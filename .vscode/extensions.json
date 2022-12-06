@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "vue.volar",
+    "dbaeumer.vscode-eslint",
+    "ms-python.python",
+    "ms-vscode-remote.remote-ssh",
+    "redhat.vscode-yaml",
+    "streetsidesoftware.code-spell-checker",
+    "csstools.postcss",
+    "lokalise.i18n-ally",
+    "jmfirth.vsc-space-block-jumper",
+  ]
+}

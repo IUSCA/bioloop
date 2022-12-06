@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model data_storage {
+  data_storage_id          Int                        @id @default(autoincrement())
+  folder_name              String                     @db.VarChar(255)
+  parent_id                Int?
+  data_storage_batch       data_storage_batch[]
+  data_storage_file        data_storage_file[]
+  data_storage_permissions data_storage_permissions[]
+}
+
+model data_storage_batch {
+  data_storage_batch_id Int          @id @default(autoincrement())
+  data_storage_id       Int
+  batch_name            String       @db.VarChar(255)
+  status                String       @db.VarChar(255)
+  upload_date           DateTime     @default(now()) @db.Date
+  data_storage          data_storage @relation(fields: [data_storage_id], references: [data_storage_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model data_storage_batch_file {
+  data_storage_batch_id Int
+  data_storage_file_id  Int
+  status                String            @db.VarChar(255)
+  data_storage_file     data_storage_file @relation(fields: [data_storage_file_id], references: [data_storage_file_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([data_storage_batch_id, data_storage_file_id])
+}
+
+model data_storage_file {
+  data_storage_file_id    Int                       @id @default(autoincrement())
+  file_name               String                    @db.VarChar(255)
+  check_sum               String                    @db.VarChar(255)
+  size                    BigInt
+  archive                 String                    @db.VarChar(255)
+  data_storage_id         Int
+  upload_date             DateTime                  @default(now()) @db.Date
+  data_storage            data_storage              @relation(fields: [data_storage_id], references: [data_storage_id], onDelete: NoAction, onUpdate: NoAction)
+  data_storage_batch_file data_storage_batch_file[]
+}
+
+model data_storage_permissions {
+  data_storage_id Int
+  user_id         Int
+  permissions     String       @db.VarChar(255)
+  data_storage    data_storage @relation(fields: [data_storage_id], references: [data_storage_id], onDelete: NoAction, onUpdate: NoAction)
+  users           users        @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([data_storage_id, user_id])
+}
+
+model feedback {
+  feedback_id             Int                     @id @default(autoincrement())
+  issue_name              String
+  issue_description       String
+  status                  String
+  requester_id            Int
+  feedback_date           DateTime                @default(now()) @db.Timestamp(6)
+  notes                   Json?
+  report_name             String?                 @unique
+  search_params           Json?
+  assigner_id             Int?                      
+  requester               users                   @relation("requester", fields: [requester_id], references: [user_id])
+  assigner                users?                  @relation("assigner", fields: [assigner_id], references: [user_id])
+}
+
+
+
+model requests {
+  request_id      Int       @id @default(autoincrement())
+  user_id         Int
+  data_id         String
+  data            Json
+  status          String
+  file_name       String
+  request_date    DateTime  @default(now()) @db.Timestamp(6)
+  users           users     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model role_permissions {
+  role_permission_id Int    @id @default(autoincrement())
+  role_id            Int
+  permission_field   String @db.VarChar(255)
+  permission_value   String @db.VarChar(255)
+  roles              roles  @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model roles {
+  role_id          Int                @id @default(autoincrement())
+  role_name        String             @db.VarChar(50)
+  role_description String             @default("") @db.VarChar(255)
+  role_permissions role_permissions[]
+  user_role        user_role[]
+}
+
+model user_role {
+  user_id Int
+  role_id Int
+  roles   roles   @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+  users   users   @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([user_id, role_id])
+}
+
+model user_search {
+  user_id           Int     
+  search_name       String  
+  search            Json
+  users             users   @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  @@id([user_id, search_name])
+}
+
+
+model user_settings {
+  user_setting_id   Int     @id @default(autoincrement())
+  user_id           Int     @unique
+  settings          Json
+  users             users   @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+
+
+model users {
+  user_id                           Int                        @id @default(autoincrement())
+  is_deleted                        Boolean                    @default(false)
+  user_name                         String                     @unique @db.VarChar(100)
+  password                          String                     @db.VarChar(32)
+  name                              String                     @default("") @db.VarChar(100)
+  email                             String                     @unique @default("") @db.VarChar(100)
+  notes                             String
+  creation_time                     DateTime                   @default(now()) @db.Timestamp(6)
+  last_update_time                  DateTime                   @default(now()) @db.Timestamp(6)
+  data_storage_permissions          data_storage_permissions[]
+  user_role                         user_role[]
+  requests                          requests[]
+  user_search                       user_search[]
+  user_settings                     user_settings[]
+  requester           feedback[]                  @relation("requester")
+  assigner            feedback[]                  @relation("assigner")
+}

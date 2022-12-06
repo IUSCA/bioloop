@@ -1,0 +1,9 @@
+apps:
+  - name: "worker-stage"
+    script: stage.py
+    interpreter: venv/bin/python3
+    exec_mode: fork
+    watch: false
+    out_file: ../log/worker/stage.log
+    err_file: ../log/worker/stage.err
+    combine_logs: false
