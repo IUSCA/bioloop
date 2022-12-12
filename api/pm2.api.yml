@@ -1,10 +1,10 @@
 apps:
   - name: "phi-api"
     cwd: api
-    script: gpdb-api.js
+    script: dgl-api.js
     exec_mode: fork
     watch: false
-    interpreter: /opt/sca/gpdb-test/api/node_modules/.bin/node
+    interpreter: /opt/sca/dgl/api/node_modules/.bin/node
     out_file: ../log/api/api.log
     err_file: ../log/api/api.err
     combine_logs: false

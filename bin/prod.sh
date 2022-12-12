@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Deployment Configuration ##
-app_folder='/opt/sca/gpdb/'
+app_folder='/opt/sca/dgl/'
 config_folder="${HOME}/config/"
 
 
