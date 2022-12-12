@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Deployment Configuration ##
-app_folder='/opt/sca/gpdb-test/'
+app_folder='/opt/sca/dgl-test/'
 
 echo "Deploying DB..."
 cd ${app_folder}api

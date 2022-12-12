@@ -23,7 +23,7 @@
     "mq": {
         "user": "user",
         "password": "password",
-        "host": "gpdb_queue",
+        "host": "dgl_queue",
         "vhost": "/"
     },
     "files": {
@@ -31,14 +31,14 @@
         "landing": "/opt/sca/files/"
     },
     "postgres": {
-        "host": "gpdb_postgres",
+        "host": "dgl_postgres",
         "username": "username",
         "password": "password",
         "port": "5432",
-        "database": "gpdb"
+        "database": "dgl"
     },
     "ms": {
-        "host": "http://gpdb_search:7700"
+        "host": "http://dgl_search:7700"
 
     }
 }

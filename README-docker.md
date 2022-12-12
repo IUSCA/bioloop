@@ -8,6 +8,14 @@ Requires `docker` and `docker-compose`. Docker desktop should work too.
 
 Shared volumes are used in `docker-compose.ymnl` to ensure container node_modules are not confused with host level node_modules. Keeps `node_modules` folders out of your local code to make it easier to `find` and `grep`
 
+## OpenSSL
+
+```
+cd ui/
+mkdir .cert
+openssl req -subj '/CN=localhost' -x509 -newkey rsa:4096 -nodes -keyout ./.cert/key.pem -out ./.cert/cert.pem 
+```
+
 ## Starting / Stopping
 
 If you only memorize three docker commands, these are good ones to know.
@@ -85,8 +93,8 @@ https://charlesbrandt.com/system/virtualization/docker-compose.html#shell-shortc
 Most containers have `curl` available. Connect to one and then try making requests to the service you're having issue with.
 
 ```
-docker-compose -p gpdb exec web bash
-curl -X GET http://gpdb_api:3030/
+docker-compose -p dgl exec web bash
+curl -X GET http://dgl_api:3030/
 ```
 
 (in this case, we don't need the `/api` suffix since we're behind the nginx proxy that normally adds `/api` for us)
@@ -107,5 +115,5 @@ netstat -panl | grep " LISTEN "
 If you have a compose file named something other than `docker-compose.yml`, you can specify the name with a `-f` flag:
 
 ```
-docker-compose -p gpdb -f docker-compose-prod.yml up -d
+docker-compose -p dgl -f docker-compose-prod.yml up -d
 ```

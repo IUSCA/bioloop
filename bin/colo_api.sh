@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Deployment Configuration ##
-app_folder='/opt/sca/gpdb-test/'
+app_folder='/opt/sca/dgl-test/'
 api_config_dir="${HOME}/config/api/"
 ui_config_dir="${HOME}/config/ui/"
 worker_config_dir="${HOME}/config/worker/"

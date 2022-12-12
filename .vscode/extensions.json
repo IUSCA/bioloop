@@ -3,6 +3,7 @@
     "vue.volar",
     "dbaeumer.vscode-eslint",
     "ms-python.python",
+    "prisma.prisma",
     "ms-vscode-remote.remote-ssh",
     "redhat.vscode-yaml",
     "streetsidesoftware.code-spell-checker",
