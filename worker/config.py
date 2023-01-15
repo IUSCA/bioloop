@@ -12,7 +12,6 @@ config = {
     'paths': {
         'scratch': '/N/scratch/dgluser/test',
         'archive': f'archive/{YEAR}',
-        'stage_dir': '/N/dcwan/projects/cmg-sca/production/staging',
-        'tar_dir': '/N/dcwan/projects/cmg-sca/production/striped-8',
+        'stage': '/N/project/DG_Multiple_Myeloma/share/test/staging',
     }
 }
