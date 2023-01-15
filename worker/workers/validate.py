@@ -3,22 +3,22 @@ from datetime import datetime
 import shutil
 
 import utils
-import config
+from config import config
 
 
 def validate(batch):
-    check_files(batch_dir=batch['paths']['staged'], metadata=batch['metadata'])
+    check_files(batch_dir=batch['paths']['staged'], files_metadata=batch['files_metadata'])
     # TODO: what to do if the checksums do not match?
 
 
-def check_files(batch_dir, metadata):
+def check_files(batch_dir, files_metadata):
     batch_dir = Path(batch_dir)
     validated_count = 0
-    for file_metadata in metadata:
+    for file_metadata in files_metadata:
         rel_path = file_metadata['path']
-        path = stage_dir / batch_dir / rel_path
+        path = batch_dir / rel_path
         digest = utils.checksum(path)
-        if digest == files_metadata['md5']:
+        if digest == file_metadata['md5']:
             validated_count += 1
     return validated_count == len(files_metadata)
 

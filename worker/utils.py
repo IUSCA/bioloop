@@ -2,7 +2,7 @@ import hashlib
 import os
 from subprocess import Popen, PIPE
 import subprocess
-from multiprocessing import Process 
+from multiprocessing import Process
 from contextlib import contextmanager
 import time
 
@@ -15,10 +15,11 @@ def checksum(fname):
     return m.hexdigest()
 
 
-def checksum_py311(fname):
-    with open(fname, 'rb') as f:
-        digest = hashlib.file_digest(f, 'md5')
-        return digest.hexdigest()
+#
+# def checksum_py311(fname):
+#     with open(fname, 'rb') as f:
+#         digest = hashlib.file_digest(f, 'md5')
+#         return digest.hexdigest()
 
 
 def execute_old(cmd, cwd=None):
@@ -33,7 +34,7 @@ def execute_old(cmd, cwd=None):
         return p.pid, stdout_lines, p.returncode
 
 
-def execute(cmd, **kwargs):
+def execute(cmd, cwd=None):
     """
     returns stdout, stderr (strings)
     if the return code is not zero, subprocess.CalledProcessError is raised
@@ -42,18 +43,18 @@ def execute(cmd, **kwargs):
     except subprocess.CalledProcessError as exc:
         print(exc.stdout, exc.stderr, exc.returncode)
     """
-    p = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
     return p.stdout, p.stderr
 
 
 def total_size(dir_path):
     """
-    can throw CalledProcessError if the executable or options are wrong for the platform or the input dir_path does not exist
+    can throw CalledProcessError
     can throw IndexError: list index out of range - if the stdout is not in expected format
     can throw ValueError - invalid literal for int() with base 10 - if the stdout is not in expected format
     """
-    completed_proc = subprocess.run(['du', '-sb', str(dir_path)], capture_output=True, check=True)
-    return int(completed_proc.stdout.decode('utf-8').split()[0])
+    completed_proc = subprocess.run(['du', '-sb', str(dir_path)], capture_output=True, check=True, text=True)
+    return int(completed_proc.stdout.split()[0])
 
 
 @contextmanager
@@ -62,26 +63,29 @@ def track_progress_parallel(progress_fn, progress_fn_args, loop_delay=5):
         while True:
             try:
                 progress_fn(*progress_fn_args)
-            except :
+            except:
                 pass
             time.sleep(loop_delay)
-    
+
+    p = None
     try:
         # start a subprocess to call progress_loop every loop_delay seconds
         p = Process(target=progress_loop)
         p.start()
-        yield p # inside the context manager
+        yield p  # inside the context manager
     finally:
         # terminate the sub process
-        p.terminate()
+        if p is not None:
+            p.terminate()
+
 
 def progress(done, total=None):
-    progress = None
+    p = None
     if total_size:
-        progress = size * 1.0 / total_size
+        p = done * 1.0 / total
     return {
-        'progress': progress,
-        'done': size,
+        'progress': p,
+        'done': done,
         'total': total_size,
         'units': 'bytes',
     }

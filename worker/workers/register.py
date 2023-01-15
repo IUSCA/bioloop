@@ -2,7 +2,7 @@ import socket
 import time
 from datetime import datetime
 
-from http import APIServerSession
+from api import APIServerSession
 
 
 def has_recent_activity(dir_path, recency_threshold=3600):

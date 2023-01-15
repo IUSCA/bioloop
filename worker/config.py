@@ -1,9 +1,11 @@
 import datetime
 
- # archiving directory name has year in its path to
- # make it easier to purge data based on the year it was archived
+# archiving directory name has year in its path to
+# make it easier to purge data based on the year it was archived
 YEAR = datetime.datetime.now().year
 config = {
+    'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
+                          '.vcf.gz.tbi', '.vcf'],
     'api': {
         'username': 'user',
         'password': 'pass',

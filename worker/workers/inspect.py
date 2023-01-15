@@ -1,13 +1,13 @@
+import json
 from pathlib import Path
-import hashlib
 
 import utils
-import json
+from config import config
 
 
 def generate_metadata(source):
     """
-    source is a directiry that exists and has to readable and executable (see files inside)
+    source is a directory that exists and has to readable and executable (see files inside)
     all the files and directories under source should be readable
     returns:    number of files, 
                 number of directories, 
@@ -15,7 +15,7 @@ def generate_metadata(source):
                 number of genome data files,
                 the md5 digest and relative filenames of genome data files
     """
-    # TODO: check source is a directiry that exists and has to readable and executable (see files inside)
+    # TODO: check source is a directory that exists and has to readable and executable (see files inside)
     # TODO: all the files and directories under source should be readable
     # TODO: what is the exception raised if rglob fails because of file permission issue?
     # TODO: what is the exception raised by open if the file is not readable?
@@ -25,15 +25,15 @@ def generate_metadata(source):
         if p.is_file():
             num_files += 1
             size += p.stat().st_size
-            if ''.join(p.suffixes) in ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz', '.vcf.gz.tbi', '.vcf']:
+            if ''.join(p.suffixes) in config['genome_file_types']:
                 cbcls += 1
                 # with open(p, 'rb') as f:
                 #     digest = hashlib.file_digest(f, 'md5')
-                hexdigest = utils.checksum(p)
+                hex_digest = utils.checksum(p)
                 relpath = p.relative_to(source)
                 metadata.append({
                     'path': str(relpath),
-                    'md5': hexdigest
+                    'md5': hex_digest
                 })
         elif p.is_dir():
             num_directories += 1
@@ -55,7 +55,7 @@ def inspect(source):
             'metadata': metadata
         }, f)
 
-if __name__=='__main__':
-    source = '/N/project/DG_Multiple_Myeloma/share/sentieon_val_7'
+
+if __name__ == '__main__':
     # source = '/N/u/dgluser/Carbonate/DGL'
-    inspect(source)
+    inspect('/N/project/DG_Multiple_Myeloma/share/sentieon_val_7')

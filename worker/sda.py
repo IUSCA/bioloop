@@ -1,5 +1,4 @@
 import utils
-import subprocess
 
 
 def put(source, target):
@@ -17,10 +16,10 @@ def get(source, target_dir):
     command = ['hsi', '-P', f'get {source}']
     return utils.execute(command, cwd=target_dir)
 
+
 def get_hash(sda_path):
     command = ['hsi', '-P', f'hashlist {sda_path}']
     stdout, stderr = utils.execute(command)
     return stdout.strip().split()[0]
-
 
 # TODO: hsi hash list {source} - get the checksum (md5)
