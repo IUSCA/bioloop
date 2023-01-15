@@ -56,14 +56,51 @@ class Workflow:
         skip_one_it = itertools.islice(it, 1, None)
         return next(skip_one_it, None)
 
+    def get_task_instance(self, step):
+        """
+        returns the latest task instance (task object) from the step object
+        """
+        task_runs = step['task_runs']
+        if task_runs is not None and len(task_runs) > 0:
+            task_id = task_runs[-1]['task_id']
+            col = self.app.backend.collection
+            task_rec = col.find_one({'_id': task_id})
+            return task_rec
+    
     def pause(self):
         # find running task
         # revoke it
-        pass
+        res = self.get_pending_step()
+        if res:
+            i, status = res
+            if status in [celery.states.PENDING, celery.states.STARTED, celery.states.RETRY]:
+                step = self.workflow['steps'][i]
+                task_runs = step['task_runs']
+                if task_runs is not None and len(task_runs) > 0:
+                    task_id = task_runs[-1]['task_id']
+                    self.app.control.revoke(task_id)
+                    print(f'revoked task: {task_id} in step-{i+1} {step["name"]}')
+                    return step
 
     def resume(self, *args):
         # find failed / revoked task
         # submit a new task with arguments
+        res = self.get_pending_step()
+        if res:
+            i, status = res
+            if status in [celery.states.FAILURE, celery.states.REVOKED]:
+                step = self.workflow['steps'][i]
+                task = self.app.tasks[step['task']]
+
+                # failed / revoked task instance
+                task_inst = self.get_task_instance(step)
+                
+                kwargs = {
+                    'workflow_id': self.workflow['_id'],
+                    'step': step['name']
+                }
+                task.apply_async(task_inst['args'], kwargs)
+                print(f'starting step {step["name"]}')
         pass
 
     def on_step_start(self, step_name, task_id):
@@ -107,7 +144,7 @@ class Workflow:
         else:
             return celery.states.PENDING
 
-    def get_current_step(self):
+    def get_pending_step(self):
         """
         finds the index of the first step whose status is not celery.states.SUCCESS
         :return: int
@@ -116,7 +153,7 @@ class Workflow:
         return next((s for s in statuses if s[1] != celery.states.SUCCESS), None)
 
     def get_workflow_status(self):
-        last_step_not_succeeded = self.get_current_step()
+        last_step_not_succeeded = self.get_pending_step()
         if last_step_not_succeeded:
             step_idx, task_status = last_step_not_succeeded
             if step_idx == 0 and task_status == celery.states.PENDING:
@@ -142,6 +179,8 @@ class WorkflowTask(Task):  # noqa
     def before_start(self, task_id, args, kwargs):
         print(f'before_start, task_id:{task_id}, args:{args}, kwargs:{kwargs} name:{self.name}')
 
+        print('\n'.join(self.app.tasks.keys()))
+
         if 'workflow_id' in kwargs and 'step' in kwargs:
             workflow_id = kwargs['workflow_id']
             self.workflow = Workflow(self.app, workflow_id)
@@ -159,3 +198,13 @@ class WorkflowTask(Task):  # noqa
             self.update_state(state='PROGRESS',
                               meta=progress_obj
                               )
+
+def resubmit_task(app, task_id):
+    col = app.backend.collection
+    task_rec = col.find_one({'_id': task_id})
+    
+    assert task_rec, f'Task with id "{task_id}" is not found in the database'
+    
+    task = app.tasks[task_rec['name']]
+    
+    r = task.apply_async(args=task_rec['args'], kwargs=task_rec['kwargs'])
