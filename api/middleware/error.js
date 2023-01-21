@@ -6,21 +6,14 @@ function notFound(req, res, next) {
   next(error);
 }
 
-// eslint-disable-next-line consistent-return
 function errorHandler(err, req, res, next) {
   // delegate to the default Express error handler,
   // when the headers have already been sent to the client
   if (res.headersSent) {
     return next(err);
   }
-  console.log(JSON.stringify({
-    status: err.status,
-    statusCode: err.statusCode,
-    expose: err.expose,
-    headers: err.headers,
-    message: err.message,
-  }, null, 2));
   if (err.status !== 404) {
+    // eslint-disable-next-line no-console
     console.error(err);
   }
   if (err.expose === true) {

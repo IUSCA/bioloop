@@ -8,7 +8,7 @@ datasource db {
 }
 
 model batch {
-  id           BigInt     @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   name         String
   directories  Decimal?   @db.Decimal
   files        Decimal?   @db.Decimal
@@ -27,7 +27,7 @@ model batch {
 model checksum {
   path     String
   md5      String
-  id       BigInt  @id @default(autoincrement())
-  batch_id BigInt?
-  batch    batch?  @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "checksum_batch_fkey")
+  id       Int    @id @default(autoincrement())
+  batch_id Int?
+  batch    batch? @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "checksum_batch_fkey")
 }

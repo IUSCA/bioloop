@@ -8,7 +8,7 @@ const cors = require('cors');
 // global.__basedir = __dirname;
 
 const indexRouter = require('./routes/index');
-const middleware = require('./middleware');
+const errorMiddleware = require('./middleware/error');
 
 // Register application
 const app = express();
@@ -37,9 +37,9 @@ app.use(cors());
 app.use('/', indexRouter);
 
 // handle unknown routes
-app.use(middleware.notFound);
+app.use(errorMiddleware.notFound);
 
 // pass any unhandled errors to the error handler
-app.use(middleware.errorHandler);
+app.use(errorMiddleware.errorHandler);
 
 module.exports = app;
