@@ -1,44 +1,9 @@
 {
-    "site": {
-        "mode": "dev"
-    },
-    "express": {
-        "port": 3030,
-        "host": "0.0.0.0"
-    },
-    "logger": {
-        "level": "debug",
-        "colorize": true
-    },
-    "casUrl": "https://idp-stg.login.iu.edu/idp/profile/cas/serviceValidate?ticket=",
-    "auth": {
-        "ttl": 86400000,
-        "iss": "localhost",
-        "pub": "/config/auth.pub",
-        "key": "/config/auth.key",
-        "sign_opt": {
-            "algorithm": "RS256"
-        }
-    },
-    "mq": {
-        "user": "user",
-        "password": "password",
-        "host": "gpdb_queue",
-        "vhost": "/"
-    },
-    "files": {
-        "feedback": "/opt/sca/feedback/",
-        "landing": "/opt/sca/files/"
-    },
-    "postgres": {
-        "host": "gpdb_postgres",
-        "username": "username",
-        "password": "password",
-        "port": "5432",
-        "database": "gpdb"
-    },
-    "ms": {
-        "host": "http://gpdb_search:7700"
-
-    }
+  "express": {
+    "port": 3030,
+    "host": "localhost"
+  },
+  "logger": {
+    "level": "debug"
+  }
 }
