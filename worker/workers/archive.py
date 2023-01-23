@@ -1,13 +1,10 @@
-from pathlib import Path
 import tarfile
+from pathlib import Path
 
-import celery
-from celery import Celery, Task
-
-import celeryconfig
-from config import config
 import sda
 import utils
+from celery_app import app
+from config import config
 from workflow import WorkflowTask
 
 
@@ -39,9 +36,8 @@ def hsi_put_progress(celery_task, sda_path, total_size):
     r = utils.progress(name=name, done=size, total=total_size)
     celery_task.update_progress(r)
 
-app = Celery("tasks")
-app.config_from_object(celeryconfig)
-# celery -A workers.archive worker --concurrency 4
+
+# celery -A celery_ap worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
 def archive_batch(celery_task, batch, **kwargs):
     # Tar the batch directory and compute checksum
@@ -69,8 +65,6 @@ def archive_batch(celery_task, batch, **kwargs):
             f'Archive failed: Checksums of local {scratch_tar_path} ({scratch_digest})' +
             'and SDA {sda_tar_path} ({sda_digest}) do not match')
     return batch
-
-
 
 # def tar_task(self, batch, **kwargs):
 #     # batch = {

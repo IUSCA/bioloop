@@ -2,19 +2,14 @@ from pathlib import Path
 import tarfile
 import shutil
 
-import celery
-from celery import Celery, Task
-
-import celeryconfig
 from config import config
 import sda
 import utils
 from workflow import WorkflowTask
+from celery_app import app
 
 
-app = Celery("tasks")
-app.config_from_object(celeryconfig)
-# celery -A workers.stage worker --concurrency 4
+# celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
 def stage_batch(celery_app, batch, **kwargs):
     """
@@ -48,15 +43,15 @@ def stage_batch(celery_app, batch, **kwargs):
 
     # extract the tar file
     # check for name conflicts in stage dir and delete dir if exists
-    extracted_dirname = staging_dir / batch['name']
-    if extracted_dirname.exists():
-        shutil.rmtree(extracted_dirname)
+    extracted_dir_name = staging_dir / batch['name']
+    if extracted_dir_name.exists():
+        shutil.rmtree(extracted_dir_name)
     with tarfile.open(scratch_tar_path) as tar:
         tar.extractall(path=staging_dir)
 
     # delete the local tar copy after extraction
     scratch_tar_path.unlink()
-    batch['paths']['staged'] = str(extracted_dirname)
+    batch['paths']['staged'] = str(extracted_dir_name)
     return batch
 
 
@@ -67,4 +62,4 @@ if __name__ == '__main__':
             'origin': '/N/u/dgluser/Carbonate/DGL/worker'
         }
     }
-    get_batch_from_sda(batch)
+    # stage_batch(batch)

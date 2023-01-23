@@ -1,12 +1,9 @@
-from pathlib import Path
-from datetime import datetime
 import shutil
+from datetime import datetime
+from pathlib import Path
 
-import celery
-from celery import Celery, Task
-
-import celeryconfig
 import utils
+from celery_app import app
 from config import config
 from workflow import WorkflowTask
 
@@ -23,13 +20,12 @@ def check_files(batch_dir, files_metadata):
                 validated_count += 1
     return validated_count == len(files_metadata)
 
-app = Celery("tasks")
-app.config_from_object(celeryconfig)
-# celery -A workers.validate worker --concurrency 4
+
+# celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
 def validate_batch(celery_app, batch, **kwargs):
-    validated = check_files(batch_dir=batch['paths']['staged'], 
-                files_metadata=batch['metadata'])
+    validated = check_files(batch_dir=batch['paths']['staged'],
+                            files_metadata=batch['metadata'])
     # TODO: what to do if the checksums do not match?
     batch['validated'] = validated
     return batch

@@ -21,5 +21,3 @@ def get_hash(sda_path):
     command = ['hsi', '-P', f'hashlist {sda_path}']
     stdout, stderr = utils.execute(command)
     return stdout.strip().split()[0]
-
-# TODO: hsi hash list {source} - get the checksum (md5)

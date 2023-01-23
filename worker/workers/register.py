@@ -1,11 +1,11 @@
 import socket
 import time
-from datetime import datetime
+from pathlib import Path
 
 import api
+from celery_app import app as celery_app
 from config import config
 from workflow import Workflow
-from celery_app import app as celery_app
 
 
 def has_recent_activity(dir_path, recency_threshold=3600):
@@ -13,16 +13,18 @@ def has_recent_activity(dir_path, recency_threshold=3600):
     last_update_time = max([p.stat().st_mtime for p in dir_path.iterdir()], default=time.time())
     return time.time() - last_update_time <= recency_threshold
 
+
 def get_registered_batch_paths():
     batches = api.get_all_batches()
     return [b.origin_path for b in batches]
+
 
 class Registration:
     def __init__(self):
         self.host = socket.getfqdn()
         self.source_dirs = set(Path(sd).resolve() for sd in config['registration']['source_dirs'] if Path(sd).exists())
         self.rejects = set(config['registration']['rejects'])
-        self.completed = set(get_completed_batch_paths())  # HTTP GET
+        self.completed = set(get_registered_batch_paths())  # HTTP GET
         self.candidates = set()
         self.steps = [
             {
@@ -42,7 +44,7 @@ class Registration:
                 'task': 'workers.validate.validate_batch'
             }
         ]
-        
+
     def register(self):
         while True:
             if self.candidates:
@@ -52,13 +54,13 @@ class Registration:
                         self.completed.add(candidate)
                         self.candidates.remove(candidate)
             else:
-                time.sleep(self.config['wait_between_scans'])
+                time.sleep(config['registration']['wait_between_scans'])
                 self.scan()
 
     def scan(self):
         candidates = set()
         for source_dir in self.source_dirs:
-            for p in sd.iterdir():
+            for p in source_dir.iterdir():
                 if p.is_dir() and (str(p) not in self.completed):
                     candidates.add(p)
         return candidates
@@ -73,4 +75,3 @@ class Registration:
         }
         # HTTP POST
         api.create_batch(batch)
-        

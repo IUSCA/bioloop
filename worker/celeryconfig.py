@@ -1,7 +1,9 @@
-from dotenv import load_dotenv
-load_dotenv()  # take environment variables from .env.
 import os
 import urllib.parse
+from dotenv import load_dotenv
+
+load_dotenv()  # take environment variables from .env.
+
 
 password = os.environ['DGL_PASS']
 

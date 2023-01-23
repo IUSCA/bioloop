@@ -1,6 +1,6 @@
-import json
 from flask import Flask, request, jsonify
 
+from celery_app import app as celery_app
 from workflow import Workflow
 
 app = Flask(__name__)
