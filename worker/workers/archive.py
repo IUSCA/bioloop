@@ -1,31 +1,54 @@
 from pathlib import Path
 import tarfile
 
+import celery
+from celery import Celery, Task
+
+import celeryconfig
 from config import config
 import sda
 import utils
+from workflow import WorkflowTask
 
 
-def make_tarfile(tarfile_name, source_dir, source_size):
+def make_tarfile(celery_task, tarfile_name, source_dir, source_size):
     tar_path = Path(f'{config["paths"]["scratch"]}/{tarfile_name}.tar')
 
+    print(f'creating tar of {source_dir} at {tar_path}')
     # if the tar file already exists, delete it
     if tar_path.exists():
         tar_path.unlink()
 
     with utils.track_progress_parallel(progress_fn=tar_progress,
-                                       progress_fn_args=(tar_path, source_size)):
+                                       progress_fn_args=(celery_task, tar_path, source_size)):
         with tarfile.open(tar_path, 'w') as tar:
             tar.add(str(source_dir), arcname=tarfile_name, recursive=True)
     return tar_path
 
 
-def archive(batch):
+def tar_progress(celery_task, tar_path, total_size):
+    size = Path(tar_path).stat().st_size
+    name = f'{celery_task.name}.tar'
+    r = utils.progress(name=name, done=size, total=total_size)
+    celery_task.update_progress(r)
+
+
+def hsi_put_progress(celery_task, sda_path, total_size):
+    size = sda.get_size(sda_path)
+    name = f'{celery_task.name}.sda_put'
+    r = utils.progress(name=name, done=size, total=total_size)
+    celery_task.update_progress(r)
+
+app = Celery("tasks")
+app.config_from_object(celeryconfig)
+# celery -A workers.archive worker --concurrency 4
+@app.task(base=WorkflowTask, bind=True)
+def archive_batch(celery_task, batch, **kwargs):
     # Tar the batch directory and compute checksum
-    scratch_tar_path = make_tarfile(tarfile_name=batch['name'],
+    scratch_tar_path = make_tarfile(celery_task=celery_task,
+                                    tarfile_name=batch['name'],
                                     source_dir=batch['paths']['origin'],
                                     source_size=batch['du_size'])
-    scratch_tar_path = Path(scratch_tar_path)
     scratch_digest = utils.checksum(scratch_tar_path)
 
     sda_tar_path = f'{config["paths"]["archive"]}/{batch["name"]}.tar'
@@ -33,7 +56,7 @@ def archive(batch):
 
     print('sda put', str(scratch_tar_path), sda_tar_path)
     with utils.track_progress_parallel(progress_fn=hsi_put_progress,
-                                       progress_fn_args=(sda_tar_path, batch['du_size'])):
+                                       progress_fn_args=(celery_task, sda_tar_path, batch['du_size'])):
         sda.put(source=scratch_tar_path, target=sda_tar_path)
 
     # validate whether the md5 checksums of local and SDA copies match
@@ -48,32 +71,29 @@ def archive(batch):
     return batch
 
 
-def tar_progress(tar_path, total_size):
-    size = Path(tar_path).stat().st_size
-    return utils.progress(done=size, total=total_size)
+
+# def tar_task(self, batch, **kwargs):
+#     # batch = {
+#     #     'name': 'sentieon_val_7',
+#     #     'paths': {
+#     #         'origin': '/N/project/DG_Multiple_Myeloma/share/sentieon_val_7/vcf'
+#     #     },
+#     #     'du_size': 371544389559
+#     # }
+#     archive(self, batch)
+#     return batch
 
 
-def hsi_put_progress(sda_path, total_size):
-    size = sda.get_size(sda_path)
-    return utils.progress(done=size, total=total_size)
-
-
-if __name__ == '__main__':
-    # print(config)
-    # batch = {
-    #     'name': 'sentieon_val_7',
-    #     'paths': {
-    #         'origin': '/N/project/DG_Multiple_Myeloma/share/sentieon_val_7'
-    #     }
-    # }
-    # batch = {
-    #     'name': 'worker',
-    #     'paths': {
-    #         'origin': '/N/u/dgluser/Carbonate/DGL/worker'
-    #     }
-    # }
-    make_tarfile(tarfile_name='sentieon_val_7_bam',
-                 source_dir='/N/project/DG_Multiple_Myeloma/share/sentieon_val_7/bam',
-                 source_size=371544389559)
-    # archive(batch, '/N/scratch/dgluser/test/sentieon_val_7.tar')
-    # print(batch)
+# if __name__ == '__main__':
+#     batch = {
+#         'name': 'sentieon_val_7',
+#         'paths': {
+#             'origin': '/N/project/DG_Multiple_Myeloma/share/sentieon_val_7/bam'
+#         },
+#         'du_size': 371544389559
+#     }
+#     scratch_tar_path = make_tarfile(celery_task = {},
+#                                     tarfile_name=batch['name'],
+#                                     source_dir=batch['paths']['origin'],
+#                                     source_size=batch['du_size'])
+#     print(scratch_tar_path)

@@ -167,9 +167,9 @@ class Workflow:
 
 
 class WorkflowTask(Task):  # noqa
-    autoretry_for = (Exception,)  # retry for all exceptions
-    max_retries = 3
-    default_retry_delay = 5  # wait for n seconds before adding the task back to the queue
+    # autoretry_for = (Exception,)  # retry for all exceptions
+    # max_retries = 3
+    # default_retry_delay = 5  # wait for n seconds before adding the task back to the queue
     add_to_parent = True
     trail = True
 
@@ -177,9 +177,7 @@ class WorkflowTask(Task):  # noqa
         self.workflow = None
 
     def before_start(self, task_id, args, kwargs):
-        print(f'before_start, task_id:{task_id}, args:{args}, kwargs:{kwargs} name:{self.name}')
-
-        print('\n'.join(self.app.tasks.keys()))
+        print(f'before_start, task_id:{task_id}, kwargs:{kwargs} name:{self.name}')
 
         if 'workflow_id' in kwargs and 'step' in kwargs:
             workflow_id = kwargs['workflow_id']
@@ -187,7 +185,7 @@ class WorkflowTask(Task):  # noqa
             self.workflow.on_step_start(kwargs['step'], task_id)
 
     def on_success(self, retval, task_id, args, kwargs):
-        print(f'on_success, retval: {retval}, task_id: {task_id}, args: {args}, kwargs: {kwargs}')
+        print(f'on_success, task_id: {task_id}, kwargs: {kwargs}')
 
         if 'workflow_id' in kwargs and 'step' in kwargs:
             self.workflow.on_step_success(retval, kwargs['step'])
@@ -195,6 +193,7 @@ class WorkflowTask(Task):  # noqa
     def update_progress(self, progress_obj):
         # called_directly: This flag is set to true if the task was not executed by the worker.
         if not self.request.called_directly:
+            print(f'updating progress for {self.name}', progress_obj)
             self.update_state(state='PROGRESS',
                               meta=progress_obj
                               )

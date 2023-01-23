@@ -2,13 +2,13 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 
+import celery
+from celery import Celery, Task
+
+import celeryconfig
 import utils
 from config import config
-
-
-def validate(batch):
-    check_files(batch_dir=batch['paths']['staged'], files_metadata=batch['files_metadata'])
-    # TODO: what to do if the checksums do not match?
+from workflow import WorkflowTask
 
 
 def check_files(batch_dir, files_metadata):
@@ -17,10 +17,22 @@ def check_files(batch_dir, files_metadata):
     for file_metadata in files_metadata:
         rel_path = file_metadata['path']
         path = batch_dir / rel_path
-        digest = utils.checksum(path)
-        if digest == file_metadata['md5']:
-            validated_count += 1
+        if path.exists():
+            digest = utils.checksum(path)
+            if digest == file_metadata['md5']:
+                validated_count += 1
     return validated_count == len(files_metadata)
+
+app = Celery("tasks")
+app.config_from_object(celeryconfig)
+# celery -A workers.validate worker --concurrency 4
+@app.task(base=WorkflowTask, bind=True)
+def validate_batch(celery_app, batch, **kwargs):
+    validated = check_files(batch_dir=batch['paths']['staged'], 
+                files_metadata=batch['metadata'])
+    # TODO: what to do if the checksums do not match?
+    batch['validated'] = validated
+    return batch
 
 
 # TODO: move out of validate
