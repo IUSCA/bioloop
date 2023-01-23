@@ -17,3 +17,9 @@ class APIServerSession(requests.Session):
     def request(self, method, url, *args, **kwargs):
         joined_url = urljoin(self.base_url, url)
         return super().request(method, joined_url, *args, **kwargs)
+
+def get_all_batches():
+    pass
+
+def create_batch(batch):
+    pass
