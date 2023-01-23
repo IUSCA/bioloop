@@ -66,7 +66,7 @@ class Workflow:
             col = self.app.backend.collection
             task_rec = col.find_one({'_id': task_id})
             return task_rec
-    
+
     def pause(self):
         # find running task
         # revoke it
@@ -79,10 +79,10 @@ class Workflow:
                 if task_runs is not None and len(task_runs) > 0:
                     task_id = task_runs[-1]['task_id']
                     self.app.control.revoke(task_id)
-                    print(f'revoked task: {task_id} in step-{i+1} {step["name"]}')
+                    print(f'revoked task: {task_id} in step-{i + 1} {step["name"]}')
                     return step
 
-    def resume(self, *args):
+    def resume(self):
         # find failed / revoked task
         # submit a new task with arguments
         res = self.get_pending_step()
@@ -94,7 +94,7 @@ class Workflow:
 
                 # failed / revoked task instance
                 task_inst = self.get_task_instance(step)
-                
+
                 kwargs = {
                     'workflow_id': self.workflow['_id'],
                     'step': step['name']
@@ -198,12 +198,13 @@ class WorkflowTask(Task):  # noqa
                               meta=progress_obj
                               )
 
+
 def resubmit_task(app, task_id):
     col = app.backend.collection
     task_rec = col.find_one({'_id': task_id})
-    
+
     assert task_rec, f'Task with id "{task_id}" is not found in the database'
-    
+
     task = app.tasks[task_rec['name']]
-    
-    r = task.apply_async(args=task_rec['args'], kwargs=task_rec['kwargs'])
+
+    task.apply_async(args=task_rec['args'], kwargs=task_rec['kwargs'])
