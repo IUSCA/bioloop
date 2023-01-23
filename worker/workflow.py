@@ -1,5 +1,6 @@
 import itertools
 import uuid
+import datetime
 
 import celery
 import celery.states
@@ -107,12 +108,14 @@ class Workflow:
         step = self.get_step(step_name)
         step['task_runs'] = step.get('task_runs', [])
         step['task_runs'].append({
+            'start_time': datetime.datetime.utcnow(),
             'task_id': task_id
         })
         self.update()
         print(f'starting {step_name} with task id: {task_id}')
 
     def on_step_success(self, retval, step_name):
+        self.update_step_end_time(step_name)
         next_step = self.get_next_step(step_name)
 
         # apply next task with retval
@@ -165,7 +168,13 @@ class Workflow:
         else:
             return celery.states.SUCCESS
 
-
+    def update_step_end_time(self, step_name):
+        step = self.get_step(step_name)
+        task_runs = step['task_runs']
+        if len(task_runs) > 0:
+            last_task_run = task_runs[-1]
+            last_task_run['end_time'] = datetime.datetime.utcnow()
+        self.update()
 class WorkflowTask(Task):  # noqa
     # autoretry_for = (Exception,)  # retry for all exceptions
     # max_retries = 3
