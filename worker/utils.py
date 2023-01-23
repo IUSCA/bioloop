@@ -2,7 +2,9 @@ import hashlib
 import os
 from subprocess import Popen, PIPE
 import subprocess
-from multiprocessing import Process
+# import multiprocessing
+# https://stackoverflow.com/questions/30624290/celery-daemonic-processes-are-not-allowed-to-have-children
+import billiard as multiprocessing
 from contextlib import contextmanager
 import time
 
@@ -61,31 +63,34 @@ def total_size(dir_path):
 def track_progress_parallel(progress_fn, progress_fn_args, loop_delay=5):
     def progress_loop():
         while True:
+            time.sleep(loop_delay)
             try:
                 progress_fn(*progress_fn_args)
-            except:
-                pass
-            time.sleep(loop_delay)
+            except Exception as e:
+                print('loop: exception', e)
 
     p = None
     try:
         # start a subprocess to call progress_loop every loop_delay seconds
-        p = Process(target=progress_loop)
+        p = multiprocessing.Process(target=progress_loop)
         p.start()
+        print(f'starting a sub process to track progress with pid: {p.pid}')
         yield p  # inside the context manager
     finally:
         # terminate the sub process
+        print(f'terminating progress tracker')
         if p is not None:
             p.terminate()
 
 
-def progress(done, total=None):
-    p = None
-    if total_size:
-        p = done * 1.0 / total
+def progress(name, done, total=None):
+    percent_done = None
+    if total:
+        percent_done = done * 1.0 / total
     return {
-        'progress': p,
+        'name': name,
+        'percent_done': percent_done,
         'done': done,
-        'total': total_size,
+        'total': total,
         'units': 'bytes',
     }

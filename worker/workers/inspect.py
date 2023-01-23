@@ -1,8 +1,13 @@
 import json
 from pathlib import Path
 
+import celery
+from celery import Celery, Task
+
+import celeryconfig
 import utils
 from config import config
+from workflow import WorkflowTask
 
 
 def generate_metadata(source):
@@ -40,21 +45,32 @@ def generate_metadata(source):
 
     return num_files, num_directories, size, cbcls, metadata
 
-
-def inspect(source):
+app = Celery("tasks")
+app.config_from_object(celeryconfig)
+# celery -A workers.inspect worker --concurrency 4
+@app.task(base=WorkflowTask, bind=True)
+def inspect_batch(self, source, **kwargs):
     source = Path(source).resolve()
     du_size = utils.total_size(source)
     num_files, num_directories, size, cbcls, metadata = generate_metadata(source)
-    print(num_files, num_directories, size, cbcls)
-    with open('inspect_result.json', 'w') as f:
-        json.dump({
-            'num_files': num_files,
-            'num_directories': num_directories,
-            'size': size,
-            'cbcls': cbcls,
-            'metadata': metadata
-        }, f)
+    
+    batch = {
+        'name': source.name,
+        'du_size': du_size,
+        'paths': {
+            'origin': str(source)
+        },
+        'num_files': num_files,
+        'num_directories': num_directories,
+        'size': size,
+        'cbcls': cbcls,
+        'metadata': metadata
+    }    
 
+    # with open('inspect_result.json', 'w') as f:
+    #     json.dump(batch, f)
+
+    return batch
 
 if __name__ == '__main__':
     # source = '/N/u/dgluser/Carbonate/DGL'

@@ -14,6 +14,6 @@ config = {
     'paths': {
         'scratch': '/N/scratch/dgluser/test',
         'archive': f'archive/{YEAR}',
-        'stage': '/N/project/DG_Multiple_Myeloma/share/test/staging',
+        'stage': '/N/scratch/dgluser/test/stage',
     }
 }
