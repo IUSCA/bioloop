@@ -1,15 +1,26 @@
 version: "3"
 services:
-  ui:
-    container_name: dgl_ui
-    image: node:19
+  # ui:
+  #   container_name: dgl_ui
+  #   image: node:19
+  #   volumes:
+  #     - ./ui/:/opt/sca/dgl/ui/
+  #     - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
+  #   ports:
+  #     - 127.0.0.1:443:443
+  #   working_dir: /opt/sca/dgl/ui
+  #   command: sh -c "npm install && npm run dev"
+
+  postgres:
+    container_name: dgl_postgres
+    image: postgres:14.5
+    # restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=examlple
     volumes:
-      - ./ui/:/opt/sca/dgl/ui/
-      - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
+      - ./db/db_postgres:/var/lib/postgresql/data
     ports:
-      - 127.0.0.1:443:443
-    working_dir: /opt/sca/dgl/ui
-    command: sh -c "npm install && npm run dev"
+      - 127.0.0.1:5432:5432
 
 volumes:
   dgl_ui_modules:

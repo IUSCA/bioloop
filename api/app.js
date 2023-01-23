@@ -1,64 +1,45 @@
-const express = require("express");
-const cookieParser = require("cookie-parser");
-var winston = require("winston");
-let requestLogger = require('morgan')
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const requestLogger = require('morgan');
+const compression = require('compression');
+const cors = require('cors');
 
-global.__basedir = __dirname;
+// why?
+// global.__basedir = __dirname;
 
-// Local import
-let config = require("config")
-
-// let storage = require('./storage')
-// storage.file_status_update()
-
-// let cron = require('node-cron')
-
-// // cron.schedule('* * * * *', () => {
-// //   console.log('running a task every minute')
-// // })
-
-// cron.schedule('* * * * *', file_status())
-
-
-const logger_settings = {
-  transports: [
-    //display all logs to console
-    new winston.transports.Console({
-      timestamp: function () {
-        var d = new Date();
-        return d.toString(); //show timestamp
-      },
-      level: config.get("logger.level"),
-      colorize: config.get("logger.colorize"),
-    }),
-  ],
-}
-
-var logger = new winston.createLogger(logger_settings);
-
-// Register routes
-const router = require("./routes/index");
+const indexRouter = require('./routes/index');
+const { notFound, errorHandler } = require('./middleware/error');
 
 // Register application
 const app = express();
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: false }));
+// request logger - https://github.com/expressjs/morgan
+app.use(requestLogger('dev'));
+
+// request parsing middleware
+app.use(express.json({ limit: '50mb' }));
+
+// extended: false -> use querystring instead of qs library to parse urlencoded query string
+// removes ? ex: ?a=b will be {a: b}
+// does not parse nested objects:
+// ?person[name]=bobby&person[age]=3 will be { 'person[age]': '3', 'person[name]': 'bobby' }
+// see https://stackoverflow.com/questions/29960764/what-does-extended-mean-in-express-4-0
+app.use(express.urlencoded({ limit: '50mb', extended: false }));
 app.use(cookieParser());
-app.use(requestLogger('dev'))
 
-app.use("/", router);
+// gzip compression
+app.use(compression());
 
-exports.app = app;
+// enable CORS - cross origin resource sharing
+app.use(cors());
 
-exports.start = function (cb) {
-  var port = process.env.PORT || config.get("express.port") || "3030";
-  var host = process.env.HOST || config.get("express.host") || "localhost";
-  app.listen(port, host, function (err) {
-    if (err) return cb(err);
-    logger.info(
-      `gpdb-api service running on ${host}:${port} in mode ${app.settings.env}`
-    );
-    cb(null);
-  });
-};
+// mount router
+app.use('/', indexRouter);
+
+// handle unknown routes
+app.use(notFound);
+
+// pass any unhandled errors to the error handler
+app.use(errorHandler);
+
+module.exports = app;

@@ -9,5 +9,6 @@
     "csstools.postcss",
     "lokalise.i18n-ally",
     "jmfirth.vsc-space-block-jumper",
+    "adpyke.vscode-sql-formatter"
   ]
 }
