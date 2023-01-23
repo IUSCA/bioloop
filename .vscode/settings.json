@@ -1,5 +1,14 @@
 {
-  "cSpell.words": ["vite", "vitest", "vueuse", "pinia", "iconify", "vitejs", "unplugin" ],
+  "cSpell.words": [
+    "iconify",
+    "pinia",
+    "traceback",
+    "unplugin",
+    "vite",
+    "vitejs",
+    "vitest",
+    "vueuse"
+  ],
   "i18n-ally.sourceLanguage": "en",
   "i18n-ally.keystyle": "nested",
   "i18n-ally.localesPaths": "locales",
