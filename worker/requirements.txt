@@ -2,3 +2,4 @@ celery
 pymongo
 flask
 python-dotenv
+requests

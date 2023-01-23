@@ -2,6 +2,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import api
 import utils
 from celery_app import app
 from config import config
@@ -23,12 +24,13 @@ def check_files(batch_dir, files_metadata):
 
 # celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
-def validate_batch(celery_app, batch, **kwargs):
+def validate_batch(celery_app, batch_id, **kwargs):
+    batch = api.get_batch(batch_id=batch_id)
     validated = check_files(batch_dir=batch['paths']['staged'],
                             files_metadata=batch['metadata'])
     # TODO: what to do if the checksums do not match?
-    batch['validated'] = validated
-    return batch
+
+    return batch_id
 
 
 # TODO: move out of validate

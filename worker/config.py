@@ -10,7 +10,7 @@ config = {
     'api': {
         'username': 'user',
         'password': 'pass',
-        'base_url': ''
+        'base_url': 'http://localhost:3030'
     },
     'paths': {
         'scratch': '/N/scratch/dgluser/test',

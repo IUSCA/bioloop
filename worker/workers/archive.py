@@ -1,6 +1,7 @@
 import tarfile
 from pathlib import Path
 
+import api
 import sda
 import utils
 from celery_app import app
@@ -39,7 +40,8 @@ def hsi_put_progress(celery_task, sda_path, total_size):
 
 # celery -A celery_ap worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
-def archive_batch(celery_task, batch, **kwargs):
+def archive_batch(celery_task, batch_id, **kwargs):
+    batch = api.get_batch(batch_id=batch_id)
     # Tar the batch directory and compute checksum
     scratch_tar_path = make_tarfile(celery_task=celery_task,
                                     tarfile_name=batch['name'],
@@ -48,7 +50,6 @@ def archive_batch(celery_task, batch, **kwargs):
     scratch_digest = utils.checksum(scratch_tar_path)
 
     sda_tar_path = f'{config["paths"]["archive"]}/{batch["name"]}.tar'
-    batch['paths']['archive'] = sda_tar_path
 
     print('sda put', str(scratch_tar_path), sda_tar_path)
     with utils.track_progress_parallel(progress_fn=hsi_put_progress,
@@ -64,7 +65,13 @@ def archive_batch(celery_task, batch, **kwargs):
         raise Exception(
             f'Archive failed: Checksums of local {scratch_tar_path} ({scratch_digest})' +
             'and SDA {sda_tar_path} ({sda_digest}) do not match')
-    return batch
+
+    update_data = {
+        'archive_path': sda_tar_path
+    }
+    api.update_batch(batch_id=batch_id, update_data=update_data)
+
+    return batch_id
 
 # def tar_task(self, batch, **kwargs):
 #     # batch = {

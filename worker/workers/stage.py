@@ -2,6 +2,7 @@ from pathlib import Path
 import tarfile
 import shutil
 
+import api
 from config import config
 import sda
 import utils
@@ -9,16 +10,15 @@ from workflow import WorkflowTask
 from celery_app import app
 
 
-# celery -A celery_app worker --concurrency 4
-@app.task(base=WorkflowTask, bind=True)
-def stage_batch(celery_app, batch, **kwargs):
+def get_batch_from_sda(batch):
     """
     gets the tar from SDA and extracts it
 
-    input: batch['name'], batch['paths']['archive'] should exist
-    returns: batch, adds batch['paths']['staged']
+    input: batch['name'], batch['archive_path'] should exist
+    returns: stage_path
     """
-    sda_tar_path = batch['paths']['archive']
+
+    sda_tar_path = batch['archive_path']
     staging_dir = Path(config['paths']['stage'])
     scratch_tar_path = Path(config['paths']['scratch']) / f"{batch['name']}.tar"
     sda_digest = sda.get_hash(sda_path=sda_tar_path)
@@ -51,15 +51,27 @@ def stage_batch(celery_app, batch, **kwargs):
 
     # delete the local tar copy after extraction
     scratch_tar_path.unlink()
-    batch['paths']['staged'] = str(extracted_dir_name)
-    return batch
+    return str(extracted_dir_name)
+
+
+# celery -A celery_app worker --concurrency 4
+@app.task(base=WorkflowTask, bind=True)
+def stage_batch(celery_app, batch_id, **kwargs):
+    batch = api.get_batch(batch_id=batch_id)
+    extracted_dir_name = get_batch_from_sda(batch)
+    update_data = {
+        'stage_path':  extracted_dir_name
+    }
+    api.update_batch(batch_id=batch_id, update_data=update_data)
+    return batch_id
 
 
 if __name__ == '__main__':
-    batch = {
-        'name': 'worker',
-        'paths': {
-            'origin': '/N/u/dgluser/Carbonate/DGL/worker'
-        }
-    }
+    pass
+    # batch = {
+    #     'name': 'worker',
+    #     'paths': {
+    #         'origin': '/N/u/dgluser/Carbonate/DGL/worker'
+    #     }
+    # }
     # stage_batch(batch)

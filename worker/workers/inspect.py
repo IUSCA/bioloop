@@ -4,6 +4,7 @@ import utils
 from config import config
 from workflow import WorkflowTask
 from celery_app import app
+import api
 
 
 def generate_metadata(source):
@@ -44,28 +45,23 @@ def generate_metadata(source):
 
 # celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
-def inspect_batch(self, source, **kwargs):
-    source = Path(source).resolve()
+def inspect_batch(self, batch_id, **kwargs):
+    batch = api.get_batch(batch_id=batch_id)
+    source = Path(batch['origin_path']).resolve()
     du_size = utils.total_size(source)
-    num_files, num_directories, size, cbcls, metadata = generate_metadata(source)
+    num_files, num_directories, size, num_genome_files, metadata = generate_metadata(source)
 
-    batch = {
-        'name': source.name,
+    update_data = {
         'du_size': du_size,
-        'paths': {
-            'origin': str(source)
-        },
+        'size': size,
         'num_files': num_files,
         'num_directories': num_directories,
-        'size': size,
-        'cbcls': cbcls,
-        'metadata': metadata
+        'num_genome_files': num_genome_files,
     }
+    api.update_batch(batch_id=batch_id, update_data=update_data)
+    api.add_checksums_to_batch(batch_id=batch_id, checksums=metadata)
 
-    # with open('inspect_result.json', 'w') as f:
-    #     json.dump(batch, f)
-
-    return batch
+    return batch_id
 
 
 if __name__ == '__main__':

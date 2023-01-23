@@ -67,11 +67,11 @@ class Registration:
 
     def register_candidate(self, candidate):
         wf = Workflow(celery_app=celery_app, steps=self.steps)
-        wf.start()
         batch = {
             'name': candidate.name,
             'origin_path': str(candidate.resolve()),
             'workflow_id': wf.workflow._id
         }
         # HTTP POST
-        api.create_batch(batch)
+        created_batch = api.create_batch(batch)
+        wf.start(created_batch.id)
