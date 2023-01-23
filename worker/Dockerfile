@@ -15,7 +15,7 @@ RUN apt-get install -y git
 RUN apt-get install -y curl
 RUN apt-get install -y wget
 
-WORKDIR /opt/sca/gpdb/worker
+WORKDIR /opt/sca/dgl/worker
 
 # RUN pip install -r [module]
 

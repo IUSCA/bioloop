@@ -57,7 +57,7 @@ exports.start = function (cb) {
   app.listen(port, host, function (err) {
     if (err) return cb(err);
     logger.info(
-      `gpdb-api service running on ${host}:${port} in mode ${app.settings.env}`
+      `dgl-api service running on ${host}:${port} in mode ${app.settings.env}`
     );
     cb(null);
   });
