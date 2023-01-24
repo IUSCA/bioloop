@@ -1,0 +1,7 @@
+{
+  "postgres": {
+    "hostname": "commons3.sca.iu.edu",
+    "db": "dgl_test",
+    "schema": "public"
+  }
+}

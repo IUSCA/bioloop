@@ -5,5 +5,13 @@
   },
   "logger": {
     "level": "debug"
+  },
+  "postgres": {
+    "hostname": "localhost",
+    "port": "5432",
+    "user": "dgluser",
+    "password": "",
+    "db": "dgl",
+    "schema": "dgl"
   }
 }

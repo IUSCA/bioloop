@@ -1,19 +1,20 @@
 create table batch
 (
-    id           bigint generated always as identity
+    id               integer generated always as identity
         primary key,
-    name         text                    not null,
-    directories  numeric,
-    files        numeric,
-    genome_files numeric,
-    du_size      numeric,
-    size         numeric,
-    description  text,
-    created_at   timestamp default now() not null,
-    updated_at   timestamp default now() not null,
-    origin_path  text,
-    archive_path text,
-    stage_path   text
+    name             text                    not null,
+    num_directories  numeric,
+    num_files        numeric,
+    num_genome_files numeric,
+    du_size          numeric,
+    size             numeric,
+    description      text,
+    created_at       timestamp default now() not null,
+    updated_at       timestamp default now() not null,
+    origin_path      text,
+    archive_path     text,
+    stage_path       text,
+    workflow_id      text
 );
 
 alter table batch
@@ -23,9 +24,9 @@ create table checksum
 (
     path     text not null,
     md5      text not null,
-    id       bigint generated always as identity
+    id       integer generated always as identity
         primary key,
-    batch_id bigint
+    batch_id integer
         constraint checksum_batch_fkey
             references batch
 );
