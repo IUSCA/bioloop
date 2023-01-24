@@ -1,113 +1,56 @@
 version: "3"
 services:
   ui:
-    container_name: gpdb_ui
-    image: node:14
+    container_name: dgl_ui
+    image: node:19
     volumes:
-      - ./ui/:/opt/sca/gpdb/ui/
-      - gpdb_ui_modules:/opt/sca/gpdb/ui/node_modules
-    ports:
-      - 127.0.0.1:443:443
-    working_dir: /opt/sca/gpdb/ui
+      - ./ui/:/opt/sca/dgl/ui/
+      - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
+    # ports:
+    #   - 127.0.0.1:443:443
+    working_dir: /opt/sca/dgl/ui
     command: sh -c "npm install && npm run dev"
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
-
-  api:
-    container_name: gpdb_api
-    image: node:14
-    volumes:
-      - ./api/:/opt/sca/gpdb/api/
-      - gpdb_api_modules:/opt/sca/gpdb/api/node_modules
-      - /tmp/restore/:/opt/sca/files/
-      - /tmp/feedback/:/opt/sca/feedback/
-    ports:
-      - 127.0.0.1:3030:3030
-    working_dir: /opt/sca/gpdb/api
-    command: sh -c "npm install && npx prisma db push && npx nodemon api.js"
-    depends_on:
-      - queue
 
   postgres:
-    container_name: gpdb_postgres
+    container_name: dgl_postgres
     image: postgres:14.5
-    restart: unless-stopped
+    # restart: unless-stopped
     environment:
-      - POSTGRES_USER=username
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=examlple
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
     ports:
       - 127.0.0.1:5432:5432
 
-  # mongo
-  #   # https://hub.docker.com/_/mongo
-  #   container_name: gpdb_mongo
-  #   image: mongo:5
-  #   restart: unless-stopped
-  #   # ports:
-  #   # helpful for using a GUI client like compass for troubleshooting
-  #   # - 127.0.0.1:27017:27017
-  #   #environment:
-  #   # MONGO_INITDB_ROOT_USERNAME: root
-  #   # MONGO_INITDB_ROOT_PASSWORD: example
-  #   volumes:
-  #     - ./db/db_mongo:/data/db
-  #     # for importing database files
-  #     # - ./db/mongodump:/opt/sca/gpdb/mongodump
-
-  search:
-    # https://docs.meilisearch.com/learn/cookbooks/docker.html
-    container_name: gpdb_search
-    image: getmeili/meilisearch:v0.29
-    # environment:
-    #   - http_proxy
-    #   - https_proxy
-    #   - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
-    #   - MEILI_NO_ANALYTICS=${MEILI_NO_ANALYTICS:-true}
-    #   - MEILI_ENV=${MEILI_ENV:-development}
-    #   - MEILI_LOG_LEVEL
-    #   - MEILI_DB_PATH=${MEILI_DB_PATH:-/data.ms}
-    # ports:
-    #   - ${MEILI_PORT:-7700}:7700
-    # networks:
-    #   - meilisearch
-    volumes:
-      - ./db/db_meilisearch/data.ms:/data.ms
-    restart: unless-stopped
-
-  queue:
-    # https://hub.docker.com/_/rabbitmq/
-    container_name: gpdb_queue
-    # includes web gui ?
-    image: rabbitmq:3-management
-    # image: rabbitmq:3
+  mongo:
+    # https://hub.docker.com/_/mongo
+    container_name: dgl_celery_mongo
+    image: mongo:5
     ports:
-      - 127.0.0.1:5672:5672
-      - 127.0.0.1:15672:15672
-    volumes:
-      - ./db/queue/data/:/var/lib/rabbitmq/
-      # - ./db/queue/log/:/var/log/rabbitmq/
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
     environment:
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
-
-  worker:
-    container_name: gpdb_worker
-    build:
-      context: ./worker/
-      dockerfile: Dockerfile
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
-      - ./worker/:/opt/sca/gpdb/
-      - /tmp/restore/:/opt/sca/files/
-    # restart: on-failure
-    depends_on:
-      - queue
-    entrypoint: [ "python3", "-u", "test.py" ]
-    #entrypoint: [ "tail", "-f", "/dev/null" ]
+      - ./db/db_mongo:/data/db
+      # for importing database files
+      # - ./db/mongodump:/opt/sca/dgl/mongodump
+
+  api:
+    container_name: dgl_api
+    image: node:19
+    volumes:
+      - ./api/:/opt/sca/dgl/api/
+      - dgl_api_modules:/opt/sca/dgl/api/node_modules
+    ports:
+      - 127.0.0.1:3030:3030
+    working_dir: /opt/sca/dgl/api
+    command: sh -c "npm install && npx nodemon api.js"
 
 volumes:
-  gpdb_ui_modules:
+  dgl_ui_modules:
     external: false
 
-  gpdb_api_modules:
+  dgl_api_modules:
     external: false

@@ -1,15 +1,15 @@
 version: "3"
 services:
-  # ui:
-  #   container_name: dgl_ui
-  #   image: node:19
-  #   volumes:
-  #     - ./ui/:/opt/sca/dgl/ui/
-  #     - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
-  #   ports:
-  #     - 127.0.0.1:443:443
-  #   working_dir: /opt/sca/dgl/ui
-  #   command: sh -c "npm install && npm run dev"
+  ui:
+    container_name: dgl_ui
+    image: node:19
+    volumes:
+      - ./ui/:/opt/sca/dgl/ui/
+      - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
+    # ports:
+    #   - 127.0.0.1:443:443
+    working_dir: /opt/sca/dgl/ui
+    command: sh -c "npm install && npm run dev"
 
   postgres:
     container_name: dgl_postgres
@@ -22,6 +22,35 @@ services:
     ports:
       - 127.0.0.1:5432:5432
 
+  mongo:
+    # https://hub.docker.com/_/mongo
+    container_name: dgl_celery_mongo
+    image: mongo:5
+    ports:
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./db/db_mongo:/data/db
+      # for importing database files
+      # - ./db/mongodump:/opt/sca/dgl/mongodump
+
+  api:
+    container_name: dgl_api
+    image: node:19
+    volumes:
+      - ./api/:/opt/sca/dgl/api/
+      - dgl_api_modules:/opt/sca/dgl/api/node_modules
+    ports:
+      - 127.0.0.1:3030:3030
+    working_dir: /opt/sca/dgl/api
+    command: sh -c "npm install && npx nodemon api.js"
+
 volumes:
   dgl_ui_modules:
+    external: false
+
+  dgl_api_modules:
     external: false
