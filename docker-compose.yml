@@ -44,7 +44,7 @@ services:
       - ./api/:/opt/sca/dgl/api/
       - dgl_api_modules:/opt/sca/dgl/api/node_modules
     ports:
-      - 127.0.0.1:3030:3030
+      - 3000:3030
     working_dir: /opt/sca/dgl/api
     command: sh -c "npm install && npx nodemon api.js"
 
