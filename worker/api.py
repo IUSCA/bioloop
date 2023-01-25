@@ -1,5 +1,6 @@
-import requests
 from urllib.parse import urljoin
+
+import requests
 
 from config import config
 
@@ -20,7 +21,7 @@ class APIServerSession(requests.Session):
 
 
 def get_all_batches(include_checksums=False):
-  return []
+    return []
     # with APIServerSession() as s:
     #     payload = {
     #         'include_checksums': int(include_checksums)

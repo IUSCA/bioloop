@@ -1,5 +1,4 @@
-import celery
-from celery import Celery, Task
+from celery import Celery
 
 import celeryconfig
 

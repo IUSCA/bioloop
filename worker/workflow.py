@@ -1,6 +1,6 @@
+import datetime
 import itertools
 import uuid
-import datetime
 
 import celery
 import celery.states
@@ -175,7 +175,6 @@ class Workflow:
             last_task_run = task_runs[-1]
             last_task_run['end_time'] = datetime.datetime.utcnow()
         self.update()
-
 
 
 class WorkflowTask(Task):  # noqa

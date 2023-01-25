@@ -1,49 +1,49 @@
 {
-    "source_node": "k2.compbio.iupui.edu",
-    "name": "221028_NB501714_0142_AH2YNKAFX5",
-    "paths": {
-        "origin": "/data/nextseq/221028_NB501714_0142_AH2YNKAFX5",
-        "archive": "archive_raw/221028_NB501714_0142_AH2YNKAFX5.tar"
+  "source_node": "k2.compbio.iupui.edu",
+  "name": "221028_NB501714_0142_AH2YNKAFX5",
+  "paths": {
+    "origin": "/data/nextseq/221028_NB501714_0142_AH2YNKAFX5",
+    "archive": "archive_raw/221028_NB501714_0142_AH2YNKAFX5.tar"
+  },
+  "events": [
+    {
+      "stamp": "2021-10-14T23:32:12.123Z",
+      "description": "registration - first noticed"
     },
-    "events": [
-        {
-            "stamp": "2021-10-14T23:32:12.123Z",
-            "description": "registration - first noticed"
-        },
-        {
-            "stamp": "2021-10-14T23:32:12.123Z",
-            "description": "registration - ready for processing"
-        },
-        {
-            "stamp": "",
-            "description": "inspection - start"
-        },
-        {
-            "stamp": "",
-            "description": "inspection - finish"
-        },
-        {
-            "stamp": "",
-            "description": "archive - start"
-        },
-        {
-            "stamp": "",
-            "description": "archive - finish"
-        }
-    ],
-    "directories": 31,
-    "files": 2452,
-    "cbcls": 664,
-    "size": 20027397028,
-    "checksums": [
-        {
-            "path": "Data/Intensities/BaseCalls/L001/0001.bcl.bgzf",
-            "md5": "e43a7e54657431f979dfd6c7d4311ee6"
-        }
-    ],
-    "takenAt": "2022-10-28T00:00:00.000+00:00",
-    "inspected": true,
-    "taken": "12345",
-    "du_size": 20027576570,
-    "archived": true
+    {
+      "stamp": "2021-10-14T23:32:12.123Z",
+      "description": "registration - ready for processing"
+    },
+    {
+      "stamp": "",
+      "description": "inspection - start"
+    },
+    {
+      "stamp": "",
+      "description": "inspection - finish"
+    },
+    {
+      "stamp": "",
+      "description": "archive - start"
+    },
+    {
+      "stamp": "",
+      "description": "archive - finish"
+    }
+  ],
+  "directories": 31,
+  "files": 2452,
+  "cbcls": 664,
+  "size": 20027397028,
+  "checksums": [
+    {
+      "path": "Data/Intensities/BaseCalls/L001/0001.bcl.bgzf",
+      "md5": "e43a7e54657431f979dfd6c7d4311ee6"
+    }
+  ],
+  "takenAt": "2022-10-28T00:00:00.000+00:00",
+  "inspected": true,
+  "taken": "12345",
+  "du_size": 20027576570,
+  "archived": true
 }
