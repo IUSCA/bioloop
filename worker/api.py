@@ -20,15 +20,16 @@ class APIServerSession(requests.Session):
 
 
 def get_all_batches(include_checksums=False):
-    with APIServerSession() as s:
-        payload = {
-            'include_checksums': int(include_checksums)
-        }
-        r = s.get('/batch', params=payload)
-        if r.status_code == 200:
-            return r.json()
-        else:
-            raise Exception('Server responded with non-200 code')
+  return []
+    # with APIServerSession() as s:
+    #     payload = {
+    #         'include_checksums': int(include_checksums)
+    #     }
+    #     r = s.get('/batch', params=payload)
+    #     if r.status_code == 200:
+    #         return r.json()
+    #     else:
+    #         raise Exception('Server responded with non-200 code')
 
 
 def get_batch(batch_id, include_checksums=False):

@@ -20,7 +20,8 @@ config = {
     'registration': {
         'source_dirs': ['/N/project/DG_Multiple_Myeloma/share'],
         'rejects': ['.snapshots'],
-        'wait_between_scans': 5*60
+        'wait_between_scans': 5*60,
+        'recency_threshold': 60*60
     }
    
 }

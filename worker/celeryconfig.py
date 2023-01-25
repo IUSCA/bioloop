@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()  # take environment variables from .env.
 
 
-password = os.environ['DGL_PASS']
+password = os.environ['MONGO_PASS']
 
 # https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/rabbitmq.html
 broker_url = f'amqp://dgl:{urllib.parse.quote(password)}@commons3.sca.iu.edu:5672/dgl-test'
