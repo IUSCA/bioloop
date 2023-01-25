@@ -1,6 +1,6 @@
+import datetime
 import itertools
 import uuid
-import datetime
 
 import celery
 import celery.states
@@ -27,6 +27,7 @@ class Workflow:
                 assert step['task'] in self.app.tasks, f'Task {step["task"]} is not registered in celery'
             self.workflow = {
                 '_id': str(uuid.uuid4()),
+                'start_date': datetime.datetime.utcnow(),
                 'steps': steps,
             }
             self.wf_col.insert_one(self.workflow)
@@ -102,7 +103,6 @@ class Workflow:
                 }
                 task.apply_async(task_inst['args'], kwargs)
                 print(f'starting step {step["name"]}')
-        pass
 
     def on_step_start(self, step_name, task_id):
         step = self.get_step(step_name)
@@ -126,7 +126,7 @@ class Workflow:
                 'workflow_id': self.workflow['_id'],
                 'step': next_step['name']
             }
-            next_task.apply_async((retval,), kwargs)
+            next_task.apply_async((retval[0],), kwargs)
             print(f'starting next step {next_step["name"]}')
 
     def get_step_status(self, step):
@@ -175,6 +175,38 @@ class Workflow:
             last_task_run = task_runs[-1]
             last_task_run['end_time'] = datetime.datetime.utcnow()
         self.update()
+
+    def refresh(self):
+        workflow_id = self.workflow['_id']
+        res = self.wf_col.find_one({'_id': workflow_id})
+        if res:
+            self.workflow = res
+        else:
+            raise Exception(f'Workflow with id {workflow_id} is not found')
+
+    def get_embellished_workflow(self):
+        self.refresh()
+        status = self.get_workflow_status()
+        pending_step_idx, pending_step_status = self.get_pending_step()
+        steps = []
+        for step in self.workflow['steps']:
+            emb_step = {
+                'name': step['name'],
+                'task': step['task'],
+                'last_task_run': self.get_task_instance(step)
+            }
+            steps.append(emb_step)
+
+        return {
+            '_id': self.workflow['_id'],
+            'start_date': self.workflow['start_date'],
+            'status': status,
+            'steps_done': pending_step_idx,
+            'total_steps': len(steps),
+            'pending_step': steps[pending_step_idx]['name'],
+            'steps': steps
+        }
+
 class WorkflowTask(Task):  # noqa
     # autoretry_for = (Exception,)  # retry for all exceptions
     # max_retries = 3

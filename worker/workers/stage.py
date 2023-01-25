@@ -1,16 +1,21 @@
-from pathlib import Path
-import tarfile
 import shutil
+import tarfile
+from pathlib import Path
+
+from celery import Celery
 
 import api
-from config import config
+import celeryconfig
 import sda
 import utils
+from config import config
 from workflow import WorkflowTask
-from celery_app import app
+
+app = Celery("tasks")
+app.config_from_object(celeryconfig)
 
 
-def get_batch_from_sda(batch):
+def get_batch_from_sda(celery_task, batch):
     """
     gets the tar from SDA and extracts it
 
@@ -34,7 +39,12 @@ def get_batch_from_sda(batch):
     if not tarfile_exists:
         # get the tarfile from SDA to scratch
         scratch_tar_path.unlink(missing_ok=True)
-        sda.get(source=sda_tar_path, target_dir=scratch_tar_path.parent)
+        source_size = sda.get_size(sda_tar_path)
+
+        with utils.track_progress_parallel(progress_fn=utils.file_progress,
+                                           progress_fn_args=(celery_task, scratch_tar_path, source_size, 'sda_get')):
+            sda.get(source=sda_tar_path, target_dir=scratch_tar_path.parent)
+
         # after getting the file from SDA, validate the checksum
         scratch_digest = utils.checksum(scratch_tar_path)
         if sda_digest != scratch_digest:
@@ -56,14 +66,14 @@ def get_batch_from_sda(batch):
 
 # celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
-def stage_batch(celery_app, batch_id, **kwargs):
+def stage_batch(celery_task, batch_id, **kwargs):
     batch = api.get_batch(batch_id=batch_id)
-    extracted_dir_name = get_batch_from_sda(batch)
+    extracted_dir_name = get_batch_from_sda(celery_task, batch)
     update_data = {
-        'stage_path':  extracted_dir_name
+        'stage_path': extracted_dir_name
     }
     api.update_batch(batch_id=batch_id, update_data=update_data)
-    return batch_id
+    return batch_id,
 
 
 if __name__ == '__main__':

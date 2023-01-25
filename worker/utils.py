@@ -1,12 +1,14 @@
 import hashlib
 import os
-from subprocess import Popen, PIPE
 import subprocess
+import time
+from contextlib import contextmanager
+from pathlib import Path
+from subprocess import Popen, PIPE
+
 # import multiprocessing
 # https://stackoverflow.com/questions/30624290/celery-daemonic-processes-are-not-allowed-to-have-children
 import billiard as multiprocessing
-from contextlib import contextmanager
-import time
 
 
 def checksum(fname):
@@ -94,3 +96,10 @@ def progress(name, done, total=None):
         'total': total,
         'units': 'bytes',
     }
+
+
+def file_progress(celery_task, path, total, progress_name):
+    size = Path(path).stat().st_size
+    name = f'{celery_task.name}.{progress_name}.progress'
+    r = progress(name=name, done=size, total=total)
+    celery_task.update_progress(r)

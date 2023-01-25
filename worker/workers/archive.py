@@ -1,12 +1,17 @@
 import tarfile
 from pathlib import Path
 
+from celery import Celery
+
 import api
+import celeryconfig
 import sda
 import utils
-from celery_app import app
 from config import config
 from workflow import WorkflowTask
+
+app = Celery("tasks")
+app.config_from_object(celeryconfig)
 
 
 def make_tarfile(celery_task, tarfile_name, source_dir, source_size):
@@ -17,18 +22,11 @@ def make_tarfile(celery_task, tarfile_name, source_dir, source_size):
     if tar_path.exists():
         tar_path.unlink()
 
-    with utils.track_progress_parallel(progress_fn=tar_progress,
-                                       progress_fn_args=(celery_task, tar_path, source_size)):
+    with utils.track_progress_parallel(progress_fn=utils.file_progress,
+                                       progress_fn_args=(celery_task, tar_path, source_size, 'tar')):
         with tarfile.open(tar_path, 'w') as tar:
             tar.add(str(source_dir), arcname=tarfile_name, recursive=True)
     return tar_path
-
-
-def tar_progress(celery_task, tar_path, total_size):
-    size = Path(tar_path).stat().st_size
-    name = f'{celery_task.name}.tar'
-    r = utils.progress(name=name, done=size, total=total_size)
-    celery_task.update_progress(r)
 
 
 def hsi_put_progress(celery_task, sda_path, total_size):
@@ -38,7 +36,7 @@ def hsi_put_progress(celery_task, sda_path, total_size):
     celery_task.update_progress(r)
 
 
-# celery -A celery_ap worker --concurrency 4
+# celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
 def archive_batch(celery_task, batch_id, **kwargs):
     batch = api.get_batch(batch_id=batch_id)
@@ -71,7 +69,7 @@ def archive_batch(celery_task, batch_id, **kwargs):
     }
     api.update_batch(batch_id=batch_id, update_data=update_data)
 
-    return batch_id
+    return batch_id,
 
 # def tar_task(self, batch, **kwargs):
 #     # batch = {

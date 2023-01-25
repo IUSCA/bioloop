@@ -2,21 +2,26 @@ import socket
 import time
 from pathlib import Path
 
+from celery import Celery
+
 import api
-from celery_app import app as celery_app
+import celeryconfig
 from config import config
 from workflow import Workflow
 
-
-def has_recent_activity(dir_path, recency_threshold=3600):
-    # has anything been modified in the specified directory recently?
-    last_update_time = max([p.stat().st_mtime for p in dir_path.iterdir()], default=time.time())
-    return time.time() - last_update_time <= recency_threshold
+celery_app = Celery("tasks")
+celery_app.config_from_object(celeryconfig)
 
 
 def get_registered_batch_paths():
     batches = api.get_all_batches()
     return [b.origin_path for b in batches]
+
+
+def has_no_recent_activity(dir_path):
+    # has anything been modified in the specified directory recently?
+    last_update_time = max([p.stat().st_mtime for p in dir_path.iterdir()], default=time.time())
+    return time.time() - last_update_time > config['registration']['recency_threshold']
 
 
 class Registration:
@@ -47,23 +52,21 @@ class Registration:
 
     def register(self):
         while True:
-            if self.candidates:
-                for candidate in self.candidates:
-                    if not has_recent_activity(candidate):
-                        self.register_candidate(candidate)
-                        self.completed.add(candidate)
-                        self.candidates.remove(candidate)
-            else:
-                time.sleep(config['registration']['wait_between_scans'])
-                self.scan()
+            while len(self.candidates) > 0:
+                candidate = next(iter(self.candidates))
+                if has_no_recent_activity(candidate):
+                    self.register_candidate(candidate)
+                    self.completed.add(str(candidate))
+                    self.candidates.remove(candidate)
+
+            time.sleep(config['registration']['wait_between_scans'])
+            self.scan()
 
     def scan(self):
-        candidates = set()
         for source_dir in self.source_dirs:
             for p in source_dir.iterdir():
-                if p.is_dir() and (str(p) not in self.completed):
-                    candidates.add(p)
-        return candidates
+                if p.is_dir() and (p.name not in self.rejects) and (str(p) not in self.completed):
+                    self.candidates.add(p)
 
     def register_candidate(self, candidate):
         wf = Workflow(celery_app=celery_app, steps=self.steps)
@@ -75,3 +78,8 @@ class Registration:
         # HTTP POST
         created_batch = api.create_batch(batch)
         wf.start(created_batch.id)
+
+
+if __name__ == '__main__':
+    r = Registration()
+    r.register()
