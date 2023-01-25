@@ -27,7 +27,7 @@ class Workflow:
                 assert step['task'] in self.app.tasks, f'Task {step["task"]} is not registered in celery'
             self.workflow = {
                 '_id': str(uuid.uuid4()),
-                'start_date': datetime.datetime.utcnow(),
+                'created_at': datetime.datetime.utcnow(),
                 'steps': steps,
             }
             self.wf_col.insert_one(self.workflow)
@@ -39,6 +39,7 @@ class Workflow:
         Update the workflow object in mongo db
         :return: None
         """
+        self.workflow['updated_at'] = datetime.datetime.utcnow()
         self.wf_col.update_one({'_id': self.workflow['_id']}, {'$set': self.workflow})
 
     def start(self, *args, **kwargs):
@@ -58,16 +59,18 @@ class Workflow:
         skip_one_it = itertools.islice(it, 1, None)
         return next(skip_one_it, None)
 
-    def get_task_instance(self, step):
+    def get_task_instance(self, task_id):
+        col = self.app.backend.collection
+        return col.find_one({'_id': task_id})
+
+    def get_last_run_task_instance(self, step):
         """
         returns the latest task instance (task object) from the step object
         """
         task_runs = step['task_runs']
         if task_runs is not None and len(task_runs) > 0:
             task_id = task_runs[-1]['task_id']
-            col = self.app.backend.collection
-            task_rec = col.find_one({'_id': task_id})
-            return task_rec
+            return self.get_task_instance(task_id)
 
     def pause(self):
         # find running task
@@ -95,7 +98,7 @@ class Workflow:
                 task = self.app.tasks[step['task']]
 
                 # failed / revoked task instance
-                task_inst = self.get_task_instance(step)
+                task_inst = self.get_last_run_task_instance(step)
 
                 kwargs = {
                     'workflow_id': self.workflow['_id'],
@@ -184,26 +187,33 @@ class Workflow:
         else:
             raise Exception(f'Workflow with id {workflow_id} is not found')
 
-    def get_embellished_workflow(self):
+    def get_embellished_workflow(self, include_task_details=True):
         self.refresh()
         status = self.get_workflow_status()
-        pending_step_idx, pending_step_status = self.get_pending_step()
+        pending_step_idx, pending_step_status = self.get_pending_step() or (None, None)
         steps = []
         for step in self.workflow['steps']:
             emb_step = {
                 'name': step['name'],
                 'task': step['task'],
-                'last_task_run': self.get_task_instance(step)
+                'start_time': step.get('start_time', None),
+                'end_time': step.get('end_time', None),
+                'status': self.get_step_status(step)
             }
+            if include_task_details:
+                emb_step['last_task_run'] = self.get_last_run_task_instance(step),
+                emb_step['prev_task_runs'] = [
+                    self.get_task_instance(t['task_id']) for t in step.get('task_runs', [])[:-1]
+                ]
             steps.append(emb_step)
 
         return {
-            '_id': self.workflow['_id'],
-            'start_date': self.workflow['start_date'],
+            'id': self.workflow['_id'],
+            'created_at': self.workflow.get('created_at', None),
+            'updated_at': self.workflow.get('created_at', None),
             'status': status,
-            'steps_done': pending_step_idx,
+            'steps_done': pending_step_idx or len(steps),
             'total_steps': len(steps),
-            'pending_step': steps[pending_step_idx]['name'],
             'steps': steps
         }
 
