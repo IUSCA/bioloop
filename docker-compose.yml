@@ -43,10 +43,15 @@ services:
     volumes:
       - ./api/:/opt/sca/dgl/api/
       - dgl_api_modules:/opt/sca/dgl/api/node_modules
-    ports:
-      - 3000:3030
+    expose:
+      - 3030
+    # ports:
+      # - 127.0.0.1:3000:3030
     working_dir: /opt/sca/dgl/api
     command: sh -c "npm install && npx nodemon api.js"
+    networks:
+      dgl_network:
+        ipv4_address: 172.19.0.2
 
 volumes:
   dgl_ui_modules:
@@ -54,3 +59,9 @@ volumes:
 
   dgl_api_modules:
     external: false
+
+networks:
+  dgl_network:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
