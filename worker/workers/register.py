@@ -2,12 +2,13 @@ import socket
 import time
 from pathlib import Path
 
+from celery import Celery
+
 import api
+import celeryconfig
 from config import config
 from workflow import Workflow
 
-from celery import Celery, Task
-import celeryconfig
 celery_app = Celery("tasks")
 celery_app.config_from_object(celeryconfig)
 
@@ -15,6 +16,12 @@ celery_app.config_from_object(celeryconfig)
 def get_registered_batch_paths():
     batches = api.get_all_batches()
     return [b.origin_path for b in batches]
+
+
+def has_no_recent_activity(dir_path):
+    # has anything been modified in the specified directory recently?
+    last_update_time = max([p.stat().st_mtime for p in dir_path.iterdir()], default=time.time())
+    return time.time() - last_update_time > config['registration']['recency_threshold']
 
 
 class Registration:
@@ -47,7 +54,7 @@ class Registration:
         while True:
             while len(self.candidates) > 0:
                 candidate = next(iter(self.candidates))
-                if self.has_no_recent_activity(candidate):
+                if has_no_recent_activity(candidate):
                     self.register_candidate(candidate)
                     self.completed.add(str(candidate))
                     self.candidates.remove(candidate)
@@ -61,11 +68,6 @@ class Registration:
                 if p.is_dir() and (p.name not in self.rejects) and (str(p) not in self.completed):
                     self.candidates.add(p)
 
-    def has_no_recent_activity(self, dir_path):
-        # has anything been modified in the specified directory recently?
-        last_update_time = max([p.stat().st_mtime for p in dir_path.iterdir()], default=time.time())
-        return time.time() - last_update_time > config['registration']['recency_threshold']
-
     def register_candidate(self, candidate):
         wf = Workflow(celery_app=celery_app, steps=self.steps)
         batch = {
@@ -77,6 +79,7 @@ class Registration:
         created_batch = api.create_batch(batch)
         wf.start(created_batch.id)
 
-if __name__=='__main__':
-  r = Registration()
-  r.register()
+
+if __name__ == '__main__':
+    r = Registration()
+    r.register()

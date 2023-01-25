@@ -126,7 +126,7 @@ class Workflow:
                 'workflow_id': self.workflow['_id'],
                 'step': next_step['name']
             }
-            next_task.apply_async((retval,), kwargs)
+            next_task.apply_async((retval[0],), kwargs)
             print(f'starting next step {next_step["name"]}')
 
     def get_step_status(self, step):
@@ -175,6 +175,9 @@ class Workflow:
             last_task_run = task_runs[-1]
             last_task_run['end_time'] = datetime.datetime.utcnow()
         self.update()
+
+
+
 class WorkflowTask(Task):  # noqa
     # autoretry_for = (Exception,)  # retry for all exceptions
     # max_retries = 3

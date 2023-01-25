@@ -1,10 +1,15 @@
 from pathlib import Path
 
+from celery import Celery
+
+import api
+import celeryconfig
 import utils
 from config import config
 from workflow import WorkflowTask
-from celery_app import app
-import api
+
+app = Celery("tasks")
+app.config_from_object(celeryconfig)
 
 
 def generate_metadata(source):
@@ -61,7 +66,7 @@ def inspect_batch(self, batch_id, **kwargs):
     api.update_batch(batch_id=batch_id, update_data=update_data)
     api.add_checksums_to_batch(batch_id=batch_id, checksums=metadata)
 
-    return batch_id
+    return batch_id,
 
 
 if __name__ == '__main__':
