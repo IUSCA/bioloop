@@ -10,11 +10,11 @@ datasource db {
 model batch {
   id               Int        @id @default(autoincrement())
   name             String
-  num_directories  Decimal?   @db.Decimal
-  num_files        Decimal?   @db.Decimal
-  num_genome_files Decimal?   @db.Decimal
-  du_size          Decimal?   @db.Decimal
-  size             Decimal?   @db.Decimal
+  num_directories  Int?
+  num_files        Int?
+  num_genome_files Int?
+  du_size          BigInt?
+  size             BigInt?
   description      String?
   created_at       DateTime   @default(now()) @db.Timestamp(6)
   updated_at       DateTime   @default(now()) @db.Timestamp(6)

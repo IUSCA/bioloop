@@ -14,12 +14,25 @@ router.get(
   '/',
   query('include_checksums').toBoolean().default(false),
   validator(async (req, res, next) => {
+    // only select path and md5 columns from the checksum table if include_checksums is true
+    const checksumSelect = req.query.include_checksums ? {
+      select: {
+        path: true,
+        md5: true,
+      },
+    } : false;
     const batches = await prisma.batch.findMany({
       include: {
-        checksum: req.query.include_checksums,
+        checksum: checksumSelect,
       },
     });
-    res.json(batches);
+    // rename checksum property to metadata
+    const result = batches.map((batch) => {
+      const { checksum, ...rest } = batch;
+      rest.metadata = checksum;
+      return rest;
+    });
+    res.json(result);
   }),
 );
 
@@ -28,16 +41,28 @@ router.get(
   param('id').isInt().toInt(),
   query('include_checksums').toBoolean().default(false),
   validator(async (req, res, next) => {
+    // only select path and md5 columns from the checksum table if include_checksums is true
+    const checksumSelect = req.query.include_checksums ? {
+      select: {
+        path: true,
+        md5: true,
+      },
+    } : false;
     const batch = await prisma.batch.findFirst({
       where: {
         id: req.params.id,
       },
       include: {
-        checksum: req.query.include_checksums,
+        checksum: checksumSelect,
       },
     });
 
-    if (batch) { res.json(batch); } else { next(createError(404)); }
+    if (batch) {
+      // rename checksum property to metadata
+      const { checksum, ...rest } = batch;
+      rest.metadata = checksum;
+      res.json(rest);
+    } else { next(createError(404)); }
   }),
 );
 

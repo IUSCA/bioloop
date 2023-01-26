@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv-safe').config();
 const config = require('config');
 const process = require('process');
 
@@ -17,3 +17,9 @@ function makeDatabaseUrl() {
 const dbUrl = makeDatabaseUrl();
 // console.log(dbUrl);
 process.env.DATABASE_URL = dbUrl;
+
+// Postgres columns can be of BigInt type for which serialization is not defined
+// eslint-disable-next-line no-extend-native, func-names
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
