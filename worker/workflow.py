@@ -78,11 +78,11 @@ class Workflow:
         task = col.find_one({'_id': task_id})
         if task is not None:
             task['date_start'] = date_start
-            if 'result' in task:
+            if 'result' in task and task['result'] is not None:
                 try:
                     task['result'] = json.loads(task['result'])
                 except Exception as e:
-                    print('unable to parse result json', e, task)
+                    print('unable to parse result json', e, task['_id'], task['result'])
 
         return task
 

@@ -3,6 +3,7 @@ from urllib.parse import urljoin
 import requests
 
 from config import config
+import utils
 
 
 # https://stackoverflow.com/a/51026159/2580077
@@ -16,6 +17,13 @@ class APIServerSession(requests.Session):
         joined_url = urljoin(self.base_url, url)
         return super().request(method, joined_url, *args, **kwargs)
 
+def parse_batch(batch):
+    # convert du_size and size from string to int
+    if batch is not None:
+        batch['du_size'] = utils.parse_int(batch.get('du_size', None))
+        batch['size'] = utils.parse_int(batch.get('size', None))
+    return batch
+
 
 def get_all_batches(include_checksums=False):
     with APIServerSession() as s:
@@ -24,7 +32,8 @@ def get_all_batches(include_checksums=False):
         }
         r = s.get('/batch', params=payload)
         if r.status_code == 200:
-            return r.json()
+            batches = r.json()
+            return [parse_batch(batch) for batch in batches]
         else:
             raise Exception('Server responded with non-200 code')
 
@@ -36,7 +45,7 @@ def get_batch(batch_id, include_checksums=False):
         }
         r = s.get(f'/batch/{batch_id}', params=payload)
         if r.status_code == 200:
-            return r.json()
+            return parse_batch(r.json())
         else:
             raise Exception('Server responded with non-200 code')
 

@@ -2,20 +2,15 @@ import socket
 import time
 from pathlib import Path
 
-from celery import Celery
-
 import api
-import celeryconfig
 from config import config
 from workflow import Workflow
-
-celery_app = Celery("tasks")
-celery_app.config_from_object(celeryconfig)
+from celery_app import app as celery_app
 
 
 def get_registered_batch_paths():
     batches = api.get_all_batches()
-    return [b.origin_path for b in batches]
+    return [b['origin_path'] for b in batches]
 
 
 def has_no_recent_activity(dir_path):
@@ -59,25 +54,29 @@ class Registration:
                     self.completed.add(str(candidate))
                     self.candidates.remove(candidate)
 
-            time.sleep(config['registration']['wait_between_scans'])
+            sleep_duration = config['registration']['wait_between_scans']
+            print(f'sleeping for {sleep_duration} seconds')
+            time.sleep(sleep_duration)
             self.scan()
 
     def scan(self):
         for source_dir in self.source_dirs:
             for p in source_dir.iterdir():
                 if p.is_dir() and (p.name not in self.rejects) and (str(p) not in self.completed):
+                    print(f'found new candidate: {p}')
                     self.candidates.add(p)
 
     def register_candidate(self, candidate):
+        print(f'registering {candidate}')
         wf = Workflow(celery_app=celery_app, steps=self.steps)
         batch = {
             'name': candidate.name,
             'origin_path': str(candidate.resolve()),
-            'workflow_id': wf.workflow._id
+            'workflow_id': wf.workflow['_id']
         }
         # HTTP POST
         created_batch = api.create_batch(batch)
-        wf.start(created_batch.id)
+        wf.start(created_batch['id'])
 
 
 if __name__ == '__main__':

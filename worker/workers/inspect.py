@@ -26,14 +26,14 @@ def generate_metadata(source):
     # TODO: all the files and directories under source should be readable
     # TODO: what is the exception raised if rglob fails because of file permission issue?
     # TODO: what is the exception raised by open if the file is not readable?
-    num_files, num_directories, size, cbcls = 0, 0, 0, 0
+    num_files, num_directories, size, num_genome_files = 0, 0, 0, 0
     metadata = []
     for p in source.rglob('*'):
         if p.is_file():
             num_files += 1
             size += p.stat().st_size
             if ''.join(p.suffixes) in config['genome_file_types']:
-                cbcls += 1
+                num_genome_files += 1
                 # with open(p, 'rb') as f:
                 #     digest = hashlib.file_digest(f, 'md5')
                 hex_digest = utils.checksum(p)
@@ -45,7 +45,7 @@ def generate_metadata(source):
         elif p.is_dir():
             num_directories += 1
 
-    return num_files, num_directories, size, cbcls, metadata
+    return num_files, num_directories, size, num_genome_files, metadata
 
 
 # celery -A celery_app worker --concurrency 4
