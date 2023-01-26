@@ -32,11 +32,9 @@ def check_files(batch_dir, files_metadata):
 # celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
 def validate_batch(celery_app, batch_id, **kwargs):
-    batch = api.get_batch(batch_id=batch_id)
-    validation_errors = check_files(batch_dir=batch['paths']['staged'],
+    batch = api.get_batch(batch_id=batch_id, include_checksums=True)
+    validation_errors = check_files(batch_dir=batch['stage_path'],
                                     files_metadata=batch['metadata'])
-    # TODO: what to do if the checksums do not match?
-
     return batch_id, validation_errors
 
 

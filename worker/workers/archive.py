@@ -43,7 +43,7 @@ def archive_batch(celery_task, batch_id, **kwargs):
     # Tar the batch directory and compute checksum
     scratch_tar_path = make_tarfile(celery_task=celery_task,
                                     tarfile_name=batch['name'],
-                                    source_dir=batch['paths']['origin'],
+                                    source_dir=batch['origin_path'],
                                     source_size=batch['du_size'])
     scratch_digest = utils.checksum(scratch_tar_path)
 

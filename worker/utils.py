@@ -103,3 +103,12 @@ def file_progress(celery_task, path, total, progress_name):
     name = f'{celery_task.name}.{progress_name}.progress'
     r = progress(name=name, done=size, total=total)
     celery_task.update_progress(r)
+
+
+def parse_int(x, default=None):
+  if x is None:
+    return x
+  try:
+    return int(x)
+  except ValueError:
+    return default
