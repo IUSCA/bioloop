@@ -26,7 +26,7 @@ def get_boolean_query(req, name, default=False):
     return req.args.get(name, default, type=lambda v: v.lower() == 'true')
 
 
-@app.route('/', methods=['GET'])
+@app.route('/workflow', methods=['GET'])
 def get_all_workflows():
     last_task_run = get_boolean_query(request, 'last_task_run')
     prev_task_runs = get_boolean_query(request, 'prev_task_runs')
@@ -39,7 +39,7 @@ def get_all_workflows():
     return jsonify(response)
 
 
-@app.route('/<workflow_id>', methods=['GET'])
+@app.route('/workflow/<workflow_id>', methods=['GET'])
 def get_workflow(workflow_id):
     last_task_run = get_boolean_query(request, 'last_task_run')
     prev_task_runs = get_boolean_query(request, 'prev_task_runs')
@@ -47,21 +47,24 @@ def get_workflow(workflow_id):
     return jsonify(wf.get_embellished_workflow(last_task_run=last_task_run, prev_task_runs=prev_task_runs))
 
 
-@app.route('/', methods=['POST'])
+@app.route('/workflow', methods=['POST'])
 def create_workflow():
-    steps = request.json
-    wf = Workflow(celery_app=celery_app, steps=steps)
-    return jsonify({'workflow_id': wf.workflow.workflow_id})
+    body = request.json
+    if 'steps' not in body:
+        return "invalid request body", 400
+    wf = Workflow(celery_app=celery_app, steps=body['steps'])
+    wf.start()
+    return jsonify({'workflow_id': wf.workflow['_id']})
 
 
-@app.route('/<workflow_id>/pause', methods=['POST'])
+@app.route('/workflow/<workflow_id>/pause', methods=['POST'])
 def pause_workflow(workflow_id):
     wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
     status = wf.pause()
     return jsonify(status)
 
 
-@app.route('/<workflow_id>/resume', methods=['POST'])
+@app.route('/workflow/<workflow_id>/resume', methods=['POST'])
 def resume_workflow(workflow_id):
     wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
     status = wf.resume()

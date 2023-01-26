@@ -5,9 +5,6 @@ import requests
 from config import config
 
 
-# session = requests.Session()
-# session.auth = (utils['api']['username'], utils['api']['password'])
-
 # https://stackoverflow.com/a/51026159/2580077
 class APIServerSession(requests.Session):
     def __init__(self):
