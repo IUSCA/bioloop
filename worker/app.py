@@ -1,10 +1,11 @@
 from datetime import datetime, date
 
-from flask import Flask, request, jsonify, request
+from flask import Flask, request, jsonify
 from flask.json.provider import DefaultJSONProvider
 
 from celery_app import app as celery_app
 from workflow import Workflow
+
 
 # jsonify - serialize datetime objects into yyyy-mm-ddTHH:mm:ssssss
 # https://stackoverflow.com/a/74618781/2580077
@@ -14,13 +15,16 @@ class UpdatedJSONProvider(DefaultJSONProvider):
             return o.isoformat()
         return super().default(o)
 
+
 app = Flask(__name__)
 app.json = UpdatedJSONProvider(app)
 db = celery_app.backend.database
 wf_col = db.get_collection('workflow_meta')
 
-def get_boolean_query(request, name, default=False):
-    return request.args.get(name, default, type=lambda v: v.lower() == 'true')
+
+def get_boolean_query(req, name, default=False):
+    return req.args.get(name, default, type=lambda v: v.lower() == 'true')
+
 
 @app.route('/', methods=['GET'])
 def get_all_workflows():
@@ -31,7 +35,7 @@ def get_all_workflows():
     for res in results:
         workflow_id = res['_id']
         wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
-        response.append(wf.get_embellished_workflow(last_task_run=include_task_details, prev_task_runs=prev_task_runs))
+        response.append(wf.get_embellished_workflow(last_task_run=last_task_run, prev_task_runs=prev_task_runs))
     return jsonify(response)
 
 

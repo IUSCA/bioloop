@@ -4,7 +4,7 @@ import celeryconfig
 from workflow import Workflow
 
 # import all the tasks that the workflow requires
-import tasksA
+
 # import workers.archive
 # import workers.inspect
 # import workers.stage
@@ -18,19 +18,19 @@ print('\n'.join(app.tasks.keys()))
 
 # task1.apply_async(('batch-123', ))
 steps = [
-        {
-            'name': 'inspect',
-            'task': 'tasksA.task1'
-        },
-        {
-            'name': 'archive',
-            'task': 'tasksA.task2'
-        },
-        {
-            'name': 'stage',
-            'task': 'tasksA.task3'
-        }
-    ]
+    {
+        'name': 'inspect',
+        'task': 'tasksA.task1'
+    },
+    {
+        'name': 'archive',
+        'task': 'tasksA.task2'
+    },
+    {
+        'name': 'stage',
+        'task': 'tasksA.task3'
+    }
+]
 
 wf = Workflow(app, steps=steps)
 wf.start('batch-id-test')

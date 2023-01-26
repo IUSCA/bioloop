@@ -2,12 +2,13 @@ import os
 import time
 
 from celery import Celery
-import celeryconfig
 
+import celeryconfig
 from workflow import WorkflowTask
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
+
 
 @app.task(base=WorkflowTask, bind=True)
 def task1(self, dataset_id, **kwargs):
@@ -15,14 +16,15 @@ def task1(self, dataset_id, **kwargs):
     time.sleep(1)
     return dataset_id, {'return_obj': 'foo'}
 
+
 @app.task(base=WorkflowTask, bind=True)
 def task2(self, dataset_id, **kwargs):
     print(f'task - {os.getpid()} 2 starts with {dataset_id}')
-    i=0
-    while i < 10*60:
-      i=i+1
-      print(i)
-      time.sleep(1)
+    i = 0
+    while i < 10 * 60:
+        i = i + 1
+        print(i)
+        time.sleep(1)
     return dataset_id,
 
 

@@ -1,15 +1,17 @@
 import datetime
 import itertools
+import json
 import uuid
 from collections import Counter
-import json
 
 import celery
 import celery.states
 from celery import Task
 
+
 def duplicates(items):
     return list((Counter(items) - Counter(set(items))).keys())
+
 
 class Workflow:
     def __init__(self, celery_app, workflow_id=None, steps=None):
@@ -31,7 +33,8 @@ class Workflow:
                 assert 'name' in step, f'step - {i} does not have "name" key'
                 assert len(step['name']) > 0, f'step - {i} name is empty'
                 assert 'task' in step, f'step - {i} does not have "task" key'
-                assert step['task'] in self.app.tasks, f'step - {i} Task {step["task"]} is not registered in the celery application'
+                assert step['task'] in self.app.tasks, \
+                    f'step - {i} Task {step["task"]} is not registered in the celery application'
             names = [step['name'] for step in steps]
             duplicate_names = duplicates(names)
             assert len(duplicate_names) == 0, f'Steps with duplicate names: {duplicate_names}'
@@ -74,12 +77,12 @@ class Workflow:
         col = self.app.backend.collection
         task = col.find_one({'_id': task_id})
         if task is not None:
-          task['date_start'] = date_start
-          if 'result' in task:
-            try:
-              task['result'] = json.loads(task['result'])
-            except Exception as e:
-              print('unable to parse result json', e, task)
+            task['date_start'] = date_start
+            if 'result' in task:
+                try:
+                    task['result'] = json.loads(task['result'])
+                except Exception as e:
+                    print('unable to parse result json', e, task)
 
         return task
 
@@ -107,16 +110,16 @@ class Workflow:
                     self.app.control.revoke(task_id, terminate=True)
                     print(f'revoked task: {task_id} in step-{i + 1} {step["name"]}')
                     return {
-                      'paused': True,
-                      'revoked_step': {
-                        'task_id': task_id,
-                        'task': step['task'],
-                        'name': step['name']
-                      }
-                      
+                        'paused': True,
+                        'revoked_step': {
+                            'task_id': task_id,
+                            'task': step['task'],
+                            'name': step['name']
+                        }
+
                     }
         return {
-          'paused': False
+            'paused': False
         }
 
     def resume(self):
@@ -139,14 +142,14 @@ class Workflow:
                 task.apply_async(task_inst['args'], kwargs)
                 print(f'resuming step {step["name"]}')
                 return {
-                  'resumed': True,
-                  'restarted_step': {
-                    'name': step['name'],
-                    'task': step['task']
-                  }
+                    'resumed': True,
+                    'restarted_step': {
+                        'name': step['name'],
+                        'task': step['task']
+                    }
                 }
         return {
-          'resumed': False
+            'resumed': False
         }
 
     def on_step_start(self, step_name, task_id):
@@ -244,7 +247,8 @@ class Workflow:
                 emb_step['last_task_run'] = self.get_last_run_task_instance(step)
             if prev_task_runs:
                 emb_step['prev_task_runs'] = [
-                    self.get_task_instance(t['task_id'], t.get('date_start', None)) for t in step.get('task_runs', [])[:-1]
+                    self.get_task_instance(t['task_id'], t.get('date_start', None)) for t in
+                    step.get('task_runs', [])[:-1]
                 ]
             steps.append(emb_step)
 
@@ -257,6 +261,7 @@ class Workflow:
             'total_steps': len(steps),
             'steps': steps
         }
+
 
 class WorkflowTask(Task):  # noqa
     # autoretry_for = (Exception,)  # retry for all exceptions
