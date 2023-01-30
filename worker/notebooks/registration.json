@@ -1,0 +1,23 @@
+{
+  "source_node": "k2.compbio.iupui.edu",
+  "name": "221028_NB501714_0142_AH2YNKAFX5",
+  "paths": {
+    "origin": "/data/nextseq/221028_NB501714_0142_AH2YNKAFX5"
+  },
+  "events": [
+    {
+      "stamp": "2021-10-14T23:32:12.123Z",
+      "description": "registration - first noticed"
+    },
+    {
+      "stamp": "2021-10-14T23:32:12.123Z",
+      "description": "registration - ready for processing"
+    }
+  ],
+  "directories": 0,
+  "files": 0,
+  "cbcls": 0,
+  "size": 0,
+  "checksums": [],
+  "takenAt": "2022-10-28T00:00:00.000+00:00"
+}

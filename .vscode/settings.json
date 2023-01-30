@@ -1,5 +1,16 @@
 {
-  "cSpell.words": ["vite", "vitest", "vueuse", "pinia", "iconify", "vitejs", "unplugin" ],
+  "cSpell.words": [
+    "celeryconfig",
+    "iconify",
+    "jsonify",
+    "pinia",
+    "traceback",
+    "unplugin",
+    "vite",
+    "vitejs",
+    "vitest",
+    "vueuse"
+  ],
   "i18n-ally.sourceLanguage": "en",
   "i18n-ally.keystyle": "nested",
   "i18n-ally.localesPaths": "locales",
@@ -8,6 +19,7 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
   },
+  "eslint.validate": ["javascript"],
   "files.associations": {
     "*.css": "postcss"
   },

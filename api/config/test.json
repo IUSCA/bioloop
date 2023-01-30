@@ -1,0 +1,10 @@
+{
+  "express": {
+    "host": "0.0.0.0"
+  },
+  "postgres": {
+    "hostname": "commons3.sca.iu.edu",
+    "db": "dgl_test",
+    "schema": "public"
+  }
+}

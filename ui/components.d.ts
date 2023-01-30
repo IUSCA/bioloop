@@ -12,5 +12,6 @@ declare module '@vue/runtime-core' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
+    StepProgress: typeof import('./src/components/StepProgress.vue')['default']
   }
 }

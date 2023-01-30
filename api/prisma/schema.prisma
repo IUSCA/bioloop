@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model batch {
+  id               Int        @id @default(autoincrement())
+  name             String
+  num_directories  Int?
+  num_files        Int?
+  num_genome_files Int?
+  du_size          BigInt?
+  size             BigInt?
+  description      String?
+  created_at       DateTime   @default(now()) @db.Timestamp(6)
+  updated_at       DateTime   @default(now()) @db.Timestamp(6)
+  origin_path      String?
+  archive_path     String?
+  stage_path       String?
+  workflow_id      String?
+  checksum         checksum[]
+}
+
+model checksum {
+  path     String
+  md5      String
+  id       Int    @id @default(autoincrement())
+  batch_id Int?
+  batch    batch? @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "checksum_batch_fkey")
+}
