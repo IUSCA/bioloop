@@ -9,7 +9,7 @@ from scaworkers.workflow import WorkflowTask
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
-
+# celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
 def task1(self, dataset_id, **kwargs):
     print(f'task - {os.getpid()} 1 starts with {dataset_id}')

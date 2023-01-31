@@ -106,9 +106,9 @@ def file_progress(celery_task, path, total, progress_name):
 
 
 def parse_int(x, default=None):
-  if x is None:
-    return x
-  try:
-    return int(x)
-  except ValueError:
-    return default
+    if x is None:
+        return x
+    try:
+        return int(x)
+    except ValueError:
+        return default

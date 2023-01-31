@@ -2,8 +2,8 @@ from urllib.parse import urljoin
 
 import requests
 
-from scaworkers.config import config
 import scaworkers.utils as utils
+from scaworkers.config import config
 
 
 # https://stackoverflow.com/a/51026159/2580077
@@ -16,6 +16,7 @@ class APIServerSession(requests.Session):
     def request(self, method, url, *args, **kwargs):
         joined_url = urljoin(self.base_url, url)
         return super().request(method, joined_url, *args, **kwargs)
+
 
 def parse_batch(batch):
     # convert du_size and size from string to int

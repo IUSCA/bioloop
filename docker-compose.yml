@@ -15,70 +15,15 @@ services:
   api:
     container_name: dgl_api
     image: node:19
-    environment:
-      # postgresql://username:password@dgl_postgres:5432/dbname[?paramspec]
-      - DATABASE_URL=postgresql://username:password@dgl_postgres:5432/dgl
     volumes:
       - ./api/:/opt/sca/dgl/api/
       - dgl_api_modules:/opt/sca/dgl/api/node_modules
-      - /tmp/restore/:/opt/sca/files/
-      - /tmp/feedback/:/opt/sca/feedback/
+    expose:
+      - 3030
     ports:
       - 127.0.0.1:3030:3030
     working_dir: /opt/sca/dgl/api
-    command: sh -c "npm install && npx prisma db push && npx nodemon api.js"
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
-    depends_on:
-      - postgres
-      - queue
-
-  postgres:
-    container_name: dgl_postgres
-    image: postgres:14.5
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=username
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - ./db/db_postgres:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
-
-  # mongo
-  #   # https://hub.docker.com/_/mongo
-  #   container_name: dgl_mongo
-  #   image: mongo:5
-  #   restart: unless-stopped
-  #   # ports:
-  #   # helpful for using a GUI client like compass for troubleshooting
-  #   # - 127.0.0.1:27017:27017
-  #   #environment:
-  #   # MONGO_INITDB_ROOT_USERNAME: root
-  #   # MONGO_INITDB_ROOT_PASSWORD: example
-  #   volumes:
-  #     - ./db/db_mongo:/data/db
-  #     # for importing database files
-  #     # - ./db/mongodump:/opt/sca/dgl/mongodump
-
-  search:
-    # https://docs.meilisearch.com/learn/cookbooks/docker.html
-    container_name: dgl_search
-    image: getmeili/meilisearch:v0.29
-    # environment:
-    #   - http_proxy
-    #   - https_proxy
-    #   - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
-    #   - MEILI_NO_ANALYTICS=${MEILI_NO_ANALYTICS:-true}
-    #   - MEILI_ENV=${MEILI_ENV:-development}
-    #   - MEILI_LOG_LEVEL
-    #   - MEILI_DB_PATH=${MEILI_DB_PATH:-/data.ms}
-    # ports:
-    #   - ${MEILI_PORT:-7700}:7700
-    # networks:
-    #   - meilisearch
-    volumes:
-      - ./db/db_meilisearch/data.ms:/data.ms
-    restart: unless-stopped
+    command: sh -c "npm install && npx nodemon api.js"
 
   queue:
     # https://hub.docker.com/_/rabbitmq/
@@ -96,19 +41,22 @@ services:
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
 
-  worker:
-    container_name: dgl_worker
+  worker_api:
+    container_name: dgl_worker_api
     build:
       context: ./worker/
       dockerfile: Dockerfile
     volumes:
-      - ./worker/:/opt/sca/dgl/
-      - /tmp/restore/:/opt/sca/files/
-    # restart: on-failure
+      - ./scaworkers/:/opt/sca/app/scaworkers
+      - ./.env:/opt/sca/app/.env
+    expose:
+      - 5001
+    environment:
+      - PORT=5001
     depends_on:
       - queue
-    entrypoint: [ "python3", "-u", "test.py" ]
-    #entrypoint: [ "tail", "-f", "/dev/null" ]
+      - mongo
+    # restart: on-failure
 
   postgres:
     container_name: dgl_postgres
@@ -136,37 +84,6 @@ services:
       # for importing database files
       # - ./db/mongodump:/opt/sca/dgl/mongodump
 
-  api:
-    container_name: dgl_api
-    image: node:19
-    volumes:
-      - ./api/:/opt/sca/dgl/api/
-      - dgl_api_modules:/opt/sca/dgl/api/node_modules
-    expose:
-      - 3030
-    # ports:
-      # - 127.0.0.1:3000:3030
-    working_dir: /opt/sca/dgl/api
-    command: sh -c "npm install && npx nodemon api.js"
-    networks:
-      dgl_network:
-        ipv4_address: 172.19.0.2
-
-  queue:
-    # https://hub.docker.com/_/rabbitmq/
-    container_name: dgl_queue
-    # includes web gui ?
-    image: rabbitmq:3-management
-    # image: rabbitmq:3
-    ports:
-      - 127.0.0.1:5672:5672
-      - 127.0.0.1:15672:15672
-    volumes:
-      - ./db/queue/data/:/var/lib/rabbitmq/
-      # - ./db/queue/log/:/var/log/rabbitmq/
-    environment:
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
 
 volumes:
   dgl_ui_modules:
@@ -174,9 +91,3 @@ volumes:
 
   dgl_api_modules:
     external: false
-
-networks:
-  dgl_network:
-    ipam:
-      config:
-        - subnet: 172.19.0.0/24

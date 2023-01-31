@@ -1,0 +1,39 @@
+version: "3"
+services:
+  ui:
+    container_name: dgl_ui
+    image: node:19
+    volumes:
+      - ./ui/:/opt/sca/dgl/ui/
+      - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
+    working_dir: /opt/sca/dgl/ui
+    command: sh -c "npm install && npm run builddev"
+    restart: unless-stopped
+
+  api:
+    container_name: dgl_api
+    image: node:19
+    volumes:
+      - ./api/:/opt/sca/dgl/api/
+      - dgl_api_modules:/opt/sca/dgl/api/node_modules
+    expose:
+      - 3030
+    working_dir: /opt/sca/dgl/api
+    command: sh -c "npm install && npx nodemon api.js"
+    restart: unless-stopped
+    networks:
+      dgl_network:
+        ipv4_address: 172.19.0.2
+
+volumes:
+  dgl_ui_modules:
+    external: false
+
+  dgl_api_modules:
+    external: false
+
+networks:
+  dgl_network:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24

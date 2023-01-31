@@ -3,9 +3,9 @@ import time
 from pathlib import Path
 
 import scaworkers.api as api
+from scaworkers.celery_app import app as celery_app
 from scaworkers.config import config
 from scaworkers.workflow import Workflow
-from scaworkers.celery_app import app as celery_app
 
 
 def get_registered_batch_paths():

@@ -3,5 +3,3 @@
 
 # Allow files and directories
 !Pipfile*
-!run.sh
-!workers

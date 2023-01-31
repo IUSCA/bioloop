@@ -21,7 +21,7 @@ USER scauser:sca
 RUN pip install --user pipenv
 ENV PATH="/home/scauser/.local/bin:${PATH}"
 
-# Adds Pipfile and Pipefile.lock into the image in the /app folder.
+# Adds Pipfile and Pipefile.lock into the image in the /opt/sca/app/ folder.
 # Run these commands to generate Pipfile and Pipfile.lock in local machine
 # pip install pipenv
 # pipenv install
