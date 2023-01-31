@@ -3,12 +3,12 @@ from pathlib import Path
 
 from celery import Celery
 
-import api
-import celeryconfig
-import sda
-import utils
-from config import config
-from workflow import WorkflowTask
+import scaworkers.api as api
+import scaworkers.celeryconfig as celeryconfig
+import scaworkers.sda as sda
+import scaworkers.utils as utils
+from scaworkers.config import config
+from scaworkers.workflow import WorkflowTask
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)

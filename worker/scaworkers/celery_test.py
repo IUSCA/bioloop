@@ -1,7 +1,7 @@
 from celery import Celery
 
-import celeryconfig
-from workflow import Workflow
+import scaworkers.celeryconfig as celeryconfig
+from scaworkers.workflow import Workflow
 
 # import all the tasks that the workflow requires
 

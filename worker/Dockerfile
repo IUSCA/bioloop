@@ -1,25 +1,52 @@
-FROM ubuntu:22.04
+FROM python:3.10.6
 
-# python docker image often seems like a good place to start, 
-# however, it's built with a fairly old version of debian / ubuntu
-# if you need access to newer versions of tools (e.g. ffmpeg)
-# it may be better to start with a distribution of your choosing
-# FROM python:3
+# From Google Cloud Run Tutorials
+# Allow statements and log messages to immediately appear in the Knative logs
+ENV PYTHONUNBUFFERED True
 
-# may require `docker-compose build --no-cache`
-RUN apt-get update
+RUN pip install --upgrade pip
 
-# only needed when running ubuntu:22.04 as base image
-RUN apt-get install -y pip
-RUN apt-get install -y git
-RUN apt-get install -y curl
-RUN apt-get install -y wget
+# create scauser and sca group with the same ids as in the production VM.
+RUN groupadd --gid 1302 sca
+RUN useradd -ms /bin/bash --uid 1558638 --gid 1302 scauser 
 
-WORKDIR /opt/sca/dgl/worker
+WORKDIR /opt/sca/app
+RUN chown -R scauser:sca /opt/sca/app
 
-# RUN pip install -r [module]
+# set user
+USER scauser:sca
 
-# Anti-pattern?
-# Seems better to run pip commands here instead
-# COPY requirements.txt /srv/python/requirements.txt
-# RUN pip install -r requirements.txt
+
+
+RUN pip install --user pipenv
+ENV PATH="/home/scauser/.local/bin:${PATH}"
+
+# Adds Pipfile and Pipefile.lock into the image in the /app folder.
+# Run these commands to generate Pipfile and Pipfile.lock in local machine
+# pip install pipenv
+# pipenv install
+# pipenv lock
+COPY --chown=scauser:sca Pipfile*  /opt/sca/app/
+
+# In conjuction with copying the Pipfile & Pipefile.lock above
+# this will install the pipenv tool, and then install all of the
+# defined dependencies for this application as part of the image.
+RUN pipenv requirements > requirements.txt
+RUN pip install --user -r requirements.txt
+
+# The app folder is copied towards the end of the image creation
+# since it tends to change more often than the previous steps,
+# and therefore we can take advantage of Docker's caching to speed
+# up subsequent builds which leads to a faster build/rebuild cycle.
+
+# COPY scaworkers $APP_HOME/app
+# COPY --chown=scauser:sca run.sh /opt/sca/app/run.sh
+
+# From Google Cloud Run Tutorials
+# Run the web service on container startup. Here we use the gunicorn
+# webserver, with one worker process and 8 threads.
+# For environments with multiple CPU cores, increase the number of workers
+# to be equal to the cores available.
+
+CMD gunicorn -p app.pid --bind :$PORT --workers 1 --threads 1 --timeout 0 workers.app:app
+# HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 CMD curl -f http://localhost:$PORT/health

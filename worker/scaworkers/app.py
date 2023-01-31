@@ -3,8 +3,8 @@ from datetime import datetime, date
 from flask import Flask, request, jsonify
 from flask.json.provider import DefaultJSONProvider
 
-from celery_app import app as celery_app
-from workflow import Workflow
+from scaworkers.celery_app import app as celery_app
+from scaworkers.workflow import Workflow
 
 
 # jsonify - serialize datetime objects into yyyy-mm-ddTHH:mm:ssssss

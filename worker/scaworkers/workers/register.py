@@ -2,10 +2,10 @@ import socket
 import time
 from pathlib import Path
 
-import api
-from config import config
-from workflow import Workflow
-from celery_app import app as celery_app
+import scaworkers.api as api
+from scaworkers.config import config
+from scaworkers.workflow import Workflow
+from scaworkers.celery_app import app as celery_app
 
 
 def get_registered_batch_paths():

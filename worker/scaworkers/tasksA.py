@@ -3,8 +3,8 @@ import time
 
 from celery import Celery
 
-import celeryconfig
-from workflow import WorkflowTask
+import scaworkers.celeryconfig as celeryconfig
+from scaworkers.workflow import WorkflowTask
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)

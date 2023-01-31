@@ -2,8 +2,8 @@ from urllib.parse import urljoin
 
 import requests
 
-from config import config
-import utils
+from scaworkers.config import config
+import scaworkers.utils as utils
 
 
 # https://stackoverflow.com/a/51026159/2580077
