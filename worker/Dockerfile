@@ -8,7 +8,7 @@ RUN pip install --upgrade pip
 
 # create scauser and sca group with the same ids as in the production VM.
 RUN groupadd --gid 1302 sca
-RUN useradd -ms /bin/bash --uid 1558638 --gid 1302 scauser 
+RUN useradd -ms /bin/bash --uid 2457689 --gid 1302 scauser 
 
 WORKDIR /opt/sca/app
 RUN chown -R scauser:sca /opt/sca/app
@@ -48,5 +48,5 @@ RUN pip install --user -r requirements.txt
 # For environments with multiple CPU cores, increase the number of workers
 # to be equal to the cores available.
 
-CMD gunicorn -p app.pid --bind :$PORT --workers 1 --threads 1 --timeout 0 workers.app:app
+CMD gunicorn -p app.pid --bind :$PORT --workers 1 --threads 1 --timeout 0 scaworkers.app:app
 # HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 CMD curl -f http://localhost:$PORT/health

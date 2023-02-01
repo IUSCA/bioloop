@@ -3,6 +3,7 @@ services:
   ui:
     container_name: dgl_ui
     image: node:19
+    user: "${APP_UID}:${APP_GID}"
     volumes:
       - ./ui/:/opt/sca/dgl/ui/
       - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
@@ -13,6 +14,7 @@ services:
   api:
     container_name: dgl_api
     image: node:19
+    user: "${APP_UID}:${APP_GID}"
     volumes:
       - ./api/:/opt/sca/dgl/api/
       - dgl_api_modules:/opt/sca/dgl/api/node_modules
@@ -24,6 +26,22 @@ services:
     networks:
       dgl_network:
         ipv4_address: 172.19.0.2
+
+  worker_api:
+    container_name: dgl_worker_api
+    build:
+      context: ./worker/
+      dockerfile: Dockerfile
+    volumes:
+      - ./worker/scaworkers/:/opt/sca/app/scaworkers
+      - ./worker/.env:/opt/sca/app/.env
+    expose:
+      - 5001
+    environment:
+      - PORT=5001
+    networks:
+      dgl_network:
+        ipv4_address: 172.19.0.3
 
 volumes:
   dgl_ui_modules:
