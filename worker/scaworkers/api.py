@@ -18,11 +18,21 @@ class APIServerSession(requests.Session):
         return super().request(method, joined_url, *args, **kwargs)
 
 
-def parse_batch(batch):
+def batch_getter(batch):
     # convert du_size and size from string to int
     if batch is not None:
         batch['du_size'] = utils.parse_int(batch.get('du_size', None))
         batch['size'] = utils.parse_int(batch.get('size', None))
+    return batch
+
+
+def batch_setter(batch):
+    # convert du_size and size from int to string
+    if batch is not None:
+        if 'du_size' in batch and batch['du_size'] is not None:
+            batch['du_size'] = str(batch['du_size'])
+        if 'size' in batch and batch['size'] is not None:
+            batch['size'] = str(batch['size'])
     return batch
 
 
@@ -34,7 +44,7 @@ def get_all_batches(include_checksums=False):
         r = s.get('batch', params=payload)
         if r.status_code == 200:
             batches = r.json()
-            return [parse_batch(batch) for batch in batches]
+            return [batch_getter(batch) for batch in batches]
         else:
             raise Exception('Server responded with non-200 code')
 
@@ -46,14 +56,14 @@ def get_batch(batch_id, include_checksums=False):
         }
         r = s.get(f'batch/{batch_id}', params=payload)
         if r.status_code == 200:
-            return parse_batch(r.json())
+            return batch_getter(r.json())
         else:
             raise Exception('Server responded with non-200 code')
 
 
 def create_batch(batch):
     with APIServerSession() as s:
-        r = s.post('batch', json=batch)
+        r = s.post('batch', json=batch_setter(batch))
         if r.status_code == 200:
             return r.json()
         else:
@@ -62,7 +72,7 @@ def create_batch(batch):
 
 def update_batch(batch_id, update_data):
     with APIServerSession() as s:
-        r = s.patch(f'batch/{batch_id}', json=update_data)
+        r = s.patch(f'batch/{batch_id}', json=batch_setter(update_data))
         if r.status_code == 200:
             return r.json()
         else:
