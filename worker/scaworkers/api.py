@@ -31,7 +31,7 @@ def get_all_batches(include_checksums=False):
         payload = {
             'include_checksums': int(include_checksums)
         }
-        r = s.get('/batch', params=payload)
+        r = s.get('batch', params=payload)
         if r.status_code == 200:
             batches = r.json()
             return [parse_batch(batch) for batch in batches]
@@ -44,7 +44,7 @@ def get_batch(batch_id, include_checksums=False):
         payload = {
             'include_checksums': int(include_checksums)
         }
-        r = s.get(f'/batch/{batch_id}', params=payload)
+        r = s.get(f'batch/{batch_id}', params=payload)
         if r.status_code == 200:
             return parse_batch(r.json())
         else:
@@ -53,7 +53,7 @@ def get_batch(batch_id, include_checksums=False):
 
 def create_batch(batch):
     with APIServerSession() as s:
-        r = s.post('/batch', json=batch)
+        r = s.post('batch', json=batch)
         if r.status_code == 200:
             return r.json()
         else:
@@ -62,7 +62,7 @@ def create_batch(batch):
 
 def update_batch(batch_id, update_data):
     with APIServerSession() as s:
-        r = s.patch(f'/batch/{batch_id}', json=update_data)
+        r = s.patch(f'batch/{batch_id}', json=update_data)
         if r.status_code == 200:
             return r.json()
         else:
@@ -71,7 +71,7 @@ def update_batch(batch_id, update_data):
 
 def add_checksums_to_batch(batch_id, checksums):
     with APIServerSession() as s:
-        r = s.post(f'/batch/{batch_id}/checksums', json=checksums)
+        r = s.post(f'batch/{batch_id}/checksums', json=checksums)
         if r.status_code != 200:
             raise Exception('Server responded with non-200 code')
 

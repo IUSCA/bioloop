@@ -29,19 +29,19 @@ class Registration:
         self.steps = [
             {
                 'name': 'inspect',
-                'task': 'workers.inspect.inspect_batch'
+                'task': 'scaworkers.workers.inspect.inspect_batch'
             },
             {
                 'name': 'archive',
-                'task': 'workers.archive.archive_batch'
+                'task': 'scaworkers.workers.archive.archive_batch'
             },
             {
                 'name': 'stage',
-                'task': 'workers.stage.stage_batch'
+                'task': 'scaworkers.workers.stage.stage_batch'
             },
             {
                 'name': 'validate',
-                'task': 'workers.validate.validate_batch'
+                'task': 'scaworkers.workers.validate.validate_batch'
             }
         ]
 
