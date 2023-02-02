@@ -122,13 +122,13 @@ class Workflow:
             'paused': False
         }
 
-    def resume(self):
+    def resume(self, force=False):
         # find failed / revoked task
         # submit a new task with arguments
         res = self.get_pending_step()
         if res:
             i, status = res
-            if status in [celery.states.FAILURE, celery.states.REVOKED]:
+            if (status in [celery.states.FAILURE, celery.states.REVOKED]) or force:
                 step = self.workflow['steps'][i]
                 task = self.app.tasks[step['task']]
 

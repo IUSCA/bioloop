@@ -66,8 +66,9 @@ def pause_workflow(workflow_id):
 
 @app.route('/workflow/<workflow_id>/resume', methods=['POST'])
 def resume_workflow(workflow_id):
+    force = get_boolean_query(request, 'force')
     wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
-    status = wf.resume()
+    status = wf.resume(force=force)
     return jsonify(status)
 
 
