@@ -81,4 +81,6 @@ class Registration:
 
 if __name__ == '__main__':
     r = Registration()
+    print('start registering:', r.source_dirs)
     r.register()
+    
