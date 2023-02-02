@@ -4,7 +4,7 @@ const createError = require('http-errors');
 const { query, param, body } = require('express-validator');
 
 // const logger = require('../logger');
-const asyncHandler = require('../middleware/asyncHandler');
+// const asyncHandler = require('../middleware/asyncHandler');
 const validator = require('../middleware/validator');
 const { includeWorkflow } = require('../services/workflow');
 const { renameKey } = require('../utils');
@@ -73,7 +73,8 @@ router.get(
   }),
 );
 
-router.post('/', 
+router.post(
+  '/',
   body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
   body('size').optional().notEmpty().customSanitizer(BigInt),
   validator(async (req, res, next) => {
@@ -88,8 +89,10 @@ router.post('/',
 router.patch(
   '/:id',
   param('id').isInt().toInt(),
-  body('du_size').optional().notEmpty().bail().customSanitizer(BigInt), // convert to BigInt
-  body('size').optional().notEmpty().bail().customSanitizer(BigInt),
+  body('du_size').optional().notEmpty().bail()
+    .customSanitizer(BigInt), // convert to BigInt
+  body('size').optional().notEmpty().bail()
+    .customSanitizer(BigInt),
   validator(async (req, res, next) => {
     const batchToUpdate = await prisma.batch.findFirst({
       where: {
