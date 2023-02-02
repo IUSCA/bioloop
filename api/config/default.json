@@ -13,5 +13,10 @@
     "password": "",
     "db": "dgl",
     "schema": "dgl"
+  },
+  "workflow_server": {
+    "base_url": "http://localhost:5001",
+    "user": "",
+    "password": ""
   }
 }

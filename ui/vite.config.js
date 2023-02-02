@@ -106,7 +106,7 @@ export default defineConfig({
     // as the primary web / dev server
     proxy: {
       "/api": {
-        target: `http://${config.apiHost}:3030`,
+        target: `http://${config.apiHost}:${config.apiPort}`,
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ""),

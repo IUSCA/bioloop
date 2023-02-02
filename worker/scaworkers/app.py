@@ -43,6 +43,7 @@ def get_all_workflows():
 def get_workflow(workflow_id):
     last_task_run = get_boolean_query(request, 'last_task_run')
     prev_task_runs = get_boolean_query(request, 'prev_task_runs')
+    # TODO: send 404 if there is no workflow with requested workflow_id
     wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
     return jsonify(wf.get_embellished_workflow(last_task_run=last_task_run, prev_task_runs=prev_task_runs))
 
