@@ -122,9 +122,12 @@ class Workflow:
             'paused': False
         }
 
-    def resume(self, force=False):
+    def resume(self, force=False, args=None):
         # find failed / revoked task
         # submit a new task with arguments
+        # TODO: if the pending step is not the first step, and it has never run before,
+        #  then get the args from the previous step
+        # cannot resume the step automatically, that has never started, provide args
         res = self.get_pending_step()
         if res:
             i, status = res
@@ -134,12 +137,14 @@ class Workflow:
 
                 # failed / revoked task instance
                 task_inst = self.get_last_run_task_instance(step)
+                assert not (task_inst is None and args is None), 'no args are provided and there is no last run task'
+                task_args = task_inst['args'] if task_inst is not None else args
 
                 kwargs = {
                     'workflow_id': self.workflow['_id'],
                     'step': step['name']
                 }
-                task.apply_async(task_inst['args'], kwargs)
+                task.apply_async(task_args, kwargs)
                 print(f'resuming step {step["name"]}')
                 return {
                     'resumed': True,

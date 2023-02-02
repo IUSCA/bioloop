@@ -67,8 +67,9 @@ def pause_workflow(workflow_id):
 @app.route('/workflow/<workflow_id>/resume', methods=['POST'])
 def resume_workflow(workflow_id):
     force = get_boolean_query(request, 'force')
+    body = request.json
     wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
-    status = wf.resume(force=force)
+    status = wf.resume(force=force, args=body.get('args', None))
     return jsonify(status)
 
 
@@ -78,6 +79,11 @@ def delete_workflow(workflow_id):
     return jsonify({
         'deleted_count': results.deleted_count
     })
+
+
+@app.route("/health")
+def index():
+    return "OK"
 
 
 if __name__ == "__main__":
