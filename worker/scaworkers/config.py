@@ -9,7 +9,7 @@ config = {
     'api': {
         'username': 'user',
         'password': 'pass',
-        'base_url': 'http://localhost:3030'
+        'base_url': 'https://dgl.sca.iu.edu/api/'
     },
     'paths': {
         'scratch': '/N/scratch/dgluser/test',
