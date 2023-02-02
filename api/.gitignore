@@ -15,6 +15,7 @@ pids
 
 # Optional npm cache directory
 .npm
+.pnpm-store
 
 # Optional REPL history
 .node_repl_history
