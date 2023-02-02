@@ -71,6 +71,14 @@ def resume_workflow(workflow_id):
     return jsonify(status)
 
 
+@app.route('/workflow/<workflow_id>', methods=['DELETE'])
+def delete_workflow(workflow_id):
+    results = wf_col.delete_one({'_id': workflow_id})
+    return jsonify({
+        'deleted_count': results.deleted_count
+    })
+
+
 if __name__ == "__main__":
     # Only for debugging while developing
     app.run(host="0.0.0.0", debug=True, port=5000)

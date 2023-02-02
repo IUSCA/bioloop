@@ -198,7 +198,8 @@ class Workflow:
     def get_pending_step(self):
         """
         finds the index of the first step whose status is not celery.states.SUCCESS
-        :return: int
+        if all steps have succeeded, it returns None
+        :return: (index:int, CELERY.states.STATE)
         """
         statuses = [(i, self.get_step_status(step)) for i, step in enumerate(self.workflow['steps'])]
         return next((s for s in statuses if s[1] != celery.states.SUCCESS), None)
@@ -257,7 +258,7 @@ class Workflow:
             'created_at': self.workflow.get('created_at', None),
             'updated_at': self.workflow.get('created_at', None),
             'status': status,
-            'steps_done': pending_step_idx or len(steps),
+            'steps_done': (1+pending_step_idx) if pending_step_idx is not None else len(steps),
             'total_steps': len(steps),
             'steps': steps
         }
