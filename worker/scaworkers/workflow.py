@@ -253,12 +253,14 @@ class Workflow:
                 ]
             steps.append(emb_step)
 
+        # number of steps done is same of index of the pending step
+        # if all steps are complete pending_step_idx is None, then steps_done is len(steps)
         return {
             'id': self.workflow['_id'],
             'created_at': self.workflow.get('created_at', None),
             'updated_at': self.workflow.get('created_at', None),
             'status': status,
-            'steps_done': (1+pending_step_idx) if pending_step_idx is not None else len(steps),
+            'steps_done': pending_step_idx if pending_step_idx is not None else len(steps),
             'total_steps': len(steps),
             'steps': steps
         }
