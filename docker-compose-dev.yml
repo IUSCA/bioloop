@@ -6,8 +6,8 @@ services:
     volumes:
       - ./ui/:/opt/sca/dgl/ui/
       - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
-    # ports:
-    #   - 127.0.0.1:443:443
+    ports:
+      - 127.0.0.1:443:443
     working_dir: /opt/sca/dgl/ui
     command: sh -c "npm install && npm run dev"
     # entrypoint: [ "tail", "-f", "/dev/null" ]
@@ -24,6 +24,8 @@ services:
       - 127.0.0.1:3030:3030
     working_dir: /opt/sca/dgl/api
     command: sh -c "npm install && npx nodemon api.js"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   queue:
     # https://hub.docker.com/_/rabbitmq/
@@ -66,8 +68,10 @@ services:
       - POSTGRES_PASSWORD=examlple
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
-    ports:
-      - 127.0.0.1:5432:5432
+    # ports:
+    #   - 127.0.0.1:5432:5432
+    expose:
+      - 5432
 
   mongo:
     # https://hub.docker.com/_/mongo
