@@ -9,5 +9,14 @@ module.exports = {
     log_date_format: "YYYY-MM-DD HH:mm Z",
     error_file: "../logs/worker/celery_worker.err",
     out_file: "../logs/worker/celery_worker.log"
+  }, {
+    name   : "register",
+    script : "python",
+    args: "-m scaworkers.workers.register",
+    watch: false,
+    interpreter: "",
+    log_date_format: "YYYY-MM-DD HH:mm Z",
+    error_file: "../logs/worker/register.err",
+    out_file: "../logs/worker/register.log"
   }]
 }
