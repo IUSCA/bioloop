@@ -15,7 +15,7 @@
         }}</router-link>
       </template>
       <template #cell(start_date)="{ value }">
-        <span>{{ moment(value).format("YYYY-MM-DD") }}</span>
+        <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
       </template>
       <template #cell(last_updated)="{ value }">
         <span>{{ moment(value).fromNow() }}</span>

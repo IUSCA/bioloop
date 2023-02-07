@@ -36,4 +36,14 @@ function validateEmail(email) {
   return re.test(email);
 }
 
-export { formatBytes, difference, union, maybePluralize, dayjs, validateEmail };
+const capitalize = (s) => (s && s[0].toUpperCase() + s.slice(1)) || "";
+
+export {
+  formatBytes,
+  difference,
+  union,
+  maybePluralize,
+  dayjs,
+  validateEmail,
+  capitalize,
+};

@@ -1,54 +1,85 @@
 <template>
-  <span>Run page - {{ props.batchId }}</span>
+  <div>
+    <span class="text-3xl">Sequencing Run : {{ batch.name }}</span>
+    <va-divider />
+  </div>
+  <div>
+    <div class="flex flex-row flex-wrap gap-3">
+      <div class="flex-[3_1_0%]">
+        <va-card>
+          <va-card-title>
+            <span class="text-xl">Info</span>
+          </va-card-title>
+          <va-card-content v-if="Object.keys(batch || {}).length > 0">
+            <batch-info :batch="batch"></batch-info>
+            <div class="flex flex-row gap-2 ml-3 mt-3 mb-6">
+              <div class="flex-[0_0_20%]">Description</div>
+              <div class="">
+                <div v-if="!edit_discription">
+                  <span>{{ batch.description }}</span>
+                  <!-- <va-button
+                  preset="primary"
+                  round
+                  @click="edit_discription = true"
+                >
+                  <i-mdi-pencil-outline />
+                </va-button> -->
+                </div>
+                <div v-else>
+                  <va-input
+                    class="w-96"
+                    v-model="description"
+                    type="textarea"
+                    autosize
+                  />
+                </div>
+              </div>
+            </div>
+          </va-card-content>
+        </va-card>
+      </div>
+      <div class="flex-[2_1_0%] flex flex-col gap-3 justify-start">
+        <div class="flex-none" v-if="batch.archive_path">
+          <va-card>
+            <va-card-title>
+              <span class="text-lg">Archived</span>
+            </va-card-title>
+            <va-card-content>{{ batch.archive_path }}</va-card-content>
+          </va-card>
+        </div>
+        <div class="flex-none" v-if="batch.stage_path">
+          <va-card>
+            <va-card-title>
+              <span class="text-lg">Staged for Processing</span>
+            </va-card-title>
+            <va-card-content>{{ batch.stage_path }}</va-card-content>
+          </va-card>
+        </div>
+      </div>
+    </div>
+    <div class="mt-3">
+      <va-card>
+        <va-card-title>
+          <span class="text-xl">Workflow</span>
+        </va-card-title>
+        <va-card-content>
+          <workflow :batch="batch"></workflow>
+        </va-card-content>
+      </va-card>
+    </div>
+  </div>
 </template>
 
 <script setup>
+import BatchService from "../../services/batch";
 const props = defineProps({ batchId: String });
 
-const batch = ref({
-  id: 7,
-  name: "bcl_fastq",
-  num_directories: 976,
-  num_files: 4249,
-  num_genome_files: 636,
-  du_size: "87839405520",
-  size: "87835338192",
-  description: null,
-  created_at: "2023-02-02T21:16:37.772Z",
-  updated_at: "2023-02-02T22:23:53.628Z",
-  origin_path: "/N/project/DG_Multiple_Myeloma/share/bcl_fastq",
-  archive_path: "archive/2023/bcl_fastq.tar",
-  stage_path: "/N/scratch/dgluser/test/stage/bcl_fastq",
-  workflow_id: "63339ae0-9643-4d8b-aa3a-303434f6bdcd",
-  workflow: {
-    created_at: "2023-02-02T21:16:37.732000",
-    id: "63339ae0-9643-4d8b-aa3a-303434f6bdcd",
-    status: "SUCCESS",
-    steps: [
-      {
-        name: "inspect",
-        status: "SUCCESS",
-        task: "scaworkers.workers.inspect.inspect_batch",
-      },
-      {
-        name: "archive",
-        status: "SUCCESS",
-        task: "scaworkers.workers.archive.archive_batch",
-      },
-      {
-        name: "stage",
-        status: "SUCCESS",
-        task: "scaworkers.workers.stage.stage_batch",
-      },
-      {
-        name: "validate",
-        status: "SUCCESS",
-        task: "scaworkers.workers.validate.validate_batch",
-      },
-    ],
-    steps_done: 4,
-    total_steps: 4,
-    updated_at: "2023-02-02T21:16:37.732000",
-  },
+const batch = ref({});
+const description = ref("");
+const edit_discription = ref(false);
+
+BatchService.getById(props.batchId).then((res) => {
+  batch.value = res.data;
+  console.log("batch.value", batch.value);
 });
 </script>

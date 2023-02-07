@@ -63,7 +63,7 @@ router.get(
       // rename checksum property to metadata
       // include workflow with batch
       const renameChecksumToMetadata = renameKey('checksum', 'metadata');
-      const _includeWorkflow = includeWorkflow();
+      const _includeWorkflow = includeWorkflow(true, true);
       let _batch = renameChecksumToMetadata(batch);
       _batch = await _includeWorkflow(_batch);
       res.json(_batch);
