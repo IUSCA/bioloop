@@ -18,5 +18,15 @@
     "base_url": "http://localhost:5001",
     "user": "",
     "password": ""
+  },
+  "auth": {
+    "mode": "dev",
+    "jwt": {
+      "iss": "localhost",
+      "ttl": 604800000,
+      "pub": "keys/auth.pub",
+      "key": "keys/auth.key",
+      "sign_algorithm": "RS256"
+    }
   }
 }

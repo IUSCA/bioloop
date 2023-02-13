@@ -3,7 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
 const { query, param, body } = require('express-validator');
 
-// const logger = require('../logger');
+// const logger = require('../services/logger');
 // const asyncHandler = require('../middleware/asyncHandler');
 const validator = require('../middleware/validator');
 const { includeWorkflow } = require('../services/workflow');
