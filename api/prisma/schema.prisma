@@ -17,12 +17,12 @@ model batch {
   size             BigInt?
   description      String?
   created_at       DateTime   @default(now()) @db.Timestamp(6)
-  updated_at       DateTime   @default(now()) @db.Timestamp(6)
+  updated_at       DateTime   @updatedAt @default(now()) @db.Timestamp(6)
   origin_path      String?
   archive_path     String?
   stage_path       String?
   workflow_id      String?
-  checksum         checksum[]
+  metadata         checksum[]
 }
 
 model checksum {
@@ -30,5 +30,52 @@ model checksum {
   md5      String
   id       Int    @id @default(autoincrement())
   batch_id Int?
-  batch    batch? @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "checksum_batch_fkey")
+  batch    batch? @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model user {
+  id            Int             @id @default(autoincrement())
+  username      String          @unique @db.VarChar(100)
+  password      String?         @db.VarChar(100)
+  name          String?         @db.VarChar(100)
+  email         String          @unique @db.VarChar(100)
+  cas_id        String?         @db.VarChar(100)
+  notes         String?          
+  created_at    DateTime        @default(now()) @db.Timestamp(6)
+  updated_at    DateTime        @updatedAt @default(now()) @db.Timestamp(6)
+  is_deleted    Boolean         @default(false)
+  user_role     user_role[]
+  user_settings user_settings[]
+  contact       contact[]
+}
+
+model user_settings {
+  id       Int  @id @default(autoincrement())
+  user_id  Int  @unique
+  settings Json
+  users    user @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model contact {
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String
+  type        String
+  user_id     Int
+  user        user   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model role {
+  id          Int               @id @default(autoincrement())
+  name        String            @db.VarChar(50)
+  description String            @default("") @db.VarChar(255)
+  user_role   user_role[]
+}
+
+model user_role {
+  user_id Int
+  role_id Int
+  roles   role @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users   user @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@id([user_id, role_id])
 }
