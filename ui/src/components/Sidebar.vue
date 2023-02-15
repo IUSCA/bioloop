@@ -4,7 +4,7 @@
       <va-list>
         <va-list-item>
           <va-list-item-section icon>
-            <img src="@/assets/cmg_logo_small.png" />
+            <img class="w-12 h-12" src="/logo.svg" />
           </va-list-item-section>
 
           <va-list-item-section>
