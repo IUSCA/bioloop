@@ -100,14 +100,14 @@ function get_progress(step) {
   return null;
 }
 
-const steps = ref(
-  workflow.steps.map((s) => {
-    return {
-      name: s["name"],
-      completed: s.task_runs && s.task_runs.status === "COMPLETED",
-    };
-  })
-);
+// const steps = ref(
+//   workflow.steps.map((s) => {
+//     return {
+//       name: s["name"],
+//       completed: s.task_runs && s.task_runs.status === "COMPLETED",
+//     };
+//   })
+// );
 
 const row_items = ref(
   workflow.steps.map((s) => {
@@ -123,3 +123,8 @@ const row_items = ref(
   })
 );
 </script>
+
+<route lang="yaml">
+meta:
+  title: Workflows
+</route>
