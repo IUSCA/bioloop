@@ -92,3 +92,8 @@ BatchService.getAll()
   .then((res) => (workflows.value = res))
   .catch(console.log);
 </script>
+
+<route lang="yaml">
+meta:
+  title: Sequencing Runs
+</route>

@@ -5,3 +5,8 @@
 <script setup>
 // import { Icon } from '@iconify/vue';
 </script>
+
+<route lang="yaml">
+meta:
+  title: Dashboard
+</route>

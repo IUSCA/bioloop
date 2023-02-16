@@ -4,7 +4,8 @@
     "no-unused-vars": ["error", { "argsIgnorePattern": "next" }],
     "no-use-before-define": ["error", { "variables": false }],
     "no-multi-str": 0,
-    "consistent-return": 0
+    "consistent-return": 0,
+    "camelcase": 0
   },
   "env": {
     "node": true,

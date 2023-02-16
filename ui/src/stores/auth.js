@@ -1,23 +1,12 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { useLocalStorage } from "@vueuse/core";
 import { ref } from "vue";
-import AuthService from "../services/auth.service";
+import authService from "../services/auth";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));
   const loggedIn = ref(false);
   const status = ref("");
-
-  function initialize() {
-    if (user.value.accessToken) {
-      AuthService.verify()
-        .then(() => {
-          status.value = JSON.stringify(user);
-          loggedIn.value = true;
-        })
-        .catch(onLogout);
-    }
-  }
 
   function onLogin(_user) {
     user.value = _user;
@@ -29,34 +18,27 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = {};
   }
 
-  function login(casTicket, casReturn) {
-    return AuthService.login(casTicket, casReturn).then(
-      (_user) => {
-        onLogin(_user);
-      },
-      (error) => {
+  function casLogin(ticket) {
+    return authService
+      .casVerify(ticket)
+      .then((res) => {
+        const _user = res.data;
+        if (_user) onLogin(_user);
+        return _user;
+      })
+      .catch((error) => {
+        console.error("CAS Login failed", error);
         status.value = error;
         onLogout();
-        return Promise.reject(error);
-      }
-    );
+        return Promise.reject();
+      });
   }
 
   function logout() {
     onLogout();
   }
 
-  function register(casTicket, casReturn) {
-    return AuthService.register(casTicket, casReturn)
-      .then((_user) => {
-        onLogin(_user);
-      })
-      .catch((error) => {
-        status.value = error;
-        onLogout();
-        return Promise.reject(error);
-      });
-  }
+  function register() {}
 
   // Check for roles
   function hasRole(role) {
@@ -64,17 +46,16 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function saveSettings(data) {
-    return AuthService.saveSettings(data).then(
-      (res) => (user.value.settings = res.data.settings)
-    );
+    return authService
+      .saveSettings(data)
+      .then((res) => (user.value.settings = res.data.settings));
   }
 
   return {
     user,
     loggedIn,
     status,
-    initialize,
-    login,
+    casLogin,
     logout,
     register,
     hasRole,
