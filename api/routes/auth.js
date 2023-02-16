@@ -4,8 +4,8 @@ const IULoginHelper = require('@iusca/iulogin-helper');
 const config = require('config');
 
 const validator = require('../middleware/validator');
-const userService = require('../services/user.service');
-const authService = require('../services/auth.service');
+const userService = require('../services/user');
+const authService = require('../services/auth');
 
 const router = express.Router();
 
@@ -15,7 +15,7 @@ const IULogin = new IULoginHelper({
 });
 
 router.get(
-  '/casurl',
+  '/cas/url',
   query('service').notEmpty(),
   validator(async (req, res, next) => {
     const loginUrl = IULogin.get_login_url(req.query.service);
@@ -24,14 +24,14 @@ router.get(
 );
 
 router.post(
-  '/verify',
+  '/cas/verify',
   body('ticket').notEmpty(),
   body('service').notEmpty(),
   validator(async (req, res, next) => {
     // eslint-disable-next-line no-unused-vars
     IULogin.validate(req.body.ticket, req.body.service, false, async (err, username, profile) => {
       if (err) return next(err);
-      const user = await userService.findUserById(username);
+      const user = await userService.findUserByCASId(username);
       if (user) {
         const resObj = await authService.onLogin(user);
         return res.json(resObj);

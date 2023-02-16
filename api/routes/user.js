@@ -4,7 +4,7 @@ const { query, param } = require('express-validator');
 // const _ = require('lodash');
 
 const logger = require('../services/logger');
-const userService = require('../services/user.service');
+const userService = require('../services/user');
 const validator = require('../middleware/validator');
 
 const router = express.Router();

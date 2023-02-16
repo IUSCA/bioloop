@@ -1,14 +1,14 @@
 const createError = require('http-errors');
 
-const authService = require('../services/auth.service');
+const authService = require('../services/auth');
 
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (!authHeader) return next(createError.Unauthorized());
+  if (!authHeader) return next(createError.Unauthorized('Authentication failed. Token not found.'));
 
   const token = authHeader.split(' ')[1];
   const auth = authService.checkJWT(token);
-  if (!auth) return next(createError.Unauthorized());
+  if (!auth) return next(createError.Unauthorized('Authentication failed. Token is not valid.'));
 
   req.user = auth.profile;
   next();

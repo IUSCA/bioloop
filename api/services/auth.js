@@ -2,10 +2,11 @@ const fs = require('fs');
 const path = require('path');
 
 const jsonwt = require('jsonwebtoken');
+const _ = require('lodash/fp');
 const config = require('config');
 
 const logger = require('./logger');
-const userService = require('./user.service');
+const userService = require('./user');
 
 const key = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.key')));
 const pub = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.pub')));
@@ -13,31 +14,26 @@ const signOpt = {
   algorithm: config.get('auth.jwt.sign_algorithm'),
 };
 
-function issueJWT(user) {
+function issueJWT(userProfile) {
   const claim = {
     iss: config.get('auth.jwt.iss'),
-    exp: (Date.now() + config.get('auth.jwt.ttl')) / 1000,
-    sub: user.id,
-    user,
+    exp: (Date.now() + config.get('auth.jwt.ttl_milliseconds')) / 1000,
+    sub: userProfile.username,
+    profile: userProfile,
   };
-  return {
-    token: jsonwt.sign(claim, key, signOpt),
-    user,
-  };
+  return jsonwt.sign(claim, key, signOpt);
 }
 
 async function onLogin(user) {
   await userService.updateLastLogin(user.id);
 
-  const userProfile = {
-    id: user.id,
-    email: user.email,
-    name: user.fullname,
-    roles: user.roles,
-    casid: user.casid,
-  };
+  const userProfile = _.pick(['username', 'email', 'name', 'roles', 'cas_id']);
 
-  return issueJWT(userProfile);
+  const token = issueJWT(userProfile);
+  return {
+    profile: userProfile,
+    token,
+  };
 }
 
 function checkJWT(token) {
