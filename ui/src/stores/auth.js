@@ -1,7 +1,7 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { useLocalStorage } from "@vueuse/core";
 import { ref } from "vue";
-import AuthService from "../services/auth.service";
+import AuthService from "../services/auth";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));
@@ -9,7 +9,7 @@ export const useAuthStore = defineStore("auth", () => {
   const status = ref("");
 
   function initialize() {
-    if (user.value.accessToken) {
+    if (user.value.token) {
       AuthService.verify()
         .then(() => {
           status.value = JSON.stringify(user);
@@ -17,6 +17,7 @@ export const useAuthStore = defineStore("auth", () => {
         })
         .catch(onLogout);
     }
+    console.log("initialize auth store");
   }
 
   function onLogin(_user) {
@@ -29,8 +30,8 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = {};
   }
 
-  function login(casTicket, casReturn) {
-    return AuthService.login(casTicket, casReturn).then(
+  function login(casTicket) {
+    return AuthService.login(casTicket).then(
       (_user) => {
         onLogin(_user);
       },
@@ -46,17 +47,7 @@ export const useAuthStore = defineStore("auth", () => {
     onLogout();
   }
 
-  function register(casTicket, casReturn) {
-    return AuthService.register(casTicket, casReturn)
-      .then((_user) => {
-        onLogin(_user);
-      })
-      .catch((error) => {
-        status.value = error;
-        onLogout();
-        return Promise.reject(error);
-      });
-  }
+  function register() {}
 
   // Check for roles
   function hasRole(role) {

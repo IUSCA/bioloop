@@ -5,7 +5,6 @@ const exports = {
   apiBasePath: "/api",
   casUrl: "https://idp-stg.login.iu.edu/idp/profile/cas/login",
   casReturn: "https://localhost/signin",
-  defaultRedirect: "/signin",
   analyticsId: "G-FOO",
 };
 
