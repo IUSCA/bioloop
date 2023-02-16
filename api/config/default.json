@@ -12,7 +12,7 @@
     "user": "dgluser",
     "password": "",
     "db": "dgl",
-    "schema": "dgl"
+    "schema": "public"
   },
   "workflow_server": {
     "base_url": "http://localhost:5001",

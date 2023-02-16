@@ -27,7 +27,7 @@ function issueJWT(userProfile) {
 async function onLogin(user) {
   await userService.updateLastLogin(user.id);
 
-  const userProfile = _.pick(['username', 'email', 'name', 'roles', 'cas_id']);
+  const userProfile = _.pick(['username', 'email', 'name', 'roles', 'cas_id'])(user);
 
   const token = issueJWT(userProfile);
   return {

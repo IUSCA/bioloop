@@ -23,7 +23,7 @@ services:
     ports:
       - 127.0.0.1:3030:3030
     working_dir: /opt/sca/dgl/api
-    command: sh -c "npm install && npx nodemon api.js"
+    command: sh -c "npm install && npx prisma db push && npx nodemon api.js"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

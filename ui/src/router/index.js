@@ -16,9 +16,8 @@ const user = ref(useLocalStorage("user", {}));
 
 // Authentication and Authorization navigation guard
 router.beforeEach((to, _from) => {
-  // console.log("to", to);
-  // console.log("from", _from);
-
+  console.log("to", to.path);
+  console.log("from", _from.path);
   // routeRequiresAuth is false only when requiresAuth is explicitly set to a falsy value
   const routeRequiresAuth = !(
     Object.hasOwn(to.meta, "requiresAuth") && !to.meta.requiresAuth
