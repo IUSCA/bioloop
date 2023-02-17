@@ -2,8 +2,11 @@ const express = require('express');
 const { query, body } = require('express-validator');
 const IULoginHelper = require('@iusca/iulogin-helper');
 const config = require('config');
+const createError = require('http-errors');
 
 const validator = require('../middleware/validator');
+const asyncHandler = require('../middleware/asyncHandler');
+const { authenticate } = require('../middleware/auth');
 const userService = require('../services/user');
 const authService = require('../services/auth');
 
@@ -29,9 +32,9 @@ router.post(
   body('service').notEmpty(),
   validator(async (req, res, next) => {
     // eslint-disable-next-line no-unused-vars
-    IULogin.validate(req.body.ticket, req.body.service, false, async (err, username, profile) => {
+    IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id, profile) => {
       if (err) return next(err);
-      const user = await userService.findUserByCASId(username);
+      const user = await userService.findActiveUserBy('cas_id', cas_id);
       if (user) {
         const resObj = await authService.onLogin(user);
         return res.json(resObj);
@@ -42,5 +45,16 @@ router.post(
     });
   }),
 );
+
+router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
+  const user = await userService.findActiveUserBy('username', req.user.username);
+  if (user) {
+    const resObj = await authService.onLogin(user);
+    return res.json(resObj);
+  }
+  // User has a valid token but they are deleted soon after and are not a portal user
+  // Send an invalid request error
+  return createError.BadRequest('Not a valid user');
+}));
 
 module.exports = router;

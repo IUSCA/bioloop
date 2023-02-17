@@ -1,30 +1,44 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
-import { useLocalStorage } from "@vueuse/core";
 import { ref } from "vue";
+import jwtDecode from "jwt-decode";
 import authService from "../services/auth";
+import config from "../config";
 
 export const useAuthStore = defineStore("auth", () => {
+  console.log("initializing auth store");
   const user = ref(useLocalStorage("user", {}));
+  const token = ref(useLocalStorage("token", ""));
   const loggedIn = ref(false);
   const status = ref("");
+  let refreshTokenTimer = null;
 
-  function onLogin(_user) {
-    user.value = _user;
+  function initialize() {
+    console.log("auth store: initialize");
+    if (user.value && token.value) {
+      loggedIn.value = true;
+      refreshTokenBeforeExpiry();
+    }
+  }
+
+  function onLogin(data) {
+    user.value = data.profile;
+    token.value = data.token;
     loggedIn.value = true;
+    refreshTokenBeforeExpiry();
   }
 
   function onLogout() {
     loggedIn.value = false;
     user.value = {};
+    token.value = "";
   }
 
   function casLogin(ticket) {
     return authService
       .casVerify(ticket)
       .then((res) => {
-        const _user = res.data;
-        if (_user) onLogin(_user);
-        return _user;
+        if (res.data) onLogin(res.data);
+        return res.data;
       })
       .catch((error) => {
         console.error("CAS Login failed", error);
@@ -38,7 +52,45 @@ export const useAuthStore = defineStore("auth", () => {
     onLogout();
   }
 
-  function register() {}
+  function refreshTokenBeforeExpiry() {
+    // idempotent method - will not create a timeout if one already exists
+    console.log("auth store: refreshTokenBeforeExpiry");
+    if (!refreshTokenTimer) {
+      // timer is not running running
+      try {
+        const payload = jwtDecode(token.value);
+        const expiresAt = new Date(payload.exp * 1000);
+        const now = new Date();
+        if (now < expiresAt) {
+          // token is still alive
+          const delay =
+            expiresAt - now - config.refreshTokenTMinusSeconds * 1000;
+          console.log(
+            "auth store: refreshTokenBeforeExpiry: trigerring refreshToken in ",
+            delay / 1000,
+            "seconds"
+          );
+          refreshTokenTimer = setTimeout(refreshToken, delay);
+        }
+        // else - do nothing, navigation guard will redirect to /auth
+      } catch (err) {
+        console.error("Errored trying to decode access token", err);
+      }
+    }
+  }
+
+  function refreshToken() {
+    console.log("refreshing token");
+    refreshTokenTimer = null; // reset timer state
+    authService
+      .refreshToken()
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+      })
+      .catch((err) => {
+        console.error("Unable to refresh token", err);
+      });
+  }
 
   // Check for roles
   function hasRole(role) {
@@ -55,9 +107,9 @@ export const useAuthStore = defineStore("auth", () => {
     user,
     loggedIn,
     status,
+    initialize,
     casLogin,
     logout,
-    register,
     hasRole,
     saveSettings,
   };

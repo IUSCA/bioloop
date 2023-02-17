@@ -1,7 +1,7 @@
 import axios from "axios";
 import config from "../config";
 
-const user = ref(useLocalStorage("user", {}));
+const token = ref(useLocalStorage("token", ""));
 
 const axiosInstance = axios.create({
   baseURL: config.apiBasePath,
@@ -9,9 +9,9 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = user.value?.token;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const _token = token.value;
+    if (_token) {
+      config.headers.Authorization = `Bearer ${_token}`;
     }
     return config;
   },

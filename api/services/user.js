@@ -12,6 +12,7 @@ const prisma = new PrismaClient();
 //     .value();
 // }
 
+// TODO: what happens if input is null or malformed
 const transformUser = _.flow([
   ({ user_role, ...user }) => ({
     ...user,
@@ -20,10 +21,11 @@ const transformUser = _.flow([
   _.omit(['password', 'id', 'user_role']),
 ]);
 
-async function findUserByCASId(cas_id) {
-  const user = await prisma.user.findUnique({
+async function findActiveUserBy(key, value) {
+  const user = await prisma.user.findFirst({
     where: {
-      cas_id,
+      is_deleted: false,
+      [key]: value,
     },
     include: {
       user_role: {
@@ -39,6 +41,6 @@ async function updateLastLogin(id) {
 }
 
 module.exports = {
-  findUserByCASId,
+  findActiveUserBy,
   updateLastLogin,
 };

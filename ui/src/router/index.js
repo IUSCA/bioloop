@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
 import generatedRoutes from "virtual:generated-pages";
 import { setupLayouts } from "virtual:generated-layouts";
-import { useLocalStorage } from "@vueuse/core";
 import { isLiveToken } from "../services/utils";
+import config from "../config";
 
 // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
 const routes = setupLayouts(generatedRoutes);
@@ -12,7 +12,7 @@ const router = createRouter({
   routes,
 });
 
-const user = ref(useLocalStorage("user", {}));
+const token = ref(useLocalStorage("token", ""));
 
 // Authentication and Authorization navigation guard
 router.beforeEach((to, _from) => {
@@ -25,12 +25,11 @@ router.beforeEach((to, _from) => {
   const isRoleRestrictedRoute = Object.hasOwn(to.meta, "requiresRole");
 
   let isLoggedIn = false;
-  const token = user.value?.token;
-  if (isLiveToken(token)) {
+  if (isLiveToken(token.value)) {
     isLoggedIn = true;
   } else {
     // JWT expired, remove user from local storage
-    user.value = {};
+    token.value = "";
   }
 
   if (routeRequiresAuth) {
@@ -61,7 +60,7 @@ router.beforeEach((to, _from) => {
 // https://github.com/vuejs/vue-router/issues/914#issuecomment-1019253370
 router.afterEach((to, _from) => {
   nextTick(() => {
-    document.title = to.meta?.title || "DGL-SCA";
+    document.title = to.meta?.title || config.defaultTitle;
   });
 });
 
