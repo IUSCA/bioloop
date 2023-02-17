@@ -75,21 +75,21 @@ function isActive(path) {
 
 const isAdmin = ref(true);
 const user_items = ref([
-  {
-    icon: "mdi-flask",
-    title: "Projects",
-    path: "/projects",
-  },
-  {
-    icon: "mdi-chart-gantt",
-    title: "Tracks",
-    path: "/tracks",
-  },
-  {
-    icon: "mdi-chart-timeline",
-    title: "Sessions",
-    path: "/sessions",
-  },
+  // {
+  //   icon: "mdi-flask",
+  //   title: "Projects",
+  //   path: "/projects",
+  // },
+  // {
+  //   icon: "mdi-chart-gantt",
+  //   title: "Tracks",
+  //   path: "/tracks",
+  // },
+  // {
+  //   icon: "mdi-chart-timeline",
+  //   title: "Sessions",
+  //   path: "/sessions",
+  // },
 ]);
 
 const admin_items = ref([
@@ -123,21 +123,21 @@ const admin_items = ref([
     title: "User Management",
     path: "/users",
   },
-  {
-    icon: "mdi-account-multiple",
-    title: "Group Management",
-    path: "/groups",
-  },
+  // {
+  //   icon: "mdi-account-multiple",
+  //   title: "Group Management",
+  //   path: "/groups",
+  // },
   // {
   //   icon: 'mdi-delete-empty-outline',
   //   title: 'Data Cleanup',
   //   path: '/clean',
   // },
-  {
-    icon: "mdi-format-list-bulleted",
-    title: "Stats/Tracking",
-    path: "/stats",
-  },
+  // {
+  //   icon: "mdi-format-list-bulleted",
+  //   title: "Stats/Tracking",
+  //   path: "/stats",
+  // },
 ]);
 
 const bottom_items = ref([
