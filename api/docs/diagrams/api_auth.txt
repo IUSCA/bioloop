@@ -1,0 +1,16 @@
+sequenceDiagram
+    rect rgb(191, 223, 255)
+    Client->>API: GET:/auth/casurl
+    API->>Client: CAS URL
+    end
+    rect rgb(200, 150, 255)
+    Client->>+API: POST: /auth/verify
+    API->>IU CAS: verify ticket
+    IU CAS->>API: cas_id
+    API->>DB: find user with cas_id
+    DB->>API: User Data
+    API->>-Client: User data + JWT
+    end
+
+
+[![](https://mermaid.ink/img/pako:eNptkm9rwjAQxr_KkVcbVqYOXywvBLVjOPZHVmUwCiM2VxvWpi5NJiJ-913MurmxvAjJ_Z7Lc5dkz7JaIuOswXeHOsNYibURVaqBhsHMglmvzvpX_QgGg0uahsPzAKelQm27o9F4PuNwc73gF8LZ4iITjTNl0BAiQVBymI4TWD7dBYRa_jEZ9HoR9Ie9f006R5f5Y7LgEHw-0Kh8d-ozW3oLDoGAVdkb2iAIqC2WSnxV8jQ1nnDIlZbgGjSwVbb4JYonberS81hYcZrdbTs8UkkUOnD7vPjulEWsQlMJJemq9z6cMltghSnjtJSYC1falEUBtY_h6T4cQsGi3iZf4MFVKzSN59Y49JJDqg9kQ1dTJzudMe5BxNyGymlflfFclA1FN0K_1PXPHqWytbkPX-H4Iw6fNW6k3Q?type=png)](https://mermaid.live/edit#pako:eNptkm9rwjAQxr_KkVcbVqYOXywvBLVjOPZHVmUwCiM2VxvWpi5NJiJ-913MurmxvAjJ_Z7Lc5dkz7JaIuOswXeHOsNYibURVaqBhsHMglmvzvpX_QgGg0uahsPzAKelQm27o9F4PuNwc73gF8LZ4iITjTNl0BAiQVBymI4TWD7dBYRa_jEZ9HoR9Ie9f006R5f5Y7LgEHw-0Kh8d-ozW3oLDoGAVdkb2iAIqC2WSnxV8jQ1nnDIlZbgGjSwVbb4JYonberS81hYcZrdbTs8UkkUOnD7vPjulEWsQlMJJemq9z6cMltghSnjtJSYC1falEUBtY_h6T4cQsGi3iZf4MFVKzSN59Y49JJDqg9kQ1dTJzudMe5BxNyGymlflfFclA1FN0K_1PXPHqWytbkPX-H4Iw6fNW6k3Q)

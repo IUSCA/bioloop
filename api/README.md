@@ -69,24 +69,56 @@ files
 - `utils/index.js` - non-specific common code
 
 ## Error Handling
-Source:
-- https://expressjs.com/en/guide/error-handling.html
-- https://github.com/jshttp/http-errors
+Source: [Express Error Handling](https://expressjs.com/en/guide/error-handling.html)
 
-```bash
-pnpm install http-error
-```
-
-- Express automatically handles errors thrown in the synchronous code, however it cannot catch errors thrown from asynchronous code (in versions below 5). These have to caught and passed to the `next` function.
-- The error thrown from the sync code are handled and passed to `next`
+- Express automatically handles errors thrown in the synchronous code, however it cannot catch errors thrown from asynchronous code (in versions below 5). These have to be caught and passed on to the `next` function.
+- The error thrown from the sync code in the middleware are handled and passed on to the `next` automatically.
 - When `next` is called with any argument except `'route'`, express assumes it is due to an error and skips any remaining non-error handling routing and middleware functions.
 
-The default error handler:
+### Asynchronous Error Handler
+`asyncMiddleware` in [middleware/error.js](middleware/asyncHandler.js)
+
+Usage: Wrap the route handler middleware with `asyncHandler` to produce a middleware funtion that can catch the asynchronous error and pass on to the default error handler.
+
+
+```javascript
+const asyncHandler = require('../middleware/asyncHandler');
+
+router.get('/user', asyncHandler(async (req, res, next) => {
+    const user = await userService.findActiveUserBy('username', req.query.username);
+    res.json(user)
+}))
+```
+
+instead of
+
+```javascript
+router.get('/user', async (req, res, next) => {
+  try {
+    const user = await userService.findActiveUserBy('username', req.query.username);
+    res.json(user)
+  } catch(err) {
+    next(err)
+  }
+})
+```
+
+
+### The Default Error Handler
 - The default error handler is added at the end of the middleware function stack
 - The `res.statusCode` is set from `err.status` (or `err.statusCode`). If this value is outside the 4xx or 5xx range, it will be set to 500.
 - The `res.statusMessage` is set according to the status code.
 - The body will be the HTML of the status code message when in production environment, otherwise will be `err.stack`. (environment variable NODE_ENV=production)
-- Any headers specified in an `err.headers` object.
+
+### Custom Default Error Handler
+- `errorHandler` in [middleware/error.js](middleware/error.js)
+- Logs error to console
+- send actual message to client only if `err.expose` is true otherwise send a generic Internal server error.  For http errors such as (`throw createError(400, 'foo bar')`), the client receives `{"message":"foo bar"}` with status code to 400.
+- For non http errors such as  `throw new Error('business logic error')`, only the `err.message` is set others are not. For such error, this handler will send a generic message. Client's will not see `business logic error` in thier response object.
+- Does not log to console for 404 errors
+
+### 404 handler
+- `notFound` in [middleware/error.js](middleware/error.js)
 
 ### http-errors module:
 - Helps to create http specific error objects which can be thrown or passed to next
@@ -101,15 +133,9 @@ return next(createError.NotFound())
 ```
 this will automatically set correct error message based on the constructor.
 
-### Custom error handler
-- `errorHandler` in [middleware/error.js](middleware/error.js)
-- Logs error to console
-- send actual message to client only if `err.expose` is true otherwise send a generic Internal server error.  For http errors such as (`throw createError(400, 'foo bar')`), the client receives `{"message":"foo bar"}` with status code to 400.
-- For non http errors such as  `throw new Error('business logic error')`, only the `err.message` is set others are not. For such error, this handler will send a generic message. Client's will not see `business logic error` in thier response object.
-- Does not log to console for 404 errors
 
-### 404 handler
-- `notFound` in [middleware/error.js](middleware/error.js)
+## Request Validators
+
 
 ## Linting
 
@@ -127,8 +153,73 @@ precdence of config: command line > environment > {NODE_ENV}.json > default.json
 
 The properties to read and override from environment is defined in `custom-environment-variables.json`
 
+### Loading environment variables
+
+```javascript
+require('dotenv-safe').config();
+```
+
 ## Authentication
 
 The API uses IU CAS authnetication model. 
 
-see [middleware/auth.js](middleware/auth.js) and [routes/auth.js](routes/auth.js)
+<img src="docs/assets/api_auth.png" >
+
+All the routes and sub-routers added after the [`authenticate`](middleware/auth.js) middleware in [index router](routes/index.js) require authentication. The routes that do not require authentication such as [auth routes](routes/auth.js) are added before this.
+
+The [`authenticate`](middleware/auth.js) middleware, parses the `Authorization` header for the bearer token and cryptographically verifies the JWT. If the JWT is deemed valid, the payload is decoded and added to the request as `req.user`
+
+To add authentication to a single route:
+```javascript
+const { authenticate } = require('../middleware/auth');
+
+router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
+  const user = await userService.findActiveUserBy('username', req.user.username);
+  // ...
+}))
+```
+
+## Request Validation
+
+Uses [express-validator](https://express-validator.github.io/docs/)
+
+
+Using the [`validator`](middleware/validator.js) higher order function, the error checking code is factored out from the route specific middleware functions.
+
+```javascript
+app.post(
+  '/user',
+  body('username').isEmail(),
+  body('password').isLength({ min: 5 }),
+  (req, res) => {
+    // Finds the validation errors in this request and wraps them in an object with handy functions
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    User.create({
+      username: req.body.username,
+      password: req.body.password,
+    }).then(user => res.json(user));
+  },
+);
+```
+
+becomes
+
+```javascript
+const validator = require('middleware/validator')
+app.post(
+  '/user',
+  body('username').isEmail(),
+  body('password').isLength({ min: 5 }),
+  validator(async (req, res) => {
+    const user = await User.create({
+      username: req.body.username,
+      password: req.body.password,
+    });
+    res.json(user);
+  },
+));
+```
