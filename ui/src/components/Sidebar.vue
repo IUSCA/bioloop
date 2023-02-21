@@ -10,8 +10,8 @@
           <va-list-item-section>
             <va-list-item-label class="text-3xl"> DGL-SCA </va-list-item-label>
 
-            <va-list-item-label caption>
-              Logged in as deduggi
+            <va-list-item-label v-if="auth.user?.username">
+              Logged in as {{ auth.user.username }}
             </va-list-item-label>
           </va-list-item-section>
         </va-list-item>
@@ -67,13 +67,17 @@
 </template>
 
 <script setup>
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 const route = useRoute();
+
+const isAdmin = ref(auth.hasRole("admin"));
 
 function isActive(path) {
   return route.path.startsWith(path);
 }
 
-const isAdmin = ref(true);
 const user_items = ref([
   // {
   //   icon: "mdi-flask",

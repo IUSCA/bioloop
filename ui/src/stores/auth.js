@@ -94,7 +94,10 @@ export const useAuthStore = defineStore("auth", () => {
 
   // Check for roles
   function hasRole(role) {
-    return "roles" in user.value && user.value.roles.includes(role);
+    return (
+      "roles" in user.value &&
+      user.value.roles.map((s) => s.toLowerCase()).includes(role.toLowerCase())
+    );
   }
 
   function saveSettings(data) {
