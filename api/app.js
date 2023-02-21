@@ -4,9 +4,6 @@ const requestLogger = require('morgan');
 const compression = require('compression');
 const cors = require('cors');
 
-// why?
-// global.__basedir = __dirname;
-
 const indexRouter = require('./routes/index');
 const { notFound, errorHandler } = require('./middleware/error');
 
