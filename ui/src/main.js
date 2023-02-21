@@ -7,7 +7,7 @@ import "material-design-icons-iconfont/dist/material-design-icons.min.css";
 import App from "./App.vue";
 import router from "./router";
 
-// Tree-shake extra vuestic styles, so there is not conflict with Tailwind
+// Tree-shake extra vuestic styles, so there is no conflict with Tailwind
 // https://vuestic.dev/en/getting-started/tree-shaking#css-code-split
 import "vuestic-ui/styles/essential.css";
 import "vuestic-ui/styles/typography.css";
