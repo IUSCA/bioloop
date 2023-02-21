@@ -1,17 +1,17 @@
 <template>
-  <main class="px-4 py-10 mt-10 text-center text-sky-700">
-    <div>
-      <p class="text-4xl">
-        <i-mdi-alert-circle-outline class="inline-block" />
-      </p>
-    </div>
-    <router-view />
-    <div>
-      <div class="m-3 text-sm mt-8">
-        <va-button @click="router.back()"> Go Back </va-button>
+  <div class="flex flex-row h-screen">
+    <main class="grow overflow-y-scroll flex flex-col justify-between">
+      <div class="text-center p-40">
+        <router-view></router-view>
+        <div class="m-3 text-sm mt-8">
+          <va-button size="large" round @click="router.back()">
+            Go Back
+          </va-button>
+        </div>
       </div>
-    </div>
-  </main>
+      <Footer class="flex-grow-0"></Footer>
+    </main>
+  </div>
 </template>
 
 <script setup>

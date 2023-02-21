@@ -1,5 +1,9 @@
 <template>
-  <div class="text-2xl">Not Found</div>
+  <div class="va-h1 font-semibold text-gray-500">This page's gone fishing.</div>
+  <div class="va-text-secondary">
+    If you feel that it's not right, please send us a message at
+    <a class="va-link" href="mailto:admin@sca.iu.edu">admin@sca.iu.edu</a>
+  </div>
 </template>
 
 <route lang="yaml">
