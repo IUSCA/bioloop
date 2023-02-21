@@ -25,15 +25,13 @@ router.get(
     } : false;
     const batches = await prisma.batch.findMany({
       include: {
-        checksum: checksumSelect,
+        metadata: checksumSelect,
       },
     });
 
-    // rename checksum property to metadata
     // include workflow with batch
-    const renameChecksumToMetadata = renameKey('checksum', 'metadata');
     const _includeWorkflow = includeWorkflow();
-    const promises = batches.map(renameChecksumToMetadata).map(_includeWorkflow);
+    const promises = batches.map(_includeWorkflow);
     const result = await Promise.all(promises);
     res.json(result);
   }),
@@ -56,16 +54,13 @@ router.get(
         id: req.params.id,
       },
       include: {
-        checksum: checksumSelect,
+        metadata: checksumSelect,
       },
     });
     if (batch) {
-      // rename checksum property to metadata
       // include workflow with batch
-      const renameChecksumToMetadata = renameKey('checksum', 'metadata');
       const _includeWorkflow = includeWorkflow(true, true);
-      let _batch = renameChecksumToMetadata(batch);
-      _batch = await _includeWorkflow(_batch);
+      _batch = await _includeWorkflow(batch);
       res.json(_batch);
     } else {
       next(createError(404));

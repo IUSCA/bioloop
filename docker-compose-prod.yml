@@ -12,14 +12,15 @@ services:
 
   api:
     container_name: dgl_api
-    image: node:19
+    build:
+      context: ./api
     volumes:
-      - ./api/:/opt/sca/dgl/api/
-      - dgl_api_modules:/opt/sca/dgl/api/node_modules
+      - ./api/:/opt/sca/app
+      - dgl_api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
-    working_dir: /opt/sca/dgl/api
-    command: sh -c "npm install && npx nodemon api.js"
+    working_dir: /opt/sca/app
+    command: sh -c "npm install && npx prisma db push && npx nodemon index.js"
     networks:
       dgl_network:
         ipv4_address: 172.19.0.2
