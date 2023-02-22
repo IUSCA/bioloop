@@ -7,6 +7,10 @@ const exports = {
   refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
   defaultTitle: "DGL-SCA",
+  contact: {
+    dgl_admin: "admin@dgl.iu.edu",
+    sca_admin: "sca-ops-l@list.iu.edu",
+  },
 };
 
 export default exports;

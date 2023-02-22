@@ -158,7 +158,7 @@ const bottom_items = ref([
   {
     icon: "mdi-logout-variant",
     title: "Logout",
-    path: "/signout",
+    path: "/auth/logout",
   },
 ]);
 </script>
