@@ -6,15 +6,31 @@ Docker standardizes the server environment and makes it easier to get a local de
 
 Requires `docker` and `docker-compose`. Docker desktop should work too. 
 
-Shared volumes are used in `docker-compose.ymnl` to ensure container node_modules are not confused with host level node_modules. Keeps `node_modules` folders out of your local code to make it easier to `find` and `grep`
+Shared volumes are used in `docker-compose.yml` to ensure container `node_modules` are not confused with host level `node_modules`. This approach also keeps `node_modules` folders out of the local directory to make it easier to `find` and `grep`.
 
-## OpenSSL
+To make adjustments to the way the application runs, edit and review [docker-compose.yml](docker-compose.yml).
+
+The UI and API containers have been set to run on start up to install / update dependencies.
+
+Set up the [front-end ui client](ui/README.md) or [back-end api server](api/README.md) as needed.
+
+### .env files
+
+`api/`, `worker/` both contain `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
+
+### OpenSSL
 
 ```
 cd ui/
 mkdir .cert
 openssl req -subj '/CN=localhost' -x509 -newkey rsa:4096 -nodes -keyout ./.cert/key.pem -out ./.cert/cert.pem 
 ```
+
+```
+cd api/keys
+./genkeys.sh
+```
+
 
 ## Starting / Stopping
 
@@ -52,21 +68,34 @@ Queue folders need to belong to docker group
 chown -R ${USER}:docker db/queue/
 ```
 
-## Configuration
+## Seed the database
 
-Try it out how it is.
+Add any usernames you need to work with in `api/prisma/seed.js` then seed the db
+
+```
+docker-compose execute api bash
+npx prisma db seed
+```
+
+
+## Testing
+
+Try it out how it is. Open a browser and go to:
 
 https://localhost
 
-The default configuration should be enough to get up and running.
+You may need to specify the `https://` prefix manually. You may also have to accept a warning about an insecure connection since it's a self-signed certificate. The default configuration should be enough to get up and running.
 
-To make adjustments, edit and review [docker-compose.yml](docker-compose.yml).
+Test the API with:
 
-Comment out containers that you don't currently need.
+http://127.0.0.1:3030/health
 
-The UI and API containers have been set to run on start up to install / update dependencies.
+To make more complex requests, use an API development tool like Hoppscotch or Insomnia:
 
-Set up the [front-end ui client](ui/README-ui.md) or [back-end api server](api/README-api.md) as needed.
+https://hoppscotch.io/
+
+To POST a request, choose `POST`, specify the URL, and in `Body` choose `application/x-www-form-urlencoded` for the `Content Type`
+
 
 ## Shortcuts
 
