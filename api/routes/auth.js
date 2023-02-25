@@ -4,7 +4,7 @@ const IULoginHelper = require('@iusca/iulogin-helper');
 const config = require('config');
 const createError = require('http-errors');
 
-const validator = require('../middleware/validator');
+const { validate } = require('../middleware/validators');
 const asyncHandler = require('../middleware/asyncHandler');
 const { authenticate } = require('../middleware/auth');
 const userService = require('../services/user');
@@ -19,8 +19,10 @@ const IULogin = new IULoginHelper({
 
 router.get(
   '/cas/url',
-  query('service').notEmpty(),
-  validator(async (req, res, next) => {
+  validate([
+    query('service').notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
     const loginUrl = IULogin.get_login_url(req.query.service);
     res.json({ url: loginUrl });
   }),
@@ -28,9 +30,11 @@ router.get(
 
 router.post(
   '/cas/verify',
-  body('ticket').notEmpty(),
-  body('service').notEmpty(),
-  validator(async (req, res, next) => {
+  validate([
+    body('ticket').notEmpty(),
+    body('service').notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
     // eslint-disable-next-line no-unused-vars
     IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id, profile) => {
       if (err) return next(err);
@@ -56,5 +60,19 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
   // Send an invalid request error
   return createError.BadRequest('Not a valid user');
 }));
+
+if (config.get('mode') !== 'production') {
+  router.post(
+    '/test_login',
+    asyncHandler(async (req, res, next) => {
+      if (req.body?.username === 'test_user') {
+        const user = await userService.findActiveUserBy('username', 'test_user');
+        const resObj = await authService.onLogin(user);
+        return res.json(resObj);
+      }
+      return next(createError.Forbidden());
+    }),
+  );
+}
 
 module.exports = router;

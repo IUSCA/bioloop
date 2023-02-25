@@ -65,9 +65,12 @@ services:
     image: postgres:14.5
     # restart: unless-stopped
     environment:
+      - POSTGRES_USER=dgluser
       - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=dgl
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
+      - ./postgres/scripts:/docker-entrypoint-initdb.d
     ports:
       - 127.0.0.1:5432:5432
     expose:

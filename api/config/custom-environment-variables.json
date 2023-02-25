@@ -4,5 +4,6 @@
   },
   "postgres": {
     "password": "DATABASE_PASSWORD"
-  }
+  },
+  "mode": "NODE_ENV"
 }

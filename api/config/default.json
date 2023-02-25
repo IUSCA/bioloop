@@ -28,5 +28,6 @@
       "key": "keys/auth.key",
       "sign_algorithm": "RS256"
     }
-  }
+  },
+  "mode": "default"
 }

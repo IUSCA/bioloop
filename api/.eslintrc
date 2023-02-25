@@ -16,6 +16,7 @@
     "ecmaVersion": 13
   },
   "extends": [
-    "airbnb-base"
+    "airbnb-base",
+    "plugin:lodash-fp/recommended" // https://www.npmjs.com/package/eslint-plugin-lodash-fp
   ]
 }
