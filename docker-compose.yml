@@ -49,8 +49,8 @@ services:
       context: ./worker/
       dockerfile: Dockerfile
     volumes:
-      - ./scaworkers/:/opt/sca/app/scaworkers
-      - ./.env:/opt/sca/app/.env
+      - ./worker/scaworkers/:/opt/sca/app/scaworkers
+      - ./worker/.env:/opt/sca/app/.env
     expose:
       - 5001
     environment:
