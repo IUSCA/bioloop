@@ -17,6 +17,7 @@ router.get(
     query('include_checksums').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     // only select path and md5 columns from the checksum table if include_checksums is true
     const checksumSelect = req.query.include_checksums ? {
       select: {
@@ -45,6 +46,7 @@ router.get(
     query('include_checksums').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     // only select path and md5 columns from the checksum table if include_checksums is true
     const checksumSelect = req.query.include_checksums ? {
       select: {
@@ -78,6 +80,7 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     const batch = await prisma.batch.create({
       data: req.body,
     });
@@ -96,6 +99,7 @@ router.patch(
       .customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     const batchToUpdate = await prisma.batch.findFirst({
       where: {
         id: req.params.id,
@@ -119,6 +123,7 @@ router.post(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     const checksums = req.body.map((c) => ({
       batch_id: req.params.id,
       path: c.path,

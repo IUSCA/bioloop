@@ -23,6 +23,7 @@ router.get(
     query('service').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Auth']
     const loginUrl = IULogin.get_login_url(req.query.service);
     res.json({ url: loginUrl });
   }),
@@ -35,6 +36,7 @@ router.post(
     body('service').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
     IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id, profile) => {
       if (err) return next(err);
@@ -51,6 +53,7 @@ router.post(
 );
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['Auth']
   const user = await userService.findActiveUserBy('username', req.user.username);
   if (user) {
     const resObj = await authService.onLogin(user);
@@ -65,6 +68,7 @@ if (config.get('mode') !== 'production') {
   router.post(
     '/test_login',
     asyncHandler(async (req, res, next) => {
+      // #swagger.tags = ['Auth']
       if (req.body?.username === 'test_user') {
         const user = await userService.findActiveUserBy('username', 'test_user');
         const resObj = await authService.onLogin(user);
