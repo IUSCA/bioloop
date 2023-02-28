@@ -260,10 +260,10 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
 
 ## Request Validation
 
-Uses [express-validator](https://express-validator.github.io/docs/)
+Uses [express-validator](https://express-validator.github.io/docs/) to validate if the request query, params, or the body is of the expected format and has acceptable values. This module helps to write declarative code that reduces repeated spagetti safety checking code inside the route handler. The route can now safely assume that all required properties/keys of `req.params`, `req.query`, or `req.body` are present and have sensible values.
 
 
-Using the [`validator`](middleware/validator.js) higher order function, the error checking code is factored out from the route specific middleware functions.
+Using the [`validate`](middleware/validators.js) higher order function, the error checking code is factored out from the route specific middleware functions.
 
 ```javascript
 app.post(
@@ -291,9 +291,11 @@ becomes
 const validator = require('middleware/validator')
 app.post(
   '/user',
-  body('username').isEmail(),
-  body('password').isLength({ min: 5 }),
-  validator(async (req, res) => {
+  validate([
+    body('username').isEmail(),
+    body('password').isLength({ min: 5 }),
+  ]),
+  asyncHandler(async (req, res) => {
     const user = await User.create({
       username: req.body.username,
       password: req.body.password,
