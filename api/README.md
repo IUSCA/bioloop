@@ -288,7 +288,7 @@ app.post(
 becomes
 
 ```javascript
-const validator = require('middleware/validator')
+const validate = require('middleware/validators')
 app.post(
   '/user',
   validate([
