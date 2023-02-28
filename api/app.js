@@ -26,7 +26,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: false }));
 app.use(cookieParser());
 
-// gzip compression
+// compress all responses
 app.use(compression());
 
 // enable CORS - cross origin resource sharing

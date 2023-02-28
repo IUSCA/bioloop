@@ -45,6 +45,7 @@ Run `pnpm install` and `pnpm start` to start the API server.
 - [IU CAS authentication](#authentication)
 - JWT based stateless session management
 - [Role Based Access Control](#authorization-role-based-access-control)
+- [Request Validation](#request-validation)
 - [Auto generated swagger documentation](#auto-generated-swagger-documentation)
 - Prisma + Postgres ORM
 
@@ -61,6 +62,30 @@ Production deployment:
 
 Assumptions:
 - there is a reverse proxy which handles security headers as we are not using `helmet` module.
+
+## Typical request flow through the Express Server
+1. Express creates a [`request`](https://expressjs.com/en/4x/api.html#req) object that represents the HTTP request and has properties for the request query string, parameters, body, HTTP headers, and so on.
+2. [app.js](app.js) - The body, query parameters, and cookies are parsed and converted to objects and `req` object is updated.
+3. [app.js](app.js) - CORS?
+4. [Index Router](routers/index.js) - Intial [routing](https://expressjs.com/en/guide/routing.html) is performed to select a sub-router to send the request to. 
+5. [Authentication](#authentication) - Validate JWT and attach user profile to `req.user` or send 401 error response<sup>*</sup>. 
+6. [AceessControl](#authorization-role-based-access-control) - Determine whether the requester has enough permissions to perform the desired operation on a particular resource and attach the permission object to `req.permission` or send 403 error response.
+7. [Request Validation](#request-validation) - Validate if the request query, params, or the body is in expected format or send 400 error.
+8. [Async Handler](#asynchronous-error-handler) - Envolpe the business logic route middleware to catch async error and propagate them to global error handler.
+9. **Route Handler - Business Logic** - create and send the response.
+10. [Compression](https://expressjs.com/en/resources/middleware/compression.html) - Apply gZip compression to the response body.
+11. Express server sets some default headers and sends the [response](https://expressjs.com/en/4x/api.html#res) to the client.
+
+
+### When something goes wrong
+
+10. [404 Handler](#404-handler) - Handle routing failures and send 404 error response.
+11. [Prisma Not Found handler](#prisma-not-found-error-handler) - Handle not found prisma errors and send 404 error response.
+12. [Global error handler](#custom-default-error-handler) - Handle all other errors and send 500 error response.
+13. [Compression](https://expressjs.com/en/resources/middleware/compression.html) - Apply gZip compression to the response body.
+14. Express server sets some default headers and sends the [response](https://expressjs.com/en/4x/api.html#res) to the client.
+
+\* For the routes that are registered before `authenticate` such as `/health` and `/auth`, this middleware not invoked.
 
 ## Project Structure
 files 
@@ -325,7 +350,10 @@ The goal of the [accessControl](middleware/auth.js) middleware is to determine f
 Code to check if the requester to is authorized to `GET /users/dduck`. This route is protected by `authenticate` middleware which attaches the requester profile to `req.user` if the token is valid.
 
 ```javascript
+const { authenticate } = require('../middleware/auth');
+
 router.get('/:username',
+  authenticate,
   asyncHandler(async (req, res, next) => {
     
     const roles = req.user.roles;
@@ -359,7 +387,7 @@ The above code can be written consicely with the help of accessControl middlewar
 `routes/*.js`
 ```javascript
 // import middleware
-const { accessControl } = require('../middleware/auth');
+const { authenticate, accessControl } = require('../middleware/auth');
 
 // configre the middleware to authorize requests to user resource
 // resource ownership is checked by default
@@ -369,6 +397,7 @@ const isPermittedTo = accessControl('user');
 //
 router.get(
   '/:username',
+  authenticate,
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const user = await userService.findActiveUserBy('username', req.params.username);
