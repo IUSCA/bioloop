@@ -47,7 +47,7 @@ services:
     container_name: dgl_worker_api
     build:
       context: ./worker/
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.docker
     volumes:
       - ./worker/scaworkers/:/opt/sca/app/scaworkers
       - ./worker/.env:/opt/sca/app/.env
