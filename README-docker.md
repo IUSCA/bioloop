@@ -31,6 +31,12 @@ cd api/keys
 ./genkeys.sh
 ```
 
+> Note: when running under Windows, it may be necessary to run the openssl commands via Cygwin
+
+### Worker Container
+
+edit the `worker/Dockerfile.docker` file so that the container gets built to run with a non-root user / group. The ids in that file need ot match up with the corresponding existing system user that you want them to run as. 
+
 
 ## Starting / Stopping
 
@@ -60,6 +66,7 @@ To see what is going on in a specific container:
 docker-compose logs -f api
 ```
 
+
 ## Queue
 
 Queue folders need to belong to docker group
@@ -68,12 +75,13 @@ Queue folders need to belong to docker group
 chown -R ${USER}:docker db/queue/
 ```
 
+
 ## Seed the database
 
 Add any usernames you need to work with in `api/prisma/seed.js` then seed the db
 
 ```
-docker-compose execute api bash
+docker-compose exec api bash
 npx prisma db seed
 ```
 
