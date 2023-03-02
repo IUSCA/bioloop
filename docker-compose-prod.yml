@@ -14,6 +14,9 @@ services:
     container_name: dgl_api
     build:
       context: ./api
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./api/:/opt/sca/app
       - dgl_api_modules:/opt/sca/app/node_modules
@@ -29,7 +32,9 @@ services:
     container_name: dgl_worker_api
     build:
       context: ./worker/
-      dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./worker/scaworkers/:/opt/sca/app/scaworkers
       - ./worker/.env:/opt/sca/app/.env

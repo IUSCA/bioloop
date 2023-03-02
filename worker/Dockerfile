@@ -3,12 +3,14 @@ FROM python:3.10.6
 # From Google Cloud Run Tutorials
 # Allow statements and log messages to immediately appear in the Knative logs
 ENV PYTHONUNBUFFERED True
+ARG APP_GID
+ARG APP_UID 
 
 RUN pip install --upgrade pip
 
 # create scauser and sca group with the same ids as in the production VM.
-RUN groupadd --gid 1302 sca
-RUN useradd -ms /bin/bash --uid 2457689 --gid 1302 scauser 
+RUN groupadd -o --gid ${APP_GID} sca
+RUN useradd -ms /bin/bash --uid ${APP_UID} --gid ${APP_GID} scauser
 
 WORKDIR /opt/sca/app
 RUN chown -R scauser:sca /opt/sca/app
