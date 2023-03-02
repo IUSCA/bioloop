@@ -3,9 +3,11 @@ const cookieParser = require('cookie-parser');
 const requestLogger = require('morgan');
 const compression = require('compression');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerFile = require('./swagger_output.json');
 
 const indexRouter = require('./routes/index');
-const { notFound, errorHandler } = require('./middleware/error');
+const { notFound, errorHandler, prismaNotFoundHandler } = require('./middleware/error');
 
 // Register application
 const app = express();
@@ -24,17 +26,23 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: false }));
 app.use(cookieParser());
 
-// gzip compression
+// compress all responses
 app.use(compression());
 
 // enable CORS - cross origin resource sharing
 app.use(cors());
+
+// mount swagger ui
+app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 // mount router
 app.use('/', indexRouter);
 
 // handle unknown routes
 app.use(notFound);
+
+// handle prisma errors that indicate record is not found and send 404
+app.use(prismaNotFoundHandler);
 
 // pass any unhandled errors to the error handler
 app.use(errorHandler);

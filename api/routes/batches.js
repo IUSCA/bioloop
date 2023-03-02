@@ -4,18 +4,20 @@ const createError = require('http-errors');
 const { query, param, body } = require('express-validator');
 
 // const logger = require('../services/logger');
-// const asyncHandler = require('../middleware/asyncHandler');
-const validator = require('../middleware/validator');
+const asyncHandler = require('../middleware/asyncHandler');
+const { validate } = require('../middleware/validators');
 const { includeWorkflow } = require('../services/workflow');
-const { renameKey } = require('../utils');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 router.get(
   '/',
-  query('include_checksums').toBoolean().default(false),
-  validator(async (req, res, next) => {
+  validate([
+    query('include_checksums').toBoolean().default(false),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     // only select path and md5 columns from the checksum table if include_checksums is true
     const checksumSelect = req.query.include_checksums ? {
       select: {
@@ -39,9 +41,12 @@ router.get(
 
 router.get(
   '/:id',
-  param('id').isInt().toInt(),
-  query('include_checksums').toBoolean().default(false),
-  validator(async (req, res, next) => {
+  validate([
+    param('id').isInt().toInt(),
+    query('include_checksums').toBoolean().default(false),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     // only select path and md5 columns from the checksum table if include_checksums is true
     const checksumSelect = req.query.include_checksums ? {
       select: {
@@ -60,7 +65,7 @@ router.get(
     if (batch) {
       // include workflow with batch
       const _includeWorkflow = includeWorkflow(true, true);
-      _batch = await _includeWorkflow(batch);
+      const _batch = await _includeWorkflow(batch);
       res.json(_batch);
     } else {
       next(createError(404));
@@ -70,9 +75,12 @@ router.get(
 
 router.post(
   '/',
-  body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
-  body('size').optional().notEmpty().customSanitizer(BigInt),
-  validator(async (req, res, next) => {
+  validate([
+    body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
+    body('size').optional().notEmpty().customSanitizer(BigInt),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     const batch = await prisma.batch.create({
       data: req.body,
     });
@@ -83,12 +91,15 @@ router.post(
 
 router.patch(
   '/:id',
-  param('id').isInt().toInt(),
-  body('du_size').optional().notEmpty().bail()
-    .customSanitizer(BigInt), // convert to BigInt
-  body('size').optional().notEmpty().bail()
-    .customSanitizer(BigInt),
-  validator(async (req, res, next) => {
+  validate([
+    param('id').isInt().toInt(),
+    body('du_size').optional().notEmpty().bail()
+      .customSanitizer(BigInt), // convert to BigInt
+    body('size').optional().notEmpty().bail()
+      .customSanitizer(BigInt),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     const batchToUpdate = await prisma.batch.findFirst({
       where: {
         id: req.params.id,
@@ -108,8 +119,11 @@ router.patch(
 
 router.post(
   '/:id/checksums',
-  param('id').isInt().toInt(),
-  validator(async (req, res, next) => {
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
     const checksums = req.body.map((c) => ({
       batch_id: req.params.id,
       path: c.path,

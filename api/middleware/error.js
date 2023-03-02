@@ -1,9 +1,20 @@
 const createError = require('http-errors');
+const { Prisma } = require('@prisma/client');
 
 // catch 404 and forward to error handler
 function notFound(req, res, next) {
   const error = createError(404, `Not Found - ${req.originalUrl}`);
   next(error);
+}
+
+// catch prisma record not found errors and send 404
+function prismaNotFoundHandler(e, req, res, next) {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    if (e?.meta?.cause?.includes('not found')) {
+      return next(createError.NotFound());
+    }
+  }
+  return next(e);
 }
 
 function errorHandler(err, req, res, next) {
@@ -26,4 +37,5 @@ function errorHandler(err, req, res, next) {
 module.exports = {
   notFound,
   errorHandler,
+  prismaNotFoundHandler,
 };

@@ -49,8 +49,8 @@ services:
       context: ./worker/
       dockerfile: Dockerfile
     volumes:
-      - ./scaworkers/:/opt/sca/app/scaworkers
-      - ./.env:/opt/sca/app/.env
+      - ./worker/scaworkers/:/opt/sca/app/scaworkers
+      - ./worker/.env:/opt/sca/app/.env
     expose:
       - 5001
     environment:
@@ -65,9 +65,12 @@ services:
     image: postgres:14.5
     # restart: unless-stopped
     environment:
+      - POSTGRES_USER=dgluser
       - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=dgl
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
+      - ./postgres/scripts:/docker-entrypoint-initdb.d
     ports:
       - 127.0.0.1:5432:5432
     expose:

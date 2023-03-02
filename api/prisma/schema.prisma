@@ -75,7 +75,8 @@ model role {
 model user_role {
   user_id Int
   role_id Int
-  roles   role @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users   user @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles   role @relation(fields: [role_id], references: [id])
+  users   user @relation(fields: [user_id], references: [id])
+  assigned_at DateTime @default(now())
   @@id([user_id, role_id])
 }

@@ -31,28 +31,61 @@ DATABASE_URL="postgresql://dgluser:example@localhost:5432/dgl?schema=public"
 Run `pnpm install` and `pnpm start` to start the API server.
 
 ## Features:
-- global error handler
-- async error handler
-- body parser, cookie parser, compression
-- logger
+- Query and body parser, cookie parser, response compression, and CORS
+- [Error Handling](#error-handling)
+  - [Async error handler](#asynchronous-error-handler)
+  - [Default error handler](#the-default-error-handler)
+  - [Prisma not found handler](#prisma-not-found-error-handler)
+  - [404 Not Found handler](#404-handler)
+- Logger
   - log incoming requests
   - multi-level logger: ex: `logger.info()`
   - log timestamps
-- hierarchical configuration
+- [Hierarchical layered configuration](#config)
+- [IU CAS authentication](#authentication)
+- JWT based stateless session management
+- [Role Based Access Control](#authorization-role-based-access-control)
+- [Request Validation](#request-validation)
+- [Auto generated swagger documentation](#auto-generated-swagger-documentation)
+- Prisma + Postgres ORM
 
 Developer Exprience
 - Auto reload:  `nodemon index.js`
-- Linting
+- [Linting](#linting)
     - auto highligt linting errors
     - format on save
 - Consistent Coding styles with editorconfig
 
 Production deployment:
 - pm2
-- redirect logs and rotate log files
+- docker
 
 Assumptions:
 - there is a reverse proxy which handles security headers as we are not using `helmet` module.
+
+## Typical request flow through the Express Server
+1. Express creates a [`request`](https://expressjs.com/en/4x/api.html#req) object that represents the HTTP request and has properties for the request query string, parameters, body, HTTP headers, and so on.
+2. [app.js](app.js) - The body, query parameters, and cookies are parsed and converted to objects and `req` object is updated.
+3. [app.js](app.js) - CORS?
+4. [Index Router](routers/index.js) - Intial [routing](https://expressjs.com/en/guide/routing.html) is performed to select a sub-router to send the request to. 
+5. [Authentication](#authentication) - Validate JWT and attach user profile to `req.user` or send 401 error response<sup>*</sup>. 
+6. [AceessControl](#authorization-role-based-access-control) - Determine whether the requester has enough permissions to perform the desired operation on a particular resource and attach the permission object to `req.permission` or send 403 error response.
+7. [Request Validation](#request-validation) - Validate if the request query, params, or the body is in expected format or send 400 error.
+8. [Async Handler](#asynchronous-error-handler) - Envolpe the business logic route middleware to catch async error and propagate them to global error handler.
+9. **Route Handler - Business Logic** - create and send the response.
+10. [Compression](https://expressjs.com/en/resources/middleware/compression.html) - Apply gZip compression to the response body.
+11. Express server sets some default headers and sends the [response](https://expressjs.com/en/4x/api.html#res) to the client.
+
+
+### When something goes wrong
+
+10. [404 Handler](#404-handler) - Handle routing failures and send 404 error response.
+11. [Prisma Not Found handler](#prisma-not-found-error-handler) - Handle not found prisma errors and send 404 error response.
+12. [Global error handler](#custom-default-error-handler) - Handle all other errors and send 500 error response.
+13. [Compression](https://expressjs.com/en/resources/middleware/compression.html) - Apply gZip compression to the response body.
+14. Express server sets some default headers and sends the [response](https://expressjs.com/en/4x/api.html#res) to the client.
+
+\* For the routes that are registered before `authenticate` such as `/health` and `/auth`, this middleware not invoked.
 
 ## Project Structure
 files 
@@ -134,12 +167,58 @@ return next(createError.NotFound())
 this will automatically set correct error message based on the constructor.
 
 
-## Request Validators
+### Prisma Not Found Error Handler
+Prisma returns opaque error objects from the underlying query engine when DB queries fail. One such common error that must be handled everytime a DB query is made is the **Not Found** error. 
+
+HTTP semantics require that if a resource cannot be found either while retrieving, updating or deleting the response should be sent 404 status code. In order to achieve this, the errors from the prisma code have to be caught and analysed for the **Not Found** errors. 
+
+A typical example of handling a not found error and returning 404 response:
+
+```javascript
+router.delete(
+  '/:username',
+  asyncHandler(async (req, res, next) => {
+    try{
+      const deletedUser = await userService.softDeleteUser(req.params.username);
+      res.json(deletedUser);
+    } catch(e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e?.meta?.cause?.includes('not found')) {
+          return next(createError.NotFound());
+        }
+      }
+      return next(e);
+    }
+  }),
+);
+```
+
+Here, the errors other than not found are propagated to the error handler by `next(e)`.
+
+The try-catch code can be refactored to a middleware that intercepts all errors before the Custom default error handler. The above code after refactoring looks like:
+
+`app.js`
+```javascript
+const { prismaNotFoundHandler } = require('./middleware/error');
+app.use(prismaNotFoundHandler);
+```
+
+`routes/*.js`
+```javascript
+router.delete(
+  '/:username',
+  asyncHandler(async (req, res, next) => {
+    const deletedUser = await userService.softDeleteUser(req.params.username);
+    res.json(deletedUser);
+  }),
+);
+```
+Now, the routes' business logic code is cleaner and 404s are automatically when prisma ORM throws not found errors. If you want to send other HTTP status codes, intercept the prisma error in your route handler without propagating it.
 
 
 ## Linting
 
-Eslint rules inherited from `eslint-config-airbnb-base`
+Eslint rules inherited from `eslint-config-airbnb-base` and [Lodash-fp ruleset](https://www.npmjs.com/package/eslint-plugin-lodash-fp).
 
 ## Config
 
@@ -181,10 +260,10 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
 
 ## Request Validation
 
-Uses [express-validator](https://express-validator.github.io/docs/)
+Uses [express-validator](https://express-validator.github.io/docs/) to validate if the request query, params, or the body is of the expected format and has acceptable values. This module helps to write declarative code that reduces repeatitive Spaghetti safety checking code inside the route handler. The route can now confidently presume that all of the required properties/keys of `req.params`, `req.query`, or `req.body` exist and have appropriate values and optional keys set to default values.
 
 
-Using the [`validator`](middleware/validator.js) higher order function, the error checking code is factored out from the route specific middleware functions.
+Using the [`validate`](middleware/validators.js) higher order function, the error checking code is factored out from the route specific middleware functions.
 
 ```javascript
 app.post(
@@ -209,12 +288,14 @@ app.post(
 becomes
 
 ```javascript
-const validator = require('middleware/validator')
+const validate = require('middleware/validators')
 app.post(
   '/user',
-  body('username').isEmail(),
-  body('password').isLength({ min: 5 }),
-  validator(async (req, res) => {
+  validate([
+    body('username').isEmail(),
+    body('password').isLength({ min: 5 }),
+  ]),
+  asyncHandler(async (req, res) => {
     const user = await User.create({
       username: req.body.username,
       password: req.body.password,
@@ -223,3 +304,119 @@ app.post(
   },
 ));
 ```
+
+## Authorization: Role Based Access Control
+
+[accesscontrol](https://www.npmjs.com/package/accesscontrol) library is used to provide role based authorization to routes (resources).
+
+Roles in this application:
+- user
+- operator
+- admin
+- superadmin
+
+Each role defines CRUD permissions on resources with two scopes: "own" and "any". These are configured in [services/accesscontrols.js](services/accesscontrols.js).
+
+The goal of the [accessControl](middleware/auth.js) middleware is to determine from an incoming request whether the requester has enough permissions to perform the desired operation on a particular resource.
+
+### A simple use case: 
+
+**Objective**: Users with `user` role are only permitted to read and update thier own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
+
+**Role design**:
+- roles: `admin`, `user`
+- actions: CRUD
+- resource: `user`
+
+```javascript
+{
+  admin: {
+    user: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+  },
+  user: {
+    user: {
+      'read:own': ['*'],
+      'update:own': ['*'],
+    },
+  },
+}
+```
+
+**Permission check**:
+
+Code to check if the requester to is authorized to `GET /users/dduck`. This route is protected by `authenticate` middleware which attaches the requester profile to `req.user` if the token is valid.
+
+```javascript
+const { authenticate } = require('../middleware/auth');
+
+router.get('/:username',
+  authenticate,
+  asyncHandler(async (req, res, next) => {
+    
+    const roles = req.user.roles;
+    const resourceOwner = req.params.username;
+    const requester = req.user?.username;
+
+    const permission = (requester === resourceOwner)
+        ? ac.can(roles).readOwn('user')
+        : ac.can(roles).readAny('user');
+    
+    if (!permission.granted) {
+      return next(createError(403)); // Forbidden
+    }
+    else {
+      const user = await userService.findActiveUserBy('username', req.params.username);
+      if (user) { return res.json(user); }
+      return next(createError.NotFound());
+    }
+  }),
+);
+```
+
+readOwn permission is verified against user roles if the requester and resource owner are the same, otherwise readAny permission is examined. If the requester has only `user` role and is requesting the profile of other users, the request will be denied.
+
+### AccessControl Middleware Usage
+
+[accessControl](middleware/auth.js) middleware is a generic function to handle authorization for any action or resource with optional ownership checking.
+
+The above code can be written consicely with the help of accessControl middleware.
+
+`routes/*.js`
+```javascript
+// import middleware
+const { authenticate, accessControl } = require('../middleware/auth');
+
+// configre the middleware to authorize requests to user resource
+// resource ownership is checked by default
+// throws 403 if not authorized
+const isPermittedTo = accessControl('user');
+
+//
+router.get(
+  '/:username',
+  authenticate,
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const user = await userService.findActiveUserBy('username', req.params.username);
+    if (user) { return res.json(user); }
+    return next(createError.NotFound());
+  }),
+);
+```
+
+## Auto-generated Swagger Documentation
+
+1. Add `// #swagger.tags = ['<sub-router>']` comment to the code of the route handler and replace `sub-router` with a valid name that describes the family of routes (ex: User, Batch, etc).
+2. Run `npm run swagger-autogen` to generate the documentation.
+3. Visit `http://<api-host>:<api-port>/docs`
+
+Files:
+- `swagger.js` - script that generates the documentation. Configures the output file, the router to generate routes and other common config.
+- `swagger_output.json` - generated routes, not included in the version control.
+
+Source: https://medium.com/swlh/automatic-api-documentation-in-node-js-using-swagger-dd1ab3c78284
