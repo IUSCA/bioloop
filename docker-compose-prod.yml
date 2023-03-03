@@ -23,7 +23,7 @@ services:
     expose:
       - 3030
     working_dir: /opt/sca/app
-    command: sh -c "npm install && npx prisma db push && npx nodemon index.js"
+    command: bash -c "pnpm fetch && npx prisma db push && nodemon --signal SIGTERM index.js"
     networks:
       dgl_network:
         ipv4_address: 172.19.0.2

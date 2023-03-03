@@ -15,3 +15,11 @@ USER scauser:sca
 
 # create node_modules directory before the volume mounts
 RUN mkdir /opt/sca/app/node_modules
+
+# setup for npm global packages
+RUN npm config set prefix '~/.local/'
+RUN mkdir -p ~/.local/bin && echo 'export PATH=~/.local/bin/:$PATH' >> ~/.bashrc
+ENV PATH="~/.local/bin/:${PATH}"
+
+# install pnpm
+RUN npm install -g pnpm

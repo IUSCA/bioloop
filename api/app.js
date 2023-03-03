@@ -4,7 +4,7 @@ const requestLogger = require('morgan');
 const compression = require('compression');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
-const swaggerFile = require('./swagger_output.json');
+const config = require('config')
 
 const indexRouter = require('./routes/index');
 const { notFound, errorHandler, prismaNotFoundHandler } = require('./middleware/error');
@@ -32,8 +32,15 @@ app.use(compression());
 // enable CORS - cross origin resource sharing
 app.use(cors());
 
-// mount swagger ui
-app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+if (!['production', 'test'].includes(config.get('mode'))) {
+  // mount swagger ui
+  try{
+    const swaggerFile = require('./swagger_output.json');
+    app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+  } catch(e) {
+    console.log('Unable to load "./swagger_output.json"', e)
+  }
+}
 
 // mount router
 app.use('/', indexRouter);
