@@ -14,13 +14,16 @@ services:
     container_name: dgl_api
     build:
       context: ./api
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./api/:/opt/sca/app
       - dgl_api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
     working_dir: /opt/sca/app
-    command: sh -c "npm install && npx prisma db push && npx nodemon index.js"
+    command: bash -c "pnpm fetch && npx prisma db push && nodemon --signal SIGTERM index.js"
     networks:
       dgl_network:
         ipv4_address: 172.19.0.2
@@ -29,7 +32,9 @@ services:
     container_name: dgl_worker_api
     build:
       context: ./worker/
-      dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./worker/scaworkers/:/opt/sca/app/scaworkers
       - ./worker/.env:/opt/sca/app/.env
