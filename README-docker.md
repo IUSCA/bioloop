@@ -16,7 +16,7 @@ Set up the [front-end ui client](ui/README.md) or [back-end api server](api/READ
 
 ### .env files
 
-`api/`, `worker/` both contain `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
+`api/`, `worker/` both contain `.env.example.docker` files. Copy these to a corresponding `.env` file and update values accordingly.
 
 ### OpenSSL
 
@@ -31,8 +31,18 @@ cd api/keys
 ./genkeys.sh
 ```
 
+> Note: when running under Windows, it may be necessary to run the openssl commands via Cygwin
+
 
 ## Starting / Stopping
+
+```bash
+bin/dev.sh
+```
+Run this script from the project root. 
+- It creates a `.env` file in the project root which has the user id (uid) and group id (gid) of the project root directory's owner. The processes inside the api and worker_api docker containers are run as a user with this UID and GID.
+- It builds both the api and worker_api images
+- It runs all the containers (ui, api, worker_api, queue, postgres, mongo_db)
 
 If you only memorize three docker commands, these are good ones to know.
 
@@ -60,6 +70,7 @@ To see what is going on in a specific container:
 docker-compose logs -f api
 ```
 
+
 ## Queue
 
 Queue folders need to belong to docker group
@@ -68,12 +79,13 @@ Queue folders need to belong to docker group
 chown -R ${USER}:docker db/queue/
 ```
 
+
 ## Seed the database
 
 Add any usernames you need to work with in `api/prisma/seed.js` then seed the db
 
 ```
-docker-compose execute api bash
+docker-compose exec api bash
 npx prisma db seed
 ```
 
