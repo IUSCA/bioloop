@@ -4,28 +4,54 @@ services:
     container_name: dgl_ui
     image: node:19
     volumes:
-      - ./ui/:/opt/sca/dgl/ui/
-      - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
+      - ./ui/:/opt/sca/app
+      - dgl_ui_modules:/opt/sca/app/node_modules
     ports:
       - 127.0.0.1:443:443
-    working_dir: /opt/sca/dgl/ui
-    command: sh -c "npm install && npm run dev"
+    working_dir: /opt/sca/app
+    command: sh -c "npm install && exec /opt/sca/app/node_modules/.bin/vite --host"
     # entrypoint: [ "tail", "-f", "/dev/null" ]
 
   api:
     container_name: dgl_api
-    image: node:19
+    build:
+      context: ./api
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
     volumes:
-      - ./api/:/opt/sca/dgl/api/
-      - dgl_api_modules:/opt/sca/dgl/api/node_modules
+      - ./api/:/opt/sca/app
+      - dgl_api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
     ports:
       - 127.0.0.1:3030:3030
-    working_dir: /opt/sca/dgl/api
-    command: sh -c "npm install && npx prisma db push && npx nodemon api.js"
+    # entrypoint: ["tail", "-f", "/dev/null"]
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
+    depends_on:
+     - postgres
+
+  worker_api:
+    container_name: dgl_worker_api
+    build:
+      context: ./worker/
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
+    volumes:
+      - ./worker/scaworkers/:/opt/sca/app/scaworkers
+      - ./worker/.env:/opt/sca/app/.env
+    expose:
+      - 5001
+    environment:
+      - PORT=5001
+    ports:
+      - 127.0.0.1:5001:5001
+    depends_on:
+      - queue
+      - mongo
+    # restart: on-failure
 
   queue:
     # https://hub.docker.com/_/rabbitmq/
@@ -42,23 +68,6 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
-
-  worker_api:
-    container_name: dgl_worker_api
-    build:
-      context: ./worker/
-      dockerfile: Dockerfile.docker
-    volumes:
-      - ./worker/scaworkers/:/opt/sca/app/scaworkers
-      - ./worker/.env:/opt/sca/app/.env
-    expose:
-      - 5001
-    environment:
-      - PORT=5001
-    depends_on:
-      - queue
-      - mongo
-    # restart: on-failure
 
   postgres:
     container_name: dgl_postgres

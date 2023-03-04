@@ -16,7 +16,7 @@ Set up the [front-end ui client](ui/README.md) or [back-end api server](api/READ
 
 ### .env files
 
-`api/`, `worker/` both contain `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
+`api/`, `worker/` both contain `.env.example.docker` files. Copy these to a corresponding `.env` file and update values accordingly.
 
 ### OpenSSL
 
@@ -33,12 +33,16 @@ cd api/keys
 
 > Note: when running under Windows, it may be necessary to run the openssl commands via Cygwin
 
-### Worker Container
-
-edit the `worker/Dockerfile.docker` file so that the container gets built to run with a non-root user / group. The ids in that file need ot match up with the corresponding existing system user that you want them to run as. 
-
 
 ## Starting / Stopping
+
+```bash
+bin/dev.sh
+```
+Run this script from the project root. 
+- It creates a `.env` file in the project root which has the user id (uid) and group id (gid) of the project root directory's owner. The processes inside the api and worker_api docker containers are run as a user with this UID and GID.
+- It builds both the api and worker_api images
+- It runs all the containers (ui, api, worker_api, queue, postgres, mongo_db)
 
 If you only memorize three docker commands, these are good ones to know.
 
