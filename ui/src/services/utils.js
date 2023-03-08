@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import jwtDecode from "jwt-decode";
 
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
@@ -41,9 +42,11 @@ const capitalize = (s) => (s && s[0].toUpperCase() + s.slice(1)) || "";
 function isLiveToken(jwt) {
   if (jwt) {
     try {
-      const payload_enc = jwt.split(".")[1];
-      const payload_str = window.atob(payload_enc);
-      const payload = JSON.parse(payload_str);
+      console.log("isLiveToken", jwt);
+      // const payload_enc = jwt.split(".")[1];
+      // const payload_str = window.atob(payload_enc);
+      // const payload = JSON.parse(payload_str);
+      const payload = jwtDecode(jwt);
       const expiresAt = new Date(payload.exp * 1000);
       console.log("current token expires at", expiresAt);
       if (new Date() < expiresAt) {

@@ -3,11 +3,18 @@
     "host": "0.0.0.0"
   },
   "postgres": {
-    "hostname": "host.docker.internal",
+    "hostname": "commons3.sca.iu.edu",
     "db": "dgl_test",
     "schema": "public"
   },
   "workflow_server": {
-    "base_url": "http://host.docker.internal:5001"
+    "base_url": "http://dgl_worker_api:5001"
+  },
+  "auth": {
+    "mode": "dev",
+    "jwt": {
+      "iss": "dgl.sca.iu.edu",
+      "ttl_milliseconds": 3600000
+    }
   }
 }

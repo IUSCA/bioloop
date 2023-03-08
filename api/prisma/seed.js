@@ -5,17 +5,17 @@ const prisma = new PrismaClient();
 // Create default roles
 const roles = [{
   id: 1,
-  name: 'Admin',
+  name: 'admin',
   description: 'Access to the Admin Panel',
 },
 {
   id: 2,
-  name: 'Operator',
+  name: 'operator',
   description: 'Operator level access',
 },
 {
   id: 3,
-  name: 'User',
+  name: 'user',
   description: 'User level access',
 }];
 
@@ -29,7 +29,7 @@ async function main() {
   // Create default admins
   const admins = ['ccbrandt', 'deduggi'];
 
-  const promises = admins.map((username) => prisma.user.upsert({
+  const admin_promises = admins.map((username) => prisma.user.upsert({
     where: { email: `${username}@iu.edu` },
     update: {},
     create: {
@@ -43,7 +43,26 @@ async function main() {
     },
   }));
 
-  await Promise.all(promises);
+  await Promise.all(admin_promises);
+
+  // create test user
+  const users = ['test_user'];
+
+  const user_promises = users.map((username) => prisma.user.upsert({
+    where: { email: `${username}@iu.edu` },
+    update: {},
+    create: {
+      username,
+      email: `${username}@iu.edu`,
+      cas_id: username,
+      name: username,
+      user_role: {
+        create: [{ role_id: 3 }],
+      },
+    },
+  }));
+
+  await Promise.all(user_promises);
 }
 
 main()

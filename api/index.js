@@ -10,8 +10,28 @@ const logger = require('./services/logger');
 
 const port = config.get('express.port');
 const host = config.get('express.host');
-app.listen(port, () => {
-  /* eslint-disable no-console */
+const server = app.listen(port, () => {
   logger.info(`Listening: http://${host}:${port}`);
-  /* eslint-enable no-console */
+});
+
+const shutdown = () => {
+  logger.warn('server: closing');
+  server.close((err) => {
+    if (err) {
+      logger.error('server: closed with ERROR', err);
+      process.exit(1);
+    }
+    logger.warn('server: closed');
+    process.exit();
+  });
+};
+
+process.on('SIGINT', () => {
+  logger.warn('process received SIGINT');
+  shutdown();
+});
+
+process.on('SIGTERM', () => {
+  logger.warn('process received SIGTERM');
+  shutdown();
 });

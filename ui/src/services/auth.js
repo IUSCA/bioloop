@@ -18,6 +18,8 @@ class AuthService {
   }
 
   saveSettings = (data) => api.put("/users/mine/settings", data);
+
+  refreshToken = () => api.post("/auth/refresh_token");
 }
 
 export default new AuthService();

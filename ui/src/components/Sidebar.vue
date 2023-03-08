@@ -4,14 +4,14 @@
       <va-list>
         <va-list-item>
           <va-list-item-section icon>
-            <img src="@/assets/cmg_logo_small.png" />
+            <img class="w-12 h-12" src="/logo.svg" />
           </va-list-item-section>
 
           <va-list-item-section>
             <va-list-item-label class="text-3xl"> DGL-SCA </va-list-item-label>
 
-            <va-list-item-label caption>
-              Logged in as deduggi
+            <va-list-item-label v-if="auth.user?.username">
+              Logged in as {{ auth.user.username }}
             </va-list-item-label>
           </va-list-item-section>
         </va-list-item>
@@ -67,29 +67,33 @@
 </template>
 
 <script setup>
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 const route = useRoute();
+
+const isAdmin = ref(auth.hasRole("admin"));
 
 function isActive(path) {
   return route.path.startsWith(path);
 }
 
-const isAdmin = ref(true);
 const user_items = ref([
-  {
-    icon: "mdi-flask",
-    title: "Projects",
-    path: "/projects",
-  },
-  {
-    icon: "mdi-chart-gantt",
-    title: "Tracks",
-    path: "/tracks",
-  },
-  {
-    icon: "mdi-chart-timeline",
-    title: "Sessions",
-    path: "/sessions",
-  },
+  // {
+  //   icon: "mdi-flask",
+  //   title: "Projects",
+  //   path: "/projects",
+  // },
+  // {
+  //   icon: "mdi-chart-gantt",
+  //   title: "Tracks",
+  //   path: "/tracks",
+  // },
+  // {
+  //   icon: "mdi-chart-timeline",
+  //   title: "Sessions",
+  //   path: "/sessions",
+  // },
 ]);
 
 const admin_items = ref([
@@ -123,21 +127,21 @@ const admin_items = ref([
     title: "User Management",
     path: "/users",
   },
-  {
-    icon: "mdi-account-multiple",
-    title: "Group Management",
-    path: "/groups",
-  },
+  // {
+  //   icon: "mdi-account-multiple",
+  //   title: "Group Management",
+  //   path: "/groups",
+  // },
   // {
   //   icon: 'mdi-delete-empty-outline',
   //   title: 'Data Cleanup',
   //   path: '/clean',
   // },
-  {
-    icon: "mdi-format-list-bulleted",
-    title: "Stats/Tracking",
-    path: "/stats",
-  },
+  // {
+  //   icon: "mdi-format-list-bulleted",
+  //   title: "Stats/Tracking",
+  //   path: "/stats",
+  // },
 ]);
 
 const bottom_items = ref([
@@ -154,7 +158,7 @@ const bottom_items = ref([
   {
     icon: "mdi-logout-variant",
     title: "Logout",
-    path: "/signout",
+    path: "/auth/logout",
   },
 ]);
 </script>

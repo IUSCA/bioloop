@@ -1,12 +1,8 @@
 # DGL
 Diagnostic Genomics Laboratory portal and pipeline application
 
-```
-git clone git@githubcom:iusca/dgl.git
-cd dgl/
-ls
-```
+## Getting started
+- [API](api/README.md)
+- [UI](ui/README.md)
 
-## Docker
-
-[Run with docker](docker-README.md)
+- [Docker](README-docker.md)

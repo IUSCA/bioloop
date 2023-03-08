@@ -24,3 +24,6 @@ pids
 # keys
 keys/*.pub
 keys/*.key
+
+#swagger auto generate file
+swagger_output.json

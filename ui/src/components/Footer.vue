@@ -52,7 +52,7 @@
         </p>
 
         <p class="copyright">
-          CMG-SCA is a service of the Indiana University
+          DGL-SCA is a service of the Indiana University
           <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>
           group.
         </p>

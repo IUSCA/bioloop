@@ -4,22 +4,24 @@ services:
     container_name: dgl_ui
     image: node:19
     volumes:
-      - ./ui/:/opt/sca/dgl/ui/
-      - dgl_ui_modules:/opt/sca/dgl/ui/node_modules
-    working_dir: /opt/sca/dgl/ui
+      - ./ui/:/opt/sca/app
+      - dgl_ui_modules:/opt/sca/app/node_modules
+    working_dir: /opt/sca/app
     command: sh -c "npm install && npm run builddev"
     
 
   api:
     container_name: dgl_api
-    image: node:19
+    build:
+      context: ./api
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
     volumes:
-      - ./api/:/opt/sca/dgl/api/
-      - dgl_api_modules:/opt/sca/dgl/api/node_modules
+      - ./api/:/opt/sca/app
+      - dgl_api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
-    working_dir: /opt/sca/dgl/api
-    command: sh -c "npm install && npx nodemon api.js"
     networks:
       dgl_network:
         ipv4_address: 172.19.0.2
@@ -28,7 +30,9 @@ services:
     container_name: dgl_worker_api
     build:
       context: ./worker/
-      dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./worker/scaworkers/:/opt/sca/app/scaworkers
       - ./worker/.env:/opt/sca/app/.env
@@ -36,6 +40,7 @@ services:
       - 5001
     environment:
       - PORT=5001
+    restart: on-failure
     networks:
       dgl_network:
         ipv4_address: 172.19.0.3
