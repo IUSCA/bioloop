@@ -12,10 +12,12 @@ declare module '@vue/runtime-core' {
     Icon: typeof import('@iconify/vue')['Icon']
     IMdiAlert: typeof import('~icons/mdi/alert')['default']
     IMdiAlertOctagon: typeof import('~icons/mdi/alert-octagon')['default']
+    IMdiPlus: typeof import('~icons/mdi/plus')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
     StepProgress: typeof import('./src/components/StepProgress.vue')['default']
+    UserDataForm: typeof import('./src/components/UserDataForm.vue')['default']
     Workflow: typeof import('./src/components/runs/Workflow.vue')['default']
   }
 }
