@@ -3,8 +3,11 @@
     "host": "0.0.0.0"
   },
   "postgres": {
-    "hostname": "commons3.sca.iu.edu",
+    "hostname": "host.docker.internal",
     "db": "dgl_test",
     "schema": "public"
+  },
+  "workflow_server": {
+    "base_url": "http://host.docker.internal:5001"
   }
 }

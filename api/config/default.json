@@ -12,6 +12,21 @@
     "user": "dgluser",
     "password": "",
     "db": "dgl",
-    "schema": "dgl"
+    "schema": "public"
+  },
+  "workflow_server": {
+    "base_url": "http://localhost:5001",
+    "user": "",
+    "password": ""
+  },
+  "auth": {
+    "mode": "dev",
+    "jwt": {
+      "iss": "localhost",
+      "ttl_milliseconds": 604800000,
+      "pub": "keys/auth.pub",
+      "key": "keys/auth.key",
+      "sign_algorithm": "RS256"
+    }
   }
 }

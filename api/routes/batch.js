@@ -1,11 +1,13 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
-const { query, param } = require('express-validator');
+const { query, param, body } = require('express-validator');
 
-// const logger = require('../logger');
-const asyncHandler = require('../middleware/asyncHandler');
+// const logger = require('../services/logger');
+// const asyncHandler = require('../middleware/asyncHandler');
 const validator = require('../middleware/validator');
+const { includeWorkflow } = require('../services/workflow');
+const { renameKey } = require('../utils');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -26,12 +28,13 @@ router.get(
         checksum: checksumSelect,
       },
     });
+
     // rename checksum property to metadata
-    const result = batches.map((batch) => {
-      const { checksum, ...rest } = batch;
-      rest.metadata = checksum;
-      return rest;
-    });
+    // include workflow with batch
+    const renameChecksumToMetadata = renameKey('checksum', 'metadata');
+    const _includeWorkflow = includeWorkflow();
+    const promises = batches.map(renameChecksumToMetadata).map(_includeWorkflow);
+    const result = await Promise.all(promises);
     res.json(result);
   }),
 );
@@ -56,29 +59,40 @@ router.get(
         checksum: checksumSelect,
       },
     });
-
     if (batch) {
       // rename checksum property to metadata
-      const { checksum, ...rest } = batch;
-      rest.metadata = checksum;
-      res.json(rest);
-    } else { next(createError(404)); }
+      // include workflow with batch
+      const renameChecksumToMetadata = renameKey('checksum', 'metadata');
+      const _includeWorkflow = includeWorkflow(true, true);
+      let _batch = renameChecksumToMetadata(batch);
+      _batch = await _includeWorkflow(_batch);
+      res.json(_batch);
+    } else {
+      next(createError(404));
+    }
   }),
 );
 
-router.post('/', asyncHandler(async (req, res, next) => {
-  const batchData = req.body;
+router.post(
+  '/',
+  body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
+  body('size').optional().notEmpty().customSanitizer(BigInt),
+  validator(async (req, res, next) => {
+    const batch = await prisma.batch.create({
+      data: req.body,
+    });
 
-  const batch = await prisma.batch.create({
-    data: batchData,
-  });
-
-  res.json(batch);
-}));
+    res.json(batch);
+  }),
+);
 
 router.patch(
   '/:id',
   param('id').isInt().toInt(),
+  body('du_size').optional().notEmpty().bail()
+    .customSanitizer(BigInt), // convert to BigInt
+  body('size').optional().notEmpty().bail()
+    .customSanitizer(BigInt),
   validator(async (req, res, next) => {
     const batchToUpdate = await prisma.batch.findFirst({
       where: {

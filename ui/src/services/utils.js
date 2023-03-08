@@ -36,4 +36,34 @@ function validateEmail(email) {
   return re.test(email);
 }
 
-export { formatBytes, difference, union, maybePluralize, dayjs, validateEmail };
+const capitalize = (s) => (s && s[0].toUpperCase() + s.slice(1)) || "";
+
+function isLiveToken(jwt) {
+  if (jwt) {
+    try {
+      const payload_enc = jwt.split(".")[1];
+      const payload_str = window.atob(payload_enc);
+      const payload = JSON.parse(payload_str);
+      const expiresAt = new Date(payload.exp * 1000);
+      console.log("current token expires at", expiresAt);
+      if (new Date() < expiresAt) {
+        // valid
+        return true;
+      }
+    } catch (err) {
+      console.error("Errored trying to decode access token", err);
+    }
+  }
+  return false;
+}
+
+export {
+  formatBytes,
+  difference,
+  union,
+  maybePluralize,
+  dayjs,
+  validateEmail,
+  capitalize,
+  isLiveToken,
+};

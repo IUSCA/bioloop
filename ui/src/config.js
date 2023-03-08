@@ -1,11 +1,9 @@
 const exports = {
   mode: "development",
-  apiHost: "dgl_api",
-  apiPort: 3030,
-  api: "https://localhost/api",
-  casUrl: "https://idp-stg.login.iu.edu/idp/profile/cas/login",
-  casReturn: "https://localhost/signin",
-  defaultRedirect: "/signin",
+  // vite server redirects traffic on starting with apiBaseURL
+  // to http://${config.apiHost}:${config.apiPort} in dev environment
+  apiBasePath: "/api",
+  casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth",
   analyticsId: "G-FOO",
 };
 

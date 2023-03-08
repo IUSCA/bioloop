@@ -8,20 +8,16 @@
 ui/node_modules
 ui/dist
 ui/dist-ssr
-ui/package-lock.json
 ui/yarn-error.log
 ui/yarn-lock.json
-ui/pnpm-lock.yaml
 ui/.nuxt
 ui/static/sw.js
 ui/*.local
 ui/.cert
 
 api/node_modules
-api/package-lock.json
 api/yarn-lock.json
 api/yarn-error.log
-api/pnpm-lock.yaml
 api/.vscode
 api/node_modules
 api/.env

@@ -71,3 +71,8 @@ read: https://docs.docker.com/compose/production/
       dgl_network:
         ipv4_address: 172.19.0.2
 ```
+
+
+eslint disabled camel case
+
+for snake case: https://github.com/ptkdev/eslint-plugin-snakecasejs
