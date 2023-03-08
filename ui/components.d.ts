@@ -10,6 +10,8 @@ declare module '@vue/runtime-core' {
     BatchInfo: typeof import('./src/components/runs/BatchInfo.vue')['default']
     Footer: typeof import('./src/components/Footer.vue')['default']
     Icon: typeof import('@iconify/vue')['Icon']
+    IMdiAlert: typeof import('~icons/mdi/alert')['default']
+    IMdiAlertOctagon: typeof import('~icons/mdi/alert-octagon')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
