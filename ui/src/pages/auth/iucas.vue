@@ -15,9 +15,9 @@
 </template>
 
 <script setup>
-import config from "../config";
-import { useAuthStore } from "../stores/auth";
-import authService from "../services/auth";
+import config from "../../config";
+import { useAuthStore } from "../../stores/auth";
+import authService from "../../services/auth";
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -67,6 +67,6 @@ if (ticket) {
 <route lang="yaml">
 meta:
   layout: auth
-  title: Auth
+  title: IU CAS Auth
   requiresAuth: false
 </route>

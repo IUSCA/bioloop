@@ -3,7 +3,7 @@ import api from "./api";
 class BatchService {
   getAll(include_checksums = false) {
     return api
-      .get("/batch", {
+      .get("/batches", {
         params: {
           include_checksums,
         },
@@ -12,7 +12,7 @@ class BatchService {
   }
 
   getById(id, include_checksums = false) {
-    return api.get(`/batch/${id}`, {
+    return api.get(`/batches/${id}`, {
       params: {
         include_checksums,
       },
