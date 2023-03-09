@@ -157,6 +157,6 @@ if __name__ == '__main__':
         r.register()
         bs_reg.register()
 
-        sleep_duration = config['illumina']['registration']['wait_between_scans']
+        sleep_duration = config['registration']['wait_between_scans']
         print(f'sleeping for {sleep_duration} seconds')
         time.sleep(sleep_duration)
