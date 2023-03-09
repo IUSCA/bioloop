@@ -15,6 +15,7 @@ config = {
         'scratch': '/N/scratch/dgluser/test',
         'archive': f'archive/{YEAR}',
         'stage': '/N/scratch/dgluser/test/stage',
+        'illumina_download': '/N/scratch/dgluser/bs_test'
     },
     'registration': {
         'source_dirs': ['/N/project/DG_Multiple_Myeloma/share'],
