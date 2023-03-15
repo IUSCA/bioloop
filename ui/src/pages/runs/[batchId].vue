@@ -55,6 +55,26 @@
             <va-card-content>{{ batch.stage_path }}</va-card-content>
           </va-card>
         </div>
+        <div class="flex-none" v-if="batch.report_id">
+          <va-card>
+            <va-card-title>
+              <span class="text-lg">Reports</span>
+            </va-card-title>
+            <va-card-content>
+              <div class="flex flex-nowrap justify-between align-center gap-1">
+                <i-mdi-chart-box-outline class="inline text-2xl" />
+                <a
+                  class="va-link"
+                  target="_blank"
+                  :href="`/qc/${batch.report_id}/multiqc_report.html`"
+                >
+                  <span>MultiQC Report</span>
+                  <span class="text-sm pl-2">(opens in new tab)</span>
+                </a>
+              </div>
+            </va-card-content>
+          </va-card>
+        </div>
       </div>
     </div>
     <div class="mt-3">
