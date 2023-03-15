@@ -15,7 +15,9 @@ config = {
         'scratch': '/N/scratch/dgluser/test',
         'archive': f'archive/{YEAR}',
         'stage': '/N/scratch/dgluser/test/stage',
-        'illumina_download': '/N/scratch/dgluser/bs_test'
+        'illumina_download': '/N/scratch/dgluser/bs_test',
+        'qc': '/N/scratch/dgluser/public/qc',
+        'qc_public': '/N/u/dgluser/Carbonate/DGL/qc'
     },
     'registration': {
         'source_dirs': ['/N/project/DG_Multiple_Myeloma/share'],
@@ -29,6 +31,6 @@ config = {
             'wait_between_scans': 10,     # 5 minutes
             'recency_threshold': 60 * 60, # 1 hour
         },
-    }
+    },
 
 }

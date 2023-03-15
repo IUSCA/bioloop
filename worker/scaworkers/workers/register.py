@@ -111,6 +111,10 @@ class BaseSpaceRegistration:
             {
                 'name': 'validate',
                 'task': 'scaworkers.workers.validate.validate_batch'
+            },
+            {
+                'name': 'generate_reports',
+                'task': 'scaworkers.workers.report.generate'
             }
         ]
 

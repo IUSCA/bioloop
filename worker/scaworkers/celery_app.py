@@ -13,6 +13,8 @@ import scaworkers.workers.stage
 import scaworkers.workers.validate
 # noinspection PyUnresolvedReferences
 import scaworkers.workers.download
+# noinspection PyUnresolvedReferences
+import scaworkers.workers.report
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
