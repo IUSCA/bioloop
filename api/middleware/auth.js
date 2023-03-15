@@ -83,7 +83,7 @@ const accessControl = _.curry((
       resource, action, checkOwnerShip, resourceOwner, requester, roles,
     });
 
-    if (roles) {
+    if (roles && roles.length > 0) {
       const acQuery = ac.can(roles);
       const permission = (checkOwnerShip && requester === resourceOwner)
         ? acQuery[actions.own](resource)

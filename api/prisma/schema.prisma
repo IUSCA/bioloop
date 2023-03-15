@@ -21,6 +21,7 @@ model batch {
   origin_path      String?
   archive_path     String?
   stage_path       String?
+  report_id        String?
   workflow_id      String?
   metadata         checksum[]
 }

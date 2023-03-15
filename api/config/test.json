@@ -11,7 +11,7 @@
     "base_url": "http://dgl_worker_api:5001"
   },
   "auth": {
-    "mode": "dev",
+    "mode": "prod",
     "jwt": {
       "iss": "dgl.sca.iu.edu",
       "ttl_milliseconds": 3600000
