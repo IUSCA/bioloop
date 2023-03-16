@@ -1,6 +1,6 @@
 <template>
   <va-sidebar>
-    <va-sidebar-item to="/about">
+    <va-sidebar-item to="/">
       <va-list>
         <va-list-item>
           <va-list-item-section icon>
@@ -97,11 +97,11 @@ const user_items = ref([
 ]);
 
 const admin_items = ref([
-  {
-    icon: "mdi-monitor-dashboard",
-    title: "Dashboard",
-    path: "/dashboard",
-  },
+  // {
+  //   icon: "mdi-monitor-dashboard",
+  //   title: "Dashboard",
+  //   path: "/",
+  // },
   {
     icon: "mdi-dna",
     title: "Sequencing Runs",

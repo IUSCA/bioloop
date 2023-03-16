@@ -7,7 +7,7 @@
       <Sidebar></Sidebar>
     </nav>
     <main class="grow overflow-y-scroll">
-      <div class="p-10 min-h-screen">
+      <div class="px-10 pb-10 pt-3 min-h-screen">
         <router-view></router-view>
       </div>
       <Footer></Footer>

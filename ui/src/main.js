@@ -4,6 +4,7 @@ import { createVuestic } from "vuestic-ui";
 import config from "../vuestic.config.js"; // https://vuestic.dev/en/styles/tailwind
 import "vuestic-ui/css";
 import "./styles/main.css";
+import "./styles/overrides.css";
 // import "material-design-icons-iconfont/dist/material-design-icons.min.css";
 
 import App from "./App.vue";

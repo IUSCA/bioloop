@@ -8,6 +8,7 @@
           class="flex flex-col mb-2 border-gray-800 border border-solid"
           placeholder="search users"
           outline
+          clearable
         />
       </div>
       <div class="text-right">
