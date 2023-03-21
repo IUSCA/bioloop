@@ -12,7 +12,7 @@
     </div> -->
     <!--  -->
 
-    <div class="max-w-screen-lg">
+    <div class="">
       <va-card>
         <va-card-content>
           <div class="p-3">

@@ -85,7 +85,7 @@
                   <a
                     class="va-link"
                     target="_blank"
-                    :href="`/qc/${batch.report_id}/multiqc_report.html`"
+                    :href="`/api/reports/${batch.report_id}/multiqc_report.html`"
                   >
                     <span>MultiQC Report</span>
                     <span class="text-sm pl-2">(opens in new tab)</span>
@@ -121,7 +121,8 @@ const description = ref("");
 const edit_discription = ref(false);
 const loading = ref(false);
 
-function fetch_batch() {
+function fetch_batch(show_loading = false) {
+  loading.value = show_loading;
   BatchService.getById(props.batchId)
     .then((res) => {
       batch.value = res.data;
@@ -131,10 +132,13 @@ function fetch_batch() {
       if (err?.response?.status == 404)
         toast.error("Could not find the Sequencing Run");
       else toast.error("Something went wrong");
+    })
+    .finally(() => {
+      loading.value = false;
     });
 }
 
-fetch_batch();
+fetch_batch(true);
 const fetch_interval = setInterval(fetch_batch, 15000);
 
 onBeforeUnmount(() => {

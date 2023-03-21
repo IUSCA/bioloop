@@ -1,7 +1,10 @@
+const fsPromises = require('fs/promises');
+
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
 const { query, param, body } = require('express-validator');
+const multer = require('multer');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -160,4 +163,45 @@ router.delete(
   }),
 );
 
+const report_storage = multer.diskStorage({
+  async destination(req, file, cb) {
+    try {
+      const batch = await prisma.batch.findFirst({
+        where: {
+          id: req.params.id,
+        },
+      });
+
+      if (batch?.report_id) {
+        const parent_dir = `reports/${batch.report_id}`;
+        await fsPromises.mkdir(parent_dir, {
+          recursive: true,
+        });
+
+        cb(null, parent_dir);
+      } else {
+        cb('report_id is not set');
+      }
+    } catch (e) {
+      cb(e);
+    }
+  },
+
+  filename(req, file, cb) {
+    cb(null, 'multiqc_report.html');
+  },
+});
+
+router.put(
+  '/:id/report',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  multer({ storage: report_storage }).single('report'),
+  asyncHandler(async (req, res, next) => {
+    res.json({
+      path: req.file.path,
+    });
+  }),
+);
 module.exports = router;

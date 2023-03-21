@@ -28,3 +28,6 @@ keys/jwks.json
 
 #swagger auto generate file
 swagger_output.json
+
+# generated reports
+reports
