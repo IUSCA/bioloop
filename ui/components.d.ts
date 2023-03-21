@@ -8,14 +8,20 @@ export {}
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
     BatchInfo: typeof import('./src/components/runs/BatchInfo.vue')['default']
+    ConfirmButton: typeof import('./src/components/buttons/ConfirmButton.vue')['default']
+    ConfirmHoldButton: typeof import('./src/components/buttons/ConfirmHoldButton.vue')['default']
+    CopyButton: typeof import('./src/components/buttons/CopyButton.vue')['default']
     Footer: typeof import('./src/components/Footer.vue')['default']
     Icon: typeof import('@iconify/vue')['Icon']
     IMdiAlert: typeof import('~icons/mdi/alert')['default']
     IMdiAlertOctagon: typeof import('~icons/mdi/alert-octagon')['default']
+    IMdiChartBoxOutline: typeof import('~icons/mdi/chart-box-outline')['default']
+    IMdiContentCopy: typeof import('~icons/mdi/content-copy')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Sidebar: typeof import('./src/components/Sidebar.vue')['default']
     StepProgress: typeof import('./src/components/StepProgress.vue')['default']
     Workflow: typeof import('./src/components/runs/Workflow.vue')['default']
+    WorkflowStatusPill: typeof import('./src/components/runs/WorkflowStatusPill.vue')['default']
   }
 }

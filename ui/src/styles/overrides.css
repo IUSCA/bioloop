@@ -9,3 +9,8 @@ input.va-input__content__input {
 label.va-input-wrapper__label {
   margin-top: 3px;
 }
+
+div.inner-loading__overlay {
+  z-index: 1;
+  background-color: rgba(255,255,255,0.6)
+}

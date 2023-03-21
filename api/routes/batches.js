@@ -138,4 +138,26 @@ router.post(
   }),
 );
 
+router.delete(
+  '/:id',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const deleteChecksums = prisma.checksum.deleteMany({
+      where: {
+        batch_id: req.params.id,
+      },
+    });
+    const deleteBatch = prisma.batch.delete({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    await prisma.$transaction([deleteChecksums, deleteBatch]);
+    res.send();
+  }),
+);
+
 module.exports = router;

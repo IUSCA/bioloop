@@ -1,4 +1,6 @@
 const express = require('express');
+// const { PrismaClient } = require('@prisma/client');
+
 const asyncHandler = require('../middleware/asyncHandler');
 const wf_service = require('../services/workflow');
 const { accessControl } = require('../middleware/auth');
@@ -6,6 +8,7 @@ const { accessControl } = require('../middleware/auth');
 const isPermittedTo = accessControl('workflow');
 
 const router = express.Router();
+// const prisma = new PrismaClient();
 
 router.get(
   '/',
@@ -68,7 +71,7 @@ router.delete(
 
   asyncHandler(
     async (req, res, next) => {
-      const api_res = await wf_service.delete(req.params.id);
+      const api_res = await wf_service.deleteOne(req.params.id);
       res.json(api_res.data);
     },
   ),

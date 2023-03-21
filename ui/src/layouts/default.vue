@@ -6,8 +6,8 @@
     >
       <Sidebar></Sidebar>
     </nav>
-    <main class="grow overflow-y-scroll">
-      <div class="px-10 pb-10 pt-3 min-h-screen">
+    <main class="grow overflow-y-scroll max-w-[calc(100vw-16rem)]">
+      <div class="px-4 pb-10 pt-3 min-h-screen">
         <router-view></router-view>
       </div>
       <Footer></Footer>
