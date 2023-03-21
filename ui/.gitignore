@@ -27,3 +27,6 @@ coverage
 *.sln
 *.sw?
 .cert
+
+# vue components auto import
+components.d.ts
