@@ -52,6 +52,10 @@ function resume(id) {
   return wfApi.post(`/workflow/${id}/resume`);
 }
 
+function create(wf) {
+  return wfApi.post('/workflow', wf);
+}
+
 module.exports = {
   getAll,
   getOne,
@@ -59,4 +63,5 @@ module.exports = {
   pause,
   deleteOne,
   resume,
+  create,
 };

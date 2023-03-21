@@ -53,8 +53,10 @@ def create_workflow():
     body = request.json
     if 'steps' not in body:
         return "invalid request body", 400
-    wf = Workflow(celery_app=celery_app, steps=body['steps'])
-    wf.start()
+    if not ('args' in body and isinstance(body['args'], list) and len(body['args']) > 0):
+        return "invalid request body", 400
+    wf = Workflow(celery_app=celery_app, steps=body['steps'], name=body.get('name', None))
+    wf.start(*body['args'])
     return jsonify({'workflow_id': wf.workflow['_id']})
 
 

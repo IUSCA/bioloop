@@ -6,7 +6,7 @@ const { query, param, body } = require('express-validator');
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
-const { includeWorkflow } = require('../services/workflow');
+const wfService = require('../services/workflow');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -32,7 +32,7 @@ router.get(
     });
 
     // include workflow with batch
-    const _includeWorkflow = includeWorkflow();
+    const _includeWorkflow = wfService.includeWorkflow();
     const promises = batches.map(_includeWorkflow);
     const result = await Promise.all(promises);
     res.json(result);
@@ -64,7 +64,7 @@ router.get(
     });
     if (batch) {
       // include workflow with batch
-      const _includeWorkflow = includeWorkflow(true, true);
+      const _includeWorkflow = wfService.includeWorkflow(true, true);
       const _batch = await _includeWorkflow(batch);
       res.json(_batch);
     } else {
@@ -157,6 +157,22 @@ router.delete(
 
     await prisma.$transaction([deleteChecksums, deleteBatch]);
     res.send();
+  }),
+);
+
+router.post(
+  '/:id/stage',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const batch_id = req.params.id;
+    const wf = await wfService.create({
+      name: 'Re-stage Batch',
+      steps: [{}, {}, {}],
+      args: [batch_id],
+    });
+    return res.json(wf);
   }),
 );
 
