@@ -23,6 +23,7 @@
       :columns="columns"
       :hoverable="true"
       :filter="filterInput"
+      :loading="data_loading"
     >
       <template #cell(created_at)="{ value }">
         <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
@@ -53,7 +54,7 @@
     no-outside-dismiss
   >
     <div class="max-w-lg">
-      <va-inner-loading :loading="loading">
+      <va-inner-loading :loading="modal_loading">
         <va-form class="flex flex-wrap gap-2 gap-y-6" ref="modifyFormRef">
           <va-input
             v-model="editedUser.username"
@@ -127,13 +128,17 @@
 <script setup>
 import moment from "moment";
 import UserService from "@/services/user";
+import toast from "@/services/toast";
+
 const users = ref([]);
 const filterInput = ref("");
 const editing = ref(false);
 const editedUser = ref({});
 const modifyFormRef = ref(null);
-const loading = ref(false);
+const modal_loading = ref(false);
 const editMode = ref("modify");
+const data_loading = ref(false);
+
 const editModalTitle = computed(() => {
   return editMode.value == "modify" ? "Modify User" : "Create User";
 });
@@ -161,10 +166,19 @@ const columns = ref([
 ]);
 
 function fetch_all_users() {
-  UserService.getAll().then((_users) => {
-    users.value = _users;
-    console.log(_users);
-  });
+  data_loading.value = true;
+  UserService.getAll()
+    .then((_users) => {
+      users.value = _users;
+      console.log(_users);
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to fetch Users");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
 }
 
 function openModalToEditItemById(id) {
@@ -208,7 +222,7 @@ function modifyUser() {
       .map((r) => r?.trim())
       .filter((r) => r && r.length > 0);
 
-    loading.value = true;
+    modal_loading.value = true;
 
     console.log(updates);
     UserService.modifyUser(orig_username, updates)
@@ -220,7 +234,7 @@ function modifyUser() {
         console.error(err);
       })
       .finally(() => {
-        loading.value = false;
+        modal_loading.value = false;
         resetEditModal();
       });
   }
@@ -236,7 +250,7 @@ function createUser() {
       .map((r) => r?.trim())
       .filter((r) => r && r.length > 0);
 
-    loading.value = true;
+    modal_loading.value = true;
 
     console.log(updates);
     UserService.createUser(updates)
@@ -248,7 +262,7 @@ function createUser() {
         console.error(err);
       })
       .finally(() => {
-        loading.value = false;
+        modal_loading.value = false;
         resetEditModal();
       });
   }

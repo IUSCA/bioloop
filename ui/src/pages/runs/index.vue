@@ -8,6 +8,7 @@
       :hoverable="true"
       v-model:sort-by="sortBy"
       v-model:sorting-order="sortingOrder"
+      :loading="data_loading"
     >
       <template #cell(name)="{ rowData }">
         <router-link :to="`/runs/${rowData.id}`" class="va-link">{{
@@ -39,11 +40,13 @@
 import moment from "moment";
 import BatchService from "../../services/batch";
 import { formatBytes } from "../../services/utils";
+import toast from "@/services/toast";
 
-const workflows = ref([]);
+const batches = ref([]);
+const data_loading = ref(false);
 
 const row_items = computed(() => {
-  return workflows.value.map((p) => {
+  return batches.value.map((p) => {
     const workflow = p["workflow"] || {};
     return {
       id: p["id"],
@@ -88,9 +91,19 @@ const columns = ref([
 const sortBy = ref("start_date");
 const sortingOrder = ref("desc");
 
-BatchService.getAll()
-  .then((res) => (workflows.value = res))
-  .catch(console.log);
+function fetch_all_batches() {
+  data_loading.value = true;
+  BatchService.getAll()
+    .then((res) => (batches.value = res))
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to fetch sequencing runs");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
+}
+fetch_all_batches();
 </script>
 
 <route lang="yaml">
