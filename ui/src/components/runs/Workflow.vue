@@ -49,21 +49,21 @@
             </div>
 
             <div v-if="workflow.status == 'SUCCESS'">
-              <confirm-hold-button
+              <confirm-button
                 action="Delete Workflow"
                 icon="mdi-delete"
                 color="danger"
                 @click="delete_workflow"
-              ></confirm-hold-button>
+              ></confirm-button>
             </div>
 
             <div v-if="['STARTED', 'PROGRESS'].includes(workflow.status)">
-              <confirm-hold-button
+              <confirm-button
                 action="Stop Workflow"
                 icon="mdi-stop-circle-outline"
                 color="danger"
                 @click="pause_workflow"
-              ></confirm-hold-button>
+              ></confirm-button>
             </div>
           </div>
         </div>
@@ -166,9 +166,37 @@ function delete_workflow() {
 
 function resume_workflow() {
   loading.value = true;
+  workflowService
+    .resume(workflow.value.id)
+    .then((res) => {
+      console.log(res);
+      toast.success("Resumed workflow");
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to resume workflow");
+    })
+    .finally(() => {
+      emit("update");
+      loading.value = false;
+    });
 }
 
 function pause_workflow() {
   loading.value = true;
+  workflowService
+    .pause(workflow.value.id)
+    .then((res) => {
+      console.log(res);
+      toast.success("Stopped workflow");
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to stop workflow");
+    })
+    .finally(() => {
+      emit("update");
+      loading.value = false;
+    });
 }
 </script>
