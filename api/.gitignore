@@ -24,6 +24,7 @@ pids
 # keys
 keys/*.pub
 keys/*.key
+keys/jwks.json
 
 #swagger auto generate file
 swagger_output.json
