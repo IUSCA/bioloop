@@ -15,9 +15,7 @@
     "schema": "public"
   },
   "workflow_server": {
-    "base_url": "http://localhost:5001",
-    "user": "",
-    "password": ""
+    "base_url": "http://localhost:5001"
   },
   "auth": {
     "mode": "dev",

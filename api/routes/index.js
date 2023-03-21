@@ -12,5 +12,6 @@ router.use('/batches', require('./batches'));
 router.use(authenticate);
 
 router.use('/users', require('./users'));
+router.use('/workflows', require('./workflows'));
 
 module.exports = router;

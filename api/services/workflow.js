@@ -7,20 +7,20 @@ const wfApi = axios.create({
   baseURL: config.get('workflow_server.base_url'),
 });
 
-function getAll(lastTaskRun = false, prevTaskRuns = false) {
+function getAll(last_task_run = false, prev_task_runs = false) {
   return wfApi.get('/workflow', {
     params: {
-      last_task_run: lastTaskRun,
-      prev_task_runs: prevTaskRuns,
+      last_task_run,
+      prev_task_runs,
     },
   });
 }
 
-function getOne(id, lastTaskRun = false, prevTaskRuns = false) {
+function getOne(id, last_task_run = false, prev_task_runs = false) {
   return wfApi.get(`/workflow/${id}`, {
     params: {
-      last_task_run: lastTaskRun,
-      prev_task_runs: prevTaskRuns,
+      last_task_run,
+      prev_task_runs,
     },
   });
 }
@@ -40,8 +40,23 @@ function includeWorkflow(lastTaskRun = false, prevTaskRuns = false) {
   };
 }
 
+function pause(id) {
+  return wfApi.post(`/workflow/${id}/pause`);
+}
+
+function deleteOne(id) {
+  return wfApi.delete(`/workflow/${id}`);
+}
+
+function resume(id) {
+  return wfApi.post(`/workflow/${id}/resume`);
+}
+
 module.exports = {
   getAll,
   getOne,
   includeWorkflow,
+  pause,
+  deleteOne,
+  resume,
 };
