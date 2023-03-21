@@ -107,21 +107,21 @@ const admin_items = ref([
     title: "Sequencing Runs",
     path: "/runs",
   },
-  {
-    icon: "mdi-file-lock",
-    title: "Data Products",
-    path: "/dataproducts",
-  },
-  {
-    icon: "mdi-transition",
-    title: "Conversions",
-    path: "/conversions",
-  },
-  {
-    icon: "mdi-folder-upload",
-    title: "Data Uploader",
-    path: "/datauploader",
-  },
+  // {
+  //   icon: "mdi-file-lock",
+  //   title: "Data Products",
+  //   path: "/dataproducts",
+  // },
+  // {
+  //   icon: "mdi-transition",
+  //   title: "Conversions",
+  //   path: "/conversions",
+  // },
+  // {
+  //   icon: "mdi-folder-upload",
+  //   title: "Data Uploader",
+  //   path: "/datauploader",
+  // },
   {
     icon: "mdi-table-account",
     title: "User Management",
