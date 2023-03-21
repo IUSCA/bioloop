@@ -28,9 +28,9 @@ def run_fastqc(source_dir, output_dir):
 
     # fastqc -t 8 parallel processes 8 fastq files at once
     # all fastq files are sent as command line args
-
-    cmd = ['fastqc', '-t', '8'] + fastq_files + ['-o', str(output_dir)]
-    utils.execute(cmd)
+    if len(fastq_files) > 0:
+        cmd = ['fastqc', '-t', '8'] + fastq_files + ['-o', str(output_dir)]
+        utils.execute(cmd)
 
 
 def run_multiqc(source_dir, output_dir):
@@ -59,16 +59,18 @@ def cleanup(report_dir):
                 f.unlink()
 
 
-def create_report(batch_dir: Path, batch_name: str) -> str:
+def create_report(batch_dir: Path, batch_name: str, report_id: str = None) -> str:
     """
     Runs fastqc and multiqc on batch files and cleans up intermediate files.
     Finally, creates a symbolic link called `public_qc_dir/<report_id>` that points to batch quality control directory.
 
+
     :param batch_dir: (str): Staged batch directory path
     :param batch_name: (str): Batch name
+    :param report_id: (str): report_id of the last generated report to be reused.
     :return: The report ID (UUID4)
     """
-    report_id = str(uuid.uuid4())
+    report_id = report_id or str(uuid.uuid4())
     batch_qc_dir = Path(config['paths']['qc']) / batch_name
     batch_qc_dir.mkdir(parents=True, exist_ok=True)
 
@@ -91,13 +93,14 @@ def generate(celery_task, batch_id, **kwargs):
     batch = api.get_batch(batch_id=batch_id)
 
     report_id = create_report(batch_dir=Path(batch['stage_path']), batch_name=batch['name'])
+    report_filename = Path(config['paths']['qc']) / batch['name'] / 'multiqc_report.html'
 
-    update_data = {
-        'report_id': report_id
-    }
-    api.update_batch(batch_id=batch_id, update_data=update_data)
-
-    # report_filename = Path(config['paths']['qc']) / batch['name'] / 'multiqc_report.html'
-    # api.upload_report(batch_id=batch_id, report_filename=report_filename)
+    # if the report is created successfully
+    if report_filename.exists():
+        update_data = {
+            'report_id': report_id
+        }
+        api.update_batch(batch_id=batch_id, update_data=update_data)
+        # api.upload_report(batch_id=batch_id, report_filename=report_filename)
 
     return batch_id,

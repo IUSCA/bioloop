@@ -28,8 +28,9 @@ config = {
     'illumina': {
         'registration': {
             'rejects': [],
-            'wait_between_scans': 10,     # 5 minutes
-            'recency_threshold': 60 * 60, # 1 hour
+            'wait_between_scans': 10,  # 5 minutes
+            'recency_threshold': 60 * 60,  # 1 hour
+            'minimum_project_size': 1024 * 1024 * 1024  # 1 GB
         },
     },
 
