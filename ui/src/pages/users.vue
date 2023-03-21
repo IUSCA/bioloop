@@ -232,6 +232,7 @@ function modifyUser() {
       })
       .catch((err) => {
         console.error(err);
+        toast.error("Unable to modify user");
       })
       .finally(() => {
         modal_loading.value = false;
@@ -260,6 +261,7 @@ function createUser() {
       })
       .catch((err) => {
         console.error(err);
+        toast.error("Unable to create user");
       })
       .finally(() => {
         modal_loading.value = false;
