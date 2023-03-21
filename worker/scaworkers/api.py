@@ -127,6 +127,7 @@ def upload_report(batch_id, report_filename):
             'report': (filename, fileobj)
         })
         if r.status_code != 200:
+            print(r, r.status_code)
             raise Exception('Server responded with non-200 code')
 
 

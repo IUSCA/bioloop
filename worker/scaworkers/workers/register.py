@@ -158,7 +158,7 @@ if __name__ == '__main__':
     bs_reg = BaseSpaceRegistration()
 
     while True:
-        r.register()
+        # r.register()
         bs_reg.register()
 
         sleep_duration = config['registration']['wait_between_scans']

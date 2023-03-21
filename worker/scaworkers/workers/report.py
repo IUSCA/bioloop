@@ -97,7 +97,7 @@ def generate(celery_task, batch_id, **kwargs):
     }
     api.update_batch(batch_id=batch_id, update_data=update_data)
 
-    report_filename = Path(config['paths']['qc']) / batch['name'] / 'multiqc_report.html'
-    api.upload_report(batch_id=batch_id, report_filename=str(report_filename))
+    # report_filename = Path(config['paths']['qc']) / batch['name'] / 'multiqc_report.html'
+    # api.upload_report(batch_id=batch_id, report_filename=report_filename)
 
     return batch_id,

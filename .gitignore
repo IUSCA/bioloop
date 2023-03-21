@@ -53,3 +53,5 @@ worker/venv/*
 worker/.env
 
 app.pid
+
+qc
