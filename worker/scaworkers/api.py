@@ -119,5 +119,17 @@ def add_checksums_to_batch(batch_id, checksums):
             raise Exception('Server responded with non-200 code')
 
 
+def upload_report(batch_id, report_filename):
+    filename = report_filename.name
+    fileobj = open(report_filename, 'rb')
+    with APIServerSession() as s:
+        r = s.put(f'batches/{batch_id}/report', files={
+            'report': (filename, fileobj)
+        })
+        if r.status_code != 200:
+            print(r, r.status_code)
+            raise Exception('Server responded with non-200 code')
+
+
 if __name__ == '__main__':
     pass

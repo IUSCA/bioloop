@@ -142,7 +142,7 @@ class Workflow:
 
     def on_step_start(self, step_name: str, task_id: str) -> None:
         """
-        Called by an instance of WorkflowTask before starts work.
+        Called by an instance of WorkflowTask before it starts work.
         Updates the workflow object's step with the task_id and date_start
 
         :param step_name: name of the step that the task is running
@@ -342,6 +342,7 @@ class WorkflowTask(Task):  # noqa
 
     def before_start(self, task_id, args, kwargs):
         print(f'before_start, task_id:{task_id}, kwargs:{kwargs} name:{self.name}')
+        self.update_progress({})
 
         if 'workflow_id' in kwargs and 'step' in kwargs:
             workflow_id = kwargs['workflow_id']

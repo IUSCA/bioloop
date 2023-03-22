@@ -9,7 +9,9 @@
         <tr>
           <td>Start Date</td>
           <td>
-            {{ moment(props.batch.created_at).format("YYYY-MM-DD HH:mm:ss") }}
+            {{
+              moment.utc(props.batch.created_at).format("YYYY-MM-DD HH:mm:ss")
+            }}
             UTC
           </td>
         </tr>
@@ -19,7 +21,7 @@
             <span>{{ moment(props.batch.updated_at).fromNow() }}</span>
             <span class="text-sm pl-3"
               >{{
-                moment(props.batch.updated_at).format("YYYY-MM-DD HH:mm:ss")
+                moment.utc(props.batch.updated_at).format("YYYY-MM-DD HH:mm:ss")
               }}
               UTC</span
             >
@@ -31,7 +33,11 @@
         </tr>
         <tr>
           <td>Total Size</td>
-          <td>{{ formatBytes(props.batch.du_size) }}</td>
+          <td>
+            <span v-if="props.batch.du_size">
+              {{ formatBytes(props.batch.du_size) }}
+            </span>
+          </td>
         </tr>
         <tr>
           <td>Total Files</td>

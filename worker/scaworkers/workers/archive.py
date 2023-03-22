@@ -31,7 +31,7 @@ def make_tarfile(celery_task, tarfile_name, source_dir, source_size):
 
 def hsi_put_progress(celery_task, sda_path, total_size):
     size = sda.get_size(sda_path)
-    name = f'{celery_task.name}.sda_put'
+    name = 'sda_put'
     r = utils.progress(name=name, done=size, total=total_size)
     celery_task.update_progress(r)
 

@@ -94,6 +94,11 @@ const user_items = ref([
   //   title: "Sessions",
   //   path: "/sessions",
   // },
+  {
+    icon: "mdi-dna",
+    title: "Sequencing Runs",
+    path: "/runs",
+  },
 ]);
 
 const admin_items = ref([
@@ -102,11 +107,6 @@ const admin_items = ref([
   //   title: "Dashboard",
   //   path: "/",
   // },
-  {
-    icon: "mdi-dna",
-    title: "Sequencing Runs",
-    path: "/runs",
-  },
   // {
   //   icon: "mdi-file-lock",
   //   title: "Data Products",

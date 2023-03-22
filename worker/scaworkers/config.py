@@ -15,8 +15,8 @@ config = {
         'scratch': '/N/scratch/dgluser/test',
         'archive': f'archive/{YEAR}',
         'stage': '/N/scratch/dgluser/test/stage',
-        'illumina_download': '/N/scratch/dgluser/bs_test',
-        'qc': '/N/scratch/dgluser/public/qc',
+        'illumina_download': '/N/scratch/dgluser/test',
+        'qc': '/N/scratch/dgluser/test/qc',
         'qc_public': '/N/u/dgluser/Carbonate/DGL/qc'
     },
     'registration': {
@@ -28,8 +28,9 @@ config = {
     'illumina': {
         'registration': {
             'rejects': [],
-            'wait_between_scans': 10,     # 5 minutes
-            'recency_threshold': 60 * 60, # 1 hour
+            'wait_between_scans': 10,  # 5 minutes
+            'recency_threshold': 60 * 60,  # 1 hour
+            'minimum_project_size': 1024 * 1024 * 1024  # 1 GB
         },
     },
 

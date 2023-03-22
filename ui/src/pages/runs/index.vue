@@ -23,7 +23,6 @@
       </template>
       <template #cell(status)="{ source }">
         <va-progress-circle
-          v-if="source.progress"
           class="mb-2"
           :thickness="0.1"
           :modelValue="source['progress']"
@@ -54,7 +53,7 @@ const row_items = computed(() => {
       start_date: p["created_at"],
       last_updated: p["updated_at"],
       data_files: p["num_genome_files"],
-      size: formatBytes(p["du_size"]),
+      size: p["du_size"] == null ? "" : formatBytes(p["du_size"]),
       status: {
         progress: (100 * workflow["steps_done"]) / workflow["total_steps"],
         steps: workflow["total_steps"],
