@@ -342,6 +342,7 @@ class WorkflowTask(Task):  # noqa
 
     def before_start(self, task_id, args, kwargs):
         print(f'before_start, task_id:{task_id}, kwargs:{kwargs} name:{self.name}')
+        self.update_progress({})
 
         if 'workflow_id' in kwargs and 'step' in kwargs:
             workflow_id = kwargs['workflow_id']
