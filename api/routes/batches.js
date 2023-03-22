@@ -31,12 +31,17 @@ router.get(
     const batches = await prisma.batch.findMany({
       include: {
         metadata: checksumSelect,
+        workflows: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
     // include workflow with batch
-    const _includeWorkflow = wfService.includeWorkflow();
-    const promises = batches.map(_includeWorkflow);
+    const _includeWorkflows = wfService.includeWorkflows();
+    const promises = batches.map(_includeWorkflows);
     const result = await Promise.all(promises);
     res.json(result);
   }),
@@ -63,12 +68,17 @@ router.get(
       },
       include: {
         metadata: checksumSelect,
+        workflows: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
     if (batch) {
       // include workflow with batch
-      const _includeWorkflow = wfService.includeWorkflow(true, true);
-      const _batch = await _includeWorkflow(batch);
+      const _includeWorkflows = wfService.includeWorkflows(true, true);
+      const _batch = await _includeWorkflows(batch);
       res.json(_batch);
     } else {
       next(createError(404));
@@ -84,10 +94,24 @@ router.post(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
+    // #swagger.summary = 'Create a new batch.'
+    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
+        a new relation is created between batch and given workflow_id'
+    */
+    const { workflow_id, ...batch_obj } = req.body;
+    const data = batch_obj;
+    if (workflow_id) {
+      data.workflows = {
+        create: [
+          {
+            id: workflow_id,
+          },
+        ],
+      };
+    }
     const batch = await prisma.batch.create({
-      data: req.body,
+      data,
     });
-
     res.json(batch);
   }),
 );
@@ -103,6 +127,11 @@ router.patch(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
+    // #swagger.summary = 'Modify batch.'
+    /* #swagger.description =
+        To add checksums use POST "/batches/:id/checksums"
+        To add workflow use POST "/batches/:id/workflows"
+    */
     const batchToUpdate = await prisma.batch.findFirst({
       where: {
         id: req.params.id,
@@ -127,6 +156,7 @@ router.post(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
+    // #swagger.summary = Associate checksums to a batch
     const checksums = req.body.map((c) => ({
       batch_id: req.params.id,
       path: c.path,
@@ -141,13 +171,39 @@ router.post(
   }),
 );
 
+router.post(
+  '/:id/workflows',
+  validate([
+    param('id').isInt().toInt(),
+    body('workflow_id').notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
+    // #swagger.summary = Associate workflow_id to a batch
+    await prisma.workflow.create({
+      data: {
+        id: req.body.workflow_id,
+        batch_id: req.params.id,
+      },
+    });
+    res.sendStatus(200);
+  }),
+);
+
 router.delete(
   '/:id',
   validate([
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
+    // #swagger.summary = Delete batch along with its checksums and workflow associations
     const deleteChecksums = prisma.checksum.deleteMany({
+      where: {
+        batch_id: req.params.id,
+      },
+    });
+    const deleteWorkflows = prisma.workflow.deleteMany({
       where: {
         batch_id: req.params.id,
       },
@@ -158,7 +214,7 @@ router.delete(
       },
     });
 
-    await prisma.$transaction([deleteChecksums, deleteBatch]);
+    await prisma.$transaction([deleteChecksums, deleteWorkflows, deleteBatch]);
     res.send();
   }),
 );
@@ -169,11 +225,32 @@ router.post(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
+    // #swagger.summary = Create and start a workflow to stage the batch and associate it.
     const batch_id = req.params.id;
     const wf = await wfService.create({
-      name: 'Re-stage Batch',
-      steps: [{}, {}, {}],
+      name: 'Stage Batch',
+      steps: [
+        {
+          name: 'stage',
+          task: 'scaworkers.workers.stage.stage_batch',
+        },
+        {
+          name: 'validate',
+          task: 'scaworkers.workers.validate.validate_batch',
+        },
+        {
+          name: 'generate_reports',
+          task: 'scaworkers.workers.report.generate',
+        },
+      ],
       args: [batch_id],
+    });
+    await prisma.workflow.create({
+      data: {
+        id: wf.workflow_id,
+        batch_id,
+      },
     });
     return res.json(wf);
   }),
@@ -215,6 +292,8 @@ router.put(
   ]),
   multer({ storage: report_storage }).single('report'),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
+    // #swagger.summary = Upload a QC report (html file) of this batch
     res.json({
       path: req.file.path,
     });

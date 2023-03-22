@@ -16,6 +16,7 @@ router.get(
 
   asyncHandler(
     async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
       const api_res = await wf_service.getOne(
         req.query.last_task_runs,
         req.query.prev_task_runs,
@@ -31,6 +32,7 @@ router.get(
 
   asyncHandler(
     async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
       const api_res = await wf_service.getOne(
         req.params.id,
         req.query.last_task_runs,
@@ -47,6 +49,7 @@ router.post(
 
   asyncHandler(
     async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
       const api_res = await wf_service.pause(req.params.id);
       res.json(api_res.data);
     },
@@ -59,6 +62,7 @@ router.post(
 
   asyncHandler(
     async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
       const api_res = await wf_service.resume(req.params.id);
       res.json(api_res.data);
     },
@@ -71,6 +75,7 @@ router.delete(
 
   asyncHandler(
     async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
       const api_res = await wf_service.deleteOne(req.params.id);
       res.json(api_res.data);
     },

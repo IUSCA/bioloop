@@ -65,6 +65,8 @@ class Workflow:
         kwargs['step'] = first_step['name']
         task.apply_async(args, kwargs)
 
+        # self.app.send_task(first_step['task'], args, kwargs)
+
     def pause(self):
         """
         Revoke the current running task.
