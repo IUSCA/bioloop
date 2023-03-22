@@ -100,7 +100,7 @@ def progress(name, done, total=None):
 
 def file_progress(celery_task, path, total, progress_name):
     size = Path(path).stat().st_size
-    name = f'{celery_task.name}.{progress_name}.progress'
+    name = progress_name
     r = progress(name=name, done=size, total=total)
     celery_task.update_progress(r)
 

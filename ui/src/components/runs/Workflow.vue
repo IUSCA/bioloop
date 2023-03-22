@@ -152,13 +152,11 @@ function compute_step_duration(step) {
 function get_progress_obj(step) {
   if (step?.status == "PROGRESS" && step?.last_task_run?.result) {
     const progress = step?.last_task_run?.result;
-    const sub_step_names = progress?.name?.split(".");
-    const name = sub_step_names[sub_step_names.length - 1];
     const percent_done = progress.percent_done
       ? Math.round(progress.percent_done * 100)
       : null;
     return {
-      name,
+      name: progress?.name,
       percent_done,
     };
   }
