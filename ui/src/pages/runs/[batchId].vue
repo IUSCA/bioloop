@@ -102,7 +102,7 @@
             <span class="text-xl">Workflows</span>
           </va-card-title>
           <va-card-content>
-            <workflow :batch="batch" @update="fetch_batch"></workflow>
+            <workflow :batch="batch" @update="fetch_batch(true)"></workflow>
           </va-card-content>
         </va-card>
       </div>
@@ -126,7 +126,7 @@ function fetch_batch(show_loading = false) {
   BatchService.getById(props.batchId)
     .then((res) => {
       batch.value = res.data;
-      // batch.value.workflow.status = "STARTED";
+      // batch.value.workflow.status = "REVOKED";
     })
     .catch((err) => {
       if (err?.response?.status == 404)

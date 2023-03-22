@@ -41,13 +41,22 @@
         </div>
         <div class="flex justify-center">
           <div class="flex-initial">
-            <div v-if="['REVOKED', 'FAILURE'].includes(workflow.status)">
+            <div
+              v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
+              class="flex flex-col justify-start items-center gap-3"
+            >
               <confirm-hold-button
                 action="Resume Workflow"
                 icon="mdi-play"
                 color="primary"
                 @click="resume_workflow"
               ></confirm-hold-button>
+              <confirm-button
+                action="Delete Workflow"
+                icon="mdi-delete"
+                color="danger"
+                @click="delete_workflow"
+              ></confirm-button>
             </div>
 
             <div v-if="workflow.status == 'SUCCESS'">
@@ -127,7 +136,7 @@ watch(
   () => {
     // runs when collectionStats are updated
     workflow.value = props.batch?.workflow;
-    console.log(workflow.value);
+    // console.log(workflow.value);
   },
   {
     immediate: true,
@@ -141,7 +150,7 @@ function compute_step_duration(step) {
       const start_time = moment.utc(task.date_start);
       const end_time =
         task.status === "PROGRESS" ? moment.utc() : moment.utc(task.date_done);
-      console.log(start_time, end_time, moment);
+      // console.log(start_time, end_time, moment);
       const duration = moment.duration(end_time - start_time);
       return duration.humanize();
     }
