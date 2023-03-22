@@ -139,7 +139,7 @@ function fetch_batch(show_loading = false) {
 }
 
 fetch_batch(true);
-const fetch_interval = setInterval(fetch_batch, 15000);
+const fetch_interval = setInterval(fetch_batch, 10000);
 
 onBeforeUnmount(() => {
   if (fetch_interval) {

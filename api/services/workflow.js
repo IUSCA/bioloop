@@ -41,7 +41,7 @@ function includeWorkflow(lastTaskRun = false, prevTaskRuns = false) {
 }
 
 function pause(id) {
-  return wfApi.post(`/workflow/${id}/pause`);
+  return wfApi.post(`/workflow/${id}/pause`, {});
 }
 
 function deleteOne(id) {
@@ -49,7 +49,7 @@ function deleteOne(id) {
 }
 
 function resume(id) {
-  return wfApi.post(`/workflow/${id}/resume`);
+  return wfApi.post(`/workflow/${id}/resume`, {});
 }
 
 module.exports = {
