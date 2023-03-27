@@ -102,6 +102,11 @@
             <span class="text-xl">Workflows</span>
           </va-card-title>
           <va-card-content>
+            <!-- TODO: for multi-workflow change this into v-for -->
+            <!-- TODO: send workflow_id instead of batch and fetch workflow object from the component -->
+            <!-- TODO: figure out the sort order of workflows - start time vs currently running -->
+            <!-- TODO: add filter based on workflow status -->
+            <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
             <workflow :batch="batch" @update="fetch_batch(true)"></workflow>
           </va-card-content>
         </va-card>
