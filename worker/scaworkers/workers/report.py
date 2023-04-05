@@ -101,6 +101,6 @@ def generate(celery_task, batch_id, **kwargs):
             'report_id': report_id
         }
         api.update_batch(batch_id=batch_id, update_data=update_data)
-        # api.upload_report(batch_id=batch_id, report_filename=report_filename)
+        api.upload_report(batch_id=batch_id, report_filename=report_filename)
 
     return batch_id,
