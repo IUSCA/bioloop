@@ -154,9 +154,10 @@ class BaseSpaceRegistration:
 
 
 if __name__ == '__main__':
-    r = Registration()
+    # r = Registration()
     bs_reg = BaseSpaceRegistration()
 
+    print('starting register worker')
     while True:
         # r.register()
         bs_reg.register()
