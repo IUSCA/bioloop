@@ -12,11 +12,11 @@ config = {
         'base_url': 'https://dgl.sca.iu.edu/api/'
     },
     'paths': {
-        'scratch': '/N/scratch/dgluser/test',
+        'scratch': '/N/scratch/dgluser/dgl/production/scratch',
         'archive': f'archive/{YEAR}',
-        'stage': '/N/scratch/dgluser/test/stage',
-        'illumina_download': '/N/scratch/dgluser/test',
-        'qc': '/N/scratch/dgluser/test/qc',
+        'stage': '/N/scratch/dgluser/dgl/production/stage',
+        'illumina_download': '/N/scratch/dgluser/dgl/production/scratch',
+        'qc': '/N/scratch/dgluser/dgl/production/qc',
         'qc_public': '/N/u/dgluser/Carbonate/DGL/qc'
     },
     'registration': {
