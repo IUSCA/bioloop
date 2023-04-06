@@ -2,26 +2,47 @@
   <h2 class="text-4xl font-bold">Sequencing Runs</h2>
 
   <div>
+    <div class="flex my-2">
+      <va-input
+        v-model="filterInput"
+        class="border-gray-800 border border-solid"
+        placeholder="search sequencing runs"
+        outline
+        clearable
+      />
+    </div>
     <va-data-table
-      :items="row_items"
+      :items="batches"
       :columns="columns"
       :hoverable="true"
       v-model:sort-by="sortBy"
       v-model:sorting-order="sortingOrder"
       :loading="data_loading"
+      :filter="filterInput"
+      :row-bind="getRowBind"
     >
       <template #cell(name)="{ rowData }">
         <router-link :to="`/runs/${rowData.id}`" class="va-link">{{
           rowData.name
         }}</router-link>
       </template>
-      <template #cell(start_date)="{ value }">
+      <template #cell(created_at)="{ value }">
         <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
       </template>
-      <template #cell(last_updated)="{ value }">
+      <template #cell(archived)="{ source }">
+        <span v-if="source" class="flex justify-center"
+          ><i-mdi-check-circle class="text-green-700"
+        /></span>
+      </template>
+      <template #cell(staged)="{ source }">
+        <span v-if="source" class="flex justify-center"
+          ><i-mdi-check-circle class="text-green-700"
+        /></span>
+      </template>
+      <template #cell(updated_at)="{ value }">
         <span>{{ moment(value).fromNow() }}</span>
       </template>
-      <template #cell(status)="{ source }">
+      <!-- <template #cell(status)="{ source }">
         <va-progress-circle
           class="mb-2"
           :thickness="0.1"
@@ -30,6 +51,12 @@
           {{ source["completed"] }} /
           {{ source["steps"] }}
         </va-progress-circle>
+      </template> -->
+      <template #cell(du_size)="{ source }">
+        <span>{{ source != null ? formatBytes(source) : "" }}</span>
+      </template>
+      <template #cell(workflows)="{ source }">
+        <span>{{ source?.length || 0 }}</span>
       </template>
     </va-data-table>
   </div>
@@ -43,49 +70,69 @@ import toast from "@/services/toast";
 
 const batches = ref([]);
 const data_loading = ref(false);
-
-const row_items = computed(() => {
-  return batches.value.map((p) => {
-    // TODO: - multi workflow
-    const workflow = p["workflow"] || {};
-    return {
-      id: p["id"],
-      name: p["name"],
-      start_date: p["created_at"],
-      last_updated: p["updated_at"],
-      data_files: p["num_genome_files"],
-      size: p["du_size"] == null ? "" : formatBytes(p["du_size"]),
-      status: {
-        progress: (100 * workflow["steps_done"]) / workflow["total_steps"],
-        steps: workflow["total_steps"],
-        completed: workflow["steps_done"],
-      },
-    };
-  });
-});
+const filterInput = ref("");
 
 const columns = ref([
   // { key: "id", sortable: true, sortingOptions: ["desc", "asc", null] },
   { key: "name", sortable: true, sortingOptions: ["desc", "asc", null] },
   {
-    key: "start_date",
+    key: "created_at",
+    label: "start date",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
   },
   {
-    key: "last_updated",
+    key: "archive_path",
+    name: "archived",
+    label: "archived",
+    thAlign: "center",
+    tdAlign: "center",
+    sortable: true,
+  },
+  {
+    key: "stage_path",
+    name: "staged",
+    label: "staged",
+    thAlign: "center",
+    tdAlign: "center",
+    sortable: true,
+  },
+  {
+    key: "updated_at",
+    label: "last updated",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
   },
-  { key: "status", sortable: false },
-  { key: "data_files", sortable: true, sortingOptions: ["desc", "asc", null] },
+  // { key: "status", sortable: false },
   {
-    key: "size",
+    key: "num_genome_files",
+    label: "data files",
+    sortable: true,
+    sortingOptions: ["desc", "asc", null],
+  },
+  {
+    key: "du_size",
+    label: "size",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
     width: 80,
+    sortingFn: (a, b) => a - b,
+  },
+  {
+    key: "workflows",
+    tdAlign: "center",
   },
 ]);
+
+function getRowBind(row) {
+  const inprogress_wf = row.workflows?.filter(
+    (workflow) => workflow.status == "PROGRESS"
+  );
+  const is_in_progress = (inprogress_wf?.length || 0) > 0;
+  if (is_in_progress) {
+    return { class: ["bg-slate-200"] };
+  }
+}
 
 // initial sorting order
 const sortBy = ref("start_date");
