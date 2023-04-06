@@ -1,0 +1,1028 @@
+[
+  {
+    "_id": "faf25d85-c50a-481b-ac1b-cdb86a7f1462",
+    "status": "SUCCESS",
+    "result": "[7]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T21:22:41.094401",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      7
+    ],
+    "kwargs": {
+      "workflow_id": "63339ae0-9643-4d8b-aa3a-303434f6bdcd",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "b3a234d9-5782-482b-be5c-dfcbfc8496ea",
+    "status": "SUCCESS",
+    "result": "[7]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T21:56:57.769847",
+    "parent_id": "faf25d85-c50a-481b-ac1b-cdb86a7f1462",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      7
+    ],
+    "kwargs": {
+      "workflow_id": "63339ae0-9643-4d8b-aa3a-303434f6bdcd",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "dbc71e50-8230-4498-93bf-25a8491f5ac0",
+    "status": "SUCCESS",
+    "result": "[6]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T21:27:59.042099",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      6
+    ],
+    "kwargs": {
+      "workflow_id": "02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "9082d78a-8086-4960-94cb-d9f55e721a3b",
+    "status": "SUCCESS",
+    "result": "[6]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T22:34:38.856510",
+    "parent_id": "dbc71e50-8230-4498-93bf-25a8491f5ac0",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      6
+    ],
+    "kwargs": {
+      "workflow_id": "02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "dd8d3c3b-2f32-47c3-b613-7b494ef1d967",
+    "status": "SUCCESS",
+    "result": "[8]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T21:42:46.267861",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      8
+    ],
+    "kwargs": {
+      "workflow_id": "e2c47b03-8873-4be1-9c30-b0b3d784c88c",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "ab62be27-c2c1-47fa-beb0-aebe86457086",
+    "status": "SUCCESS",
+    "result": "[8]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T22:56:12.751428",
+    "parent_id": "dd8d3c3b-2f32-47c3-b613-7b494ef1d967",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      8
+    ],
+    "kwargs": {
+      "workflow_id": "e2c47b03-8873-4be1-9c30-b0b3d784c88c",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "7e86ffcd-b5a7-4b78-a14b-0ff692512b8e",
+    "status": "SUCCESS",
+    "result": "[7]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T22:23:53.638850",
+    "parent_id": "b3a234d9-5782-482b-be5c-dfcbfc8496ea",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      7
+    ],
+    "kwargs": {
+      "workflow_id": "63339ae0-9643-4d8b-aa3a-303434f6bdcd",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "9f663886-f2a2-400e-a6e4-5d2b9186b49c",
+    "status": "SUCCESS",
+    "result": "[7, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T22:28:01.114180",
+    "parent_id": "7e86ffcd-b5a7-4b78-a14b-0ff692512b8e",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      7
+    ],
+    "kwargs": {
+      "workflow_id": "63339ae0-9643-4d8b-aa3a-303434f6bdcd",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "cf3c7c9f-b4c8-4167-b360-3c35f8051e5c",
+    "status": "SUCCESS",
+    "result": "[6]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T23:21:33.101619",
+    "parent_id": "9082d78a-8086-4960-94cb-d9f55e721a3b",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      6
+    ],
+    "kwargs": {
+      "workflow_id": "02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "bdc7ba2c-c211-4901-ae2a-992265cb19a0",
+    "status": "SUCCESS",
+    "result": "[8]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T23:53:51.067624",
+    "parent_id": "ab62be27-c2c1-47fa-beb0-aebe86457086",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      8
+    ],
+    "kwargs": {
+      "workflow_id": "e2c47b03-8873-4be1-9c30-b0b3d784c88c",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "ac0984c7-ee95-4001-9aea-7e71c1070df5",
+    "status": "SUCCESS",
+    "result": "[6, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-02T23:32:34.087572",
+    "parent_id": "cf3c7c9f-b4c8-4167-b360-3c35f8051e5c",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      6
+    ],
+    "kwargs": {
+      "workflow_id": "02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "589f5107-25da-4983-8a37-dad9cdd3e845",
+    "status": "SUCCESS",
+    "result": "[8, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-02-03T00:05:22.974904",
+    "parent_id": "bdc7ba2c-c211-4901-ae2a-992265cb19a0",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      8
+    ],
+    "kwargs": {
+      "workflow_id": "e2c47b03-8873-4be1-9c30-b0b3d784c88c",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3c6e7d01-7505-4147-bdbc-70dab660ae10",
+    "status": "SUCCESS",
+    "result": "[10]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-09T18:33:40.134046",
+    "name": "scaworkers.workers.download.download_illumina_batch",
+    "args": [
+      10
+    ],
+    "kwargs": {
+      "workflow_id": "6ca07614-bc84-4e5d-8808-71d0ebaef98b",
+      "step": "download"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "487483a3-7e3b-4d42-8017-69df43bd9e57",
+    "status": "SUCCESS",
+    "result": "[10]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-09T18:38:33.695525",
+    "parent_id": "3c6e7d01-7505-4147-bdbc-70dab660ae10",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      10
+    ],
+    "kwargs": {
+      "workflow_id": "6ca07614-bc84-4e5d-8808-71d0ebaef98b",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3b5066bf-f626-4781-af16-1d9ebe08bffc",
+    "status": "SUCCESS",
+    "result": "[10]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-09T19:29:13.992646",
+    "parent_id": "487483a3-7e3b-4d42-8017-69df43bd9e57",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      10
+    ],
+    "kwargs": {
+      "workflow_id": "6ca07614-bc84-4e5d-8808-71d0ebaef98b",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "81c07060-4363-4269-9947-bfd863e65a7c",
+    "status": "SUCCESS",
+    "result": "[10]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-09T19:48:20.891043",
+    "parent_id": "3b5066bf-f626-4781-af16-1d9ebe08bffc",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      10
+    ],
+    "kwargs": {
+      "workflow_id": "6ca07614-bc84-4e5d-8808-71d0ebaef98b",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "f83f8bb2-937a-42b9-99bb-437c82640551",
+    "status": "SUCCESS",
+    "result": "[10, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-09T19:53:06.395359",
+    "parent_id": "81c07060-4363-4269-9947-bfd863e65a7c",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      10
+    ],
+    "kwargs": {
+      "workflow_id": "6ca07614-bc84-4e5d-8808-71d0ebaef98b",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "c3ca9f07-315e-46b7-88a7-3747a5c1ab39",
+    "status": "SUCCESS",
+    "result": "[11]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-21T23:01:26.705396",
+    "name": "scaworkers.workers.download.download_illumina_batch",
+    "args": [
+      11
+    ],
+    "kwargs": {
+      "workflow_id": "8afb902b-2ed3-47cd-9390-a262672d2d64",
+      "step": "download"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "96a3e384-911a-4b96-9495-a675c08f3cf0",
+    "status": "SUCCESS",
+    "result": "[11]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-21T23:01:27.093181",
+    "parent_id": "c3ca9f07-315e-46b7-88a7-3747a5c1ab39",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      11
+    ],
+    "kwargs": {
+      "workflow_id": "8afb902b-2ed3-47cd-9390-a262672d2d64",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3f798662-d7e1-42ce-85fa-c7b5b53b3f5b",
+    "status": "SUCCESS",
+    "result": "[11]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-21T23:01:27.820628",
+    "parent_id": "96a3e384-911a-4b96-9495-a675c08f3cf0",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      11
+    ],
+    "kwargs": {
+      "workflow_id": "8afb902b-2ed3-47cd-9390-a262672d2d64",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "9665ecc0-1839-4fdf-8e06-8d3788f8eccd",
+    "status": "SUCCESS",
+    "result": "[11]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-21T23:01:30.819185",
+    "parent_id": "3f798662-d7e1-42ce-85fa-c7b5b53b3f5b",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      11
+    ],
+    "kwargs": {
+      "workflow_id": "8afb902b-2ed3-47cd-9390-a262672d2d64",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "631824bc-e4e8-432f-a996-19286016bf68",
+    "status": "SUCCESS",
+    "result": "[11, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-21T23:01:30.914921",
+    "parent_id": "9665ecc0-1839-4fdf-8e06-8d3788f8eccd",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      11
+    ],
+    "kwargs": {
+      "workflow_id": "8afb902b-2ed3-47cd-9390-a262672d2d64",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "b7dff532-4f8a-4977-9d92-75cbea6dcbf4",
+    "status": "FAILURE",
+    "result": "{\"exc_type\": \"CalledProcessError\", \"exc_message\": [1, [\"fastqc\", \"-t\", \"8\", \"-o\", \"\"]], \"exc_module\": \"subprocess\"}",
+    "traceback": "Traceback (most recent call last):\n  File \"/N/u/dgluser/Carbonate/.local/lib/python3.9/site-packages/celery/app/trace.py\", line 451, in trace_task\n    R = retval = fun(*args, **kwargs)\n  File \"/N/u/dgluser/Carbonate/.local/lib/python3.9/site-packages/celery/app/trace.py\", line 734, in __protected_call__\n    return self.run(*args, **kwargs)\n  File \"/geode2/home/u020/dgluser/Carbonate/DGL/worker/scaworkers/workers/report.py\", line 93, in generate\n    report_id = create_report(batch_dir=Path(batch['stage_path']), batch_name=batch['name'])\n  File \"/geode2/home/u020/dgluser/Carbonate/DGL/worker/scaworkers/workers/report.py\", line 79, in create_report\n    run_fastqc(batch_dir, batch_qc_dir)\n  File \"/geode2/home/u020/dgluser/Carbonate/DGL/worker/scaworkers/workers/report.py\", line 33, in run_fastqc\n    utils.execute(cmd)\n  File \"/geode2/home/u020/dgluser/Carbonate/DGL/worker/scaworkers/utils.py\", line 50, in execute\n    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)\n  File \"/N/soft/rhel7/python/3.9.8/lib/python3.9/subprocess.py\", line 528, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command '['fastqc', '-t', '8', '-o', '']' returned non-zero exit status 1.\n",
+    "children": [],
+    "date_done": "2023-03-21T23:01:32.084964",
+    "parent_id": "631824bc-e4e8-432f-a996-19286016bf68",
+    "name": "scaworkers.workers.report.generate",
+    "args": [
+      11
+    ],
+    "kwargs": {
+      "workflow_id": "8afb902b-2ed3-47cd-9390-a262672d2d64",
+      "step": "generate_reports"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "82b7ba37-1c4e-454c-91ff-53b7bbe16ae7",
+    "status": "SUCCESS",
+    "result": "[11]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-21T23:48:38.037618",
+    "name": "scaworkers.workers.report.generate",
+    "args": [
+      11
+    ],
+    "kwargs": {
+      "workflow_id": "8afb902b-2ed3-47cd-9390-a262672d2d64",
+      "step": "generate_reports"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "c7cbf9ae-e7bc-4d4b-a409-ec615ca99b3a",
+    "status": "SUCCESS",
+    "result": "[12]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-21T23:56:27.577889",
+    "name": "scaworkers.workers.download.download_illumina_batch",
+    "args": [
+      12
+    ],
+    "kwargs": {
+      "workflow_id": "970e13dd-1905-493e-aa3a-13645bd439d9",
+      "step": "download"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "519d49de-fb94-4e69-beb5-f783cd93fad6",
+    "status": "SUCCESS",
+    "result": "[12]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T00:00:24.856029",
+    "parent_id": "c7cbf9ae-e7bc-4d4b-a409-ec615ca99b3a",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      12
+    ],
+    "kwargs": {
+      "workflow_id": "970e13dd-1905-493e-aa3a-13645bd439d9",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "8fc31463-a41a-46e1-ad8f-cf8836f4a6b8",
+    "status": "SUCCESS",
+    "result": "[12]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T00:44:14.779168",
+    "parent_id": "519d49de-fb94-4e69-beb5-f783cd93fad6",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      12
+    ],
+    "kwargs": {
+      "workflow_id": "970e13dd-1905-493e-aa3a-13645bd439d9",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "096e6ac5-87bd-4ce6-b76a-e2a706378b6c",
+    "status": "SUCCESS",
+    "result": "[12]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T01:00:35.143103",
+    "parent_id": "8fc31463-a41a-46e1-ad8f-cf8836f4a6b8",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      12
+    ],
+    "kwargs": {
+      "workflow_id": "970e13dd-1905-493e-aa3a-13645bd439d9",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3904f569-8bb1-4e87-afe5-460b16439e80",
+    "status": "SUCCESS",
+    "result": "[12, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T01:04:36.552477",
+    "parent_id": "096e6ac5-87bd-4ce6-b76a-e2a706378b6c",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      12
+    ],
+    "kwargs": {
+      "workflow_id": "970e13dd-1905-493e-aa3a-13645bd439d9",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "c863439e-e0a5-4e35-a1e7-21de513e5e1b",
+    "status": "SUCCESS",
+    "result": "[12]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T01:39:13.596478",
+    "parent_id": "3904f569-8bb1-4e87-afe5-460b16439e80",
+    "name": "scaworkers.workers.report.generate",
+    "args": [
+      12
+    ],
+    "kwargs": {
+      "workflow_id": "970e13dd-1905-493e-aa3a-13645bd439d9",
+      "step": "generate_reports"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "464302fa-4f31-4ae0-8fbd-21fbf4e9985b",
+    "status": "SUCCESS",
+    "result": "[13]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T01:54:44.583882",
+    "name": "scaworkers.workers.download.download_illumina_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "download"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3c286066-2f11-4479-937c-baebef07f550",
+    "status": "REVOKED",
+    "result": "{\"exc_type\": \"TaskRevokedError\", \"exc_message\": [\"terminated\"], \"exc_module\": \"celery.exceptions\"}",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T01:56:16.628655",
+    "parent_id": "464302fa-4f31-4ae0-8fbd-21fbf4e9985b",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "36392459-51f8-4750-adb3-b55aa344cb66",
+    "status": "REVOKED",
+    "result": "{\"exc_type\": \"TaskRevokedError\", \"exc_message\": [\"terminated\"], \"exc_module\": \"celery.exceptions\"}",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T02:03:44.768738",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3d533457-a67b-424d-9311-249a0706fca6",
+    "status": "REVOKED",
+    "result": "{\"exc_type\": \"TaskRevokedError\", \"exc_message\": [\"terminated\"], \"exc_module\": \"celery.exceptions\"}",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T02:14:52.788528",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "2e020c74-774e-4f86-a150-f9052e54c9ab",
+    "status": "SUCCESS",
+    "result": "[13]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T13:36:45.355668",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "7f28309c-5e09-4add-9eff-0ddfdf818219",
+    "status": "SUCCESS",
+    "result": "[13]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T14:02:38.467617",
+    "parent_id": "2e020c74-774e-4f86-a150-f9052e54c9ab",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "4aa8e9a1-25a1-4845-9cb6-92a8344bed3b",
+    "status": "SUCCESS",
+    "result": "[13]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T14:20:52.711860",
+    "parent_id": "7f28309c-5e09-4add-9eff-0ddfdf818219",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3a99d3bb-9d1c-4c89-9309-5a1299a91d7d",
+    "status": "SUCCESS",
+    "result": "[13, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T14:25:25.221021",
+    "parent_id": "4aa8e9a1-25a1-4845-9cb6-92a8344bed3b",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "5d3432d9-d8fa-4257-b46a-cef635e8ad9a",
+    "status": "SUCCESS",
+    "result": "[13]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-22T15:04:40.364862",
+    "parent_id": "3a99d3bb-9d1c-4c89-9309-5a1299a91d7d",
+    "name": "scaworkers.workers.report.generate",
+    "args": [
+      13
+    ],
+    "kwargs": {
+      "workflow_id": "94e78cd2-d836-4175-8199-562da80867e5",
+      "step": "generate_reports"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "f5ff24bd-0d65-41a4-9be8-cc3e69c14a2b",
+    "status": "SUCCESS",
+    "result": "[14]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-23T00:37:30.161533",
+    "name": "scaworkers.workers.download.download_illumina_batch",
+    "args": [
+      14
+    ],
+    "kwargs": {
+      "workflow_id": "9d4941bd-182c-4314-8825-e62869839c5f",
+      "step": "download"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "973c12c3-143a-42a4-8e20-177fd0b752e3",
+    "status": "SUCCESS",
+    "result": "[14]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-23T00:41:05.696919",
+    "parent_id": "f5ff24bd-0d65-41a4-9be8-cc3e69c14a2b",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      14
+    ],
+    "kwargs": {
+      "workflow_id": "9d4941bd-182c-4314-8825-e62869839c5f",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "be7f62cf-62be-4c5a-adf9-9bd67454f541",
+    "status": "SUCCESS",
+    "result": "[14]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-23T01:22:17.299471",
+    "parent_id": "973c12c3-143a-42a4-8e20-177fd0b752e3",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      14
+    ],
+    "kwargs": {
+      "workflow_id": "9d4941bd-182c-4314-8825-e62869839c5f",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "21f2d688-2bac-4924-bd25-7e254000ba2f",
+    "status": "SUCCESS",
+    "result": "[14]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-23T01:38:31.724664",
+    "parent_id": "be7f62cf-62be-4c5a-adf9-9bd67454f541",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      14
+    ],
+    "kwargs": {
+      "workflow_id": "9d4941bd-182c-4314-8825-e62869839c5f",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "1c5ad156-d60a-4321-9583-cd7b54fc18f0",
+    "status": "SUCCESS",
+    "result": "[14, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-23T01:42:14.647597",
+    "parent_id": "21f2d688-2bac-4924-bd25-7e254000ba2f",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      14
+    ],
+    "kwargs": {
+      "workflow_id": "9d4941bd-182c-4314-8825-e62869839c5f",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "d785e34d-5c95-45cf-a198-3875e400c807",
+    "status": "SUCCESS",
+    "result": "[14]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-03-23T02:14:13.969708",
+    "parent_id": "1c5ad156-d60a-4321-9583-cd7b54fc18f0",
+    "name": "scaworkers.workers.report.generate",
+    "args": [
+      14
+    ],
+    "kwargs": {
+      "workflow_id": "9d4941bd-182c-4314-8825-e62869839c5f",
+      "step": "generate_reports"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "ff8e7b04-4647-4b9a-8c95-f0fc154de568",
+    "status": "SUCCESS",
+    "result": "[15]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-04-01T22:35:28.530579",
+    "name": "scaworkers.workers.download.download_illumina_batch",
+    "args": [
+      15
+    ],
+    "kwargs": {
+      "workflow_id": "874a4b40-0534-44e3-b4ff-ae029cca5109",
+      "step": "download"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "3ea14f94-4ca4-4819-a759-0024992ec535",
+    "status": "SUCCESS",
+    "result": "[15]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-04-01T22:37:07.736681",
+    "parent_id": "ff8e7b04-4647-4b9a-8c95-f0fc154de568",
+    "name": "scaworkers.workers.inspect.inspect_batch",
+    "args": [
+      15
+    ],
+    "kwargs": {
+      "workflow_id": "874a4b40-0534-44e3-b4ff-ae029cca5109",
+      "step": "inspect"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "35fe7a39-d425-4478-8ca2-f0e041a07897",
+    "status": "REVOKED",
+    "result": "{\"exc_type\": \"TaskRevokedError\", \"exc_message\": [\"terminated\"], \"exc_module\": \"celery.exceptions\"}",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-04-03T14:29:32.907238",
+    "parent_id": "3ea14f94-4ca4-4819-a759-0024992ec535",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      15
+    ],
+    "kwargs": {
+      "workflow_id": "874a4b40-0534-44e3-b4ff-ae029cca5109",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "407f4554-7d85-4272-a3bd-3daf5d7562e8",
+    "status": "SUCCESS",
+    "result": "[15]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-04-03T14:50:47.622209",
+    "name": "scaworkers.workers.archive.archive_batch",
+    "args": [
+      15
+    ],
+    "kwargs": {
+      "workflow_id": "874a4b40-0534-44e3-b4ff-ae029cca5109",
+      "step": "archive"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "94729741-bed7-4bf4-aab3-e34f7409b7cd",
+    "status": "SUCCESS",
+    "result": "[15]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-04-03T15:07:14.909103",
+    "parent_id": "407f4554-7d85-4272-a3bd-3daf5d7562e8",
+    "name": "scaworkers.workers.stage.stage_batch",
+    "args": [
+      15
+    ],
+    "kwargs": {
+      "workflow_id": "874a4b40-0534-44e3-b4ff-ae029cca5109",
+      "step": "stage"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "19cc0707-42a3-4ee4-bc7a-fe2c9b25a4b2",
+    "status": "SUCCESS",
+    "result": "[15, []]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-04-03T15:08:58.219383",
+    "parent_id": "94729741-bed7-4bf4-aab3-e34f7409b7cd",
+    "name": "scaworkers.workers.validate.validate_batch",
+    "args": [
+      15
+    ],
+    "kwargs": {
+      "workflow_id": "874a4b40-0534-44e3-b4ff-ae029cca5109",
+      "step": "validate"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  },
+  {
+    "_id": "f00f383e-72d2-46cb-80dd-576af83070b5",
+    "status": "SUCCESS",
+    "result": "[15]",
+    "traceback": null,
+    "children": [],
+    "date_done": "2023-04-03T15:26:06.779046",
+    "parent_id": "19cc0707-42a3-4ee4-bc7a-fe2c9b25a4b2",
+    "name": "scaworkers.workers.report.generate",
+    "args": [
+      15
+    ],
+    "kwargs": {
+      "workflow_id": "874a4b40-0534-44e3-b4ff-ae029cca5109",
+      "step": "generate_reports"
+    },
+    "worker": "celery@localhost",
+    "retries": 0,
+    "queue": "celery"
+  }
+]

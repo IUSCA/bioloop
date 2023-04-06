@@ -35,7 +35,7 @@ router.post(
     body('ticket').notEmpty(),
     body('service').notEmpty(),
   ]),
-  asyncHandler(async (req, res, next) => {
+  (req, res, next) => {
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
     IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id, profile) => {
@@ -49,7 +49,7 @@ router.post(
       // Send an empty success message
       return res.status(204).send();
     });
-  }),
+  },
 );
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {

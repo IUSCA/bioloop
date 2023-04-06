@@ -98,7 +98,7 @@ services:
     volumes:
       - ./db/db_mongo:/data/db
       # for importing database files
-      # - ./db/mongodump:/opt/sca/dgl/mongodump
+      - ./db/mongodump:/opt/sca/app/mongodump
 
 
 volumes:
