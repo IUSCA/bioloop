@@ -1,91 +1,10 @@
 <template>
   <va-inner-loading :loading="loading">
-    <div v-if="workflow">
+    <div v-if="workflow" class="pb-2">
       <div class="mb-2" v-if="!workflowService.is_workflow_done(workflow)">
         <va-progress-bar indeterminate size="0.3rem" />
       </div>
-      <div class="grid grid-cols-3">
-        <div class="flex flex-col gap-2">
-          <div>
-            ID: <span class="pl-3">{{ workflow.id }}</span>
-          </div>
-          <div v-if="workflow.name">
-            Name: <span class="pl-3">{{ workflow.name }}</span>
-          </div>
-          <div>
-            Status:
-            <span class="pl-3">
-              <workflow-status-pill :status="workflow.status" />
-            </span>
-          </div>
-        </div>
-        <div class="">
-          <div>
-            Created:
-            <span class="pl-3">
-              {{
-                moment.utc(workflow.created_at).format("YYYY-MM-DD HH:mm:ss")
-              }}
-              UTC
-            </span>
-          </div>
-          <div>
-            Updated:
-            <span class="pl-3">
-              {{
-                moment.utc(workflow.updated_at).format("YYYY-MM-DD HH:mm:ss")
-              }}
-              UTC
-            </span>
-          </div>
-        </div>
-        <div class="flex justify-center">
-          <div class="flex-initial">
-            <div
-              v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
-              class="flex flex-col justify-start items-center gap-3"
-            >
-              <confirm-hold-button
-                action="Resume Workflow"
-                icon="mdi-play"
-                color="primary"
-                @click="resume_workflow"
-              ></confirm-hold-button>
-              <confirm-button
-                action="Delete Workflow"
-                icon="mdi-delete"
-                color="danger"
-                @click="delete_workflow"
-              ></confirm-button>
-            </div>
-
-            <div v-if="workflow.status == 'SUCCESS'">
-              <confirm-button
-                action="Delete Workflow"
-                icon="mdi-delete"
-                color="danger"
-                @click="delete_workflow"
-              ></confirm-button>
-            </div>
-
-            <div v-if="['STARTED', 'PROGRESS'].includes(workflow.status)">
-              <confirm-button
-                action="Stop Workflow"
-                icon="mdi-stop-circle-outline"
-                color="danger"
-                @click="pause_workflow"
-              ></confirm-button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <va-data-table
-        style="margin-top: 30px"
-        :items="row_items"
-        :columns="columns"
-        :hoverable="true"
-      >
+      <va-data-table :items="row_items" :columns="columns" :hoverable="true">
         <template #cell(step)="{ source }">
           <div class="flex gap-3 justify-start items-center">
             <span
@@ -114,6 +33,47 @@
           <workflow-status-pill :status="source" />
         </template>
       </va-data-table>
+
+      <div class="flex justify-end">
+        <div class="flex-initial">
+          <div
+            v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
+            class="flex justify-start items-center gap-3"
+          >
+            <confirm-hold-button
+              action="Resume Workflow"
+              icon="mdi-play"
+              color="primary"
+              @click="resume_workflow"
+            ></confirm-hold-button>
+
+            <confirm-button
+              action="Delete Workflow"
+              icon="mdi-delete"
+              color="danger"
+              @click="delete_workflow"
+            ></confirm-button>
+          </div>
+
+          <div v-else-if="workflow.status == 'SUCCESS'">
+            <confirm-button
+              action="Delete Workflow"
+              icon="mdi-delete"
+              color="danger"
+              @click="delete_workflow"
+            ></confirm-button>
+          </div>
+
+          <div v-else>
+            <confirm-button
+              action="Stop Workflow"
+              icon="mdi-stop-circle-outline"
+              color="danger"
+              @click="pause_workflow"
+            ></confirm-button>
+          </div>
+        </div>
+      </div>
     </div>
   </va-inner-loading>
 </template>

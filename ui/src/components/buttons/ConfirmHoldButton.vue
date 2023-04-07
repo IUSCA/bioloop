@@ -6,7 +6,7 @@
       :color="props.color"
       preset="primary"
     >
-      <Icon :icon="props.icon" class="mr-3" />
+      <Icon :icon="props.icon" class="mr-3 text-xl" />
 
       <span>
         {{ (isHovered ? "Click & Hold to " : "") + props.action }}

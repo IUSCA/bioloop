@@ -101,7 +101,12 @@
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
         <div v-for="workflow in batch.workflows" :key="workflow.id">
-          <va-collapse flat class="mb-6">
+          <va-collapse
+            flat
+            solid
+            class="mb-4"
+            v-model="workflow.collapse_model"
+          >
             <template #header-content>
               <div class="flex-[0_0_90%]">
                 <workflow-compact :workflow="workflow" />
@@ -140,20 +145,18 @@ function fetch_batch(show_loading = false) {
   BatchService.getById(props.batchId)
     .then((res) => {
       const _batch = res.data;
-      // _batch.workflows[1].status = "STARTED";
-      _batch?.workflows.sort((a, b) => {
-        /* compareFn: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
-         * sort by status, created_at
-         * not done status has higher precedence
-         */
-        const is_a_done = workflowService.is_workflow_done(a);
-        const is_b_done = workflowService.is_workflow_done(b);
-        const order_by_done = is_a_done - is_b_done;
+      const _workflows = _batch?.workflows || [];
+      // _workflows[1].status = "PROGRESS";
+      // _workflows[1].steps_done = 4;
 
-        if (!order_by_done) {
-          return moment.duration(moment(b.created_at) - moment(a.created_at));
-        }
-        return order_by_done;
+      // sort workflows
+      _workflows.sort(workflow_compare_fn);
+      // add collapse_model to open running workflows
+      _batch.workflows = _workflows.map((w) => {
+        return {
+          ...w,
+          collapse_model: !workflowService.is_workflow_done(w),
+        };
       });
       batch.value = _batch;
     })
@@ -175,4 +178,19 @@ fetch_batch(true);
 //     clearInterval(fetch_interval);
 //   }
 // });
+
+function workflow_compare_fn(a, b) {
+  /* compareFn: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
+   * sort by status, created_at
+   * not done status has higher precedence
+   */
+  const is_a_done = workflowService.is_workflow_done(a);
+  const is_b_done = workflowService.is_workflow_done(b);
+  const order_by_done = is_a_done - is_b_done;
+
+  if (!order_by_done) {
+    return moment.duration(moment(b.created_at) - moment(a.created_at));
+  }
+  return order_by_done;
+}
 </script>

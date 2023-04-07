@@ -6,7 +6,7 @@
       :color="props.color"
       preset="primary"
     >
-      <Icon :icon="props.icon" class="mr-3" />
+      <Icon :icon="props.icon" class="mr-3 text-xl" />
       <span>{{ props.action }}</span>
     </va-button>
 
@@ -15,7 +15,7 @@
       @click="emit('click')"
       :color="props.color"
     >
-      <Icon icon="mdi-alert-circle-outline" class="mr-3" />
+      <Icon icon="mdi-alert-circle-outline" class="mr-3 text-xl" />
       <span> Click again to confirm </span>
     </va-button>
   </div>

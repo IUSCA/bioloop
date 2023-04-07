@@ -5,38 +5,48 @@
     </div>
 
     <div class="col-span-5 flex flex-col">
-      <span class="text-lg capitalize"> {{ workflow.name }} </span>
+      <span class="text-lg font-semibold capitalize">
+        {{ workflow.name }}
+      </span>
       <span class="text-sm"> {{ workflow.id }} </span>
     </div>
 
-    <div
-      class="col-span-1"
-      v-show="workflow.steps_done != workflow.total_steps"
-    >
-      <va-progress-circle :thickness="0.1" indeterminate>
-        {{ workflow.steps_done }} / {{ workflow.total_steps }}
-      </va-progress-circle>
+    <div class="col-span-1">
+      <div v-show="workflow.steps_done != workflow.total_steps">
+        <va-progress-circle :thickness="0.1" indeterminate>
+          {{ workflow.steps_done }} / {{ workflow.total_steps }}
+        </va-progress-circle>
+      </div>
     </div>
 
     <div class="col-span-3">
       <va-popover message="Created On">
         <i-mdi-calendar class="text-xl inline-block text-slate-700" />
+        <span class="pl-2">
+          {{
+            moment
+              .utc(workflow.created_at)
+              .tz(moment.tz.guess())
+              .format("YYYY-MM-DD HH:mm z")
+          }}
+        </span>
       </va-popover>
-      <span class="pl-2">
-        {{
-          moment
-            .utc(workflow.created_at)
-            .tz(moment.tz.guess())
-            .format("YYYY-MM-DD HH:mm z")
-        }}
-      </span>
     </div>
 
     <div class="col-span-2">
       <va-popover message="Duration">
         <i-mdi-timer class="text-xl inline-block text-slate-700" />
+        <span class="pl-2"> {{ elapsed_time }} </span>
       </va-popover>
-      <span class="pl-2"> {{ elapsed_time }} </span>
+
+      <div v-if="!workflowService.is_workflow_done(workflow)">
+        <va-popover message="Last Updated">
+          <i-mdi-update class="inline-block text-slate-700 pl-1" />
+          <span class="text-sm pl-2">
+            {{ moment(workflow.updated_at).fromNow() }}
+          </span>
+        </va-popover>
+      </div>
     </div>
   </div>
 </template>
