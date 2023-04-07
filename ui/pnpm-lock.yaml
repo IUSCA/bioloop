@@ -19,6 +19,7 @@ specifiers:
   jwt-decode: ^3.1.2
   material-design-icons-iconfont: ^6.7.0
   moment: ^2.29.4
+  moment-timezone: ^0.5.43
   pinia: ^2.0.31
   postcss: ^8.4.21
   prettier: ^2.8.4
@@ -43,6 +44,7 @@ dependencies:
   dayjs: 1.11.7
   jwt-decode: 3.1.2
   moment: 2.29.4
+  moment-timezone: 0.5.43
   pinia: 2.0.31_vue@3.2.47
   vue: 3.2.47
   vue-router: 4.1.6_vue@3.2.47
@@ -1703,6 +1705,12 @@ packages:
       pkg-types: 1.0.2
       ufo: 1.1.0
     dev: true
+
+  /moment-timezone/0.5.43:
+    resolution: {integrity: sha512-72j3aNyuIsDxdF1i7CEgV2FfxM1r6aaqJyLB2vwb33mXYyoyLly+F1zbWqhA3/bVIoJ4szlUoMbUnVdid32NUQ==}
+    dependencies:
+      moment: 2.29.4
+    dev: false
 
   /moment/2.29.4:
     resolution: {integrity: sha512-5LC9SOxjSc2HF6vO2CyuTDNivEdoz2IvyJJGj6X8DJ0eFyfszE0QiEd+iXmBvUP3WHxSjFH/vIsA0EN00cgr8w==}

@@ -124,7 +124,7 @@ import moment from "moment";
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 
-const props = defineProps({ batch: Object });
+const props = defineProps({ workflow: Object });
 const emit = defineEmits(["update"]);
 
 const loading = ref(false);
@@ -132,10 +132,10 @@ const workflow = ref();
 
 // to watch props make them reactive or wrap them in functions
 watch(
-  [() => props.batch],
+  [() => props.workflow],
   () => {
     // runs when collectionStats are updated
-    workflow.value = props.batch?.workflow;
+    workflow.value = props.workflow;
     // console.log(workflow.value);
   },
   {

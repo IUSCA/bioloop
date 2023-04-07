@@ -1,5 +1,8 @@
 :root {
   --va-input-container-label-font-size: 0.7rem;
+  --va-popover-content-font-size: 0.8rem;
+  --va-popover-content-padding: 0.5rem 0.5rem;
+  --va-popover-content-opacity: 0.9;
 }
 
 input.va-input__content__input {

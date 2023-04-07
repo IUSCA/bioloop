@@ -30,14 +30,14 @@
         <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
       </template>
       <template #cell(archived)="{ source }">
-        <span v-if="source" class="flex justify-center"
-          ><i-mdi-check-circle class="text-green-700"
-        /></span>
+        <span v-if="source" class="flex justify-center">
+          <i-mdi-check-circle-outline class="text-green-700" />
+        </span>
       </template>
       <template #cell(staged)="{ source }">
-        <span v-if="source" class="flex justify-center"
-          ><i-mdi-check-circle class="text-green-700"
-        /></span>
+        <span v-if="source" class="flex justify-center">
+          <i-mdi-check-circle-outline class="text-green-700" />
+        </span>
       </template>
       <template #cell(updated_at)="{ value }">
         <span>{{ moment(value).fromNow() }}</span>

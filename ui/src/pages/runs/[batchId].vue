@@ -97,19 +97,38 @@
         </div>
       </div>
       <div class="mt-3">
-        <va-card>
-          <va-card-title>
-            <span class="text-xl">Workflows</span>
-          </va-card-title>
-          <va-card-content>
-            <!-- TODO: for multi-workflow change this into v-for -->
-            <!-- TODO: send workflow_id instead of batch and fetch workflow object from the component -->
-            <!-- TODO: figure out the sort order of workflows - start time vs currently running -->
-            <!-- TODO: add filter based on workflow status -->
-            <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-            <workflow :batch="batch" @update="fetch_batch(true)"></workflow>
+        <span class="flex text-xl my-2">Workflows</span>
+        <!-- <va-card v-for="workflow in batch.workflows" :key="workflow.id">
+          <va-card-title> </va-card-title>
+          <va-card-content> -->
+        <!-- TODO: for multi-workflow change this into v-for -->
+        <!-- TODO: send workflow_id instead of batch and fetch workflow object from the component -->
+        <!-- TODO: figure out the sort order of workflows - start time vs currently running -->
+        <!-- TODO: add filter based on workflow status -->
+        <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
+
+        <!-- <workflow
+              :workflow="workflow"
+              @update="fetch_batch(true)"
+            ></workflow>
           </va-card-content>
-        </va-card>
+        </va-card> -->
+        <div v-for="workflow in batch.workflows" :key="workflow.id">
+          <va-collapse :modelValue="false" flat class="mb-6">
+            <template #header-content>
+              <div class="flex-[0_0_90%]">
+                <workflow-compact :workflow="workflow" />
+              </div>
+            </template>
+
+            <div style="padding: 8px">
+              <workflow
+                :workflow="workflow"
+                @update="fetch_batch(true)"
+              ></workflow>
+            </div>
+          </va-collapse>
+        </div>
       </div>
     </div>
   </va-inner-loading>
@@ -125,6 +144,7 @@ const batch = ref({});
 const description = ref("");
 const edit_discription = ref(false);
 const loading = ref(false);
+// const collapsibles = ref([{ value: true }, { value: false }]);
 
 function fetch_batch(show_loading = false) {
   loading.value = show_loading;
@@ -144,11 +164,11 @@ function fetch_batch(show_loading = false) {
 }
 
 fetch_batch(true);
-const fetch_interval = setInterval(fetch_batch, 10000);
+// const fetch_interval = setInterval(fetch_batch, 10000);
 
-onBeforeUnmount(() => {
-  if (fetch_interval) {
-    clearInterval(fetch_interval);
-  }
-});
+// onBeforeUnmount(() => {
+//   if (fetch_interval) {
+//     clearInterval(fetch_interval);
+//   }
+// });
 </script>

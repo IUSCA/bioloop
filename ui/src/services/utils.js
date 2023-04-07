@@ -60,6 +60,24 @@ function isLiveToken(jwt) {
   return false;
 }
 
+function format_duration(duration) {
+  let formattedDuration = "";
+
+  if (duration.asSeconds() < 60) {
+    formattedDuration = duration.seconds() + "s";
+  } else if (duration.asMinutes() < 10) {
+    formattedDuration = duration.minutes() + "m " + duration.seconds() + "s";
+  } else if (duration.asMinutes() < 60) {
+    formattedDuration = duration.minutes() + "m ";
+  } else if (duration.asHours() < 24) {
+    formattedDuration = duration.hours() + "h " + duration.minutes() + "m ";
+  } else {
+    formattedDuration =
+      Math.floor(duration.asDays()) + "d " + duration.hours() + "h";
+  }
+  return formattedDuration;
+}
+
 export {
   formatBytes,
   difference,
@@ -69,4 +87,5 @@ export {
   validateEmail,
   capitalize,
   isLiveToken,
+  format_duration,
 };

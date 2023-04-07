@@ -323,6 +323,7 @@ class Workflow:
         # if all steps are complete pending_step_idx is None, then steps_done is len(steps)
         return {
             'id': self.workflow['_id'],
+            'name': self.workflow.get('name', None),
             'created_at': self.workflow.get('created_at', None),
             'updated_at': self.workflow.get('updated_at', None),
             'status': status,

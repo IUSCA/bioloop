@@ -17,12 +17,13 @@ const prisma = new PrismaClient();
 router.get(
   '/',
   validate([
-    query('include_checksums').toBoolean().default(false),
+    query('checksums').toBoolean().default(false),
+    query('workflows').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
-    // only select path and md5 columns from the checksum table if include_checksums is true
-    const checksumSelect = req.query.include_checksums ? {
+    // only select path and md5 columns from the checksum table if checksums is true
+    const checksumSelect = req.query.checksums ? {
       select: {
         path: true,
         md5: true,
@@ -39,11 +40,21 @@ router.get(
       },
     });
 
-    // include workflow with batch
-    const _includeWorkflows = wfService.includeWorkflows();
-    const promises = batches.map(_includeWorkflows);
-    const result = await Promise.all(promises);
-    res.json(result);
+    if (req.query.workflows) {
+      // include workflow with batch
+      const _includeWorkflows = wfService.includeWorkflows();
+      const promises = batches.map(_includeWorkflows);
+      const result = await Promise.all(promises);
+      res.json(result);
+    } else {
+      res.json(batches.map((batch) => {
+        const { workflows, ...rest } = batch;
+        return {
+          ...rest,
+          workflows: workflows.map((w) => w.id),
+        };
+      }));
+    }
   }),
 );
 
@@ -51,12 +62,15 @@ router.get(
   '/:id',
   validate([
     param('id').isInt().toInt(),
-    query('include_checksums').toBoolean().default(false),
+    query('checksums').toBoolean().default(false),
+    query('workflows').toBoolean().default(false),
+    query('last_task_run').toBoolean().default(false),
+    query('prev_task_runs').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
-    // only select path and md5 columns from the checksum table if include_checksums is true
-    const checksumSelect = req.query.include_checksums ? {
+    // only select path and md5 columns from the checksum table if checksums is true
+    const checksumSelect = req.query.checksums ? {
       select: {
         path: true,
         md5: true,
@@ -76,10 +90,16 @@ router.get(
       },
     });
     if (batch) {
-      // include workflow with batch
-      const _includeWorkflows = wfService.includeWorkflows(true, true);
-      const _batch = await _includeWorkflows(batch);
-      res.json(_batch);
+      if (req.query.workflows) {
+        // include workflow with batch
+        const _includeWorkflows = wfService.includeWorkflows(
+          req.query.last_task_run,
+          req.query.prev_task_runs,
+        );
+        res.json(await _includeWorkflows(batch));
+      } else {
+        res.json(batch);
+      }
     } else {
       next(createError(404));
     }
