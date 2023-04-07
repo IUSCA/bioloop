@@ -151,6 +151,7 @@ import moment from "moment";
 import BatchService from "../../services/batch";
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
+import config from "@/config";
 
 const props = defineProps({ batchId: String });
 
@@ -158,6 +159,15 @@ const batch = ref({});
 const description = ref("");
 const edit_discription = ref(false);
 const loading = ref(false);
+const active_wf = computed(() => {
+  return (batch.value?.workflows || [])
+    .map(workflowService.is_workflow_done)
+    .some((x) => !x);
+});
+// const active_wf = ref(false);
+const polling_interval = computed(() => {
+  return active_wf.value ? config.batch_polling_interval : null;
+});
 
 function fetch_batch(show_loading = false) {
   loading.value = show_loading;
@@ -189,14 +199,23 @@ function fetch_batch(show_loading = false) {
     });
 }
 
+// initial data fetch
 fetch_batch(true);
-// const fetch_interval = setInterval(fetch_batch, 10000);
 
-// onBeforeUnmount(() => {
-//   if (fetch_interval) {
-//     clearInterval(fetch_interval);
-//   }
-// });
+/**
+ * providing the interval directly will kick of the polling immediately
+ * provide a ref which will resolve to null when there are no active workflows and to 10s otherwise
+ * now it can be controlled by resume and pause whenever active_wf changes
+ */
+const poll = useIntervalFn(fetch_batch, polling_interval);
+
+watch(active_wf, (newVal, _) => {
+  if (newVal) {
+    poll.resume();
+  } else {
+    poll.pause();
+  }
+});
 
 function workflow_compare_fn(a, b) {
   /* compareFn: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
