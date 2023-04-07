@@ -12,10 +12,10 @@ class WorkflowService {
       .then((response) => response.data);
   }
 
-  getById(id, last_task_run = false, prev_task_runs = false) {
-    return api.get(`/wokflows/${id}`, {
+  getById(id, last_task_runs = false, prev_task_runs = false) {
+    return api.get(`/workflows/${id}`, {
       params: {
-        last_task_run,
+        last_task_runs,
         prev_task_runs,
       },
     });

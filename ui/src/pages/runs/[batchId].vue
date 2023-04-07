@@ -181,15 +181,20 @@ function fetch_batch(show_loading = false) {
       // sort workflows
       _workflows.sort(workflow_compare_fn);
       // add collapse_model to open running workflows
-      _batch.workflows = _workflows.map((w) => {
+      // keep workflows open that were open
+      _batch.workflows = _workflows.map((w, i) => {
         return {
           ...w,
-          collapse_model: !workflowService.is_workflow_done(w),
+          collapse_model:
+            !workflowService.is_workflow_done(w) ||
+            (batch.value?.workflows || [])[i]?.collapse_model ||
+            false,
         };
       });
       batch.value = _batch;
     })
     .catch((err) => {
+      console.error(err);
       if (err?.response?.status == 404)
         toast.error("Could not find the Sequencing Run");
       else toast.error("Something went wrong");

@@ -7,10 +7,7 @@
       <va-data-table :items="row_items" :columns="columns" :hoverable="true">
         <template #cell(step)="{ source }">
           <div class="flex gap-3 justify-start items-center">
-            <span
-              style="text-transform: capitalize"
-              class="text-lg flex-initial"
-            >
+            <span style="text-transform: uppercase" class="flex-initial">
               {{ source.name }}
             </span>
             <span
@@ -88,14 +85,14 @@ const props = defineProps({ workflow: Object });
 const emit = defineEmits(["update"]);
 
 const loading = ref(false);
-const workflow = ref();
+const workflow = ref(props.workflow);
 
 // to watch props make them reactive or wrap them in functions
 watch(
   [() => props.workflow],
   () => {
-    // runs when collectionStats are updated
     workflow.value = props.workflow;
+    fetch_data();
     // console.log(workflow.value);
   },
   {
@@ -154,6 +151,14 @@ const columns = ref([
   { key: "start_date" },
   { key: "duration" },
 ]);
+
+function fetch_data(workflow_id) {
+  workflowService
+    .getById(workflow_id || workflow.value.id, true, true)
+    .then((res) => {
+      workflow.value = res.data;
+    });
+}
 
 function delete_workflow() {
   loading.value = true;

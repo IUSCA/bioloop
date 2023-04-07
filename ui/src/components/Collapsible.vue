@@ -1,5 +1,5 @@
 <template>
-  <div class="collapsible-container rounded shadow bg-slate-100 m-2">
+  <div class="collapsible-container rounded shadow m-2">
     <div
       class="collapsible-header bg-slate-100 hover:bg-slate-300"
       @click="toggleCollapsible"
