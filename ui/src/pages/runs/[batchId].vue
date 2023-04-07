@@ -1,10 +1,11 @@
 <template>
-  <va-inner-loading :loading="loading">
+  <div>
     <div>
       <span class="text-3xl">Sequencing Run : {{ batch.name }}</span>
       <va-divider />
     </div>
     <div>
+      <!-- Batch Info + Status Cards -->
       <div class="flex flex-row flex-wrap gap-3">
         <div class="flex-[3_1_0%]">
           <va-card>
@@ -13,6 +14,8 @@
             </va-card-title>
             <va-card-content v-if="Object.keys(batch || {}).length > 0">
               <batch-info :batch="batch"></batch-info>
+
+              <!-- edit description -->
               <div class="flex flex-row gap-2 ml-3 mt-3 mb-6">
                 <div class="flex-[0_0_20%]">Description</div>
                 <div class="">
@@ -39,7 +42,10 @@
             </va-card-content>
           </va-card>
         </div>
+
+        <!-- Status Cards -->
         <div class="flex-[2_1_0%] flex flex-col gap-3 justify-start">
+          <!-- Archived -->
           <div class="flex-none" v-if="batch.archive_path">
             <va-card>
               <va-card-title>
@@ -56,6 +62,8 @@
               </va-card-content>
             </va-card>
           </div>
+
+          <!-- Staged for processing -->
           <div class="flex-none" v-if="batch.stage_path">
             <va-card>
               <va-card-title>
@@ -72,6 +80,8 @@
               </va-card-content>
             </va-card>
           </div>
+
+          <!-- Reports -->
           <div class="flex-none" v-if="batch.report_id">
             <va-card>
               <va-card-title>
@@ -96,34 +106,44 @@
           </div>
         </div>
       </div>
+
+      <!-- Workflows -->
       <div class="mt-3">
-        <span class="flex text-xl my-2">Workflows</span>
+        <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-        <div v-for="workflow in batch.workflows" :key="workflow.id">
-          <va-collapse
-            flat
-            solid
-            class="mb-4"
-            v-model="workflow.collapse_model"
-          >
-            <template #header-content>
-              <div class="flex-[0_0_90%]">
-                <workflow-compact :workflow="workflow" />
-              </div>
-            </template>
+        <div v-if="batch.workflows">
+          <div v-for="workflow in batch.workflows" :key="workflow.id">
+            <va-collapse
+              flat
+              solid
+              class="mb-4"
+              v-model="workflow.collapse_model"
+            >
+              <template #header-content>
+                <div class="flex-[0_0_90%]">
+                  <workflow-compact :workflow="workflow" />
+                </div>
+              </template>
 
-            <div style="padding: 8px">
-              <workflow
-                :workflow="workflow"
-                @update="fetch_batch(true)"
-              ></workflow>
-            </div>
-          </va-collapse>
+              <div style="padding: 8px">
+                <workflow
+                  :workflow="workflow"
+                  @update="fetch_batch(true)"
+                ></workflow>
+              </div>
+            </va-collapse>
+          </div>
+        </div>
+        <div v-else class="text-center bg-slate-100 py-2 rounded shadow">
+          <i-mdi-card-remove-outline class="inline-block text-5xl pr-3" />
+          <span class="text-lg">
+            There are no workflows associated with this batch.
+          </span>
         </div>
       </div>
     </div>
-  </va-inner-loading>
+  </div>
 </template>
 
 <script setup>
