@@ -20,7 +20,7 @@
       style="color: var(--va-danger)"
     />
 
-    <i-mdi-clock-time-twelve
+    <i-mdi-clock-time-twelve-outline
       v-else-if="props.status == 'PENDING'"
       style="color: var(--va-primary)"
     />

@@ -46,6 +46,7 @@ import moment from "moment-timezone";
 import WorkflowStatusIcon from "@/components/runs/WorkflowStatusIcon.vue";
 import useTimer from "@/composables/useTimer";
 import { format_duration } from "@/services/utils";
+import workflowService from "@/services/workflow";
 
 const props = defineProps({ workflow: Object });
 
@@ -59,7 +60,7 @@ watch(
     // runs when collectionStats are updated
     workflow.value = props.workflow;
     // console.log(workflow.value);
-    if (!["SUCCESS", "FAILURE", "REVOKED"].includes(workflow.value.status)) {
+    if (!workflowService.is_workflow_done(workflow.value)) {
       elapsed_time = useTimer(workflow.value.created_at);
     } else {
       const duration = moment.duration(

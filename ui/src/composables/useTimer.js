@@ -3,7 +3,6 @@ import moment from "moment";
 import { format_duration } from "@/services/utils";
 
 export default function useTimer(start_time) {
-  console.log(start_time);
   const elapsed_time = ref(0);
 
   let timer_id;

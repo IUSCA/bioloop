@@ -98,23 +98,10 @@
       </div>
       <div class="mt-3">
         <span class="flex text-xl my-2">Workflows</span>
-        <!-- <va-card v-for="workflow in batch.workflows" :key="workflow.id">
-          <va-card-title> </va-card-title>
-          <va-card-content> -->
-        <!-- TODO: for multi-workflow change this into v-for -->
-        <!-- TODO: send workflow_id instead of batch and fetch workflow object from the component -->
-        <!-- TODO: figure out the sort order of workflows - start time vs currently running -->
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-
-        <!-- <workflow
-              :workflow="workflow"
-              @update="fetch_batch(true)"
-            ></workflow>
-          </va-card-content>
-        </va-card> -->
         <div v-for="workflow in batch.workflows" :key="workflow.id">
-          <va-collapse :modelValue="false" flat class="mb-6">
+          <va-collapse flat class="mb-6">
             <template #header-content>
               <div class="flex-[0_0_90%]">
                 <workflow-compact :workflow="workflow" />
@@ -135,8 +122,10 @@
 </template>
 
 <script setup>
+import moment from "moment";
 import BatchService from "../../services/batch";
 import toast from "@/services/toast";
+import workflowService from "@/services/workflow";
 
 const props = defineProps({ batchId: String });
 
@@ -150,8 +139,23 @@ function fetch_batch(show_loading = false) {
   loading.value = show_loading;
   BatchService.getById(props.batchId)
     .then((res) => {
-      batch.value = res.data;
-      // batch.value.workflow.status = "REVOKED";
+      const _batch = res.data;
+      // _batch.workflows[1].status = "STARTED";
+      _batch?.workflows.sort((a, b) => {
+        /* compareFn: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
+         * sort by status, created_at
+         * not done status has higher precedence
+         */
+        const is_a_done = workflowService.is_workflow_done(a);
+        const is_b_done = workflowService.is_workflow_done(b);
+        const order_by_done = is_a_done - is_b_done;
+
+        if (!order_by_done) {
+          return moment.duration(moment(b.created_at) - moment(a.created_at));
+        }
+        return order_by_done;
+      });
+      batch.value = _batch;
     })
     .catch((err) => {
       if (err?.response?.status == 404)

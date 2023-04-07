@@ -11,7 +11,7 @@ const props = defineProps({
 
 function status_to_color(status) {
   if (status == "PENDING") {
-    return "#E5E7EB";
+    return "primary";
   } else if (status == "PROGRESS" || status == "STARTED") {
     return "warning";
   } else if (status == "SUCCESS") {

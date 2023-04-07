@@ -32,6 +32,10 @@ class WorkflowService {
   resume(id) {
     return api.post(`/workflows/${id}/resume`);
   }
+
+  is_workflow_done(workflow) {
+    return ["REVOKED", "FAILURE", "SUCCESS"].includes(workflow?.status);
+  }
 }
 
 export default new WorkflowService();

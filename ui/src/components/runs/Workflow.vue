@@ -1,7 +1,7 @@
 <template>
   <va-inner-loading :loading="loading">
     <div v-if="workflow">
-      <div class="mb-2" v-if="!is_workflow_done()">
+      <div class="mb-2" v-if="!workflowService.is_workflow_done(workflow)">
         <va-progress-bar indeterminate size="0.3rem" />
       </div>
       <div class="grid grid-cols-3">
@@ -194,10 +194,6 @@ const columns = ref([
   { key: "start_date" },
   { key: "duration" },
 ]);
-
-function is_workflow_done() {
-  return ["REVOKED", "FAILURE", "SUCCESS"].includes(workflow.value?.status);
-}
 
 function delete_workflow() {
   loading.value = true;
