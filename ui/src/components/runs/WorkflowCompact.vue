@@ -34,7 +34,7 @@
     </div>
 
     <div class="col-span-2">
-      <va-popover message="Duration">
+      <va-popover message="Duration" placement="top">
         <i-mdi-timer class="text-xl inline-block text-slate-700" />
         <span class="pl-2"> {{ elapsed_time }} </span>
       </va-popover>

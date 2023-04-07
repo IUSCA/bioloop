@@ -113,27 +113,27 @@
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
         <div v-if="batch.workflows">
-          <div v-for="workflow in batch.workflows" :key="workflow.id">
-            <va-collapse
-              flat
-              solid
-              class="mb-4"
-              v-model="workflow.collapse_model"
-            >
-              <template #header-content>
-                <div class="flex-[0_0_90%]">
-                  <workflow-compact :workflow="workflow" />
-                </div>
-              </template>
-
-              <div style="padding: 8px">
-                <workflow
-                  :workflow="workflow"
-                  @update="fetch_batch(true)"
-                ></workflow>
+          <collapsible
+            flat
+            solid
+            class=""
+            v-for="workflow in batch.workflows"
+            :key="workflow.id"
+            v-model="workflow.collapse_model"
+          >
+            <template #header-content>
+              <div class="flex-[0_0_90%]">
+                <workflow-compact :workflow="workflow" />
               </div>
-            </va-collapse>
-          </div>
+            </template>
+
+            <div style="padding: 8px">
+              <workflow
+                :workflow="workflow"
+                @update="fetch_batch(true)"
+              ></workflow>
+            </div>
+          </collapsible>
         </div>
         <div v-else class="text-center bg-slate-100 py-2 rounded shadow">
           <i-mdi-card-remove-outline class="inline-block text-5xl pr-3" />
@@ -158,7 +158,6 @@ const batch = ref({});
 const description = ref("");
 const edit_discription = ref(false);
 const loading = ref(false);
-// const collapsibles = ref([{ value: true }, { value: false }]);
 
 function fetch_batch(show_loading = false) {
   loading.value = show_loading;
