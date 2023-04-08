@@ -1,7 +1,7 @@
 <template>
   <div class="collapsible-container rounded shadow m-2">
     <div
-      class="collapsible-header bg-slate-100 hover:bg-slate-300"
+      class="collapsible-header bg-slate-200 hover:bg-slate-300"
       @click="toggleCollapsible"
     >
       <slot name="header-content"></slot>

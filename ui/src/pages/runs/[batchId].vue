@@ -88,22 +88,143 @@
                 <span class="text-lg">Reports</span>
               </va-card-title>
               <va-card-content>
-                <div
-                  class="flex flex-nowrap justify-between align-center gap-1"
-                >
-                  <i-mdi-chart-box-outline class="inline text-2xl" />
+                <div class="flex flex-nowrap gap-3 justify-start items-center">
+                  <i-mdi-chart-box-outline class="flex-initial text-2xl" />
                   <a
-                    class="va-link"
+                    class="va-link flex items-center justify-start"
                     target="_blank"
                     :href="`/api/reports/${batch.report_id}/multiqc_report.html`"
                   >
-                    <span>MultiQC Report</span>
-                    <span class="text-sm pl-2">(opens in new tab)</span>
+                    <span class="flex-initial">MultiQC Report</span>
+                    <i-mdi-open-in-new class="flex-initial inline-block pl-1" />
                   </a>
                 </div>
               </va-card-content>
             </va-card>
           </div>
+          <!-- Actions -->
+          <div class="flex-none">
+            <va-card>
+              <va-card-title>
+                <span class="text-lg">Actions</span>
+              </va-card-title>
+              <va-card-content>
+                <div class="flex justify-around">
+                  <va-button
+                    color="primary"
+                    border-color="primary"
+                    preset="secondary"
+                    class="flex-initial"
+                    @click="stage_modal = true"
+                  >
+                    <i-mdi-download class="pr-2 text-2xl" />
+                    Stage Files
+                  </va-button>
+                  <va-button
+                    color="danger"
+                    border-color="danger"
+                    class="flex-initial"
+                    preset="secondary"
+                    @click="delete_archive_modal.visible = true"
+                  >
+                    <i-mdi-delete class="pr-2 text-2xl" />
+                    Delete Archive
+                  </va-button>
+                </div>
+              </va-card-content>
+            </va-card>
+          </div>
+
+          <!-- stage modal -->
+          <va-modal
+            :model-value="stage_modal"
+            message="Stage all files in this batch from the SDA?"
+            @ok="stage"
+            @cancel="stage_modal = !stage_modal"
+          />
+
+          <!-- delete archive modal -->
+          <va-modal
+            :model-value="delete_archive_modal.visible"
+            max-width="480px"
+            blur
+            hide-default-actions
+          >
+            <template #header>
+              <div class="flex justify-end">
+                <va-button
+                  class="flex-initial"
+                  preset="plain"
+                  @click="delete_archive_modal.visible = false"
+                >
+                  <i-mdi-close />
+                </va-button>
+              </div>
+            </template>
+
+            <div>
+              <p class="text-lg font-semibold">Delete {{ batch.name }}</p>
+
+              <va-divider class="my-2" />
+
+              <div class="flex flex-col items-center gap-2">
+                <div><i-mdi-zip-box-outline class="text-3xl" /></div>
+                <span class="text-xl font-semibold tracking-wide">
+                  {{ batch.name }}
+                </span>
+                <div class="flex items-center gap-5">
+                  <div class="flex items-center gap-1">
+                    <i-mdi-harddisk class="text-xl" />
+                    <span> {{ formatBytes(batch.du_size) }} </span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <i-mdi-file-multiple class="text-xl" />
+                    <span> {{ batch.num_genome_files }} </span>
+                  </div>
+                </div>
+              </div>
+
+              <va-divider class="my-4" />
+
+              <div>
+                <va-alert
+                  color="#fdeae7"
+                  text-color="#940909"
+                  class="text-center"
+                >
+                  <span>
+                    Unexpected bad things will happen if you don't read this!
+                  </span>
+                </va-alert>
+
+                <ul class="va-unordered va-text-secondary mt-3">
+                  <li>
+                    This will permanently delete the
+                    <b> {{ batch.name }} </b> archive on the SDA, its associated
+                    workflows and task runs.
+                  </li>
+                  <li>This will not delete any of the staged files.</li>
+                </ul>
+              </div>
+
+              <va-divider class="my-4" />
+
+              <div class="flex flex-col">
+                <p>To confirm, type "{{ batch.name }}" in the box below</p>
+                <va-input
+                  v-model="delete_archive_modal.input"
+                  class="my-2 w-full"
+                />
+                <va-button
+                  color="danger"
+                  :disabled="delete_archive_modal.input !== batch.name"
+                  @click="delete_archive"
+                >
+                  Delete this Sequencing Run
+                </va-button>
+              </div>
+            </div>
+          </va-modal>
         </div>
       </div>
 
@@ -152,6 +273,7 @@ import BatchService from "../../services/batch";
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import config from "@/config";
+import { formatBytes } from "../../services/utils";
 
 const props = defineProps({ batchId: String });
 
@@ -159,6 +281,12 @@ const batch = ref({});
 const description = ref("");
 const edit_discription = ref(false);
 const loading = ref(false);
+const stage_modal = ref(false);
+const delete_archive_modal = ref({
+  visible: true,
+  input: "",
+});
+
 const active_wf = computed(() => {
   return (batch.value?.workflows || [])
     .map(workflowService.is_workflow_done)
@@ -235,5 +363,15 @@ function workflow_compare_fn(a, b) {
     return moment.duration(moment(b.created_at) - moment(a.created_at));
   }
   return order_by_done;
+}
+
+function stage() {
+  stage_modal.value = false;
+  console.log("stage");
+}
+
+function delete_archive() {
+  delete_archive_modal.value.visible = false;
+  console.log("delete_archive");
 }
 </script>

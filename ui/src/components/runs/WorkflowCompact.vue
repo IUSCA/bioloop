@@ -20,7 +20,7 @@
     </div>
 
     <div class="col-span-3">
-      <va-popover message="Created On">
+      <va-popover message="Created On" hover-over-timeout="500">
         <i-mdi-calendar class="text-xl inline-block text-slate-700" />
         <span class="pl-2">
           {{
@@ -34,13 +34,13 @@
     </div>
 
     <div class="col-span-2">
-      <va-popover message="Duration" placement="top">
+      <va-popover message="Duration" placement="top" hover-over-timeout="500">
         <i-mdi-timer class="text-xl inline-block text-slate-700" />
         <span class="pl-2"> {{ elapsed_time }} </span>
       </va-popover>
 
       <div v-if="!workflowService.is_workflow_done(workflow)">
-        <va-popover message="Last Updated">
+        <va-popover message="Last Updated" hover-over-timeout="500">
           <i-mdi-update class="inline-block text-slate-700 pl-1" />
           <span class="text-sm pl-2">
             {{ moment(workflow.updated_at).fromNow() }}
