@@ -3,7 +3,7 @@ import api from "./api";
 class WorkflowService {
   getAll(last_task_run = false, prev_task_runs = false) {
     return api
-      .get("/wokflows", {
+      .get("/workflows", {
         params: {
           last_task_run,
           prev_task_runs,
@@ -13,7 +13,7 @@ class WorkflowService {
   }
 
   getById(id, last_task_run = false, prev_task_runs = false) {
-    return api.get(`/wokflows/${id}`, {
+    return api.get(`/workflows/${id}`, {
       params: {
         last_task_run,
         prev_task_runs,
