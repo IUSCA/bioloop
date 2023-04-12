@@ -8,7 +8,17 @@
       <span class="text-lg font-semibold capitalize">
         {{ workflow.name }}
       </span>
-      <span class="text-sm"> {{ workflow.id }} </span>
+      <div>
+        <span class="text-sm"> {{ workflow.id }} </span>
+      </div>
+      <div v-if="props.show_batch && batch_id">
+        <span class="text-sm">
+          Sequencing Run:
+          <router-link :to="`/runs/${batch_id}`" class="va-link"
+            >#{{ batch_id }}</router-link
+          >
+        </span>
+      </div>
     </div>
 
     <div class="col-span-1">
@@ -58,10 +68,23 @@ import useTimer from "@/composables/useTimer";
 import { format_duration } from "@/services/utils";
 import workflowService from "@/services/workflow";
 
-const props = defineProps({ workflow: Object });
+const props = defineProps({
+  workflow: Object,
+  show_batch: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const workflow = ref({});
 let elapsed_time = null;
+const batch_id = computed(() => {
+  // batch_id is the first argument of the args in the task object
+  const a_step = (workflow.value?.steps || [])[0];
+  const x = (a_step?.last_task_run?.args || [])[0];
+  console.log("x", a_step, x);
+  return x;
+});
 
 // to watch props make them reactive or wrap them in functions
 watch(
@@ -69,7 +92,7 @@ watch(
   () => {
     // runs when collectionStats are updated
     workflow.value = props.workflow;
-    // console.log(workflow.value);
+    console.log(workflow.value, props.show_batch);
     if (!workflowService.is_workflow_done(workflow.value)) {
       elapsed_time = useTimer(workflow.value.created_at);
     } else {

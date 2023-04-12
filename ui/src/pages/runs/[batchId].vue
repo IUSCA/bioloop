@@ -233,11 +233,8 @@
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-        <div v-if="batch.workflows">
+        <div v-if="(batch.workflows || []).length > 0">
           <collapsible
-            flat
-            solid
-            class=""
             v-for="workflow in batch.workflows"
             :key="workflow.id"
             v-model="workflow.collapse_model"
@@ -248,7 +245,7 @@
               </div>
             </template>
 
-            <div style="padding: 8px">
+            <div>
               <workflow
                 :workflow="workflow"
                 @update="fetch_batch(true)"
@@ -256,10 +253,10 @@
             </div>
           </collapsible>
         </div>
-        <div v-else class="text-center bg-slate-100 py-2 rounded shadow">
-          <i-mdi-card-remove-outline class="inline-block text-5xl pr-3" />
+        <div v-else class="text-center bg-slate-200 py-2 rounded shadow">
+          <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
           <span class="text-lg">
-            There are no workflows associated with this batch.
+            There are no workflows associated with this sequencing run.
           </span>
         </div>
       </div>
@@ -283,7 +280,7 @@ const edit_discription = ref(false);
 const loading = ref(false);
 const stage_modal = ref(false);
 const delete_archive_modal = ref({
-  visible: true,
+  visible: false,
   input: "",
 });
 
