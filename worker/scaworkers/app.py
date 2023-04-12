@@ -20,6 +20,7 @@ app = Flask(__name__)
 app.json = UpdatedJSONProvider(app)
 db = celery_app.backend.database
 wf_col = db.get_collection('workflow_meta')
+task_col = db.get_collection('celery_taskmeta')
 
 
 def get_boolean_query(req, name, default=False):
@@ -27,13 +28,22 @@ def get_boolean_query(req, name, default=False):
 
 
 @app.route('/workflow', methods=['GET'])
-def get_all_workflows():
+def get_workflows():
     last_task_run = get_boolean_query(request, 'last_task_run')
     prev_task_runs = get_boolean_query(request, 'prev_task_runs')
-    results = wf_col.find(projection=['_id'])
+    is_in_progress = get_boolean_query(request, 'progress')
+    if is_in_progress:
+        in_progress_tasks = task_col.find({
+            'status': {
+                '$nin': ['SUCCESS', 'FAILURE', 'REVOKED']
+            }
+        })
+        workflow_ids = [wf_id for t in in_progress_tasks if
+                              (wf_id := t.get('kwargs', {}).get('workflow_id', None))]
+    else:
+        workflow_ids = [res['_id'] for res in wf_col.find(projection=['_id'])]
     response = []
-    for res in results:
-        workflow_id = res['_id']
+    for workflow_id in workflow_ids:
         wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
         response.append(wf.get_embellished_workflow(last_task_run=last_task_run, prev_task_runs=prev_task_runs))
     return jsonify(response)
