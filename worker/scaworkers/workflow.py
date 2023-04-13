@@ -65,6 +65,8 @@ class Workflow:
         kwargs['step'] = first_step['name']
         task.apply_async(args, kwargs)
 
+        # self.app.send_task(first_step['task'], args, kwargs)
+
     def pause(self):
         """
         Revoke the current running task.
@@ -321,6 +323,7 @@ class Workflow:
         # if all steps are complete pending_step_idx is None, then steps_done is len(steps)
         return {
             'id': self.workflow['_id'],
+            'name': self.workflow.get('name', None),
             'created_at': self.workflow.get('created_at', None),
             'updated_at': self.workflow.get('updated_at', None),
             'status': status,

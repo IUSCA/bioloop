@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 const transformUser = _.flow([
   ({ user_role, ...user }) => ({
     ...user,
-    roles: user_role.map(({ roles }) => roles.name),
+    roles: user_role?.map(({ roles }) => roles.name),
   }),
   _.omit(['password', 'id', 'user_role']),
 ]);
@@ -160,6 +160,7 @@ async function updateUser(username, data) {
 }
 
 module.exports = {
+  transformUser,
   findActiveUserBy,
   updateLastLogin,
   findAll,

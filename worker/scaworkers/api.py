@@ -69,10 +69,10 @@ def batch_setter(batch):
     return batch
 
 
-def get_all_batches(include_checksums=False):
+def get_all_batches(checksums=False):
     with APIServerSession() as s:
         payload = {
-            'include_checksums': int(include_checksums)
+            'checksums': int(checksums)
         }
         r = s.get('batches', params=payload)
         if r.status_code == 200:
@@ -82,10 +82,10 @@ def get_all_batches(include_checksums=False):
             raise Exception('Server responded with non-200 code')
 
 
-def get_batch(batch_id, include_checksums=False):
+def get_batch(batch_id, checksums=False):
     with APIServerSession() as s:
         payload = {
-            'include_checksums': int(include_checksums)
+            'checksums': int(checksums)
         }
         r = s.get(f'batches/{batch_id}', params=payload)
         if r.status_code == 200:

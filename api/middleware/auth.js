@@ -79,9 +79,9 @@ const accessControl = _.curry((
     const resourceOwner = req.params.username; // _resourceOwnerFn(req);
     const requester = req.user?.username; // _requesterFn(req);
 
-    console.log('access-controls', {
-      resource, action, checkOwnerShip, resourceOwner, requester, roles,
-    });
+    // console.log('access-controls', {
+    //   resource, action, checkOwnerShip, resourceOwner, requester, roles,
+    // });
 
     if (roles && roles.length > 0) {
       const acQuery = ac.can(roles);

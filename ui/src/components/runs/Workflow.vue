@@ -1,97 +1,13 @@
 <template>
   <va-inner-loading :loading="loading">
-    <div v-if="workflow">
-      <div class="mb-2" v-if="!is_workflow_done()">
+    <div v-if="workflow" class="pb-2">
+      <div class="mb-2" v-if="!workflowService.is_workflow_done(workflow)">
         <va-progress-bar indeterminate size="0.3rem" />
       </div>
-      <div class="grid grid-cols-3">
-        <div class="flex flex-col gap-2">
-          <div>
-            ID: <span class="pl-3">{{ workflow.id }}</span>
-          </div>
-          <div v-if="workflow.name">
-            Name: <span class="pl-3">{{ workflow.name }}</span>
-          </div>
-          <div>
-            Status:
-            <span class="pl-3">
-              <workflow-status-pill :status="workflow.status" />
-            </span>
-          </div>
-        </div>
-        <div class="">
-          <div>
-            Created:
-            <span class="pl-3">
-              {{
-                moment.utc(workflow.created_at).format("YYYY-MM-DD HH:mm:ss")
-              }}
-              UTC
-            </span>
-          </div>
-          <div>
-            Updated:
-            <span class="pl-3">
-              {{
-                moment.utc(workflow.updated_at).format("YYYY-MM-DD HH:mm:ss")
-              }}
-              UTC
-            </span>
-          </div>
-        </div>
-        <div class="flex justify-center">
-          <div class="flex-initial">
-            <div
-              v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
-              class="flex flex-col justify-start items-center gap-3"
-            >
-              <confirm-hold-button
-                action="Resume Workflow"
-                icon="mdi-play"
-                color="primary"
-                @click="resume_workflow"
-              ></confirm-hold-button>
-              <confirm-button
-                action="Delete Workflow"
-                icon="mdi-delete"
-                color="danger"
-                @click="delete_workflow"
-              ></confirm-button>
-            </div>
-
-            <div v-if="workflow.status == 'SUCCESS'">
-              <confirm-button
-                action="Delete Workflow"
-                icon="mdi-delete"
-                color="danger"
-                @click="delete_workflow"
-              ></confirm-button>
-            </div>
-
-            <div v-if="['STARTED', 'PROGRESS'].includes(workflow.status)">
-              <confirm-button
-                action="Stop Workflow"
-                icon="mdi-stop-circle-outline"
-                color="danger"
-                @click="pause_workflow"
-              ></confirm-button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <va-data-table
-        style="margin-top: 30px"
-        :items="row_items"
-        :columns="columns"
-        :hoverable="true"
-      >
+      <va-data-table :items="row_items" :columns="columns" :hoverable="true">
         <template #cell(step)="{ source }">
           <div class="flex gap-3 justify-start items-center">
-            <span
-              style="text-transform: capitalize"
-              class="text-lg flex-initial"
-            >
+            <span style="text-transform: uppercase" class="flex-initial">
               {{ source.name }}
             </span>
             <span
@@ -114,6 +30,47 @@
           <workflow-status-pill :status="source" />
         </template>
       </va-data-table>
+
+      <div class="flex justify-end">
+        <div class="flex-initial">
+          <div
+            v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
+            class="flex justify-start items-center gap-3"
+          >
+            <confirm-hold-button
+              action="Resume Workflow"
+              icon="mdi-play"
+              color="primary"
+              @click="resume_workflow"
+            ></confirm-hold-button>
+
+            <confirm-button
+              action="Delete Workflow"
+              icon="mdi-delete"
+              color="danger"
+              @click="delete_workflow"
+            ></confirm-button>
+          </div>
+
+          <div v-else-if="workflow.status == 'SUCCESS'">
+            <confirm-button
+              action="Delete Workflow"
+              icon="mdi-delete"
+              color="danger"
+              @click="delete_workflow"
+            ></confirm-button>
+          </div>
+
+          <div v-else>
+            <confirm-button
+              action="Stop Workflow"
+              icon="mdi-stop-circle-outline"
+              color="danger"
+              @click="pause_workflow"
+            ></confirm-button>
+          </div>
+        </div>
+      </div>
     </div>
   </va-inner-loading>
 </template>
@@ -124,18 +81,18 @@ import moment from "moment";
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 
-const props = defineProps({ batch: Object });
+const props = defineProps({ workflow: Object });
 const emit = defineEmits(["update"]);
 
 const loading = ref(false);
-const workflow = ref();
+const workflow = ref(props.workflow);
 
 // to watch props make them reactive or wrap them in functions
 watch(
-  [() => props.batch],
+  [() => props.workflow],
   () => {
-    // runs when collectionStats are updated
-    workflow.value = props.batch?.workflow;
+    workflow.value = props.workflow;
+    fetch_data();
     // console.log(workflow.value);
   },
   {
@@ -195,8 +152,12 @@ const columns = ref([
   { key: "duration" },
 ]);
 
-function is_workflow_done() {
-  return ["REVOKED", "FAILURE", "SUCCESS"].includes(workflow.value?.status);
+function fetch_data(workflow_id) {
+  workflowService
+    .getById(workflow_id || workflow.value.id, true, true)
+    .then((res) => {
+      workflow.value = res.data;
+    });
 }
 
 function delete_workflow() {
@@ -222,8 +183,12 @@ function resume_workflow() {
   workflowService
     .resume(workflow.value.id)
     .then((res) => {
-      console.log(res);
-      toast.success("Resumed workflow");
+      console.log(res.data);
+      if (res.data?.resumed) {
+        toast.success("Resumed workflow");
+      } else {
+        toast.error("Unable to resume workflow");
+      }
     })
     .catch((err) => {
       console.error(err);
@@ -240,8 +205,12 @@ function pause_workflow() {
   workflowService
     .pause(workflow.value.id)
     .then((res) => {
-      console.log(res);
-      toast.success("Stopped workflow");
+      console.log(res.data);
+      if (res.data?.paused) {
+        toast.success("Stopped workflow");
+      } else {
+        toast.error("Unable to stop workflow");
+      }
     })
     .catch((err) => {
       console.error(err);

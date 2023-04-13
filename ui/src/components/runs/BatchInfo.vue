@@ -9,22 +9,15 @@
         <tr>
           <td>Start Date</td>
           <td>
-            {{
-              moment.utc(props.batch.created_at).format("YYYY-MM-DD HH:mm:ss")
-            }}
-            UTC
+            {{ utc_date_to_local_tz(props.batch.created_at) }}
           </td>
         </tr>
         <tr>
           <td>Last Updated</td>
           <td>
-            <span>{{ moment(props.batch.updated_at).fromNow() }}</span>
-            <span class="text-sm pl-3"
-              >{{
-                moment.utc(props.batch.updated_at).format("YYYY-MM-DD HH:mm:ss")
-              }}
-              UTC</span
-            >
+            <span class="">
+              {{ utc_date_to_local_tz(props.batch.updated_at) }}
+            </span>
           </td>
         </tr>
         <tr>
@@ -56,7 +49,6 @@
   </div>
 </template>
 <script setup>
-import moment from "moment";
-import { formatBytes } from "../../services/utils";
+import { formatBytes, utc_date_to_local_tz } from "../../services/utils";
 const props = defineProps({ batch: Object });
 </script>

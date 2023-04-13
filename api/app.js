@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const requestLogger = require('morgan');
@@ -35,7 +37,7 @@ app.use(cors());
 if (!['production', 'test'].includes(config.get('mode'))) {
   // mount swagger ui
   try {
-    const swaggerFile = require('./swagger_output.json');
+    const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));
     app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
   } catch (e) {
     console.log('Unable to load "./swagger_output.json"', e);
