@@ -8,7 +8,7 @@ datasource db {
 }
 
 model batch {
-  id               Int        @id @default(autoincrement())
+  id               Int           @id @default(autoincrement())
   name             String
   num_directories  Int?
   num_files        Int?
@@ -16,14 +16,16 @@ model batch {
   du_size          BigInt?
   size             BigInt?
   description      String?
-  created_at       DateTime   @default(now()) @db.Timestamp(6)
-  updated_at       DateTime   @default(now()) @updatedAt @db.Timestamp(6)
+  created_at       DateTime      @default(now()) @db.Timestamp(6)
+  updated_at       DateTime      @default(now()) @updatedAt @db.Timestamp(6)
   origin_path      String?
   archive_path     String?
   stage_path       String?
   report_id        String?
+  is_deleted       Boolean       @default(false)
   workflows        workflow[]
   metadata         checksum[]
+  audit_logs       batch_audit[]
 }
 
 model checksum {
@@ -48,6 +50,7 @@ model user {
   user_role     user_role[]
   user_settings user_settings[]
   contact       contact[]
+  batch_audit   batch_audit[]
 }
 
 model user_settings {
@@ -84,7 +87,19 @@ model user_role {
 }
 
 model workflow {
-  id String @id
+  id       String @id
   batch_id Int?
   batch    batch? @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model batch_audit {
+  id        Int      @id @default(autoincrement())
+  action    String
+  timestamp DateTime @default(now())
+  old_data  Json?
+  new_data  Json?
+  user_id   Int?
+  user      user?    @relation(fields: [user_id], references: [id])
+  batch_id  Int
+  batch     batch?   @relation(fields: [batch_id], references: [id])
 }

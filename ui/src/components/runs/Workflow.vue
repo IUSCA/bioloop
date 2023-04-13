@@ -183,8 +183,12 @@ function resume_workflow() {
   workflowService
     .resume(workflow.value.id)
     .then((res) => {
-      console.log(res);
-      toast.success("Resumed workflow");
+      console.log(res.data);
+      if (res.data?.resumed) {
+        toast.success("Resumed workflow");
+      } else {
+        toast.error("Unable to resume workflow");
+      }
     })
     .catch((err) => {
       console.error(err);
@@ -201,8 +205,12 @@ function pause_workflow() {
   workflowService
     .pause(workflow.value.id)
     .then((res) => {
-      console.log(res);
-      toast.success("Stopped workflow");
+      console.log(res.data);
+      if (res.data?.paused) {
+        toast.success("Stopped workflow");
+      } else {
+        toast.error("Unable to stop workflow");
+      }
     })
     .catch((err) => {
       console.error(err);

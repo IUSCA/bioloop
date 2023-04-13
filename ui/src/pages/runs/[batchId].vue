@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <va-inner-loading :loading="loading">
     <div>
       <span class="text-3xl">Sequencing Run : {{ batch.name }}</span>
       <va-divider />
@@ -44,7 +44,10 @@
         </div>
 
         <!-- Status Cards -->
-        <div class="flex-[2_1_0%] flex flex-col gap-3 justify-start">
+        <div
+          class="flex-[2_1_0%] flex flex-col gap-3 justify-start"
+          v-if="!batch.is_deleted"
+        >
           <!-- Archived -->
           <div class="flex-none" v-if="batch.archive_path">
             <va-card>
@@ -102,6 +105,7 @@
               </va-card-content>
             </va-card>
           </div>
+
           <!-- Actions -->
           <div class="flex-none">
             <va-card>
@@ -109,8 +113,9 @@
                 <span class="text-lg">Actions</span>
               </va-card-title>
               <va-card-content>
-                <div class="flex justify-around">
+                <div class="flex justify-start gap-3">
                   <va-button
+                    v-if="batch.archive_path"
                     color="primary"
                     border-color="primary"
                     preset="secondary"
@@ -121,6 +126,7 @@
                     Stage Files
                   </va-button>
                   <va-button
+                    v-if="batch.archive_path"
                     color="danger"
                     border-color="danger"
                     class="flex-initial"
@@ -139,7 +145,7 @@
           <va-modal
             :model-value="stage_modal"
             message="Stage all files in this batch from the SDA?"
-            @ok="stage"
+            @ok="stage_batch"
             @cancel="stage_modal = !stage_modal"
           />
 
@@ -228,6 +234,18 @@
         </div>
       </div>
 
+      <!-- Audit logs -->
+      <div class="mt-3" v-if="batch.audit_logs && batch.audit_logs.length > 0">
+        <va-card>
+          <va-card-title>
+            <span class="text-xl font-bold"> AUDIT LOG </span>
+          </va-card-title>
+          <va-card-content>
+            <batch-audit-logs :logs="batch.audit_logs" />
+          </va-card-content>
+        </va-card>
+      </div>
+
       <!-- Workflows -->
       <div class="mt-3">
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
@@ -261,7 +279,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </va-inner-loading>
 </template>
 
 <script setup>
@@ -362,13 +380,37 @@ function workflow_compare_fn(a, b) {
   return order_by_done;
 }
 
-function stage() {
+function stage_batch() {
   stage_modal.value = false;
-  console.log("stage");
+  loading.value = true;
+  BatchService.stage_batch(batch.value.id)
+    .then(() => {
+      toast.success("A workflow has started to stage batch");
+      fetch_batch(true);
+    })
+    .catch((err) => {
+      console.error("unable to stage batch", err);
+      toast.error("Unable to stage batch");
+    })
+    .finally(() => {
+      loading.value = false;
+    });
 }
 
 function delete_archive() {
   delete_archive_modal.value.visible = false;
-  console.log("delete_archive");
+  loading.value = true;
+  BatchService.delete_batch(batch.value.id)
+    .then(() => {
+      toast.success("A workflow has started to delete batch");
+      fetch_batch(true);
+    })
+    .catch((err) => {
+      console.error("unable to delete batch", err);
+      toast.error("Unable to delete batch");
+    })
+    .finally(() => {
+      loading.value = false;
+    });
 }
 </script>

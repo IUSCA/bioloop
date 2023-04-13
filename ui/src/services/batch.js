@@ -28,6 +28,14 @@ class BatchService {
       },
     });
   }
+
+  stage_batch(batch_id) {
+    return api.post(`/batches/${batch_id}/stage`);
+  }
+
+  delete_batch(batch_id) {
+    return api.delete(`/batches/${batch_id}`);
+  }
 }
 
 export default new BatchService();

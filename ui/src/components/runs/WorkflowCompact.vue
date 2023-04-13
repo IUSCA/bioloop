@@ -33,12 +33,7 @@
       <va-popover message="Created On" hover-over-timeout="500">
         <i-mdi-calendar class="text-xl inline-block text-slate-700" />
         <span class="pl-2">
-          {{
-            moment
-              .utc(workflow.created_at)
-              .tz(moment.tz.guess())
-              .format("YYYY-MM-DD HH:mm z")
-          }}
+          {{ utc_date_to_local_tz(workflow.created_at) }}
         </span>
       </va-popover>
     </div>
@@ -49,7 +44,11 @@
         <span class="pl-2"> {{ elapsed_time }} </span>
       </va-popover>
 
-      <div v-if="!workflowService.is_workflow_done(workflow)">
+      <div
+        v-if="
+          !workflowService.is_workflow_done(workflow) && workflow.updated_at
+        "
+      >
         <va-popover message="Last Updated" hover-over-timeout="500">
           <i-mdi-update class="inline-block text-slate-700 pl-1" />
           <span class="text-sm pl-2">
@@ -65,7 +64,7 @@
 import moment from "moment-timezone";
 import WorkflowStatusIcon from "@/components/runs/WorkflowStatusIcon.vue";
 import useTimer from "@/composables/useTimer";
-import { format_duration } from "@/services/utils";
+import { format_duration, utc_date_to_local_tz } from "@/services/utils";
 import workflowService from "@/services/workflow";
 
 const props = defineProps({
@@ -82,7 +81,6 @@ const batch_id = computed(() => {
   // batch_id is the first argument of the args in the task object
   const a_step = (workflow.value?.steps || [])[0];
   const x = (a_step?.last_task_run?.args || [])[0];
-  console.log("x", a_step, x);
   return x;
 });
 
@@ -92,7 +90,6 @@ watch(
   () => {
     // runs when collectionStats are updated
     workflow.value = props.workflow;
-    console.log(workflow.value, props.show_batch);
     if (!workflowService.is_workflow_done(workflow.value)) {
       elapsed_time = useTimer(workflow.value.created_at);
     } else {

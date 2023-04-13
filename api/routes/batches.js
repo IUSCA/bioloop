@@ -10,6 +10,7 @@ const multer = require('multer');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const wfService = require('../services/workflow');
+const userService = require('../services/user');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -30,6 +31,9 @@ router.get(
       },
     } : false;
     const batches = await prisma.batch.findMany({
+      where: {
+        is_deleted: false,
+      },
       include: {
         metadata: checksumSelect,
         workflows: {
@@ -87,19 +91,34 @@ router.get(
             id: true,
           },
         },
+        audit_logs: {
+          include: {
+            user: {
+              include: {
+                user_role: {
+                  select: { roles: true },
+                },
+              },
+            },
+          },
+        },
       },
     });
     if (batch) {
+      let _batch = batch;
       if (req.query.workflows) {
         // include workflow with batch
         const _includeWorkflows = wfService.includeWorkflows(
           req.query.last_task_run,
           req.query.prev_task_runs,
         );
-        res.json(await _includeWorkflows(batch));
-      } else {
-        res.json(batch);
+        _batch = await _includeWorkflows(batch);
       }
+      _batch?.audit_logs?.forEach((log) => {
+        // eslint-disable-next-line no-param-reassign
+        if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+      });
+      res.json(_batch);
     } else {
       next(createError(404));
     }
@@ -217,24 +236,31 @@ router.delete(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
-    // #swagger.summary = Delete batch along with its checksums and workflow associations
-    const deleteChecksums = prisma.checksum.deleteMany({
-      where: {
-        batch_id: req.params.id,
+    // #swagger.summary = starts a delete archive workflow and marks the batch as deleted on success
+    const batch_id = req.params.id;
+    const wf = (await wfService.create({
+      name: 'Delete Batch',
+      steps: [
+        {
+          name: 'delete',
+          task: 'scaworkers.workers.delete.delete_batch',
+        },
+      ],
+      args: [batch_id],
+    })).data;
+    await prisma.workflow.create({
+      data: {
+        id: wf.workflow_id,
+        batch_id,
       },
     });
-    const deleteWorkflows = prisma.workflow.deleteMany({
-      where: {
-        batch_id: req.params.id,
+    await prisma.batch_audit.create({
+      data: {
+        action: 'delete',
+        user_id: req.user?.id,
+        batch_id,
       },
     });
-    const deleteBatch = prisma.batch.delete({
-      where: {
-        id: req.params.id,
-      },
-    });
-
-    await prisma.$transaction([deleteChecksums, deleteWorkflows, deleteBatch]);
     res.send();
   }),
 );
@@ -248,7 +274,7 @@ router.post(
     // #swagger.tags = ['Batches']
     // #swagger.summary = Create and start a workflow to stage the batch and associate it.
     const batch_id = req.params.id;
-    const wf = await wfService.create({
+    const wf = (await wfService.create({
       name: 'Stage Batch',
       steps: [
         {
@@ -265,7 +291,7 @@ router.post(
         },
       ],
       args: [batch_id],
-    });
+    })).data;
     await prisma.workflow.create({
       data: {
         id: wf.workflow_id,

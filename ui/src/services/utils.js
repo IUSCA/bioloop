@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import jwtDecode from "jwt-decode";
+import moment from "moment-timezone";
 
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
@@ -78,6 +79,10 @@ function format_duration(duration) {
   return formattedDuration;
 }
 
+function utc_date_to_local_tz(date) {
+  return moment.utc(date).tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss z");
+}
+
 export {
   formatBytes,
   difference,
@@ -88,4 +93,5 @@ export {
   capitalize,
   isLiveToken,
   format_duration,
+  utc_date_to_local_tz,
 };
