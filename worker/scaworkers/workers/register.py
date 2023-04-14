@@ -137,7 +137,9 @@ class BaseSpaceRegistration:
     def scan(self):
         for project in illumina.get_projects():
             project_name, total_size = project['Name'], project['TotalSize']
-            if project_name not in self.rejects and project_name not in self.completed and total_size >= config['illumina']['registration']['minimum_project_size']:
+            if project_name not in self.rejects and \
+                project_name not in self.completed and \
+                  total_size >= config['illumina']['registration']['minimum_project_size']:
                 print(f'found new candidate: {project_name}')
                 self.candidates[project_name] = project
 

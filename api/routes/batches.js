@@ -5,6 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
 const { query, param, body } = require('express-validator');
 const multer = require('multer');
+const _ = require('lodash/fp');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -14,6 +15,31 @@ const userService = require('../services/user');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+router.get('/stats', asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['Batches']
+  // #swagger.summary = 'Get summary statistics of batches.'
+  const result = await prisma.$queryRaw`select count(*) as "count", sum(du_size) as total_size, sum(num_genome_files) as total_genome_files from batch where is_deleted = false;`;
+  const stats = result[0];
+  res.json(_.mapValues(Number)(stats));
+}));
+
+// router.get('/stats2', asyncHandler(async (req, res, next) => {
+//   // #swagger.tags = ['Batches']
+//   // #swagger.summary = 'Get summary statistics of batches.'
+//   const result = await prisma.batch.aggregate({
+//     _count: {
+//       id: true,
+//     },
+//     _sum: {
+//       du_size: true,
+//     },
+//     // _sum: {
+//     //   num_genome_files: true,
+//     // },
+//   });
+//   res.json(result);
+// }));
 
 router.get(
   '/',
@@ -345,4 +371,5 @@ router.put(
     });
   }),
 );
+
 module.exports = router;

@@ -103,3 +103,12 @@ model batch_audit {
   batch_id  Int
   batch     batch?   @relation(fields: [batch_id], references: [id])
 }
+
+model metric {
+  timestamp   DateTime @default(now()) @db.Timestamp(6)
+  measurement String
+  fields      Json
+  tags        Json?
+
+  @@id([timestamp, measurement])
+}

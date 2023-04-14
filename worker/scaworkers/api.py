@@ -54,8 +54,8 @@ class APIServerSession(requests.Session):
 def batch_getter(batch):
     # convert du_size and size from string to int
     if batch is not None:
-        batch['du_size'] = utils.parse_int(batch.get('du_size', None))
-        batch['size'] = utils.parse_int(batch.get('size', None))
+        batch['du_size'] = utils.parse_number(batch.get('du_size', None))
+        batch['size'] = utils.parse_number(batch.get('size', None))
     return batch
 
 
@@ -126,6 +126,14 @@ def upload_report(batch_id, report_filename):
         r = s.put(f'batches/{batch_id}/report', files={
             'report': (filename, fileobj)
         })
+        if r.status_code != 200:
+            print(r, r.status_code)
+            raise Exception('Server responded with non-200 code')
+
+
+def send_metrics(metrics):
+    with APIServerSession() as s:
+        r = s.put('/metrics', json=metrics)
         if r.status_code != 200:
             print(r, r.status_code)
             raise Exception('Server responded with non-200 code')

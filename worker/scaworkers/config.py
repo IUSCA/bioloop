@@ -32,5 +32,5 @@ config = {
             'minimum_project_size': 1024 * 1024 * 1024  # 1 GB
         },
     },
-
+    'service_user': 'dgluser'
 }
