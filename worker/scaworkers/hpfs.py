@@ -62,6 +62,7 @@ def parse_lfs_quota_output(text):
     fields = [0 if f == '-' else f for f in fields]
     size_usage = dict(zip(header[:5], fields[:5]))
     size_usage['usage'] = size_usage.pop('kbytes') * 1024
+    size_usage['limit'] = size_usage['limit'] * 1024
 
     files_usage = dict(zip(header[5:], fields[5:]))
     files_usage['usage'] = files_usage.pop('files')

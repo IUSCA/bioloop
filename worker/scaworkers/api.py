@@ -133,7 +133,7 @@ def upload_report(batch_id, report_filename):
 
 def send_metrics(metrics):
     with APIServerSession() as s:
-        r = s.put('/metrics', json=metrics)
+        r = s.put('metrics', json=metrics)
         if r.status_code != 200:
             print(r, r.status_code)
             raise Exception('Server responded with non-200 code')

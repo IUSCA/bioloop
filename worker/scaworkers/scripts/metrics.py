@@ -40,3 +40,7 @@ def main():
     )
 
     api.send_metrics(metrics)
+    
+
+if __name__=='__main__':
+    main()
