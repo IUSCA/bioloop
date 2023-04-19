@@ -92,10 +92,8 @@ BatchService.getStats()
   });
 </script>
 
-<style lang="scss" scoped>
-.row-separated {
-  .flex + .flex {
-    border-left: 1px solid var(--va-primary);
-  }
+<style scoped>
+.row-separated .flex + .flex {
+  border-left: 1px solid var(--va-primary);
 }
 </style>
