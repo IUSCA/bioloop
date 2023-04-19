@@ -26,21 +26,6 @@ function getOne(id, last_task_run = false, prev_task_runs = false) {
   });
 }
 
-// function includeWorkflow(lastTaskRun = false, prevTaskRuns = false) {
-//   return async function anon(batch) {
-//     if (batch.workflow_id) {
-//       try {
-//         const res = await getOne(batch.workflow_id, lastTaskRun, prevTaskRuns);
-//         // eslint-disable-next-line no-param-reassign
-//         batch.workflow = res.data;
-//       } catch (error) {
-//         logger.error(error);
-//       }
-//     }
-//     return batch;
-//   };
-// }
-
 function includeWorkflows(lastTaskRun, prevTaskRuns) {
   /**
    * Returns a functions that populates workflows in batch using ids in batch.workflows

@@ -1,33 +1,42 @@
 <template>
-  <va-card>
-    <va-card-title>
-      <span class="text-xl"> Storage </span>
-    </va-card-title>
-    <va-card-content>
+  <div class="flex flex-col gap-4">
+    <!-- Storage -->
+    <div class="">
+      <span class="text-xl font-bold block my-1">RESOURCE USAGE</span>
       <Storage></Storage>
-    </va-card-content>
-  </va-card>
-  <span class="text-xl font-bold block mt-4">ACTIVE WORKFLOWS</span>
-  <div v-if="(workflows || []).length > 0">
-    <collapsible
-      v-for="workflow in workflows"
-      :key="workflow.id"
-      v-model="workflow.collapse_model"
-    >
-      <template #header-content>
-        <div class="flex-[0_0_90%]">
-          <workflow-compact :workflow="workflow" show_batch />
-        </div>
-      </template>
+    </div>
 
-      <div>
-        <workflow :workflow="workflow" @update="update"></workflow>
+    <!-- Stats -->
+    <div class="">
+      <span class="text-xl font-bold block my-1">SEQUENCING RUNS</span>
+      <stats></stats>
+    </div>
+
+    <!-- Workflows -->
+    <div>
+      <span class="text-xl font-bold block my-1">ACTIVE WORKFLOWS</span>
+      <div v-if="(workflows || []).length > 0">
+        <collapsible
+          v-for="workflow in workflows"
+          :key="workflow.id"
+          v-model="workflow.collapse_model"
+        >
+          <template #header-content>
+            <div class="flex-[0_0_90%]">
+              <workflow-compact :workflow="workflow" show_batch />
+            </div>
+          </template>
+
+          <div>
+            <workflow :workflow="workflow" @update="update"></workflow>
+          </div>
+        </collapsible>
       </div>
-    </collapsible>
-  </div>
-  <div v-else class="text-center bg-slate-200 py-2 rounded shadow">
-    <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
-    <span class="text-lg"> There are no active workflows. </span>
+      <div v-else class="text-center bg-slate-200 py-2 rounded shadow">
+        <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
+        <span class="text-lg"> There are no active workflows. </span>
+      </div>
+    </div>
   </div>
 </template>
 

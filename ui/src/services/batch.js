@@ -36,6 +36,10 @@ class BatchService {
   delete_batch(batch_id) {
     return api.delete(`/batches/${batch_id}`);
   }
+
+  getStats() {
+    return api.get("/batches/stats");
+  }
 }
 
 export default new BatchService();

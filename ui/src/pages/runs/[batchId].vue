@@ -284,11 +284,11 @@
 
 <script setup>
 import moment from "moment";
-import BatchService from "../../services/batch";
+import BatchService from "@/services/batch";
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import config from "@/config";
-import { formatBytes } from "../../services/utils";
+import { formatBytes } from "@/services/utils";
 
 const props = defineProps({ batchId: String });
 
