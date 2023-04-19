@@ -63,7 +63,6 @@
 <script setup>
 import moment from "moment-timezone";
 import WorkflowStatusIcon from "@/components/runs/WorkflowStatusIcon.vue";
-import useTimer from "@/composables/useTimer";
 import { format_duration, utc_date_to_local_tz } from "@/services/utils";
 import workflowService from "@/services/workflow";
 
@@ -76,12 +75,26 @@ const props = defineProps({
 });
 
 const workflow = ref({});
-let elapsed_time = null;
 const batch_id = computed(() => {
   // batch_id is the first argument of the args in the task object
   const a_step = (workflow.value?.steps || [])[0];
   const x = (a_step?.last_task_run?.args || [])[0];
   return x;
+});
+const elapsed_time = computed(() => {
+  if (!workflowService.is_workflow_done(workflow.value)) {
+    const now = moment.utc();
+    const duration = moment.duration(
+      now - moment.utc(workflow.value.created_at)
+    );
+    return format_duration(duration);
+  } else {
+    const duration = moment.duration(
+      moment.utc(workflow.value.updated_at) -
+        moment.utc(workflow.value.created_at)
+    );
+    return format_duration(duration);
+  }
 });
 
 // to watch props make them reactive or wrap them in functions
@@ -90,15 +103,6 @@ watch(
   () => {
     // runs when collectionStats are updated
     workflow.value = props.workflow;
-    if (!workflowService.is_workflow_done(workflow.value)) {
-      elapsed_time = useTimer(workflow.value.created_at);
-    } else {
-      const duration = moment.duration(
-        moment.utc(workflow.value.updated_at) -
-          moment.utc(workflow.value.created_at)
-      );
-      elapsed_time = format_duration(duration);
-    }
   },
   {
     immediate: true,
