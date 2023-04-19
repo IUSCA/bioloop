@@ -32,17 +32,17 @@
     <div class="col-span-3">
       <va-popover message="Created On" hover-over-timeout="500">
         <i-mdi-calendar class="text-xl inline-block text-slate-700" />
-        <span class="pl-2">
-          {{ utc_date_to_local_tz(workflow.created_at) }}
-        </span>
       </va-popover>
+      <span class="pl-2">
+        {{ utc_date_to_local_tz(workflow.created_at) }}
+      </span>
     </div>
 
     <div class="col-span-2">
       <va-popover message="Duration" placement="top" hover-over-timeout="500">
         <i-mdi-timer class="text-xl inline-block text-slate-700" />
-        <span class="pl-2"> {{ elapsed_time }} </span>
       </va-popover>
+      <span class="pl-2"> {{ elapsed_time }} </span>
 
       <div
         v-if="
@@ -51,10 +51,10 @@
       >
         <va-popover message="Last Updated" hover-over-timeout="500">
           <i-mdi-update class="inline-block text-slate-700 pl-1" />
-          <span class="text-sm pl-2">
-            {{ moment(workflow.updated_at).fromNow() }}
-          </span>
         </va-popover>
+        <span class="text-sm pl-2">
+          {{ moment(workflow.updated_at).fromNow() }}
+        </span>
       </div>
     </div>
   </div>
