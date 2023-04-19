@@ -39,13 +39,18 @@ def get_workflows():
             }
         })
         workflow_ids = [wf_id for t in in_progress_tasks if
-                              (wf_id := t.get('kwargs', {}).get('workflow_id', None))]
+                        (wf_id := t.get('kwargs', {}).get('workflow_id', None))]
     else:
         workflow_ids = [res['_id'] for res in wf_col.find(projection=['_id'])]
     response = []
     for workflow_id in workflow_ids:
-        wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
-        response.append(wf.get_embellished_workflow(last_task_run=last_task_run, prev_task_runs=prev_task_runs))
+        try:
+            wf = Workflow(celery_app=celery_app, workflow_id=workflow_id)
+            if wf is not None:
+                response.append(wf.get_embellished_workflow(last_task_run=last_task_run, prev_task_runs=prev_task_runs))
+        except Exception as e:
+            print(e)
+
     return jsonify(response)
 
 
