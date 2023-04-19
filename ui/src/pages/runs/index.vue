@@ -2,15 +2,27 @@
   <h2 class="text-4xl font-bold">Sequencing Runs</h2>
 
   <div>
-    <div class="flex my-2">
-      <va-input
-        v-model="filterInput"
-        class="border-gray-800 border border-solid"
-        placeholder="search sequencing runs"
-        outline
-        clearable
-      />
+    <div class="flex my-2 gap-3">
+      <div class="flex-1">
+        <va-input
+          v-model="filterInput"
+          class="border-gray-800 border border-solid w-full"
+          placeholder="search sequencing runs"
+          outline
+          clearable
+        />
+      </div>
+      <!-- <div class="flex-1">search bar</div> -->
+
+      <div class="flex-[0_0_10rem] flex items-center justify-center">
+        <va-checkbox
+          v-model="only_deleted_batches"
+          class=""
+          label="Only show deleted"
+        />
+      </div>
     </div>
+
     <va-data-table
       :items="batches"
       :columns="columns"
@@ -64,13 +76,14 @@
 
 <script setup>
 import moment from "moment";
-import BatchService from "../../services/batch";
-import { formatBytes } from "../../services/utils";
+import BatchService from "@/services/batch";
+import { formatBytes } from "@/services/utils";
 import toast from "@/services/toast";
 
 const batches = ref([]);
 const data_loading = ref(false);
 const filterInput = ref("");
+const only_deleted_batches = ref(false);
 
 const columns = ref([
   // { key: "id", sortable: true, sortingOptions: ["desc", "asc", null] },
@@ -125,22 +138,26 @@ const columns = ref([
 ]);
 
 function getRowBind(row) {
-  const inprogress_wf = row.workflows?.filter(
-    (workflow) => workflow.status == "PROGRESS"
-  );
-  const is_in_progress = (inprogress_wf?.length || 0) > 0;
-  if (is_in_progress) {
+  // const active_wf = row.workflows?.filter(
+  //   (workflow) => !workflowService.is_workflow_done(workflow)
+  // );
+  // const is_in_progress = (active_wf?.length || 0) > 0;
+  // if (is_in_progress) {
+  //   return { class: ["bg-slate-200"] };
+  // }
+  // highlight deleted batches
+  if (row.is_deleted) {
     return { class: ["bg-slate-200"] };
   }
 }
 
 // initial sorting order
-const sortBy = ref("start_date");
+const sortBy = ref("updated_at");
 const sortingOrder = ref("desc");
 
 function fetch_all_batches() {
   data_loading.value = true;
-  BatchService.getAll()
+  BatchService.getAll({ only_deleted: only_deleted_batches.value })
     .then((res) => (batches.value = res))
     .catch((err) => {
       console.error(err);
@@ -151,6 +168,10 @@ function fetch_all_batches() {
     });
 }
 fetch_all_batches();
+
+watch(only_deleted_batches, () => {
+  fetch_all_batches();
+});
 </script>
 
 <route lang="yaml">

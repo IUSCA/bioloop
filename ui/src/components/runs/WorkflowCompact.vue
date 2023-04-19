@@ -53,7 +53,7 @@
           <i-mdi-update class="inline-block text-slate-700 pl-1" />
         </va-popover>
         <span class="text-sm pl-2">
-          {{ moment(workflow.updated_at).fromNow() }}
+          {{ moment.utc(workflow.updated_at).fromNow() }}
         </span>
       </div>
     </div>

@@ -314,7 +314,7 @@ const polling_interval = computed(() => {
 
 function fetch_batch(show_loading = false) {
   loading.value = show_loading;
-  BatchService.getById(props.batchId)
+  BatchService.getById({ id: props.batchId })
     .then((res) => {
       const _batch = res.data;
       const _workflows = _batch?.workflows || [];

@@ -46,6 +46,7 @@ router.get(
   validate([
     query('checksums').toBoolean().default(false),
     query('workflows').toBoolean().default(false),
+    query('only_deleted').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
@@ -58,7 +59,7 @@ router.get(
     } : false;
     const batches = await prisma.batch.findMany({
       where: {
-        is_deleted: false,
+        ...(req.query.only_deleted ? { is_deleted: true } : {}),
       },
       include: {
         metadata: checksumSelect,

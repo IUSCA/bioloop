@@ -17,11 +17,11 @@ router.get(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      const api_res = await wf_service.getAll(
-        req.query.last_task_run,
-        req.query.prev_task_runs,
-        req.query.progress,
-      );
+      const api_res = await wf_service.getAll({
+        last_task_run: req.query.last_task_run,
+        prev_task_runs: req.query.prev_task_runs,
+        only_active: req.query.only_active,
+      });
       res.json(api_res.data);
     },
   ),

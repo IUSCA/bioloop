@@ -1,12 +1,16 @@
 import api from "./api";
 
 class WorkflowService {
-  getAll(last_task_run = false, prev_task_runs = false, progress = false) {
+  getAll({
+    last_task_run = false,
+    prev_task_runs = false,
+    only_active = false,
+  } = {}) {
     return api.get("/workflows", {
       params: {
         last_task_run,
         prev_task_runs,
-        progress,
+        only_active,
       },
     });
   }

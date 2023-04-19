@@ -31,14 +31,14 @@ def get_boolean_query(req, name, default=False):
 def get_workflows():
     last_task_run = get_boolean_query(request, 'last_task_run')
     prev_task_runs = get_boolean_query(request, 'prev_task_runs')
-    is_in_progress = get_boolean_query(request, 'progress')
-    if is_in_progress:
-        in_progress_tasks = task_col.find({
+    only_active = get_boolean_query(request, 'only_active')
+    if only_active:
+        active_tasks = task_col.find({
             'status': {
                 '$nin': ['SUCCESS', 'FAILURE', 'REVOKED']
             }
         })
-        workflow_ids = [wf_id for t in in_progress_tasks if
+        workflow_ids = [wf_id for t in active_tasks if
                         (wf_id := t.get('kwargs', {}).get('workflow_id', None))]
     else:
         workflow_ids = [res['_id'] for res in wf_col.find(projection=['_id'])]

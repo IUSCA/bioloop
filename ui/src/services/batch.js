@@ -1,24 +1,25 @@
 import api from "./api";
 
 class BatchService {
-  getAll(checksums = false, workflows = true) {
+  getAll({ checksums = false, workflows = false, only_deleted = false } = {}) {
     return api
       .get("/batches", {
         params: {
           checksums,
           workflows,
+          only_deleted,
         },
       })
       .then((response) => response.data);
   }
 
-  getById(
+  getById({
     id,
     checksums = false,
     workflows = true,
     last_task_run = false,
-    prev_task_runs = false
-  ) {
+    prev_task_runs = false,
+  } = {}) {
     return api.get(`/batches/${id}`, {
       params: {
         checksums,

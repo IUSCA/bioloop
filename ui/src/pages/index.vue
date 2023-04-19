@@ -47,7 +47,7 @@ import workflowService from "@/services/workflow";
 const workflows = ref([]);
 
 workflowService
-  .getAll(true, false, true)
+  .getAll({ last_task_run: true, prev_task_runs: false, only_active: true })
   .then((res) => {
     console.log(res.data);
     workflows.value = res.data;
