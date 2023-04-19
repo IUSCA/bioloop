@@ -20,6 +20,18 @@ module.exports = {
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/worker/register.err",
       out_file: "../logs/worker/register.log"
+    },
+    {
+      name: "metrics",
+      script: "python",
+      args: "-u -m scaworkers.scripts.metrics",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/worker/metrics.err",
+      out_file: "../logs/worker/metrics.log",
+      cron_restart: "0 * * * *",
+      autorestart: false
     }
   ]
 }
