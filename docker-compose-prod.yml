@@ -22,6 +22,7 @@ services:
       - dgl_api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
+    # entrypoint: [ "tail", "-f", "/dev/null" ]
     networks:
       dgl_network:
         ipv4_address: 172.19.0.2
