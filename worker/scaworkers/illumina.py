@@ -49,12 +49,14 @@ def list_datasets(n_days):
 
 
 def download_dataset(dataset_id, download_dir):
-    command = ['bs', 'download', 'dataset', dataset_id, '-o', download_dir]
+    command = ['bs', 'download', 'dataset', '--id', dataset_id, '-o', download_dir]
     return utils.execute(command)
 
 
 def download_recent_datasets(download_dir, n_days):
+    download_dir.mkdir(exist_ok=True, parents=True)
     ds_metas = list_datasets(n_days)
     ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]
     for ds_id in ds_ids:
-        download_dataset(ds_id, download_dir)
+        print('downloading', ds_id)
+        download_dataset(ds_id, str(download_dir))
