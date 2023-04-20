@@ -1,4 +1,3 @@
-import os
 import shutil
 import uuid
 from pathlib import Path
@@ -61,29 +60,20 @@ def cleanup(report_dir):
 
 def create_report(batch_dir: Path, batch_name: str, report_id: str = None) -> str:
     """
-    Runs fastqc and multiqc on batch files and cleans up intermediate files.
-    Finally, creates a symbolic link called `public_qc_dir/<report_id>` that points to batch quality control directory.
+    Runs fastqc and multiqc on batch files. The qc files are placed in config['paths']['qc']/batch_name
 
 
     :param batch_dir: (str): Staged batch directory path
     :param batch_name: (str): Batch name
-    :param report_id: (str): report_id of the last generated report to be reused.
+    :param report_id: (str): report_id of the last generated report to be reused. (optional)
     :return: The report ID (UUID4)
     """
     report_id = report_id or str(uuid.uuid4())
     batch_qc_dir = Path(config['paths']['qc']) / batch_name
     batch_qc_dir.mkdir(parents=True, exist_ok=True)
 
-    public_qc_dir = Path(config['paths']['qc_public'])
-    public_qc_dir.mkdir(parents=True, exist_ok=True)
-    batch_public_qc_dir = public_qc_dir / report_id
-
     run_fastqc(batch_dir, batch_qc_dir)
     run_multiqc(batch_qc_dir, batch_qc_dir)
-    cleanup(batch_qc_dir)
-
-    # create a symlink pointing to qc_dir named public_qc_dir
-    os.symlink(batch_qc_dir, batch_public_qc_dir)
 
     return report_id
 
@@ -92,7 +82,11 @@ def create_report(batch_dir: Path, batch_name: str, report_id: str = None) -> st
 def generate(celery_task, batch_id, **kwargs):
     batch = api.get_batch(batch_id=batch_id)
 
-    report_id = create_report(batch_dir=Path(batch['stage_path']), batch_name=batch['name'])
+    report_id = create_report(
+        batch_dir=Path(batch['stage_path']),
+        batch_name=batch['name'],
+        report_id=batch.get('report_id', None)
+    )
     report_filename = Path(config['paths']['qc']) / batch['name'] / 'multiqc_report.html'
 
     # if the report is created successfully
