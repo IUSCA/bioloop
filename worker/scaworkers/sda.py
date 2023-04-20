@@ -24,5 +24,5 @@ def get_hash(sda_path):
 
 
 def delete(path):
-    command = ['hsi', f'rm {path}']
+    command = ['hsi', '-P', f'rm {path}']
     return utils.execute(command)

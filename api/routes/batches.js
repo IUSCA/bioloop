@@ -12,11 +12,13 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const wfService = require('../services/workflow');
 const userService = require('../services/user');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.get('/stats', asyncHandler(async (req, res, next) => {
+// UI
+router.get('/stats', authenticate, asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Batches']
   // #swagger.summary = 'Get summary statistics of batches.'
   const result = await prisma.$queryRaw`select count(*) as "count", sum(du_size) as total_size, sum(num_genome_files) as total_genome_files from batch where is_deleted = false;`;
@@ -24,23 +26,7 @@ router.get('/stats', asyncHandler(async (req, res, next) => {
   res.json(_.mapValues(Number)(stats));
 }));
 
-// router.get('/stats2', asyncHandler(async (req, res, next) => {
-//   // #swagger.tags = ['Batches']
-//   // #swagger.summary = 'Get summary statistics of batches.'
-//   const result = await prisma.batch.aggregate({
-//     _count: {
-//       id: true,
-//     },
-//     _sum: {
-//       du_size: true,
-//     },
-//     // _sum: {
-//     //   num_genome_files: true,
-//     // },
-//   });
-//   res.json(result);
-// }));
-
+// worker + UI
 router.get(
   '/',
   validate([
@@ -89,6 +75,7 @@ router.get(
   }),
 );
 
+// worker + UI
 router.get(
   '/:id',
   validate([
@@ -152,6 +139,7 @@ router.get(
   }),
 );
 
+// worker
 router.post(
   '/',
   validate([
@@ -182,6 +170,7 @@ router.post(
   }),
 );
 
+// worker
 router.patch(
   '/:id',
   validate([
@@ -215,6 +204,7 @@ router.patch(
   }),
 );
 
+// worker
 router.post(
   '/:id/checksums',
   validate([
@@ -239,6 +229,7 @@ router.post(
 
 router.post(
   '/:id/workflows',
+  authenticate,
   validate([
     param('id').isInt().toInt(),
     body('workflow_id').notEmpty(),
@@ -256,8 +247,10 @@ router.post(
   }),
 );
 
+// UI
 router.delete(
   '/:id',
+  authenticate,
   validate([
     param('id').isInt().toInt(),
   ]),
@@ -292,8 +285,10 @@ router.delete(
   }),
 );
 
+// UI
 router.post(
   '/:id/stage',
+  authenticate,
   validate([
     param('id').isInt().toInt(),
   ]),
@@ -358,6 +353,7 @@ const report_storage = multer.diskStorage({
   },
 });
 
+// worker
 router.put(
   '/:id/report',
   validate([
