@@ -69,7 +69,7 @@ def create_report(batch_dir: Path, batch_name: str, report_id: str = None) -> st
     :return: The report ID (UUID4)
     """
     report_id = report_id or str(uuid.uuid4())
-    batch_qc_dir = Path(config['paths']['qc']) / batch_name
+    batch_qc_dir = Path(config['paths']['qc']) / batch_name / 'qc'
     batch_qc_dir.mkdir(parents=True, exist_ok=True)
 
     run_fastqc(batch_dir, batch_qc_dir)

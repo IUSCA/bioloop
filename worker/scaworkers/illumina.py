@@ -29,7 +29,10 @@ def get_projects():
                 project[date_key] = None
         project['TotalSize'] = project.get('TotalSize', 0)
 
-    valid_projects = [p for p in projects if p.get('Name', None) and p.get('Id', None) and p.get('DateModified', None)]
+    valid_projects = [
+        p for p in projects
+        if p.get('Name', None) and p.get('Id', None) and p.get('DateModified', None)
+    ]
     return valid_projects
 
 
@@ -37,3 +40,21 @@ def download_project(project_name, download_dir):
     # '--overwrite'
     command = ['bs', 'download', 'project', '--name', project_name, '-o', str(download_dir), '--no-progress-bars']
     return utils.execute(command)
+
+
+def list_datasets(n_days):
+    command = ['bs', 'list', 'datasets', '-f', 'json', f'--newer-than={n_days}d']
+    stdout, stderr = utils.execute(command)
+    return json.loads(stdout)
+
+
+def download_dataset(dataset_id, download_dir):
+    command = ['bs', 'download', 'dataset', dataset_id, '-o', download_dir]
+    return utils.execute(command)
+
+
+def download_recent_datasets(download_dir, n_days):
+    ds_metas = list_datasets(n_days)
+    ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]
+    for ds_id in ds_ids:
+        download_dataset(ds_id, download_dir)

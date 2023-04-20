@@ -14,8 +14,7 @@ config = {
     'paths': {
         'scratch': '/N/scratch/dgluser/dgl/production/scratch',
         'archive': f'archive/{YEAR}',
-        'stage': '/N/scratch/dgluser/dgl/production/stage',
-        'illumina_download': '/N/scratch/dgluser/dgl/production/scratch',
+        'stage': '/N/project/DG_Multiple_Myeloma/share/raw_data',
         'qc': '/N/project/DG_Multiple_Myeloma/share/data_products'
     },
     'registration': {
