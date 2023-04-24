@@ -11,7 +11,7 @@ const _ = require('lodash/fp');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const wfService = require('../services/workflow');
-const userService = require('../services/user');
+const batchService = require('../services/batch');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -30,48 +30,21 @@ router.get('/stats', authenticate, asyncHandler(async (req, res, next) => {
 router.get(
   '/',
   validate([
-    query('checksums').toBoolean().default(false),
-    query('workflows').toBoolean().default(false),
     query('only_deleted').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
-    // only select path and md5 columns from the checksum table if checksums is true
-    const checksumSelect = req.query.checksums ? {
-      select: {
-        path: true,
-        md5: true,
-      },
-    } : false;
     const batches = await prisma.batch.findMany({
       where: {
         ...(req.query.only_deleted ? { is_deleted: true } : {}),
       },
       include: {
-        metadata: checksumSelect,
-        workflows: {
-          select: {
-            id: true,
-          },
-        },
+        ...batchService.include_workflows,
+        ...batchService.include_states,
       },
     });
 
-    if (req.query.workflows) {
-      // include workflow with batch
-      const _includeWorkflows = wfService.includeWorkflows();
-      const promises = batches.map(_includeWorkflows);
-      const result = await Promise.all(promises);
-      res.json(result);
-    } else {
-      res.json(batches.map((batch) => {
-        const { workflows, ...rest } = batch;
-        return {
-          ...rest,
-          workflows: workflows.map((w) => w.id),
-        };
-      }));
-    }
+    res.json(batches);
   }),
 );
 
@@ -88,51 +61,15 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
     // only select path and md5 columns from the checksum table if checksums is true
-    const checksumSelect = req.query.checksums ? {
-      select: {
-        path: true,
-        md5: true,
-      },
-    } : false;
-    const batch = await prisma.batch.findFirst({
-      where: {
-        id: req.params.id,
-      },
-      include: {
-        metadata: checksumSelect,
-        workflows: {
-          select: {
-            id: true,
-          },
-        },
-        audit_logs: {
-          include: {
-            user: {
-              include: {
-                user_role: {
-                  select: { roles: true },
-                },
-              },
-            },
-          },
-        },
-      },
+    const batch = await batchService.get_batch({
+      id: req.params.id,
+      checksums: req.query.checksums,
+      workflows: req.query.workflows,
+      last_task_run: req.query.last_task_run,
+      prev_task_runs: req.query.prev_task_runs,
     });
     if (batch) {
-      let _batch = batch;
-      if (req.query.workflows) {
-        // include workflow with batch
-        const _includeWorkflows = wfService.includeWorkflows(
-          req.query.last_task_run,
-          req.query.prev_task_runs,
-        );
-        _batch = await _includeWorkflows(batch);
-      }
-      _batch?.audit_logs?.forEach((log) => {
-        // eslint-disable-next-line no-param-reassign
-        if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
-      });
-      res.json(_batch);
+      res.json(batch);
     } else {
       next(createError(404));
     }
@@ -152,7 +89,7 @@ router.post(
     /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
         a new relation is created between batch and given workflow_id'
     */
-    const { workflow_id, ...batch_obj } = req.body;
+    const { workflow_id, state, ...batch_obj } = req.body;
     const data = batch_obj;
     if (workflow_id) {
       data.workflows = {
@@ -163,8 +100,19 @@ router.post(
         ],
       };
     }
+    data.states = {
+      create: [
+        {
+          state: state || 'REGISTERED',
+        },
+      ],
+    };
     const batch = await prisma.batch.create({
       data,
+      include: {
+        ...batchService.include_workflows,
+        ...batchService.include_states,
+      },
     });
     res.json(batch);
   }),
@@ -186,6 +134,7 @@ router.patch(
     /* #swagger.description =
         To add checksums use POST "/batches/:id/checksums"
         To add workflow use POST "/batches/:id/workflows"
+        To add state use POST "/batches/:id/state"
     */
     const batchToUpdate = await prisma.batch.findFirst({
       where: {
@@ -194,11 +143,26 @@ router.patch(
     });
     if (!batchToUpdate) { return next(createError(404)); }
 
+    // const { state, ...data } = req.body;
+    // if (state) {
+    //   data.states = {
+    //     create: [
+    //       {
+    //         state,
+    //       },
+    //     ],
+    //   };
+    // }
+
     const batch = await prisma.batch.update({
       where: {
         id: req.params.id,
       },
       data: req.body,
+      include: {
+        ...batchService.include_workflows,
+        ...batchService.include_states,
+      },
     });
     res.json(batch);
   }),
@@ -241,6 +205,26 @@ router.post(
       data: {
         id: req.body.workflow_id,
         batch_id: req.params.id,
+      },
+    });
+    res.sendStatus(200);
+  }),
+);
+
+router.post(
+  '/:id/state',
+  validate([
+    param('id').isInt().toInt(),
+    body('state').notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
+    // #swagger.summary = Add new state to a batch
+    await prisma.batch_state.create({
+      data: {
+        state: req.body.state,
+        batch_id: req.params.id,
+        metadata: req.body.metadata,
       },
     });
     res.sendStatus(200);

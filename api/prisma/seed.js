@@ -21,7 +21,7 @@ const roles = [{
 
 const batches = [
   {
-    id: 10,
+    id: 1,
     name: 'PCM230203',
     num_directories: 35,
     num_files: 116,
@@ -31,13 +31,13 @@ const batches = [
     description: null,
     origin_path: '/N/scratch/dgluser/bs_test/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/PCM230203',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
+    raw_data: [1],
   },
   {
-    id: 15,
-    name: 'PCM230327PL',
+    id: 2,
+    name: 'PCM230327',
     num_directories: 6,
     num_files: 13,
     num_genome_files: 12,
@@ -46,12 +46,12 @@ const batches = [
     description: null,
     origin_path: '/N/scratch/dgluser/test/PCM230327PL',
     archive_path: 'archive/2023/PCM230327PL.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/PCM230327PL',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
     report_id: '9b0b3fba-ccfd-4918-a5ff-ac93fa1a19ae',
+    raw_data: [2],
   },
   {
-    id: 11,
+    id: 3,
     name: 'PCM230215_657496842_Aborted_WF',
     num_directories: 6,
     num_files: 125,
@@ -61,13 +61,13 @@ const batches = [
     description: null,
     origin_path: '/N/scratch/dgluser/test/PCM230215_657496842_Aborted_WF',
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/PCM230215_657496842_Aborted_WF',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
     report_id: null,
+    raw_data: [3],
   },
   {
-    id: 12,
-    name: 'PCM230306PL',
+    id: 4,
+    name: 'PCM230306',
     num_directories: 44,
     num_files: 218,
     num_genome_files: 68,
@@ -76,12 +76,12 @@ const batches = [
     description: null,
     origin_path: '/N/scratch/dgluser/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/PCM230306PL',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
     report_id: 'fa7d41f5-3813-43f6-9a72-5440ed6eac2b',
+    raw_data: [4],
   },
   {
-    id: 7,
+    id: 5,
     name: 'bcl_fastq',
     num_directories: 976,
     num_files: 4249,
@@ -91,9 +91,9 @@ const batches = [
     description: null,
     origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/bcl_fastq',
     workflows: ['63339ae0-9643-4d8b-aa3a-303434f6bdcd'],
     report_id: null,
+    raw_data: [5],
   },
   {
     id: 6,
@@ -106,54 +106,30 @@ const batches = [
     description: null,
     origin_path: '/N/project/DG_Multiple_Myeloma/share/PCM221205',
     archive_path: 'archive/2023/PCM221205.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/PCM221205',
     workflows: ['02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68'],
     report_id: null,
+    raw_data: [6],
+  },
+  {
+    id: 7,
+    name: 'PCM230203',
   },
   {
     id: 8,
-    name: 'sentieon_val_7',
-    num_directories: 13871,
-    num_files: 28227,
-    num_genome_files: 182,
-    du_size: 371544389559,
-    size: 371543926042,
-    description: null,
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/sentieon_val_7',
-    archive_path: 'archive/2023/sentieon_val_7.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/sentieon_val_7',
-    workflows: ['e2c47b03-8873-4be1-9c30-b0b3d784c88c'],
-    report_id: null,
+    name: 'PCM230327',
+  },
+];
+
+const data_products = [
+  {
+    id: 1,
+    batch_id: 7,
+    raw_data_id: 1,
   },
   {
-    id: 13,
-    name: 'PCM230215PL',
-    num_directories: 20,
-    num_files: 90,
-    num_genome_files: 30,
-    du_size: 151808617759,
-    size: 151808531743,
-    description: null,
-    origin_path: '/N/scratch/dgluser/test/PCM230215PL',
-    archive_path: 'archive/2023/PCM230215PL.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/PCM230215PL',
-    workflows: ['94e78cd2-d836-4175-8199-562da80867e5'],
-    report_id: '93bcfa16-a813-4116-86a6-bf9bef7bc48f',
-  },
-  {
-    id: 14,
-    name: 'PCM230314PL',
-    num_directories: 24,
-    num_files: 98,
-    num_genome_files: 38,
-    du_size: 124798978226,
-    size: 124798875826,
-    description: null,
-    origin_path: '/N/scratch/dgluser/test/PCM230314PL',
-    archive_path: 'archive/2023/PCM230314PL.tar',
-    stage_path: '/N/scratch/dgluser/test/stage/PCM230314PL',
-    workflows: ['9d4941bd-182c-4314-8825-e62869839c5f'],
-    report_id: '997b10c0-5ead-41db-93d3-787d4e36641f',
+    id: 2,
+    batch_id: 8,
+    raw_data_id: 2,
   },
 ];
 
@@ -203,21 +179,39 @@ async function main() {
   await Promise.all(user_promises);
 
   const batchPromises = batches.map((batch) => {
-    const { workflows, ...batch_obj } = batch;
+    const { workflows, raw_data, ...batch_obj } = batch;
+    if (workflows) {
+      batch_obj.workflows = {
+        create: workflows.map((workflow_id) => ({ id: workflow_id })),
+      };
+    }
+    if (raw_data) {
+      batch_obj.raw_data = {
+        create: [{
+          id: raw_data[0],
+        }],
+      };
+    }
     return prisma.batch.upsert({
       where: {
         id: batch_obj.id,
       },
       update: {},
-      create: {
-        ...batch_obj,
-        workflows: {
-          create: workflows.map((workflow_id) => ({ id: workflow_id })),
-        },
-      },
+      create: batch_obj,
     });
   });
   await Promise.all(batchPromises);
+
+  const data_product_promises = data_products.map((data_product) => prisma.data_product.upsert({
+    where: {
+      id: data_product.id,
+    },
+    update: {},
+    create: {
+      ...data_product,
+    },
+  }));
+  await Promise.all(data_product_promises);
 }
 
 main()

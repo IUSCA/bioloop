@@ -10,9 +10,9 @@ router.get('/latest', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']
   // #swagger.summary = 'Get latest entries for each measurement.'
   const latestEntries = await prisma.$queryRaw`
-    select distinct on (measurement) timestamp, measurement, fields, tags
+    select distinct on (measurement, subject) timestamp, measurement, subject, usage, "limit", fields, tags
     from metric
-    order by measurement, timestamp desc;
+    order by measurement, subject, timestamp desc;
   `;
 
   res.json(latestEntries);

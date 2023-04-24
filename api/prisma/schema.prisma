@@ -20,12 +20,29 @@ model batch {
   updated_at       DateTime      @default(now()) @updatedAt @db.Timestamp(6)
   origin_path      String?
   archive_path     String?
-  stage_path       String?
   report_id        String?
   is_deleted       Boolean       @default(false)
   workflows        workflow[]
   metadata         checksum[]
   audit_logs       batch_audit[]
+  states           batch_state[]
+  raw_data         raw_data?
+  data_product     data_product?
+}
+
+model raw_data {
+  id            Int            @id @default(autoincrement())
+  batch_id      Int            @unique
+  batch         batch          @relation(fields: [batch_id], references: [id])
+  data_products data_product[]
+}
+
+model data_product {
+  id          Int       @id @default(autoincrement())
+  batch_id    Int       @unique
+  batch       batch     @relation(fields: [batch_id], references: [id])
+  raw_data_id Int?
+  raw_data    raw_data? @relation(fields: [raw_data_id], references: [id])
 }
 
 model checksum {
@@ -107,8 +124,21 @@ model batch_audit {
 model metric {
   timestamp   DateTime @default(now()) @db.Timestamp(6)
   measurement String
-  fields      Json
+  subject     String
+  usage       BigInt?
+  limit       BigInt?
+  fields      Json?
   tags        Json?
 
-  @@id([timestamp, measurement])
+  @@id([timestamp, measurement, subject])
+}
+
+model batch_state {
+  state     String
+  timestamp DateTime @default(now()) @db.Timestamp(6)
+  metadata  Json?
+  batch_id  Int
+  batch     batch?   @relation(fields: [batch_id], references: [id])
+
+  @@id([timestamp, batch_id, state])
 }
