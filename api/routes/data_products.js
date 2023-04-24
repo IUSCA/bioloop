@@ -17,7 +17,7 @@ router.get(
     query('only_deleted').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
+    // #swagger.tags = ['Data Products']
     const objs = await prisma.data_product.findMany({
       where: {
         batch: {
@@ -44,7 +44,7 @@ router.get(
     query('workflows').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
+    // #swagger.tags = ['Data Products']
     // only select path and md5 columns from the checksum table if checksums is true
     const _batch = await batchService.get_batch({
       data_product_id: req.params.id,

@@ -15,10 +15,11 @@
               />
             </div>
 
-            <div class="py-3 self-center">
+            <div class="py-3 self-center flex flex-col gap-1 items-center">
               <span class="uppercase">
                 {{ metric.measurement }}
               </span>
+              <span class="va-text-secondary"> {{ metric.subject }} </span>
             </div>
 
             <div>
@@ -57,21 +58,10 @@ import MetricService from "@/services/metrics";
 
 const disk_usage_metrics = ref([]);
 
-// const stats = ref({
-//   sequencing_runs: 100,
-//   data_products: 100,
-// });
-
-const fields_obj = (fields) =>
-  fields.reduce((acc, curr) => Object.assign(acc, curr), {});
-
 MetricService.getLatest()
   .then((res) => {
     console.log(res.data);
-    disk_usage_metrics.value = res.data.map((m) => ({
-      ...m,
-      ...fields_obj(m.fields),
-    }));
+    disk_usage_metrics.value = res.data;
   })
   .catch((err) => {
     console.error(err);
