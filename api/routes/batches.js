@@ -10,7 +10,6 @@ const _ = require('lodash/fp');
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
-const wfService = require('../services/workflow');
 const batchService = require('../services/batch');
 const { authenticate } = require('../middleware/auth');
 
@@ -39,8 +38,8 @@ router.get(
         ...(req.query.only_deleted ? { is_deleted: true } : {}),
       },
       include: {
-        ...batchService.include_workflows,
-        ...batchService.include_states,
+        ...batchService.INCLUDE_WORKFLOWS,
+        ...batchService.INCLUDE_STATES,
       },
     });
 
@@ -110,8 +109,8 @@ router.post(
     const batch = await prisma.batch.create({
       data,
       include: {
-        ...batchService.include_workflows,
-        ...batchService.include_states,
+        ...batchService.INCLUDE_WORKFLOWS,
+        ...batchService.INCLUDE_STATES,
       },
     });
     res.json(batch);
@@ -160,8 +159,8 @@ router.patch(
       },
       data: req.body,
       include: {
-        ...batchService.include_workflows,
-        ...batchService.include_states,
+        ...batchService.INCLUDE_WORKFLOWS,
+        ...batchService.INCLUDE_STATES,
       },
     });
     res.json(batch);
@@ -237,67 +236,48 @@ router.delete(
   authenticate,
   validate([
     param('id').isInt().toInt(),
+    query('soft_delete').toBoolean().default(true),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
-    // #swagger.summary = starts a delete archive workflow and marks the batch as deleted on success
-    const batch_id = req.params.id;
-    const wf = (await wfService.create({
-      name: 'Delete Batch',
-      steps: [
-        {
-          name: 'delete',
-          task: 'scaworkers.workers.delete.delete_batch',
-        },
-      ],
-      args: [batch_id],
-    })).data;
-    await prisma.workflow.create({
-      data: {
-        id: wf.workflow_id,
-        batch_id,
-      },
+    // #swagger.summary = For soft delete, starts a delete archive workflow and
+    // marks the batch as deleted on success. Batch is hard deleted only when there are no
+    // workflow association
+    const _batch = await batchService.get_batch({
+      id: req.params.id,
     });
-    await prisma.batch_audit.create({
-      data: {
-        action: 'delete',
-        user_id: req.user?.id,
-        batch_id,
-      },
-    });
-    res.send();
+
+    if (_batch) {
+      if (req.query.soft_delete) {
+        await batchService.soft_delete(req.params.id, req.user?.id);
+        res.send();
+      } else if ((_batch.workflows?.length || 0) === 0) {
+        // no workflows - safe to delete
+        await batchService.hard_delete(_batch.id);
+      } else {
+        next(createError.Conflict('Unable to delete as one or more workflows are associated with this bacth'));
+      }
+    } else {
+      next(createError(404));
+    }
   }),
 );
 
 // UI
 router.post(
-  '/:id/stage',
+  '/:id/workflow/:wf',
   authenticate,
   validate([
     param('id').isInt().toInt(),
+    param('wf').isIn(['stage', 'integrated']),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
-    // #swagger.summary = Create and start a workflow to stage the batch and associate it.
+    // #swagger.summary = Create and start a workflow and associate it.
+    // Allowed names are stage, integrated
     const batch_id = req.params.id;
-    const wf = (await wfService.create({
-      name: 'Stage Batch',
-      steps: [
-        {
-          name: 'stage',
-          task: 'scaworkers.workers.stage.stage_batch',
-        },
-        {
-          name: 'validate',
-          task: 'scaworkers.workers.validate.validate_batch',
-        },
-        {
-          name: 'generate_reports',
-          task: 'scaworkers.workers.report.generate',
-        },
-      ],
-      args: [batch_id],
-    })).data;
+    const wf_name = req.params.wf;
+    const wf = (await batchService.create_workflow(wf_name)(batch_id)).data;
     await prisma.workflow.create({
       data: {
         id: wf.workflow_id,

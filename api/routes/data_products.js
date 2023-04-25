@@ -27,8 +27,8 @@ router.get(
       include: {
         batch: {
           include: {
-            ...batchService.include_workflows,
-            ...batchService.include_states,
+            ...batchService.INCLUDE_WORKFLOWS,
+            ...batchService.INCLUDE_STATES,
           },
         },
       },

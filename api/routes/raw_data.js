@@ -53,8 +53,8 @@ router.get(
       include: {
         batch: {
           include: {
-            ...batchService.include_workflows,
-            ...batchService.include_states,
+            ...batchService.INCLUDE_WORKFLOWS,
+            ...batchService.INCLUDE_STATES,
           },
         },
       },
@@ -71,7 +71,6 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Raw Data']
-    // only select path and md5 columns from the checksum table if checksums is true
     const _batch = await batchService.get_batch({
       raw_data_id: req.params.id,
       workflows: req.query.workflows,

@@ -1,3 +1,5 @@
+const assert = require('assert');
+
 const { PrismaClient } = require('@prisma/client');
 
 const wfService = require('./workflow');
@@ -5,7 +7,7 @@ const userService = require('./user');
 
 const prisma = new PrismaClient();
 
-const include_states = {
+const INCLUDE_STATES = {
   states: {
     select: {
       state: true,
@@ -18,7 +20,7 @@ const include_states = {
   },
 };
 
-const include_workflows = {
+const INCLUDE_WORKFLOWS = {
   workflows: {
     select: {
       id: true,
@@ -26,24 +28,92 @@ const include_workflows = {
   },
 };
 
-async function soft_delete(id, user_id) {
-  const mark_deleted = prisma.batch.update({
-    where: {
-      id,
+const INTEGRATED_WORKFLOW = {
+  name: 'Integrated',
+  steps: [
+    {
+      name: 'inspect',
+      task: 'scaworkers.workers.inspect.inspect_batch',
     },
+    {
+      name: 'archive',
+      task: 'scaworkers.workers.archive.archive_batch',
+    },
+    {
+      name: 'stage',
+      task: 'scaworkers.workers.stage.stage_batch',
+    },
+    {
+      name: 'validate',
+      task: 'scaworkers.workers.validate.validate_batch',
+    },
+    {
+      name: 'generate_reports',
+      task: 'scaworkers.workers.report.generate',
+    },
+  ],
+};
+
+const STAGE_WORKFLOW = {
+  name: 'Stage Batch',
+  steps: [
+    {
+      name: 'stage',
+      task: 'scaworkers.workers.stage.stage_batch',
+    },
+    {
+      name: 'validate',
+      task: 'scaworkers.workers.validate.validate_batch',
+    },
+    {
+      name: 'generate_reports',
+      task: 'scaworkers.workers.report.generate',
+    },
+  ],
+};
+
+const DELETE_WORKFLOW = {
+  name: 'Delete Batch',
+  steps: [
+    {
+      name: 'delete',
+      task: 'scaworkers.workers.delete.delete_batch',
+    },
+  ],
+};
+
+const WORKFLOW_REGISTRY = {
+  delete: DELETE_WORKFLOW,
+  stage: STAGE_WORKFLOW,
+  integrated: INTEGRATED_WORKFLOW,
+};
+
+function create_workflow(wf_name) {
+  const wf = WORKFLOW_REGISTRY[wf_name];
+  assert(wf, `${wf_name} workflow is not registered`);
+  return (batch_id) => wfService.create({
+    ...wf,
+    args: [batch_id],
+  });
+}
+
+async function soft_delete(batch_id, user_id) {
+  const wf = (await create_workflow('delete')(batch_id)).data;
+
+  await prisma.workflow.create({
     data: {
-      is_deleted: true,
+      id: wf.workflow_id,
+      batch_id,
     },
   });
-  const log_delete = prisma.batch_audit.create({
+
+  await prisma.batch_audit.create({
     data: {
       action: 'delete',
       user_id,
-      batch_id: id,
+      batch_id,
     },
   });
-  const [updatedBatch, _] = await prisma.$transaction([mark_deleted, log_delete]);
-  return updatedBatch;
 }
 
 async function hard_delete(id) {
@@ -57,13 +127,41 @@ async function hard_delete(id) {
       batch_id: id,
     },
   });
+  const deleteAudit = prisma.batch_audit.deleteMany({
+    where: {
+      batch_id: id,
+    },
+  });
+  const deleteStates = prisma.batch_state.deleteMany({
+    where: {
+      batch_id: id,
+    },
+  });
+  const deleteRaWData = prisma.raw_data.delete({
+    where: {
+      batch_id: id,
+    },
+  });
+  const deleteDataProduct = prisma.data_product.delete({
+    where: {
+      batch_id: id,
+    },
+  });
   const deleteBatch = prisma.batch.delete({
     where: {
       id,
     },
   });
 
-  await prisma.$transaction([deleteChecksums, deleteWorkflows, deleteBatch]);
+  await prisma.$transaction([
+    deleteChecksums,
+    deleteWorkflows,
+    deleteAudit,
+    deleteStates,
+    deleteRaWData,
+    deleteDataProduct,
+    deleteBatch,
+  ]);
 }
 
 async function get_batch({
@@ -105,7 +203,7 @@ async function get_batch({
     where: query,
     include: {
       metadata: checksumSelect,
-      ...include_workflows,
+      ...INCLUDE_WORKFLOWS,
       audit_logs: {
         include: {
           user: {
@@ -117,7 +215,7 @@ async function get_batch({
           },
         },
       },
-      ...include_states,
+      ...INCLUDE_STATES,
       raw_data: true,
       data_product: true,
     },
@@ -145,7 +243,8 @@ async function get_batch({
 module.exports = {
   soft_delete,
   hard_delete,
-  include_states,
-  include_workflows,
+  INCLUDE_STATES,
+  INCLUDE_WORKFLOWS,
   get_batch,
+  create_workflow,
 };
