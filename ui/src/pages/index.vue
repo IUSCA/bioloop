@@ -6,10 +6,20 @@
       <Storage></Storage>
     </div>
 
-    <!-- Stats -->
+    <!-- Sequencing Run Stats -->
     <div class="">
       <span class="text-xl font-bold block my-1">SEQUENCING RUNS</span>
-      <stats></stats>
+      <router-link to="/runs" class="va-link">
+        <stats :data="sequencing_runs_stats"></stats>
+      </router-link>
+    </div>
+
+    <!-- Data Product Stats -->
+    <div class="">
+      <span class="text-xl font-bold block my-1">DATA PRODUCTS</span>
+      <router-link to="/dataproducts" class="va-link">
+        <stats :data="data_products_stats"></stats>
+      </router-link>
     </div>
 
     <!-- Workflows -->
@@ -43,8 +53,12 @@
 <script setup>
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
+import rawDataService from "@/services/raw_data";
+import dataProductsService from "@/services/dataproducts";
 
 const workflows = ref([]);
+const sequencing_runs_stats = ref({});
+const data_products_stats = ref({});
 
 workflowService
   .getAll({ last_task_run: true, prev_task_runs: false, only_active: true })
@@ -62,6 +76,26 @@ workflowService
 function update() {
   console.log("workflow updated");
 }
+
+rawDataService
+  .getStats()
+  .then((res) => {
+    sequencing_runs_stats.value = res.data;
+  })
+  .catch((err) => {
+    console.error(err);
+    toast.error("Unable to fetch sequencing runs stats");
+  });
+
+dataProductsService
+  .getStats()
+  .then((res) => {
+    data_products_stats.value = res.data;
+  })
+  .catch((err) => {
+    console.error(err);
+    toast.error("Unable to fetch data products stats");
+  });
 </script>
 
 <route lang="yaml">

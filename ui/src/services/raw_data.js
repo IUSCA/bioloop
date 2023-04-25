@@ -15,6 +15,10 @@ class RawDataService {
       },
     });
   }
+
+  getStats() {
+    return api.get("/raw_data/stats");
+  }
 }
 
 export default new RawDataService();

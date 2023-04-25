@@ -2,14 +2,14 @@
   <div style="">
     <va-card>
       <va-card-content>
-        <div class="row row-separated">
-          <div class="flex flex-col xs4 items-center justify-end">
+        <div class="grid grid-cols-4 row-separated">
+          <div class="flex flex-col items-center justify-end">
             <h2
-              v-if="sequencing_runs_stats?.count != undefined"
+              v-if="props.data?.count != undefined"
               class="va-h2 ma-0 va-text-center"
               :style="{ color: colors.primary }"
             >
-              {{ number_formatter.format(sequencing_runs_stats.count) }}
+              {{ number_formatter.format(props.data.count) }}
             </h2>
             <VaSkeleton
               v-else
@@ -21,13 +21,13 @@
             <p class="va-text-center">Registered</p>
           </div>
 
-          <div class="flex flex-col xs4 items-center justify-end">
+          <div class="flex flex-col items-center justify-end">
             <h2
-              v-if="sequencing_runs_stats?.total_size != undefined"
+              v-if="props.data?.total_size != undefined"
               class="va-h2 ma-0 va-text-center"
               :style="{ color: colors.info }"
             >
-              {{ formatBytes(sequencing_runs_stats.total_size) }}
+              {{ formatBytes(props.data.total_size) }}
             </h2>
             <VaSkeleton
               v-else
@@ -39,17 +39,13 @@
             <p class="va-text-center no-wrap">Total Size</p>
           </div>
 
-          <div class="flex flex-col xs4 items-center justify-end">
+          <div class="flex flex-col items-center justify-end">
             <h2
-              v-if="sequencing_runs_stats?.total_genome_files != undefined"
+              v-if="props.data?.genome_files != undefined"
               class="va-h2 ma-0 va-text-center"
-              :style="{ color: colors.warning }"
+              :style="{ color: colors.success }"
             >
-              {{
-                number_formatter.format(
-                  sequencing_runs_stats.total_genome_files
-                )
-              }}
+              {{ number_formatter.format(props.data.genome_files) }}
             </h2>
             <VaSkeleton
               v-else
@@ -58,7 +54,24 @@
               width="64px"
               height="32px"
             />
-            <p class="va-text-center"># Genome Files</p>
+            <p class="va-text-center">Genome Files</p>
+          </div>
+
+          <div class="flex flex-col items-center justify-end">
+            <h2
+              v-if="props.data?.workflows != undefined"
+              class="va-h2 ma-0 va-text-center text-indigo-600"
+            >
+              {{ number_formatter.format(props.data.workflows) }}
+            </h2>
+            <VaSkeleton
+              v-else
+              variant="rounded"
+              inline
+              width="64px"
+              height="32px"
+            />
+            <p class="va-text-center">Workflows</p>
           </div>
         </div>
       </va-card-content>
@@ -67,29 +80,15 @@
 </template>
 
 <script setup>
-import toast from "@/services/toast";
-import BatchService from "@/services/batch";
 import { formatBytes } from "@/services/utils";
 import { useColors } from "vuestic-ui";
 
 const { colors } = useColors();
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
 
-const sequencing_runs_stats = ref({
-  count: null,
-  total_size: null,
-  total_genome_files: null,
+const props = defineProps({
+  data: Object,
 });
-
-BatchService.getStats()
-  .then((res) => {
-    console.log(res.data);
-    sequencing_runs_stats.value = res.data;
-  })
-  .catch((err) => {
-    console.error(err);
-    toast.error("Unable to fetch batch stats");
-  });
 </script>
 
 <style scoped>

@@ -11,6 +11,32 @@ const batchService = require('../services/batch');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+router.get('/stats', asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['Raw Data']
+  // #swagger.summary = 'Get summary statistics of batches of raw data.'
+  const result = await prisma.$queryRaw`
+  select count(*)                      as "count",
+         sum(du_size)                  as total_size,
+         sum(num_genome_files)         as genome_files
+  from batch
+  join raw_data rd on batch.id = rd.batch_id
+  where is_deleted = false`;
+  const stats = _.mapValues(Number)(result[0]);
+
+  const result_2 = await prisma.$queryRaw`
+  select sum(1) as workflows
+  from batch
+  join raw_data rd on batch.id = rd.batch_id
+  join workflow w on batch.id = w.batch_id
+  where is_deleted = false
+  `;
+
+  res.json({
+    ...stats,
+    ..._.mapValues(Number)(result_2[0]),
+  });
+}));
+
 router.get(
   '/',
   validate([

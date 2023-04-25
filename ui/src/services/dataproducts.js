@@ -15,6 +15,10 @@ class DataProductService {
       },
     });
   }
+
+  getStats() {
+    return api.get("/data_products/stats");
+  }
 }
 
 export default new DataProductService();
