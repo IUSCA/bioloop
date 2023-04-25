@@ -19,7 +19,7 @@ class BatchService {
     workflows = true,
     last_task_run = false,
     prev_task_runs = false,
-  } = {}) {
+  }) {
     return api.get(`/batches/${id}`, {
       params: {
         checksums,

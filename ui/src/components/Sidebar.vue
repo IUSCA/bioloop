@@ -99,6 +99,11 @@ const user_items = ref([
     title: "Sequencing Runs",
     path: "/runs",
   },
+  {
+    icon: "mdi-package-variant-closed",
+    title: "Data Products",
+    path: "/dataproducts",
+  },
 ]);
 
 const admin_items = ref([

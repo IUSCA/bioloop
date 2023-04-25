@@ -1,5 +1,5 @@
 <template>
-  <div style="width: 500px">
+  <div style="">
     <va-card>
       <va-card-content>
         <div class="row row-separated">
@@ -9,7 +9,7 @@
               class="va-h2 ma-0 va-text-center"
               :style="{ color: colors.primary }"
             >
-              {{ sequencing_runs_stats.count }}
+              {{ number_formatter.format(sequencing_runs_stats.count) }}
             </h2>
             <VaSkeleton
               v-else

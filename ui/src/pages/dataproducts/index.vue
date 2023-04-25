@@ -1,5 +1,5 @@
 <template>
-  <h2 class="text-4xl font-bold">Sequencing Runs</h2>
+  <h2 class="text-4xl font-bold">Data Products</h2>
 
   <div>
     <div class="flex my-2 gap-3">
@@ -24,7 +24,7 @@
     </div>
 
     <va-data-table
-      :items="raw_data"
+      :items="dataproducts"
       :columns="columns"
       :hoverable="true"
       v-model:sort-by="sortBy"
@@ -34,7 +34,7 @@
       :row-bind="getRowBind"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`/runs/${rowData.id}`" class="va-link">{{
+        <router-link :to="`/dataproducts/${rowData.id}`" class="va-link">{{
           rowData.name
         }}</router-link>
       </template>
@@ -76,12 +76,12 @@
 
 <script setup>
 import moment from "moment";
-import RawDataService from "@/services/raw_data";
+import DataProductsService from "@/services/dataproducts";
 import { formatBytes } from "@/services/utils";
 import toast from "@/services/toast";
 
 // const batches = ref([]);
-const raw_data = ref([]);
+const dataproducts = ref([]);
 const data_loading = ref(false);
 const filterInput = ref("");
 const only_show_deleted_checked = ref(false);
@@ -159,9 +159,9 @@ const sortingOrder = ref("desc");
 
 function fetch_all() {
   data_loading.value = true;
-  RawDataService.getAll()
+  DataProductsService.getAll()
     .then((res) => {
-      raw_data.value = res.data
+      dataproducts.value = res.data
         .filter((r) => r.batch)
         .map((r) => {
           const { batch, ...rest } = r;
