@@ -33,7 +33,6 @@ const batches = [
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
-    raw_data: [1],
   },
   {
     id: 2,
@@ -48,7 +47,6 @@ const batches = [
     archive_path: 'archive/2023/PCM230327PL.tar',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
     report_id: '9b0b3fba-ccfd-4918-a5ff-ac93fa1a19ae',
-    raw_data: [2],
   },
   {
     id: 3,
@@ -63,7 +61,6 @@ const batches = [
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
     report_id: null,
-    raw_data: [3],
   },
   {
     id: 4,
@@ -78,7 +75,6 @@ const batches = [
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
     report_id: 'fa7d41f5-3813-43f6-9a72-5440ed6eac2b',
-    raw_data: [4],
   },
   {
     id: 5,
@@ -93,7 +89,6 @@ const batches = [
     archive_path: 'archive/2023/bcl_fastq.tar',
     workflows: ['63339ae0-9643-4d8b-aa3a-303434f6bdcd'],
     report_id: null,
-    raw_data: [5],
   },
   {
     id: 6,
@@ -108,7 +103,6 @@ const batches = [
     archive_path: 'archive/2023/PCM221205.tar',
     workflows: ['02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68'],
     report_id: null,
-    raw_data: [6],
   },
   {
     id: 7,
@@ -132,6 +126,47 @@ const data_products = [
     raw_data_id: 2,
   },
 ];
+
+const raw_data = [
+  {
+    id: 1,
+    batch_id: 1,
+  },
+  {
+    id: 2,
+    batch_id: 2,
+  },
+  {
+    id: 3,
+    batch_id: 3,
+  },
+  {
+    id: 4,
+    batch_id: 4,
+  },
+  {
+    id: 5,
+    batch_id: 5,
+  },
+  {
+    id: 6,
+    batch_id: 6,
+  },
+];
+
+async function update_seq(table) {
+  // Get the current maximum value of the id column
+  const result = await prisma[table].aggregate({
+    _max: {
+      id: true,
+    },
+  });
+  const currentMaxId = result?._max?.id || 0;
+  console.log('table', table, currentMaxId);
+
+  // Reset the sequence to the current maximum value
+  await prisma.$executeRawUnsafe(`ALTER SEQUENCE ${table}_id_seq RESTART WITH ${currentMaxId + 1}`);
+}
 
 async function main() {
   await Promise.allSettled(roles.map((role) => prisma.role.upsert({
@@ -179,17 +214,10 @@ async function main() {
   await Promise.all(user_promises);
 
   const batchPromises = batches.map((batch) => {
-    const { workflows, raw_data, ...batch_obj } = batch;
+    const { workflows, ...batch_obj } = batch;
     if (workflows) {
       batch_obj.workflows = {
         create: workflows.map((workflow_id) => ({ id: workflow_id })),
-      };
-    }
-    if (raw_data) {
-      batch_obj.raw_data = {
-        create: [{
-          id: raw_data[0],
-        }],
       };
     }
     return prisma.batch.upsert({
@@ -202,6 +230,7 @@ async function main() {
   });
   await Promise.all(batchPromises);
 
+  // upsert data_products
   const data_product_promises = data_products.map((data_product) => prisma.data_product.upsert({
     where: {
       id: data_product.id,
@@ -212,11 +241,27 @@ async function main() {
     },
   }));
   await Promise.all(data_product_promises);
+
+  // upsert raw data
+  const raw_data_promises = raw_data.map((r) => prisma.raw_data.upsert({
+    where: {
+      id: r.id,
+    },
+    update: {},
+    create: {
+      ...r,
+    },
+  }));
+  await Promise.all(raw_data_promises);
+
+  // update the auto increment id's sequence numbers
+  const tables = ['batch', 'raw_data', 'data_product', 'user', 'role'];
+  await Promise.all(tables.map(update_seq));
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
+  .then(() => {
+    prisma.$disconnect();
   })
   .catch(async (e) => {
     console.error(e);
