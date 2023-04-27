@@ -84,7 +84,7 @@ def generate(celery_task, batch_id, **kwargs):
     batch_qc_dir = Path(config['paths'][batch_type]['qc']) / batch['name'] / 'qc'
     staged_path = Path(config['paths'][batch_type]['stage']) / batch['name']
 
-    report_id, batch_qc_dir = create_report(
+    report_id = create_report(
         batch_dir=staged_path,
         batch_qc_dir=batch_qc_dir,
         report_id=(batch.get('attributes', {}) or {}).get('report_id', None)
