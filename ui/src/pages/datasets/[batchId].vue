@@ -110,7 +110,7 @@
           </div>
 
           <!-- Actions -->
-          <div class="flex-none">
+          <div class="flex-none" v-if="batch.archive_path">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Actions</span>

@@ -87,7 +87,7 @@ def generate(celery_task, batch_id, **kwargs):
     report_id, batch_qc_dir = create_report(
         batch_dir=staged_path,
         batch_qc_dir=batch_qc_dir,
-        report_id=batch.get('attributes', {}).get('report_id', None)
+        report_id=(batch.get('attributes', {}) or {}).get('report_id', None)
     )
 
     report_filename = batch_qc_dir / 'multiqc_report.html'

@@ -53,9 +53,10 @@ class BatchService {
   }
 
   is_staged(dataset) {
-    const steps = dataset?.steps || [];
+    const states = dataset?.states || [];
     return (
-      steps.filter((s) => (s?.name || "").toLowerCase() == "staged").length > 0
+      states.filter((s) => (s?.state || "").toLowerCase() == "staged").length >
+      0
     );
   }
 }
