@@ -15,7 +15,7 @@ const exports = {
   paths: {
     stage: {
       raw_data: "/N/project/DG_Multiple_Myeloma/share/raw_data",
-      data_products: "/N/project/DG_Multiple_Myeloma/share/data_products",
+      data_products: "/N/scratch/dgluser/dgl/production/stage/data_products",
     },
   },
 };

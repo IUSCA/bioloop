@@ -85,7 +85,7 @@
           </div>
 
           <!-- Reports -->
-          <div class="flex-none" v-if="batch.report_id">
+          <div class="flex-none" v-if="batch?.attributes?.report_id">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Reports</span>
@@ -96,7 +96,7 @@
                   <a
                     class="va-link flex items-center justify-start"
                     target="_blank"
-                    :href="`/api/reports/${batch.report_id}/multiqc_report.html`"
+                    :href="`/api/reports/${batch?.attributes?.report_id}/multiqc_report.html`"
                   >
                     <span class="flex-initial">MultiQC Report</span>
                     <i-mdi-open-in-new class="flex-initial inline-block pl-1" />

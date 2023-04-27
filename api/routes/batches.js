@@ -319,11 +319,11 @@ router.post(
     // #swagger.tags = ['Batches']
     // #swagger.summary = Add new state to a batch
     await prisma.batch_state.create({
-      data: {
+      data: _.omitBy(_.isNil)({
         state: req.body.state,
         batch_id: req.params.id,
         metadata: req.body.metadata,
-      },
+      }),
     });
     res.sendStatus(200);
   }),
