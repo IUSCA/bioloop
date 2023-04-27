@@ -38,7 +38,7 @@ config = {
             'rejects': [],
             'recency_threshold': 60 * 60,  # 1 hour
             'minimum_project_size': 1024 * 1024 * 1024,  # 1 GB
-            'wait_between_scans': 5 * 60,
+            'wait_between_scans': 30 * 60,
         },
         'download': {
             'datasets': {

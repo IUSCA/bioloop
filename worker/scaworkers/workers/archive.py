@@ -48,7 +48,10 @@ def archive_batch(celery_task, batch_id, **kwargs):
     scratch_digest = utils.checksum(scratch_tar_path)
 
     batch_type = batch['type'].lower()
-    sda_tar_path = f'{config["paths"][batch_type]["archive"]}/{batch["name"]}.tar'
+    sda_dir = config["paths"][batch_type]["archive"]
+    sda.ensure_directory(sda_dir)  # create the directory if it does not exist
+
+    sda_tar_path = f'{sda_dir}/{batch["name"]}.tar'
 
     print('sda put', str(scratch_tar_path), sda_tar_path)
     with utils.track_progress_parallel(progress_fn=hsi_put_progress,
