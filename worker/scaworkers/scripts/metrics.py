@@ -11,7 +11,7 @@ import socket
 
 def main():
     metrics = []
-    tags = [{'hostname': socket.getfqdn()}]
+    hostname = socket.getfqdn()
 
     disk_usages = hpfs.get_disk_usages()
 
@@ -19,8 +19,10 @@ def main():
         [
             {
                 'measurement': d['Filesystem'],
-                'fields': [{'usage': d['usage']}, {'limit': d['quota']}],
-                'tags': tags
+                'subject': hostname,
+                'usage': d['usage'],
+                'limit': d['quota'],
+                'tags': []
             }
             for d in disk_usages if d['Filesystem'] in ['sda']
         ]
@@ -32,13 +34,16 @@ def main():
         [
             {
                 'measurement': d['Filesystem'],
-                'fields': [{'usage': d['usage']}, {'limit': d['limit']}],
-                'tags': tags
+                'subject': hostname,
+                'usage': d['usage'],
+                'limit': d['limit'],
+                'tags': []
             }
             for d in scratch_usage
         ]
     )
 
+    # print(metrics)
     api.send_metrics(metrics)
     
 
