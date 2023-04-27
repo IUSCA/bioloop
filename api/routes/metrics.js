@@ -18,7 +18,7 @@ router.get('/latest', asyncHandler(async (req, res, next) => {
   res.json(latestEntries);
 }));
 
-router.put('/', asyncHandler(async (req, res, next) => {
+router.post('/', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']
   // #swagger.summary = 'Insert new measurements'
   const result = await prisma.metric.createMany({

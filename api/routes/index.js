@@ -9,8 +9,6 @@ router.use('/auth', require('./auth'));
 router.use('/batches', require('./batches'));
 router.use('/reports', require('./reports'));
 router.use('/metrics', require('./metrics'));
-router.use('/raw_data', require('./raw_data'));
-router.use('/data_products', require('./data_products'));
 
 // From this point on, all routes require authentication.
 router.use(authenticate);

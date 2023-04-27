@@ -23,6 +23,7 @@ const batches = [
   {
     id: 1,
     name: 'PCM230203',
+    type: 'RAW_DATA',
     num_directories: 35,
     num_files: 116,
     num_genome_files: 60,
@@ -32,11 +33,14 @@ const batches = [
     origin_path: '/N/scratch/dgluser/bs_test/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
-    report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
+    attributes: {
+      report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
+    },
   },
   {
     id: 2,
     name: 'PCM230327',
+    type: 'RAW_DATA',
     num_directories: 6,
     num_files: 13,
     num_genome_files: 12,
@@ -46,11 +50,14 @@ const batches = [
     origin_path: '/N/scratch/dgluser/test/PCM230327PL',
     archive_path: 'archive/2023/PCM230327PL.tar',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
-    report_id: '9b0b3fba-ccfd-4918-a5ff-ac93fa1a19ae',
+    attributes: {
+      report_id: '9b0b3fba-ccfd-4918-a5ff-ac93fa1a19ae',
+    },
   },
   {
     id: 3,
     name: 'PCM230215_657496842_Aborted_WF',
+    type: 'RAW_DATA',
     num_directories: 6,
     num_files: 125,
     num_genome_files: 0,
@@ -60,11 +67,15 @@ const batches = [
     origin_path: '/N/scratch/dgluser/test/PCM230215_657496842_Aborted_WF',
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
-    report_id: null,
+    attributes: {
+      report_id: null,
+    },
+    is_deleted: true,
   },
   {
     id: 4,
     name: 'PCM230306',
+    type: 'RAW_DATA',
     num_directories: 44,
     num_files: 218,
     num_genome_files: 68,
@@ -74,11 +85,14 @@ const batches = [
     origin_path: '/N/scratch/dgluser/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
-    report_id: 'fa7d41f5-3813-43f6-9a72-5440ed6eac2b',
+    attributes: {
+      report_id: 'fa7d41f5-3813-43f6-9a72-5440ed6eac2b',
+    },
   },
   {
     id: 5,
     name: 'bcl_fastq',
+    type: 'RAW_DATA',
     num_directories: 976,
     num_files: 4249,
     num_genome_files: 636,
@@ -88,11 +102,11 @@ const batches = [
     origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
     workflows: ['63339ae0-9643-4d8b-aa3a-303434f6bdcd'],
-    report_id: null,
   },
   {
     id: 6,
     name: 'PCM221205',
+    type: 'RAW_DATA',
     num_directories: 12,
     num_files: 249,
     num_genome_files: 93,
@@ -102,57 +116,26 @@ const batches = [
     origin_path: '/N/project/DG_Multiple_Myeloma/share/PCM221205',
     archive_path: 'archive/2023/PCM221205.tar',
     workflows: ['02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68'],
-    report_id: null,
   },
   {
     id: 7,
     name: 'PCM230203',
+    type: 'DATA_PRODUCT',
   },
   {
     id: 8,
     name: 'PCM230327',
+    type: 'DATA_PRODUCT',
   },
 ];
 
-const data_products = [
-  {
-    id: 1,
-    batch_id: 7,
-    raw_data_id: 1,
-  },
-  {
-    id: 2,
-    batch_id: 8,
-    raw_data_id: 2,
-  },
-];
-
-const raw_data = [
-  {
-    id: 1,
-    batch_id: 1,
-  },
-  {
-    id: 2,
-    batch_id: 2,
-  },
-  {
-    id: 3,
-    batch_id: 3,
-  },
-  {
-    id: 4,
-    batch_id: 4,
-  },
-  {
-    id: 5,
-    batch_id: 5,
-  },
-  {
-    id: 6,
-    batch_id: 6,
-  },
-];
+const batch_heirarchical_association = [{
+  source_id: 1,
+  derived_id: 7,
+}, {
+  source_id: 2,
+  derived_id: 8,
+}];
 
 async function update_seq(table) {
   // Get the current maximum value of the id column
@@ -162,7 +145,6 @@ async function update_seq(table) {
     },
   });
   const currentMaxId = result?._max?.id || 0;
-  console.log('table', table, currentMaxId);
 
   // Reset the sequence to the current maximum value
   await prisma.$executeRawUnsafe(`ALTER SEQUENCE ${table}_id_seq RESTART WITH ${currentMaxId + 1}`);
@@ -230,32 +212,19 @@ async function main() {
   });
   await Promise.all(batchPromises);
 
-  // upsert data_products
-  const data_product_promises = data_products.map((data_product) => prisma.data_product.upsert({
-    where: {
-      id: data_product.id,
-    },
-    update: {},
-    create: {
-      ...data_product,
-    },
-  }));
-  await Promise.all(data_product_promises);
-
-  // upsert raw data
-  const raw_data_promises = raw_data.map((r) => prisma.raw_data.upsert({
-    where: {
-      id: r.id,
-    },
-    update: {},
-    create: {
-      ...r,
-    },
-  }));
-  await Promise.all(raw_data_promises);
+  // upsert raw data - data product associations
+  await Promise.all(
+    batch_heirarchical_association.map((sd) => prisma.batch_hierarchy.upsert({
+      where: {
+        source_id_derived_id: sd,
+      },
+      update: {},
+      create: sd,
+    })),
+  );
 
   // update the auto increment id's sequence numbers
-  const tables = ['batch', 'raw_data', 'data_product', 'user', 'role'];
+  const tables = ['batch', 'user', 'role'];
   await Promise.all(tables.map(update_seq));
 }
 

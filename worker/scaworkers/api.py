@@ -48,6 +48,7 @@ class APIServerSession(requests.Session):
 
     def request(self, method, url, *args, **kwargs):
         joined_url = urljoin(self.base_url, url)
+        print(method, joined_url, args, kwargs)
         return super().request(method, joined_url, *args, **kwargs)
 
 
@@ -69,10 +70,11 @@ def batch_setter(batch):
     return batch
 
 
-def get_all_batches(checksums=False):
+def get_all_batches(batch_type=None, name=None):
     with APIServerSession() as s:
         payload = {
-            'checksums': int(checksums)
+            'type': batch_type,
+            'name': name,
         }
         r = s.get('batches', params=payload)
         if r.status_code == 200:
@@ -133,9 +135,16 @@ def upload_report(batch_id, report_filename):
 
 def send_metrics(metrics):
     with APIServerSession() as s:
-        r = s.put('metrics', json=metrics)
+        r = s.post('metrics', json=metrics)
         if r.status_code != 200:
             print(r, r.status_code)
+            raise Exception('Server responded with non-200 code')
+
+
+def add_associations(associations):
+    with APIServerSession() as s:
+        r = s.post(f'batches/associations', json=associations)
+        if r.status_code != 200:
             raise Exception('Server responded with non-200 code')
 
 

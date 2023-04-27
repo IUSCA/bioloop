@@ -28,6 +28,20 @@ const INCLUDE_WORKFLOWS = {
   },
 };
 
+const INCLUDE_AUDIT_LOGS = {
+  audit_logs: {
+    include: {
+      user: {
+        include: {
+          user_role: {
+            select: { roles: true },
+          },
+        },
+      },
+    },
+  },
+};
+
 const INTEGRATED_WORKFLOW = {
   name: 'Integrated',
   steps: [
@@ -137,16 +151,6 @@ async function hard_delete(id) {
       batch_id: id,
     },
   });
-  const deleteRaWData = prisma.raw_data.delete({
-    where: {
-      batch_id: id,
-    },
-  });
-  const deleteDataProduct = prisma.data_product.delete({
-    where: {
-      batch_id: id,
-    },
-  });
   const deleteBatch = prisma.batch.delete({
     where: {
       id,
@@ -158,40 +162,17 @@ async function hard_delete(id) {
     deleteWorkflows,
     deleteAudit,
     deleteStates,
-    deleteRaWData,
-    deleteDataProduct,
     deleteBatch,
   ]);
 }
 
 async function get_batch({
   id = null,
-  raw_data_id = null,
-  data_product_id = null,
   checksums = false,
   workflows = false,
   last_task_run = false,
   prev_task_runs = false,
 }) {
-  let query = null;
-  if (id) {
-    query = { id };
-  } else if (raw_data_id) {
-    query = {
-      raw_data: {
-        id: raw_data_id,
-      },
-    };
-  } else if (data_product_id) {
-    query = {
-      data_product: {
-        id: data_product_id,
-      },
-    };
-  } else {
-    throw new Error('invalid parameters - at least one of id, raw_data_id, data_product_id must be provided');
-  }
-
   const checksumSelect = checksums ? {
     select: {
       path: true,
@@ -200,24 +181,14 @@ async function get_batch({
   } : false;
 
   const batch = await prisma.batch.findFirst({
-    where: query,
+    where: { id },
     include: {
       metadata: checksumSelect,
       ...INCLUDE_WORKFLOWS,
-      audit_logs: {
-        include: {
-          user: {
-            include: {
-              user_role: {
-                select: { roles: true },
-              },
-            },
-          },
-        },
-      },
+      ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
-      raw_data: true,
-      data_product: true,
+      source_batches: true,
+      derived_batches: true,
     },
   });
 
@@ -240,6 +211,43 @@ async function get_batch({
   return null;
 }
 
+function create_batch(_data) {
+  console.log('create_batch', _data);
+  const { workflow_id, state, ...data } = _data;
+
+  // create workflow association
+  if (workflow_id) {
+    data.workflows = {
+      create: [
+        {
+          id: workflow_id,
+        },
+      ],
+    };
+  }
+
+  // add a state
+  data.states = {
+    create: [
+      {
+        state: state || 'REGISTERED',
+      },
+    ],
+  };
+
+  // create batch along with associations
+  console.log('creating batch', data);
+  return prisma.batch.create({
+    data,
+    include: {
+      ...INCLUDE_WORKFLOWS,
+      ...INCLUDE_STATES,
+      raw_data: true,
+      data_product: true,
+    },
+  });
+}
+
 module.exports = {
   soft_delete,
   hard_delete,
@@ -247,4 +255,5 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_batch,
   create_workflow,
+  create_batch,
 };

@@ -8,41 +8,40 @@ datasource db {
 }
 
 model batch {
-  id               Int           @id @default(autoincrement())
+  id               Int               @id @default(autoincrement())
   name             String
+  type             String
   num_directories  Int?
   num_files        Int?
   num_genome_files Int?
   du_size          BigInt?
   size             BigInt?
   description      String?
-  created_at       DateTime      @default(now()) @db.Timestamp(6)
-  updated_at       DateTime      @default(now()) @updatedAt @db.Timestamp(6)
+  created_at       DateTime          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime          @default(now()) @updatedAt @db.Timestamp(6)
   origin_path      String?
   archive_path     String?
-  report_id        String?
-  is_deleted       Boolean       @default(false)
+  is_deleted       Boolean           @default(false)
+  attributes       Json?
   workflows        workflow[]
   metadata         checksum[]
   audit_logs       batch_audit[]
   states           batch_state[]
-  raw_data         raw_data?
-  data_product     data_product?
+  derived_batches  batch_hierarchy[] @relation("source_batches")
+  source_batches   batch_hierarchy[] @relation("derived_batches")
+
+  @@unique([name, type])
 }
 
-model raw_data {
-  id            Int            @id @default(autoincrement())
-  batch_id      Int            @unique
-  batch         batch          @relation(fields: [batch_id], references: [id])
-  data_products data_product[]
-}
+model batch_hierarchy {
+  source_id   Int
+  derived_id  Int
+  assigned_at DateTime @default(now()) @db.Timestamp(6)
 
-model data_product {
-  id          Int       @id @default(autoincrement())
-  batch_id    Int       @unique
-  batch       batch     @relation(fields: [batch_id], references: [id])
-  raw_data_id Int?
-  raw_data    raw_data? @relation(fields: [raw_data_id], references: [id])
+  source_batch  batch @relation(name: "source_batches", fields: [source_id], references: [id])
+  derived_batch batch @relation(name: "derived_batches", fields: [derived_id], references: [id])
+
+  @@id([source_id, derived_id])
 }
 
 model checksum {

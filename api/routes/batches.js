@@ -3,7 +3,9 @@ const fsPromises = require('fs/promises');
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
-const { query, param, body } = require('express-validator');
+const {
+  query, param, body, checkSchema,
+} = require('express-validator');
 const multer = require('multer');
 const _ = require('lodash/fp');
 
@@ -16,30 +18,96 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// UI
-router.get('/stats', authenticate, asyncHandler(async (req, res, next) => {
+// stats - UI
+router.get(
+  '/stats',
+  // authenticate,
+  validate([
+    query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Batches']
   // #swagger.summary = 'Get summary statistics of batches.'
-  const result = await prisma.$queryRaw`select count(*) as "count", sum(du_size) as total_size, sum(num_genome_files) as total_genome_files from batch where is_deleted = false;`;
-  const stats = result[0];
-  res.json(_.mapValues(Number)(stats));
-}));
+    let result;
+    if (req.query.type) {
+      result = await prisma.$queryRaw`
+        select 
+          count(*) as "count", 
+          sum(du_size) as total_size, 
+          sum(num_genome_files) as genome_files 
+        from batch 
+        where is_deleted = false and type = ${req.query.type};
+      `;
+    } else {
+      result = await prisma.$queryRaw`
+        select 
+          count(*) as "count", 
+          sum(du_size) as total_size, 
+          sum(num_genome_files) as genome_files 
+        from batch 
+        where is_deleted = false;
+      `;
+    }
+    const stats = result[0];
+    res.json(_.mapValues(Number)(stats));
+  }),
+);
 
-// worker + UI
+// add hierarchy association
+const assoc_body_schema = {
+  '0.source_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Source ID must be an integer',
+    },
+    toInt: true,
+  },
+  '0.derived_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Derived ID must be an integer',
+    },
+    toInt: true,
+  },
+};
+router.post(
+  '/associations',
+  validate([
+    checkSchema(assoc_body_schema),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Batches']
+    // #swagger.summary = Add new associations between batches
+    await prisma.batch_hierarchy.createMany({
+      data: req.body,
+    });
+    res.sendStatus(200);
+  }),
+);
+
+// get all - worker + UI
 router.get(
   '/',
   validate([
-    query('only_deleted').toBoolean().default(false),
+    query('deleted').toBoolean().optional(),
+    query('processed').toBoolean().optional(),
+    query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
+    query('name').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Batches']
     const batches = await prisma.batch.findMany({
       where: {
-        ...(req.query.only_deleted ? { is_deleted: true } : {}),
+        ...(_.isUndefined(req.query.deleted) ? {} : { is_deleted: req.query.deleted }),
+        ...(_.isUndefined(req.query.processed) ? {} : { workflows: ({ [req.query.processed ? 'some' : 'none']: {} }) }),
+        ...(req.query.type ? { type: req.query.type } : {}),
+        ...(req.query.name ? { name: req.query.name } : {}),
       },
       include: {
         ...batchService.INCLUDE_WORKFLOWS,
         ...batchService.INCLUDE_STATES,
+        source_batches: true,
+        derived_batches: true,
       },
     });
 
@@ -47,7 +115,7 @@ router.get(
   }),
 );
 
-// worker + UI
+// get by id - worker + UI
 router.get(
   '/:id',
   validate([
@@ -75,7 +143,7 @@ router.get(
   }),
 );
 
-// worker
+// create - worker
 router.post(
   '/',
   validate([
@@ -88,36 +156,13 @@ router.post(
     /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
         a new relation is created between batch and given workflow_id'
     */
-    const { workflow_id, state, ...batch_obj } = req.body;
-    const data = batch_obj;
-    if (workflow_id) {
-      data.workflows = {
-        create: [
-          {
-            id: workflow_id,
-          },
-        ],
-      };
-    }
-    data.states = {
-      create: [
-        {
-          state: state || 'REGISTERED',
-        },
-      ],
-    };
-    const batch = await prisma.batch.create({
-      data,
-      include: {
-        ...batchService.INCLUDE_WORKFLOWS,
-        ...batchService.INCLUDE_STATES,
-      },
-    });
+    const data = req.body;
+    const batch = batchService.create_batch(data);
     res.json(batch);
   }),
 );
 
-// worker
+// modify - worker
 router.patch(
   '/:id',
   validate([
@@ -161,13 +206,15 @@ router.patch(
       include: {
         ...batchService.INCLUDE_WORKFLOWS,
         ...batchService.INCLUDE_STATES,
+        source_batches: true,
+        derived_batches: true,
       },
     });
     res.json(batch);
   }),
 );
 
-// worker
+// add checksums to batch - worker
 router.post(
   '/:id/checksums',
   validate([
@@ -190,6 +237,7 @@ router.post(
   }),
 );
 
+// add workflow ids to batch
 router.post(
   '/:id/workflows',
   authenticate,
@@ -210,6 +258,7 @@ router.post(
   }),
 );
 
+// add state to batch
 router.post(
   '/:id/state',
   validate([
@@ -230,7 +279,7 @@ router.post(
   }),
 );
 
-// UI
+// delete - UI
 router.delete(
   '/:id',
   authenticate,
@@ -263,7 +312,7 @@ router.delete(
   }),
 );
 
-// UI
+// Launch a workflow on the batch - UI
 router.post(
   '/:id/workflow/:wf',
   authenticate,
@@ -317,7 +366,7 @@ const report_storage = multer.diskStorage({
   },
 });
 
-// worker
+// upload a report - worker
 router.put(
   '/:id/report',
   validate([

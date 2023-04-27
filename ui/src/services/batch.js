@@ -1,16 +1,14 @@
 import api from "./api";
 
 class BatchService {
-  getAll({ checksums = false, workflows = false, only_deleted = false } = {}) {
-    return api
-      .get("/batches", {
-        params: {
-          checksums,
-          workflows,
-          only_deleted,
-        },
-      })
-      .then((response) => response.data);
+  getAll({ deleted = null, processed = null, type = null } = {}) {
+    return api.get("/batches", {
+      params: {
+        deleted,
+        processed,
+        type,
+      },
+    });
   }
 
   getById({
@@ -31,15 +29,27 @@ class BatchService {
   }
 
   stage_batch(batch_id) {
-    return api.post(`/batches/${batch_id}/stage`);
+    return api.post(`/batches/${batch_id}/workflow/stage`);
   }
 
-  delete_batch(batch_id) {
-    return api.delete(`/batches/${batch_id}`);
+  archive_batch(batch_id) {
+    return api.post(`/batches/${batch_id}/workflow/integrated`);
   }
 
-  getStats() {
-    return api.get("/batches/stats");
+  delete_batch({ batch_id, soft_delete = true }) {
+    return api.delete(`/batches/${batch_id}`, {
+      params: {
+        soft_delete,
+      },
+    });
+  }
+
+  getStats(type) {
+    return api.get("/batches/stats", {
+      params: {
+        type,
+      },
+    });
   }
 }
 
