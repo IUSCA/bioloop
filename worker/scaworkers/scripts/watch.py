@@ -79,6 +79,7 @@ def register_raw_data() -> None:
         rejects=reg_config['rejects']
     )
     for candidate in candidates:
+        print('registering raw data', candidate.name)
         batch = {
             'name': candidate.name,
             'type': 'RAW_DATA',
@@ -96,6 +97,7 @@ def register_data_products() -> None:
         rejects=reg_config['rejects']
     )
     for candidate in candidates:
+        print('registering data product', candidate.name)
         batch = {
             'name': candidate.name,
             'type': 'DATA_PRODUCT',
@@ -113,6 +115,9 @@ def register_data_products() -> None:
 
 
 if __name__ == "__main__":
+    register_raw_data()
+    register_data_products()
+
     path1 = config['registration']['raw_data']['source_dir']
     path2 = config['registration']['data_products']['source_dir']
     handler1 = TopLevelDirHandler(path1, register_raw_data)

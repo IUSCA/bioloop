@@ -10,11 +10,6 @@ from scaworkers.workflow import Workflow
 import scaworkers.illumina as illumina
 
 
-# def get_registered_batch_paths():
-#     batches = api.get_all_batches()
-#     return [b['origin_path'] for b in batches]
-
-
 def get_registered_batch_names():
     batches = api.get_all_batches(batch_type='RAW_DATA')
     return [b['name'] for b in batches]
@@ -38,55 +33,6 @@ def get_last_registered_batch():
         return batches_sorted[-1]
     else:
         return None
-
-
-# class Registration:
-#     def __init__(self):
-#         self.host = socket.getfqdn()
-#         self.source_dirs = set(Path(sd).resolve() for sd in config['registration']['source_dirs'] if Path(sd).exists())
-#         self.rejects = set(config['registration']['rejects'])
-#         self.completed = set(get_registered_batch_paths())  # HTTP GET
-#         self.candidates = set()
-#
-#     def register(self):
-#         while len(self.candidates) > 0:
-#             candidate = next(iter(self.candidates))
-#             if self.has_no_recent_activity(candidate):
-#                 self.register_candidate(candidate)
-#                 self.completed.add(str(candidate))
-#                 self.candidates.remove(candidate)
-#
-#         sleep_duration = config['registration']['wait_between_scans']
-#         print(f'sleeping for {sleep_duration} seconds')
-#         time.sleep(sleep_duration)
-#         self.scan()
-#
-#     @staticmethod
-#     def has_no_recent_activity(dir_path):
-#         # has anything been modified in the specified directory recently?
-#         last_update_time = max([p.stat().st_mtime for p in dir_path.iterdir()], default=time.time())
-#         return time.time() - last_update_time > config['registration']['recency_threshold']
-#
-#     def scan(self):
-#         for source_dir in self.source_dirs:
-#             for p in source_dir.iterdir():
-#                 if all([
-#                     p.is_dir(),
-#                     p.name not in self.rejects,
-#                     str(p) not in self.completed
-#                 ]):
-#                     print(f'found new candidate: {p}')
-#                     self.candidates.add(p)
-#
-#     def register_candidate(self, candidate: Path):
-#         print(f'registering {candidate}')
-#         batch = {
-#             'name': candidate.name,
-#             'origin_path': str(candidate.resolve()),
-#         }
-#         # HTTP POST
-#         created_batch = api.create_batch(batch)
-#         print(created_batch)
 
 
 class BaseSpaceRegistration:
@@ -140,22 +86,9 @@ class BaseSpaceRegistration:
 
     def scan(self):
         latest_project = self.get_latest_project()
+        print('latest_project', latest_project)
         if latest_project is not None:
             self.candidates[latest_project['Name']] = latest_project
-
-    # def scan(self):
-    #     for project in illumina.get_projects():
-    #         project_name, total_size = project['Name'], project['TotalSize']
-    #
-    #         # if the project_name ends with PL, remove PL
-    #         if project_name.endswith('PL'):
-    #             project_name = project_name[:-2]
-    #
-    #         if project_name not in self.rejects and \
-    #             project_name not in self.completed and \
-    #             total_size >= config['illumina']['registration']['minimum_project_size']:
-    #             print(f'found new candidate: {project_name}')
-    #             self.candidates[project_name] = project
 
     def get_latest_project(self):
         """
@@ -225,6 +158,6 @@ if __name__ == '__main__':
         # r.register()
         bs_reg.register()
 
-        sleep_duration = config['registration']['wait_between_scans']
+        sleep_duration = config['illumina']['registration']['wait_between_scans']
         print(f'sleeping for {sleep_duration} seconds')
         time.sleep(sleep_duration)
