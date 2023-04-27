@@ -397,8 +397,8 @@ const report_storage = multer.diskStorage({
         },
       });
 
-      if (batch?.report_id) {
-        const parent_dir = `reports/${batch.report_id}`;
+      if (batch?.attributes?.report_id) {
+        const parent_dir = `reports/${batch?.attributes?.report_id}`;
         await fsPromises.mkdir(parent_dir, {
           recursive: true,
         });
