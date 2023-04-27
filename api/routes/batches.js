@@ -29,6 +29,7 @@ router.get(
   // #swagger.tags = ['Batches']
   // #swagger.summary = 'Get summary statistics of batches.'
     let result;
+    let n_wf_result;
     if (req.query.type) {
       result = await prisma.$queryRaw`
         select 
@@ -38,6 +39,17 @@ router.get(
         from batch 
         where is_deleted = false and type = ${req.query.type};
       `;
+
+      n_wf_result = await prisma.workflow.aggregate({
+        where: {
+          batch: {
+            type: req.query.type,
+          },
+        },
+        _count: {
+          id: true,
+        },
+      });
     } else {
       result = await prisma.$queryRaw`
         select 
@@ -47,9 +59,18 @@ router.get(
         from batch 
         where is_deleted = false;
       `;
+
+      n_wf_result = await prisma.workflow.aggregate({
+        _count: {
+          id: true,
+        },
+      });
     }
     const stats = result[0];
-    res.json(_.mapValues(Number)(stats));
+    res.json({
+      ..._.mapValues(Number)(stats),
+      workflows: n_wf_result?._count.id || 0,
+    });
   }),
 );
 

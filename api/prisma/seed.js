@@ -137,6 +137,23 @@ const batch_heirarchical_association = [{
   derived_id: 8,
 }];
 
+const metrics = [{
+  measurement: '/N/scratch files',
+  subject: 'host1',
+  usage: 500200,
+  limit: 8000000,
+}, {
+  measurement: '/N/scratch',
+  subject: 'host1',
+  usage: 100400,
+  limit: 6000000,
+}, {
+  measurement: 'SDA',
+  subject: 'host1',
+  usage: 300400,
+  limit: 50000000,
+}];
+
 async function update_seq(table) {
   // Get the current maximum value of the id column
   const result = await prisma[table].aggregate({
@@ -226,6 +243,11 @@ async function main() {
   // update the auto increment id's sequence numbers
   const tables = ['batch', 'user', 'role'];
   await Promise.all(tables.map(update_seq));
+
+  // add metrics
+  await prisma.metric.createMany({
+    data: metrics,
+  });
 }
 
 main()

@@ -6,11 +6,11 @@
       <Storage></Storage>
     </div>
 
-    <!-- Sequencing Run Stats -->
+    <!-- Raw Data Stats -->
     <div class="">
-      <span class="text-xl font-bold block my-1">SEQUENCING RUNS</span>
-      <router-link to="/runs" class="va-link">
-        <stats :data="sequencing_runs_stats"></stats>
+      <span class="text-xl font-bold block my-1">RAW DATA</span>
+      <router-link to="/rawdata" class="va-link">
+        <stats :data="raw_data_stats"></stats>
       </router-link>
     </div>
 
@@ -53,11 +53,10 @@
 <script setup>
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
-import rawDataService from "@/services/raw_data";
-import dataProductsService from "@/services/dataproducts";
+import BatchService from "@/services/batch";
 
 const workflows = ref([]);
-const sequencing_runs_stats = ref({});
+const raw_data_stats = ref({});
 const data_products_stats = ref({});
 
 workflowService
@@ -69,7 +68,7 @@ workflowService
   .catch((err) => {
     console.error(err);
     if (err?.response?.status == 404)
-      toast.error("Could not find the Sequencing Run");
+      toast.error("Could not find the active workflows");
     else toast.error("Something went wrong");
   });
 
@@ -77,18 +76,16 @@ function update() {
   console.log("workflow updated");
 }
 
-rawDataService
-  .getStats()
+BatchService.getStats({ type: "RAW_DATA" })
   .then((res) => {
-    sequencing_runs_stats.value = res.data;
+    raw_data_stats.value = res.data;
   })
   .catch((err) => {
     console.error(err);
-    toast.error("Unable to fetch sequencing runs stats");
+    toast.error("Unable to fetch raw data stats");
   });
 
-dataProductsService
-  .getStats()
+BatchService.getStats({ type: "DATA_PRODUCT" })
   .then((res) => {
     data_products_stats.value = res.data;
   })
