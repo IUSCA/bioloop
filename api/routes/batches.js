@@ -324,6 +324,7 @@ router.delete(
       } else if ((_batch.workflows?.length || 0) === 0) {
         // no workflows - safe to delete
         await batchService.hard_delete(_batch.id);
+        res.send();
       } else {
         next(createError.Conflict('Unable to delete as one or more workflows are associated with this bacth'));
       }

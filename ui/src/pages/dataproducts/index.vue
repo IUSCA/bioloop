@@ -112,7 +112,7 @@
       okText="Archive"
       @ok="
         launch_modal.visible = false;
-        launch_wf(launch_modal.selected?.batch_id);
+        launch_wf(launch_modal.selected?.id);
         launch_modal.selected = null;
       "
       @cancel="
@@ -147,7 +147,7 @@
       okText="Delete"
       @ok="
         delete_modal.visible = false;
-        delete_data_product(delete_modal.selected?.batch_id);
+        delete_data_product(delete_modal.selected?.id);
         delete_modal.selected = null;
       "
       @cancel="
@@ -273,13 +273,13 @@ function fetch_all() {
 }
 fetch_all();
 
-function launch_wf(batch_id) {
-  console.log("launch wf", batch_id);
+function launch_wf(id) {
+  console.log("launch wf", id);
 }
 
-function delete_data_product(batch_id) {
-  console.log("delete wf", batch_id);
-  BatchService.delete_batch({ batch_id, soft_delete: false });
+function delete_data_product(id) {
+  console.log("delete wf", id);
+  BatchService.delete_batch({ id, soft_delete: false });
 }
 </script>
 

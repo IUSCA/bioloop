@@ -29,7 +29,7 @@
       :row-bind="getRowBind"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`/runs/${rowData.id}`" class="va-link">{{
+        <router-link :to="`/rawdata/${rowData.id}`" class="va-link">{{
           rowData.name
         }}</router-link>
       </template>
@@ -112,7 +112,7 @@
       okText="Archive"
       @ok="
         launch_modal.visible = false;
-        launch_wf(launch_modal.selected?.batch_id);
+        launch_wf(launch_modal.selected?.id);
         launch_modal.selected = null;
       "
       @cancel="
@@ -146,7 +146,7 @@
       okText="Delete"
       @ok="
         delete_modal.visible = false;
-        delete_raw_data(delete_modal.selected?.batch_id);
+        delete_raw_data(delete_modal.selected?.id);
         delete_modal.selected = null;
       "
       @cancel="
@@ -272,16 +272,29 @@ function fetch_all(query = {}) {
 }
 fetch_all();
 
-function launch_wf(batch_id) {
-  console.log("launch wf", batch_id);
+function launch_wf(id) {
+  console.log("launch wf", id);
+  data_loading.value = true;
+  BatchService.archive_batch(id)
+    .then(() => {
+      toast.success(`Launched a workflow to archive the dataset: ${id}`);
+      fetch_all();
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to archive the dataset");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
 }
 
-function delete_raw_data(batch_id) {
-  console.log("delete wf", batch_id);
+function delete_raw_data(id) {
+  console.log("delete wf", id);
   data_loading.value = true;
-  BatchService.delete_batch({ batch_id, soft_delete: false })
+  BatchService.delete_batch({ id, soft_delete: false })
     .then(() => {
-      toast.success(`Deleted raw data: ${batch_id}`);
+      toast.success(`Deleted raw data: ${id}`);
       fetch_all();
     })
     .catch((err) => {

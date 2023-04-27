@@ -28,16 +28,16 @@ class BatchService {
     });
   }
 
-  stage_batch(batch_id) {
-    return api.post(`/batches/${batch_id}/workflow/stage`);
+  stage_batch(id) {
+    return api.post(`/batches/${id}/workflow/stage`);
   }
 
-  archive_batch(batch_id) {
-    return api.post(`/batches/${batch_id}/workflow/integrated`);
+  archive_batch(id) {
+    return api.post(`/batches/${id}/workflow/integrated`);
   }
 
-  delete_batch({ batch_id, soft_delete = true }) {
-    return api.delete(`/batches/${batch_id}`, {
+  delete_batch({ id, soft_delete = true }) {
+    return api.delete(`/batches/${id}`, {
       params: {
         soft_delete,
       },
