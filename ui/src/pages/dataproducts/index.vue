@@ -29,7 +29,7 @@
       :row-bind="getRowBind"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`/dataproducts/${rowData.id}`" class="va-link">{{
+        <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
           rowData.name
         }}</router-link>
       </template>

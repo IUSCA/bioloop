@@ -1,7 +1,10 @@
 <template>
   <va-inner-loading :loading="loading">
     <div>
-      <span class="text-3xl">Sequencing Run : {{ batch.name }}</span>
+      <span class="text-3xl capitalize" v-if="batch.type">
+        {{ batch.type.replace("_", " ").toLowerCase() }} :
+      </span>
+      <span class="text-3xl"> {{ batch.name }} </span>
       <va-divider />
     </div>
     <div>
