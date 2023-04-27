@@ -1,7 +1,3 @@
-import shutil
-from datetime import datetime
-from pathlib import Path
-
 from celery import Celery
 
 import scaworkers.api as api
@@ -22,4 +18,5 @@ def delete_batch(celery_app, batch_id, **kwargs):
         'is_deleted': True
     }
     api.update_batch(batch_id=batch_id, update_data=update_data)
+    api.add_state_to_batch(batch_id=batch_id, state='DELETED')
     return batch_id,

@@ -147,5 +147,15 @@ def add_associations(associations):
             raise Exception('Server responded with non-200 code')
 
 
+def add_state_to_batch(batch_id, state, metadata=None):
+    with APIServerSession() as s:
+        r = s.post(f'batches/{batch_id}/states', json={
+            'state': state,
+            'metadata': metadata
+        })
+        if r.status_code != 200:
+            raise Exception('Server responded with non-200 code')
+
+
 if __name__ == '__main__':
     pass

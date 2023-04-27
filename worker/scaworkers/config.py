@@ -13,9 +13,15 @@ config = {
     },
     'paths': {
         'scratch': '/N/scratch/dgluser/dgl/production/scratch',
-        'archive': f'archive/{YEAR}',
-        'stage': '/N/project/DG_Multiple_Myeloma/share/raw_data',
-        'qc': '/N/project/DG_Multiple_Myeloma/share/data_products'
+        'raw_data': {
+            'archive': f'archive/{YEAR}/raw_data',
+            'stage': '/N/project/DG_Multiple_Myeloma/share/raw_data',
+            'qc': '/N/project/DG_Multiple_Myeloma/share/data_products'
+        },
+        'data_product': {
+            'archive': f'archive/{YEAR}/data_products',
+            'stage': '/N/scratch/dgluser/dgl/production/stage/data_products',
+        }
     },
     'registration': {
         'raw_data': {

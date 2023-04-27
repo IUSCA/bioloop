@@ -24,7 +24,8 @@ def get_batch_from_sda(celery_task, batch):
     """
 
     sda_tar_path = batch['archive_path']
-    staging_dir = Path(config['paths']['stage'])
+    batch_type = batch['type'].lower()
+    staging_dir = Path(config['paths'][batch_type]['stage'])
     scratch_tar_path = Path(config['paths']['scratch']) / f"{batch['name']}.tar"
     sda_digest = sda.get_hash(sda_path=sda_tar_path)
 
@@ -69,10 +70,8 @@ def get_batch_from_sda(celery_task, batch):
 def stage_batch(celery_task, batch_id, **kwargs):
     batch = api.get_batch(batch_id=batch_id)
     extracted_dir_name = get_batch_from_sda(celery_task, batch)
-    update_data = {
-        'stage_path': extracted_dir_name
-    }
-    api.update_batch(batch_id=batch_id, update_data=update_data)
+
+    api.add_state_to_batch(batch_id=batch_id, state='STAGED')
     return batch_id,
 
 

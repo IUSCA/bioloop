@@ -24,6 +24,6 @@ def download_illumina_batch(self, batch_id, **kwargs):
     update_data = {
         'origin_path': str(download_path)
     }
-
     api.update_batch(batch_id=batch_id, update_data=update_data)
+    api.add_state_to_batch(batch_id=batch_id, state='DOWNLOADED')
     return batch_id,

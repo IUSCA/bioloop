@@ -310,7 +310,7 @@ router.post(
 
 // add state to batch
 router.post(
-  '/:id/state',
+  '/:id/states',
   validate([
     param('id').isInt().toInt(),
     body('state').notEmpty(),
