@@ -32,7 +32,7 @@ def generate_metadata(source):
         if p.is_file():
             num_files += 1
             size += p.stat().st_size
-            if ''.join(p.suffixes) in config['genome_file_types']:
+            if ''.join(p.suffixes) in config['genome_file_types'] and not p.is_symlink():
                 num_genome_files += 1
                 # with open(p, 'rb') as f:
                 #     digest = hashlib.file_digest(f, 'md5')
