@@ -17,3 +17,11 @@ div.inner-loading__overlay {
   z-index: 1;
   background-color: rgba(255,255,255,0.6)
 }
+
+div.va-modal__title {
+  font-size: initial;
+}
+
+div.va-dropdown__content.va-dropdown__content-wrapper {
+  z-index: 1;
+}

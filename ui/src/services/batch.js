@@ -44,12 +44,19 @@ class BatchService {
     });
   }
 
-  getStats(type) {
+  getStats({ type }) {
     return api.get("/batches/stats", {
       params: {
         type,
       },
     });
+  }
+
+  is_staged(dataset) {
+    const steps = dataset?.steps || [];
+    return (
+      steps.filter((s) => (s?.name || "").toLowerCase() == "staged").length > 0
+    );
   }
 }
 

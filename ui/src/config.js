@@ -12,6 +12,12 @@ const exports = {
     sca_admin: "sca-ops-l@list.iu.edu",
   },
   batch_polling_interval: 10000,
+  paths: {
+    stage: {
+      raw_data: "/N/project/DG_Multiple_Myeloma/share/raw_data",
+      data_products: "/N/project/DG_Multiple_Myeloma/share/data_products",
+    },
+  },
 };
 
 export default exports;

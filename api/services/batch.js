@@ -212,7 +212,6 @@ async function get_batch({
 }
 
 function create_batch(_data) {
-  console.log('create_batch', _data);
   const { workflow_id, state, ...data } = _data;
 
   // create workflow association
@@ -236,7 +235,6 @@ function create_batch(_data) {
   };
 
   // create batch along with associations
-  console.log('creating batch', data);
   return prisma.batch.create({
     data,
     include: {

@@ -1,5 +1,5 @@
 <template>
-  <h2 class="text-4xl font-bold">Data Products</h2>
+  <h2 class="text-4xl font-bold">Raw Data</h2>
 
   <div>
     <div class="flex my-2 gap-3">
@@ -7,7 +7,7 @@
         <va-input
           v-model="filterInput"
           class="border-gray-800 border border-solid w-full"
-          placeholder="search data products"
+          placeholder="search raw data"
           outline
           clearable
         />
@@ -20,7 +20,7 @@
     </div>
 
     <va-data-table
-      :items="dataproducts"
+      :items="raw_data"
       :columns="columns"
       v-model:sort-by="sortBy"
       v-model:sorting-order="sortingOrder"
@@ -29,7 +29,7 @@
       :row-bind="getRowBind"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`/dataproducts/${rowData.id}`" class="va-link">{{
+        <router-link :to="`/runs/${rowData.id}`" class="va-link">{{
           rowData.name
         }}</router-link>
       </template>
@@ -123,19 +123,18 @@
       <div class="flex flex-col gap-3">
         <p>
           By clicking the "Archive" button, a workflow will be initiated to
-          archive the data product to the SDA (Secure Data Archive).
-          Additionally, it will stage the contents to
+          archive the raw data to the SDA (Secure Data Archive). Additionally,
+          it will stage the contents to
           <span class="path bg-slate-200">
-            {{ config.paths.stage.data_products }}/{{
-              launch_modal.selected?.name
-            }} </span
-          >.
+            {{ config.paths.stage.raw_data }}/{{ launch_modal.selected?.name }}
+          </span>
+          and generate QC (Quality Control) files and report.
         </p>
         <p>
           Please be aware that the time it takes to complete this process
           depends on the size of the directory and the amount of data being
           archived. To monitor the progress of the workflow, you can view the
-          data product details page.
+          raw data details page.
         </p>
       </div>
     </va-modal>
@@ -147,7 +146,7 @@
       okText="Delete"
       @ok="
         delete_modal.visible = false;
-        delete_data_product(delete_modal.selected?.batch_id);
+        delete_raw_data(delete_modal.selected?.batch_id);
         delete_modal.selected = null;
       "
       @cancel="
@@ -172,8 +171,7 @@ import { formatBytes } from "@/services/utils";
 import toast from "@/services/toast";
 import config from "@/config";
 
-// const batches = ref([]);
-const dataproducts = ref([]);
+const raw_data = ref([]);
 const data_loading = ref(false);
 const filterInput = ref("");
 const launch_modal = ref({
@@ -201,6 +199,7 @@ const columns = ref([
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
+    width: 40,
   },
   {
     key: "stage_path",
@@ -209,6 +208,7 @@ const columns = ref([
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
+    width: 40,
   },
   {
     key: "updated_at",
@@ -228,7 +228,6 @@ const columns = ref([
     label: "size",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
-    width: 80,
     sortingFn: (a, b) => a - b,
   },
   {
@@ -257,15 +256,15 @@ function getRowBind(row) {
 const sortBy = ref("updated_at");
 const sortingOrder = ref("desc");
 
-function fetch_all() {
+function fetch_all(query = {}) {
   data_loading.value = true;
-  BatchService.getAll({ type: "DATA_PRODUCT" })
+  return BatchService.getAll({ type: "RAW_DATA", ...query })
     .then((res) => {
-      dataproducts.value = res.data;
+      raw_data.value = res.data;
     })
     .catch((err) => {
       console.error(err);
-      toast.error("Unable to fetch data products");
+      toast.error("Unable to fetch raw data");
     })
     .finally(() => {
       data_loading.value = false;
@@ -277,13 +276,25 @@ function launch_wf(batch_id) {
   console.log("launch wf", batch_id);
 }
 
-function delete_data_product(batch_id) {
+function delete_raw_data(batch_id) {
   console.log("delete wf", batch_id);
-  BatchService.delete_batch({ batch_id, soft_delete: false });
+  data_loading.value = true;
+  BatchService.delete_batch({ batch_id, soft_delete: false })
+    .then(() => {
+      toast.success(`Deleted raw data: ${batch_id}`);
+      fetch_all();
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to delete raw data");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
 }
 </script>
 
 <route lang="yaml">
 meta:
-  title: Data Products
+  title: Raw Data
 </route>

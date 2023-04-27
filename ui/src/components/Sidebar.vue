@@ -96,8 +96,8 @@ const user_items = ref([
   // },
   {
     icon: "mdi-dna",
-    title: "Sequencing Runs",
-    path: "/runs",
+    title: "Raw Data",
+    path: "/rawdata",
   },
   {
     icon: "mdi-package-variant-closed",

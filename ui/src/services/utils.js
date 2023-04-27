@@ -83,6 +83,11 @@ function utc_date_to_local_tz(date) {
   return moment.utc(date).tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss z");
 }
 
+function lxor(a, b) {
+  // logical XOR
+  return (a || b) && !(a && b);
+}
+
 export {
   formatBytes,
   difference,
@@ -94,4 +99,5 @@ export {
   isLiveToken,
   format_duration,
   utc_date_to_local_tz,
+  lxor,
 };

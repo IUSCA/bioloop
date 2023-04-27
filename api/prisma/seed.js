@@ -121,11 +121,25 @@ const batches = [
     id: 7,
     name: 'PCM230203',
     type: 'DATA_PRODUCT',
+    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230203',
   },
   {
     id: 8,
     name: 'PCM230327',
     type: 'DATA_PRODUCT',
+    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230327',
+  },
+  {
+    id: 9,
+    name: 'PCM230406',
+    type: 'RAW_DATA',
+    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230406',
+  },
+  {
+    id: 10,
+    name: 'PCM230417',
+    type: 'RAW_DATA',
+    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230417',
   },
 ];
 
