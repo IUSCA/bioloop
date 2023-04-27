@@ -45,7 +45,7 @@ def main():
 
     # print(metrics)
     api.send_metrics(metrics)
-    
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     main()

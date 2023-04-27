@@ -211,41 +211,6 @@ async function get_batch({
   return null;
 }
 
-function create_batch(_data) {
-  const { workflow_id, state, ...data } = _data;
-
-  // create workflow association
-  if (workflow_id) {
-    data.workflows = {
-      create: [
-        {
-          id: workflow_id,
-        },
-      ],
-    };
-  }
-
-  // add a state
-  data.states = {
-    create: [
-      {
-        state: state || 'REGISTERED',
-      },
-    ],
-  };
-
-  // create batch along with associations
-  return prisma.batch.create({
-    data,
-    include: {
-      ...INCLUDE_WORKFLOWS,
-      ...INCLUDE_STATES,
-      raw_data: true,
-      data_product: true,
-    },
-  });
-}
-
 module.exports = {
   soft_delete,
   hard_delete,
@@ -253,5 +218,4 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_batch,
   create_workflow,
-  create_batch,
 };

@@ -177,8 +177,37 @@ router.post(
     /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
         a new relation is created between batch and given workflow_id'
     */
-    const data = req.body;
-    const batch = batchService.create_batch(data);
+    const { workflow_id, state, ...data } = req.body;
+
+    // create workflow association
+    if (workflow_id) {
+      data.workflows = {
+        create: [
+          {
+            id: workflow_id,
+          },
+        ],
+      };
+    }
+
+    // add a state
+    data.states = {
+      create: [
+        {
+          state: state || 'REGISTERED',
+        },
+      ],
+    };
+
+    // create batch along with associations
+    const batch = await prisma.batch.create({
+      data,
+      include: {
+        ...batchService.INCLUDE_WORKFLOWS,
+        ...batchService.INCLUDE_STATES,
+
+      },
+    });
     res.json(batch);
   }),
 );
