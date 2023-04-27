@@ -92,7 +92,9 @@ def generate(celery_task, batch_id, **kwargs):
     # if the report is created successfully
     if report_filename.exists():
         update_data = {
-            'report_id': report_id
+            'attributes': {
+                'report_id': report_id
+            }
         }
         api.update_batch(batch_id=batch_id, update_data=update_data)
         api.upload_report(batch_id=batch_id, report_filename=report_filename)

@@ -1,13 +1,12 @@
 import socket
 import time
-from pathlib import Path
 from datetime import datetime
 
 import scaworkers.api as api
+import scaworkers.illumina as illumina
 from scaworkers.celery_app import app as celery_app
 from scaworkers.config import config
 from scaworkers.workflow import Workflow
-import scaworkers.illumina as illumina
 
 
 def get_registered_batch_names():
@@ -142,6 +141,7 @@ class BaseSpaceRegistration:
         wf = Workflow(celery_app=celery_app, steps=self.steps)
         batch = {
             'name': project_name,
+            'type': 'RAW_DATA',
             'workflow_id': wf.workflow['_id']
         }
         # HTTP POST
