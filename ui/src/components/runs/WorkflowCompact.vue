@@ -13,8 +13,8 @@
       </div>
       <div v-if="props.show_batch && batch_id">
         <span class="text-sm">
-          Sequencing Run:
-          <router-link :to="`/runs/${batch_id}`" class="va-link"
+          Dataset:
+          <router-link :to="`/dataset/${batch_id}`" class="va-link"
             >#{{ batch_id }}</router-link
           >
         </span>

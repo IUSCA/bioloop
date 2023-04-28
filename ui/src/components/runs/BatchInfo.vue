@@ -25,7 +25,7 @@
           <td>{{ props.batch.origin_path }}</td>
         </tr>
         <tr>
-          <td>Total Size</td>
+          <td>Size</td>
           <td>
             <span v-if="props.batch.du_size">
               {{ formatBytes(props.batch.du_size) }}
@@ -33,15 +33,15 @@
           </td>
         </tr>
         <tr>
-          <td>Total Files</td>
+          <td>Files</td>
           <td>{{ props.batch.num_files }}</td>
         </tr>
         <tr>
-          <td>Total Genome Files</td>
+          <td>Genome Files</td>
           <td>{{ props.batch.num_genome_files }}</td>
         </tr>
         <tr>
-          <td>Total Directories</td>
+          <td>Directories</td>
           <td>{{ props.batch.num_directories }}</td>
         </tr>
       </tbody>

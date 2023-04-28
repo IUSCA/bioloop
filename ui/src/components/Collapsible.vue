@@ -1,7 +1,7 @@
 <template>
   <div class="collapsible-container rounded shadow m-2">
     <div
-      class="collapsible-header bg-slate-200 hover:bg-slate-300"
+      class="collapsible-header bg-slate-200 hover:bg-slate-300 rounded"
       @click="toggleCollapsible"
     >
       <slot name="header-content"></slot>
@@ -53,7 +53,7 @@ function toggleCollapsible() {
 
 .collapsible-header {
   /* background-color: #f2f2f2; */
-  padding: 10px;
+  padding: 5px;
   display: flex;
   justify-content: space-between;
   align-items: center;
