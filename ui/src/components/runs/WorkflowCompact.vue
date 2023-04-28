@@ -23,7 +23,10 @@
 
     <div class="col-span-1">
       <div v-show="workflow.steps_done != workflow.total_steps">
-        <va-progress-circle :thickness="0.1" indeterminate>
+        <va-progress-circle
+          :thickness="0.1"
+          :indeterminate="!workflowService.is_workflow_done(workflow)"
+        >
           {{ workflow.steps_done }} / {{ workflow.total_steps }}
         </va-progress-circle>
       </div>
