@@ -1,4 +1,3 @@
-import time
 from urllib.parse import urljoin
 
 import requests
@@ -48,14 +47,15 @@ class APIServerSession(requests.Session):
 
     def request(self, method, url, *args, **kwargs):
         joined_url = urljoin(self.base_url, url)
+        print(method, joined_url, args, kwargs)
         return super().request(method, joined_url, *args, **kwargs)
 
 
 def batch_getter(batch):
     # convert du_size and size from string to int
     if batch is not None:
-        batch['du_size'] = utils.parse_int(batch.get('du_size', None))
-        batch['size'] = utils.parse_int(batch.get('size', None))
+        batch['du_size'] = utils.parse_number(batch.get('du_size', None))
+        batch['size'] = utils.parse_number(batch.get('size', None))
     return batch
 
 
@@ -69,10 +69,11 @@ def batch_setter(batch):
     return batch
 
 
-def get_all_batches(include_checksums=False):
+def get_all_batches(batch_type=None, name=None):
     with APIServerSession() as s:
         payload = {
-            'include_checksums': int(include_checksums)
+            'type': batch_type,
+            'name': name,
         }
         r = s.get('batches', params=payload)
         if r.status_code == 200:
@@ -82,10 +83,10 @@ def get_all_batches(include_checksums=False):
             raise Exception('Server responded with non-200 code')
 
 
-def get_batch(batch_id, include_checksums=False):
+def get_batch(batch_id, checksums=False):
     with APIServerSession() as s:
         payload = {
-            'include_checksums': int(include_checksums)
+            'checksums': int(checksums)
         }
         r = s.get(f'batches/{batch_id}', params=payload)
         if r.status_code == 200:
@@ -128,6 +129,31 @@ def upload_report(batch_id, report_filename):
         })
         if r.status_code != 200:
             print(r, r.status_code)
+            raise Exception('Server responded with non-200 code')
+
+
+def send_metrics(metrics):
+    with APIServerSession() as s:
+        r = s.post('metrics', json=metrics)
+        if r.status_code != 200:
+            print(r, r.status_code)
+            raise Exception('Server responded with non-200 code')
+
+
+def add_associations(associations):
+    with APIServerSession() as s:
+        r = s.post(f'batches/associations', json=associations)
+        if r.status_code != 200:
+            raise Exception('Server responded with non-200 code')
+
+
+def add_state_to_batch(batch_id, state, metadata=None):
+    with APIServerSession() as s:
+        r = s.post(f'batches/{batch_id}/states', json={
+            'state': state,
+            'metadata': metadata
+        })
+        if r.status_code != 200:
             raise Exception('Server responded with non-200 code')
 
 

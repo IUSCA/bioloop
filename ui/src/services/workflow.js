@@ -1,21 +1,24 @@
 import api from "./api";
 
 class WorkflowService {
-  getAll(last_task_run = false, prev_task_runs = false) {
-    return api
-      .get("/workflows", {
-        params: {
-          last_task_run,
-          prev_task_runs,
-        },
-      })
-      .then((response) => response.data);
-  }
-
-  getById(id, last_task_run = false, prev_task_runs = false) {
-    return api.get(`/workflows/${id}`, {
+  getAll({
+    last_task_run = false,
+    prev_task_runs = false,
+    only_active = false,
+  } = {}) {
+    return api.get("/workflows", {
       params: {
         last_task_run,
+        prev_task_runs,
+        only_active,
+      },
+    });
+  }
+
+  getById(id, last_task_runs = false, prev_task_runs = false) {
+    return api.get(`/workflows/${id}`, {
+      params: {
+        last_task_runs,
         prev_task_runs,
       },
     });
@@ -31,6 +34,10 @@ class WorkflowService {
 
   resume(id) {
     return api.post(`/workflows/${id}/resume`);
+  }
+
+  is_workflow_done(workflow) {
+    return ["REVOKED", "FAILURE", "SUCCESS"].includes(workflow?.status);
   }
 }
 

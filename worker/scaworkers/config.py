@@ -13,24 +13,38 @@ config = {
     },
     'paths': {
         'scratch': '/N/scratch/dgluser/dgl/production/scratch',
-        'archive': f'archive/{YEAR}',
-        'stage': '/N/scratch/dgluser/dgl/production/stage',
-        'illumina_download': '/N/scratch/dgluser/dgl/production/scratch',
-        'qc': '/N/scratch/dgluser/dgl/production/qc',
-        'qc_public': '/N/u/dgluser/Carbonate/DGL/qc'
+        'raw_data': {
+            'archive': f'archive/{YEAR}/raw_data',
+            'stage': '/N/project/DG_Multiple_Myeloma/share/raw_data',
+            'qc': '/N/project/DG_Multiple_Myeloma/share/data_products'
+        },
+        'data_product': {
+            'archive': f'archive/{YEAR}/data_products',
+            'stage': '/N/scratch/dgluser/dgl/production/stage/data_products',
+        }
     },
     'registration': {
-        'source_dirs': ['/N/project/DG_Multiple_Myeloma/share'],
-        'rejects': ['.snapshots'],
-        'wait_between_scans': 5 * 60,
-        'recency_threshold': 60 * 60,
+        'raw_data': {
+            'source_dir': '/N/project/DG_Multiple_Myeloma/share/legacy_raw_data/',
+            'rejects': ['.snapshots'],
+        },
+        'data_products': {
+            'source_dir': '/N/project/DG_Multiple_Myeloma/share/data_products/',
+            'rejects': ['.snapshots'],
+        },
     },
     'illumina': {
         'registration': {
             'rejects': [],
             'recency_threshold': 60 * 60,  # 1 hour
-            'minimum_project_size': 1024 * 1024 * 1024  # 1 GB
+            'minimum_project_size': 1024 * 1024 * 1024,  # 1 GB
+            'wait_between_scans': 30 * 60,
         },
+        'download': {
+            'datasets': {
+                'n_days': 7
+            }
+        }
     },
-
+    'service_user': 'dgluser'
 }

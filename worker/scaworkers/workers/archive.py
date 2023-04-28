@@ -47,7 +47,11 @@ def archive_batch(celery_task, batch_id, **kwargs):
                                     source_size=batch['du_size'])
     scratch_digest = utils.checksum(scratch_tar_path)
 
-    sda_tar_path = f'{config["paths"]["archive"]}/{batch["name"]}.tar'
+    batch_type = batch['type'].lower()
+    sda_dir = config["paths"][batch_type]["archive"]
+    sda.ensure_directory(sda_dir)  # create the directory if it does not exist
+
+    sda_tar_path = f'{sda_dir}/{batch["name"]}.tar'
 
     print('sda put', str(scratch_tar_path), sda_tar_path)
     with utils.track_progress_parallel(progress_fn=hsi_put_progress,
@@ -68,6 +72,7 @@ def archive_batch(celery_task, batch_id, **kwargs):
         'archive_path': sda_tar_path
     }
     api.update_batch(batch_id=batch_id, update_data=update_data)
+    api.add_state_to_batch(batch_id=batch_id, state='ARCHIVED')
 
     return batch_id,
 

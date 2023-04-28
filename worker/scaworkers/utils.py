@@ -105,10 +105,10 @@ def file_progress(celery_task, path, total, progress_name):
     celery_task.update_progress(r)
 
 
-def parse_int(x, default=None):
+def parse_number(x, default=None, func=int):
     if x is None:
         return x
     try:
-        return int(x)
+        return func(x)
     except ValueError:
         return default

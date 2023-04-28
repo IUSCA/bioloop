@@ -1,0 +1,98 @@
+<template>
+  <div style="">
+    <va-card>
+      <va-card-content>
+        <div class="grid grid-cols-4 row-separated">
+          <div class="flex flex-col items-center justify-end">
+            <h2
+              v-if="props.data?.count != undefined"
+              class="va-h2 ma-0 va-text-center"
+              :style="{ color: colors.primary }"
+            >
+              {{ number_formatter.format(props.data.count) }}
+            </h2>
+            <VaSkeleton
+              v-else
+              variant="rounded"
+              inline
+              width="64px"
+              height="32px"
+            />
+            <p class="va-text-center">Registered</p>
+          </div>
+
+          <div class="flex flex-col items-center justify-end">
+            <h2
+              v-if="props.data?.total_size != undefined"
+              class="va-h2 ma-0 va-text-center"
+              :style="{ color: colors.info }"
+            >
+              {{ formatBytes(props.data.total_size) }}
+            </h2>
+            <VaSkeleton
+              v-else
+              variant="rounded"
+              inline
+              width="64px"
+              height="32px"
+            />
+            <p class="va-text-center no-wrap">Total Size</p>
+          </div>
+
+          <div class="flex flex-col items-center justify-end">
+            <h2
+              v-if="props.data?.genome_files != undefined"
+              class="va-h2 ma-0 va-text-center"
+              :style="{ color: colors.success }"
+            >
+              {{ number_formatter.format(props.data.genome_files) }}
+            </h2>
+            <VaSkeleton
+              v-else
+              variant="rounded"
+              inline
+              width="64px"
+              height="32px"
+            />
+            <p class="va-text-center">Genome Files</p>
+          </div>
+
+          <div class="flex flex-col items-center justify-end">
+            <h2
+              v-if="props.data?.workflows != undefined"
+              class="va-h2 ma-0 va-text-center text-indigo-600"
+            >
+              {{ number_formatter.format(props.data.workflows) }}
+            </h2>
+            <VaSkeleton
+              v-else
+              variant="rounded"
+              inline
+              width="64px"
+              height="32px"
+            />
+            <p class="va-text-center">Workflows</p>
+          </div>
+        </div>
+      </va-card-content>
+    </va-card>
+  </div>
+</template>
+
+<script setup>
+import { formatBytes } from "@/services/utils";
+import { useColors } from "vuestic-ui";
+
+const { colors } = useColors();
+const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
+
+const props = defineProps({
+  data: Object,
+});
+</script>
+
+<style scoped>
+.row-separated .flex + .flex {
+  border-left: 1px solid var(--va-primary);
+}
+</style>

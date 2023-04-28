@@ -239,6 +239,7 @@
     "useTimeout": true,
     "useTimeoutFn": true,
     "useTimeoutPoll": true,
+    "useTimer": true,
     "useTimestamp": true,
     "useTitle": true,
     "useToNumber": true,

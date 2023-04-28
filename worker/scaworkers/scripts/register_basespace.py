@@ -39,6 +39,7 @@ class BaseSpaceRegistration:
         wf = Workflow(celery_app=celery_app, steps=self.steps)
         batch = {
             'name': project_name,
+            'type': 'RAW_DATA',
             'workflow_id': wf.workflow['_id']
         }
         # HTTP POST

@@ -1,22 +1,63 @@
 import api from "./api";
 
 class BatchService {
-  getAll(include_checksums = false) {
-    return api
-      .get("/batches", {
-        params: {
-          include_checksums,
-        },
-      })
-      .then((response) => response.data);
-  }
-
-  getById(id, include_checksums = false) {
-    return api.get(`/batches/${id}`, {
+  getAll({ deleted = null, processed = null, type = null } = {}) {
+    return api.get("/batches", {
       params: {
-        include_checksums,
+        deleted,
+        processed,
+        type,
       },
     });
+  }
+
+  getById({
+    id,
+    checksums = false,
+    workflows = true,
+    last_task_run = false,
+    prev_task_runs = false,
+  }) {
+    return api.get(`/batches/${id}`, {
+      params: {
+        checksums,
+        workflows,
+        last_task_run,
+        prev_task_runs,
+      },
+    });
+  }
+
+  stage_batch(id) {
+    return api.post(`/batches/${id}/workflow/stage`);
+  }
+
+  archive_batch(id) {
+    return api.post(`/batches/${id}/workflow/integrated`);
+  }
+
+  delete_batch({ id, soft_delete = true }) {
+    return api.delete(`/batches/${id}`, {
+      params: {
+        soft_delete,
+      },
+    });
+  }
+
+  getStats({ type }) {
+    return api.get("/batches/stats", {
+      params: {
+        type,
+      },
+    });
+  }
+
+  is_staged(dataset) {
+    const states = dataset?.states || [];
+    return (
+      states.filter((s) => (s?.state || "").toLowerCase() == "staged").length >
+      0
+    );
   }
 }
 

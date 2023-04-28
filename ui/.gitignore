@@ -30,3 +30,5 @@ coverage
 
 # vue components auto import
 components.d.ts
+
+src/pages/test.vue

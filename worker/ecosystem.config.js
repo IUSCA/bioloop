@@ -14,12 +14,34 @@ module.exports = {
     {
       name: "register",
       script: "python",
-      args: "-u -m scaworkers.workers.register",
+      args: "-u -m scaworkers.scripts.register",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/worker/register.err",
       out_file: "../logs/worker/register.log"
+    },
+    {
+      name: "watch_register",
+      script: "python",
+      args: "-u -m scaworkers.scripts.watch",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/worker/watch_register.err",
+      out_file: "../logs/worker/watch_register.log"
+    },
+    {
+      name: "metrics",
+      script: "python",
+      args: "-u -m scaworkers.scripts.metrics",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/worker/metrics.err",
+      out_file: "../logs/worker/metrics.log",
+      cron_restart: "0 * * * *",
+      autorestart: false
     }
   ]
 }

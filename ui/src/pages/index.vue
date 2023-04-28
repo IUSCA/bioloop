@@ -1,9 +1,98 @@
 <template>
-  <h2 class="text-3xl font-bold underline">Welcome</h2>
+  <div class="flex flex-col gap-4">
+    <!-- Storage -->
+    <div class="">
+      <span class="text-xl font-bold block my-1">RESOURCE USAGE</span>
+      <Storage></Storage>
+    </div>
+
+    <!-- Raw Data Stats -->
+    <div class="">
+      <span class="text-xl font-bold block my-1">RAW DATA</span>
+      <router-link to="/rawdata" class="va-link">
+        <stats :data="raw_data_stats"></stats>
+      </router-link>
+    </div>
+
+    <!-- Data Product Stats -->
+    <div class="">
+      <span class="text-xl font-bold block my-1">DATA PRODUCTS</span>
+      <router-link to="/dataproducts" class="va-link">
+        <stats :data="data_products_stats"></stats>
+      </router-link>
+    </div>
+
+    <!-- Workflows -->
+    <div>
+      <span class="text-xl font-bold block my-1">ACTIVE WORKFLOWS</span>
+      <div v-if="(workflows || []).length > 0">
+        <collapsible
+          v-for="workflow in workflows"
+          :key="workflow.id"
+          v-model="workflow.collapse_model"
+        >
+          <template #header-content>
+            <div class="flex-[0_0_90%]">
+              <workflow-compact :workflow="workflow" show_batch />
+            </div>
+          </template>
+
+          <div>
+            <workflow :workflow="workflow" @update="update"></workflow>
+          </div>
+        </collapsible>
+      </div>
+      <div v-else class="text-center bg-slate-200 py-2 rounded shadow">
+        <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
+        <span class="text-lg"> There are no active workflows. </span>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-// import { Icon } from '@iconify/vue';
+import toast from "@/services/toast";
+import workflowService from "@/services/workflow";
+import BatchService from "@/services/batch";
+
+const workflows = ref([]);
+const raw_data_stats = ref({});
+const data_products_stats = ref({});
+
+workflowService
+  .getAll({ last_task_run: true, prev_task_runs: false, only_active: true })
+  .then((res) => {
+    console.log(res.data);
+    workflows.value = res.data;
+  })
+  .catch((err) => {
+    console.error(err);
+    if (err?.response?.status == 404)
+      toast.error("Could not find the active workflows");
+    else toast.error("Something went wrong");
+  });
+
+function update() {
+  console.log("workflow updated");
+}
+
+BatchService.getStats({ type: "RAW_DATA" })
+  .then((res) => {
+    raw_data_stats.value = res.data;
+  })
+  .catch((err) => {
+    console.error(err);
+    toast.error("Unable to fetch raw data stats");
+  });
+
+BatchService.getStats({ type: "DATA_PRODUCT" })
+  .then((res) => {
+    data_products_stats.value = res.data;
+  })
+  .catch((err) => {
+    console.error(err);
+    toast.error("Unable to fetch data products stats");
+  });
 </script>
 
 <route lang="yaml">

@@ -68,6 +68,7 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
 
   postgres:
     container_name: dgl_postgres
@@ -98,7 +99,7 @@ services:
     volumes:
       - ./db/db_mongo:/data/db
       # for importing database files
-      # - ./db/mongodump:/opt/sca/dgl/mongodump
+      - ./db/mongodump:/opt/sca/app/mongodump
 
 
 volumes:
