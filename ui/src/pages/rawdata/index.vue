@@ -1,5 +1,5 @@
 <template>
-  <h2 class="text-4xl font-bold">Raw Data</h2>
+  <h2 class="text-3xl font-bold">Raw Data</h2>
 
   <div>
     <div class="flex my-2 gap-3">
