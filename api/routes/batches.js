@@ -237,22 +237,14 @@ router.patch(
     });
     if (!batchToUpdate) { return next(createError(404)); }
 
-    // const { state, ...data } = req.body;
-    // if (state) {
-    //   data.states = {
-    //     create: [
-    //       {
-    //         state,
-    //       },
-    //     ],
-    //   };
-    // }
+    const { attributes, ...data } = req.body;
+    data.attributes = _.merge(batchToUpdate?.attributes)(attributes); // deep merge
 
     const batch = await prisma.batch.update({
       where: {
         id: req.params.id,
       },
-      data: req.body,
+      data,
       include: {
         ...batchService.INCLUDE_WORKFLOWS,
         ...batchService.INCLUDE_STATES,

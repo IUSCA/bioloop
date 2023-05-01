@@ -1,5 +1,8 @@
 <template>
-  <va-button-dropdown label="Filters" :close-on-content-click="false">
+  <va-button-dropdown
+    :label="`Filters${activeCountText}`"
+    :close-on-content-click="false"
+  >
     <div class="flex flex-col gap-1">
       <va-checkbox
         v-model="checkboxes.deleted"
@@ -35,6 +38,14 @@ const checkboxes = ref({
   saved: false,
   unprocessed: false,
   processed: false,
+});
+
+const activeCountText = computed(() => {
+  const activeCount = Object.values(checkboxes.value).reduce(
+    (acc, curr) => acc + curr,
+    0
+  );
+  return activeCount > 0 ? ` (${activeCount})` : "";
 });
 
 function handle_filters() {

@@ -1,5 +1,5 @@
 <template>
-  <h2 class="text-4xl font-bold">Data Products</h2>
+  <h2 class="text-3xl font-semibold">Data Products</h2>
 
   <div>
     <div class="flex my-2 gap-3">
@@ -257,9 +257,9 @@ function getRowBind(row) {
 const sortBy = ref("updated_at");
 const sortingOrder = ref("desc");
 
-function fetch_all() {
+function fetch_all(query = {}) {
   data_loading.value = true;
-  BatchService.getAll({ type: "DATA_PRODUCT" })
+  BatchService.getAll({ type: "DATA_PRODUCT", ...query })
     .then((res) => {
       dataproducts.value = res.data;
     })
