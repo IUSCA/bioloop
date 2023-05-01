@@ -46,7 +46,7 @@
 
       <template #cell(staged)="{ rowData }">
         <span
-          v-if="BatchService.is_staged(rowData)"
+          v-if="BatchService.is_staged(rowData?.states)"
           class="flex justify-center"
         >
           <i-mdi-check-circle-outline class="text-green-700" />
@@ -203,12 +203,14 @@ const columns = ref([
     sortable: true,
   },
   {
-    key: "stage_path",
+    key: "states",
     name: "staged",
     label: "staged",
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
+    width: 40,
+    sortingFn: (a, b) => BatchService.is_staged(a) - BatchService.is_staged(b),
   },
   {
     key: "updated_at",
@@ -275,11 +277,36 @@ fetch_all();
 
 function launch_wf(id) {
   console.log("launch wf", id);
+  data_loading.value = true;
+  BatchService.archive_batch(id)
+    .then(() => {
+      toast.success(`Launched a workflow to archive the dataset: ${id}`);
+      fetch_all();
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to archive the dataset");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
 }
 
 function delete_data_product(id) {
   console.log("delete wf", id);
-  BatchService.delete_batch({ id, soft_delete: false });
+  data_loading.value = true;
+  BatchService.delete_batch({ id, soft_delete: false })
+    .then(() => {
+      toast.success(`Deleted dataset: ${id}`);
+      fetch_all();
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to delete dataset");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
 }
 </script>
 

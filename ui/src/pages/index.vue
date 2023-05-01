@@ -6,20 +6,22 @@
       <Storage></Storage>
     </div>
 
-    <!-- Raw Data Stats -->
-    <div class="">
-      <span class="text-xl font-bold block my-1">RAW DATA</span>
-      <router-link to="/rawdata" class="va-link">
-        <stats :data="raw_data_stats"></stats>
-      </router-link>
-    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <!-- Raw Data Stats -->
+      <div class="">
+        <!-- <span class="text-xl font-bold block my-1">RAW DATA</span> -->
+        <router-link to="/rawdata" class="va-link">
+          <stats :data="raw_data_stats" title="RAW DATA"></stats>
+        </router-link>
+      </div>
 
-    <!-- Data Product Stats -->
-    <div class="">
-      <span class="text-xl font-bold block my-1">DATA PRODUCTS</span>
-      <router-link to="/dataproducts" class="va-link">
-        <stats :data="data_products_stats"></stats>
-      </router-link>
+      <!-- Data Product Stats -->
+      <div class="">
+        <!-- <span class="text-xl font-bold block my-1"> DATA PRODUCTS </span> -->
+        <router-link to="/dataproducts" class="va-link">
+          <stats :data="data_products_stats" title="DATA PRODUCTS"></stats>
+        </router-link>
+      </div>
     </div>
 
     <!-- Workflows -->

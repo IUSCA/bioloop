@@ -1,12 +1,15 @@
 <template>
   <div style="">
     <va-card>
+      <va-card-title>
+        <span class="text-xl"> {{ props.title }} </span>
+      </va-card-title>
       <va-card-content>
-        <div class="grid grid-cols-4 row-separated">
+        <div class="grid grid-cols-4 lg:grid-cols-2 gap-3 gap-y-5">
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.count != undefined"
-              class="va-h2 ma-0 va-text-center"
+              class="va-h3 ma-0 va-text-center"
               :style="{ color: colors.primary }"
             >
               {{ number_formatter.format(props.data.count) }}
@@ -24,10 +27,10 @@
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.total_size != undefined"
-              class="va-h2 ma-0 va-text-center"
+              class="va-h3 ma-0 va-text-center"
               :style="{ color: colors.info }"
             >
-              {{ formatBytes(props.data.total_size) }}
+              {{ formatBytes(props.data.total_size, 0) }}
             </h2>
             <VaSkeleton
               v-else
@@ -42,7 +45,7 @@
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.genome_files != undefined"
-              class="va-h2 ma-0 va-text-center"
+              class="va-h3 ma-0 va-text-center"
               :style="{ color: colors.success }"
             >
               {{ number_formatter.format(props.data.genome_files) }}
@@ -60,7 +63,7 @@
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.workflows != undefined"
-              class="va-h2 ma-0 va-text-center text-indigo-600"
+              class="va-h3 ma-0 va-text-center text-indigo-600"
             >
               {{ number_formatter.format(props.data.workflows) }}
             </h2>
@@ -88,6 +91,7 @@ const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
 
 const props = defineProps({
   data: Object,
+  title: String,
 });
 </script>
 

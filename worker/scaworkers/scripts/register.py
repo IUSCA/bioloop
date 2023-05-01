@@ -138,7 +138,7 @@ class BaseSpaceRegistration:
 
     def register_candidate(self, project_name):
         print(f'registering {project_name}')
-        wf = Workflow(celery_app=celery_app, steps=self.steps)
+        wf = Workflow(celery_app=celery_app, steps=self.steps, name='Integrated')
         batch = {
             'name': project_name,
             'type': 'RAW_DATA',
