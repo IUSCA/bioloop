@@ -46,7 +46,7 @@
 
       <template #cell(staged)="{ rowData }">
         <span
-          v-if="BatchService.is_staged(rowData)"
+          v-if="BatchService.is_staged(rowData?.states)"
           class="flex justify-center"
         >
           <i-mdi-check-circle-outline class="text-green-700" />
@@ -202,13 +202,14 @@ const columns = ref([
     width: 40,
   },
   {
-    key: "stage_path",
+    key: "states",
     name: "staged",
     label: "staged",
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
     width: 40,
+    sortingFn: (a, b) => BatchService.is_staged(a) - BatchService.is_staged(b),
   },
   {
     key: "updated_at",

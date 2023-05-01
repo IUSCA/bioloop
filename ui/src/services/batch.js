@@ -52,11 +52,10 @@ class BatchService {
     });
   }
 
-  is_staged(dataset) {
-    const states = dataset?.states || [];
+  is_staged(states) {
     return (
-      states.filter((s) => (s?.state || "").toLowerCase() == "staged").length >
-      0
+      (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
+        .length > 0
     );
   }
 }
