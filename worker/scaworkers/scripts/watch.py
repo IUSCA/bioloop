@@ -1,83 +1,78 @@
 import time
 from pathlib import Path
-
-from watchdog.events import RegexMatchingEventHandler
-from watchdog.observers import Observer
+from typing import Callable
 
 from scaworkers.config import config
 import scaworkers.api as api
 
 
-class TopLevelDirHandler(RegexMatchingEventHandler):
-    """
-    the regular expression matches a string that starts with the watched path,
-    followed by a forward slash, and then one or more non-slash characters until
-    the end of the string. This pattern matches only paths that contain exactly
-    one directory below the watched path, making it suitable for monitoring only
-    top-level directories.
-
-    ^ matches the beginning of the string.
-    {}\/ inserts the watched path into the regex, followed by a forward slash.
-        The curly braces are a placeholder for the watched path, and the backslash is used to
-        escape the forward slash character.
-    [^\/]+ matches one or more characters that are not forward slashes.
-        The ^ inside the square brackets means "negate the character class",
-        so the expression matches any character that is not a forward slash.
-        The + means to match one or more of these non-slash characters.
-    $ matches the end of the string.
-    """
-
-    def __init__(self, path, callback):
-        self.path = path
+class Observer:
+    def __init__(self, name: str, dir_path: str, callback: Callable[[str, list[Path]], None], interval: int = 1):
+        self.name = name
+        self.dir_path = Path(dir_path)
         self.callback = callback
-        regexes = [r'^{}\/[^\/]+$'.format(path)]
-        super().__init__(regexes=regexes, ignore_directories=False)
+        self.interval = interval
 
-    def on_created(self, event):
-        if event.is_directory:
-            # print("m1 - New top-level directory created:", event.src_path)
-            self.callback()
+        # Keep track of the directories in the watched directory
+        self.directories = set()
 
-    def on_moved(self, event):
-        if event.is_directory:
-            # print("m1 - New top-level directory moved:", event.src_path, event.dest_path)
-            self.callback()
+    def watch(self) -> None:
+        # Get the current subdirectories of the watched directory
+        current_directories = set(p.name for p in self.dir_path.iterdir() if p.is_dir())
 
+        # Find the directories that have been added or renamed
+        added_directories = current_directories - self.directories
+        deleted_directories = self.directories - current_directories
 
-# def dir1_callback():
-#     print('change in m1')
-#
-#
-# def dir2_callback():
-#     print('change in m2')
+        if len(added_directories) > 0:
+            self.callback('add', [self.dir_path / name for name in added_directories])
+        if len(deleted_directories) > 0:
+            self.callback('delete', [self.dir_path / name for name in deleted_directories])
 
-
-def scan(path_to_target_dir: str, registered_names: list[str], rejects: list[str]) -> list[Path]:
-    """
-    return the directories in target_dir which are not in registered and not in rejects
-
-    :return: new directories to register
-    """
-    target_dir = Path(path_to_target_dir)
-    dirs = [
-        p for p in target_dir.iterdir()
-        if all([
-            p.is_dir(),
-            p.name not in set(registered_names),
-            p.name not in set(rejects)
-        ])
-    ]
-    return dirs
+        self.directories = current_directories
 
 
-def register_raw_data() -> None:
+class Poller:
+    def __init__(self):
+        self.observers = dict()
+        # print('observers', self.observers)
+
+    def register(self, observer: Observer):
+        observer.interval = int(observer.interval)
+        assert observer.interval >= 1
+        self.observers[observer.name] = observer
+
+    def unregister(self, name):
+        self.observers.pop(name)
+
+    def poll(self):
+        last_call_times = {name: 0 for name in self.observers.keys()}
+        while True:
+            for observer in self.observers.values():
+                current_time = time.time()
+                elapsed_since_last_call = current_time - last_call_times[observer.name]
+                if elapsed_since_last_call >= observer.interval:
+                    # print('calling observer watch', observer.name, int(time.time()))
+                    try:
+                        observer.watch()
+                    except Exception as e:
+                        print('exception in calling observer', e)
+                    last_call_times[observer.name] = current_time
+            time.sleep(1)
+
+
+def register_raw_data(event: str, new_dirs: list[Path]) -> None:
+    if event != 'add':
+        return
     reg_config = config['registration']['raw_data']
     registered_names = [batch['name'] for batch in api.get_all_batches(batch_type='RAW_DATA')]
-    candidates = scan(
-        path_to_target_dir=reg_config['source_dir'],
-        registered_names=registered_names,
-        rejects=reg_config['rejects']
-    )
+    candidates = [
+        p for p in new_dirs
+        if all([
+            p.name not in set(registered_names),
+            p.name not in set(reg_config['rejects'])
+        ])
+    ]
     for candidate in candidates:
         print('registering raw data', candidate.name)
         batch = {
@@ -88,14 +83,18 @@ def register_raw_data() -> None:
         api.create_batch(batch)
 
 
-def register_data_products() -> None:
+def register_data_products(event: str, new_dirs: list[Path]) -> None:
+    if event != 'add':
+        return
     reg_config = config['registration']['data_products']
     registered_names = [batch['name'] for batch in api.get_all_batches(batch_type='DATA_PRODUCT')]
-    candidates = scan(
-        path_to_target_dir=reg_config['source_dir'],
-        registered_names=registered_names,
-        rejects=reg_config['rejects']
-    )
+    candidates = [
+        p for p in new_dirs
+        if all([
+            p.name not in set(registered_names),
+            p.name not in set(reg_config['rejects'])
+        ])
+    ]
     for candidate in candidates:
         print('registering data product', candidate.name)
         batch = {
@@ -115,21 +114,12 @@ def register_data_products() -> None:
 
 
 if __name__ == "__main__":
-    register_raw_data()
-    register_data_products()
-
     path1 = config['registration']['raw_data']['source_dir']
     path2 = config['registration']['data_products']['source_dir']
-    handler1 = TopLevelDirHandler(path1, register_raw_data)
-    handler2 = TopLevelDirHandler(path2, register_data_products)
-    observer = Observer()
-    observer.schedule(handler1, path1, recursive=True)
-    observer.schedule(handler2, path2, recursive=True)
-    observer.start()
-    print('observer started', path1, path2)
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+    obs1 = Observer('raw_data_obs', path1, register_raw_data, interval=5)
+    obs2 = Observer('data_products_obs', path2, register_data_products, interval=5)
+
+    poller = Poller()
+    poller.register(obs1)
+    poller.register(obs2)
+    poller.poll()
