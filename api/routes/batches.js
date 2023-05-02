@@ -336,11 +336,12 @@ router.delete(
     // workflow association
     const _batch = await batchService.get_batch({
       id: req.params.id,
+      workflows: true,
     });
 
     if (_batch) {
       if (req.query.soft_delete) {
-        await batchService.soft_delete(req.params.id, req.user?.id);
+        await batchService.soft_delete(_batch, req.user?.id);
         res.send();
       } else if ((_batch.workflows?.length || 0) === 0) {
         // no workflows - safe to delete
@@ -367,15 +368,14 @@ router.post(
     // #swagger.tags = ['Batches']
     // #swagger.summary = Create and start a workflow and associate it.
     // Allowed names are stage, integrated
-    const batch_id = req.params.id;
-    const wf_name = req.params.wf;
-    const wf = (await batchService.create_workflow(wf_name)(batch_id)).data;
-    await prisma.workflow.create({
-      data: {
-        id: wf.workflow_id,
-        batch_id,
-      },
+
+    const batch = await batchService.get_batch({
+      id: req.params.id,
+      workflows: true,
     });
+
+    const wf_name = req.params.wf;
+    const wf = await batchService.create_workflow(batch, wf_name);
     return res.json(wf);
   }),
 );

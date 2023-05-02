@@ -43,7 +43,7 @@ const INCLUDE_AUDIT_LOGS = {
 };
 
 const INTEGRATED_WORKFLOW = {
-  name: 'Integrated',
+  name: 'integrated',
   steps: [
     {
       name: 'inspect',
@@ -69,7 +69,7 @@ const INTEGRATED_WORKFLOW = {
 };
 
 const STAGE_WORKFLOW = {
-  name: 'Stage Batch',
+  name: 'stage',
   steps: [
     {
       name: 'stage',
@@ -87,7 +87,7 @@ const STAGE_WORKFLOW = {
 };
 
 const DELETE_WORKFLOW = {
-  name: 'Delete Batch',
+  name: 'delete',
   steps: [
     {
       name: 'delete',
@@ -102,30 +102,44 @@ const WORKFLOW_REGISTRY = {
   integrated: INTEGRATED_WORKFLOW,
 };
 
-function create_workflow(wf_name) {
-  const wf = WORKFLOW_REGISTRY[wf_name];
-  assert(wf, `${wf_name} workflow is not registered`);
-  return (batch_id) => wfService.create({
-    ...wf,
-    args: [batch_id],
-  });
-}
+const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
-async function soft_delete(batch_id, user_id) {
-  const wf = (await create_workflow('delete')(batch_id)).data;
+async function create_workflow(batch, wf_name) {
+  const wf_body = WORKFLOW_REGISTRY[wf_name];
+  assert(wf_body, `${wf_name} workflow is not registered`);
 
+  // check if a workflow with the same name is not already running / pending
+  const active_wfs_with_same_name = batch.workflows
+    .filter((_wf) => _wf.name === wf_body.name)
+    .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
+
+  assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
+
+  // create the workflow
+  const wf = (await wfService.create({
+    ...wf_body,
+    args: [batch.id],
+  })).data;
+
+  // add association to the batch
   await prisma.workflow.create({
     data: {
       id: wf.workflow_id,
-      batch_id,
+      batch_id: batch.id,
     },
   });
+
+  return wf;
+}
+
+async function soft_delete(batch, user_id) {
+  await create_workflow(batch, 'delete');
 
   await prisma.batch_audit.create({
     data: {
       action: 'delete',
       user_id,
-      batch_id,
+      batch_id: batch.id,
     },
   });
 }
