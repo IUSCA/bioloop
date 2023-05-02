@@ -1,3 +1,4 @@
+const { AssertionError } = require('assert');
 const createError = require('http-errors');
 const { Prisma } = require('@prisma/client');
 
@@ -13,6 +14,14 @@ function prismaNotFoundHandler(e, req, res, next) {
     if (e?.meta?.cause?.includes('not found')) {
       return next(createError.NotFound());
     }
+  }
+  return next(e);
+}
+
+// catch assertion errors and send 400
+function assertionErrorHandler(e, req, res, next) {
+  if (e instanceof AssertionError) {
+    return next(createError.BadRequest(e.message));
   }
   return next(e);
 }
@@ -38,4 +47,5 @@ module.exports = {
   notFound,
   errorHandler,
   prismaNotFoundHandler,
+  assertionErrorHandler,
 };

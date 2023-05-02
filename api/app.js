@@ -9,7 +9,9 @@ const swaggerUi = require('swagger-ui-express');
 const config = require('config');
 
 const indexRouter = require('./routes/index');
-const { notFound, errorHandler, prismaNotFoundHandler } = require('./middleware/error');
+const {
+  notFound, errorHandler, prismaNotFoundHandler, assertionErrorHandler,
+} = require('./middleware/error');
 
 // Register application
 const app = express();
@@ -52,6 +54,9 @@ app.use(notFound);
 
 // handle prisma errors that indicate record is not found and send 404
 app.use(prismaNotFoundHandler);
+
+// handle asserions errors and send 400
+app.use(assertionErrorHandler);
 
 // pass any unhandled errors to the error handler
 app.use(errorHandler);
