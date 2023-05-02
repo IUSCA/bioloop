@@ -417,7 +417,7 @@ function stage_batch() {
 function delete_archive() {
   delete_archive_modal.value.visible = false;
   loading.value = true;
-  BatchService.delete_batch(batch.value.id)
+  BatchService.delete_batch({ id: batch.value.id })
     .then(() => {
       toast.success("A workflow has started to delete batch");
       fetch_batch(true);
