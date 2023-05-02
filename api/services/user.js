@@ -18,7 +18,7 @@ const transformUser = _.flow([
     ...user,
     roles: user_role?.map(({ roles }) => roles.name),
   }),
-  _.omit(['password', 'id', 'user_role']),
+  _.omit(['password', 'user_role']),
 ]);
 
 async function findRoles(roles, _prisma) {

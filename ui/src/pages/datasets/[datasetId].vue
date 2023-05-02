@@ -214,8 +214,8 @@
                 <ul class="va-unordered va-text-secondary mt-3">
                   <li>
                     This will permanently delete the
-                    <b> {{ dataset.name }} </b> archive on the SDA, its associated
-                    workflows and task runs.
+                    <b> {{ dataset.name }} </b> archive on the SDA, its
+                    associated workflows and task runs.
                   </li>
                   <li>This will not delete any of the staged files.</li>
                 </ul>
@@ -243,7 +243,10 @@
       </div>
 
       <!-- Audit logs -->
-      <div class="mt-3" v-if="dataset.audit_logs && dataset.audit_logs.length > 0">
+      <div
+        class="mt-3"
+        v-if="dataset.audit_logs && dataset.audit_logs.length > 0"
+      >
         <va-card>
           <va-card-title>
             <span class="text-xl font-bold"> AUDIT LOG </span>
@@ -417,7 +420,7 @@ function stage_dataset() {
 function delete_archive() {
   delete_archive_modal.value.visible = false;
   loading.value = true;
-  DatasetService.delete_dataset(dataset.value.id)
+  DatasetService.delete_dataset({ id: dataset.value.id })
     .then(() => {
       toast.success("A workflow has started to delete dataset");
       fetch_dataset(true);
