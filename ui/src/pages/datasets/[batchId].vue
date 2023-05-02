@@ -117,8 +117,10 @@
               </va-card-title>
               <va-card-content>
                 <div class="flex justify-start gap-3">
+                  <!-- Stage Action Button-->
                   <va-button
                     v-if="batch.archive_path"
+                    :disabled="is_stage_pending"
                     color="primary"
                     border-color="primary"
                     preset="secondary"
@@ -128,8 +130,11 @@
                     <i-mdi-download class="pr-2 text-2xl" />
                     Stage Files
                   </va-button>
+
+                  <!-- Delete Action Button-->
                   <va-button
                     v-if="batch.archive_path"
+                    :disabled="is_delete_pending"
                     color="danger"
                     border-color="danger"
                     class="flex-initial"
@@ -310,6 +315,15 @@ const active_wf = computed(() => {
     .map(workflowService.is_workflow_done)
     .some((x) => !x);
 });
+
+const is_stage_pending = computed(() => {
+  return workflowService.is_step_pending("stage", batch.value?.workflows);
+});
+
+const is_delete_pending = computed(() => {
+  return workflowService.is_step_pending("delete", batch.value?.workflows);
+});
+
 // const active_wf = ref(false);
 const polling_interval = computed(() => {
   return active_wf.value ? config.batch_polling_interval : null;
