@@ -165,6 +165,18 @@ async function hard_delete(id) {
       dataset_id: id,
     },
   });
+  const deleteAssociations = prisma.dataset_hierarchy.deleteMany({
+    where: {
+      OR: [
+        {
+          source_id: id,
+        },
+        {
+          derived_id: id,
+        },
+      ],
+    },
+  });
   const deleteDataset = prisma.dataset.delete({
     where: {
       id,
@@ -176,6 +188,7 @@ async function hard_delete(id) {
     deleteWorkflows,
     deleteAudit,
     deleteStates,
+    deleteAssociations,
     deleteDataset,
   ]);
 }

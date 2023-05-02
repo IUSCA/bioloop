@@ -168,6 +168,13 @@ const metrics = [{
   limit: 50000000,
 }];
 
+const dataset_audit_data = [{
+  id: 1,
+  action: 'DELETE',
+  user_id: 2,
+  dataset_id: 3,
+}];
+
 async function update_seq(table) {
   // Get the current maximum value of the id column
   const result = await prisma[table].aggregate({
@@ -254,8 +261,19 @@ async function main() {
     })),
   );
 
+  // update dataset audit data
+  await Promise.all(
+    dataset_audit_data.map((d) => prisma.dataset_audit.upsert({
+      where: {
+        id: d.id,
+      },
+      update: {},
+      create: d,
+    })),
+  );
+
   // update the auto increment id's sequence numbers
-  const tables = ['dataset', 'user', 'role'];
+  const tables = ['dataset', 'user', 'role', 'dataset_audit'];
   await Promise.all(tables.map(update_seq));
 
   // add metrics
