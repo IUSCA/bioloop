@@ -9,27 +9,27 @@ from scaworkers.config import config
 from scaworkers.workflow import Workflow
 
 
-def get_registered_batch_names():
-    batches = api.get_all_batches(batch_type='RAW_DATA')
-    return [b['name'] for b in batches]
+def get_registered_dataset_names():
+    datasets = api.get_all_datasets(dataset_type='RAW_DATA')
+    return [b['name'] for b in datasets]
 
 
-def get_last_registered_batch():
+def get_last_registered_dataset():
     DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     DATE_KEYS = ['created_at']
 
-    batches = api.get_all_batches(batch_type='RAW_DATA')
-    for batch in batches:
+    datasets = api.get_all_datasets(dataset_type='RAW_DATA')
+    for dataset in datasets:
         for date_key in DATE_KEYS:
-            date_str = batch.get(date_key, '')
+            date_str = dataset.get(date_key, '')
             try:
-                batch[date_key] = datetime.strptime(date_str, DATE_FORMAT)
+                dataset[date_key] = datetime.strptime(date_str, DATE_FORMAT)
             except ValueError:
-                batch[date_key] = None
+                dataset[date_key] = None
 
-    batches_sorted = sorted(batches, key=lambda x: x['created_at'])
-    if len(batches_sorted) > 0:
-        return batches_sorted[-1]
+    datasets_sorted = sorted(datasets, key=lambda x: x['created_at'])
+    if len(datasets_sorted) > 0:
+        return datasets_sorted[-1]
     else:
         return None
 
@@ -38,28 +38,28 @@ class BaseSpaceRegistration:
     def __init__(self):
         self.host = socket.getfqdn()
         self.rejects = set(config['illumina']['registration']['rejects'])
-        self.completed = set(get_registered_batch_names())  # HTTP GET
+        self.completed = set(get_registered_dataset_names())  # HTTP GET
         self.candidates = {}
         self.steps = [
             {
                 'name': 'download',
-                'task': 'scaworkers.workers.download.download_illumina_batch'
+                'task': 'scaworkers.workers.download.download_illumina_dataset'
             },
             {
                 'name': 'inspect',
-                'task': 'scaworkers.workers.inspect.inspect_batch'
+                'task': 'scaworkers.workers.inspect.inspect_dataset'
             },
             {
                 'name': 'archive',
-                'task': 'scaworkers.workers.archive.archive_batch'
+                'task': 'scaworkers.workers.archive.archive_dataset'
             },
             {
                 'name': 'stage',
-                'task': 'scaworkers.workers.stage.stage_batch'
+                'task': 'scaworkers.workers.stage.stage_dataset'
             },
             {
                 'name': 'validate',
-                'task': 'scaworkers.workers.validate.validate_batch'
+                'task': 'scaworkers.workers.validate.validate_dataset'
             },
             {
                 'name': 'generate_reports',
@@ -104,7 +104,7 @@ class BaseSpaceRegistration:
         If there are multiple projects satisfying the above conditions, take the last modified
         :return:
         """
-        last_registration_date = (get_last_registered_batch() or {}).get('created_at', datetime(1970, 1, 1))
+        last_registration_date = (get_last_registered_dataset() or {}).get('created_at', datetime(1970, 1, 1))
 
         projects = illumina.get_projects()
         # if the name ends with PL, cut out PL
@@ -139,14 +139,14 @@ class BaseSpaceRegistration:
     def register_candidate(self, project_name):
         print(f'registering {project_name}')
         wf = Workflow(celery_app=celery_app, steps=self.steps, name='Integrated')
-        batch = {
+        dataset = {
             'name': project_name,
             'type': 'RAW_DATA',
             'workflow_id': wf.workflow['_id']
         }
         # HTTP POST
-        created_batch = api.create_batch(batch)
-        wf.start(created_batch['id'])
+        created_dataset = api.create_dataset(dataset)
+        wf.start(created_dataset['id'])
 
 
 if __name__ == '__main__':

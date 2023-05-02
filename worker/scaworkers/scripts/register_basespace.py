@@ -10,23 +10,23 @@ class BaseSpaceRegistration:
         self.steps = [
             {
                 'name': 'download',
-                'task': 'scaworkers.workers.download.download_illumina_batch'
+                'task': 'scaworkers.workers.download.download_illumina_dataset'
             },
             {
                 'name': 'inspect',
-                'task': 'scaworkers.workers.inspect.inspect_batch'
+                'task': 'scaworkers.workers.inspect.inspect_dataset'
             },
             {
                 'name': 'archive',
-                'task': 'scaworkers.workers.archive.archive_batch'
+                'task': 'scaworkers.workers.archive.archive_dataset'
             },
             {
                 'name': 'stage',
-                'task': 'scaworkers.workers.stage.stage_batch'
+                'task': 'scaworkers.workers.stage.stage_dataset'
             },
             {
                 'name': 'validate',
-                'task': 'scaworkers.workers.validate.validate_batch'
+                'task': 'scaworkers.workers.validate.validate_dataset'
             },
             {
                 'name': 'generate_reports',
@@ -37,14 +37,14 @@ class BaseSpaceRegistration:
     def register_candidate(self, project_name):
         print(f'registering {project_name}')
         wf = Workflow(celery_app=celery_app, steps=self.steps)
-        batch = {
+        dataset = {
             'name': project_name,
             'type': 'RAW_DATA',
             'workflow_id': wf.workflow['_id']
         }
         # HTTP POST
-        created_batch = api.create_batch(batch)
-        wf.start(created_batch['id'])
+        created_dataset = api.create_dataset(dataset)
+        wf.start(created_dataset['id'])
 
 
 if __name__ == '__main__':

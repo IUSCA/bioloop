@@ -35,7 +35,7 @@
         >
           <template #header-content>
             <div class="flex-[0_0_90%]">
-              <workflow-compact :workflow="workflow" show_batch />
+              <workflow-compact :workflow="workflow" show_dataset />
             </div>
           </template>
 
@@ -55,7 +55,7 @@
 <script setup>
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
-import BatchService from "@/services/batch";
+import DatasetService from "@/services/dataset";
 
 const workflows = ref([]);
 const raw_data_stats = ref({});
@@ -78,7 +78,7 @@ function update() {
   console.log("workflow updated");
 }
 
-BatchService.getStats({ type: "RAW_DATA" })
+DatasetService.getStats({ type: "RAW_DATA" })
   .then((res) => {
     raw_data_stats.value = res.data;
   })
@@ -87,7 +87,7 @@ BatchService.getStats({ type: "RAW_DATA" })
     toast.error("Unable to fetch raw data stats");
   });
 
-BatchService.getStats({ type: "DATA_PRODUCT" })
+DatasetService.getStats({ type: "DATA_PRODUCT" })
   .then((res) => {
     data_products_stats.value = res.data;
   })

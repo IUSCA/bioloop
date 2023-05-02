@@ -10,13 +10,13 @@ app.config_from_object(celeryconfig)
 
 
 @app.task(base=WorkflowTask, bind=True)
-def delete_batch(celery_app, batch_id, **kwargs):
-    batch = api.get_batch(batch_id=batch_id)
-    sda_path = batch['archive_path']
+def delete_dataset(celery_app, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    sda_path = dataset['archive_path']
     sda.delete(sda_path)
     update_data = {
         'is_deleted': True
     }
-    api.update_batch(batch_id=batch_id, update_data=update_data)
-    api.add_state_to_batch(batch_id=batch_id, state='DELETED')
-    return batch_id,
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    api.add_state_to_dataset(dataset_id=dataset_id, state='DELETED')
+    return dataset_id,

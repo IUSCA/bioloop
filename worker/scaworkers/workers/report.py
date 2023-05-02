@@ -19,7 +19,7 @@ def run_fastqc(source_dir, output_dir):
     Run the FastQC tool to check the quality of all fastq files 
     (.fastq.gz) in the source directory recursively.
 
-    :param source_dir: (pathlib.Path): The batch / sequencing run directory
+    :param source_dir: (pathlib.Path): The dataset / sequencing run directory
     :param output_dir: (pathlib.Path): where to create the reports (a .zip and .html file)
     :return: None
     """
@@ -58,39 +58,39 @@ def cleanup(report_dir):
                 f.unlink()
 
 
-def create_report(batch_dir: Path, batch_qc_dir: Path, report_id: str = None) -> str:
+def create_report(dataset_dir: Path, dataset_qc_dir: Path, report_id: str = None) -> str:
     """
-    Runs fastqc and multiqc on batch files. The qc files are placed in batch_qc_dir
+    Runs fastqc and multiqc on dataset files. The qc files are placed in dataset_qc_dir
 
 
-    :param batch_dir: (Path): Staged batch directory path
-    :param batch_qc_dir: (Path): directory to generate the qc reports in
+    :param dataset_dir: (Path): Staged dataset directory path
+    :param dataset_qc_dir: (Path): directory to generate the qc reports in
     :param report_id: (str): report_id of the last generated report to be reused. (optional)
     :return: The report ID (UUID4)
     """
     report_id = report_id or str(uuid.uuid4())
-    batch_qc_dir.mkdir(parents=True, exist_ok=True)
+    dataset_qc_dir.mkdir(parents=True, exist_ok=True)
 
-    run_fastqc(batch_dir, batch_qc_dir)
-    run_multiqc(batch_qc_dir, batch_qc_dir)
+    run_fastqc(dataset_dir, dataset_qc_dir)
+    run_multiqc(dataset_qc_dir, dataset_qc_dir)
 
     return report_id
 
 
 @app.task(base=WorkflowTask, bind=True)
-def generate(celery_task, batch_id, **kwargs):
-    batch = api.get_batch(batch_id=batch_id)
-    batch_type = batch['type'].lower()
-    batch_qc_dir = Path(config['paths'][batch_type]['qc']) / batch['name'] / 'qc'
-    staged_path = Path(config['paths'][batch_type]['stage']) / batch['name']
+def generate(celery_task, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    dataset_type = dataset['type'].lower()
+    dataset_qc_dir = Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'
+    staged_path = Path(config['paths'][dataset_type]['stage']) / dataset['name']
 
     report_id = create_report(
-        batch_dir=staged_path,
-        batch_qc_dir=batch_qc_dir,
-        report_id=(batch.get('attributes', {}) or {}).get('report_id', None)
+        dataset_dir=staged_path,
+        dataset_qc_dir=dataset_qc_dir,
+        report_id=(dataset.get('attributes', {}) or {}).get('report_id', None)
     )
 
-    report_filename = batch_qc_dir / 'multiqc_report.html'
+    report_filename = dataset_qc_dir / 'multiqc_report.html'
 
     # if the report is created successfully
     if report_filename.exists():
@@ -99,11 +99,11 @@ def generate(celery_task, batch_id, **kwargs):
                 'report_id': report_id
             }
         }
-        api.update_batch(batch_id=batch_id, update_data=update_data)
-        api.upload_report(batch_id=batch_id, report_filename=report_filename)
-        api.add_state_to_batch(batch_id=batch_id, state='QC')
+        api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+        api.upload_report(dataset_id=dataset_id, report_filename=report_filename)
+        api.add_state_to_dataset(dataset_id=dataset_id, state='QC')
     else:
         pass
         # TODO: fail the task if there is not report?
 
-    return batch_id,
+    return dataset_id,

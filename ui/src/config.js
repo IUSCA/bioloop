@@ -11,7 +11,7 @@ const exports = {
     dgl_admin: "admin@dgl.iu.edu",
     sca_admin: "sca-ops-l@list.iu.edu",
   },
-  batch_polling_interval: 10000,
+  dataset_polling_interval: 10000,
   paths: {
     stage: {
       raw_data: "/N/project/DG_Multiple_Myeloma/share/raw_data",

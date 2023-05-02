@@ -411,7 +411,7 @@ router.get(
 
 ## Auto-generated Swagger Documentation
 
-1. Add `// #swagger.tags = ['<sub-router>']` comment to the code of the route handler and replace `sub-router` with a valid name that describes the family of routes (ex: User, Batch, etc).
+1. Add `// #swagger.tags = ['<sub-router>']` comment to the code of the route handler and replace `sub-router` with a valid name that describes the family of routes (ex: User, Dataset, etc).
 2. Run `npm run swagger-autogen` to generate the documentation.
 3. Visit `http://<api-host>:<api-port>/docs`
 

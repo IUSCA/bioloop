@@ -17,7 +17,7 @@ print('\n'.join(app.tasks.keys()))
 
 generate_report.apply_async((10, ))
 
-# task1.apply_async(('batch-123', ))
+# task1.apply_async(('dataset-123', ))
 # steps = [
 #     {
 #         'name': 'inspect',
@@ -34,7 +34,7 @@ generate_report.apply_async((10, ))
 # ]
 #
 # wf = Workflow(app, steps=steps)
-# wf.start('batch-id-test')
+# wf.start('dataset-id-test')
 # print(wf.workflow['_id'])
 
 # wf = Workflow(app, workflow_id='1a948b2f-c778-4c34-8bc4-3f05d80d68a8')

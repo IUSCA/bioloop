@@ -15,18 +15,18 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
 
-def get_batch_from_sda(celery_task, batch):
+def get_dataset_from_sda(celery_task, dataset):
     """
     gets the tar from SDA and extracts it
 
-    input: batch['name'], batch['archive_path'] should exist
+    input: dataset['name'], dataset['archive_path'] should exist
     returns: stage_path
     """
 
-    sda_tar_path = batch['archive_path']
-    batch_type = batch['type'].lower()
-    staging_dir = Path(config['paths'][batch_type]['stage'])
-    scratch_tar_path = Path(config['paths']['scratch']) / f"{batch['name']}.tar"
+    sda_tar_path = dataset['archive_path']
+    dataset_type = dataset['type'].lower()
+    staging_dir = Path(config['paths'][dataset_type]['stage'])
+    scratch_tar_path = Path(config['paths']['scratch']) / f"{dataset['name']}.tar"
     sda_digest = sda.get_hash(sda_path=sda_tar_path)
 
     # check if tar file is already downloaded
@@ -54,7 +54,7 @@ def get_batch_from_sda(celery_task, batch):
 
     # extract the tar file
     # check for name conflicts in stage dir and delete dir if exists
-    extracted_dir_name = staging_dir / batch['name']
+    extracted_dir_name = staging_dir / dataset['name']
     if extracted_dir_name.exists():
         shutil.rmtree(extracted_dir_name)
     with tarfile.open(scratch_tar_path) as tar:
@@ -67,20 +67,20 @@ def get_batch_from_sda(celery_task, batch):
 
 # celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
-def stage_batch(celery_task, batch_id, **kwargs):
-    batch = api.get_batch(batch_id=batch_id)
-    extracted_dir_name = get_batch_from_sda(celery_task, batch)
+def stage_dataset(celery_task, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    extracted_dir_name = get_dataset_from_sda(celery_task, dataset)
 
-    api.add_state_to_batch(batch_id=batch_id, state='STAGED')
-    return batch_id,
+    api.add_state_to_dataset(dataset_id=dataset_id, state='STAGED')
+    return dataset_id,
 
 
 if __name__ == '__main__':
     pass
-    # batch = {
+    # dataset = {
     #     'name': 'worker',
     #     'paths': {
     #         'origin': '/N/u/dgluser/Carbonate/DGL/worker'
     #     }
     # }
-    # stage_batch(batch)
+    # stage_dataset(dataset)

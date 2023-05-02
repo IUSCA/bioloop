@@ -51,80 +51,80 @@ class APIServerSession(requests.Session):
         return super().request(method, joined_url, *args, **kwargs)
 
 
-def batch_getter(batch):
+def dataset_getter(dataset):
     # convert du_size and size from string to int
-    if batch is not None:
-        batch['du_size'] = utils.parse_number(batch.get('du_size', None))
-        batch['size'] = utils.parse_number(batch.get('size', None))
-    return batch
+    if dataset is not None:
+        dataset['du_size'] = utils.parse_number(dataset.get('du_size', None))
+        dataset['size'] = utils.parse_number(dataset.get('size', None))
+    return dataset
 
 
-def batch_setter(batch):
+def dataset_setter(dataset):
     # convert du_size and size from int to string
-    if batch is not None:
-        if 'du_size' in batch and batch['du_size'] is not None:
-            batch['du_size'] = str(batch['du_size'])
-        if 'size' in batch and batch['size'] is not None:
-            batch['size'] = str(batch['size'])
-    return batch
+    if dataset is not None:
+        if 'du_size' in dataset and dataset['du_size'] is not None:
+            dataset['du_size'] = str(dataset['du_size'])
+        if 'size' in dataset and dataset['size'] is not None:
+            dataset['size'] = str(dataset['size'])
+    return dataset
 
 
-def get_all_batches(batch_type=None, name=None):
+def get_all_datasets(dataset_type=None, name=None):
     with APIServerSession() as s:
         payload = {
-            'type': batch_type,
+            'type': dataset_type,
             'name': name,
         }
-        r = s.get('batches', params=payload)
+        r = s.get('datasets', params=payload)
         if r.status_code == 200:
-            batches = r.json()
-            return [batch_getter(batch) for batch in batches]
+            datasets = r.json()
+            return [dataset_getter(dataset) for dataset in datasets]
         else:
             raise Exception('Server responded with non-200 code')
 
 
-def get_batch(batch_id, checksums=False):
+def get_dataset(dataset_id, checksums=False):
     with APIServerSession() as s:
         payload = {
             'checksums': int(checksums)
         }
-        r = s.get(f'batches/{batch_id}', params=payload)
+        r = s.get(f'datasets/{dataset_id}', params=payload)
         if r.status_code == 200:
-            return batch_getter(r.json())
+            return dataset_getter(r.json())
         else:
             raise Exception('Server responded with non-200 code')
 
 
-def create_batch(batch):
+def create_dataset(dataset):
     with APIServerSession() as s:
-        r = s.post('batches', json=batch_setter(batch))
-        if r.status_code == 200:
-            return r.json()
-        else:
-            raise Exception('Server responded with non-200 code')
-
-
-def update_batch(batch_id, update_data):
-    with APIServerSession() as s:
-        r = s.patch(f'batches/{batch_id}', json=batch_setter(update_data))
+        r = s.post('datasets', json=dataset_setter(dataset))
         if r.status_code == 200:
             return r.json()
         else:
             raise Exception('Server responded with non-200 code')
 
 
-def add_checksums_to_batch(batch_id, checksums):
+def update_dataset(dataset_id, update_data):
     with APIServerSession() as s:
-        r = s.post(f'batches/{batch_id}/checksums', json=checksums)
+        r = s.patch(f'datasets/{dataset_id}', json=dataset_setter(update_data))
+        if r.status_code == 200:
+            return r.json()
+        else:
+            raise Exception('Server responded with non-200 code')
+
+
+def add_checksums_to_dataset(dataset_id, checksums):
+    with APIServerSession() as s:
+        r = s.post(f'datasets/{dataset_id}/checksums', json=checksums)
         if r.status_code != 200:
             raise Exception('Server responded with non-200 code')
 
 
-def upload_report(batch_id, report_filename):
+def upload_report(dataset_id, report_filename):
     filename = report_filename.name
     fileobj = open(report_filename, 'rb')
     with APIServerSession() as s:
-        r = s.put(f'batches/{batch_id}/report', files={
+        r = s.put(f'datasets/{dataset_id}/report', files={
             'report': (filename, fileobj)
         })
         if r.status_code != 200:
@@ -142,14 +142,14 @@ def send_metrics(metrics):
 
 def add_associations(associations):
     with APIServerSession() as s:
-        r = s.post(f'batches/associations', json=associations)
+        r = s.post(f'datasets/associations', json=associations)
         if r.status_code != 200:
             raise Exception('Server responded with non-200 code')
 
 
-def add_state_to_batch(batch_id, state, metadata=None):
+def add_state_to_dataset(dataset_id, state, metadata=None):
     with APIServerSession() as s:
-        r = s.post(f'batches/{batch_id}/states', json={
+        r = s.post(f'datasets/{dataset_id}/states', json={
             'state': state,
             'metadata': metadata
         })

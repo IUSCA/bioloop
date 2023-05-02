@@ -77,7 +77,7 @@ router.delete(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      // #swagger.summary = Delete batch-workflow association and then delete workflow
+      // #swagger.summary = Delete dataset-workflow association and then delete workflow
       await prisma.workflow.delete({
         id: req.params.id,
       });
