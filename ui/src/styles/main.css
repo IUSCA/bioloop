@@ -16,4 +16,5 @@ a {
   font-family: monospace;
   padding: 2px 4px;
   border-radius: 4px;
+  word-break: break-all;
 }
