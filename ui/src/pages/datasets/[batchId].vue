@@ -70,16 +70,16 @@
           </div>
 
           <!-- Staged for processing -->
-          <div class="flex-none" v-if="batch.stage_path">
+          <div class="flex-none" v-if="BatchService.is_staged(batch?.states)">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Staged for Processing</span>
               </va-card-title>
               <va-card-content>
                 <div class="">
-                  <span> {{ batch.stage_path }} </span>
+                  <span> {{ BatchService.get_staged_path(batch) }} </span>
                   <copy-button
-                    :text="batch.stage_path"
+                    :text="BatchService.get_staged_path(batch)"
                     class="inline-block ml-3"
                   />
                 </div>
@@ -177,7 +177,11 @@
             </template>
 
             <div>
-              <p class="text-lg font-semibold">Delete {{ batch.name }}</p>
+              <p class="text-lg font-semibold">
+                Delete
+                <span class="capitalize"> {{ batch.type }} </span>
+                : <span class="uppercase"> {{ batch.name }} </span>
+              </p>
 
               <va-divider class="my-2" />
 
@@ -214,8 +218,11 @@
                 <ul class="va-unordered va-text-secondary mt-3">
                   <li>
                     This will permanently delete the
-                    <b> {{ batch.name }} </b> archive on the SDA, its associated
-                    workflows and task runs.
+                    <b> {{ batch.name }} </b> archive on the SDA at
+                    <span class="path bg-slate-200">
+                      {{ BatchService.get_staged_path(batch) }}
+                    </span>
+                    , its associated workflows and task runs.
                   </li>
                   <li>This will not delete any of the staged files.</li>
                 </ul>

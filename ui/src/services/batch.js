@@ -1,4 +1,5 @@
 import api from "./api";
+import config from "@/config";
 
 class BatchService {
   getAll({ deleted = null, processed = null, type = null } = {}) {
@@ -57,6 +58,11 @@ class BatchService {
       (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
         .length > 0
     );
+  }
+
+  get_staged_path(batch) {
+    const batch_type = batch.type.toLowerCase();
+    return `${config.paths.stage[batch_type]}/${batch.name}`;
   }
 }
 
