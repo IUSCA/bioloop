@@ -210,7 +210,8 @@ const columns = ref([
     tdAlign: "center",
     sortable: true,
     width: 40,
-    sortingFn: (a, b) => DatasetService.is_staged(a) - DatasetService.is_staged(b),
+    sortingFn: (a, b) =>
+      DatasetService.is_staged(a) - DatasetService.is_staged(b),
   },
   {
     key: "updated_at",
