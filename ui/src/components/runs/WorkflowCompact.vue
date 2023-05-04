@@ -11,11 +11,11 @@
       <div>
         <span class="text-sm"> {{ workflow.id }} </span>
       </div>
-      <div v-if="props.show_batch && batch_id">
+      <div v-if="props.show_dataset && dataset_id">
         <span class="text-sm">
           Dataset:
-          <router-link :to="`/dataset/${batch_id}`" class="va-link"
-            >#{{ batch_id }}</router-link
+          <router-link :to="`/dataset/${dataset_id}`" class="va-link"
+            >#{{ dataset_id }}</router-link
           >
         </span>
       </div>
@@ -71,15 +71,15 @@ import workflowService from "@/services/workflow";
 
 const props = defineProps({
   workflow: Object,
-  show_batch: {
+  show_dataset: {
     type: Boolean,
     default: false,
   },
 });
 
 const workflow = ref({});
-const batch_id = computed(() => {
-  // batch_id is the first argument of the args in the task object
+const dataset_id = computed(() => {
+  // dataset_id is the first argument of the args in the task object
   const a_step = (workflow.value?.steps || [])[0];
   const x = (a_step?.last_task_run?.args || [])[0];
   return x;

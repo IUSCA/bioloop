@@ -28,14 +28,14 @@ function getOne(id, last_task_run = false, prev_task_runs = false) {
 
 function includeWorkflows(lastTaskRun, prevTaskRuns) {
   /**
-   * Returns a functions that populates workflows in batch using ids in batch.workflows
-   * batch.workflows: [{id: ''}]
+   * Returns a functions that populates workflows in dataset using ids in dataset.workflows
+   * dataset.workflows: [{id: ''}]
    */
-  return function anon(batch) {
+  return function anon(dataset) {
     /**
-     * returns a promise that yields a modified batch with workflows populated
+     * returns a promise that yields a modified dataset with workflows populated
      */
-    const futureWorkflows = batch.workflows.map(
+    const futureWorkflows = dataset.workflows.map(
       ({ id }) => getOne(id, lastTaskRun, prevTaskRuns)
         .then((res) => res.data)
         .catch((err) => {
@@ -48,8 +48,8 @@ function includeWorkflows(lastTaskRun, prevTaskRuns) {
       .then((workflows) => workflows.filter((x) => x))
       .then((workflows) => {
         // eslint-disable-next-line no-param-reassign
-        batch.workflows = workflows;
-        return batch;
+        dataset.workflows = workflows;
+        return dataset;
       });
   };
 }

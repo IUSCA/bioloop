@@ -12,7 +12,7 @@ const _ = require('lodash/fp');
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
-const batchService = require('../services/batch');
+const datasetService = require('../services/dataset');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
@@ -26,8 +26,8 @@ router.get(
     query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['Batches']
-  // #swagger.summary = 'Get summary statistics of batches.'
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -36,13 +36,13 @@ router.get(
           count(*) as "count", 
           sum(du_size) as total_size, 
           sum(num_genome_files) as genome_files 
-        from batch 
+        from dataset 
         where is_deleted = false and type = ${req.query.type};
       `;
 
       n_wf_result = await prisma.workflow.aggregate({
         where: {
-          batch: {
+          dataset: {
             type: req.query.type,
           },
         },
@@ -56,7 +56,7 @@ router.get(
           count(*) as "count", 
           sum(du_size) as total_size, 
           sum(num_genome_files) as genome_files 
-        from batch 
+        from dataset 
         where is_deleted = false;
       `;
 
@@ -97,9 +97,9 @@ router.post(
     checkSchema(assoc_body_schema),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    // #swagger.summary = Add new associations between batches
-    await prisma.batch_hierarchy.createMany({
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Add new associations between datasets
+    await prisma.dataset_hierarchy.createMany({
       data: req.body,
     });
     res.sendStatus(200);
@@ -116,8 +116,8 @@ router.get(
     query('name').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    const batches = await prisma.batch.findMany({
+    // #swagger.tags = ['datasets']
+    const datasets = await prisma.dataset.findMany({
       where: {
         ...(_.isUndefined(req.query.deleted) ? {} : { is_deleted: req.query.deleted }),
         ...(_.isUndefined(req.query.processed) ? {} : { workflows: ({ [req.query.processed ? 'some' : 'none']: {} }) }),
@@ -125,14 +125,14 @@ router.get(
         ...(req.query.name ? { name: req.query.name } : {}),
       },
       include: {
-        ...batchService.INCLUDE_WORKFLOWS,
-        ...batchService.INCLUDE_STATES,
-        source_batches: true,
-        derived_batches: true,
+        ...datasetService.INCLUDE_WORKFLOWS,
+        ...datasetService.INCLUDE_STATES,
+        source_datasets: true,
+        derived_datasets: true,
       },
     });
 
-    res.json(batches);
+    res.json(datasets);
   }),
 );
 
@@ -147,17 +147,17 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
+    // #swagger.tags = ['datasets']
     // only select path and md5 columns from the checksum table if checksums is true
-    const batch = await batchService.get_batch({
+    const dataset = await datasetService.get_dataset({
       id: req.params.id,
       checksums: req.query.checksums,
       workflows: req.query.workflows,
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
     });
-    if (batch) {
-      res.json(batch);
+    if (dataset) {
+      res.json(dataset);
     } else {
       next(createError(404));
     }
@@ -172,10 +172,10 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    // #swagger.summary = 'Create a new batch.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Create a new dataset.'
     /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
-        a new relation is created between batch and given workflow_id'
+        a new relation is created between dataset and given workflow_id'
     */
     const { workflow_id, state, ...data } = req.body;
 
@@ -199,16 +199,16 @@ router.post(
       ],
     };
 
-    // create batch along with associations
-    const batch = await prisma.batch.create({
+    // create dataset along with associations
+    const dataset = await prisma.dataset.create({
       data,
       include: {
-        ...batchService.INCLUDE_WORKFLOWS,
-        ...batchService.INCLUDE_STATES,
+        ...datasetService.INCLUDE_WORKFLOWS,
+        ...datasetService.INCLUDE_STATES,
 
       },
     });
-    res.json(batch);
+    res.json(dataset);
   }),
 );
 
@@ -223,50 +223,50 @@ router.patch(
       .customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    // #swagger.summary = 'Modify batch.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Modify dataset.'
     /* #swagger.description =
-        To add checksums use POST "/batches/:id/checksums"
-        To add workflow use POST "/batches/:id/workflows"
-        To add state use POST "/batches/:id/state"
+        To add checksums use POST "/datasets/:id/checksums"
+        To add workflow use POST "/datasets/:id/workflows"
+        To add state use POST "/datasets/:id/state"
     */
-    const batchToUpdate = await prisma.batch.findFirst({
+    const datasetToUpdate = await prisma.dataset.findFirst({
       where: {
         id: req.params.id,
       },
     });
-    if (!batchToUpdate) { return next(createError(404)); }
+    if (!datasetToUpdate) { return next(createError(404)); }
 
     const { attributes, ...data } = req.body;
-    data.attributes = _.merge(batchToUpdate?.attributes)(attributes); // deep merge
+    data.attributes = _.merge(datasetToUpdate?.attributes)(attributes); // deep merge
 
-    const batch = await prisma.batch.update({
+    const dataset = await prisma.dataset.update({
       where: {
         id: req.params.id,
       },
       data,
       include: {
-        ...batchService.INCLUDE_WORKFLOWS,
-        ...batchService.INCLUDE_STATES,
-        source_batches: true,
-        derived_batches: true,
+        ...datasetService.INCLUDE_WORKFLOWS,
+        ...datasetService.INCLUDE_STATES,
+        source_datasets: true,
+        derived_datasets: true,
       },
     });
-    res.json(batch);
+    res.json(dataset);
   }),
 );
 
-// add checksums to batch - worker
+// add checksums to dataset - worker
 router.post(
   '/:id/checksums',
   validate([
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    // #swagger.summary = Associate checksums to a batch
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Associate checksums to a dataset
     const checksums = req.body.map((c) => ({
-      batch_id: req.params.id,
+      dataset_id: req.params.id,
       path: c.path,
       md5: c.md5,
     }));
@@ -279,7 +279,7 @@ router.post(
   }),
 );
 
-// add workflow ids to batch
+// add workflow ids to dataset
 router.post(
   '/:id/workflows',
   authenticate,
@@ -288,19 +288,19 @@ router.post(
     body('workflow_id').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    // #swagger.summary = Associate workflow_id to a batch
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Associate workflow_id to a dataset
     await prisma.workflow.create({
       data: {
         id: req.body.workflow_id,
-        batch_id: req.params.id,
+        dataset_id: req.params.id,
       },
     });
     res.sendStatus(200);
   }),
 );
 
-// add state to batch
+// add state to dataset
 router.post(
   '/:id/states',
   validate([
@@ -308,12 +308,12 @@ router.post(
     body('state').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    // #swagger.summary = Add new state to a batch
-    await prisma.batch_state.create({
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Add new state to a dataset
+    await prisma.dataset_state.create({
       data: _.omitBy(_.isNil)({
         state: req.body.state,
-        batch_id: req.params.id,
+        dataset_id: req.params.id,
         metadata: req.body.metadata,
       }),
     });
@@ -330,22 +330,22 @@ router.delete(
     query('soft_delete').toBoolean().default(true),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
+    // #swagger.tags = ['datasets']
     // #swagger.summary = For soft delete, starts a delete archive workflow and
-    // marks the batch as deleted on success. Batch is hard deleted only when there are no
+    // marks the dataset as deleted on success. Dataset is hard deleted only when there are no
     // workflow association
-    const _batch = await batchService.get_batch({
+    const _dataset = await datasetService.get_dataset({
       id: req.params.id,
       workflows: true,
     });
 
-    if (_batch) {
+    if (_dataset) {
       if (req.query.soft_delete) {
-        await batchService.soft_delete(_batch, req.user?.id);
+        await datasetService.soft_delete(_dataset, req.user?.id);
         res.send();
-      } else if ((_batch.workflows?.length || 0) === 0) {
+      } else if ((_dataset.workflows?.length || 0) === 0) {
         // no workflows - safe to delete
-        await batchService.hard_delete(_batch.id);
+        await datasetService.hard_delete(_dataset.id);
         res.send();
       } else {
         next(createError.Conflict('Unable to delete as one or more workflows are associated with this bacth'));
@@ -356,7 +356,7 @@ router.delete(
   }),
 );
 
-// Launch a workflow on the batch - UI
+// Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
   authenticate,
@@ -365,17 +365,17 @@ router.post(
     param('wf').isIn(['stage', 'integrated']),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
+    // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
     // Allowed names are stage, integrated
 
-    const batch = await batchService.get_batch({
+    const dataset = await datasetService.get_dataset({
       id: req.params.id,
       workflows: true,
     });
 
     const wf_name = req.params.wf;
-    const wf = await batchService.create_workflow(batch, wf_name);
+    const wf = await datasetService.create_workflow(dataset, wf_name);
     return res.json(wf);
   }),
 );
@@ -383,14 +383,14 @@ router.post(
 const report_storage = multer.diskStorage({
   async destination(req, file, cb) {
     try {
-      const batch = await prisma.batch.findFirst({
+      const dataset = await prisma.dataset.findFirst({
         where: {
           id: req.params.id,
         },
       });
 
-      if (batch?.attributes?.report_id) {
-        const parent_dir = `reports/${batch?.attributes?.report_id}`;
+      if (dataset?.attributes?.report_id) {
+        const parent_dir = `reports/${dataset?.attributes?.report_id}`;
         await fsPromises.mkdir(parent_dir, {
           recursive: true,
         });
@@ -417,8 +417,8 @@ router.put(
   ]),
   multer({ storage: report_storage }).single('report'),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Batches']
-    // #swagger.summary = Upload a QC report (html file) of this batch
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Upload a QC report (html file) of this dataset
     res.json({
       path: req.file.path,
     });

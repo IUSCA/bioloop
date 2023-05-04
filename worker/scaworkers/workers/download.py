@@ -12,9 +12,9 @@ app.config_from_object(celeryconfig)
 
 
 @app.task(base=WorkflowTask, bind=True)
-def download_illumina_batch(self, batch_id, **kwargs):
-    batch = api.get_batch(batch_id=batch_id)
-    project_name = batch['name']
+def download_illumina_dataset(self, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    project_name = dataset['name']
     download_path = Path(config['paths']['scratch']) / project_name
 
     # illumina.download_project(project_name, download_path)
@@ -24,6 +24,6 @@ def download_illumina_batch(self, batch_id, **kwargs):
     update_data = {
         'origin_path': str(download_path)
     }
-    api.update_batch(batch_id=batch_id, update_data=update_data)
-    api.add_state_to_batch(batch_id=batch_id, state='DOWNLOADED')
-    return batch_id,
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    api.add_state_to_dataset(dataset_id=dataset_id, state='DOWNLOADED')
+    return dataset_id,

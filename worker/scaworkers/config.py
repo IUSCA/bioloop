@@ -1,4 +1,9 @@
 import datetime
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()  # take environment variables from .env.
 
 # archiving directory name has year in its path to
 # make it easier to purge data based on the year it was archived
@@ -9,7 +14,7 @@ config = {
     'api': {
         'username': 'user',
         'password': 'pass',
-        'base_url': 'https://dgl.sca.iu.edu/api/'
+        'base_url': os.environ['API_URL']
     },
     'paths': {
         'scratch': '/N/scratch/dgluser/dgl/production/scratch',

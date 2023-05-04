@@ -14,7 +14,7 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
-    batch: {
+    dataset: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
@@ -43,7 +43,7 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
-    batch: {
+    dataset: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

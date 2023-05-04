@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get('/health', (req, res) => { res.send('OK'); });
 router.use('/auth', require('./auth'));
-router.use('/batches', require('./batches'));
+router.use('/datasets', require('./datasets'));
 router.use('/reports', require('./reports'));
 router.use('/metrics', require('./metrics'));
 

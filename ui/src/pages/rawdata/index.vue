@@ -46,7 +46,7 @@
 
       <template #cell(staged)="{ rowData }">
         <span
-          v-if="BatchService.is_staged(rowData?.states)"
+          v-if="DatasetService.is_staged(rowData?.states)"
           class="flex justify-center"
         >
           <i-mdi-check-circle-outline class="text-green-700" />
@@ -166,7 +166,7 @@
 
 <script setup>
 import moment from "moment";
-import BatchService from "@/services/batch";
+import DatasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import toast from "@/services/toast";
 import config from "@/config";
@@ -209,7 +209,8 @@ const columns = ref([
     tdAlign: "center",
     sortable: true,
     width: 40,
-    sortingFn: (a, b) => BatchService.is_staged(a) - BatchService.is_staged(b),
+    sortingFn: (a, b) =>
+      DatasetService.is_staged(a) - DatasetService.is_staged(b),
   },
   {
     key: "updated_at",
@@ -247,7 +248,7 @@ function getRowBind(row) {
   // if (is_in_progress) {
   //   return { class: ["bg-slate-200"] };
   // }
-  // highlight deleted batches
+  // highlight deleted datasets
   if (row.is_deleted) {
     return { class: ["bg-slate-200"] };
   }
@@ -259,7 +260,7 @@ const sortingOrder = ref("desc");
 
 function fetch_all(query = {}) {
   data_loading.value = true;
-  return BatchService.getAll({ type: "RAW_DATA", ...query })
+  return DatasetService.getAll({ type: "RAW_DATA", ...query })
     .then((res) => {
       raw_data.value = res.data;
     })
@@ -276,7 +277,7 @@ fetch_all();
 function launch_wf(id) {
   console.log("launch wf", id);
   data_loading.value = true;
-  BatchService.archive_batch(id)
+  DatasetService.archive_dataset(id)
     .then(() => {
       toast.success(`Launched a workflow to archive the dataset: ${id}`);
       fetch_all();
@@ -293,7 +294,7 @@ function launch_wf(id) {
 function delete_raw_data(id) {
   console.log("delete wf", id);
   data_loading.value = true;
-  BatchService.delete_batch({ id, soft_delete: false })
+  DatasetService.delete_dataset({ id, soft_delete: false })
     .then(() => {
       toast.success(`Deleted raw data: ${id}`);
       fetch_all();

@@ -19,7 +19,7 @@ const roles = [{
   description: 'User level access',
 }];
 
-const batches = [
+const datasets = [
   {
     id: 1,
     name: 'PCM230203',
@@ -143,7 +143,7 @@ const batches = [
   },
 ];
 
-const batch_heirarchical_association = [{
+const dataset_heirarchical_association = [{
   source_id: 1,
   derived_id: 7,
 }, {
@@ -166,6 +166,13 @@ const metrics = [{
   subject: 'host1',
   usage: 300400,
   limit: 50000000,
+}];
+
+const dataset_audit_data = [{
+  id: 1,
+  action: 'DELETE',
+  user_id: 2,
+  dataset_id: 3,
 }];
 
 async function update_seq(table) {
@@ -226,26 +233,26 @@ async function main() {
 
   await Promise.all(user_promises);
 
-  const batchPromises = batches.map((batch) => {
-    const { workflows, ...batch_obj } = batch;
+  const datasetPromises = datasets.map((dataset) => {
+    const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
-      batch_obj.workflows = {
+      dataset_obj.workflows = {
         create: workflows.map((workflow_id) => ({ id: workflow_id })),
       };
     }
-    return prisma.batch.upsert({
+    return prisma.dataset.upsert({
       where: {
-        id: batch_obj.id,
+        id: dataset_obj.id,
       },
       update: {},
-      create: batch_obj,
+      create: dataset_obj,
     });
   });
-  await Promise.all(batchPromises);
+  await Promise.all(datasetPromises);
 
   // upsert raw data - data product associations
   await Promise.all(
-    batch_heirarchical_association.map((sd) => prisma.batch_hierarchy.upsert({
+    dataset_heirarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
       where: {
         source_id_derived_id: sd,
       },
@@ -254,8 +261,19 @@ async function main() {
     })),
   );
 
+  // update dataset audit data
+  await Promise.all(
+    dataset_audit_data.map((d) => prisma.dataset_audit.upsert({
+      where: {
+        id: d.id,
+      },
+      update: {},
+      create: d,
+    })),
+  );
+
   // update the auto increment id's sequence numbers
-  const tables = ['batch', 'user', 'role'];
+  const tables = ['dataset', 'user', 'role', 'dataset_audit'];
   await Promise.all(tables.map(update_seq));
 
   // add metrics

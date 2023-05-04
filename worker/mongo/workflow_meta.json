@@ -7,7 +7,7 @@
     "steps": [
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -19,7 +19,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -31,7 +31,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -43,7 +43,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -66,7 +66,7 @@
     "steps": [
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -78,7 +78,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -90,7 +90,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -102,7 +102,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -125,7 +125,7 @@
     "steps": [
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -137,7 +137,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -149,7 +149,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -161,7 +161,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -184,7 +184,7 @@
     "steps": [
       {
         "name": "download",
-        "task": "scaworkers.workers.download.download_illumina_batch",
+        "task": "scaworkers.workers.download.download_illumina_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -196,7 +196,7 @@
       },
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -208,7 +208,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -220,7 +220,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -232,7 +232,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -255,7 +255,7 @@
     "steps": [
       {
         "name": "download",
-        "task": "scaworkers.workers.download.download_illumina_batch",
+        "task": "scaworkers.workers.download.download_illumina_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -267,7 +267,7 @@
       },
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -279,7 +279,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -291,7 +291,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -303,7 +303,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -345,7 +345,7 @@
     "steps": [
       {
         "name": "download",
-        "task": "scaworkers.workers.download.download_illumina_batch",
+        "task": "scaworkers.workers.download.download_illumina_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -357,7 +357,7 @@
       },
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -369,7 +369,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -381,7 +381,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -393,7 +393,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -429,7 +429,7 @@
     "steps": [
       {
         "name": "download",
-        "task": "scaworkers.workers.download.download_illumina_batch",
+        "task": "scaworkers.workers.download.download_illumina_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -441,7 +441,7 @@
       },
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -471,7 +471,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -483,7 +483,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -495,7 +495,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -531,7 +531,7 @@
     "steps": [
       {
         "name": "download",
-        "task": "scaworkers.workers.download.download_illumina_batch",
+        "task": "scaworkers.workers.download.download_illumina_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -543,7 +543,7 @@
       },
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -555,7 +555,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -567,7 +567,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -579,7 +579,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -615,7 +615,7 @@
     "steps": [
       {
         "name": "download",
-        "task": "scaworkers.workers.download.download_illumina_batch",
+        "task": "scaworkers.workers.download.download_illumina_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -627,7 +627,7 @@
       },
       {
         "name": "inspect",
-        "task": "scaworkers.workers.inspect.inspect_batch",
+        "task": "scaworkers.workers.inspect.inspect_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -639,7 +639,7 @@
       },
       {
         "name": "archive",
-        "task": "scaworkers.workers.archive.archive_batch",
+        "task": "scaworkers.workers.archive.archive_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -657,7 +657,7 @@
       },
       {
         "name": "stage",
-        "task": "scaworkers.workers.stage.stage_batch",
+        "task": "scaworkers.workers.stage.stage_dataset",
         "task_runs": [
           {
             "date_start": {
@@ -669,7 +669,7 @@
       },
       {
         "name": "validate",
-        "task": "scaworkers.workers.validate.validate_batch",
+        "task": "scaworkers.workers.validate.validate_dataset",
         "task_runs": [
           {
             "date_start": {

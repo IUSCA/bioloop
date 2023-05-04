@@ -4,45 +4,45 @@
       <tbody>
         <tr>
           <td>ID</td>
-          <td>{{ props.batch.id }}</td>
+          <td>{{ props.dataset.id }}</td>
         </tr>
         <tr>
           <td>Start Date</td>
           <td>
-            {{ utc_date_to_local_tz(props.batch.created_at) }}
+            {{ utc_date_to_local_tz(props.dataset.created_at) }}
           </td>
         </tr>
         <tr>
           <td>Last Updated</td>
           <td>
             <span class="">
-              {{ utc_date_to_local_tz(props.batch.updated_at) }}
+              {{ utc_date_to_local_tz(props.dataset.updated_at) }}
             </span>
           </td>
         </tr>
         <tr>
           <td>Source Path</td>
-          <td>{{ props.batch.origin_path }}</td>
+          <td>{{ props.dataset.origin_path }}</td>
         </tr>
         <tr>
           <td>Size</td>
           <td>
-            <span v-if="props.batch.du_size">
-              {{ formatBytes(props.batch.du_size) }}
+            <span v-if="props.dataset.du_size">
+              {{ formatBytes(props.dataset.du_size) }}
             </span>
           </td>
         </tr>
         <tr>
           <td>Files</td>
-          <td>{{ props.batch.num_files }}</td>
+          <td>{{ props.dataset.num_files }}</td>
         </tr>
         <tr>
           <td>Genome Files</td>
-          <td>{{ props.batch.num_genome_files }}</td>
+          <td>{{ props.dataset.num_genome_files }}</td>
         </tr>
         <tr>
           <td>Directories</td>
-          <td>{{ props.batch.num_directories }}</td>
+          <td>{{ props.dataset.num_directories }}</td>
         </tr>
       </tbody>
     </table>
@@ -50,5 +50,5 @@
 </template>
 <script setup>
 import { formatBytes, utc_date_to_local_tz } from "../../services/utils";
-const props = defineProps({ batch: Object });
+const props = defineProps({ dataset: Object });
 </script>

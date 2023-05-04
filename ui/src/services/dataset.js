@@ -1,9 +1,9 @@
 import api from "./api";
 import config from "@/config";
 
-class BatchService {
+class DatasetService {
   getAll({ deleted = null, processed = null, type = null } = {}) {
-    return api.get("/batches", {
+    return api.get("/datasets", {
       params: {
         deleted,
         processed,
@@ -19,7 +19,7 @@ class BatchService {
     last_task_run = false,
     prev_task_runs = false,
   }) {
-    return api.get(`/batches/${id}`, {
+    return api.get(`/datasets/${id}`, {
       params: {
         checksums,
         workflows,
@@ -29,16 +29,16 @@ class BatchService {
     });
   }
 
-  stage_batch(id) {
-    return api.post(`/batches/${id}/workflow/stage`);
+  stage_dataset(id) {
+    return api.post(`/datasets/${id}/workflow/stage`);
   }
 
-  archive_batch(id) {
-    return api.post(`/batches/${id}/workflow/integrated`);
+  archive_dataset(id) {
+    return api.post(`/datasets/${id}/workflow/integrated`);
   }
 
-  delete_batch({ id, soft_delete = true }) {
-    return api.delete(`/batches/${id}`, {
+  delete_dataset({ id, soft_delete = true }) {
+    return api.delete(`/datasets/${id}`, {
       params: {
         soft_delete,
       },
@@ -46,7 +46,7 @@ class BatchService {
   }
 
   getStats({ type }) {
-    return api.get("/batches/stats", {
+    return api.get("/datasets/stats", {
       params: {
         type,
       },
@@ -60,10 +60,10 @@ class BatchService {
     );
   }
 
-  get_staged_path(batch) {
-    const batch_type = batch.type.toLowerCase();
-    return `${config.paths.stage[batch_type]}/${batch.name}`;
+  get_staged_path(dataset) {
+    const dataset_type = dataset.type.toLowerCase();
+    return `${config.paths.stage[dataset_type]}/${dataset.name}`;
   }
 }
 
-export default new BatchService();
+export default new DatasetService();

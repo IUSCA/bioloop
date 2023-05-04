@@ -47,19 +47,19 @@ const INTEGRATED_WORKFLOW = {
   steps: [
     {
       name: 'inspect',
-      task: 'scaworkers.workers.inspect.inspect_batch',
+      task: 'scaworkers.workers.inspect.inspect_dataset',
     },
     {
       name: 'archive',
-      task: 'scaworkers.workers.archive.archive_batch',
+      task: 'scaworkers.workers.archive.archive_dataset',
     },
     {
       name: 'stage',
-      task: 'scaworkers.workers.stage.stage_batch',
+      task: 'scaworkers.workers.stage.stage_dataset',
     },
     {
       name: 'validate',
-      task: 'scaworkers.workers.validate.validate_batch',
+      task: 'scaworkers.workers.validate.validate_dataset',
     },
     {
       name: 'generate_reports',
@@ -73,11 +73,11 @@ const STAGE_WORKFLOW = {
   steps: [
     {
       name: 'stage',
-      task: 'scaworkers.workers.stage.stage_batch',
+      task: 'scaworkers.workers.stage.stage_dataset',
     },
     {
       name: 'validate',
-      task: 'scaworkers.workers.validate.validate_batch',
+      task: 'scaworkers.workers.validate.validate_dataset',
     },
     {
       name: 'generate_reports',
@@ -91,7 +91,7 @@ const DELETE_WORKFLOW = {
   steps: [
     {
       name: 'delete',
-      task: 'scaworkers.workers.delete.delete_batch',
+      task: 'scaworkers.workers.delete.delete_dataset',
     },
   ],
 };
@@ -104,12 +104,12 @@ const WORKFLOW_REGISTRY = {
 
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
-async function create_workflow(batch, wf_name) {
+async function create_workflow(dataset, wf_name) {
   const wf_body = WORKFLOW_REGISTRY[wf_name];
   assert(wf_body, `${wf_name} workflow is not registered`);
 
   // check if a workflow with the same name is not already running / pending
-  const active_wfs_with_same_name = batch.workflows
+  const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
     .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
 
@@ -118,28 +118,28 @@ async function create_workflow(batch, wf_name) {
   // create the workflow
   const wf = (await wfService.create({
     ...wf_body,
-    args: [batch.id],
+    args: [dataset.id],
   })).data;
 
-  // add association to the batch
+  // add association to the dataset
   await prisma.workflow.create({
     data: {
       id: wf.workflow_id,
-      batch_id: batch.id,
+      dataset_id: dataset.id,
     },
   });
 
   return wf;
 }
 
-async function soft_delete(batch, user_id) {
-  await create_workflow(batch, 'delete');
+async function soft_delete(dataset, user_id) {
+  await create_workflow(dataset, 'delete');
 
-  await prisma.batch_audit.create({
+  await prisma.dataset_audit.create({
     data: {
       action: 'delete',
       user_id,
-      batch_id: batch.id,
+      dataset_id: dataset.id,
     },
   });
 }
@@ -147,25 +147,37 @@ async function soft_delete(batch, user_id) {
 async function hard_delete(id) {
   const deleteChecksums = prisma.checksum.deleteMany({
     where: {
-      batch_id: id,
+      dataset_id: id,
     },
   });
   const deleteWorkflows = prisma.workflow.deleteMany({
     where: {
-      batch_id: id,
+      dataset_id: id,
     },
   });
-  const deleteAudit = prisma.batch_audit.deleteMany({
+  const deleteAudit = prisma.dataset_audit.deleteMany({
     where: {
-      batch_id: id,
+      dataset_id: id,
     },
   });
-  const deleteStates = prisma.batch_state.deleteMany({
+  const deleteStates = prisma.dataset_state.deleteMany({
     where: {
-      batch_id: id,
+      dataset_id: id,
     },
   });
-  const deleteBatch = prisma.batch.delete({
+  const deleteAssociations = prisma.dataset_hierarchy.deleteMany({
+    where: {
+      OR: [
+        {
+          source_id: id,
+        },
+        {
+          derived_id: id,
+        },
+      ],
+    },
+  });
+  const deleteDataset = prisma.dataset.delete({
     where: {
       id,
     },
@@ -176,11 +188,12 @@ async function hard_delete(id) {
     deleteWorkflows,
     deleteAudit,
     deleteStates,
-    deleteBatch,
+    deleteAssociations,
+    deleteDataset,
   ]);
 }
 
-async function get_batch({
+async function get_dataset({
   id = null,
   checksums = false,
   workflows = false,
@@ -194,33 +207,33 @@ async function get_batch({
     },
   } : false;
 
-  const batch = await prisma.batch.findFirst({
+  const dataset = await prisma.dataset.findFirst({
     where: { id },
     include: {
       metadata: checksumSelect,
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
-      source_batches: true,
-      derived_batches: true,
+      source_datasets: true,
+      derived_datasets: true,
     },
   });
 
-  if (batch) {
-    let _batch = batch;
+  if (dataset) {
+    let _dataset = dataset;
     if (workflows) {
-      // include workflow with batch
+      // include workflow with dataset
       const _includeWorkflows = wfService.includeWorkflows(
         last_task_run,
         prev_task_runs,
       );
-      _batch = await _includeWorkflows(batch);
+      _dataset = await _includeWorkflows(dataset);
     }
-    _batch?.audit_logs?.forEach((log) => {
+    _dataset?.audit_logs?.forEach((log) => {
       // eslint-disable-next-line no-param-reassign
       if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
     });
-    return _batch;
+    return _dataset;
   }
   return null;
 }
@@ -230,6 +243,6 @@ module.exports = {
   hard_delete,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
-  get_batch,
+  get_dataset,
   create_workflow,
 };

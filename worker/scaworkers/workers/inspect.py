@@ -50,9 +50,9 @@ def generate_metadata(source):
 
 # celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
-def inspect_batch(self, batch_id, **kwargs):
-    batch = api.get_batch(batch_id=batch_id)
-    source = Path(batch['origin_path']).resolve()
+def inspect_dataset(self, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    source = Path(dataset['origin_path']).resolve()
     du_size = utils.total_size(source)
     num_files, num_directories, size, num_genome_files, metadata = generate_metadata(source)
 
@@ -63,10 +63,10 @@ def inspect_batch(self, batch_id, **kwargs):
         'num_directories': num_directories,
         'num_genome_files': num_genome_files,
     }
-    api.update_batch(batch_id=batch_id, update_data=update_data)
-    api.add_checksums_to_batch(batch_id=batch_id, checksums=metadata)
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    api.add_checksums_to_dataset(dataset_id=dataset_id, checksums=metadata)
 
-    return batch_id,
+    return dataset_id,
 
 
 if __name__ == '__main__':

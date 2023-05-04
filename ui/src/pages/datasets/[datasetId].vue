@@ -1,29 +1,29 @@
 <template>
   <va-inner-loading :loading="loading">
     <div>
-      <span class="text-3xl capitalize" v-if="batch.type">
-        {{ batch.type.replace("_", " ").toLowerCase() }} :
+      <span class="text-3xl capitalize" v-if="dataset.type">
+        {{ dataset.type.replace("_", " ").toLowerCase() }} :
       </span>
-      <span class="text-3xl"> {{ batch.name }} </span>
+      <span class="text-3xl"> {{ dataset.name }} </span>
       <va-divider />
     </div>
     <div>
-      <!-- Batch Info + Status Cards -->
+      <!-- Dataset Info + Status Cards -->
       <div class="flex flex-row flex-wrap gap-3">
         <div class="flex-[3_1_0%]">
           <va-card>
             <va-card-title>
               <span class="text-xl">Info</span>
             </va-card-title>
-            <va-card-content v-if="Object.keys(batch || {}).length > 0">
-              <batch-info :batch="batch"></batch-info>
+            <va-card-content v-if="Object.keys(dataset || {}).length > 0">
+              <dataset-info :dataset="dataset"></dataset-info>
 
               <!-- edit description -->
               <div class="flex flex-row gap-2 ml-3 mt-3 mb-6">
                 <div class="flex-[0_0_20%]">Description</div>
                 <div class="">
                   <div v-if="!edit_discription">
-                    <span>{{ batch.description }}</span>
+                    <span>{{ dataset.description }}</span>
                     <!-- <va-button
                   preset="primary"
                   round
@@ -49,19 +49,19 @@
         <!-- Status Cards -->
         <div
           class="flex-[2_1_0%] flex flex-col gap-3 justify-start"
-          v-if="!batch.is_deleted"
+          v-if="!dataset.is_deleted"
         >
           <!-- Archived -->
-          <div class="flex-none" v-if="batch.archive_path">
+          <div class="flex-none" v-if="dataset.archive_path">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Archived</span>
               </va-card-title>
               <va-card-content>
                 <div>
-                  <span> {{ batch.archive_path }} </span>
+                  <span> {{ dataset.archive_path }} </span>
                   <copy-button
-                    :text="batch.archive_path"
+                    :text="dataset.archive_path"
                     class="inline-block ml-3"
                   />
                 </div>
@@ -70,16 +70,19 @@
           </div>
 
           <!-- Staged for processing -->
-          <div class="flex-none" v-if="BatchService.is_staged(batch?.states)">
+          <div
+            class="flex-none"
+            v-if="DatasetService.is_staged(dataset?.states)"
+          >
             <va-card>
               <va-card-title>
                 <span class="text-lg">Staged for Processing</span>
               </va-card-title>
               <va-card-content>
                 <div class="">
-                  <span> {{ BatchService.get_staged_path(batch) }} </span>
+                  <span> {{ DatasetService.get_staged_path(dataset) }} </span>
                   <copy-button
-                    :text="BatchService.get_staged_path(batch)"
+                    :text="DatasetService.get_staged_path(dataset)"
                     class="inline-block ml-3"
                   />
                 </div>
@@ -88,7 +91,7 @@
           </div>
 
           <!-- Reports -->
-          <div class="flex-none" v-if="batch?.attributes?.report_id">
+          <div class="flex-none" v-if="dataset?.attributes?.report_id">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Reports</span>
@@ -99,7 +102,7 @@
                   <a
                     class="va-link flex items-center justify-start"
                     target="_blank"
-                    :href="`/api/reports/${batch?.attributes?.report_id}/multiqc_report.html`"
+                    :href="`/api/reports/${dataset?.attributes?.report_id}/multiqc_report.html`"
                   >
                     <span class="flex-initial">MultiQC Report</span>
                     <i-mdi-open-in-new class="flex-initial inline-block pl-1" />
@@ -110,7 +113,7 @@
           </div>
 
           <!-- Actions -->
-          <div class="flex-none" v-if="batch.archive_path">
+          <div class="flex-none" v-if="dataset.archive_path">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Actions</span>
@@ -119,7 +122,7 @@
                 <div class="flex justify-start gap-3">
                   <!-- Stage Action Button-->
                   <va-button
-                    v-if="batch.archive_path"
+                    v-if="dataset.archive_path"
                     :disabled="is_stage_pending"
                     color="primary"
                     border-color="primary"
@@ -133,7 +136,7 @@
 
                   <!-- Delete Action Button-->
                   <va-button
-                    v-if="batch.archive_path"
+                    v-if="dataset.archive_path"
                     :disabled="is_delete_pending"
                     color="danger"
                     border-color="danger"
@@ -152,8 +155,8 @@
           <!-- stage modal -->
           <va-modal
             :model-value="stage_modal"
-            message="Stage all files in this batch from the SDA?"
-            @ok="stage_batch"
+            message="Stage all files in this dataset from the SDA?"
+            @ok="stage_dataset"
             @cancel="stage_modal = !stage_modal"
           />
 
@@ -179,8 +182,8 @@
             <div>
               <p class="text-lg font-semibold">
                 Delete
-                <span class="capitalize"> {{ batch.type }} </span>
-                : <span class="uppercase"> {{ batch.name }} </span>
+                <span class="capitalize"> {{ dataset.type }} </span>
+                : <span class="uppercase"> {{ dataset.name }} </span>
               </p>
 
               <va-divider class="my-2" />
@@ -188,16 +191,16 @@
               <div class="flex flex-col items-center gap-2">
                 <div><i-mdi-zip-box-outline class="text-3xl" /></div>
                 <span class="text-xl font-semibold tracking-wide">
-                  {{ batch.name }}
+                  {{ dataset.name }}
                 </span>
                 <div class="flex items-center gap-5">
                   <div class="flex items-center gap-1">
                     <i-mdi-harddisk class="text-xl" />
-                    <span> {{ formatBytes(batch.du_size) }} </span>
+                    <span> {{ formatBytes(dataset.du_size) }} </span>
                   </div>
                   <div class="flex items-center gap-1">
                     <i-mdi-file-multiple class="text-xl" />
-                    <span> {{ batch.num_genome_files }} </span>
+                    <span> {{ dataset.num_genome_files }} </span>
                   </div>
                 </div>
               </div>
@@ -218,9 +221,9 @@
                 <ul class="va-unordered va-text-secondary mt-3">
                   <li>
                     This will permanently delete the
-                    <b> {{ batch.name }} </b> archive on the SDA at
+                    <b> {{ dataset.name }} </b> archive on the SDA at
                     <span class="path bg-slate-200">
-                      {{ BatchService.get_staged_path(batch) }}
+                      {{ DatasetService.get_staged_path(dataset) }}
                     </span>
                     , its associated workflows and task runs.
                   </li>
@@ -231,14 +234,14 @@
               <va-divider class="my-4" />
 
               <div class="flex flex-col">
-                <p>To confirm, type "{{ batch.name }}" in the box below</p>
+                <p>To confirm, type "{{ dataset.name }}" in the box below</p>
                 <va-input
                   v-model="delete_archive_modal.input"
                   class="my-2 w-full"
                 />
                 <va-button
                   color="danger"
-                  :disabled="delete_archive_modal.input !== batch.name"
+                  :disabled="delete_archive_modal.input !== dataset.name"
                   @click="delete_archive"
                 >
                   Delete this Sequencing Run
@@ -250,13 +253,16 @@
       </div>
 
       <!-- Audit logs -->
-      <div class="mt-3" v-if="batch.audit_logs && batch.audit_logs.length > 0">
+      <div
+        class="mt-3"
+        v-if="dataset.audit_logs && dataset.audit_logs.length > 0"
+      >
         <va-card>
           <va-card-title>
             <span class="text-xl font-bold"> AUDIT LOG </span>
           </va-card-title>
           <va-card-content>
-            <batch-audit-logs :logs="batch.audit_logs" />
+            <dataset-audit-logs :logs="dataset.audit_logs" />
           </va-card-content>
         </va-card>
       </div>
@@ -266,9 +272,9 @@
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-        <div v-if="(batch.workflows || []).length > 0">
+        <div v-if="(dataset.workflows || []).length > 0">
           <collapsible
-            v-for="workflow in batch.workflows"
+            v-for="workflow in dataset.workflows"
             :key="workflow.id"
             v-model="workflow.collapse_model"
           >
@@ -281,7 +287,7 @@
             <div>
               <workflow
                 :workflow="workflow"
-                @update="fetch_batch(true)"
+                @update="fetch_dataset(true)"
               ></workflow>
             </div>
           </collapsible>
@@ -299,15 +305,15 @@
 
 <script setup>
 import moment from "moment";
-import BatchService from "@/services/batch";
+import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
 
-const props = defineProps({ batchId: String });
+const props = defineProps({ datasetId: String });
 
-const batch = ref({});
+const dataset = ref({});
 const description = ref("");
 const edit_discription = ref(false);
 const loading = ref(false);
@@ -318,30 +324,30 @@ const delete_archive_modal = ref({
 });
 
 const active_wf = computed(() => {
-  return (batch.value?.workflows || [])
+  return (dataset.value?.workflows || [])
     .map(workflowService.is_workflow_done)
     .some((x) => !x);
 });
 
 const is_stage_pending = computed(() => {
-  return workflowService.is_step_pending("stage", batch.value?.workflows);
+  return workflowService.is_step_pending("stage", dataset.value?.workflows);
 });
 
 const is_delete_pending = computed(() => {
-  return workflowService.is_step_pending("delete", batch.value?.workflows);
+  return workflowService.is_step_pending("delete", dataset.value?.workflows);
 });
 
 // const active_wf = ref(false);
 const polling_interval = computed(() => {
-  return active_wf.value ? config.batch_polling_interval : null;
+  return active_wf.value ? config.dataset_polling_interval : null;
 });
 
-function fetch_batch(show_loading = false) {
+function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  BatchService.getById({ id: props.batchId })
+  DatasetService.getById({ id: props.datasetId })
     .then((res) => {
-      const _batch = res.data;
-      const _workflows = _batch?.workflows || [];
+      const _dataset = res.data;
+      const _workflows = _dataset?.workflows || [];
       // _workflows[1].status = "PROGRESS";
       // _workflows[1].steps_done = 4;
 
@@ -349,16 +355,16 @@ function fetch_batch(show_loading = false) {
       _workflows.sort(workflow_compare_fn);
       // add collapse_model to open running workflows
       // keep workflows open that were open
-      _batch.workflows = _workflows.map((w, i) => {
+      _dataset.workflows = _workflows.map((w, i) => {
         return {
           ...w,
           collapse_model:
             !workflowService.is_workflow_done(w) ||
-            (batch.value?.workflows || [])[i]?.collapse_model ||
+            (dataset.value?.workflows || [])[i]?.collapse_model ||
             false,
         };
       });
-      batch.value = _batch;
+      dataset.value = _dataset;
     })
     .catch((err) => {
       console.error(err);
@@ -372,14 +378,14 @@ function fetch_batch(show_loading = false) {
 }
 
 // initial data fetch
-fetch_batch(true);
+fetch_dataset(true);
 
 /**
  * providing the interval directly will kick of the polling immediately
  * provide a ref which will resolve to null when there are no active workflows and to 10s otherwise
  * now it can be controlled by resume and pause whenever active_wf changes
  */
-const poll = useIntervalFn(fetch_batch, polling_interval);
+const poll = useIntervalFn(fetch_dataset, polling_interval);
 
 watch(active_wf, (newVal, _) => {
   if (newVal) {
@@ -404,17 +410,17 @@ function workflow_compare_fn(a, b) {
   return order_by_done;
 }
 
-function stage_batch() {
+function stage_dataset() {
   stage_modal.value = false;
   loading.value = true;
-  BatchService.stage_batch(batch.value.id)
+  DatasetService.stage_dataset(dataset.value.id)
     .then(() => {
-      toast.success("A workflow has started to stage batch");
-      fetch_batch(true);
+      toast.success("A workflow has started to stage the dataset");
+      fetch_dataset(true);
     })
     .catch((err) => {
-      console.error("unable to stage batch", err);
-      toast.error("Unable to stage batch");
+      console.error("unable to stage the dataset", err);
+      toast.error("Unable to stage the dataset");
     })
     .finally(() => {
       loading.value = false;
@@ -424,14 +430,14 @@ function stage_batch() {
 function delete_archive() {
   delete_archive_modal.value.visible = false;
   loading.value = true;
-  BatchService.delete_batch({ id: batch.value.id })
+  DatasetService.delete_dataset({ id: dataset.value.id })
     .then(() => {
-      toast.success("A workflow has started to delete batch");
-      fetch_batch(true);
+      toast.success("A workflow has started to delete the dataset");
+      fetch_dataset(true);
     })
     .catch((err) => {
-      console.error("unable to delete batch", err);
-      toast.error("Unable to delete batch");
+      console.error("unable to delete the dataset", err);
+      toast.error("Unable to delete the dataset");
     })
     .finally(() => {
       loading.value = false;

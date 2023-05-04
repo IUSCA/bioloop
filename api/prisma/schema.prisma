@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model batch {
+model dataset {
   id               Int               @id @default(autoincrement())
   name             String
   type             String
@@ -25,21 +25,21 @@ model batch {
   attributes       Json?
   workflows        workflow[]
   metadata         checksum[]
-  audit_logs       batch_audit[]
-  states           batch_state[]
-  derived_batches  batch_hierarchy[] @relation("source_batches")
-  source_batches   batch_hierarchy[] @relation("derived_batches")
+  audit_logs       dataset_audit[]
+  states           dataset_state[]
+  derived_datasets  dataset_hierarchy[] @relation("source_datasets")
+  source_datasets   dataset_hierarchy[] @relation("derived_datasets")
 
   @@unique([name, type])
 }
 
-model batch_hierarchy {
+model dataset_hierarchy {
   source_id   Int
   derived_id  Int
   assigned_at DateTime @default(now()) @db.Timestamp(6)
 
-  source_batch  batch @relation(name: "source_batches", fields: [source_id], references: [id])
-  derived_batch batch @relation(name: "derived_batches", fields: [derived_id], references: [id])
+  source_dataset  dataset @relation(name: "source_datasets", fields: [source_id], references: [id])
+  derived_dataset dataset @relation(name: "derived_datasets", fields: [derived_id], references: [id])
 
   @@id([source_id, derived_id])
 }
@@ -48,8 +48,8 @@ model checksum {
   path     String
   md5      String
   id       Int    @id @default(autoincrement())
-  batch_id Int?
-  batch    batch? @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dataset_id Int?
+  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model user {
@@ -66,7 +66,7 @@ model user {
   user_role     user_role[]
   user_settings user_settings[]
   contact       contact[]
-  batch_audit   batch_audit[]
+  dataset_audit   dataset_audit[]
 }
 
 model user_settings {
@@ -104,11 +104,11 @@ model user_role {
 
 model workflow {
   id       String @id
-  batch_id Int?
-  batch    batch? @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dataset_id Int?
+  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-model batch_audit {
+model dataset_audit {
   id        Int      @id @default(autoincrement())
   action    String
   timestamp DateTime @default(now())
@@ -116,8 +116,8 @@ model batch_audit {
   new_data  Json?
   user_id   Int?
   user      user?    @relation(fields: [user_id], references: [id])
-  batch_id  Int
-  batch     batch?   @relation(fields: [batch_id], references: [id])
+  dataset_id  Int
+  dataset     dataset?   @relation(fields: [dataset_id], references: [id])
 }
 
 model metric {
@@ -132,12 +132,12 @@ model metric {
   @@id([timestamp, measurement, subject])
 }
 
-model batch_state {
+model dataset_state {
   state     String
   timestamp DateTime @default(now()) @db.Timestamp(6)
   metadata  Json?
-  batch_id  Int
-  batch     batch?   @relation(fields: [batch_id], references: [id])
+  dataset_id  Int
+  dataset     dataset?   @relation(fields: [dataset_id], references: [id])
 
-  @@id([timestamp, batch_id, state])
+  @@id([timestamp, dataset_id, state])
 }

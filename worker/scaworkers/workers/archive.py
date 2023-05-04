@@ -38,24 +38,24 @@ def hsi_put_progress(celery_task, sda_path, total_size):
 
 # celery -A celery_app worker --concurrency 4
 @app.task(base=WorkflowTask, bind=True)
-def archive_batch(celery_task, batch_id, **kwargs):
-    batch = api.get_batch(batch_id=batch_id)
-    # Tar the batch directory and compute checksum
+def archive_dataset(celery_task, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    # Tar the dataset directory and compute checksum
     scratch_tar_path = make_tarfile(celery_task=celery_task,
-                                    tarfile_name=batch['name'],
-                                    source_dir=batch['origin_path'],
-                                    source_size=batch['du_size'])
+                                    tarfile_name=dataset['name'],
+                                    source_dir=dataset['origin_path'],
+                                    source_size=dataset['du_size'])
     scratch_digest = utils.checksum(scratch_tar_path)
 
-    batch_type = batch['type'].lower()
-    sda_dir = config["paths"][batch_type]["archive"]
+    dataset_type = dataset['type'].lower()
+    sda_dir = config["paths"][dataset_type]["archive"]
     sda.ensure_directory(sda_dir)  # create the directory if it does not exist
 
-    sda_tar_path = f'{sda_dir}/{batch["name"]}.tar'
+    sda_tar_path = f'{sda_dir}/{dataset["name"]}.tar'
 
     print('sda put', str(scratch_tar_path), sda_tar_path)
     with utils.track_progress_parallel(progress_fn=hsi_put_progress,
-                                       progress_fn_args=(celery_task, sda_tar_path, batch['du_size'])):
+                                       progress_fn_args=(celery_task, sda_tar_path, dataset['du_size'])):
         sda.put(source=scratch_tar_path, target=sda_tar_path)
 
     # validate whether the md5 checksums of local and SDA copies match
@@ -71,25 +71,25 @@ def archive_batch(celery_task, batch_id, **kwargs):
     update_data = {
         'archive_path': sda_tar_path
     }
-    api.update_batch(batch_id=batch_id, update_data=update_data)
-    api.add_state_to_batch(batch_id=batch_id, state='ARCHIVED')
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    api.add_state_to_dataset(dataset_id=dataset_id, state='ARCHIVED')
 
-    return batch_id,
+    return dataset_id,
 
-# def tar_task(self, batch, **kwargs):
-#     # batch = {
+# def tar_task(self, dataset, **kwargs):
+#     # dataset = {
 #     #     'name': 'sentieon_val_7',
 #     #     'paths': {
 #     #         'origin': '/N/project/DG_Multiple_Myeloma/share/sentieon_val_7/vcf'
 #     #     },
 #     #     'du_size': 371544389559
 #     # }
-#     archive(self, batch)
-#     return batch
+#     archive(self, dataset)
+#     return dataset
 
 
 # if __name__ == '__main__':
-#     batch = {
+#     dataset = {
 #         'name': 'sentieon_val_7',
 #         'paths': {
 #             'origin': '/N/project/DG_Multiple_Myeloma/share/sentieon_val_7/bam'
@@ -97,7 +97,7 @@ def archive_batch(celery_task, batch_id, **kwargs):
 #         'du_size': 371544389559
 #     }
 #     scratch_tar_path = make_tarfile(celery_task = {},
-#                                     tarfile_name=batch['name'],
-#                                     source_dir=batch['paths']['origin'],
-#                                     source_size=batch['du_size'])
+#                                     tarfile_name=dataset['name'],
+#                                     source_dir=dataset['paths']['origin'],
+#                                     source_size=dataset['du_size'])
 #     print(scratch_tar_path)

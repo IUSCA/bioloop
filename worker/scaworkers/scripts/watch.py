@@ -65,7 +65,7 @@ def register_raw_data(event: str, new_dirs: list[Path]) -> None:
     if event != 'add':
         return
     reg_config = config['registration']['raw_data']
-    registered_names = [batch['name'] for batch in api.get_all_batches(batch_type='RAW_DATA')]
+    registered_names = [dataset['name'] for dataset in api.get_all_datasets(dataset_type='RAW_DATA')]
     candidates = [
         p for p in new_dirs
         if all([
@@ -75,19 +75,19 @@ def register_raw_data(event: str, new_dirs: list[Path]) -> None:
     ]
     for candidate in candidates:
         print('registering raw data', candidate.name)
-        batch = {
+        dataset = {
             'name': candidate.name,
             'type': 'RAW_DATA',
             'origin_path': str(candidate.resolve()),
         }
-        api.create_batch(batch)
+        api.create_dataset(dataset)
 
 
 def register_data_products(event: str, new_dirs: list[Path]) -> None:
     if event != 'add':
         return
     reg_config = config['registration']['data_products']
-    registered_names = [batch['name'] for batch in api.get_all_batches(batch_type='DATA_PRODUCT')]
+    registered_names = [dataset['name'] for dataset in api.get_all_datasets(dataset_type='DATA_PRODUCT')]
     candidates = [
         p for p in new_dirs
         if all([
@@ -97,19 +97,19 @@ def register_data_products(event: str, new_dirs: list[Path]) -> None:
     ]
     for candidate in candidates:
         print('registering data product', candidate.name)
-        batch = {
+        dataset = {
             'name': candidate.name,
             'type': 'DATA_PRODUCT',
             'origin_path': str(candidate.resolve()),
         }
-        created_batch = api.create_batch(batch)
+        created_dataset = api.create_dataset(dataset)
 
         # Find raw_data with the same and add an association
-        source_batches = api.get_all_batches(batch_type='RAW_DATA', name=candidate.name)
-        if len(source_batches) > 0:
+        source_datasets = api.get_all_datasets(dataset_type='RAW_DATA', name=candidate.name)
+        if len(source_datasets) > 0:
             api.add_associations([{
-                'source_id': source_batches[0]['id'],
-                'derived_id': created_batch['id']
+                'source_id': source_datasets[0]['id'],
+                'derived_id': created_dataset['id']
             }])
 
 
