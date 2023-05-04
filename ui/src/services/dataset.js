@@ -1,4 +1,5 @@
 import api from "./api";
+import config from "@/config";
 
 class DatasetService {
   getAll({ deleted = null, processed = null, type = null } = {}) {
@@ -57,6 +58,11 @@ class DatasetService {
       (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
         .length > 0
     );
+  }
+
+  get_staged_path(dataset) {
+    const dataset_type = dataset.type.toLowerCase();
+    return `${config.paths.stage[dataset_type]}/${dataset.name}`;
   }
 }
 

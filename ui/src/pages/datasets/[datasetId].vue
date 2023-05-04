@@ -70,16 +70,19 @@
           </div>
 
           <!-- Staged for processing -->
-          <div class="flex-none" v-if="dataset.stage_path">
+          <div
+            class="flex-none"
+            v-if="DatasetService.is_staged(dataset?.states)"
+          >
             <va-card>
               <va-card-title>
                 <span class="text-lg">Staged for Processing</span>
               </va-card-title>
               <va-card-content>
                 <div class="">
-                  <span> {{ dataset.stage_path }} </span>
+                  <span> {{ DatasetService.get_staged_path(dataset) }} </span>
                   <copy-button
-                    :text="dataset.stage_path"
+                    :text="DatasetService.get_staged_path(dataset)"
                     class="inline-block ml-3"
                   />
                 </div>
@@ -177,7 +180,11 @@
             </template>
 
             <div>
-              <p class="text-lg font-semibold">Delete {{ dataset.name }}</p>
+              <p class="text-lg font-semibold">
+                Delete
+                <span class="capitalize"> {{ dataset.type }} </span>
+                : <span class="uppercase"> {{ dataset.name }} </span>
+              </p>
 
               <va-divider class="my-2" />
 
@@ -214,8 +221,11 @@
                 <ul class="va-unordered va-text-secondary mt-3">
                   <li>
                     This will permanently delete the
-                    <b> {{ dataset.name }} </b> archive on the SDA, its
-                    associated workflows and task runs.
+                    <b> {{ dataset.name }} </b> archive on the SDA at
+                    <span class="path bg-slate-200">
+                      {{ DatasetService.get_staged_path(dataset) }}
+                    </span>
+                    , its associated workflows and task runs.
                   </li>
                   <li>This will not delete any of the staged files.</li>
                 </ul>

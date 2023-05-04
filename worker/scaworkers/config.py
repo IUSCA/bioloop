@@ -41,9 +41,9 @@ config = {
     'illumina': {
         'registration': {
             'rejects': [],
-            'recency_threshold': 60 * 60,  # 1 hour
+            'recency_threshold': 15 * 60,  # 15 minutes; start archiving if the size hasn't changed for "recency_threshold"
             'minimum_project_size': 1024 * 1024 * 1024,  # 1 GB
-            'wait_between_scans': 30 * 60,
+            'wait_between_scans': 5 * 60, # 5 minutes
         },
         'download': {
             'datasets': {
