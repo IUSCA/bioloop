@@ -55,3 +55,4 @@ worker/.env
 app.pid
 
 qc
+backup
