@@ -1,8 +1,38 @@
 # Workers
 
+## Coding Guidelines
+
+### Hierarchical Config
+
+- The default & dev config goes into `workers/config/common.py`
+- The overrides for production goes into `workers/config/production.py`
+- Based on the environment variable APP_ENV, config from that file is imported and merged with the common config.
+  - Add APP_ENV=production to `.env` file which load_dotenv reads or
+  - directly set it as `export APP_ENV=production`.
+- In project files, import config as `from workers.config import config`
+- Imported config is a [DotMap](https://pypi.org/project/dotmap/) object, which supports both `config[]` and `config.`
+  access.
+- To add a new environment (for example "stage"), create a new file inside `workers/config` called `stage.py` and have
+  the overriding config as a dict assigned to a variable named `config`.
+
+### Celery config
+
+- config specific to Celery is in `workers/config/celeryconfig.py`
+- Config is in python values, instead of a dict
+- Env specific values and secrets are loaded from `.env` file
+
+### Code Organization
+
+- Celery Tasks: `workers/tasks/*.py`
+- Scheduled job and other scripts: `workers/scripts/*.py`
+- Helper code: `workers/*.py`
+- Config / settings are in `workers/config/*.py` and `.env`
+- Test code is in `tests/`
+
 ## Deployment
 
-Add `module load python/3.10.5` to ~/.modules
+- Add `module load python/3.10.5` to ~/.modules
+- Update `.env` (make a copy of `.env.example` and add values)
 
 ```bash
 cd ~/DGL/workers
