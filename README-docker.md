@@ -16,7 +16,7 @@ Set up the [front-end ui client](ui/README.md) or [back-end api server](api/READ
 
 ### .env files
 
-`api/`, `worker/` both contain `.env.example.docker` files. Copy these to a corresponding `.env` file and update values accordingly.
+`api/` contains `.env.example.docker` files. Copy these to a corresponding `.env` file and update values accordingly.
 
 ### OpenSSL
 

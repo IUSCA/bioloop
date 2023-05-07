@@ -45,12 +45,21 @@ const INCLUDE_AUDIT_LOGS = {
 
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
-async function create_workflow(dataset, wf_name) {
+function get_wf_body(wf_name) {
   const wf_body = config.workflow_registry[wf_name];
   assert(wf_body, `${wf_name} workflow is not registered`);
 
   wf_body.name = wf_name;
-  wf_body.project = config.project;
+  wf_body.project = config.project_FQDN;
+  wf_body.steps = wf_body.steps.map((step) => ({
+    ...step,
+    task: `${config.project_FQDN}.${step.task}`,
+  }));
+  return wf_body;
+}
+
+async function create_workflow(dataset, wf_name) {
+  const wf_body = get_wf_body(wf_name);
 
   // check if a workflow with the same name is not already running / pending on this dataset
   const active_wfs_with_same_name = dataset.workflows

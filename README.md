@@ -9,6 +9,6 @@ Diagnostic Genomics Laboratory portal and pipeline application
 
 ## Back and Restore
 
-### Postgre
+### Postgres
 
 ### Mongo

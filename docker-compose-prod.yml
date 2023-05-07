@@ -27,25 +27,6 @@ services:
       dgl_network:
         ipv4_address: 172.19.0.2
 
-  worker_api:
-    container_name: dgl_worker_api
-    build:
-      context: ./worker/
-      args:
-        APP_UID: ${APP_UID} # read from .env file
-        APP_GID: ${APP_GID} # read from .env file
-    volumes:
-      - ./worker/scaworkers/:/opt/sca/app/scaworkers
-      - ./worker/.env:/opt/sca/app/.env
-    expose:
-      - 5001
-    environment:
-      - PORT=5001
-    restart: on-failure
-    networks:
-      dgl_network:
-        ipv4_address: 172.19.0.3
-
 volumes:
   dgl_ui_modules:
     external: false

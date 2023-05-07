@@ -28,30 +28,30 @@
     }
   },
   "mode": "default",
-  "project": "dgl.sca.iu.edu",
+  "project_FQDN": "dgl.sca.iu.edu",
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
           "name": "inspect",
-          "task": "scaworkers.workers.inspect.inspect_dataset"
+          "task": "inspect_dataset"
         },
         {
           "name": "archive",
-          "task": "scaworkers.workers.archive.archive_dataset"
+          "task": "archive_dataset"
         },
         {
           "name": "stage",
-          "task": "scaworkers.workers.stage.stage_dataset"
+          "task": "stage_dataset"
         },
         {
           "name": "validate",
-          "task": "scaworkers.workers.validate.validate_dataset"
+          "task": "validate_dataset"
         },
         {
           "name": "generate_reports",
-          "task": "scaworkers.workers.report.generate"
+          "task": "generate_reports"
         }
       ]
     },
@@ -59,15 +59,15 @@
       "steps": [
         {
           "name": "stage",
-          "task": "scaworkers.workers.stage.stage_dataset"
+          "task": "stage_dataset"
         },
         {
           "name": "validate",
-          "task": "scaworkers.workers.validate.validate_dataset"
+          "task": "validate_dataset"
         },
         {
           "name": "generate_reports",
-          "task": "scaworkers.workers.report.generate"
+          "task": "generate_reports"
         }
       ]
     },

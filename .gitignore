@@ -38,19 +38,17 @@ log
 tmp
 temp
 
-worker/config/index.js
-
 queue/data/*
 queue/log/*
 
 __pycache__
 __pycache__/*
-worker/__pycache__
-worker/__pycache__/
-worker/__pycache__/*
-worker/venv/
-worker/venv/*
-worker/.env
+workers/__pycache__
+workers/__pycache__/
+workers/__pycache__/*
+workers/venv/
+workers/venv/*
+workers/.env
 
 app.pid
 
