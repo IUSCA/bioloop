@@ -1,6 +1,7 @@
 const assert = require('assert');
 
 const { PrismaClient } = require('@prisma/client');
+const config = require('config');
 
 const wfService = require('./workflow');
 const userService = require('./user');
@@ -42,73 +43,16 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
-const INTEGRATED_WORKFLOW = {
-  name: 'integrated',
-  steps: [
-    {
-      name: 'inspect',
-      task: 'scaworkers.workers.inspect.inspect_dataset',
-    },
-    {
-      name: 'archive',
-      task: 'scaworkers.workers.archive.archive_dataset',
-    },
-    {
-      name: 'stage',
-      task: 'scaworkers.workers.stage.stage_dataset',
-    },
-    {
-      name: 'validate',
-      task: 'scaworkers.workers.validate.validate_dataset',
-    },
-    {
-      name: 'generate_reports',
-      task: 'scaworkers.workers.report.generate',
-    },
-  ],
-};
-
-const STAGE_WORKFLOW = {
-  name: 'stage',
-  steps: [
-    {
-      name: 'stage',
-      task: 'scaworkers.workers.stage.stage_dataset',
-    },
-    {
-      name: 'validate',
-      task: 'scaworkers.workers.validate.validate_dataset',
-    },
-    {
-      name: 'generate_reports',
-      task: 'scaworkers.workers.report.generate',
-    },
-  ],
-};
-
-const DELETE_WORKFLOW = {
-  name: 'delete',
-  steps: [
-    {
-      name: 'delete',
-      task: 'scaworkers.workers.delete.delete_dataset',
-    },
-  ],
-};
-
-const WORKFLOW_REGISTRY = {
-  delete: DELETE_WORKFLOW,
-  stage: STAGE_WORKFLOW,
-  integrated: INTEGRATED_WORKFLOW,
-};
-
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 async function create_workflow(dataset, wf_name) {
-  const wf_body = WORKFLOW_REGISTRY[wf_name];
+  const wf_body = config.workflow_registry[wf_name];
   assert(wf_body, `${wf_name} workflow is not registered`);
 
-  // check if a workflow with the same name is not already running / pending
+  wf_body.name = wf_name;
+  wf_body.project = config.project;
+
+  // check if a workflow with the same name is not already running / pending on this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
     .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
