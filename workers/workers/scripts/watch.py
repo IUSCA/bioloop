@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Callable
 
 import workers.api as api
-from workers.config.config import config
+from workers.config import config
 
 
 class Observer:

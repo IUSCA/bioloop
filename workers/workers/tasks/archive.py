@@ -9,7 +9,7 @@ import workers.config.celeryconfig as celeryconfig
 import workers.sda as sda
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from workers.config.config import config
+from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -37,9 +37,7 @@ def hsi_put_progress(celery_task, sda_path, total_size):
     celery_task.update_progress(r)
 
 
-@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('archive_dataset'))
-def archive_dataset(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id)
+def f(celery_task, dataset):
     # Tar the dataset directory and compute checksum
     scratch_tar_path = make_tarfile(celery_task=celery_task,
                                     tarfile_name=dataset['name'],
@@ -67,7 +65,13 @@ def archive_dataset(celery_task, dataset_id, **kwargs):
         raise Exception(
             f'Archive failed: Checksums of local {scratch_tar_path} ({scratch_digest})' +
             'and SDA {sda_tar_path} ({sda_digest}) do not match')
+    return sda_tar_path
 
+
+@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('archive_dataset'))
+def archive_dataset(celery_task, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    sda_tar_path = f(celery_task, dataset)
     update_data = {
         'archive_path': sda_tar_path
     }

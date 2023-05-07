@@ -5,7 +5,7 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
-from workers.config.config import config
+from workers.config import config
 
 
 def make_retry_adapter():
@@ -44,7 +44,6 @@ class APIServerSession(requests.Session):
         # noinspection HttpUrlsUsage
         self.mount("http://", adapter)
         self.mount("https://", adapter)
-        self.auth = (config['api']['username'], config['api']['password'])
         self.base_url = config['api']['base_url']
         self.timeout = (config['api']['conn_timeout'], config['api']['read_timeout'])
 

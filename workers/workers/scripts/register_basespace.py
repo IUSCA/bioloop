@@ -3,13 +3,13 @@ import argparse
 from sca_rhythm import Workflow
 
 import workers.api as api
-from workers import utils
+import workers.workflow_utils as wf_utils
 from workers.celery_app import app as celery_app  # TODO: no need to register tasks before
 
 
 class BaseSpaceRegistration:
     def __init__(self):
-        self.wf_body = utils.get_wf_body(wf_name='illumina_integrated')
+        self.wf_body = wf_utils.get_wf_body(wf_name='illumina_integrated')
 
     def register_candidate(self, project_name):
         print(f'registering {project_name}')

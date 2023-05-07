@@ -43,7 +43,7 @@ def parse_lfs_quota_output(text):
     :param text:
     :return: List of dicts like {'Filesystem': 'home', 'usage': 4294967296, 'limit': 107374182400, quota: 0, grace: 0}
     """
-    lines = [l.strip() for l in text.split('\n') if l.strip()][1:]
+    lines = [line.strip() for line in text.split('\n') if line.strip()][1:]
     header = lines[0].split()
     fields = [utils.parse_number(f, f) for f in lines[1].split()]
     fields = [0 if f == '-' else f for f in fields]

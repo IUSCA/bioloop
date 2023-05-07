@@ -10,7 +10,7 @@ import workers.config.celeryconfig as celeryconfig
 import workers.sda as sda
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from workers.config.config import config
+from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)

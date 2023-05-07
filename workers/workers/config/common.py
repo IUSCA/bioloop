@@ -1,34 +1,26 @@
 import datetime
-import os
 
-from dotenv import load_dotenv
-
-load_dotenv()  # take environment variables from .env.
-
-# archiving directory name has year in its path to
-# make it easier to purge data based on the year it was archived
 YEAR = datetime.datetime.now().year
+
 config = {
-    'project_FQDN': 'dgl.sca.iu.edu',
+    'project_FQDN': 'dgl-dev.sca.iu.edu',
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'username': 'user',
-        'password': 'pass',
-        'base_url': os.environ['API_URL'],
+        'base_url': 'http://localhost:5001',
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
     },
     'paths': {
-        'scratch': '/N/scratch/dgluser/dgl/production/scratch',
+        'scratch': '/N/scratch/dgluser/dgl/development/scratch',
         'raw_data': {
-            'archive': f'archive/{YEAR}/raw_data',
-            'stage': '/N/project/DG_Multiple_Myeloma/share/raw_data',
-            'qc': '/N/project/DG_Multiple_Myeloma/share/data_products'
+            'archive': f'development/{YEAR}/raw_data',
+            'stage': '/N/scratch/dgluser/dgl/development/stage/raw_data',
+            'qc': '/N/scratch/dgluser/dgl/development/data_products'
         },
         'data_product': {
-            'archive': f'archive/{YEAR}/data_products',
-            'stage': '/N/scratch/dgluser/dgl/production/stage/data_products',
+            'archive': f'development/{YEAR}/data_products',
+            'stage': '/N/scratch/dgluser/dgl/development/stage/data_products',
         }
     },
     'registration': {

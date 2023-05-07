@@ -7,7 +7,7 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers import illumina
-from workers.config.config import config
+from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)

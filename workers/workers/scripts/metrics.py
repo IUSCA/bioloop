@@ -6,7 +6,7 @@ import socket
 
 from workers import api
 from workers import hpfs
-from workers.config.config import config
+from workers.config import config
 
 
 def main():

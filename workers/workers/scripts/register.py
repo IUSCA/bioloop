@@ -6,9 +6,9 @@ from sca_rhythm import Workflow
 
 import workers.api as api
 import workers.illumina as illumina
-from workers import utils
+import workers.workflow_utils as wf_utils
 from workers.celery_app import app as celery_app  # TODO: no need to register tasks before
-from workers.config.config import config
+from workers.config import config
 
 
 def get_registered_dataset_names():
@@ -28,7 +28,7 @@ class BaseSpaceRegistration:
         self.rejects = set(config['illumina']['registration']['rejects'])
         self.completed = set(get_registered_dataset_names())  # HTTP GET
         self.candidates = {}
-        self.wf_body = utils.get_wf_body(wf_name='illumina_integrated')
+        self.wf_body = wf_utils.get_wf_body(wf_name='illumina_integrated')
 
     def register(self):
         # mutating self.candidates inside the loop, so cannot use the standard for ... in ... syntax

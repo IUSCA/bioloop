@@ -1,4 +1,4 @@
-from workers.config.config import config
+from workers.config import config
 
 
 def make_task_name(task_name):
