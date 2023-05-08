@@ -77,7 +77,7 @@ cd <dgl>/ui
 pnpm dev
 ```
 
-- Reverse port map API, mongo and queue. let the clients on remote machine talk to a server
+- Reverse port forward API, mongo and queue. let the clients on remote machine talk to a server
   running on the local machine.
   - API - local port - 3030, remote port - 3031
   - Mongo - local port - 27017, remote port - 27018
@@ -100,11 +100,7 @@ colo23> git checkout dev
 colo23> git pull
 ```
 
-- changes in `workers/config/config.py` to dgl_test.sca.iu.edu
-  - project name
-  - paths.scratch
-  - paths.raw_data.archive
-- change api, mongo and queue config in `workers/.env`
+- create / update `<DGL_test>/workers/.env`
 - Run `python -m celery -A workers.celery_app worker --concurrency 8` in `~/DGL_test/workers`
 
 
