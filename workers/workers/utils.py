@@ -1,3 +1,4 @@
+from __future__ import annotations # type unions by | are only avaiable in versions > 3.10
 import hashlib
 import os
 import subprocess
@@ -5,6 +6,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from subprocess import Popen, PIPE
+
 
 # import multiprocessing
 # https://stackoverflow.com/questions/30624290/celery-daemonic-processes-are-not-allowed-to-have-children

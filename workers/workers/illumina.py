@@ -1,6 +1,8 @@
+from __future__ import annotations # type unions by | are only avaiable in versions > 3.10
 import json
 from datetime import datetime
 from pathlib import Path
+
 
 import workers.utils as utils
 
