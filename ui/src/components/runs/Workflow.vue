@@ -62,12 +62,20 @@
           </div>
 
           <div v-else>
-            <confirm-button
-              action="Stop Workflow"
-              icon="mdi-stop-circle-outline"
-              color="danger"
-              @click="pause_workflow"
-            ></confirm-button>
+            <div class="flex justify-start items-center gap-3">
+              <confirm-button
+                action="Stop Workflow"
+                icon="mdi-stop-circle-outline"
+                color="danger"
+                @click="pause_workflow"
+              ></confirm-button>
+              <confirm-button
+                action="Delete Workflow"
+                icon="mdi-delete"
+                color="danger"
+                @click="delete_workflow"
+              ></confirm-button>
+            </div>
           </div>
         </div>
       </div>
@@ -195,7 +203,12 @@ function resume_workflow() {
       toast.error("Unable to resume workflow");
     })
     .finally(() => {
-      emit("update");
+      // the workflow status needs a little bit of time to change after successful resumption
+      // because a worker needs to accept the new task, which in turn updates the workflow object
+      // wait for 2 seconds and then update
+      setTimeout(() => {
+        emit("update");
+      }, 2000);
       loading.value = false;
     });
 }
@@ -217,7 +230,9 @@ function pause_workflow() {
       toast.error("Unable to stop workflow");
     })
     .finally(() => {
-      emit("update");
+      setTimeout(() => {
+        emit("update");
+      }, 2000);
       loading.value = false;
     });
 }

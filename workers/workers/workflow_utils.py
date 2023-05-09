@@ -1,3 +1,4 @@
+from workers import sda
 from workers.config import config
 
 
@@ -13,3 +14,9 @@ def get_wf_body(wf_name: str) -> dict:
     for step in wf_body['steps']:
         step['task'] = make_task_name(step['task'])
     return wf_body
+
+
+def get_archive_dir(dataset_type: str) -> str:
+    sda_dir = config["paths"][dataset_type.lower()]["archive"]
+    sda.ensure_directory(sda_dir)  # create the directory if it does not exist
+    return sda_dir
