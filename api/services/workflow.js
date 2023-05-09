@@ -7,12 +7,18 @@ const wfApi = axios.create({
   baseURL: config.get('workflow_server.base_url'),
 });
 
-function getAll({ last_task_run = false, prev_task_runs = false, only_active = false } = {}) {
+function getAll({
+  last_task_run = false,
+  prev_task_runs = false,
+  only_active = false,
+  app_id = null,
+} = {}) {
   return wfApi.get('/workflows', {
     params: {
       last_task_run,
       prev_task_runs,
       only_active,
+      app_id,
     },
   });
 }

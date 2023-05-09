@@ -3,7 +3,7 @@ import datetime
 YEAR = datetime.datetime.now().year
 
 config = {
-    'project_FQDN': 'dgl-dev.sca.iu.edu',
+    'app_id': 'dgl-dev.sca.iu.edu',
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {

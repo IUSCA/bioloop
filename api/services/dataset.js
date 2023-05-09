@@ -46,14 +46,16 @@ const INCLUDE_AUDIT_LOGS = {
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 function get_wf_body(wf_name) {
-  const wf_body = config.workflow_registry[wf_name];
-  assert(wf_body, `${wf_name} workflow is not registered`);
+  assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
+
+  // create a deep copy of the config object because it is immutable
+  const wf_body = { ...config.workflow_registry[wf_name] };
 
   wf_body.name = wf_name;
-  wf_body.project = config.project_FQDN;
+  wf_body.app_id = config.app_id;
   wf_body.steps = wf_body.steps.map((step) => ({
     ...step,
-    task: `${config.project_FQDN}.${step.task}`,
+    task: `${config.app_id}.${step.task}`,
   }));
   return wf_body;
 }
