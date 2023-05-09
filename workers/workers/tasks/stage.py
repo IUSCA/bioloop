@@ -1,5 +1,7 @@
+import os
 import shutil
 import tarfile
+import tempfile
 from pathlib import Path
 
 from celery import Celery
@@ -22,6 +24,7 @@ def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_
     If not, download from SDA and validate if the checksums match.
     """
     sda_digest = sda.get_hash(sda_path=sda_file_path)
+    print(f'sda_digest of {sda_file_path} : {sda_digest}')
 
     file_exists = False
     if local_file_path.exists() and local_file_path.is_file():
@@ -29,8 +32,11 @@ def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_
         local_digest = utils.checksum(local_file_path)
         if sda_digest == local_digest:
             file_exists = True
+            print(f'local file exists and checksums match - not getting from the SDA')
 
     if not file_exists:
+        print('getting file from SDA')
+
         # delete the local file if possible
         local_file_path.unlink(missing_ok=True)
         source_size = sda.get_size(sda_file_path)
@@ -46,12 +52,34 @@ def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_
         #                     f'and SDA {sda_file_path} ({sda_digest}) do not match')
 
 
-def extract_tarfile(source: Path, target_dir: Path):
-    extraction_dir = target_dir / source.stem
-    if extraction_dir.exists():
-        shutil.rmtree(extraction_dir)
-    with tarfile.open(source) as tar:
-        tar.extractall(path=target_dir)
+def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
+    """
+    tar_path: path to the tar file to extract
+    target_dir: path to the top level directory after extraction
+
+    extracts the tar file to  target_dir.parent directory.
+
+    The directory created here after extraction will have the same name as the top level directory inside the archive.
+
+    If that is not desired and the name of the directory created needs to be the same as target_dir.name,
+    then set override_arcname = True
+
+    If a directory with the same name as extracted dir already exists, it will be deleted.
+    """
+    with tarfile.open(tar_path, mode='r') as archive:
+        # find the top-level directory in the extracted archive
+        archive_name = os.path.commonprefix(archive.getnames())
+        extraction_dir = target_dir if override_arcname else (target_dir.parent / archive_name)
+
+        # if extraction_dir exists then delete it
+        if extraction_dir.exists():
+            shutil.rmtree(extraction_dir)
+
+        # extracts the tar contents to temp directory
+        # move the contents to extraction_dir
+        with tempfile.TemporaryDirectory(dir=target_dir.parent) as tmpdir:
+            archive.extractall(path=tmpdir)
+            shutil.move(Path(tmpdir) / archive_name, extraction_dir)
 
 
 def stage(celery_task: WorkflowTask, dataset: dict) -> None:
@@ -68,14 +96,15 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> None:
                            sda_file_path=sda_tar_path,
                            local_file_path=scratch_tar_path)
 
-    # extract the tar file
+    # extract the tar file to stage directory
+    print('extracting tar')
     dataset_type = dataset['type'].lower()
     staging_dir = Path(config['paths'][dataset_type]['stage'])
-    extract_tarfile(source=scratch_tar_path, target_dir=staging_dir)
-    # check for name conflicts in stage dir and delete dir if exists
+    target_dir = staging_dir / dataset['name']  # path to the staged dataset
+    extract_tarfile(tar_path=scratch_tar_path, target_dir=target_dir, override_arcname=True)
 
     # delete the local tar copy after extraction
-    scratch_tar_path.unlink()
+    # scratch_tar_path.unlink()
 
 
 @app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('stage_dataset'))

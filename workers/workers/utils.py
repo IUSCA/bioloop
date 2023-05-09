@@ -15,6 +15,7 @@ from sca_rhythm import WorkflowTask
 
 
 def checksum(fname: Path | str):
+    print(f'computing checksum of {fname}')
     m = hashlib.md5()
     with open(str(fname), "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
