@@ -244,7 +244,7 @@
                   :disabled="delete_archive_modal.input !== dataset.name"
                   @click="delete_archive"
                 >
-                  Delete this Sequencing Run
+                  Delete this dataset
                 </va-button>
               </div>
             </div>
@@ -295,7 +295,7 @@
         <div v-else class="text-center bg-slate-200 py-2 rounded shadow">
           <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
           <span class="text-lg">
-            There are no workflows associated with this sequencing run.
+            There are no workflows associated with this datatset.
           </span>
         </div>
       </div>
@@ -369,8 +369,8 @@ function fetch_dataset(show_loading = false) {
     .catch((err) => {
       console.error(err);
       if (err?.response?.status == 404)
-        toast.error("Could not find the Sequencing Run");
-      else toast.error("Something went wrong");
+        toast.error("Could not find the dataset");
+      else toast.error("Something went wrong. Could not fetch datatset");
     })
     .finally(() => {
       loading.value = false;

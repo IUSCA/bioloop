@@ -8,7 +8,7 @@ const wfApi = axios.create({
 });
 
 function getAll({ last_task_run = false, prev_task_runs = false, only_active = false } = {}) {
-  return wfApi.get('/workflow', {
+  return wfApi.get('/workflows', {
     params: {
       last_task_run,
       prev_task_runs,
@@ -18,7 +18,7 @@ function getAll({ last_task_run = false, prev_task_runs = false, only_active = f
 }
 
 function getOne(id, last_task_run = false, prev_task_runs = false) {
-  return wfApi.get(`/workflow/${id}`, {
+  return wfApi.get(`/workflows/${id}`, {
     params: {
       last_task_run,
       prev_task_runs,
@@ -55,19 +55,19 @@ function includeWorkflows(lastTaskRun, prevTaskRuns) {
 }
 
 function pause(id) {
-  return wfApi.post(`/workflow/${id}/pause`, {});
+  return wfApi.post(`/workflows/${id}/pause`, {});
 }
 
 function deleteOne(id) {
-  return wfApi.delete(`/workflow/${id}`);
+  return wfApi.delete(`/workflows/${id}`);
 }
 
 function resume(id) {
-  return wfApi.post(`/workflow/${id}/resume`, {});
+  return wfApi.post(`/workflows/${id}/resume`, {});
 }
 
 function create(wf) {
-  return wfApi.post('/workflow', wf);
+  return wfApi.post('/workflows', wf);
 }
 
 module.exports = {

@@ -55,7 +55,7 @@ These need to be run in local and port forwarded through ssh.
 
 ```bash
 cd <dgl>
-docker-compose up postgres mongo queue -d
+docker-compose up postgres -d
 ```
 
 - start rhythm_api locally

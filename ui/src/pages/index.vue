@@ -62,7 +62,7 @@ const raw_data_stats = ref({});
 const data_products_stats = ref({});
 
 workflowService
-  .getAll({ last_task_run: true, prev_task_runs: false, only_active: true })
+  .getAll({ last_task_run: true, only_active: true })
   .then((res) => {
     console.log(res.data);
     workflows.value = res.data;
@@ -71,7 +71,7 @@ workflowService
     console.error(err);
     if (err?.response?.status == 404)
       toast.error("Could not find the active workflows");
-    else toast.error("Something went wrong");
+    else toast.error("Something went wrong. Unable to fetch active workflows");
   });
 
 function update() {

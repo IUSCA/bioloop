@@ -45,6 +45,8 @@ def f(celery_task, dataset):
                                     source_size=dataset['du_size'])
     scratch_digest = utils.checksum(scratch_tar_path)
 
+    # validate files inside tar
+
     dataset_type = dataset['type'].lower()
     sda_dir = config["paths"][dataset_type]["archive"]
     sda.ensure_directory(sda_dir)  # create the directory if it does not exist
