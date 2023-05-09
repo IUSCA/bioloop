@@ -41,24 +41,24 @@ def upload_file_to_sda(celery_task: WorkflowTask,
                        local_file_path: Path,
                        sda_file_path: str,
                        delete_local_file=True) -> None:
-    local_digest = utils.checksum(local_file_path)
+    # local_digest = utils.checksum(local_file_path)
     local_file_size = local_file_path.stat().st_size
 
     print('sda put', str(local_file_path), sda_file_path)
     with utils.track_progress_parallel(progress_fn=hsi_put_progress,
                                        progress_fn_args=(celery_task, sda_file_path, local_file_size)):
-        sda.put(source=str(local_file_path), target=sda_file_path)
+        sda.put(local_file=str(local_file_path), sda_file=sda_file_path, verify_checksum=True)
 
     # validate whether the md5 checksums of local and SDA copies match
-    sda_digest = sda.get_hash(sda_file_path)
-    if sda_digest == local_digest:
-        if delete_local_file:
-            # file successfully uploaded to SDA, delete the local copy
-            local_file_path.unlink()
-    else:
-        raise Exception(
-            f'Archive failed: Checksums of local {local_file_path} ({local_digest})' +
-            f'and SDA {sda_file_path} ({sda_digest}) do not match')
+    # sda_digest = sda.get_hash(sda_file_path)
+    # if sda_digest == local_digest:
+    #     if delete_local_file:
+    #         # file successfully uploaded to SDA, delete the local copy
+    #         local_file_path.unlink()
+    # else:
+    #     raise Exception(
+    #         f'Archive failed: Checksums of local {local_file_path} ({local_digest})' +
+    #         f'and SDA {sda_file_path} ({sda_digest}) do not match')
 
 
 def archive(celery_task: WorkflowTask, dataset: dict):
