@@ -10,7 +10,7 @@ const config = require('config');
 
 const indexRouter = require('./routes/index');
 const {
-  notFound, errorHandler, prismaNotFoundHandler, assertionErrorHandler,
+  notFound, errorHandler, prismaNotFoundHandler, assertionErrorHandler, axiosErrorHandler,
 } = require('./middleware/error');
 
 // Register application
@@ -57,6 +57,9 @@ app.use(prismaNotFoundHandler);
 
 // handle asserions errors and send 400
 app.use(assertionErrorHandler);
+
+// handle axios errors
+app.use(axiosErrorHandler);
 
 // pass any unhandled errors to the error handler
 app.use(errorHandler);

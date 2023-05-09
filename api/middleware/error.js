@@ -1,6 +1,7 @@
 const { AssertionError } = require('assert');
 const createError = require('http-errors');
 const { Prisma } = require('@prisma/client');
+const axios = require('axios');
 
 // catch 404 and forward to error handler
 function notFound(req, res, next) {
@@ -26,6 +27,25 @@ function assertionErrorHandler(e, req, res, next) {
   return next(e);
 }
 
+// catch axios errors, print a nice message and return 500 error
+function axiosErrorHandler(error, req, res, next) {
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      console.error('Axios Error: The request was made and the server responded with a status code', `Error ${error.response.status}: ${JSON.stringify(error.response.data, null, 2)}`);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Axios Error: The request was made but no response was received');
+    } else {
+      // Something else happened in making the request that triggered an error
+      console.error('Axios Error:  Something else happened in making the request that triggered an error', error.message);
+    }
+    return next(createError.InternalServerError());
+  }
+  // The error is not an Axios error, so re-throw it to be handled elsewhere
+  return next(error);
+}
+
 function errorHandler(err, req, res, next) {
   // delegate to the default Express error handler,
   // when the headers have already been sent to the client
@@ -48,4 +68,5 @@ module.exports = {
   errorHandler,
   prismaNotFoundHandler,
   assertionErrorHandler,
+  axiosErrorHandler,
 };
