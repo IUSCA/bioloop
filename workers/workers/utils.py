@@ -47,6 +47,7 @@ def execute(cmd, cwd=None):
     except subprocess.CalledProcessError as exc:
         print(exc.stdout, exc.stderr, exc.returncode)
     """
+    print('executing', cmd, cwd)
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
     return p.stdout, p.stderr
 

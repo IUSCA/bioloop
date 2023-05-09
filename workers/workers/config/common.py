@@ -7,7 +7,7 @@ config = {
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'base_url': 'http://localhost:5001',
+        'base_url': 'http://localhost:3130',
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
     },
