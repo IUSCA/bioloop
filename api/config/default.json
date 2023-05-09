@@ -28,7 +28,7 @@
     }
   },
   "mode": "default",
-  "project_FQDN": "dgl.sca.iu.edu",
+  "app_id": "dgl-dev.sca.iu.edu",
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",

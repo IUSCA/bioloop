@@ -51,7 +51,7 @@ python -m celery -A workers.celery_app worker --concurrency 8
 There are no test instances of API, rhythm_api, mongo, postgres, queue running.
 These need to be run in local and port forwarded through ssh.
 
-- start postgres, mongo and queue locally using docker
+- start postgres locally using docker
 
 ```bash
 cd <dgl>
@@ -62,6 +62,7 @@ docker-compose up postgres -d
 
 ```bash
 cd <rhythm_api>
+docker-compose up queue mongo -d
 poetry run dev
 ```
 
@@ -79,28 +80,36 @@ pnpm dev
 
 - Reverse port forward API, mongo and queue. let the clients on remote machine talk to a server
   running on the local machine.
-  - API - local port - 3030, remote port - 3031
-  - Mongo - local port - 27017, remote port - 27018
-  - queue - local port - 5672, remote port - 5673
+  - API - local port - 3030, remote port - 3130
+  - Mongo - local port - 27017, remote port - 28017
+  - queue - local port - 5672, remote port - 5772
 
 ```bash
 ssh \
   -A \
-  -R 3031:localhost:3030 \
-  -R 27018:localhost:27017 \
-  -R 5673:locahost:5762 \
+  -R 3130:localhost:3030 \
+  -R 28017:localhost:27017 \
+  -R 5772:localhost:5672 \
   dgluser@colo23.carbonate.uits.iu.edu
 ```
 
-- pull latest changes in dev branch to `~/DGL_test`
+- pull latest changes in dev branch to `<DGL_dev>`
 
 ```bash
-colo23> cd <DGL_test>
+colo23> cd <DGL_dev>
 colo23> git checkout dev
 colo23> git pull
 ```
 
-- create / update `<DGL_test>/workers/.env`
-- Run `python -m celery -A workers.celery_app worker --concurrency 8` in `~/DGL_test/workers`
+- create / update `<DGL_dev>/workers/.env`
+
+- install dependencies using poetry and start celery workers
+
+```bash
+colo23> cd workers
+colo23> poetry install
+colo23> poetry shell
+colo23> python -m celery -A workers.celery_app worker --concurrency 2
+```
 
 

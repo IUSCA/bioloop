@@ -1,18 +1,19 @@
 import json
 from datetime import datetime
+from pathlib import Path
 
 import workers.utils as utils
 
 
 # import workers.illumina as illumina
 
-def get_runs():
+def get_runs() -> dict:
     command = ['bs', 'list', 'run', '-f', 'json']
     stdout, stderr = utils.execute(command)
     return json.loads(stdout)
 
 
-def get_projects():
+def get_projects() -> list[dict]:
     command = ['bs', 'list', 'project', '-f', 'json']
     stdout, stderr = utils.execute(command)
     projects = json.loads(stdout)
@@ -36,24 +37,24 @@ def get_projects():
     return valid_projects
 
 
-def download_project(project_name, download_dir):
+def download_project(project_name: str, download_dir: Path | str):
     # '--overwrite'
     command = ['bs', 'download', 'project', '--name', project_name, '-o', str(download_dir), '--no-progress-bars']
     return utils.execute(command)
 
 
-def list_datasets(n_days):
+def list_datasets(n_days: int):
     command = ['bs', 'list', 'datasets', '-f', 'json', f'--newer-than={n_days}d']
     stdout, stderr = utils.execute(command)
     return json.loads(stdout)
 
 
-def download_dataset(dataset_id, download_dir):
+def download_dataset(dataset_id: str, download_dir: str):
     command = ['bs', 'download', 'dataset', '--id', dataset_id, '-o', download_dir]
     return utils.execute(command)
 
 
-def download_recent_datasets(download_dir, n_days):
+def download_recent_datasets(download_dir: Path, n_days: int):
     download_dir.mkdir(exist_ok=True, parents=True)
     ds_metas = list_datasets(n_days)
     ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]

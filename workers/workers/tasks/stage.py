@@ -16,7 +16,45 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
 
-def get_dataset_from_sda(celery_task, dataset):
+def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_file_path: Path):
+    """
+    Before downloading, check if the file exists and checksums match.
+    If not, download from SDA and validate if the checksums match.
+    """
+    sda_digest = sda.get_hash(sda_path=sda_file_path)
+
+    file_exists = False
+    if local_file_path.exists() and local_file_path.is_file():
+        # if local file exists, validate checksum against SDA
+        local_digest = utils.checksum(local_file_path)
+        if sda_digest == local_digest:
+            file_exists = True
+
+    if not file_exists:
+        # delete the local file if possible
+        local_file_path.unlink(missing_ok=True)
+        source_size = sda.get_size(sda_file_path)
+
+        with utils.track_progress_parallel(progress_fn=utils.file_progress,
+                                           progress_fn_args=(celery_task, local_file_path, source_size, 'sda_get')):
+            sda.get(source=sda_file_path, target=str(local_file_path))
+
+        # after getting the file from SDA, validate its checksum
+        local_digest = utils.checksum(local_file_path)
+        if sda_digest != local_digest:
+            raise Exception(f'Stage failed: Checksums of local {local_file_path} ({local_digest})' +
+                            f'and SDA {sda_file_path} ({sda_digest}) do not match')
+
+
+def extract_tarfile(source: Path, target_dir: Path):
+    extraction_dir = target_dir / source.stem
+    if extraction_dir.exists():
+        shutil.rmtree(extraction_dir)
+    with tarfile.open(source) as tar:
+        tar.extractall(path=target_dir)
+
+
+def stage(celery_task: WorkflowTask, dataset: dict) -> None:
     """
     gets the tar from SDA and extracts it
 
@@ -25,51 +63,25 @@ def get_dataset_from_sda(celery_task, dataset):
     """
 
     sda_tar_path = dataset['archive_path']
-    dataset_type = dataset['type'].lower()
-    staging_dir = Path(config['paths'][dataset_type]['stage'])
     scratch_tar_path = Path(config['paths']['scratch']) / f"{dataset['name']}.tar"
-    sda_digest = sda.get_hash(sda_path=sda_tar_path)
-
-    # check if tar file is already downloaded
-    tarfile_exists = False
-    if scratch_tar_path.exists() and scratch_tar_path.is_file() and tarfile.is_tarfile(scratch_tar_path):
-        # if tar file exists, validate checksum against SDA
-        scratch_digest = utils.checksum(scratch_tar_path)
-        if sda_digest == scratch_digest:
-            tarfile_exists = True
-
-    if not tarfile_exists:
-        # get the tarfile from SDA to scratch
-        scratch_tar_path.unlink(missing_ok=True)
-        source_size = sda.get_size(sda_tar_path)
-
-        with utils.track_progress_parallel(progress_fn=utils.file_progress,
-                                           progress_fn_args=(celery_task, scratch_tar_path, source_size, 'sda_get')):
-            sda.get(source=sda_tar_path, target_dir=scratch_tar_path.parent)
-
-        # after getting the file from SDA, validate the checksum
-        scratch_digest = utils.checksum(scratch_tar_path)
-        if sda_digest != scratch_digest:
-            raise Exception(f'Stage failed: Checksums of local {scratch_tar_path} ({scratch_digest})' +
-                            'and SDA {sda_tar_path} ({sda_digest}) do not match')
+    download_file_from_sda(celery_task=celery_task,
+                           sda_file_path=sda_tar_path,
+                           local_file_path=scratch_tar_path)
 
     # extract the tar file
+    dataset_type = dataset['type'].lower()
+    staging_dir = Path(config['paths'][dataset_type]['stage'])
+    extract_tarfile(source=scratch_tar_path, target_dir=staging_dir)
     # check for name conflicts in stage dir and delete dir if exists
-    extracted_dir_name = staging_dir / dataset['name']
-    if extracted_dir_name.exists():
-        shutil.rmtree(extracted_dir_name)
-    with tarfile.open(scratch_tar_path) as tar:
-        tar.extractall(path=staging_dir)
 
     # delete the local tar copy after extraction
     scratch_tar_path.unlink()
-    return str(extracted_dir_name)
 
 
 @app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('stage_dataset'))
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    extracted_dir_name = get_dataset_from_sda(celery_task, dataset)
+    stage(celery_task, dataset)
 
     api.add_state_to_dataset(dataset_id=dataset_id, state='STAGED')
     return dataset_id,

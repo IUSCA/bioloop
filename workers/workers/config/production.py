@@ -5,7 +5,7 @@ YEAR = datetime.datetime.now().year
 # Production overrides
 
 config = {
-    'project_FQDN': 'dgl.sca.iu.edu',
+    'app_id': 'dgl.sca.iu.edu',
     'api': {
         'base_url': 'https://core-dev1.sca.iu.edu:5001/rhythm',
     },

@@ -9,11 +9,12 @@ from subprocess import Popen, PIPE
 # import multiprocessing
 # https://stackoverflow.com/questions/30624290/celery-daemonic-processes-are-not-allowed-to-have-children
 import billiard as multiprocessing
+from sca_rhythm import WorkflowTask
 
 
-def checksum(fname):
+def checksum(fname: Path | str):
     m = hashlib.md5()
-    with open(fname, "rb") as f:
+    with open(str(fname), "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             m.update(chunk)
     return m.hexdigest()
@@ -38,7 +39,7 @@ def execute_old(cmd, cwd=None):
         return p.pid, stdout_lines, p.returncode
 
 
-def execute(cmd, cwd=None):
+def execute(cmd: list[str], cwd: str = None):
     """
     returns stdout, stderr (strings)
     if the return code is not zero, subprocess.CalledProcessError is raised
@@ -52,7 +53,7 @@ def execute(cmd, cwd=None):
     return p.stdout, p.stderr
 
 
-def total_size(dir_path):
+def total_size(dir_path: Path | str):
     """
     can throw CalledProcessError
     can throw IndexError: list index out of range - if the stdout is not in expected format
@@ -99,7 +100,10 @@ def progress(name, done, total=None):
     }
 
 
-def file_progress(celery_task, path, total, progress_name):
+def file_progress(celery_task: WorkflowTask,
+                  path: Path | str,
+                  total: int,
+                  progress_name: str) -> None:
     size = Path(path).stat().st_size
     name = progress_name
     r = progress(name=name, done=size, total=total)

@@ -53,7 +53,7 @@ def parse_lfs_quota_output(text):
 
     files_usage = dict(zip(header[5:], fields[5:]))
     files_usage['usage'] = files_usage.pop('files')
-    files_usage['Filesystem'] = size_usage['Filesystem'] + ' files'
+    files_usage['Filesystem'] = str(size_usage['Filesystem']) + ' files'
     return size_usage, files_usage
 
 
