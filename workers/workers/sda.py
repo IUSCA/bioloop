@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import workers.utils as utils
 
 
-def put(local_file: str, sda_file: str, verify_checksum=True):
+def put(local_file: str, sda_file: str, verify_checksum: bool = True):
     """
     Transfer a local file to SDA
 
@@ -44,17 +46,23 @@ def get(sda_file: str, local_file: str, verify_checksum=True):
     return utils.execute(command)
 
 
-def get_hash(sda_path: str):
+def get_hash(sda_path: str, missing_ok: bool = False) -> str | None:
     command = ['hsi', '-P', f'hashlist {sda_path}']
-    stdout, stderr = utils.execute(command)
-    return stdout.strip().split()[0]
+    try:
+        stdout, stderr = utils.execute(command)
+        return stdout.strip().split()[0]
+    except utils.SubprocessError:
+        if missing_ok:
+            return None
+        else:
+            raise
 
 
-def delete(path: str):
+def delete(path: str) -> None:
     command = ['hsi', '-P', f'rm {path}']
-    return utils.execute(command)
+    utils.execute(command)
 
 
 def ensure_directory(dir_path: str) -> None:
     command = ['hsi', '-P', f'mkdir -p {dir_path}']
-    return utils.execute(command)
+    utils.execute(command)
