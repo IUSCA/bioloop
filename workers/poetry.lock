@@ -494,14 +494,14 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "sca-rhythm"
-version = "0.3.2"
+version = "0.4.2"
 description = "Create and manage workflows using Celery tasks"
 category = "main"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "sca_rhythm-0.3.2-py3-none-any.whl", hash = "sha256:9ffa4273f9085f5d03fa498c0dd12a7db3a0673eb04eff88be4f1fd2e131906a"},
-    {file = "sca_rhythm-0.3.2.tar.gz", hash = "sha256:6cdd1716cac66b798fe19959f7a67d2a22e7f8e5ff7126f7fe74fea8c2401df8"},
+    {file = "sca_rhythm-0.4.2-py3-none-any.whl", hash = "sha256:beea96aa1bfb325c2783c90acfe15fe026192966d65a37d7b0e099fdda1e6af6"},
+    {file = "sca_rhythm-0.4.2.tar.gz", hash = "sha256:b518dca47eba7a0acf88475ebb634d9b526d04f32afad31973609b854b51d570"},
 ]
 
 [package.dependencies]
@@ -564,4 +564,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.9"
-content-hash = "232072f9424b2a79fca9c0d581b814ed4f1588c233461ecc548372304deb5ab7"
+content-hash = "9cd9c182c42593252104ead334efadfad6553970d80cc278f22b60beba7eeadb"

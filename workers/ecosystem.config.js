@@ -4,7 +4,7 @@ module.exports = {
     {
       name: "celery_worker",
       script: "python",
-      args: "-m celery -A workers.celery_app worker --concurrency 8",
+      args: "-m celery -A workers.celery_app worker --concurrency 8 --loglevel INFO",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",

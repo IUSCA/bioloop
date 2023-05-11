@@ -28,7 +28,7 @@ steps = [
 
 wf = Workflow(app, steps=steps, name='test_wf', app_id='tests')
 wf.start('dataset-id-tests')
-print(wf.workflow['_id'])
+print('workflow_id', wf.workflow['_id'])
 
 # wf = Workflow(app, workflow_id='1a948b2f-c778-4c34-8bc4-3f05d80d68a8')
 # wf.resume()

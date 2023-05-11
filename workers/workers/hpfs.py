@@ -1,9 +1,12 @@
 """
 HPFS - Utilities to monitor the usage of High Performance File Systems
 """
+import logging
 
 from workers import utils
 from workers.utils import convert_size_to_bytes
+
+logger = logging.getLogger(__name__)
 
 
 def parse_quota_output(text):
@@ -29,7 +32,7 @@ def parse_quota_output(text):
                     try:
                         fields[i] = convert_size_to_bytes(field.strip())
                     except Exception as e:
-                        print('unable to convert to bytes', field, e)
+                        logger.warning('unable to convert to bytes', field, e)
             # create a dict by mapping the fields to the header
             data.append(dict(zip(header, fields)))
     return [{k: v for k, v in d.items() if k in ['Filesystem', 'usage', 'quota']} for d in data if d]

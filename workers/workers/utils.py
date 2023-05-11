@@ -1,5 +1,7 @@
-from __future__ import annotations # type unions by | are only avaiable in versions > 3.10
+from __future__ import annotations  # type unions by | are only available in versions > 3.10
+
 import hashlib
+import logging
 import os
 import subprocess
 import time
@@ -7,20 +9,24 @@ from contextlib import contextmanager
 from pathlib import Path
 from subprocess import Popen, PIPE
 
-
 # import multiprocessing
 # https://stackoverflow.com/questions/30624290/celery-daemonic-processes-are-not-allowed-to-have-children
 import billiard as multiprocessing
 from sca_rhythm import WorkflowTask
 
+logger = logging.getLogger(__name__)
+
 
 def checksum(fname: Path | str):
-    print(f'computing checksum of {fname}')
     m = hashlib.md5()
     with open(str(fname), "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             m.update(chunk)
     return m.hexdigest()
+
+    # python 3.11
+    # with open(fname, 'rb') as f:
+    #     digest = hashlib.file_digest(f, 'md5')
 
 
 #
@@ -33,7 +39,6 @@ def checksum(fname: Path | str):
 def execute_old(cmd, cwd=None):
     if not cwd:
         cwd = os.getcwd()
-    print('executing', cmd, 'at', cwd)
     env = os.environ.copy()
     with Popen(cmd, cwd=cwd, stdout=PIPE, stderr=PIPE, shell=True, env=env) as p:
         stdout_lines = []
@@ -42,17 +47,31 @@ def execute_old(cmd, cwd=None):
         return p.pid, stdout_lines, p.returncode
 
 
-def execute(cmd: list[str], cwd: str = None):
+class SubprocessError(Exception):
+    pass
+
+
+def execute(cmd: list[str], cwd: str = None) -> tuple[str, str]:
     """
     returns stdout, stderr (strings)
-    if the return code is not zero, subprocess.CalledProcessError is raised
-    try:
-        execute(cmd)
-    except subprocess.CalledProcessError as exc:
-        print(exc.stdout, exc.stderr, exc.returncode)
+    if the return code is not zero, SubprocessError is raised with a dict of
+    {
+        'return_code': 1,
+        'stdout': '',
+        'stderr': '',
+        'args': []
+    }
     """
-    print('executing', cmd, cwd)
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
+    logger.info(f'executing {cmd} in CWD {cwd}')
+    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    if p.returncode != 0:
+        msg = {
+            'return_code': p.returncode,
+            'stdout': p.stdout,
+            'stderr': p.stderr,
+            'args': p.args
+        }
+        raise SubprocessError(msg)
     return p.stdout, p.stderr
 
 
@@ -74,18 +93,19 @@ def track_progress_parallel(progress_fn, progress_fn_args, loop_delay=5):
             try:
                 progress_fn(*progress_fn_args)
             except Exception as e:
-                print('loop: exception', e)
+                # log the exception message without stacktrace
+                logger.warning('exception in parallel progress loop: %s', e)
 
     p = None
     try:
         # start a subprocess to call progress_loop every loop_delay seconds
         p = multiprocessing.Process(target=progress_loop)
         p.start()
-        print(f'starting a sub process to track progress with pid: {p.pid}')
+        logger.info(f'starting a sub process to track progress with pid: {p.pid}')
         yield p  # inside the context manager
     finally:
         # terminate the sub process
-        print(f'terminating progress tracker')
+        logger.info(f'terminating progress tracker: {p.pid}')
         if p is not None:
             p.terminate()
 
@@ -171,3 +191,8 @@ def merge(a: dict, b: dict) -> dict:
         else:
             a[key] = b[key]
     return a
+
+
+def tar(tar_path: Path | str, source_dir: Path | str) -> None:
+    command = ['tar', 'cf', str(tar_path), '--sparse', str(source_dir)]
+    execute(command)

@@ -43,7 +43,7 @@ pm2 start ecosystem.config.js
 
 ```bash
 cd ~/DGL/workers
-python -m celery -A workers.celery_app worker --concurrency 8
+python -m celery -A workers.celery_app worker --concurrency 8 --loglevel INFO
 ```
 
 ## Testing with workers running on local machine
@@ -56,7 +56,7 @@ docker-compose up queue mongo -d
 
 Start Workers
 ```bash
-python -m celery -A tests.celery_app worker --concurrency 2
+python -m celery -A tests.celery_app worker --concurrency 2 --loglevel INFO
 ```
 
 Run test
@@ -127,7 +127,7 @@ colo23> git pull
 colo23> cd workers
 colo23> poetry install
 colo23> poetry shell
-colo23> python -m celery -A workers.celery_app worker --concurrency 2
+colo23> python -m celery -A workers.celery_app worker --concurrency 2 --loglevel INFO
 ```
 
 

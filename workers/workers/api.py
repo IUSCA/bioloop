@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -6,6 +7,8 @@ from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
 from workers.config import config
+
+logger = logging.getLogger(__name__)
 
 
 def make_retry_adapter():
@@ -51,7 +54,7 @@ class APIServerSession(requests.Session):
         joined_url = urljoin(self.base_url, url)
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.timeout
-        print(method, joined_url, args, kwargs)
+        logger.debug(f'{method}, {joined_url}, {args}, {kwargs}')
         return super().request(method, joined_url, *args, **kwargs)
 
 

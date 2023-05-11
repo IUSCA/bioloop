@@ -61,5 +61,4 @@ def download_recent_datasets(download_dir: Path, n_days: int):
     ds_metas = list_datasets(n_days)
     ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]
     for ds_id in ds_ids:
-        print('downloading', ds_id)
         download_dataset(ds_id, str(download_dir))
