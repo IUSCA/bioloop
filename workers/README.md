@@ -46,7 +46,25 @@ cd ~/DGL/workers
 python -m celery -A workers.celery_app worker --concurrency 8
 ```
 
-## Testing
+## Testing with workers running on local machine
+Start mongo and queue
+
+```bash
+cd <rhythm_api>
+docker-compose up queue mongo -d
+```
+
+Start Workers
+```bash
+python -m celery -A tests.celery_app worker --concurrency 2
+```
+
+Run test
+```bash
+python -m tests.test
+```
+
+## Testing with workers running on COLO node and Rhythm API
 
 There are no test instances of API, rhythm_api, mongo, postgres, queue running.
 These need to be run in local and port forwarded through ssh.
