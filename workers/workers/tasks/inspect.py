@@ -35,6 +35,7 @@ def generate_metadata(celery_task, source: Path):
 
     paths = list(source.rglob('*'))
     prog = Progress(celery_task=celery_task, name='inspect', total=len(paths), units='items')
+    prog.update(done=0)
     for i, p in enumerate(paths):
         if utils.is_readable(p):
             if p.is_file():
@@ -77,10 +78,10 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         'size': size,
         'num_files': num_files,
         'num_directories': num_directories,
-        'attributes':{
+        'attributes': {
             'num_genome_files': num_genome_files,
         }
-        
+
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_checksums_to_dataset(dataset_id=dataset_id, checksums=metadata)

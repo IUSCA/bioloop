@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from celery import Celery
+from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 
 import workers.api as api
@@ -12,10 +13,11 @@ from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
+logger = get_task_logger(__name__)
 
 
 def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, source_size: int):
-    print(f'creating tar of {source_dir} at {tar_path}')
+    logger.info(f'creating tar of {source_dir} at {tar_path}')
     # if the tar file already exists, delete it
     if tar_path.exists():
         tar_path.unlink()
@@ -38,11 +40,10 @@ def upload_file_to_sda(celery_task: WorkflowTask,
     local_digest = utils.checksum(local_file_path)
     sda_digest = sda.get_hash(sda_file_path, missing_ok=True)
     if sda_digest == local_digest:
-        print('File is already on SDA')
+        logger.warning(f'{local_file_path} is already on SDA at {sda_file_path} - not uploading')
     else:
         local_file_size = local_file_path.stat().st_size
 
-        print('sda put', str(local_file_path), sda_file_path)
         with utils.track_progress_parallel(celery_task=celery_task,
                                            name='sda_put',
                                            progress_fn=lambda: sda.get_size(sda_file_path),

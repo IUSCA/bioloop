@@ -24,6 +24,8 @@
             >
               {{ source?.progress?.percent_done }}%
             </va-progress-circle>
+            <!-- <span v-if="source?.progress?.time_remaining"> 
+              ETA: {{ source?.progress?.time_remaining }} </span> -->
           </div>
         </template>
         <template #cell(status)="{ source }">
@@ -126,8 +128,8 @@ function compute_step_duration(step) {
 function get_progress_obj(step) {
   if (step?.status == "PROGRESS" && step?.last_task_run?.result) {
     const progress = step?.last_task_run?.result;
-    const percent_done = progress.percent_done
-      ? Math.round(progress.percent_done * 100)
+    const percent_done = progress.fraction_done
+      ? Math.round(progress.fraction_done * 100)
       : null;
     return {
       name: progress?.name,

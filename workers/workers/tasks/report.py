@@ -29,11 +29,13 @@ def run_fastqc(celery_task: WorkflowTask, source_dir, output_dir):
 
     """
     NUM_THREADS = 8
+    BATCH_SIZE = NUM_THREADS
     fastq_files = [str(p) for p in source_dir.glob('**/*.fastq.gz')]
     prog = Progress(celery_task=celery_task, name='fastqc', total=len(fastq_files), units='items')
 
     done = 0
-    for batch in utils.batched(fastq_files, n=NUM_THREADS):
+    prog.update(done=done)
+    for batch in utils.batched(fastq_files, n=BATCH_SIZE):
         utils.fastqc_parallel(fastq_files=batch, output_dir=output_dir, num_threads=NUM_THREADS)
         done += len(batch)
         prog.update(done=done)

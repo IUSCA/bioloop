@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 from celery import Celery
+from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 
 import workers.api as api
@@ -16,6 +17,7 @@ from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
+logger = get_task_logger(__name__)
 
 
 def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_file_path: Path):
@@ -24,18 +26,19 @@ def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_
     If not, download from SDA and validate if the checksums match.
     """
     sda_digest = sda.get_hash(sda_path=sda_file_path)
-    print(f'sda_digest of {sda_file_path} : {sda_digest}')
+    logger.info(f'sda_digest of {sda_file_path} : {sda_digest}')
 
     file_exists = False
     if local_file_path.exists() and local_file_path.is_file():
         # if local file exists, validate checksum against SDA
+        logger.info(f'computing checksum of local file {local_file_path}')
         local_digest = utils.checksum(local_file_path)
         if sda_digest == local_digest:
             file_exists = True
-            print(f'local file exists and checksums match - not getting from the SDA')
+            logger.warning(f'local file exists and checksums match - not getting from the SDA')
 
     if not file_exists:
-        print('getting file from SDA')
+        logger.info('getting file from SDA')
 
         # delete the local file if possible
         local_file_path.unlink(missing_ok=True)
@@ -94,10 +97,11 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> None:
                            local_file_path=scratch_tar_path)
 
     # extract the tar file to stage directory
-    print('extracting tar')
     dataset_type = dataset['type'].lower()
     staging_dir = Path(config['paths'][dataset_type]['stage'])
     target_dir = staging_dir / dataset['name']  # path to the staged dataset
+
+    logger.info(f'extracting tar {scratch_tar_path} to {target_dir}')
     extract_tarfile(tar_path=scratch_tar_path, target_dir=target_dir, override_arcname=True)
 
     # delete the local tar copy after extraction
