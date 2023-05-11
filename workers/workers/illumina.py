@@ -1,8 +1,8 @@
-from __future__ import annotations # type unions by | are only avaiable in versions > 3.10
+from __future__ import annotations  # type unions by | are only avaiable in versions > 3.10
+
 import json
 from datetime import datetime
 from pathlib import Path
-
 
 import workers.utils as utils
 
@@ -54,11 +54,3 @@ def list_datasets(n_days: int):
 def download_dataset(dataset_id: str, download_dir: str):
     command = ['bs', 'download', 'dataset', '--id', dataset_id, '-o', download_dir]
     return utils.execute(command)
-
-
-def download_recent_datasets(download_dir: Path, n_days: int):
-    download_dir.mkdir(exist_ok=True, parents=True)
-    ds_metas = list_datasets(n_days)
-    ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]
-    for ds_id in ds_ids:
-        download_dataset(ds_id, str(download_dir))

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from celery import Celery
 from sca_rhythm import WorkflowTask
+from sca_rhythm.progress import Progress
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
@@ -13,6 +14,19 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
 
+def download_recent_datasets(celery_task: WorkflowTask, download_dir: Path, n_days: int):
+    download_dir.mkdir(exist_ok=True, parents=True)
+    ds_metas = illumina.list_datasets(n_days)
+    ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]
+
+    prog = Progress(celery_task=celery_task, name='download ds', total=len(ds_ids), units='items')
+    prog.update(done=0)
+
+    for i, ds_id in enumerate(ds_ids):
+        illumina.download_dataset(ds_id, str(download_dir))
+        prog.update(done=i + 1)
+
+
 @app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('download_illumina_dataset'))
 def download_illumina_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
@@ -21,7 +35,7 @@ def download_illumina_dataset(celery_task, dataset_id, **kwargs):
 
     # illumina.download_project(project_name, download_path)
     n_days = config['illumina']['download']['datasets']['n_days']
-    illumina.download_recent_datasets(download_path, n_days)
+    download_recent_datasets(celery_task, download_path, n_days)
 
     update_data = {
         'origin_path': str(download_path)
