@@ -5,7 +5,9 @@ import logging
 import os
 import subprocess
 import time
+from collections.abc import Iterable
 from contextlib import contextmanager
+from itertools import islice
 from pathlib import Path
 from subprocess import Popen, PIPE
 
@@ -13,6 +15,7 @@ from subprocess import Popen, PIPE
 # https://stackoverflow.com/questions/30624290/celery-daemonic-processes-are-not-allowed-to-have-children
 import billiard as multiprocessing
 from sca_rhythm import WorkflowTask
+from sca_rhythm.progress import Progress
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +89,19 @@ def total_size(dir_path: Path | str):
 
 
 @contextmanager
-def track_progress_parallel(progress_fn, progress_fn_args, loop_delay=5):
+def track_progress_parallel(celery_task: WorkflowTask,
+                            name: str,
+                            progress_fn,
+                            total: int = None,
+                            units: str = None,
+                            loop_delay=5):
     def progress_loop():
+        prog = Progress(celery_task=celery_task, name=name, total=total, units=units)
         while True:
             time.sleep(loop_delay)
             try:
-                progress_fn(*progress_fn_args)
+                done = progress_fn()
+                prog.update(done)
             except Exception as e:
                 # log the exception message without stacktrace
                 logger.warning('exception in parallel progress loop: %s', e)
@@ -108,29 +118,6 @@ def track_progress_parallel(progress_fn, progress_fn_args, loop_delay=5):
         logger.info(f'terminating progress tracker: {p.pid}')
         if p is not None:
             p.terminate()
-
-
-def progress(name, done, total=None):
-    percent_done = None
-    if total:
-        percent_done = done * 1.0 / total
-    return {
-        'name': name,
-        'percent_done': percent_done,
-        'done': done,
-        'total': total,
-        'units': 'bytes',
-    }
-
-
-def file_progress(celery_task: WorkflowTask,
-                  path: Path | str,
-                  total: int,
-                  progress_name: str) -> None:
-    size = Path(path).stat().st_size
-    name = progress_name
-    r = progress(name=name, done=size, total=total)
-    celery_task.update_progress(r)
 
 
 def parse_number(x, default=None, func=int):
@@ -196,3 +183,46 @@ def merge(a: dict, b: dict) -> dict:
 def tar(tar_path: Path | str, source_dir: Path | str) -> None:
     command = ['tar', 'cf', str(tar_path), '--sparse', str(source_dir)]
     execute(command)
+
+
+def is_readable(f: Path):
+    if f.is_file() and os.access(str(f), os.R_OK):
+        return True
+    if f.is_dir() and os.access(str(f), os.R_OK | os.X_OK):
+        return True
+    return False
+
+
+def batched(iterable: Iterable, n: int) -> list:
+    """Batch data into lists of length n. The last batch may be shorter."""
+    # batched('ABCDEFG', 3) --> ABC DEF G
+    it = iter(iterable)
+    while True:
+        batch = list(islice(it, n))
+        if not batch:
+            return
+        yield batch
+
+
+def fastqc_parallel(fastq_files: list[Path | str], output_dir: Path | str, num_threads: int = 8) -> None:
+    """
+    Run the FastQC tool to check the quality of all fastq files
+
+    @param fastq_files: list of paths to fastq.gz files
+    @param output_dir: cmd = ['fastqc', '-t', '8'] + fastq_files + ['-o', str(output_dir)]
+    @param num_threads: parallel processing threads
+    """
+    cmd = ['fastqc', '-t', str(num_threads)] + [str(p) for p in fastq_files] + ['-o', str(output_dir)]
+    execute(cmd)
+
+
+def multiqc(source_dir: Path | str, output_dir: Path | str) -> None:
+    """
+    Run the MultiQC tool to generate an aggregate report
+
+    @param source_dir: (pathlib.Path): where fastqc generated reports
+    @param output_dir: (pathlib.Path): where to create multiqc_report.html and multiqc_data
+    @return: none
+    """
+    cmd = ['multiqc', str(source_dir), '-o', str(output_dir)]
+    execute(cmd)

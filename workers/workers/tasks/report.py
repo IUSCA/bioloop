@@ -1,9 +1,11 @@
-import shutil
+from __future__ import annotations
+
 import uuid
 from pathlib import Path
 
 from celery import Celery
 from sca_rhythm import WorkflowTask
+from sca_rhythm.progress import Progress
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
@@ -15,65 +17,44 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
 
-def run_fastqc(source_dir, output_dir):
+def run_fastqc(celery_task: WorkflowTask, source_dir, output_dir):
     """
     Run the FastQC tool to check the quality of all fastq files 
     (.fastq.gz) in the source directory recursively.
 
-    :param source_dir: (pathlib.Path): The dataset / sequencing run directory
-    :param output_dir: (pathlib.Path): where to create the reports (a .zip and .html file)
-    :return: None
+    @param celery_task: WorkflowTask
+    @param source_dir: (pathlib.Path): The dataset / sequencing run directory
+    @param output_dir: (pathlib.Path): where to create the reports (a .zip and .html file)
+    @return: None
+
     """
+    NUM_THREADS = 8
     fastq_files = [str(p) for p in source_dir.glob('**/*.fastq.gz')]
+    prog = Progress(celery_task=celery_task, name='fastqc', total=len(fastq_files), units='items')
 
-    # fastqc -t 8 parallel processes 8 fastq files at once
-    # all fastq files are sent as command line args
-    if len(fastq_files) > 0:
-        cmd = ['fastqc', '-t', '8'] + fastq_files + ['-o', str(output_dir)]
-        utils.execute(cmd)
-
-
-def run_multiqc(source_dir, output_dir):
-    """
-    Run the MultiQC tool to generate an aggregate report
-    
-    :param source_dir: (pathlib.Path): where fastqc generated reports
-    :param output_dir: (pathlib.Path): where to create multiqc_report.html and multiqc_data
-    :return:
-    """
-    cmd = ['multiqc', str(source_dir), '-o', str(output_dir)]
-    utils.execute(cmd)
+    done = 0
+    for batch in utils.batched(fastq_files, n=NUM_THREADS):
+        utils.fastqc_parallel(fastq_files=batch, output_dir=output_dir, num_threads=NUM_THREADS)
+        done += len(batch)
+        prog.update(done=done)
 
 
-def cleanup(report_dir):
-    """
-    Delete all files and directories except multiqc_report.html in the report_dir
-    :param report_dir: (pathlib.Path): where fastqc and multiqc generates reports
-    :return:
-    """
-    for f in report_dir.iterdir():
-        if f.name != 'multiqc_report.html':
-            if f.is_dir():
-                shutil.rmtree(f)
-            else:
-                f.unlink()
-
-
-def create_report(dataset_dir: Path, dataset_qc_dir: Path, report_id: str = None) -> str:
+def create_report(celery_task: WorkflowTask, dataset_dir: Path, dataset_qc_dir: Path, report_id: str = None) -> str:
     """
     Runs fastqc and multiqc on dataset files. The qc files are placed in dataset_qc_dir
 
+    @param celery_task: WorkflowTask
+    @param dataset_dir: (Path): Staged dataset directory path
+    @param dataset_qc_dir: (Path): directory to generate the qc reports in
+    @param report_id: (str): report_id of the last generated report to be reused. (optional)
+    @return: The report ID (UUID4)
 
-    :param dataset_dir: (Path): Staged dataset directory path
-    :param dataset_qc_dir: (Path): directory to generate the qc reports in
-    :param report_id: (str): report_id of the last generated report to be reused. (optional)
-    :return: The report ID (UUID4)
     """
     report_id = report_id or str(uuid.uuid4())
     dataset_qc_dir.mkdir(parents=True, exist_ok=True)
 
-    run_fastqc(dataset_dir, dataset_qc_dir)
-    run_multiqc(dataset_qc_dir, dataset_qc_dir)
+    run_fastqc(celery_task, dataset_dir, dataset_qc_dir)
+    utils.multiqc(dataset_qc_dir, dataset_qc_dir)
 
     return report_id
 
@@ -86,6 +67,7 @@ def generate_reports(celery_task, dataset_id, **kwargs):
     staged_path = Path(config['paths'][dataset_type]['stage']) / dataset['name']
 
     report_id = create_report(
+        celery_task=celery_task,
         dataset_dir=staged_path,
         dataset_qc_dir=dataset_qc_dir,
         report_id=(dataset.get('attributes', {}) or {}).get('report_id', None)
@@ -106,5 +88,6 @@ def generate_reports(celery_task, dataset_id, **kwargs):
     else:
         pass
         # TODO: fail the task if there is not report?
+        # nonRetryable exception
 
     return dataset_id,

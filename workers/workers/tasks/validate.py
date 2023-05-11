@@ -1,5 +1,3 @@
-import shutil
-from datetime import datetime
 from pathlib import Path
 
 from celery import Celery
@@ -39,13 +37,3 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
                                     files_metadata=dataset['metadata'])
     api.add_state_to_dataset(dataset_id=dataset_id, state='VALIDATED')
     return dataset_id, validation_errors
-
-
-# TODO: move out of validate
-def clean_old_data(dataset):
-    stage_dir = Path(config['paths']['stage_dir']).resolve()
-    data_age = datetime.strptime(dataset['takenAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
-    delta = datetime.now() - data_age
-    if delta.days > 30:
-        stale_path = stage_dir / dataset['name']
-        shutil.rmtree(stale_path)

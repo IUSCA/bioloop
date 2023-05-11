@@ -41,15 +41,12 @@ def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_
         local_file_path.unlink(missing_ok=True)
         source_size = sda.get_size(sda_file_path)
 
-        with utils.track_progress_parallel(progress_fn=utils.file_progress,
-                                           progress_fn_args=(celery_task, local_file_path, source_size, 'sda_get')):
+        with utils.track_progress_parallel(celery_task=celery_task,
+                                           name='sda_get',
+                                           progress_fn=lambda: local_file_path.stat().st_size,
+                                           total=source_size,
+                                           units='bytes'):
             sda.get(sda_file=sda_file_path, local_file=str(local_file_path), verify_checksum=True)
-
-        # after getting the file from SDA, validate its checksum
-        # local_digest = utils.checksum(local_file_path)
-        # if sda_digest != local_digest:
-        #     raise Exception(f'Stage failed: Checksums of local {local_file_path} ({local_digest})' +
-        #                     f'and SDA {sda_file_path} ({sda_digest}) do not match')
 
 
 def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
