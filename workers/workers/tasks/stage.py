@@ -45,7 +45,7 @@ def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_
         source_size = sda.get_size(sda_file_path)
 
         with utils.track_progress_parallel(celery_task=celery_task,
-                                           name='sda_get',
+                                           name='sda get',
                                            progress_fn=lambda: local_file_path.stat().st_size,
                                            total=source_size,
                                            units='bytes'):

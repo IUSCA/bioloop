@@ -7,6 +7,7 @@ import subprocess
 import time
 from collections.abc import Iterable
 from contextlib import contextmanager
+from functools import wraps
 from itertools import islice
 from pathlib import Path
 from subprocess import Popen, PIPE
@@ -20,6 +21,31 @@ from sca_rhythm.progress import Progress
 logger = logging.getLogger(__name__)
 
 
+def str_func_call(func, args, kwargs):
+    args_list = [repr(arg) for arg in args] + [f"{key}={repr(val)}" for key, val in kwargs.items()]
+    args_str = ", ".join(args_list)
+    return f"{func.__name__}({args_str})"
+
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        f_str = str_func_call(f, args, kw)
+        print(f"{f_str} start")
+        ts = time.perf_counter()
+        try:
+            result = f(*args, **kw)
+            return result
+        except Exception:
+            raise
+        finally:
+            te = time.perf_counter()
+            print(f"{f_str} took: {(te - ts):2.4f} s")
+
+    return wrap
+
+
+@timing
 def checksum(fname: Path | str):
     m = hashlib.md5()
     with open(str(fname), "rb") as f:
@@ -54,6 +80,7 @@ class SubprocessError(Exception):
     pass
 
 
+@timing
 def execute(cmd: list[str], cwd: str = None) -> tuple[str, str]:
     """
     returns stdout, stderr (strings)
@@ -65,7 +92,6 @@ def execute(cmd: list[str], cwd: str = None) -> tuple[str, str]:
         'args': []
     }
     """
-    logger.info(f'executing {cmd} in CWD {cwd}')
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     if p.returncode != 0:
         msg = {

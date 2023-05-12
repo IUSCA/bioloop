@@ -17,7 +17,7 @@ def put(local_file: str, sda_file: str, verify_checksum: bool = True):
     """
     # -c flag enables checksum creation
     put_cmd = 'put -c on' if verify_checksum else 'put'
-    command = ['hsi', '-P', f'${put_cmd} {local_file} : {sda_file}']
+    command = ['hsi', '-P', f'{put_cmd} {local_file} : {sda_file}']
     return utils.execute(command)
 
 

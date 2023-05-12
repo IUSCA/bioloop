@@ -34,7 +34,7 @@ def generate_metadata(celery_task, source: Path):
         # raise nonRetryableException(msg)
 
     paths = list(source.rglob('*'))
-    prog = Progress(celery_task=celery_task, name='inspect', total=len(paths), units='items')
+    prog = Progress(celery_task=celery_task, name='', total=len(paths), units='items')
     prog.update(done=0)
     for i, p in enumerate(paths):
         if utils.is_readable(p):

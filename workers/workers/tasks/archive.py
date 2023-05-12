@@ -45,7 +45,7 @@ def upload_file_to_sda(celery_task: WorkflowTask,
         local_file_size = local_file_path.stat().st_size
 
         with utils.track_progress_parallel(celery_task=celery_task,
-                                           name='sda_put',
+                                           name='sda put',
                                            progress_fn=lambda: sda.get_size(sda_file_path),
                                            total=local_file_size,
                                            units='bytes'):
