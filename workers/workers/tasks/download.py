@@ -19,12 +19,10 @@ def download_recent_datasets(celery_task: WorkflowTask, download_dir: Path, n_da
     ds_metas = illumina.list_datasets(n_days)
     ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]
 
-    prog = Progress(celery_task=celery_task, name='datasets', total=len(ds_ids), units='items')
-    prog.update(done=0)
+    progress = Progress(celery_task=celery_task, name='datasets', units='items')
 
-    for i, ds_id in enumerate(ds_ids):
+    for ds_id in progress(ds_ids):
         illumina.download_dataset(ds_id, str(download_dir))
-        prog.update(done=i + 1)
 
 
 @app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('download_illumina_dataset'))

@@ -10,12 +10,14 @@
             <span style="text-transform: uppercase" class="flex-initial">
               {{ source.name }}
             </span>
+
             <span
               v-if="source?.progress?.name"
-              class="text-slate-500 flex-initial"
+              class="text-slate-500 flex-initial text-sm"
             >
               {{ source?.progress?.name }}
             </span>
+
             <va-progress-circle
               v-if="source?.progress?.percent_done"
               class="flex-initial"
@@ -24,8 +26,13 @@
             >
               {{ source?.progress?.percent_done }}%
             </va-progress-circle>
-            <!-- <span v-if="source?.progress?.time_remaining"> 
-              ETA: {{ source?.progress?.time_remaining }} </span> -->
+
+            <span
+              v-if="source?.progress?.time_remaining"
+              class="text-slate-500 flex-initial text-sm"
+            >
+              {{ source.progress.time_remaining }} remaining
+            </span>
           </div>
         </template>
         <template #cell(status)="{ source }">
@@ -124,16 +131,30 @@ function compute_step_duration(step) {
   }
   return "";
 }
+function parse_time_remaining(t) {
+  if (t == null) {
+    return null;
+  } else {
+    if (t == 1e100) {
+      // infinity
+      return null;
+    } else {
+      return moment.duration(t * 1000).humanize();
+    }
+  }
+}
 
 function get_progress_obj(step) {
   if (step?.status == "PROGRESS" && step?.last_task_run?.result) {
-    const progress = step?.last_task_run?.result;
+    const progress = step.last_task_run.result;
     const percent_done = progress.fraction_done
       ? Math.round(progress.fraction_done * 100)
       : null;
+
     return {
       name: progress?.name,
       percent_done,
+      time_remaining: parse_time_remaining(progress.time_remaining_sec),
     };
   }
   return null;

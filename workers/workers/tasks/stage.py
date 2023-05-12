@@ -22,7 +22,7 @@ logger = get_task_logger(__name__)
 
 def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_file_path: Path):
     """
-    Before downloading, check if the file exists and checksums match.
+    Before downloading, check if the file exists and the checksums match.
     If not, download from SDA and validate if the checksums match.
     """
     sda_digest = sda.get_hash(sda_path=sda_file_path)
@@ -35,7 +35,7 @@ def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_
         local_digest = utils.checksum(local_file_path)
         if sda_digest == local_digest:
             file_exists = True
-            logger.warning(f'local file exists and checksums match - not getting from the SDA')
+            logger.warning(f'local file exists and the checksums match - not getting from the SDA')
 
     if not file_exists:
         logger.info('getting file from SDA')

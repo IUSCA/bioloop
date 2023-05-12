@@ -1,4 +1,4 @@
-from __future__ import annotations  # type unions by | are only avaiable in versions > 3.10
+from __future__ import annotations  # type unions by | are only available in versions > 3.10
 
 import json
 from datetime import datetime

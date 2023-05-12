@@ -7,7 +7,7 @@ import subprocess
 import time
 from collections.abc import Iterable
 from contextlib import contextmanager
-from functools import wraps
+from functools import wraps, partial
 from itertools import islice
 from pathlib import Path
 from subprocess import Popen, PIPE
@@ -27,25 +27,28 @@ def str_func_call(func, args, kwargs):
     return f"{func.__name__}({args_str})"
 
 
-def timing(f):
-    @wraps(f)
+def logged(func=None, header=True, trailer=True):
+    if func is None:
+        return partial(logged, header=header, trailer=trailer)
+
+    @wraps(func)
     def wrap(*args, **kw):
-        f_str = str_func_call(f, args, kw)
-        print(f"{f_str} start")
+        f_str = str_func_call(func, args, kw)
+        if header:
+            logger.info(f_str)
         ts = time.perf_counter()
         try:
-            result = f(*args, **kw)
-            return result
+            return func(*args, **kw)
         except Exception:
             raise
         finally:
-            te = time.perf_counter()
-            print(f"{f_str} took: {(te - ts):2.4f} s")
+            if trailer:
+                te = time.perf_counter()
+                logger.info(f"{f_str} completed in {(te - ts):2.4f} s")
 
     return wrap
 
 
-@timing
 def checksum(fname: Path | str):
     m = hashlib.md5()
     with open(str(fname), "rb") as f:
@@ -80,7 +83,6 @@ class SubprocessError(Exception):
     pass
 
 
-@timing
 def execute(cmd: list[str], cwd: str = None) -> tuple[str, str]:
     """
     returns stdout, stderr (strings)

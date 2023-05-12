@@ -34,9 +34,9 @@ def generate_metadata(celery_task, source: Path):
         # raise nonRetryableException(msg)
 
     paths = list(source.rglob('*'))
-    prog = Progress(celery_task=celery_task, name='', total=len(paths), units='items')
-    prog.update(done=0)
-    for i, p in enumerate(paths):
+    progress = Progress(celery_task=celery_task, name='', units='items')
+
+    for p in progress(paths):
         if utils.is_readable(p):
             if p.is_file():
                 num_files += 1
@@ -55,8 +55,6 @@ def generate_metadata(celery_task, source: Path):
                 num_directories += 1
         else:
             errors.append(f'{p} is not readable/traversable')
-
-        prog.update(done=i + 1)
 
     # TODO: raise non retryable exception
     if len(errors) > 0:

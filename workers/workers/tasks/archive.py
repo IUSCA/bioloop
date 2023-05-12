@@ -37,10 +37,16 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 def upload_file_to_sda(celery_task: WorkflowTask,
                        local_file_path: Path,
                        sda_file_path: str) -> None:
-    local_digest = utils.checksum(local_file_path)
+    local_digest = None
     sda_digest = sda.get_hash(sda_file_path, missing_ok=True)
+
+    if sda_digest is not None:
+        logger.info(f'computing checksum of local file {local_file_path} to compare with sda_digest')
+        local_digest = utils.checksum(local_file_path)
+
     if sda_digest == local_digest:
-        logger.warning(f'{local_file_path} is already on SDA at {sda_file_path} - not uploading')
+        logger.warning(f'The checksums of local file {local_file_path} and SDA file {sda_file_path} match - not '
+                       f'uploading')
     else:
         local_file_size = local_file_path.stat().st_size
 
