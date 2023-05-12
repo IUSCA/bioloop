@@ -89,7 +89,7 @@ def generate_reports(celery_task, dataset_id, **kwargs):
         api.add_state_to_dataset(dataset_id=dataset_id, state='QC')
     else:
         pass
-        # TODO: fail the task if there is not report?
+        # TODO: fail the task if there is no report?
         # nonRetryable exception
 
     return dataset_id,

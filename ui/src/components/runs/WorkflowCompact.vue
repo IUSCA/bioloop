@@ -14,7 +14,7 @@
       <div v-if="props.show_dataset && dataset_id">
         <span class="text-sm">
           Dataset:
-          <router-link :to="`/dataset/${dataset_id}`" class="va-link"
+          <router-link :to="`/datasets/${dataset_id}`" class="va-link"
             >#{{ dataset_id }}</router-link
           >
         </span>
