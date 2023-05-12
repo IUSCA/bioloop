@@ -58,14 +58,28 @@ class APIServerSession(requests.Session):
         return super().request(method, joined_url, *args, **kwargs)
 
 
-def dataset_getter(dataset):
+def str_to_int(d: dict, key: str):
+    d['du_size'] = utils.parse_number(d.get(key, None))
+    return d
+
+
+def int_to_str(d: dict, key: str):
+    if key in d and d[key] is not None:
+        d[key] = str(d[key])
+    return d
+
+
+def dataset_getter(dataset: dict):
     DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
     DATE_KEYS = ['created_at', 'updated_at']
 
     # convert du_size and size from string to int
-    if dataset is not None:
-        dataset['du_size'] = utils.parse_number(dataset.get('du_size', None))
-        dataset['size'] = utils.parse_number(dataset.get('size', None))
+    if dataset is None:
+        return dataset
+
+    for key in ['du_size', 'size']:
+        str_to_int(dataset, key)
+    dataset['files'] = [str_to_int(f, 'size') for f in dataset.get('files', [])]
 
     # convert date strings to date objects
     for date_key in DATE_KEYS:
@@ -77,13 +91,11 @@ def dataset_getter(dataset):
     return dataset
 
 
-def dataset_setter(dataset):
+def dataset_setter(dataset: dict):
     # convert du_size and size from int to string
     if dataset is not None:
-        if 'du_size' in dataset and dataset['du_size'] is not None:
-            dataset['du_size'] = str(dataset['du_size'])
-        if 'size' in dataset and dataset['size'] is not None:
-            dataset['size'] = str(dataset['size'])
+        for key in ['du_size', 'size']:
+            int_to_str(dataset, key)
     return dataset
 
 
@@ -99,10 +111,10 @@ def get_all_datasets(dataset_type=None, name=None):
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, checksums: bool = False):
+def get_dataset(dataset_id: str, files: bool = False):
     with APIServerSession() as s:
         payload = {
-            'checksums': int(checksums)
+            'files': files
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
         r.raise_for_status()
@@ -123,9 +135,10 @@ def update_dataset(dataset_id, update_data):
         return r.json()
 
 
-def add_checksums_to_dataset(dataset_id, checksums):
+def add_files_to_dataset(dataset_id, files: list[dict]):
     with APIServerSession() as s:
-        r = s.post(f'datasets/{dataset_id}/checksums', json=checksums)
+        req_body = [int_to_str(f, 'size') for f in files]
+        r = s.post(f'datasets/{dataset_id}/files', json=req_body)
         r.raise_for_status()
 
 

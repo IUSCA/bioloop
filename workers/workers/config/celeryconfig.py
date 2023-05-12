@@ -29,7 +29,6 @@ result_serializer = 'json'
 # result_backend = 'redis://localhost:6379/0'
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#conf-mongodb-result-backend
-# result_backend = f'mongodb://dgl:{urllib.parse.quote(mongo_password)}@commons3.sca.iu.edu:27017/dgl-tests?authSource=dgl-tests'
 result_backend = f'mongodb://{mongo_username}:{urllib.parse.quote(mongo_password)}@{mongo_url}'
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#database-backend-settings

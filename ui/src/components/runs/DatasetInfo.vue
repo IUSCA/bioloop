@@ -38,7 +38,7 @@
         </tr>
         <tr>
           <td>Genome Files</td>
-          <td>{{ props.dataset.attributes?.num_genome_files }}</td>
+          <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
         <tr>
           <td>Directories</td>

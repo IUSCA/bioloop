@@ -100,7 +100,7 @@ async function soft_delete(dataset, user_id) {
 }
 
 async function hard_delete(id) {
-  const deleteChecksums = prisma.checksum.deleteMany({
+  const deleteFiles = prisma.dataset_file.deleteMany({
     where: {
       dataset_id: id,
     },
@@ -139,7 +139,7 @@ async function hard_delete(id) {
   });
 
   await prisma.$transaction([
-    deleteChecksums,
+    deleteFiles,
     deleteWorkflows,
     deleteAudit,
     deleteStates,
@@ -150,12 +150,12 @@ async function hard_delete(id) {
 
 async function get_dataset({
   id = null,
-  checksums = false,
+  files = false,
   workflows = false,
   last_task_run = false,
   prev_task_runs = false,
 }) {
-  const checksumSelect = checksums ? {
+  const fileSelect = files ? {
     select: {
       path: true,
       md5: true,
@@ -165,7 +165,7 @@ async function get_dataset({
   const dataset = await prisma.dataset.findFirst({
     where: { id },
     include: {
-      metadata: checksumSelect,
+      files: fileSelect,
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,

@@ -141,17 +141,17 @@ router.get(
   '/:id',
   validate([
     param('id').isInt().toInt(),
-    query('checksums').toBoolean().default(false),
+    query('files').toBoolean().default(false),
     query('workflows').toBoolean().default(false),
     query('last_task_run').toBoolean().default(false),
     query('prev_task_runs').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the checksum table if checksums is true
+    // only select path and md5 columns from the dataset_file table if files is true
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
-      checksums: req.query.checksums,
+      files: req.query.files,
       workflows: req.query.workflows,
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
@@ -226,7 +226,7 @@ router.patch(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Modify dataset.'
     /* #swagger.description =
-        To add checksums use POST "/datasets/:id/checksums"
+        To add files use POST "/datasets/:id/files"
         To add workflow use POST "/datasets/:id/workflows"
         To add state use POST "/datasets/:id/state"
     */
@@ -237,8 +237,8 @@ router.patch(
     });
     if (!datasetToUpdate) { return next(createError(404)); }
 
-    const { attributes, ...data } = req.body;
-    data.attributes = _.merge(datasetToUpdate?.attributes)(attributes); // deep merge
+    const { metadata, ...data } = req.body;
+    data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
 
     const dataset = await prisma.dataset.update({
       where: {
@@ -256,23 +256,26 @@ router.patch(
   }),
 );
 
-// add checksums to dataset - worker
+// add files to dataset - worker
 router.post(
-  '/:id/checksums',
+  '/:id/files',
   validate([
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Associate checksums to a dataset
-    const checksums = req.body.map((c) => ({
+    // #swagger.summary = Associate files to a dataset
+    // #swagger.autoBody=true
+    // #swagger.autoQuery=true
+    // #swagger.autoHeaders=true
+    const files = req.body.map((f) => ({
       dataset_id: req.params.id,
-      path: c.path,
-      md5: c.md5,
+      path: f.path,
+      md5: f.md5,
     }));
 
-    await prisma.checksum.createMany({
-      data: checksums,
+    await prisma.dataset_file.createMany({
+      data: files,
     });
 
     res.sendStatus(200);
@@ -389,8 +392,8 @@ const report_storage = multer.diskStorage({
         },
       });
 
-      if (dataset?.attributes?.report_id) {
-        const parent_dir = `reports/${dataset?.attributes?.report_id}`;
+      if (dataset?.metadata?.report_id) {
+        const parent_dir = `reports/${dataset?.metadata?.report_id}`;
         await fsPromises.mkdir(parent_dir, {
           recursive: true,
         });
