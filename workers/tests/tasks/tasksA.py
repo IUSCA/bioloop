@@ -6,8 +6,8 @@ from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 
+import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
-from workers import utils
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -18,7 +18,7 @@ logger.setLevel(logging.DEBUG)
 @app.task(base=WorkflowTask, bind=True)
 def task1(celery_task, dataset_id, **kwargs):
     logger.info(f'task - {os.getpid()} 1 starts with {dataset_id}')
-    utils.execute(['ls', '-l123'])
+    cmd.execute(['ls', '-l123'])
     time.sleep(1)
     return dataset_id, {'return_obj': 'foo'}
 

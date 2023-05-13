@@ -5,9 +5,8 @@ from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 
 import workers.api as api
+import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
-import workers.sda as sda
-import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from workers.config import config
 
@@ -17,45 +16,30 @@ logger = get_task_logger(__name__)
 
 
 def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, source_size: int):
+    """
+
+    @param celery_task:
+    @param tar_path:
+    @param source_dir:
+    @param source_size:
+    @return:
+    """
     logger.info(f'creating tar of {source_dir} at {tar_path}')
     # if the tar file already exists, delete it
     if tar_path.exists():
         tar_path.unlink()
 
-    with utils.track_progress_parallel(celery_task=celery_task,
-                                       name='tar',
-                                       progress_fn=lambda: tar_path.stat().st_size,
-                                       total=source_size,
-                                       units='bytes'):
+    with wf_utils.track_progress_parallel(celery_task=celery_task,
+                                          name='tar',
+                                          progress_fn=lambda: tar_path.stat().st_size,
+                                          total=source_size,
+                                          units='bytes'):
         # using python to create tar files does not support --sparse
-        utils.tar(tar_path=tar_path, source_dir=source_dir)
+        # SDA has trouble uploading sparse tar files
+        cmd.tar(tar_path=tar_path, source_dir=source_dir)
 
     # TODO: validate files inside tar
     return tar_path
-
-
-def upload_file_to_sda(celery_task: WorkflowTask,
-                       local_file_path: Path,
-                       sda_file_path: str) -> None:
-    local_digest = None
-    sda_digest = sda.get_hash(sda_file_path, missing_ok=True)
-
-    if sda_digest is not None:
-        logger.info(f'computing checksum of local file {local_file_path} to compare with sda_digest')
-        local_digest = utils.checksum(local_file_path)
-
-    if sda_digest == local_digest:
-        logger.warning(f'The checksums of local file {local_file_path} and SDA file {sda_file_path} match - not '
-                       f'uploading')
-    else:
-        local_file_size = local_file_path.stat().st_size
-
-        with utils.track_progress_parallel(celery_task=celery_task,
-                                           name='sda put',
-                                           progress_fn=lambda: sda.get_size(sda_file_path),
-                                           total=local_file_size,
-                                           units='bytes'):
-            sda.put(local_file=str(local_file_path), sda_file=sda_file_path, verify_checksum=True)
 
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
@@ -68,9 +52,9 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
     sda_dir = wf_utils.get_archive_dir(dataset['type'])
     sda_tar_path = f'{sda_dir}/{scratch_tar_path.name}'
-    upload_file_to_sda(celery_task=celery_task,
-                       local_file_path=scratch_tar_path,
-                       sda_file_path=sda_tar_path)
+    wf_utils.upload_file_to_sda(local_file_path=scratch_tar_path,
+                                sda_file_path=sda_tar_path,
+                                celery_task=celery_task)
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
         scratch_tar_path.unlink()

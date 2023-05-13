@@ -10,46 +10,12 @@ from sca_rhythm import WorkflowTask
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-import workers.sda as sda
-import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
-
-
-def download_file_from_sda(celery_task: WorkflowTask, sda_file_path: str, local_file_path: Path):
-    """
-    Before downloading, check if the file exists and the checksums match.
-    If not, download from SDA and validate if the checksums match.
-    """
-    sda_digest = sda.get_hash(sda_path=sda_file_path)
-    logger.info(f'sda_digest of {sda_file_path} : {sda_digest}')
-
-    file_exists = False
-    if local_file_path.exists() and local_file_path.is_file():
-        # if local file exists, validate checksum against SDA
-        logger.info(f'computing checksum of local file {local_file_path}')
-        local_digest = utils.checksum(local_file_path)
-        if sda_digest == local_digest:
-            file_exists = True
-            logger.warning(f'local file exists and the checksums match - not getting from the SDA')
-
-    if not file_exists:
-        logger.info('getting file from SDA')
-
-        # delete the local file if possible
-        local_file_path.unlink(missing_ok=True)
-        source_size = sda.get_size(sda_file_path)
-
-        with utils.track_progress_parallel(celery_task=celery_task,
-                                           name='sda get',
-                                           progress_fn=lambda: local_file_path.stat().st_size,
-                                           total=source_size,
-                                           units='bytes'):
-            sda.get(sda_file=sda_file_path, local_file=str(local_file_path), verify_checksum=True)
 
 
 def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
@@ -65,6 +31,9 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
     then set override_arcname = True
 
     If a directory with the same name as extracted dir already exists, it will be deleted.
+    @param tar_path:
+    @param target_dir:
+    @param override_arcname:
     """
     with tarfile.open(tar_path, mode='r') as archive:
         # find the top-level directory in the extracted archive
@@ -92,9 +61,9 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> None:
 
     sda_tar_path = dataset['archive_path']
     scratch_tar_path = Path(config['paths']['scratch']) / f"{dataset['name']}.tar"
-    download_file_from_sda(celery_task=celery_task,
-                           sda_file_path=sda_tar_path,
-                           local_file_path=scratch_tar_path)
+    wf_utils.download_file_from_sda(sda_file_path=sda_tar_path,
+                                    local_file_path=scratch_tar_path,
+                                    celery_task=celery_task)
 
     # extract the tar file to stage directory
     dataset_type = dataset['type'].lower()

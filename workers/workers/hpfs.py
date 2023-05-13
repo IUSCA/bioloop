@@ -3,6 +3,7 @@ HPFS - Utilities to monitor the usage of High Performance File Systems
 """
 import logging
 
+import workers.cmd as cmd
 from workers import utils
 from workers.utils import convert_size_to_bytes
 
@@ -68,11 +69,11 @@ def get_disk_usages():
 
     :return: List of dicts like {'Filesystem': 'home', 'usage': 4294967296, 'quota': 107374182400}
     """
-    stdout, stderr = utils.execute(['quota'])
+    stdout, stderr = cmd.execute(['quota'])
     return parse_quota_output(stdout)
 
 
 def get_slate_scratch_usage(username):
     command = ['lfs', 'quota', '-u', username, '/N/scratch']
-    stdout, stderr = utils.execute(command)
+    stdout, stderr = cmd.execute(command)
     return parse_lfs_quota_output(stdout)

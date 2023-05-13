@@ -8,6 +8,7 @@ from sca_rhythm import WorkflowTask
 from sca_rhythm.progress import Progress
 
 import workers.api as api
+import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
@@ -36,7 +37,7 @@ def run_fastqc(celery_task: WorkflowTask, source_dir, output_dir):
     done = 0
     prog.update(done=done)
     for batch in utils.batched(fastq_files, n=BATCH_SIZE):
-        utils.fastqc_parallel(fastq_files=batch, output_dir=output_dir, num_threads=NUM_THREADS)
+        cmd.fastqc_parallel(fastq_files=batch, output_dir=output_dir, num_threads=NUM_THREADS)
         done += len(batch)
         prog.update(done=done)
 
@@ -56,7 +57,7 @@ def create_report(celery_task: WorkflowTask, dataset_dir: Path, dataset_qc_dir: 
     dataset_qc_dir.mkdir(parents=True, exist_ok=True)
 
     run_fastqc(celery_task, dataset_dir, dataset_qc_dir)
-    utils.multiqc(dataset_qc_dir, dataset_qc_dir)
+    cmd.multiqc(dataset_qc_dir, dataset_qc_dir)
 
     return report_id
 

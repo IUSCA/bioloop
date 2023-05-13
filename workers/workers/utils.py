@@ -3,20 +3,12 @@ from __future__ import annotations  # type unions by | are only available in ver
 import hashlib
 import logging
 import os
-import subprocess
 import time
 from collections.abc import Iterable
 from contextlib import contextmanager
 from functools import wraps, partial
 from itertools import islice
 from pathlib import Path
-from subprocess import Popen, PIPE
-
-# import multiprocessing
-# https://stackoverflow.com/questions/30624290/celery-daemonic-processes-are-not-allowed-to-have-children
-import billiard as multiprocessing
-from sca_rhythm import WorkflowTask
-from sca_rhythm.progress import Progress
 
 logger = logging.getLogger(__name__)
 
@@ -66,86 +58,6 @@ def checksum(fname: Path | str):
 #     with open(fname, 'rb') as f:
 #         digest = hashlib.file_digest(f, 'md5')
 #         return digest.hexdigest()
-
-
-def execute_old(cmd, cwd=None):
-    if not cwd:
-        cwd = os.getcwd()
-    env = os.environ.copy()
-    with Popen(cmd, cwd=cwd, stdout=PIPE, stderr=PIPE, shell=True, env=env) as p:
-        stdout_lines = []
-        for line in p.stdout:
-            stdout_lines.append(line)
-        return p.pid, stdout_lines, p.returncode
-
-
-class SubprocessError(Exception):
-    pass
-
-
-def execute(cmd: list[str], cwd: str = None) -> tuple[str, str]:
-    """
-    returns stdout, stderr (strings)
-    if the return code is not zero, SubprocessError is raised with a dict of
-    {
-        'return_code': 1,
-        'stdout': '',
-        'stderr': '',
-        'args': []
-    }
-    """
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-    if p.returncode != 0:
-        msg = {
-            'return_code': p.returncode,
-            'stdout': p.stdout,
-            'stderr': p.stderr,
-            'args': p.args
-        }
-        raise SubprocessError(msg)
-    return p.stdout, p.stderr
-
-
-def total_size(dir_path: Path | str):
-    """
-    can throw CalledProcessError
-    can throw IndexError: list index out of range - if the stdout is not in expected format
-    can throw ValueError - invalid literal for int() with base 10 - if the stdout is not in expected format
-    """
-    completed_proc = subprocess.run(['du', '-sb', str(dir_path)], capture_output=True, check=True, text=True)
-    return int(completed_proc.stdout.split()[0])
-
-
-@contextmanager
-def track_progress_parallel(celery_task: WorkflowTask,
-                            name: str,
-                            progress_fn,
-                            total: int = None,
-                            units: str = None,
-                            loop_delay=5):
-    def progress_loop():
-        prog = Progress(celery_task=celery_task, name=name, total=total, units=units)
-        while True:
-            time.sleep(loop_delay)
-            try:
-                done = progress_fn()
-                prog.update(done)
-            except Exception as e:
-                # log the exception message without stacktrace
-                logger.warning('exception in parallel progress loop: %s', e)
-
-    p = None
-    try:
-        # start a subprocess to call progress_loop every loop_delay seconds
-        p = multiprocessing.Process(target=progress_loop)
-        p.start()
-        logger.info(f'starting a sub process to track progress with pid: {p.pid}')
-        yield p  # inside the context manager
-    finally:
-        # terminate the sub process
-        logger.info(f'terminating progress tracker: {p.pid}')
-        if p is not None:
-            p.terminate()
 
 
 def parse_number(x, default=None, func=int):
@@ -208,11 +120,6 @@ def merge(a: dict, b: dict) -> dict:
     return a
 
 
-def tar(tar_path: Path | str, source_dir: Path | str) -> None:
-    command = ['tar', 'cf', str(tar_path), '--sparse', str(source_dir)]
-    execute(command)
-
-
 def is_readable(f: Path):
     if f.is_file() and os.access(str(f), os.R_OK):
         return True
@@ -232,25 +139,9 @@ def batched(iterable: Iterable, n: int) -> list:
         yield batch
 
 
-def fastqc_parallel(fastq_files: list[Path | str], output_dir: Path | str, num_threads: int = 8) -> None:
-    """
-    Run the FastQC tool to check the quality of all fastq files
-
-    @param fastq_files: list of paths to fastq.gz files
-    @param output_dir: cmd = ['fastqc', '-t', '8'] + fastq_files + ['-o', str(output_dir)]
-    @param num_threads: parallel processing threads
-    """
-    cmd = ['fastqc', '-t', str(num_threads)] + [str(p) for p in fastq_files] + ['-o', str(output_dir)]
-    execute(cmd)
-
-
-def multiqc(source_dir: Path | str, output_dir: Path | str) -> None:
-    """
-    Run the MultiQC tool to generate an aggregate report
-
-    @param source_dir: (pathlib.Path): where fastqc generated reports
-    @param output_dir: (pathlib.Path): where to create multiqc_report.html and multiqc_data
-    @return: none
-    """
-    cmd = ['multiqc', str(source_dir), '-o', str(output_dir)]
-    execute(cmd)
+@contextmanager
+def empty_context_manager():
+    try:
+        yield
+    finally:
+        pass
