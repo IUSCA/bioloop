@@ -49,11 +49,18 @@ class APIServerSession(requests.Session):
         self.mount("https://", adapter)
         self.base_url = config['api']['base_url']
         self.timeout = (config['api']['conn_timeout'], config['api']['read_timeout'])
+        self.access_token = config['api']['access_token']
 
     def request(self, method, url, *args, **kwargs):
         joined_url = urljoin(self.base_url, url)
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.timeout
+
+        # Add auth header
+        headers = kwargs.pop('headers', {})
+        headers['Authorization'] = f'Bearer {self.access_token}'
+        kwargs['headers'] = headers
+
         logger.debug(f'{method}, {joined_url}, {args}, {kwargs}')
         return super().request(method, joined_url, *args, **kwargs)
 

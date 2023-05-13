@@ -1,6 +1,11 @@
 import datetime
+import os
 
+from dotenv import load_dotenv
+
+load_dotenv()  # take environment variables from .env.
 YEAR = datetime.datetime.now().year
+ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
 
 config = {
     'app_id': 'dgl-dev.sca.iu.edu',
@@ -8,6 +13,7 @@ config = {
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
         'base_url': 'http://localhost:3130',
+        'access_token': ACCESS_TOKEN,
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
     },
