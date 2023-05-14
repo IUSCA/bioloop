@@ -44,11 +44,11 @@
 
           <div class="flex flex-col items-center justify-end">
             <h2
-              v-if="props.data?.genome_files != undefined"
+              v-if="props.data?.total_num_genome_files != undefined"
               class="va-h3 ma-0 va-text-center"
               :style="{ color: colors.success }"
             >
-              {{ number_formatter.format(props.data.genome_files) }}
+              {{ number_formatter.format(props.data.total_num_genome_files) }}
             </h2>
             <VaSkeleton
               v-else
