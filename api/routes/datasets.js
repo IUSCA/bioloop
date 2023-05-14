@@ -13,7 +13,6 @@ const _ = require('lodash/fp');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
-const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -21,7 +20,6 @@ const prisma = new PrismaClient();
 // stats - UI
 router.get(
   '/stats',
-  // authenticate,
   validate([
     query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
   ]),
@@ -290,7 +288,6 @@ router.post(
 // add workflow ids to dataset
 router.post(
   '/:id/workflows',
-  authenticate,
   validate([
     param('id').isInt().toInt(),
     body('workflow_id').notEmpty(),
@@ -332,7 +329,6 @@ router.post(
 // delete - UI
 router.delete(
   '/:id',
-  authenticate,
   validate([
     param('id').isInt().toInt(),
     query('soft_delete').toBoolean().default(true),
@@ -367,7 +363,6 @@ router.delete(
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
-  authenticate,
   validate([
     param('id').isInt().toInt(),
     param('wf').isIn(['stage', 'integrated']),

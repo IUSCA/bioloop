@@ -14,22 +14,24 @@ const signOpt = {
   algorithm: config.get('auth.jwt.sign_algorithm'),
 };
 
-function issueJWT(userProfile) {
+function issueJWT({ userProfile, forever = false }) {
   const claim = {
     iss: config.get('auth.jwt.iss'),
-    exp: (Date.now() + config.get('auth.jwt.ttl_milliseconds')) / 1000,
+    ...(forever ? {} : { exp: (Date.now() + config.get('auth.jwt.ttl_milliseconds')) / 1000 }),
     sub: userProfile.username,
     profile: userProfile,
   };
   return jsonwt.sign(claim, key, signOpt);
 }
 
+const get_user_profile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id']);
+
 async function onLogin(user) {
   await userService.updateLastLogin(user.id);
 
-  const userProfile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id'])(user);
+  const userProfile = get_user_profile(user);
 
-  const token = issueJWT(userProfile);
+  const token = issueJWT({ userProfile });
   return {
     profile: userProfile,
     token,
@@ -50,4 +52,5 @@ module.exports = {
   onLogin,
   issueJWT,
   checkJWT,
+  get_user_profile,
 };

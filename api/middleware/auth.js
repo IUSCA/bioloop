@@ -6,10 +6,12 @@ const { setIntersection } = require('../utils');
 const ac = require('../services/accesscontrols');
 
 function authenticate(req, res, next) {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization || '';
   if (!authHeader) return next(createError.Unauthorized('Authentication failed. Token not found.'));
 
+  if (!authHeader.startsWith('Bearer ')) return next(createError.Unauthorized('Authentication failed. Token is not valid.'));
   const token = authHeader.split(' ')[1];
+
   const auth = authService.checkJWT(token);
   if (!auth) return next(createError.Unauthorized('Authentication failed. Token is not valid.'));
 

@@ -200,7 +200,7 @@ async function main() {
   })));
 
   // Create default admins
-  const admins = ['ccbrandt', 'deduggi'];
+  const admins = ['ccbrandt', 'deduggi', 'svc_dgl_tasks'];
 
   const admin_promises = admins.map((username) => prisma.user.upsert({
     where: { email: `${username}@iu.edu` },
