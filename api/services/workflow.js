@@ -5,6 +5,7 @@ const logger = require('./logger');
 
 const wfApi = axios.create({
   baseURL: config.get('workflow_server.base_url'),
+  headers: { Authorization: `Bearer ${config.get('workflow_server.auth_token')}` },
 });
 
 function getAll({
@@ -12,6 +13,8 @@ function getAll({
   prev_task_runs = false,
   only_active = false,
   app_id = null,
+  skip = null,
+  limit = null,
 } = {}) {
   return wfApi.get('/workflows', {
     params: {
@@ -19,6 +22,8 @@ function getAll({
       prev_task_runs,
       only_active,
       app_id,
+      skip,
+      limit,
     },
   });
 }

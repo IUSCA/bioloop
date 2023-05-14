@@ -5,5 +5,8 @@
   "postgres": {
     "password": "DATABASE_PASSWORD"
   },
-  "mode": "NODE_ENV"
+  "mode": "NODE_ENV",
+  "workflow_server": {
+    "auth_token": "WORKFLOW_AUTH_TOKEN"
+  }
 }

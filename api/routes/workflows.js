@@ -23,6 +23,8 @@ router.get(
         prev_task_runs: req.query.prev_task_runs,
         only_active: req.query.only_active,
         app_id: config.app_id,
+        skip: req.query.skip,
+        limit: req.query.limit,
       });
       res.json(api_res.data);
     },
