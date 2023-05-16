@@ -16,6 +16,7 @@ specifiers:
   eslint-plugin-lodash-fp: 2.2.0-a1
   express: ^4.18.2
   express-validator: ^6.15.0
+  git-hooks: ^1.1.10
   http-errors: ^2.0.0
   jsonwebtoken: ^9.0.0
   lodash: ^4.17.21
@@ -53,6 +54,7 @@ devDependencies:
   eslint-config-airbnb-base: 15.0.0_e43qr7ng6kygh3xxr4conxr2wi
   eslint-plugin-import: 2.27.5_eslint@8.40.0
   eslint-plugin-lodash-fp: 2.2.0-a1_eslint@8.40.0
+  git-hooks: 1.1.10
   nodemon: 2.0.22
   prisma: 4.14.0
 
@@ -1355,6 +1357,12 @@ packages:
     dependencies:
       call-bind: 1.0.2
       get-intrinsic: 1.2.1
+    dev: true
+
+  /git-hooks/1.1.10:
+    resolution: {integrity: sha512-23nto1qLsqJdY0daAUYqeKPyTvzefR2wZv1krgFRnPg0FxrmITCeWAIv/QfR+fAD7eZC7Rp5OSicJB4hDKyp1A==}
+    engines: {node: '>=0.8.x'}
+    requiresBuild: true
     dev: true
 
   /glob-parent/5.1.2:
