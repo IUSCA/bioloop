@@ -3,3 +3,6 @@ notebooks
 env.sh
 .env
 
+# ignore the db file created by celery
+# related config in celeryconfig.py "worker_state_db"
+celery-state.db*
