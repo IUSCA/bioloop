@@ -9,11 +9,12 @@ function authenticate(req, res, next) {
   const authHeader = req.headers.authorization || '';
   if (!authHeader) return next(createError.Unauthorized('Authentication failed. Token not found.'));
 
-  if (!authHeader.startsWith('Bearer ')) return next(createError.Unauthorized('Authentication failed. Token is not valid.'));
+  const err = createError.Unauthorized('Authentication failed. Token is not valid.');
+  if (!authHeader.startsWith('Bearer ')) { return next(err); }
   const token = authHeader.split(' ')[1];
 
   const auth = authService.checkJWT(token);
-  if (!auth) return next(createError.Unauthorized('Authentication failed. Token is not valid.'));
+  if (!auth) return next(err);
 
   req.user = auth.profile;
   next();

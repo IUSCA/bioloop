@@ -1,6 +1,8 @@
+const path = require('path');
+
 // __basedir is the path of root directory
 // has same value when used in any js file in this project
-global.__basedir = __dirname;
+global.__basedir = path.join(__dirname, '..');
 
 require('dotenv-safe').config();
 require('./db');

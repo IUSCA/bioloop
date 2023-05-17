@@ -15,6 +15,9 @@ mongo_password = os.environ['MONGO_PASS']
 # https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/rabbitmq.html
 broker_url = f'amqp://{queue_username}:{urllib.parse.quote(queue_password)}@{queue_url}'
 
+# retry connection to broker on startup if failed
+broker_connection_retry_on_startup = True
+
 # https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/redis.html#results
 # result_backend = 'redis://localhost:6379/0'
 

@@ -2,6 +2,7 @@ const { AssertionError } = require('assert');
 const createError = require('http-errors');
 const { Prisma } = require('@prisma/client');
 const axios = require('axios');
+const _ = require('lodash/fp');
 
 // catch 404 and forward to error handler
 function notFound(req, res, next) {
@@ -32,13 +33,19 @@ function axiosErrorHandler(error, req, res, next) {
   if (axios.isAxiosError(error)) {
     if (error.response) {
       // The request was made and the server responded with a status code
-      console.error('Axios Error: The request was made and the server responded with a status code', `Error ${error.response.status}: ${JSON.stringify(error.response.data, null, 2)}`);
+      console.error(
+        'Axios Error: The request was made and the server responded with a status code',
+        `Error ${error.response.status}: ${JSON.stringify(error.response.data, null, 2)}`,
+      );
     } else if (error.request) {
       // The request was made but no response was received
       console.error('Axios Error: The request was made but no response was received');
     } else {
       // Something else happened in making the request that triggered an error
-      console.error('Axios Error:  Something else happened in making the request that triggered an error', error.message);
+      console.error(
+        'Axios Error:  Something else happened in making the request that triggered an error',
+        error.message,
+      );
     }
     return next(createError.InternalServerError());
   }
@@ -52,10 +59,12 @@ function errorHandler(err, req, res, next) {
   if (res.headersSent) {
     return next(err);
   }
-  if (err.status !== 404) {
-    // eslint-disable-next-line no-console
-    console.error(err);
-  }
+
+  // do not print stack traces for client errors
+  const is_client_error = _.isInteger(err?.status) && Math.floor(err.status / 100) === 4;
+  // eslint-disable-next-line no-console
+  console.error(is_client_error ? err.message : err);
+
   if (err.expose === true) {
     res.status(err.status || 500).send(err);
   } else {
