@@ -49,7 +49,7 @@ result_expires = 0
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-serializer
 task_serializer = 'json'
 
-# If True the task reports its status as ‘started’ when the task is executed by a worker.
+# the task reports its status as ‘started’ when the task is executed by a worker.
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-track-started
 task_track_started = True
 
@@ -69,6 +69,12 @@ task_soft_time_limit = ONE_DAY - TEN_MINUTES
 #     'tasksB.task2': 'subtractqueue'
 # }
 
+# https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-default-queue
+# task_default_queue='celery_dgl'
+
+# The queue name for each worker is automatically generated
+# https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-direct
+# worker_direct=True
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-acks-late
 task_acks_late = True
@@ -80,4 +86,4 @@ task_reject_on_worker_lost = True
 worker_prefetch_multiplier = 1
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-state-db
-worker_state_db = "./celery-state.db"
+worker_state_db = "./celery_state"

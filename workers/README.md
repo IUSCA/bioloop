@@ -56,8 +56,19 @@ docker-compose up queue mongo -d
 
 Start Workers
 ```bash
-python -m celery -A tests.celery_app worker --concurrency 2 --loglevel INFO
+python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'dgl-celery-w1@%h' --autoscale=3,1
 ```
+
+`--concurrency 1`: number of worker processed to pre-fork
+
+`-O fair`: Optimization profile, disables prefetching of tasks. Guarantees child processes will only be allocated tasks when they are actually available.
+
+Use `--hostname '<app_name>-celery-<worker_name>@%h'` to distinguish multiple workers running on the same machine either for same app or different apps.
+- replace `<app_name>` with app name (ex: dgl)
+- replace `<worker_name>` with worker name (ex: w1)
+
+Auto scaling - max_concurrency,min_concurrency
+--autoscale=10,3 (always keep 3 processes, but grow to 10 if necessary).
 
 Run test
 ```bash

@@ -7,9 +7,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "~3.9"
-celery = "^5.3.0rc1"
+celery = "^5.2.7"
 python-dotenv = "^1.0.0"
-sca-rhythm = "^0.4.5"
+sca-rhythm = "^0.4.8"
 requests = "^2.30.0"
 urllib3 = "<2"
 

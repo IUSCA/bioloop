@@ -17,70 +17,70 @@ vine = ">=5.0.0"
 
 [[package]]
 name = "billiard"
-version = "4.1.0"
+version = "3.6.4.0"
 description = "Python multiprocessing fork with improvements and bugfixes"
 category = "main"
 optional = false
-python-versions = ">=3.7"
+python-versions = "*"
 files = [
-    {file = "billiard-4.1.0-py3-none-any.whl", hash = "sha256:0f50d6be051c6b2b75bfbc8bfd85af195c5739c281d3f5b86a5640c65563614a"},
-    {file = "billiard-4.1.0.tar.gz", hash = "sha256:1ad2eeae8e28053d729ba3373d34d9d6e210f6e4d8bf0a9c64f92bd053f1edf5"},
+    {file = "billiard-3.6.4.0-py3-none-any.whl", hash = "sha256:87103ea78fa6ab4d5c751c4909bcff74617d985de7fa8b672cf8618afd5a875b"},
+    {file = "billiard-3.6.4.0.tar.gz", hash = "sha256:299de5a8da28a783d51b197d496bef4f1595dd023a93a4f59dde1886ae905547"},
 ]
 
 [[package]]
 name = "celery"
-version = "5.3.0rc1"
+version = "5.2.7"
 description = "Distributed Task Queue."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "celery-5.3.0rc1-py3-none-any.whl", hash = "sha256:3afa81e7c6393097a4079badc11117ac20a1bf145c92ae5f1cc3ed24c2b1f165"},
-    {file = "celery-5.3.0rc1.tar.gz", hash = "sha256:0f104775617974c9a108857c883dd5a5b0a9058278bccf1881ff5d3317fa15ab"},
+    {file = "celery-5.2.7-py3-none-any.whl", hash = "sha256:138420c020cd58d6707e6257b6beda91fd39af7afde5d36c6334d175302c0e14"},
+    {file = "celery-5.2.7.tar.gz", hash = "sha256:fafbd82934d30f8a004f81e8f7a062e31413a23d444be8ee3326553915958c6d"},
 ]
 
 [package.dependencies]
-billiard = ">=4.1.0,<5.0"
-click = ">=8.1.2,<9.0"
-click-didyoumean = ">=0.3.0"
+billiard = ">=3.6.4.0,<4.0"
+click = ">=8.0.3,<9.0"
+click-didyoumean = ">=0.0.3"
 click-plugins = ">=1.1.1"
 click-repl = ">=0.2.0"
-kombu = ">=5.3.0b3,<6.0"
-tzdata = ">=2022.7"
+kombu = ">=5.2.3,<6.0"
+pytz = ">=2021.3"
 vine = ">=5.0.0,<6.0"
 
 [package.extras]
-arangodb = ["pyArango (>=2.0.1)"]
-auth = ["cryptography (==40.0.1)"]
-azureblockblob = ["azure-storage-blob (>=12.15.0)"]
+arangodb = ["pyArango (>=1.3.2)"]
+auth = ["cryptography"]
+azureblockblob = ["azure-storage-blob (==12.9.0)"]
 brotli = ["brotli (>=1.0.0)", "brotlipy (>=0.7.0)"]
-cassandra = ["cassandra-driver (>=3.25.0,<4)"]
-consul = ["python-consul2 (==0.1.5)"]
-cosmosdbsql = ["pydocumentdb (==2.3.5)"]
+cassandra = ["cassandra-driver (<3.21.0)"]
+consul = ["python-consul2"]
+cosmosdbsql = ["pydocumentdb (==2.3.2)"]
 couchbase = ["couchbase (>=3.0.0)"]
-couchdb = ["pycouchdb (==1.14.2)"]
-django = ["Django (>=2.2.28)"]
-dynamodb = ["boto3 (>=1.22.2)"]
-elasticsearch = ["elasticsearch (<8.0)"]
+couchdb = ["pycouchdb"]
+django = ["Django (>=1.11)"]
+dynamodb = ["boto3 (>=1.9.178)"]
+elasticsearch = ["elasticsearch"]
 eventlet = ["eventlet (>=0.32.0)"]
 gevent = ["gevent (>=1.5.0)"]
 librabbitmq = ["librabbitmq (>=1.5.0)"]
-memcache = ["pylibmc (==1.6.3)"]
-mongodb = ["pymongo[srv] (>=4.0.2)"]
-msgpack = ["msgpack (==1.0.5)"]
-pymemcache = ["python-memcached (==1.59)"]
-pyro = ["pyro5"]
-pytest = ["pytest-celery (==0.0.0)"]
-redis = ["redis (>=4.3.6,<4.4.0)"]
-s3 = ["boto3 (==1.26.110)"]
+memcache = ["pylibmc"]
+mongodb = ["pymongo[srv] (>=3.11.1)"]
+msgpack = ["msgpack"]
+pymemcache = ["python-memcached"]
+pyro = ["pyro4"]
+pytest = ["pytest-celery"]
+redis = ["redis (>=3.4.1,!=4.0.0,!=4.0.1)"]
+s3 = ["boto3 (>=1.9.125)"]
 slmq = ["softlayer-messaging (>=1.0.3)"]
-solar = ["ephem (==4.1.4)"]
-sqlalchemy = ["sqlalchemy (>=1.4.47,<2.0)"]
-sqs = ["kombu[sqs] (>=5.3.0b3,<5.4.0)"]
+solar = ["ephem"]
+sqlalchemy = ["sqlalchemy"]
+sqs = ["kombu[sqs]"]
 tblib = ["tblib (>=1.3.0)", "tblib (>=1.5.0)"]
 yaml = ["PyYAML (>=3.10)"]
 zookeeper = ["kazoo (>=1.3.1)"]
-zstd = ["zstandard (==0.20.0)"]
+zstd = ["zstandard"]
 
 [[package]]
 name = "certifi"
@@ -291,37 +291,35 @@ files = [
 
 [[package]]
 name = "kombu"
-version = "5.3.0b3"
+version = "5.2.4"
 description = "Messaging library for Python."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "kombu-5.3.0b3-py3-none-any.whl", hash = "sha256:4ad23178dcd11192672d1fad598ace737d1044dbf31edf335a800ed26a9fb2fb"},
-    {file = "kombu-5.3.0b3.tar.gz", hash = "sha256:316df5e840f284d0671b9000bbf747da2b00f3b81433c720de66a5f659e5711d"},
+    {file = "kombu-5.2.4-py3-none-any.whl", hash = "sha256:8b213b24293d3417bcf0d2f5537b7f756079e3ea232a8386dcc89a59fd2361a4"},
+    {file = "kombu-5.2.4.tar.gz", hash = "sha256:37cee3ee725f94ea8bb173eaab7c1760203ea53bbebae226328600f9d2799610"},
 ]
 
 [package.dependencies]
-amqp = ">=5.1.1,<6.0.0"
-typing-extensions = {version = "*", markers = "python_version < \"3.10\""}
+amqp = ">=5.0.9,<6.0.0"
 vine = "*"
 
 [package.extras]
-azureservicebus = ["azure-servicebus (>=7.8.3)"]
-azurestoragequeues = ["azure-identity (>=1.12.0)", "azure-storage-queue (>=12.6.0)"]
-confluentkafka = ["confluent-kafka (>=1.9.0,<1.10.0)"]
-consul = ["python-consul2"]
+azureservicebus = ["azure-servicebus (>=7.0.0)"]
+azurestoragequeues = ["azure-storage-queue"]
+consul = ["python-consul (>=0.6.0)"]
 librabbitmq = ["librabbitmq (>=2.0.0)"]
-mongodb = ["pymongo (>=4.1.1)"]
+mongodb = ["pymongo (>=3.3.0,<3.12.1)"]
 msgpack = ["msgpack"]
-pyro = ["pyro5"]
+pyro = ["pyro4"]
 qpid = ["qpid-python (>=0.26)", "qpid-tools (>=0.26)"]
-redis = ["redis (>=4.2.2,<4.4.0)"]
+redis = ["redis (>=3.4.1,!=4.0.0,!=4.0.1)"]
 slmq = ["softlayer-messaging (>=1.0.3)"]
-sqlalchemy = ["sqlalchemy (>=1.4.47,<2.1)"]
-sqs = ["boto3 (>=1.22.2)", "pycurl (>=7.44.1,<7.45.0)", "urllib3 (>=1.26.9)"]
+sqlalchemy = ["sqlalchemy"]
+sqs = ["boto3 (>=1.9.12)", "pycurl (>=7.44.1,<7.45.0)", "urllib3 (>=1.26.7)"]
 yaml = ["PyYAML (>=3.10)"]
-zookeeper = ["kazoo (>=2.8.0)"]
+zookeeper = ["kazoo (>=1.3.1)"]
 
 [[package]]
 name = "prompt-toolkit"
@@ -449,6 +447,18 @@ files = [
 cli = ["click (>=5.0)"]
 
 [[package]]
+name = "pytz"
+version = "2023.3"
+description = "World timezone definitions, modern and historical"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pytz-2023.3-py2.py3-none-any.whl", hash = "sha256:a151b3abb88eda1d4e34a9814df37de2a80e301e68ba0fd856fb9b46bfbbbffb"},
+    {file = "pytz-2023.3.tar.gz", hash = "sha256:1d8ce29db189191fb55338ee6d0387d82ab59f3d00eac103412d64e0ebd0c588"},
+]
+
+[[package]]
 name = "requests"
 version = "2.30.0"
 description = "Python HTTP for Humans."
@@ -472,18 +482,18 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "sca-rhythm"
-version = "0.4.5"
+version = "0.4.8"
 description = "Create and manage workflows using Celery tasks"
 category = "main"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "sca_rhythm-0.4.5-py3-none-any.whl", hash = "sha256:2cb174920a69ec889c72656b7877e5509b26d3c37288a2683272bc89bb9851e2"},
-    {file = "sca_rhythm-0.4.5.tar.gz", hash = "sha256:768a3e50b5d53fcf68fb67209cea9a7979d3dce846eeaaad3b33d60b492b03e8"},
+    {file = "sca_rhythm-0.4.8-py3-none-any.whl", hash = "sha256:e2779eccaa027de8deb5cd59c79dece2c855b996ce55cfe07871d1c7fc88848b"},
+    {file = "sca_rhythm-0.4.8.tar.gz", hash = "sha256:8828c7b976eb144a55314e42da9f7aeb534da100e226c71457f1379369f20251"},
 ]
 
 [package.dependencies]
-celery = ">=5.3.0rc1,<6.0.0"
+celery = ">=5.2.7,<6.0.0"
 pymongo = ">=4.3.3,<5.0.0"
 
 [[package]]
@@ -496,30 +506,6 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
-]
-
-[[package]]
-name = "typing-extensions"
-version = "4.5.0"
-description = "Backported and Experimental Type Hints for Python 3.7+"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "typing_extensions-4.5.0-py3-none-any.whl", hash = "sha256:fb33085c39dd998ac16d1431ebc293a8b3eedd00fd4a32de0ff79002c19511b4"},
-    {file = "typing_extensions-4.5.0.tar.gz", hash = "sha256:5cb5f4a79139d699607b3ef622a1dedafa84e115ab0024e0d9c044a9479ca7cb"},
-]
-
-[[package]]
-name = "tzdata"
-version = "2023.3"
-description = "Provider of IANA time zone data"
-category = "main"
-optional = false
-python-versions = ">=2"
-files = [
-    {file = "tzdata-2023.3-py2.py3-none-any.whl", hash = "sha256:7e65763eef3120314099b6939b5546db7adce1e7d6f2e179e3df563c70511eda"},
-    {file = "tzdata-2023.3.tar.gz", hash = "sha256:11ef1e08e54acb0d4f95bdb1be05da659673de4acbd21bf9c69e94cc5e907a3a"},
 ]
 
 [[package]]
@@ -566,4 +552,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.9"
-content-hash = "fe6946a28f9d053d4a924150747030fc15c120f5437439bd7a034ec114140778"
+content-hash = "ce56510c62fdd95f366f5be41175d4acdc7ab45b9910a7c11e8edf57459c4031"
