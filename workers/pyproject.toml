@@ -9,7 +9,7 @@ readme = "README.md"
 python = "~3.9"
 celery = "^5.2.7"
 python-dotenv = "^1.0.0"
-sca-rhythm = "^0.4.8"
+sca-rhythm = "^0.4.9"
 requests = "^2.30.0"
 urllib3 = "<2"
 
