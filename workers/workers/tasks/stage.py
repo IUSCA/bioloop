@@ -77,7 +77,6 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> None:
     # scratch_tar_path.unlink()
 
 
-@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('stage_dataset'))
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     stage(celery_task, dataset)

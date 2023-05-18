@@ -62,7 +62,6 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     return sda_tar_path
 
 
-@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('archive_dataset'))
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     sda_tar_path = archive(celery_task, dataset)

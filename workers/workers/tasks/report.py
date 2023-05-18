@@ -11,7 +11,6 @@ import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
-import workers.workflow_utils as wf_utils
 from workers.config import config
 
 app = Celery("tasks")
@@ -62,7 +61,6 @@ def create_report(celery_task: WorkflowTask, dataset_dir: Path, dataset_qc_dir: 
     return report_id
 
 
-@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('generate_reports'))
 def generate_reports(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     dataset_type = dataset['type'].lower()

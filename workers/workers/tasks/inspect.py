@@ -2,14 +2,12 @@ from pathlib import Path
 
 from celery import Celery
 from celery.utils.log import get_task_logger
-from sca_rhythm import WorkflowTask
 from sca_rhythm.progress import Progress
 
 import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
-import workers.workflow_utils as wf_utils
 from workers.config import config
 
 app = Celery("tasks")
@@ -65,7 +63,6 @@ def generate_metadata(celery_task, source: Path):
     return num_files, num_directories, size, num_genome_files, metadata
 
 
-@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('inspect_dataset'))
 def inspect_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     source = Path(dataset['origin_path']).resolve()

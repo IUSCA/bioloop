@@ -4,12 +4,13 @@ module.exports = {
     {
       name: "celery_worker",
       script: "python",
-      args: "-m celery -A workers.celery_app worker --concurrency 8 --loglevel INFO -O fair",
+      args: "-m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'dgl-celery-w1@%h' --autoscale=8,1",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/workers/celery_worker.err",
-      out_file: "../logs/workers/celery_worker.log"
+      out_file: "../logs/workers/celery_worker.log",
+      kill_timeout: "3000"
     },
     {
       name: "register",

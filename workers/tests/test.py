@@ -9,20 +9,8 @@ app.config_from_object(celeryconfig)
 
 steps = [
     {
-        'name': 'inspect',
-        'task': 'tests.tasks.tasksA.task1'
-    },
-    {
         'name': 'archive',
-        'task': 'tests.tasks.tasksA.task2'
-    },
-    {
-        'name': 'stage',
-        'task': 'tests.tasks.tasksA.task3'
-    },
-    {
-        'name': 'validate',
-        'task': 'tests.tasks.tasksB.task4'
+        'task': 'task2'
     }
 ]
 

@@ -87,3 +87,8 @@ worker_prefetch_multiplier = 1
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-state-db
 worker_state_db = "./celery_state"
+
+# Maximum number of tasks a pool worker process can execute before it’s replaced with a new one.
+# Each worker process will die after processing one task
+# https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-max-tasks-per-child
+worker_max_tasks_per_child = 1

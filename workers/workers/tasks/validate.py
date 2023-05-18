@@ -8,7 +8,6 @@ from sca_rhythm.progress import Progress
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
-import workers.workflow_utils as wf_utils
 from workers.config import config
 
 app = Celery("tasks")
@@ -31,7 +30,6 @@ def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: li
     return validation_errors
 
 
-@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('validate_dataset'))
 def validate_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, files=True)
     dataset_type = dataset['type'].lower()

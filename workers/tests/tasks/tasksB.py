@@ -14,7 +14,6 @@ logger = get_task_logger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-@app.task(base=WorkflowTask, bind=True)
 def task4(celery_task, dataset_id, **kwargs):
     logger.info(f'task - {os.getpid()} 4 starts with {dataset_id}')
     time.sleep(1)

@@ -6,7 +6,6 @@ from sca_rhythm.progress import Progress
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-import workers.workflow_utils as wf_utils
 from workers import illumina
 from workers.config import config
 
@@ -25,7 +24,6 @@ def download_recent_datasets(celery_task: WorkflowTask, download_dir: Path, n_da
         illumina.download_dataset(ds_id, str(download_dir))
 
 
-@app.task(base=WorkflowTask, bind=True, name=wf_utils.make_task_name('download_illumina_dataset'))
 def download_illumina_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     project_name = dataset['name']
