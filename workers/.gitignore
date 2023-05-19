@@ -90,7 +90,7 @@ env.sh
 
 # ignore the db file created by celery
 # related config in celeryconfig.py "worker_state_db"
-celery_state.db*
+celery_state*
 
 # celery worker pid file
 celery_worker.pid

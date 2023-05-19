@@ -71,7 +71,7 @@ def generate_reports(celery_task, dataset_id, **kwargs):
         celery_task=celery_task,
         dataset_dir=staged_path,
         dataset_qc_dir=dataset_qc_dir,
-        report_id=(dataset.get('attributes', {}) or {}).get('report_id', None)
+        report_id=(dataset.get('metadata', {}) or {}).get('report_id', None)
     )
 
     report_filename = dataset_qc_dir / 'multiqc_report.html'
@@ -79,7 +79,7 @@ def generate_reports(celery_task, dataset_id, **kwargs):
     # if the report is created successfully
     if report_filename.exists():
         update_data = {
-            'attributes': {
+            'metadata': {
                 'report_id': report_id
             }
         }
