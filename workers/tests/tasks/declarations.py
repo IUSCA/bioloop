@@ -22,7 +22,7 @@ default_task_kwargs = {
           default_retry_delay=5)
 def task1(celery_task, dataset_id, **kwargs):
     from tests.tasks.tasksA import task1 as task_body
-    task_body(celery_task, dataset_id, **kwargs)
+    return task_body(celery_task, dataset_id, **kwargs)
 
 
 @app.task(base=WorkflowTask, bind=True, name='task2',
@@ -31,7 +31,7 @@ def task1(celery_task, dataset_id, **kwargs):
           **default_task_kwargs)
 def task2(celery_task, dataset_id, **kwargs):
     from tests.tasks.tasksA import task2 as task_body
-    task_body(celery_task, dataset_id, **kwargs)
+    return task_body(celery_task, dataset_id, **kwargs)
 
 
 @app.task(base=WorkflowTask, bind=True, name='task3',
@@ -40,7 +40,7 @@ def task2(celery_task, dataset_id, **kwargs):
           default_retry_delay=5)
 def task3(celery_task, dataset_id, **kwargs):
     from tests.tasks.tasksA import task3 as task_body
-    task_body(celery_task, dataset_id, **kwargs)
+    return task_body(celery_task, dataset_id, **kwargs)
 
 
 @app.task(base=WorkflowTask, bind=True, name='task4',
@@ -49,7 +49,7 @@ def task3(celery_task, dataset_id, **kwargs):
           default_retry_delay=5)
 def task4(celery_task, dataset_id, **kwargs):
     from tests.tasks.tasksB import task4 as task_body
-    task_body(celery_task, dataset_id, **kwargs)
+    return task_body(celery_task, dataset_id, **kwargs)
 
 
 @app.task(base=WorkflowTask, bind=True, name='task5',
@@ -58,4 +58,4 @@ def task4(celery_task, dataset_id, **kwargs):
           default_retry_delay=5)
 def task5(celery_task, dataset_id, **kwargs):
     from tests.tasks.tasksB import task5 as task_body
-    task_body(celery_task, dataset_id, **kwargs)
+    return task_body(celery_task, dataset_id, **kwargs)
