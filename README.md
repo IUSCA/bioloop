@@ -4,11 +4,9 @@ Diagnostic Genomics Laboratory portal and pipeline application
 ## Getting started
 - [API](api/README.md)
 - [UI](ui/README.md)
+- [Workers](workers/README.md)
 
 - [Docker](README-docker.md)
 
-## Back and Restore
-
-### Postgres
-
-### Mongo
+## Architecture
+<img src="docs/architecture.png" >
