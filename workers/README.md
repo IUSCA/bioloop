@@ -131,6 +131,10 @@ colo23> git pull
 ```
 
 - create / update `<DGL_dev>/workers/.env`
+- create an auth token to communicate with the express server (postgres db)
+  - `cd <dgl>`
+  - `node src/scripts/issue_token.js <service_account>`
+  - ex: `node src/scripts/issue_token.js svc_dgl_tasks`
 
 - install dependencies using poetry and start celery workers
 
@@ -138,7 +142,7 @@ colo23> git pull
 colo23> cd workers
 colo23> poetry install
 colo23> poetry shell
-colo23> python -m celery -A workers.celery_app worker --concurrency 2 --loglevel INFO
+colo23> python -m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'dgl-dev-celery-w1@%h' --autoscale=2,1
 ```
 
 

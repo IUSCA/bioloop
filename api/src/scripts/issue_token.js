@@ -2,7 +2,7 @@
 const path = require('path');
 const assert = require('assert');
 
-global.__basedir = path.join(__dirname, '..');
+global.__basedir = path.join(__dirname, '..', '..');
 
 require('dotenv-safe').config();
 require('../db');

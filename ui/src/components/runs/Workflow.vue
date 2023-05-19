@@ -120,10 +120,14 @@ watch(
 function compute_step_duration(step) {
   if (step.last_task_run) {
     const task = step.last_task_run;
-    if (task.date_start && (task.status === "PROGRESS" || task.date_done)) {
+    if (
+      task.date_start &&
+      (["PROGRESS", "STARTED"].includes(task.status) || task.date_done)
+    ) {
       const start_time = moment.utc(task.date_start);
-      const end_time =
-        task.status === "PROGRESS" ? moment.utc() : moment.utc(task.date_done);
+      const end_time = ["PROGRESS", "STARTED"].includes(task.status)
+        ? moment.utc()
+        : moment.utc(task.date_done);
       // console.log(start_time, end_time, moment);
       const duration = moment.duration(end_time - start_time);
       return duration.humanize();
@@ -145,7 +149,10 @@ function parse_time_remaining(t) {
 }
 
 function get_progress_obj(step) {
-  if (step?.status == "PROGRESS" && step?.last_task_run?.result) {
+  if (
+    ["PROGRESS", "STARTED"].includes(step?.status) &&
+    step?.last_task_run?.result
+  ) {
     const progress = step.last_task_run.result;
     const percent_done = progress.fraction_done
       ? Math.round(progress.fraction_done * 100)

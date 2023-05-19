@@ -348,8 +348,6 @@ function fetch_dataset(show_loading = false) {
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
-      // _workflows[1].status = "PROGRESS";
-      // _workflows[1].steps_done = 4;
 
       // sort workflows
       _workflows.sort(workflow_compare_fn);
