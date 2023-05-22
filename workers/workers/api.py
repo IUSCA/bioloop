@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -7,8 +6,6 @@ from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
 from workers.config import config
-
-logger = logging.getLogger(__name__)
 
 
 def make_retry_adapter():
@@ -61,7 +58,6 @@ class APIServerSession(requests.Session):
         headers['Authorization'] = f'Bearer {self.auth_token}'
         kwargs['headers'] = headers
 
-        logger.debug(f'{method}, {joined_url}, {args}, {kwargs}')
         return super().request(method, joined_url, *args, **kwargs)
 
 

@@ -17,9 +17,9 @@ from workers.config import config
 logger = logging.getLogger(__name__)
 
 
-def make_task_name(task_name):
-    app_id = config['app_id']
-    return f'{app_id}.{task_name}'
+# def make_task_name(task_name):
+#     app_id = config['app_id']
+#     return f'{app_id}.{task_name}'
 
 
 def get_wf_body(wf_name: str) -> dict:
@@ -27,7 +27,8 @@ def get_wf_body(wf_name: str) -> dict:
     wf_body['name'] = wf_name
     wf_body['app_id'] = config['app_id']
     for step in wf_body['steps']:
-        step['task'] = make_task_name(step['task'])
+        if 'queue' not in step:
+            step['queue'] = f'{config["app_id"]}.q'
     return wf_body
 
 

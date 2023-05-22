@@ -55,7 +55,7 @@ function get_wf_body(wf_name) {
   wf_body.app_id = config.app_id;
   wf_body.steps = wf_body.steps.map((step) => ({
     ...step,
-    task: `${config.app_id}.${step.task}`,
+    queue: step.queue || `${config.app_id}.q`,
   }));
   return wf_body;
 }

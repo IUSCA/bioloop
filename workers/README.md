@@ -39,13 +39,6 @@ cd ~/DGL/workers
 pm2 start ecosystem.config.js
 ```
 
-## Start only celery tasks
-
-```bash
-cd ~/DGL/workers
-python -m celery -A workers.celery_app worker --concurrency 8 --loglevel INFO
-```
-
 ## Testing with workers running on local machine
 Start mongo and queue
 
@@ -56,19 +49,21 @@ docker-compose up queue mongo -d
 
 Start Workers
 ```bash
-python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'dgl-celery-w1@%h' --autoscale=3,1
+python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'dgl-celery-w1@%h' --autoscale=2,1 --queues 'dgl-dev.sca.iu.edu'
 ```
 
 `--concurrency 1`: number of worker processed to pre-fork
 
 `-O fair`: Optimization profile, disables prefetching of tasks. Guarantees child processes will only be allocated tasks when they are actually available.
 
-Use `--hostname '<app_name>-celery-<worker_name>@%h'` to distinguish multiple workers running on the same machine either for same app or different apps.
+Use `--hostname '<app_name>-celery-<worker_name>@%h'` to distinguish multiple workers running on the same machine either for the same app or different apps.
 - replace `<app_name>` with app name (ex: dgl)
 - replace `<worker_name>` with worker name (ex: w1)
 
 Auto scaling - max_concurrency,min_concurrency
---autoscale=10,3 (always keep 3 processes, but grow to 10 if necessary).
+`--autoscale=10,3` (always keep 3 processes, but grow to 10 if necessary).
+
+`--queues 'dgl-dev.sca.iu.edu'` comma separated queue names. worker will subscribe to these queues for accepting tasks. Configured in `workers/config/celeryconfig.py` with `task_routes`, `task_default_queue`
 
 Run test
 ```bash

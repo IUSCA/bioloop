@@ -1,44 +1,17 @@
 from __future__ import annotations  # type unions by | are only available in versions > 3.10
 
 import hashlib
-import logging
 import os
-import time
 from collections.abc import Iterable
 from contextlib import contextmanager
-from functools import wraps, partial
 from itertools import islice
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 
 def str_func_call(func, args, kwargs):
     args_list = [repr(arg) for arg in args] + [f"{key}={repr(val)}" for key, val in kwargs.items()]
     args_str = ", ".join(args_list)
     return f"{func.__name__}({args_str})"
-
-
-def logged(func=None, header=True, trailer=True):
-    if func is None:
-        return partial(logged, header=header, trailer=trailer)
-
-    @wraps(func)
-    def wrap(*args, **kw):
-        f_str = str_func_call(func, args, kw)
-        if header:
-            logger.info(f_str)
-        ts = time.perf_counter()
-        try:
-            return func(*args, **kw)
-        except Exception:
-            raise
-        finally:
-            if trailer:
-                te = time.perf_counter()
-                logger.info(f"{f_str} completed in {(te - ts):2.4f} s")
-
-    return wrap
 
 
 def checksum(fname: Path | str):
