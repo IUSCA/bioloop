@@ -10,3 +10,5 @@ Diagnostic Genomics Laboratory portal and pipeline application
 
 ## Architecture
 <img src="docs/architecture.png" >
+
+<img src="docs/app-celery-communication-diagram.png" >
