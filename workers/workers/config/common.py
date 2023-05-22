@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()  # take environment variables from .env.
 YEAR = datetime.datetime.now().year
 AUTH_TOKEN = os.environ['AUTH_TOKEN']
+QUEUE_PASSWORD = os.environ['QUEUE_PASS']
+MONGO_PASSWORD = os.environ['MONGO_PASS']
 
 config = {
     'app_id': 'dgl-dev.sca.iu.edu',
@@ -82,6 +84,18 @@ config = {
                     'task': 'generate_reports'
                 }
             ]
+        }
+    },
+    'celery': {
+        'queue': {
+            'url': 'localhost:5672/myvhost',
+            'username': 'user',
+            'password': QUEUE_PASSWORD
+        },
+        'mongo': {
+            'url': 'localhost:27017',
+            'username': 'root',
+            'password': MONGO_PASSWORD
         }
     }
 }

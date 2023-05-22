@@ -7,7 +7,7 @@ YEAR = datetime.datetime.now().year
 config = {
     'app_id': 'dgl.sca.iu.edu',
     'api': {
-        'base_url': 'https://core-dev1.sca.iu.edu:5001/rhythm',
+        'base_url': 'https://core-dev1.sca.iu.edu/rhythm',
     },
     'paths': {
         'scratch': '/N/scratch/dgluser/dgl/production/scratch',
@@ -29,4 +29,14 @@ config = {
             'source_dir': '/N/project/DG_Multiple_Myeloma/share/data_products/',
         },
     },
+    'celery': {
+        'queue': {
+            'url': 'commons3.sca.iu.edu:5672/celery_api',
+            'user': 'celery_api',
+        },
+        'mongo': {
+            'url': 'commons3.sca.iu.edu:27017/celery_api?authSource=celery_api',
+            'user': 'celery_api',
+        }
+    }
 }

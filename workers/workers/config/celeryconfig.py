@@ -1,16 +1,13 @@
-import os
 import urllib.parse
 
-from dotenv import load_dotenv
+from workers.config import config
 
-load_dotenv()  # take environment variables from .env.
-
-queue_url = os.environ['QUEUE_URL']
-queue_username = os.environ['QUEUE_USER']
-queue_password = os.environ['QUEUE_PASS']
-mongo_url = os.environ['MONGO_URL']
-mongo_username = os.environ['MONGO_USER']
-mongo_password = os.environ['MONGO_PASS']
+queue_url = config['celery']['queue']['url']
+queue_username = config['celery']['queue']['username']
+queue_password = config['celery']['queue']['password']
+mongo_url = config['celery']['mongo']['url']
+mongo_username = config['celery']['mongo']['username']
+mongo_password = config['celery']['mongo']['password']
 
 # https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/rabbitmq.html
 broker_url = f'amqp://{queue_username}:{urllib.parse.quote(queue_password)}@{queue_url}'
@@ -69,10 +66,12 @@ task_soft_time_limit = ONE_DAY - TEN_MINUTES
 #     'tasksB.task2': 'subtractqueue'
 # }
 
+# default value is 'celery'
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-default-queue
-# task_default_queue='celery_dgl'
+task_default_queue = f'{config["app_id"]}.q'
 
 # The queue name for each worker is automatically generated
+# based on the worker hostname and a .dq suffix, using the C.dq exchange.
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-direct
 # worker_direct=True
 
@@ -90,5 +89,11 @@ worker_state_db = "./celery_state"
 
 # Maximum number of tasks a pool worker process can execute before it’s replaced with a new one.
 # Each worker process will die after processing one task
+# Used for hot module replacement (updating code while the celery main worker is running)
+# the next task run will use the updated code
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-max-tasks-per-child
 worker_max_tasks_per_child = 1
+
+# cancel tasks (those that acks late) when rabbitmq closes connection
+# https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-cancel-long-running-tasks-on-connection-loss
+worker_cancel_long_running_tasks_on_connection_loss = True
