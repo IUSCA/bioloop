@@ -148,7 +148,7 @@ router.get('/user', async (req, res, next) => {
 - Logs error to console
 - send actual message to client only if `err.expose` is true otherwise send a generic Internal server error.  For http errors such as (`throw createError(400, 'foo bar')`), the client receives `{"message":"foo bar"}` with status code to 400.
 - For non http errors such as  `throw new Error('business logic error')`, only the `err.message` is set others are not. For such error, this handler will send a generic message. Client's will not see `business logic error` in thier response object.
-- Does not log to console for 404 errors
+- Does not log to console stack trace for 4xx errors
 
 ### 404 handler
 - `notFound` in [middleware/error.js](middleware/error.js)
@@ -165,6 +165,8 @@ return next(err)
 return next(createError.NotFound())
 ```
 this will automatically set correct error message based on the constructor.
+
+- Create an error with expose being true: `createError(502, 'foo', { expose: true })`
 
 
 ### Prisma Not Found Error Handler

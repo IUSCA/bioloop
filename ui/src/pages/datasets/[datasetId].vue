@@ -91,7 +91,7 @@
           </div>
 
           <!-- Reports -->
-          <div class="flex-none" v-if="dataset?.attributes?.report_id">
+          <div class="flex-none" v-if="dataset?.metadata?.report_id">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Reports</span>
@@ -102,7 +102,7 @@
                   <a
                     class="va-link flex items-center justify-start"
                     target="_blank"
-                    :href="`/api/reports/${dataset?.attributes?.report_id}/multiqc_report.html`"
+                    :href="`/api/reports/${dataset?.metadata?.report_id}/multiqc_report.html`"
                   >
                     <span class="flex-initial">MultiQC Report</span>
                     <i-mdi-open-in-new class="flex-initial inline-block pl-1" />
@@ -244,7 +244,7 @@
                   :disabled="delete_archive_modal.input !== dataset.name"
                   @click="delete_archive"
                 >
-                  Delete this Sequencing Run
+                  Delete this dataset
                 </va-button>
               </div>
             </div>
@@ -295,7 +295,7 @@
         <div v-else class="text-center bg-slate-200 py-2 rounded shadow">
           <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
           <span class="text-lg">
-            There are no workflows associated with this sequencing run.
+            There are no workflows associated with this datatset.
           </span>
         </div>
       </div>
@@ -348,8 +348,6 @@ function fetch_dataset(show_loading = false) {
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
-      // _workflows[1].status = "PROGRESS";
-      // _workflows[1].steps_done = 4;
 
       // sort workflows
       _workflows.sort(workflow_compare_fn);
@@ -369,8 +367,8 @@ function fetch_dataset(show_loading = false) {
     .catch((err) => {
       console.error(err);
       if (err?.response?.status == 404)
-        toast.error("Could not find the Sequencing Run");
-      else toast.error("Something went wrong");
+        toast.error("Could not find the dataset");
+      else toast.error("Something went wrong. Could not fetch datatset");
     })
     .finally(() => {
       loading.value = false;

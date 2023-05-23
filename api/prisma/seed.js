@@ -26,14 +26,14 @@ const datasets = [
     type: 'RAW_DATA',
     num_directories: 35,
     num_files: 116,
-    num_genome_files: 60,
     du_size: 160612542453,
     size: 160612394997,
     description: null,
     origin_path: '/N/scratch/dgluser/bs_test/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
-    attributes: {
+    metadata: {
+      num_genome_files: 60,
       report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
     },
   },
@@ -43,14 +43,14 @@ const datasets = [
     type: 'RAW_DATA',
     num_directories: 6,
     num_files: 13,
-    num_genome_files: 12,
     du_size: 58097236036,
     size: 58097207364,
     description: null,
     origin_path: '/N/scratch/dgluser/test/PCM230327PL',
     archive_path: 'archive/2023/PCM230327PL.tar',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
-    attributes: {
+    metadata: {
+      num_genome_files: 12,
       report_id: '9b0b3fba-ccfd-4918-a5ff-ac93fa1a19ae',
     },
   },
@@ -60,14 +60,14 @@ const datasets = [
     type: 'RAW_DATA',
     num_directories: 6,
     num_files: 125,
-    num_genome_files: 0,
     du_size: 2685335,
     size: 2648471,
     description: null,
     origin_path: '/N/scratch/dgluser/test/PCM230215_657496842_Aborted_WF',
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
-    attributes: {
+    metadata: {
+      num_genome_files: 0,
       report_id: null,
     },
     is_deleted: true,
@@ -78,14 +78,14 @@ const datasets = [
     type: 'RAW_DATA',
     num_directories: 44,
     num_files: 218,
-    num_genome_files: 68,
     du_size: 137206108342,
     size: 137205924022,
     description: null,
     origin_path: '/N/scratch/dgluser/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
-    attributes: {
+    metadata: {
+      num_genome_files: 68,
       report_id: 'fa7d41f5-3813-43f6-9a72-5440ed6eac2b',
     },
   },
@@ -95,12 +95,14 @@ const datasets = [
     type: 'RAW_DATA',
     num_directories: 976,
     num_files: 4249,
-    num_genome_files: 636,
     du_size: 87839405520,
     size: 87835338192,
     description: null,
     origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
+    metadata: {
+      num_genome_files: 636,
+    },
     workflows: ['63339ae0-9643-4d8b-aa3a-303434f6bdcd'],
   },
   {
@@ -109,12 +111,14 @@ const datasets = [
     type: 'RAW_DATA',
     num_directories: 12,
     num_files: 249,
-    num_genome_files: 93,
     du_size: 357839228469,
     size: 357839175221,
     description: null,
     origin_path: '/N/project/DG_Multiple_Myeloma/share/PCM221205',
     archive_path: 'archive/2023/PCM221205.tar',
+    metadata: {
+      num_genome_files: 93,
+    },
     workflows: ['02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68'],
   },
   {
@@ -196,7 +200,7 @@ async function main() {
   })));
 
   // Create default admins
-  const admins = ['ccbrandt', 'deduggi'];
+  const admins = ['ccbrandt', 'deduggi', 'svc_dgl_tasks'];
 
   const admin_promises = admins.map((username) => prisma.user.upsert({
     where: { email: `${username}@iu.edu` },

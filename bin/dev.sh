@@ -22,5 +22,5 @@ echo "APP_UID:$APP_UID,APP_GID:$APP_GID"
 echo APP_UID=$APP_UID > .env
 echo APP_GID=$APP_GID >> .env
 
-docker compose build api worker_api
+docker compose build api
 docker compose up -d

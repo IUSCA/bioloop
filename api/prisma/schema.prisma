@@ -8,27 +8,27 @@ datasource db {
 }
 
 model dataset {
-  id               Int               @id @default(autoincrement())
+  id               Int                 @id @default(autoincrement())
   name             String
   type             String
   num_directories  Int?
   num_files        Int?
-  num_genome_files Int?
   du_size          BigInt?
   size             BigInt?
   description      String?
-  created_at       DateTime          @default(now()) @db.Timestamp(6)
-  updated_at       DateTime          @default(now()) @updatedAt @db.Timestamp(6)
+  created_at       DateTime            @default(now()) @db.Timestamp(6)
+  updated_at       DateTime            @default(now()) @updatedAt @db.Timestamp(6)
   origin_path      String?
   archive_path     String?
-  is_deleted       Boolean           @default(false)
-  attributes       Json?
+  is_deleted       Boolean             @default(false)
+  metadata         Json?
   workflows        workflow[]
-  metadata         checksum[]
+  files            dataset_file[]
   audit_logs       dataset_audit[]
   states           dataset_state[]
-  derived_datasets  dataset_hierarchy[] @relation("source_datasets")
-  source_datasets   dataset_hierarchy[] @relation("derived_datasets")
+  derived_datasets dataset_hierarchy[] @relation("source_datasets")
+  source_datasets  dataset_hierarchy[] @relation("derived_datasets")
+  
 
   @@unique([name, type])
 }
@@ -44,12 +44,37 @@ model dataset_hierarchy {
   @@id([source_id, derived_id])
 }
 
-model checksum {
-  path     String
-  md5      String
-  id       Int    @id @default(autoincrement())
+model dataset_file {
+  id         Int      @id @default(autoincrement())
+  path       String
+  md5        String
+  size       BigInt?
+  metadata   Json?
+  status     String?
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model dataset_audit {
+  id         Int      @id @default(autoincrement())
+  action     String
+  timestamp  DateTime @default(now())
+  old_data   Json?
+  new_data   Json?
+  user_id    Int?
+  user       user?    @relation(fields: [user_id], references: [id])
+  dataset_id Int
+  dataset    dataset? @relation(fields: [dataset_id], references: [id])
+}
+
+model dataset_state {
+  state      String
+  timestamp  DateTime @default(now()) @db.Timestamp(6)
+  metadata   Json?
+  dataset_id Int
+  dataset    dataset? @relation(fields: [dataset_id], references: [id])
+
+  @@id([timestamp, dataset_id, state])
 }
 
 model user {
@@ -66,7 +91,7 @@ model user {
   user_role     user_role[]
   user_settings user_settings[]
   contact       contact[]
-  dataset_audit   dataset_audit[]
+  dataset_audit dataset_audit[]
 }
 
 model user_settings {
@@ -103,21 +128,9 @@ model user_role {
 }
 
 model workflow {
-  id       String @id
+  id         String   @id
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model dataset_audit {
-  id        Int      @id @default(autoincrement())
-  action    String
-  timestamp DateTime @default(now())
-  old_data  Json?
-  new_data  Json?
-  user_id   Int?
-  user      user?    @relation(fields: [user_id], references: [id])
-  dataset_id  Int
-  dataset     dataset?   @relation(fields: [dataset_id], references: [id])
 }
 
 model metric {
@@ -130,14 +143,4 @@ model metric {
   tags        Json?
 
   @@id([timestamp, measurement, subject])
-}
-
-model dataset_state {
-  state     String
-  timestamp DateTime @default(now()) @db.Timestamp(6)
-  metadata  Json?
-  dataset_id  Int
-  dataset     dataset?   @relation(fields: [dataset_id], references: [id])
-
-  @@id([timestamp, dataset_id, state])
 }

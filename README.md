@@ -4,11 +4,11 @@ Diagnostic Genomics Laboratory portal and pipeline application
 ## Getting started
 - [API](api/README.md)
 - [UI](ui/README.md)
+- [Workers](workers/README.md)
 
 - [Docker](README-docker.md)
 
-## Back and Restore
+## Architecture
+<img src="docs/architecture.png" >
 
-### Postgre
-
-### Mongo
+<img src="docs/app-celery-communication-diagram.png" >

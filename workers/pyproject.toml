@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "dgl-workers"
+version = "0.1.0"
+description = "Worker processes for DGL"
+authors = ["Deepak Duggirala <deepakduggi@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.9"
+celery = "^5.2.7"
+python-dotenv = "^1.0.0"
+sca-rhythm = "^0.5.0"
+requests = "^2.30.0"
+urllib3 = "<2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

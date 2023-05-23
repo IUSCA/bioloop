@@ -22,5 +22,5 @@ echo "APP_UID:$APP_UID,APP_GID:$APP_GID"
 echo APP_UID=$APP_UID > .env
 echo APP_GID=$APP_GID >> .env
 
-sudo docker compose -f "docker-compose-prod.yml" build api worker_api
+sudo docker compose -f "docker-compose-prod.yml" build api
 sudo docker compose -f "docker-compose-prod.yml" up -d

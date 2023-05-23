@@ -14,14 +14,14 @@ class DatasetService {
 
   getById({
     id,
-    checksums = false,
+    files = false,
     workflows = true,
     last_task_run = false,
     prev_task_runs = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
-        checksums,
+        files,
         workflows,
         last_task_run,
         prev_task_runs,

@@ -12,7 +12,7 @@ const props = defineProps({
 function status_to_color(status) {
   if (status == "PENDING") {
     return "primary";
-  } else if (status == "PROGRESS" || status == "STARTED") {
+  } else if (["PROGRESS", "STARTED"].includes(status)) {
     return "warning";
   } else if (status == "SUCCESS") {
     return "success";

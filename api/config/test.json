@@ -1,20 +1,6 @@
 {
-  "express": {
-    "host": "0.0.0.0"
-  },
-  "postgres": {
-    "hostname": "commons3.sca.iu.edu",
-    "db": "dgl_test",
-    "schema": "public"
-  },
+  "app_id": "dgl-test.sca.iu.edu",
   "workflow_server": {
-    "base_url": "http://dgl_worker_api:5001"
-  },
-  "auth": {
-    "mode": "prod",
-    "jwt": {
-      "iss": "dgl.sca.iu.edu",
-      "ttl_milliseconds": 3600000
-    }
+    "base_url": "https://core-dev1.sca.iu.edu/rhythm"
   }
 }
