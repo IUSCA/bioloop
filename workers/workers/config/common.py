@@ -14,7 +14,7 @@ config = {
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'base_url': 'http://localhost:3130',
+        'base_url': 'http://localhost:3030',
         'auth_token': AUTH_TOKEN,
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
@@ -51,7 +51,7 @@ config = {
         },
         'download': {
             'datasets': {
-                'n_days': 7
+                'n_days': 21
             }
         }
     },
