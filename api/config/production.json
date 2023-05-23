@@ -1,5 +1,20 @@
 {
-  "logger": {
-    "level": "error"
+  "express": {
+    "host": "0.0.0.0"
+  },
+  "postgres": {
+    "hostname": "commons3.sca.iu.edu",
+    "db": "dgl_test",
+    "schema": "public"
+  },
+  "workflow_server": {
+    "base_url": "https://core-dev1.sca.iu.edu/rhythm"
+  },
+  "auth": {
+    "mode": "prod",
+    "jwt": {
+      "iss": "dgl.sca.iu.edu",
+      "ttl_milliseconds": 3600000
+    }
   }
 }

@@ -127,7 +127,7 @@ colo23> git pull
 
 - create / update `<DGL_dev>/workers/.env`
 - create an auth token to communicate with the express server (postgres db)
-  - `cd <dgl>`
+  - `cd <dgl>/api`
   - `node src/scripts/issue_token.js <service_account>`
   - ex: `node src/scripts/issue_token.js svc_dgl_tasks`
 
