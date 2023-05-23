@@ -29,6 +29,13 @@
 - Config / settings are in `workers/config/*.py` and `.env`
 - Test code is in `tests/`
 
+### Hot Module Replacement
+Worker automatically run with updated code except for the code in
+- workers.config.*
+- workers.utils
+- workers.celery_app
+- workers.task.declaration
+
 ## Deployment
 
 - Add `module load python/3.10.5` to ~/.modules
