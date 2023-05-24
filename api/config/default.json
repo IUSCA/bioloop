@@ -76,7 +76,7 @@
       "steps": [
         {
           "name": "delete",
-          "task": "scaworkers.workers.delete.delete_dataset"
+          "task": "delete_dataset"
         }
       ]
     }

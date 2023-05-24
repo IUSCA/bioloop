@@ -1,4 +1,5 @@
 {
+  "app_id": "dgl.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
