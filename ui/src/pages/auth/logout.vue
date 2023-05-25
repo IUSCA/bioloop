@@ -6,7 +6,9 @@
           <div class="flex justify-center opacity-70">
             <div class="flex flex-col gap-2 items-center">
               <img class="h-12" src="/logo.svg" />
-              <span class="text-3xl tracking-wide"> DGL-SCA </span>
+              <span class="text-3xl tracking-wide">
+                {{ config.appTitle }}
+              </span>
             </div>
           </div>
           <div class="text-center mt-8 text-xl">
@@ -21,7 +23,8 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import config from "@/config";
 import { useAuthStore } from "../../stores/auth";
 
 const auth = useAuthStore();

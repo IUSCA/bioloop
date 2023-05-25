@@ -60,7 +60,7 @@ router.beforeEach((to, _from) => {
 // https://github.com/vuejs/vue-router/issues/914#issuecomment-1019253370
 router.afterEach((to, _from) => {
   nextTick(() => {
-    document.title = to.meta?.title || config.defaultTitle;
+    document.title = to.meta?.title || config.appTitle;
   });
 });
 
