@@ -51,7 +51,7 @@ config = {
         },
         'download': {
             'datasets': {
-                'n_days': 21
+                'n_days': 7
             }
         }
     },

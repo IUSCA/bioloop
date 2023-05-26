@@ -7,7 +7,7 @@ YEAR = datetime.datetime.now().year
 config = {
     'app_id': 'dgl.sca.iu.edu',
     'api': {
-        'base_url': 'https://core-dev1.sca.iu.edu/rhythm',
+        'base_url': 'https://dgl.sca.iu.edu/api/', # trailing slash is required
     },
     'paths': {
         'scratch': '/N/scratch/dgluser/dgl/production/scratch',
