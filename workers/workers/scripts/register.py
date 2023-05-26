@@ -43,7 +43,8 @@ class BaseSpaceRegistration:
     @staticmethod
     def has_no_recent_activity(project):
         # has anything been modified in the project?
-        delta = datetime.now() - project['DateModified']
+        delta = datetime.utcnow() - project['DateModified']
+        print('has_no_recent_activity delta', delta)
         return delta.total_seconds() > config['illumina']['registration']['recency_threshold']
 
     def scan(self):
