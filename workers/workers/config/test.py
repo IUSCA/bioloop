@@ -1,6 +1,6 @@
 config = {
-  'app_id': 'dgl-test.sca.iu.edu',
-   'api': {
+    'app_id': 'dgl-test.sca.iu.edu',
+    'api': {
         'base_url': 'http://localhost:3130',
     },
     'celery': {

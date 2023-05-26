@@ -107,6 +107,7 @@ def upload_file_to_sda(local_file_path: Path,
         else:
             cm = utils.empty_context_manager()
         with cm:
+            logging.info(f'putting {local_file_path} on SDA at {sda_file_path}')
             sda.put(local_file=str(local_file_path), sda_file=sda_file_path, verify_checksum=verify_checksum)
 
 
@@ -153,4 +154,5 @@ def download_file_from_sda(sda_file_path: str,
         else:
             cm = utils.empty_context_manager()
         with cm:
+            logger.info(f'getting file from SDA {sda_file_path} to {local_file_path}')
             sda.get(sda_file=sda_file_path, local_file=str(local_file_path), verify_checksum=verify_checksum)

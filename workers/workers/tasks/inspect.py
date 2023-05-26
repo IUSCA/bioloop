@@ -30,7 +30,7 @@ def generate_metadata(celery_task, source: Path):
     errors = []
     if not utils.is_readable(source):
         msg = f'{source} is not readable/traversable'
-        # raise nonRetryableException(msg)
+        # raise nonRetryableException(msg) - TODO
 
     paths = list(source.rglob('*'))
     progress = Progress(celery_task=celery_task, name='', units='items')

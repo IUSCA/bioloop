@@ -1,7 +1,8 @@
+# noinspection PyUnresolvedReferences
 import logging
 
-# noinspection PyUnresolvedReferences
 from celery import Celery
+# noinspection PyUnresolvedReferences
 from celery.signals import task_prerun
 
 import workers.config.celeryconfig as celeryconfig
@@ -23,7 +24,6 @@ import workers.tasks.declarations
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
-
 
 # @task_prerun.connect
 # def task_prerun_handler(sender=None, task=None, **kwargs):
