@@ -52,7 +52,7 @@
         </p>
 
         <p class="copyright">
-          DGL-SCA is a service of the Indiana University
+          {{ config.appTitle }} is a service of the Indiana University
           <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>
           group.
         </p>
@@ -60,6 +60,10 @@
     </div>
   </footer>
 </template>
+
+<script setup>
+import config from "@/config";
+</script>
 
 <style scoped>
 #footer-v1 {

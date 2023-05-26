@@ -6,9 +6,9 @@ const exports = {
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth",
   refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
-  defaultTitle: "DGL-SCA",
+  appTitle: "DGL-SCA",
   contact: {
-    dgl_admin: "admin@dgl.iu.edu",
+    app_admin: "admin@dgl.iu.edu",
     sca_admin: "sca-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,

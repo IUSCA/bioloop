@@ -8,7 +8,9 @@
           </va-list-item-section>
 
           <va-list-item-section>
-            <va-list-item-label class="text-3xl"> DGL-SCA </va-list-item-label>
+            <va-list-item-label class="text-3xl">
+              {{ config.appTitle }}
+            </va-list-item-label>
 
             <va-list-item-label v-if="auth.user?.username">
               Logged in as {{ auth.user.username }}
@@ -67,6 +69,7 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();

@@ -11,8 +11,8 @@
             <span>
               It appears that you do not currently have permission to access
               this application. If you require access, please send a message to
-              <a class="va-link" :href="`mailto:${config.contact.dgl_admin}`">{{
-                config.contact.dgl_admin
+              <a class="va-link" :href="`mailto:${config.contact.app_admin}`">{{
+                config.contact.app_admin
               }}</a>
             </span>
           </div>

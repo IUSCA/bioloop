@@ -28,7 +28,7 @@
           <span class="font-light">
             Your username, roles, and other attributes can only be updated by
             site administrators.
-            <a class="va-link" :href="`mailto:${config.contact.dgl_admin}`"
+            <a class="va-link" :href="`mailto:${config.contact.app_admin}`"
               >Contact us</a
             >
             if one of these items needs to be updated.
