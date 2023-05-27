@@ -50,7 +50,10 @@ def get_hash(sda_path: str, missing_ok: bool = False) -> str | None:
     command = ['hsi', '-P', f'hashlist {sda_path}']
     try:
         stdout, stderr = cmd.execute(command)
-        return stdout.strip().split()[0]
+        checksum = stdout.strip().split()[0]
+        if checksum == '(none)':
+            return None
+        return checksum
     except cmd.SubprocessError:
         if missing_ok:
             return None
