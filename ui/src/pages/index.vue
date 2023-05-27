@@ -64,7 +64,6 @@ const data_products_stats = ref({});
 workflowService
   .getAll({ last_task_run: true, only_active: true })
   .then((res) => {
-    console.log(res.data);
     workflows.value = res.data;
   })
   .catch((err) => {

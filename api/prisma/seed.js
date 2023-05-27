@@ -29,7 +29,7 @@ const datasets = [
     du_size: 160612542453,
     size: 160612394997,
     description: null,
-    origin_path: '/N/scratch/dgluser/bs_test/PCM230203',
+    origin_path: '/N/scratch/scauser/bs_test/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     metadata: {
@@ -46,7 +46,7 @@ const datasets = [
     du_size: 58097236036,
     size: 58097207364,
     description: null,
-    origin_path: '/N/scratch/dgluser/test/PCM230327PL',
+    origin_path: '/N/scratch/scauser/test/PCM230327PL',
     archive_path: 'archive/2023/PCM230327PL.tar',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
     metadata: {
@@ -63,7 +63,7 @@ const datasets = [
     du_size: 2685335,
     size: 2648471,
     description: null,
-    origin_path: '/N/scratch/dgluser/test/PCM230215_657496842_Aborted_WF',
+    origin_path: '/N/scratch/scauser/test/PCM230215_657496842_Aborted_WF',
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
     metadata: {
@@ -81,7 +81,7 @@ const datasets = [
     du_size: 137206108342,
     size: 137205924022,
     description: null,
-    origin_path: '/N/scratch/dgluser/test/PCM230306PL',
+    origin_path: '/N/scratch/scauser/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
     metadata: {
@@ -179,6 +179,20 @@ const dataset_audit_data = [{
   dataset_id: 3,
 }];
 
+const contacts = [{
+  id: 1,
+  type: 'email',
+  value: 'sarah.williams@example.com',
+}, {
+  id: 2,
+  type: 'email',
+  value: 'johndoe1985@emailprovider.com',
+}, {
+  id: 3,
+  type: 'email',
+  value: 'emily.jones42@example.net',
+}];
+
 async function update_seq(table) {
   // Get the current maximum value of the id column
   const result = await prisma[table].aggregate({
@@ -200,7 +214,7 @@ async function main() {
   })));
 
   // Create default admins
-  const admins = ['ccbrandt', 'deduggi', 'svc_dgl_tasks'];
+  const admins = ['ccbrandt', 'deduggi', 'svc_tasks'];
 
   const admin_promises = admins.map((username) => prisma.user.upsert({
     where: { email: `${username}@iu.edu` },
@@ -219,16 +233,28 @@ async function main() {
   await Promise.all(admin_promises);
 
   // create test user
-  const users = ['test_user'];
-
-  const user_promises = users.map((username) => prisma.user.upsert({
-    where: { email: `${username}@iu.edu` },
+  const users = [
+    {
+      username: 'ajohnson',
+      name: 'Alice Johnson',
+    },
+    {
+      username: 'sdavis',
+      name: 'Samuel Davis',
+    },
+    {
+      username: 'ethompson',
+      name: 'Emily Thompson',
+    },
+  ];
+  const user_promises = users.map((user) => prisma.user.upsert({
+    where: { email: `${user.username}@iu.edu` },
     update: {},
     create: {
-      username,
-      email: `${username}@iu.edu`,
-      cas_id: username,
-      name: username,
+      username: user.username,
+      email: `${user.username}@iu.edu`,
+      cas_id: user.username,
+      name: user.name,
       user_role: {
         create: [{ role_id: 3 }],
       },
@@ -276,8 +302,19 @@ async function main() {
     })),
   );
 
+  // create contact
+  await Promise.all(
+    contacts.map((c) => prisma.contact.upsert({
+      where: {
+        id: c.id,
+      },
+      update: {},
+      create: c,
+    })),
+  );
+
   // update the auto increment id's sequence numbers
-  const tables = ['dataset', 'user', 'role', 'dataset_audit'];
+  const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact'];
   await Promise.all(tables.map(update_seq));
 
   // add metrics

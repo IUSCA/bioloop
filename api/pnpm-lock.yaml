@@ -2,7 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@iusca/iulogin-helper': ^0.1.4
-  '@prisma/client': ^4.14.0
+  '@prisma/client': ^4.14.1
   accesscontrol: ^2.2.1
   axios: ^1.4.0
   compression: ^1.7.4
@@ -10,7 +10,7 @@ specifiers:
   cookie-parser: ^1.4.6
   cors: ^2.8.5
   dotenv-safe: ^8.2.0
-  eslint: ^8.40.0
+  eslint: ^8.41.0
   eslint-config-airbnb-base: ^15.0.0
   eslint-plugin-import: ^2.27.5
   eslint-plugin-lodash-fp: 2.2.0-a1
@@ -23,14 +23,14 @@ specifiers:
   morgan: ^1.10.0
   multer: 1.4.5-lts.1
   nodemon: ^2.0.22
-  prisma: ^4.14.0
+  prisma: ^4.14.1
   swagger-autogen: ^2.23.1
   swagger-ui-express: ^4.6.3
-  winston: ^3.8.2
+  winston: ^3.9.0
 
 dependencies:
   '@iusca/iulogin-helper': 0.1.4
-  '@prisma/client': 4.14.0_prisma@4.14.0
+  '@prisma/client': 4.14.1_prisma@4.14.1
   accesscontrol: 2.2.1
   axios: 1.4.0
   compression: 1.7.4
@@ -47,16 +47,16 @@ dependencies:
   multer: 1.4.5-lts.1
   swagger-autogen: 2.23.1
   swagger-ui-express: 4.6.3_express@4.18.2
-  winston: 3.8.2
+  winston: 3.9.0
 
 devDependencies:
-  eslint: 8.40.0
-  eslint-config-airbnb-base: 15.0.0_e43qr7ng6kygh3xxr4conxr2wi
-  eslint-plugin-import: 2.27.5_eslint@8.40.0
-  eslint-plugin-lodash-fp: 2.2.0-a1_eslint@8.40.0
+  eslint: 8.41.0
+  eslint-config-airbnb-base: 15.0.0_bwfkg7osvbtezdkshju7lqq44q
+  eslint-plugin-import: 2.27.5_eslint@8.41.0
+  eslint-plugin-lodash-fp: 2.2.0-a1_eslint@8.41.0
   git-hooks: 1.1.10
   nodemon: 2.0.22
-  prisma: 4.14.0
+  prisma: 4.14.1
 
 packages:
 
@@ -73,13 +73,13 @@ packages:
       kuler: 2.0.0
     dev: false
 
-  /@eslint-community/eslint-utils/4.4.0_eslint@8.40.0:
+  /@eslint-community/eslint-utils/4.4.0_eslint@8.41.0:
     resolution: {integrity: sha512-1/sA4dwrzBAyeUoQ6oxahHKmrZvsnLCg4RfxW3ZFGGmQkSNQPFNLV9CUEFQP1x9EYXHTo5p6xdhZM1Ne9p/AfA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     peerDependencies:
       eslint: ^6.0.0 || ^7.0.0 || >=8.0.0
     dependencies:
-      eslint: 8.40.0
+      eslint: 8.41.0
       eslint-visitor-keys: 3.4.1
     dev: true
 
@@ -105,8 +105,8 @@ packages:
       - supports-color
     dev: true
 
-  /@eslint/js/8.40.0:
-    resolution: {integrity: sha512-ElyB54bJIhXQYVKjDSvCkPO1iU1tSAeVQJbllWJq1XQSmmA4dgFk8CbiBGpiOPxleE48vDogxCtmMYku4HSVLA==}
+  /@eslint/js/8.41.0:
+    resolution: {integrity: sha512-LxcyMGxwmTh2lY9FwHPGWOHmYFCZvbrFCBZL4FzSSsxsRPuhrYUg/49/0KDfW8tnIEaEHtfmn6+NPN+1DqaNmA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
 
@@ -159,8 +159,8 @@ packages:
       fastq: 1.15.0
     dev: true
 
-  /@prisma/client/4.14.0_prisma@4.14.0:
-    resolution: {integrity: sha512-MK/XaA2sFdfaOa7I9MjNKz6dxeIEdeZlnpNRoF2w3JuRLlFJLkpp6cD3yaqw2nUUhbrn3Iqe3ZpVV+VuGGil7Q==}
+  /@prisma/client/4.14.1_prisma@4.14.1:
+    resolution: {integrity: sha512-TZIswkeX1ccsHG/eN2kICzg/csXll0osK3EHu1QKd8VJ3XLcXozbNELKkCNfsCUvKJAwPdDtFCzF+O+raIVldw==}
     engines: {node: '>=14.17'}
     requiresBuild: true
     peerDependencies:
@@ -170,15 +170,15 @@ packages:
         optional: true
     dependencies:
       '@prisma/engines-version': 4.14.0-67.d9a4c5988f480fa576d43970d5a23641aa77bc9c
-      prisma: 4.14.0
+      prisma: 4.14.1
     dev: false
 
   /@prisma/engines-version/4.14.0-67.d9a4c5988f480fa576d43970d5a23641aa77bc9c:
     resolution: {integrity: sha512-3jum8/YSudeSN0zGW5qkpz+wAN2V/NYCQ+BPjvHYDfWatLWlQkqy99toX0GysDeaUoBIJg1vaz2yKqiA3CFcQw==}
     dev: false
 
-  /@prisma/engines/4.14.0:
-    resolution: {integrity: sha512-PDNlhP/1vyTgmNyiucGqGCdXIp7HIkkvKO50si3y3PcceeHvqtiKPaH1iJdz63jCWMVMbj2MElSxXPOeBvEVIQ==}
+  /@prisma/engines/4.14.1:
+    resolution: {integrity: sha512-APqFddPVHYmWNKqc+5J5SqrLFfOghKOLZxobmguDUacxOwdEutLsbXPVhNnpFDmuQWQFbXmrTTPoRrrF6B1MWA==}
     requiresBuild: true
 
   /@types/json5/0.0.29:
@@ -944,7 +944,7 @@ packages:
       lodash.zip: 4.2.0
     dev: true
 
-  /eslint-config-airbnb-base/15.0.0_e43qr7ng6kygh3xxr4conxr2wi:
+  /eslint-config-airbnb-base/15.0.0_bwfkg7osvbtezdkshju7lqq44q:
     resolution: {integrity: sha512-xaX3z4ZZIcFLvh2oUNvcX5oEofXda7giYmuplVxoOg5A7EXJMrUyqRgR+mhDhPK8LZ4PttFOBvCYDbX3sUoUig==}
     engines: {node: ^10.12.0 || >=12.0.0}
     peerDependencies:
@@ -952,8 +952,8 @@ packages:
       eslint-plugin-import: ^2.25.2
     dependencies:
       confusing-browser-globals: 1.0.11
-      eslint: 8.40.0
-      eslint-plugin-import: 2.27.5_eslint@8.40.0
+      eslint: 8.41.0
+      eslint-plugin-import: 2.27.5_eslint@8.41.0
       object.assign: 4.1.4
       object.entries: 1.1.6
       semver: 6.3.0
@@ -969,7 +969,7 @@ packages:
       - supports-color
     dev: true
 
-  /eslint-module-utils/2.8.0_psn6fw4moe3x2es443hwiatkh4:
+  /eslint-module-utils/2.8.0_dq4d7vk7i6djjoszyebjny7fci:
     resolution: {integrity: sha512-aWajIYfsqCKRDgUfjEXNN/JlrzauMuSEy5sbd7WXbtW3EH6A6MpwEh42c7qD+MqQo9QMJ6fWLAeIJynx0g6OAw==}
     engines: {node: '>=4'}
     peerDependencies:
@@ -991,13 +991,13 @@ packages:
         optional: true
     dependencies:
       debug: 3.2.7
-      eslint: 8.40.0
+      eslint: 8.41.0
       eslint-import-resolver-node: 0.3.7
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  /eslint-plugin-import/2.27.5_eslint@8.40.0:
+  /eslint-plugin-import/2.27.5_eslint@8.41.0:
     resolution: {integrity: sha512-LmEt3GVofgiGuiE+ORpnvP+kAm3h6MLZJ4Q5HCyHADofsb4VzXFsRiWj3c0OFiV+3DWFh0qg3v9gcPlfc3zRow==}
     engines: {node: '>=4'}
     peerDependencies:
@@ -1012,9 +1012,9 @@ packages:
       array.prototype.flatmap: 1.3.1
       debug: 3.2.7
       doctrine: 2.1.0
-      eslint: 8.40.0
+      eslint: 8.41.0
       eslint-import-resolver-node: 0.3.7
-      eslint-module-utils: 2.8.0_psn6fw4moe3x2es443hwiatkh4
+      eslint-module-utils: 2.8.0_dq4d7vk7i6djjoszyebjny7fci
       has: 1.0.3
       is-core-module: 2.12.1
       is-glob: 4.0.3
@@ -1029,7 +1029,7 @@ packages:
       - supports-color
     dev: true
 
-  /eslint-plugin-lodash-fp/2.2.0-a1_eslint@8.40.0:
+  /eslint-plugin-lodash-fp/2.2.0-a1_eslint@8.41.0:
     resolution: {integrity: sha512-RMWDslyCWr3p7zgvhoQueb99ABVlh+KeQixQ8C64GUmLgh7sdyGQFVHDOWZFGf6P0cy6a0pg6GdpZq6G1URdGw==}
     engines: {node: '>=6.0.0'}
     peerDependencies:
@@ -1037,7 +1037,7 @@ packages:
     dependencies:
       create-eslint-index: 1.0.0
       enhance-visitors: 1.0.0
-      eslint: 8.40.0
+      eslint: 8.41.0
       eslint-ast-utils: 1.1.0
       lodash: 4.17.21
       req-all: 1.0.0
@@ -1056,15 +1056,15 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
 
-  /eslint/8.40.0:
-    resolution: {integrity: sha512-bvR+TsP9EHL3TqNtj9sCNJVAFK3fBN8Q7g5waghxyRsPLIMwL73XSKnZFK0hk/O2ANC+iAoq6PWMQ+IfBAJIiQ==}
+  /eslint/8.41.0:
+    resolution: {integrity: sha512-WQDQpzGBOP5IrXPo4Hc0814r4/v2rrIsB0rhT7jtunIalgg6gYXWhRMOejVO8yH21T/FGaxjmFjBMNqcIlmH1Q==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     hasBin: true
     dependencies:
-      '@eslint-community/eslint-utils': 4.4.0_eslint@8.40.0
+      '@eslint-community/eslint-utils': 4.4.0_eslint@8.41.0
       '@eslint-community/regexpp': 4.5.1
       '@eslint/eslintrc': 2.0.3
-      '@eslint/js': 8.40.0
+      '@eslint/js': 8.41.0
       '@humanwhocodes/config-array': 0.11.8
       '@humanwhocodes/module-importer': 1.0.1
       '@nodelib/fs.walk': 1.2.8
@@ -1084,13 +1084,12 @@ packages:
       find-up: 5.0.0
       glob-parent: 6.0.2
       globals: 13.20.0
-      grapheme-splitter: 1.0.4
+      graphemer: 1.4.0
       ignore: 5.2.4
       import-fresh: 3.3.0
       imurmurhash: 0.1.4
       is-glob: 4.0.3
       is-path-inside: 3.0.3
-      js-sdsl: 4.4.0
       js-yaml: 4.1.0
       json-stable-stringify-without-jsonify: 1.0.1
       levn: 0.4.1
@@ -1420,8 +1419,8 @@ packages:
       get-intrinsic: 1.2.1
     dev: true
 
-  /grapheme-splitter/1.0.4:
-    resolution: {integrity: sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==}
+  /graphemer/1.4.0:
+    resolution: {integrity: sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==}
     dev: true
 
   /has-bigints/1.0.2:
@@ -1683,10 +1682,6 @@ packages:
 
   /isexe/2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
-    dev: true
-
-  /js-sdsl/4.4.0:
-    resolution: {integrity: sha512-FfVSdx6pJ41Oa+CF7RDaFmTnCaFhua+SNYQX74riGOpl96x+2jQCqEfQ2bnXu/5DPCqlRuiqyvTJM0Qjz26IVg==}
     dev: true
 
   /js-yaml/4.1.0:
@@ -2138,13 +2133,13 @@ packages:
     engines: {node: '>= 0.8.0'}
     dev: true
 
-  /prisma/4.14.0:
-    resolution: {integrity: sha512-+5dMl1uxMQb4RepndY6AwR9xi1cDcaGFICu+ws6/Nmgt93mFPNj8tYxSfTdmfg+rkNrUId9rk/Ac2vTgLe/oXA==}
+  /prisma/4.14.1:
+    resolution: {integrity: sha512-z6hxzTMYqT9SIKlzD08dhzsLUpxjFKKsLpp5/kBDnSqiOjtUyyl/dC5tzxLcOa3jkEHQ8+RpB/fE3w8bgNP51g==}
     engines: {node: '>=14.17'}
     hasBin: true
     requiresBuild: true
     dependencies:
-      '@prisma/engines': 4.14.0
+      '@prisma/engines': 4.14.1
 
   /process-nextick-args/2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
@@ -2511,8 +2506,8 @@ packages:
       json5: 2.2.3
     dev: false
 
-  /swagger-ui-dist/4.18.3:
-    resolution: {integrity: sha512-QW280Uvt234+TLo9NMPRa2Sj17RoorbQlR2eEY4R6Cs0LbdXhiO14YWX9OPBkBdiN64GQYz4zU8wlHLVi81lBg==}
+  /swagger-ui-dist/4.19.0:
+    resolution: {integrity: sha512-9C9fJGI18gK5AhaU5YRyPY1lXJH4lmWh8h9zFMrJBkYzdRjCbAzYl1ayWPYgwFvag/Luqi3Co599OK/39IS2QQ==}
     dev: false
 
   /swagger-ui-express/4.6.3_express@4.18.2:
@@ -2522,7 +2517,7 @@ packages:
       express: '>=4.0.0 || >=5.0.0-beta'
     dependencies:
       express: 4.18.2
-      swagger-ui-dist: 4.18.3
+      swagger-ui-dist: 4.19.0
     dev: false
 
   /text-hex/1.0.0:
@@ -2702,8 +2697,8 @@ packages:
       triple-beam: 1.3.0
     dev: false
 
-  /winston/3.8.2:
-    resolution: {integrity: sha512-MsE1gRx1m5jdTTO9Ld/vND4krP2To+lgDoMEHGGa4HIlAUyXJtfc7CxQcGXVyz2IBpw5hbFkj2b/AtUdQwyRew==}
+  /winston/3.9.0:
+    resolution: {integrity: sha512-jW51iW/X95BCW6MMtZWr2jKQBP4hV5bIDq9QrIjfDk6Q9QuxvTKEAlpUNAzP+HYHFFCeENhph16s0zEunu4uuQ==}
     engines: {node: '>= 12.0.0'}
     dependencies:
       '@colors/colors': 1.5.0

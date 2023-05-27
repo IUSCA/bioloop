@@ -9,8 +9,10 @@ input.va-input__content__input {
   padding-top: 5px;
   padding-bottom: 5px;
 }
-label.va-input-wrapper__label {
-  margin-top: 3px;
+
+div.va-select-content__autocomplete {
+  padding-top: 10px;
+  padding-bottom: 5px;
 }
 
 div.inner-loading__overlay {

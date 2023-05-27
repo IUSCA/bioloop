@@ -60,7 +60,6 @@ const disk_usage_metrics = ref([]);
 
 MetricService.getLatest()
   .then((res) => {
-    console.log(res.data);
     disk_usage_metrics.value = res.data;
   })
   .catch((err) => {

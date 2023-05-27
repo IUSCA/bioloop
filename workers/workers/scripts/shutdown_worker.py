@@ -47,5 +47,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # print(args.hostname, args.queues, args.immediate)
 
-    # hostname = 'dgl-celery-w1@Deepaks-MacBook-Air.local'
+    # hostname = 'app-celery-w1@Deepaks-MacBook-Air.local'
     shutdown(hostname=args.hostname, queues=args.queues, immediate=args.immediate)

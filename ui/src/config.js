@@ -14,8 +14,8 @@ const exports = {
   dataset_polling_interval: 10000,
   paths: {
     stage: {
-      raw_data: "/N/project/DG_Multiple_Myeloma/share/raw_data",
-      data_products: "/N/scratch/dgluser/dgl/production/stage/data_products",
+      RAW_DATA: "/N/project/DG_Multiple_Myeloma/share/raw_data",
+      DATA_PRODUCT: "/N/scratch/dgluser/dgl/production/stage/data_products",
     },
   },
 };

@@ -2,7 +2,7 @@
   <div class="flex flex-row h-screen">
     <nav
       aria-label="menu nav"
-      class="relative h-full content-center flex-none w-64"
+      class="relative h-full content-center flex-none w-64 shadow-xl"
     >
       <Sidebar></Sidebar>
     </nav>

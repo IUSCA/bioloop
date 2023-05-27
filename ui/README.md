@@ -1,4 +1,4 @@
-# DGL-UI
+# UI
 
 ## Getting Started
 Create a `.env` file from the template `.env.example`: 
@@ -51,6 +51,65 @@ Iconify icons are installed using
 - Installation: option-1: https://docs.iconify.design/icon-components/vue/
 - Installation: option-2: https://github.com/antfu/unplugin-icons and [autoimporting](https://github.com/antfu/unplugin-icons#auto-importing)
   - need to install [specific packs](https://github.com/antfu/unplugin-icons#icons-data) ex: `pnpm i -D @iconify-json/mdi`
+
+## Colors
+
+Vuestic colors: https://ui.vuestic.dev/en/styles/colors
+
+Accent
+- primary
+- secondary
+- success
+- warning
+- danger
+- info
+
+Background
+- backgroundPrimary
+- backgroundSecondary
+- backgroundElement
+- backgroundBorder
+
+Text
+- textPrimary
+- textInverted
+
+Using 
+
+```html
+<template>
+  <!-- use javascript object -->
+  <div :style="color: {{ colorByStatus }}"></div>
+
+  <!-- use css variables -->
+  <span style="color: var(--va-warning)"> </span>
+
+  <!-- using style block -->
+  <p class="title">
+    Title
+  </p>
+
+  <!-- use builtin props -->
+  <va-button color="info"></va-button>
+</template>
+
+<script setup>
+  import { useColors } from "vuestic-ui";
+  const colors = useColors()
+
+  const colorByStatus = status == 'FAILED' ? colors.danger : color.primary
+</script>
+
+<style scoped>
+.title {
+  color: var(--va-primary)
+}
+</style>
+```
+
+```html
+
+```
 
 ## Configuration
 

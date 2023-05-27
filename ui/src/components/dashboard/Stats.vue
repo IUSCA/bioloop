@@ -57,7 +57,7 @@
               width="64px"
               height="32px"
             />
-            <p class="va-text-center">Genome Files</p>
+            <p class="va-text-center">Data Files</p>
           </div>
 
           <div class="flex flex-col items-center justify-end">

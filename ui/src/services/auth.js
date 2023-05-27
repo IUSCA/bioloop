@@ -20,6 +20,8 @@ class AuthService {
   saveSettings = (data) => api.put("/users/mine/settings", data);
 
   refreshToken = () => api.post("/auth/refresh_token");
+
+  spoof = (username) => api.post(`/auth/spoof/${username}`);
 }
 
 export default new AuthService();

@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "dgl-workers"
+name = "app-workers"
 version = "0.1.0"
-description = "Worker processes for DGL"
+description = "Worker processes"
 authors = ["Deepak Duggirala <deepakduggi@gmail.com>"]
 readme = "README.md"
 

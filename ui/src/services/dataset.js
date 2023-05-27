@@ -61,7 +61,7 @@ class DatasetService {
   }
 
   get_staged_path(dataset) {
-    const dataset_type = dataset.type.toLowerCase();
+    const dataset_type = dataset.type;
     return `${config.paths.stage[dataset_type]}/${dataset.name}`;
   }
 }

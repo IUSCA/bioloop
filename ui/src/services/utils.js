@@ -43,7 +43,7 @@ const capitalize = (s) => (s && s[0].toUpperCase() + s.slice(1)) || "";
 function isLiveToken(jwt) {
   if (jwt) {
     try {
-      console.log("isLiveToken", jwt);
+      // console.log("isLiveToken", jwt);
       // const payload_enc = jwt.split(".")[1];
       // const payload_str = window.atob(payload_enc);
       // const payload = JSON.parse(payload_str);
@@ -88,6 +88,10 @@ function lxor(a, b) {
   return (a || b) && !(a && b);
 }
 
+function cmp(a, b) {
+  return a != null && b != null ? (a < b ? -1 : a > b ? 1 : 0) : 0;
+}
+
 export {
   formatBytes,
   difference,
@@ -100,4 +104,5 @@ export {
   format_duration,
   utc_date_to_local_tz,
   lxor,
+  cmp,
 };

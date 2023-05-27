@@ -1,5 +1,6 @@
 <template>
   <va-inner-loading :loading="loading">
+    <!-- Title -->
     <div>
       <span class="text-3xl capitalize" v-if="dataset.type">
         {{ dataset.type.replace("_", " ").toLowerCase() }} :
@@ -7,7 +8,16 @@
       <span class="text-3xl"> {{ dataset.name }} </span>
       <va-divider />
     </div>
-    <div>
+
+    <!-- Content -->
+    <div class="flex flex-col gap-3">
+      <!-- Associated datasets -->
+
+      <assoc-datasets
+        :source_datasets_meta="dataset?.source_datasets"
+        :derived_datasets_meta="dataset?.derived_datasets"
+      />
+
       <!-- Dataset Info + Status Cards -->
       <div class="flex flex-row flex-wrap gap-3">
         <div class="flex-[3_1_0%]">
@@ -253,10 +263,7 @@
       </div>
 
       <!-- Audit logs -->
-      <div
-        class="mt-3"
-        v-if="dataset.audit_logs && dataset.audit_logs.length > 0"
-      >
+      <div v-if="dataset.audit_logs && dataset.audit_logs.length > 0">
         <va-card>
           <va-card-title>
             <span class="text-xl font-bold"> AUDIT LOG </span>
@@ -268,7 +275,7 @@
       </div>
 
       <!-- Workflows -->
-      <div class="mt-3">
+      <div>
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
@@ -376,7 +383,13 @@ function fetch_dataset(show_loading = false) {
 }
 
 // initial data fetch
-fetch_dataset(true);
+watch(
+  [() => props.datasetId],
+  () => {
+    fetch_dataset(true);
+  },
+  { immediate: true }
+);
 
 /**
  * providing the interval directly will kick of the polling immediately

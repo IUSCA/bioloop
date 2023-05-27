@@ -5,7 +5,6 @@ import authService from "../services/auth";
 import config from "../config";
 
 export const useAuthStore = defineStore("auth", () => {
-  console.log("initializing auth store");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
   const loggedIn = ref(false);
@@ -13,7 +12,6 @@ export const useAuthStore = defineStore("auth", () => {
   let refreshTokenTimer = null;
 
   function initialize() {
-    console.log("auth store: initialize");
     if (user.value && token.value) {
       loggedIn.value = true;
       refreshTokenBeforeExpiry();
@@ -54,7 +52,6 @@ export const useAuthStore = defineStore("auth", () => {
 
   function refreshTokenBeforeExpiry() {
     // idempotent method - will not create a timeout if one already exists
-    console.log("auth store: refreshTokenBeforeExpiry");
     if (!refreshTokenTimer) {
       // timer is not running running
       try {
@@ -106,6 +103,19 @@ export const useAuthStore = defineStore("auth", () => {
       .then((res) => (user.value.settings = res.data.settings));
   }
 
+  function spoof(username) {
+    return authService
+      .spoof(username)
+      .then((res) => {
+        onLogin(res.data);
+        // reload entire app to reload all components
+        window.location.href = "/";
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  }
+
   return {
     user,
     loggedIn,
@@ -115,6 +125,7 @@ export const useAuthStore = defineStore("auth", () => {
     logout,
     hasRole,
     saveSettings,
+    spoof,
   };
 });
 
