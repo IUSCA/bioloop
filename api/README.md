@@ -1,4 +1,4 @@
-# DGL-API
+# API
 
 ## Getting Started
 
@@ -14,18 +14,18 @@ In the developement environment with docker this is the content of `.env` file
 ```bash
 NODE_ENV=docker
 DATABASE_PASSWORD='example'
-DATABASE_URL="postgresql://dgluser:example@dgl_postgres:5432/dgl?schema=public"
+DATABASE_URL="postgresql://appuser:example@postgres:5432/app?schema=public"
 ```
 From the project root run: `docker compose up postgres api -d` to start both the API server and the database
 
 ### Running on host machine
 
-Start a postgres db server on localhost and create a database `dgl` and user `dgluser` (password: `example`) with write premissions to public schema. In this local environment, the content of `.env` file is:
+Start a postgres db server on localhost and create a database `app` and user `appuser` (password: `example`) with write premissions to public schema. In this local environment, the content of `.env` file is:
 
 ```bash
 NODE_ENV=default
 DATABASE_PASSWORD='example'
-DATABASE_URL="postgresql://dgluser:example@localhost:5432/dgl?schema=public"
+DATABASE_URL="postgresql://appuser:example@localhost:5432/app?schema=public"
 ```
 
 Run `pnpm install` and `pnpm start` to start the API server.

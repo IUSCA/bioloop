@@ -1,11 +1,11 @@
 {
-  "app_id": "dgl.sca.iu.edu",
+  "app_id": "bioloop.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
   "postgres": {
     "hostname": "commons3.sca.iu.edu",
-    "db": "dgl_test",
+    "db": "bioloop",
     "schema": "public"
   },
   "workflow_server": {
@@ -14,7 +14,7 @@
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "dgl.sca.iu.edu",
+      "iss": "bioloop.sca.iu.edu",
       "ttl_milliseconds": 3600000
     }
   }

@@ -1,5 +1,5 @@
-# DGL
-Diagnostic Genomics Laboratory portal and pipeline application
+# BIOLOOP
+Portal and Pipeline Application Stater Project
 
 ## Getting started
 - [API](api/README.md)

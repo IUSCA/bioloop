@@ -10,7 +10,7 @@ and populate the config values to all the keys.
 In the developement environment, the API calls from the UI are proxied by the vite server. For example, the UI running on https://localhost:443 make an API call GET https://localhost:443/api/users which the vite server intercepts and proxies it to the API server running on `VITE_API_REDIRECT_URL` (ex: http://localhost:3000) as GET http://localhost:3000/users.
 
 ### Running using docker
-1. Set `VITE_API_REDIRECT_URL` to http://dgl_api:3000
+1. Set `VITE_API_REDIRECT_URL` to http://api:3000
 2. From the project root run: `docker composer up ui -d` and open https://localhost:443 in the browser. (start the API and its dependencies before starting UI)
 
 ### Running on host machine

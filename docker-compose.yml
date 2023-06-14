@@ -1,11 +1,12 @@
 version: "3"
+name: bioloop
 services:
   ui:
-    container_name: dgl_ui
+    container_name: ui
     image: node:19
     volumes:
       - ./ui/:/opt/sca/app
-      - dgl_ui_modules:/opt/sca/app/node_modules
+      - ui_modules:/opt/sca/app/node_modules
     ports:
       - 127.0.0.1:443:443
     working_dir: /opt/sca/app
@@ -13,7 +14,7 @@ services:
     # entrypoint: [ "tail", "-f", "/dev/null" ]
 
   api:
-    container_name: dgl_api
+    container_name: api
     build:
       context: ./api
       args:
@@ -21,7 +22,7 @@ services:
         APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./api/:/opt/sca/app
-      - dgl_api_modules:/opt/sca/app/node_modules
+      - api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
     ports:
@@ -33,13 +34,13 @@ services:
      - postgres
 
   postgres:
-    container_name: dgl_postgres
+    container_name: postgres
     image: postgres:14.5
     # restart: unless-stopped
     environment:
-      - POSTGRES_USER=dgluser
+      - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=example
-      - POSTGRES_DB=dgl
+      - POSTGRES_DB=app
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
       - ./postgres/scripts:/docker-entrypoint-initdb.d
@@ -50,8 +51,8 @@ services:
 
 
 volumes:
-  dgl_ui_modules:
+  ui_modules:
     external: false
 
-  dgl_api_modules:
+  api_modules:
     external: false

@@ -1,17 +1,18 @@
 version: "3"
+name: bioloop
 services:
   ui:
-    container_name: dgl_ui
+    container_name: ui
     image: node:19
     volumes:
       - ./ui/:/opt/sca/app
-      - dgl_ui_modules:/opt/sca/app/node_modules
+      - ui_modules:/opt/sca/app/node_modules
     working_dir: /opt/sca/app
     command: sh -c "npm install && npm run builddev"
     
 
   api:
-    container_name: dgl_api
+    container_name: api
     build:
       context: ./api
       args:
@@ -19,23 +20,23 @@ services:
         APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./api/:/opt/sca/app
-      - dgl_api_modules:/opt/sca/app/node_modules
+      - api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     networks:
-      dgl_network:
+      network:
         ipv4_address: 172.19.0.2
 
 volumes:
-  dgl_ui_modules:
+  ui_modules:
     external: false
 
-  dgl_api_modules:
+  api_modules:
     external: false
 
 networks:
-  dgl_network:
+  network:
     ipam:
       config:
         - subnet: 172.19.0.0/24
