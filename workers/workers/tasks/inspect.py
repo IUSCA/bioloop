@@ -84,8 +84,3 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
 
     return dataset_id,
 
-
-if __name__ == '__main__':
-    pass
-    # source = '/N/u/dgluser/Carbonate/DGL'
-    # inspect('/N/project/DG_Multiple_Myeloma/share/sentieon_val_7')

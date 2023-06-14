@@ -44,11 +44,31 @@
           <td>Directories</td>
           <td>{{ props.dataset.num_directories }}</td>
         </tr>
+        <tr>
+          <td>Description</td>
+          <td>
+            <div class="max-h-[11.5rem] overflow-y-scroll">
+              {{ props.dataset.description }}
+            </div>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </template>
+
 <script setup>
 import { formatBytes, utc_date_to_local_tz } from "../../services/utils";
 const props = defineProps({ dataset: Object });
 </script>
+
+<style lang="scss" scoped>
+div.va-table-responsive {
+  overflow: auto;
+
+  // first column min width
+  td:first-child {
+    min-width: 135px;
+  }
+}
+</style>

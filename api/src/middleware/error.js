@@ -13,7 +13,7 @@ function notFound(req, res, next) {
 // catch prisma record not found errors and send 404
 function prismaNotFoundHandler(e, req, res, next) {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    if (e?.meta?.cause?.includes('not found')) {
+    if (e?.meta?.cause?.includes('not found') || e?.code === 'P2025') {
       return next(createError.NotFound());
     }
   }

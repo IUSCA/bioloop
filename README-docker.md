@@ -16,7 +16,7 @@ Set up the [front-end ui client](ui/README.md) or [back-end api server](api/READ
 
 ### .env files
 
-`api/` contains `.env.example.docker` files. Copy these to a corresponding `.env` file and update values accordingly.
+`ui/` and `api/` contains `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
 
 ### OpenSSL
 
@@ -134,8 +134,8 @@ https://charlesbrandt.com/system/virtualization/docker-compose.html#shell-shortc
 Most containers have `curl` available. Connect to one and then try making requests to the service you're having issue with.
 
 ```
-docker-compose -p dgl exec web bash
-curl -X GET http://dgl_api:3030/
+docker-compose exec web bash
+curl -X GET http://api:3030/
 ```
 
 (in this case, we don't need the `/api` suffix since we're behind the nginx proxy that normally adds `/api` for us)
@@ -156,5 +156,5 @@ netstat -panl | grep " LISTEN "
 If you have a compose file named something other than `docker-compose.yml`, you can specify the name with a `-f` flag:
 
 ```
-docker-compose -p dgl -f docker-compose-prod.yml up -d
+docker-compose -f docker-compose-prod.yml up -d
 ```

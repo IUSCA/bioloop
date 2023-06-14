@@ -5,7 +5,8 @@
     "no-use-before-define": ["error", { "variables": false }],
     "no-multi-str": 0,
     "consistent-return": 0,
-    "camelcase": 0
+    "camelcase": 0,
+    "no-console": ["error", { "allow": ["warn", "error"] }]
   },
   "env": {
     "node": true,

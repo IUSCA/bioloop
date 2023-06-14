@@ -1,50 +1,112 @@
 <template>
-  <h2 class="text-3xl font-bold">Registered Users</h2>
-  <div class="mt-10">
-    <div class="flex justify-between gap-3 mb-2">
-      <div class="">
-        <va-input
-          v-model="filterInput"
-          class="flex flex-col mb-2 border-gray-800 border border-solid"
-          placeholder="search users"
-          outline
-          clearable
-        />
-      </div>
-      <div class="text-right">
-        <va-button icon="add" class="px-3" @click="openModalToCreateUser">
-          Create User</va-button
-        >
-      </div>
+  <h2 class="text-3xl font-bold mb-4">Registered Users</h2>
+
+  <!-- search bar and create button -->
+  <div class="flex items-center gap-3 mb-3">
+    <!-- search bar -->
+    <div class="flex-1">
+      <va-input
+        v-model="filterInput"
+        class="flex flex-col border-gray-800 border border-solid"
+        placeholder="search users"
+        outline
+        clearable
+      />
     </div>
 
-    <va-data-table
-      :items="users"
-      :columns="columns"
-      :hoverable="true"
-      :filter="filterInput"
-      :loading="data_loading"
-    >
-      <template #cell(created_at)="{ value }">
-        <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
-      </template>
-      <template #cell(updated_at)="{ value }">
-        <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
-      </template>
-      <template #cell(is_deleted)="{ source }">
-        <span>{{ source ? "Disabled" : "Enabled" }}</span>
-      </template>
-      <template #cell(actions)="{ rowIndex }">
-        <va-button
-          preset="plain"
-          icon="edit"
-          color="secondary"
-          @click="openModalToEditItemById(rowIndex)"
-        />
-      </template>
-    </va-data-table>
+    <!-- create button -->
+    <div class="flex-none">
+      <va-button
+        icon="add"
+        class="px-3"
+        color="success"
+        @click="openModalToCreateUser"
+      >
+        Create User
+      </va-button>
+    </div>
   </div>
 
+  <!-- table -->
+  <va-data-table
+    class="usertable"
+    :items="users"
+    :columns="columns"
+    :filter="filterInput"
+    :loading="data_loading"
+  >
+    <!-- roles -->
+    <template #cell(roles)="{ source }">
+      <div class="flex gap-1">
+        <va-chip
+          v-for="(role, i) in source.slice(0, 3)"
+          :color="get_role_color(role)"
+          :key="i"
+          size="small"
+          class="flex-none"
+        >
+          {{ role }}
+        </va-chip>
+        <va-chip v-if="source.length > 3" size="small" class="flex-none">
+          +{{ source.length - 3 }}
+        </va-chip>
+      </div>
+    </template>
+
+    <template #cell(created_at)="{ value }">
+      <span>{{ moment(value).utc().format("MMM D YYYY") }}</span>
+    </template>
+
+    <template #cell(is_deleted)="{ source }">
+      <span>{{ source ? "Disabled" : "Enabled" }}</span>
+    </template>
+
+    <template #cell(login)="{ source }">
+      <span v-if="source?.last_login">{{
+        moment(source.last_login).utc().fromNow()
+      }}</span>
+    </template>
+
+    <!-- actions -->
+    <template #cell(actions)="{ rowData }">
+      <div class="flex gap-3">
+        <!-- edit button -->
+        <div class="flex-none">
+          <va-button
+            size="small"
+            preset="plain"
+            color="secondary"
+            @click="openModalToEditItem(rowData)"
+          >
+            <i-mdi-pencil class="text-lg" />
+          </va-button>
+        </div>
+
+        <!-- spoof button -->
+        <div class="flex-none" v-if="auth.hasRole('admin')">
+          <va-popover message="Log in as User" placement="top">
+            <va-button
+              size="small"
+              preset="primary"
+              color="info"
+              @click="openModaltoLogInAsUser(rowData)"
+            >
+              <i-mdi-account-convert-outline class="" />
+            </va-button>
+          </va-popover>
+        </div>
+
+        <!-- delete button -->
+        <div class="flex-none">
+          <va-button size="small" preset="primary" color="danger">
+            <i-mdi-delete />
+          </va-button>
+        </div>
+      </div>
+    </template>
+  </va-data-table>
+
+  <!-- edit modal -->
   <va-modal
     :model-value="editing"
     :title="editModalTitle"
@@ -123,12 +185,35 @@
       </va-inner-loading>
     </div>
   </va-modal>
+
+  <!-- Log in as User modal -->
+  <va-modal
+    title="Log in as this user?"
+    :model-value="login_modal.visible"
+    size="small"
+    okText="Confirm"
+    @ok="logInAsUser"
+    @cancel="resetLogInAsUserModal"
+  >
+    <div class="flex flex-col gap-3">
+      <span>
+        Are you sure you want to log in as
+        <span class="font-bold"> {{ login_modal.selected.name }} </span> ? You
+        will need to completely log out to revert this change.
+      </span>
+    </div>
+  </va-modal>
 </template>
 
 <script setup>
 import moment from "moment";
 import UserService from "@/services/user";
-import toast from "@/services/toast";
+import { cmp } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
+
+const auth = useAuthStore();
 
 const users = ref([]);
 const filterInput = ref("");
@@ -138,6 +223,9 @@ const modifyFormRef = ref(null);
 const modal_loading = ref(false);
 const editMode = ref("modify");
 const data_loading = ref(false);
+const login_modal = ref({
+  visible: false,
+});
 
 const editModalTitle = computed(() => {
   return editMode.value == "modify" ? "Modify User" : "Create User";
@@ -146,23 +234,34 @@ const effectFn = computed(() => {
   return editMode.value == "modify" ? modifyUser : createUser;
 });
 
+function get_role_color(role) {
+  return (
+    {
+      user: "success",
+      admin: "info",
+      operator: "secondary",
+    }[role] || null
+  );
+}
+
 const columns = ref([
-  { key: "username", sortable: true, sortingOptions: ["desc", "asc", null] },
   { key: "name", sortable: true },
+  { key: "username", sortable: true, sortingOptions: ["desc", "asc", null] },
   { key: "email", sortable: true },
-  { key: "cas_id", sortable: true },
+  { key: "roles", sortable: false },
   {
     key: "created_at",
     sortable: true,
     label: "created on",
   },
-  {
-    key: "updated_at",
-    sortable: true,
-    label: "updated on",
-  },
   { key: "is_deleted", sortable: true, label: "status" },
-  { key: "actions" },
+  {
+    key: "login",
+    sortable: true,
+    label: "Last Login",
+    sortingFn: (a, b) => cmp(a?.last_login, b?.last_login),
+  },
+  { key: "actions", width: 30 },
 ]);
 
 function fetch_all_users() {
@@ -170,7 +269,6 @@ function fetch_all_users() {
   UserService.getAll()
     .then((_users) => {
       users.value = _users;
-      console.log(_users);
     })
     .catch((err) => {
       console.error(err);
@@ -181,19 +279,17 @@ function fetch_all_users() {
     });
 }
 
-function openModalToEditItemById(id) {
+function openModalToEditItem(rowData) {
   editMode.value = "modify";
-  console.log("edit", id);
   editing.value = true;
   // eslint-disable-next-line no-unused-vars
-  const { created_at, updated_at, ...user } = users.value[id];
+  const { created_at, updated_at, ...user } = rowData;
   editedUser.value = {
     ...user,
     status: !user.is_deleted,
     roles_str: (user.roles || []).join(", "),
     orig_username: user.username,
   };
-  console.log(editedUser.value);
 }
 
 function openModalToCreateUser() {
@@ -204,7 +300,6 @@ function openModalToCreateUser() {
     status: true,
     roles_str: "",
   };
-  console.log(editedUser.value);
 }
 
 function resetEditModal() {
@@ -212,8 +307,24 @@ function resetEditModal() {
   editedUser.value = {};
 }
 
+function openModaltoLogInAsUser(rowData) {
+  login_modal.value.visible = true;
+  login_modal.value.selected = rowData;
+  //
+}
+
+function resetLogInAsUserModal() {
+  login_modal.value.visible = false;
+  login_modal.value.selected = null;
+}
+
+function logInAsUser() {
+  const rowData = login_modal.value.selected;
+  auth.spoof(rowData.username);
+  resetLogInAsUserModal();
+}
+
 function modifyUser() {
-  console.log("modify user");
   if (modifyFormRef.value.validate()) {
     const { roles_str, orig_username, status, ...updates } = editedUser.value;
     updates.is_deleted = !status;
@@ -224,11 +335,10 @@ function modifyUser() {
 
     modal_loading.value = true;
 
-    console.log(updates);
     UserService.modifyUser(orig_username, updates)
-      .then((modifiedUser) => {
+      .then(() => {
         fetch_all_users();
-        console.log("modify success", modifiedUser);
+        toast.success("User data updated");
       })
       .catch((err) => {
         console.error(err);
@@ -242,7 +352,6 @@ function modifyUser() {
 }
 
 function createUser() {
-  console.log("create user");
   if (modifyFormRef.value.validate()) {
     const { roles_str, status, ...updates } = editedUser.value;
     updates.is_deleted = !status;
@@ -253,11 +362,10 @@ function createUser() {
 
     modal_loading.value = true;
 
-    console.log(updates);
     UserService.createUser(updates)
-      .then((user) => {
+      .then(() => {
         fetch_all_users();
-        console.log("create success", user);
+        toast.success("User created");
       })
       .catch((err) => {
         console.error(err);
@@ -272,3 +380,14 @@ function createUser() {
 
 fetch_all_users();
 </script>
+
+<style scoped>
+.usertable {
+  --va-data-table-cell-padding: 3px;
+}
+</style>
+
+<route lang="yaml">
+meta:
+  title: Users
+</route>

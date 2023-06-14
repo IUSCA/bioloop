@@ -6,7 +6,7 @@ import config from "../config";
 
 // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
 const routes = setupLayouts(generatedRoutes);
-console.log("routes", routes);
+// console.log("routes", routes);
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
@@ -16,8 +16,8 @@ const token = ref(useLocalStorage("token", ""));
 
 // Authentication and Authorization navigation guard
 router.beforeEach((to, _from) => {
-  console.log("to", to.path);
-  console.log("from", _from.path);
+  // console.log("to", to.path);
+  // console.log("from", _from.path);
   // routeRequiresAuth is false only when requiresAuth is explicitly set to a falsy value
   const routeRequiresAuth = !(
     Object.hasOwn(to.meta, "requiresAuth") && !to.meta.requiresAuth

@@ -21,10 +21,6 @@ def checksum(fname: Path | str):
             m.update(chunk)
     return m.hexdigest()
 
-    # python 3.11
-    # with open(fname, 'rb') as f:
-    #     digest = hashlib.file_digest(f, 'md5')
-
 
 #
 # def checksum_py311(fname):

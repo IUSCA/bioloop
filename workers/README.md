@@ -44,7 +44,7 @@ Worker automatically run with updated code except for the code in
 - Update `.env` (make a copy of `.env.example` and add values)
 
 ```bash
-cd ~/DGL/workers
+cd ~/app/workers
 pm2 start ecosystem.config.js
 ```
 
@@ -60,7 +60,7 @@ docker-compose up queue mongo -d
 Start Workers
 
 ```bash
-python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'dgl-celery-w1@%h' --autoscale=2,1 --queues 'dgl-dev.sca.iu.edu.q'
+python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'bioloop-celery-w1@%h' --autoscale=2,1 --queues 'bioloop-dev.sca.iu.edu.q'
 ```
 
 `--concurrency 1`: number of worker processed to pre-fork
@@ -71,13 +71,13 @@ when they are actually available.
 Use `--hostname '<app_name>-celery-<worker_name>@%h'` to distinguish multiple workers running on the same machine either
 for the same app or different apps.
 
-- replace `<app_name>` with app name (ex: dgl)
+- replace `<app_name>` with app name (ex: bioloop)
 - replace `<worker_name>` with worker name (ex: w1)
 
 Auto-scaling - max_concurrency,min_concurrency
 `--autoscale=10,3` (always keep 3 processes, but grow to 10 if necessary).
 
-`--queues 'dgl-dev.sca.iu.edu'` comma separated queue names. worker will subscribe to these queues for accepting tasks.
+`--queues '<app_name>-dev.sca.iu.edu'` comma separated queue names. worker will subscribe to these queues for accepting tasks.
 Configured in `workers/config/celeryconfig.py` with `task_routes`, `task_default_queue`
 
 Run test
@@ -94,7 +94,7 @@ These need to be run in local and port forwarded through ssh.
 - start postgres locally using docker
 
 ```bash
-cd <dgl>
+cd <app_name>
 docker-compose up postgres -d
 ```
 
@@ -109,12 +109,12 @@ poetry run dev
 - start UI and API locally
 
 ```bash
-cd <dgl>/api
+cd <app_name>/api
 pnpm start
 ```
 
 ```bash
-cd <dgl>/ui
+cd <app_name>/ui
 pnpm dev
 ```
 
@@ -130,22 +130,22 @@ ssh \
   -R 3130:localhost:3030 \
   -R 28017:localhost:27017 \
   -R 5772:localhost:5672 \
-  dgluser@colo23.carbonate.uits.iu.edu
+  bioloopuser@colo23.carbonate.uits.iu.edu
 ```
 
-- pull latest changes in dev branch to `<DGL_dev>`
+- pull latest changes in dev branch to `<bioloop_dev>`
 
 ```bash
-colo23> cd <DGL_dev>
+colo23> cd <app_dev>
 colo23> git checkout dev
 colo23> git pull
 ```
 
-- create / update `<DGL_dev>/workers/.env`
+- create / update `<app_dev>/workers/.env`
 - create an auth token to communicate with the express server (postgres db)
-  - `cd <dgl>/api`
+  - `cd <app>/api`
   - `node src/scripts/issue_token.js <service_account>`
-  - ex: `node src/scripts/issue_token.js svc_dgl_tasks`
+  - ex: `node src/scripts/issue_token.js svc_tasks`
 
 - install dependencies using poetry and start celery workers
 
@@ -153,7 +153,7 @@ colo23> git pull
 colo23> cd workers
 colo23> poetry install
 colo23> poetry shell
-colo23> python -m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'dgl-dev-celery-w1@%h' --autoscale=2,1
+colo23> python -m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'bioloop-dev-celery-w1@%h' --autoscale=2,1
 ```
 
 

@@ -6,16 +6,16 @@ const exports = {
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth",
   refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
-  appTitle: "DGL-SCA",
+  appTitle: "BIOLOOP",
   contact: {
-    app_admin: "admin@dgl.iu.edu",
+    app_admin: "admin@sca.iu.edu",
     sca_admin: "sca-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
   paths: {
     stage: {
-      raw_data: "/N/project/DG_Multiple_Myeloma/share/raw_data",
-      data_products: "/N/scratch/dgluser/dgl/production/stage/data_products",
+      RAW_DATA: "/path/to/staged/raw_data",
+      DATA_PRODUCT: "/path/to/staged/data_products",
     },
   },
 };

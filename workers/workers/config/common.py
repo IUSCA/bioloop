@@ -10,7 +10,7 @@ QUEUE_PASSWORD = os.environ['QUEUE_PASS']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
 
 config = {
-    'app_id': 'dgl-dev.sca.iu.edu',
+    'app_id': 'bioloop-dev.sca.iu.edu',
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
@@ -20,49 +20,34 @@ config = {
         'read_timeout': 30  # seconds
     },
     'paths': {
-        'scratch': '/N/scratch/dgluser/dgl/development/scratch',
+        'scratch': '/path/to/scratch',
         'raw_data': {
             'archive': f'development/{YEAR}/raw_data',
-            'stage': '/N/scratch/dgluser/dgl/development/stage/raw_data',
-            'qc': '/N/scratch/dgluser/dgl/development/data_products'
+            'stage': '/path/to/staged/raw_data',
+            'qc': '/path/to/qc'
         },
         'data_product': {
             'archive': f'development/{YEAR}/data_products',
-            'stage': '/N/scratch/dgluser/dgl/development/stage/data_products',
+            'stage': '/path/to/staged/data_products',
         }
     },
     'registration': {
         'raw_data': {
-            'source_dir': '/N/project/DG_Multiple_Myeloma/share/legacy_raw_data/',
+            'source_dir': '/path/to/source/raw_data',
             'rejects': ['.snapshots'],
         },
         'data_products': {
-            'source_dir': '/N/project/DG_Multiple_Myeloma/share/data_products/',
+            'source_dir': '/path/to/source/data_products',
             'rejects': ['.snapshots'],
         },
+        'recency_threshold': 15 * 60,
+        'minimum_project_size': 1024 * 1024 * 1024,  # 1 GB
+        'wait_between_scans': 5 * 60,  # 5 minutes
     },
-    'illumina': {
-        'registration': {
-            'rejects': [],
-            'recency_threshold': 15 * 60,
-            # 15 minutes; start archiving if the size hasn't changed for "recency_threshold"
-            'minimum_project_size': 1024 * 1024 * 1024,  # 1 GB
-            'wait_between_scans': 5 * 60,  # 5 minutes
-        },
-        'download': {
-            'datasets': {
-                'n_days': 7
-            }
-        }
-    },
-    'service_user': 'dgluser',
+    'service_user': 'bioloopuser',
     'workflow_registry': {
-        'illumina_integrated': {
+        'integrated': {
             'steps': [
-                {
-                    'name': 'download',
-                    'task': 'download_illumina_dataset'
-                },
                 {
                     'name': 'inspect',
                     'task': 'inspect_dataset'

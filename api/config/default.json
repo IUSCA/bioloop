@@ -9,9 +9,9 @@
   "postgres": {
     "hostname": "localhost",
     "port": "5432",
-    "user": "dgluser",
+    "user": "appuser",
     "password": "",
-    "db": "dgl",
+    "db": "app",
     "schema": "public"
   },
   "workflow_server": {
@@ -29,7 +29,7 @@
     }
   },
   "mode": "default",
-  "app_id": "dgl-dev.sca.iu.edu",
+  "app_id": "bioloop-dev.sca.iu.edu",
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",

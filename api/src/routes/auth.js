@@ -7,9 +7,12 @@ const createError = require('http-errors');
 const { validate } = require('../middleware/validators');
 const asyncHandler = require('../middleware/asyncHandler');
 const { authenticate } = require('../middleware/auth');
+const { accessControl } = require('../middleware/auth');
+
 const userService = require('../services/user');
 const authService = require('../services/auth');
 
+const isPermittedTo = accessControl('auth');
 const router = express.Router();
 
 const IULogin = new IULoginHelper({
@@ -43,7 +46,7 @@ router.post(
       try {
         const user = await userService.findActiveUserBy('cas_id', cas_id);
         if (user) {
-          const resObj = await authService.onLogin(user);
+          const resObj = await authService.onLogin({ user });
           return res.json(resObj);
         }
         // User was authenticated with CAS but they are not a portal user
@@ -60,7 +63,7 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
   // #swagger.tags = ['Auth']
   const user = await userService.findActiveUserBy('username', req.user.username);
   if (user) {
-    const resObj = await authService.onLogin(user);
+    const resObj = await authService.onLogin({ user });
     return res.json(resObj);
   }
   // User has a valid token but they are deleted soon after and are not a portal user
@@ -75,12 +78,24 @@ if (!['production', 'test'].includes(config.get('mode'))) {
       // #swagger.tags = ['Auth']
       if (req.body?.username === 'test_user') {
         const user = await userService.findActiveUserBy('username', 'test_user');
-        const resObj = await authService.onLogin(user);
+        const resObj = await authService.onLogin({ user });
         return res.json(resObj);
       }
       return next(createError.Forbidden());
     }),
   );
 }
+
+router.post(
+  '/spoof/:username',
+  authenticate,
+  isPermittedTo('create', false),
+  asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['Auth']
+    const user = await userService.findActiveUserBy('username', req.params.username);
+    const resObj = await authService.onLogin({ user, updateLastLogin: false });
+    return res.json(resObj);
+  }),
+);
 
 module.exports = router;

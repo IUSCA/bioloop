@@ -2,9 +2,6 @@
 set -e
 set -o pipefail
 
-# APP_USER='dgluser'
-# APP_GROUP='sca'
-
 { 
   echo "Finding the UID and GID of the provided user '"$APP_USER"' and group '"$APP_GROUP"'."
   APP_UID=$(id -u $APP_USER) && 

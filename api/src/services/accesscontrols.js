@@ -20,18 +20,20 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    auth: {
+      'create:any': ['*'],
+    },
   },
 
-  // user role permissions - start
+  // user role permissions
   user: {
     user: {
       'read:own': ['*'],
       'update:own': ['*'],
     },
   },
-  // user role permissions - end
 
-  // operator role permissions - start
+  // operator role permissions
   operator: {
     user: {
       'read:own': ['*'],
@@ -50,7 +52,6 @@ const grantsObject = {
       'delete:any': ['*'],
     },
   },
-  // operator role permissions - end
 };
 const ac = new AccessControl(grantsObject);
 

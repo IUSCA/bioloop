@@ -77,6 +77,7 @@ const props = defineProps({
   },
 });
 
+// eslint-disable-next-line vue/no-dupe-keys
 const workflow = ref({});
 const dataset_id = computed(() => {
   // dataset_id is the first argument of the args in the task object

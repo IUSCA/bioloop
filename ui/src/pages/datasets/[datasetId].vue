@@ -1,5 +1,6 @@
 <template>
   <va-inner-loading :loading="loading">
+    <!-- Title -->
     <div>
       <span class="text-3xl capitalize" v-if="dataset.type">
         {{ dataset.type.replace("_", " ").toLowerCase() }} :
@@ -7,40 +8,34 @@
       <span class="text-3xl"> {{ dataset.name }} </span>
       <va-divider />
     </div>
-    <div>
+
+    <!-- Content -->
+    <div class="flex flex-col gap-3">
+      <!-- Associated datasets -->
+
+      <assoc-datasets
+        :source_datasets_meta="dataset?.source_datasets"
+        :derived_datasets_meta="dataset?.derived_datasets"
+      />
+
       <!-- Dataset Info + Status Cards -->
-      <div class="flex flex-row flex-wrap gap-3">
-        <div class="flex-[3_1_0%]">
+      <div class="grid gird-cols-1 lg:grid-cols-2 gap-3">
+        <!-- Dataset Info -->
+        <div class="">
           <va-card>
             <va-card-title>
               <span class="text-xl">Info</span>
             </va-card-title>
             <va-card-content v-if="Object.keys(dataset || {}).length > 0">
               <dataset-info :dataset="dataset"></dataset-info>
-
-              <!-- edit description -->
-              <div class="flex flex-row gap-2 ml-3 mt-3 mb-6">
-                <div class="flex-[0_0_20%]">Description</div>
-                <div class="">
-                  <div v-if="!edit_discription">
-                    <span>{{ dataset.description }}</span>
-                    <!-- <va-button
+              <div class="flex justify-end mt-3 pr-3">
+                <va-button
                   preset="primary"
-                  round
-                  @click="edit_discription = true"
+                  @click="openModalToEditDataset"
+                  class="flex-none"
                 >
-                  <i-mdi-pencil-outline />
-                </va-button> -->
-                  </div>
-                  <div v-else>
-                    <va-input
-                      class="w-96"
-                      v-model="description"
-                      type="textarea"
-                      autosize
-                    />
-                  </div>
-                </div>
+                  <i-mdi-pencil-outline class="pr-2 text-xl" /> Edit Description
+                </va-button>
               </div>
             </va-card-content>
           </va-card>
@@ -48,7 +43,7 @@
 
         <!-- Status Cards -->
         <div
-          class="flex-[2_1_0%] flex flex-col gap-3 justify-start"
+          class="flex flex-col gap-3 justify-start"
           v-if="!dataset.is_deleted"
         >
           <!-- Archived -->
@@ -59,11 +54,7 @@
               </va-card-title>
               <va-card-content>
                 <div>
-                  <span> {{ dataset.archive_path }} </span>
-                  <copy-button
-                    :text="dataset.archive_path"
-                    class="inline-block ml-3"
-                  />
+                  <CopyText :text="dataset.archive_path" />
                 </div>
               </va-card-content>
             </va-card>
@@ -81,10 +72,7 @@
               <va-card-content>
                 <div class="">
                   <span> {{ DatasetService.get_staged_path(dataset) }} </span>
-                  <copy-button
-                    :text="DatasetService.get_staged_path(dataset)"
-                    class="inline-block ml-3"
-                  />
+                  <CopyText :text="dataset.archive_path" />
                 </div>
               </va-card-content>
             </va-card>
@@ -253,10 +241,7 @@
       </div>
 
       <!-- Audit logs -->
-      <div
-        class="mt-3"
-        v-if="dataset.audit_logs && dataset.audit_logs.length > 0"
-      >
+      <div v-if="dataset.audit_logs && dataset.audit_logs.length > 0">
         <va-card>
           <va-card-title>
             <span class="text-xl font-bold"> AUDIT LOG </span>
@@ -268,7 +253,7 @@
       </div>
 
       <!-- Workflows -->
-      <div class="mt-3">
+      <div>
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
@@ -301,21 +286,27 @@
       </div>
     </div>
   </va-inner-loading>
+
+  <EditDatasetModal
+    :key="dataset"
+    :data="dataset"
+    ref="editModal"
+    @update="fetch_dataset(true)"
+  />
 </template>
 
 <script setup>
 import moment from "moment";
 import DatasetService from "@/services/dataset";
-import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const props = defineProps({ datasetId: String });
 
 const dataset = ref({});
-const description = ref("");
-const edit_discription = ref(false);
 const loading = ref(false);
 const stage_modal = ref(false);
 const delete_archive_modal = ref({
@@ -376,7 +367,13 @@ function fetch_dataset(show_loading = false) {
 }
 
 // initial data fetch
-fetch_dataset(true);
+watch(
+  [() => props.datasetId],
+  () => {
+    fetch_dataset(true);
+  },
+  { immediate: true }
+);
 
 /**
  * providing the interval directly will kick of the polling immediately
@@ -441,4 +438,15 @@ function delete_archive() {
       loading.value = false;
     });
 }
+
+const editModal = ref(null);
+
+function openModalToEditDataset() {
+  editModal.value.show();
+}
 </script>
+
+<route lang="yaml">
+meta:
+  title: Dataset
+</route>

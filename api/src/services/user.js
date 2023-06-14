@@ -4,6 +4,18 @@ const _ = require('lodash/fp');
 
 const prisma = new PrismaClient();
 
+const INCLUDE_ROLES_LOGIN = {
+  user_role: {
+    select: { roles: true },
+  },
+  login: {
+    select: {
+      last_login: true,
+      method: true,
+    },
+  },
+};
+
 // using lodash chain api
 // function transformUser(user) {
 //   return _(user)
@@ -34,42 +46,46 @@ async function findRoles(roles, _prisma) {
   });
 }
 
-async function setPassword(user_id, password, _prisma) {
+async function setPassword({ user_id, password, _prisma }) {
+  // use the global prisma if not given
   const __prisma = _prisma || prisma;
   return __prisma.$queryRaw`
-    UPDATE "user"
+    UPDATE "user_password"
     SET password = crypt(${password}, gen_salt('bf'))
     where id = ${user_id};
   `;
 }
 
 async function findActiveUserBy(key, value) {
-  const user = await prisma.user.findFirst({
+  const user = await prisma.user.findFirstOrThrow({
     where: {
       is_deleted: false,
       [key]: value,
     },
-    include: {
-      user_role: {
-        select: { roles: true },
-      },
-    },
+    include: INCLUDE_ROLES_LOGIN,
   });
   return user ? transformUser(user) : user;
 }
 
-// eslint-disable-next-line lodash-fp/prefer-identity
-async function updateLastLogin(id) {
-  return id;
+async function updateLastLogin({ id, method }) {
+  return prisma.user_login.upsert({
+    where: {
+      user_id: id,
+    },
+    update: {
+      last_login: new Date(),
+      method,
+    },
+    create: {
+      user_id: id,
+      method,
+    },
+  });
 }
 
 async function findAll(sort) {
   const users = await prisma.user.findMany({
-    include: {
-      user_role: {
-        select: { roles: true },
-      },
-    },
+    include: INCLUDE_ROLES_LOGIN,
     orderBy: sort.map(({ key, dir }) => ({ [key]: dir })),
   });
   return users.map(transformUser);
@@ -91,11 +107,7 @@ async function createUser(data) {
         },
       }),
     },
-    include: {
-      user_role: {
-        select: { roles: true },
-      },
-    },
+    include: INCLUDE_ROLES_LOGIN,
   });
 
   return user ? transformUser(user) : user;
@@ -109,11 +121,7 @@ async function softDeleteUser(username) {
     data: {
       is_deleted: true,
     },
-    include: {
-      user_role: {
-        select: { roles: true },
-      },
-    },
+    include: INCLUDE_ROLES_LOGIN,
   });
   return updatedUser ? transformUser(updatedUser) : updatedUser;
 }
@@ -149,11 +157,7 @@ async function updateUser(username, data) {
           create: roleRows.map((r) => ({ role_id: r.id })),
         },
       },
-      include: {
-        user_role: {
-          select: { roles: true },
-        },
-      },
+      include: INCLUDE_ROLES_LOGIN,
     });
   });
   return updatedUser ? transformUser(updatedUser) : updatedUser;

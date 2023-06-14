@@ -42,7 +42,7 @@ if (!['production', 'test'].includes(config.get('mode'))) {
     const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));
     app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
   } catch (e) {
-    console.log('Unable to load "./swagger_output.json"', e);
+    console.error('Unable to load "./swagger_output.json"', e);
   }
 }
 

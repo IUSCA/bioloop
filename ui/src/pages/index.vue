@@ -53,9 +53,10 @@
 </template>
 
 <script setup>
-import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import DatasetService from "@/services/dataset";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const workflows = ref([]);
 const raw_data_stats = ref({});
@@ -64,7 +65,6 @@ const data_products_stats = ref({});
 workflowService
   .getAll({ last_task_run: true, only_active: true })
   .then((res) => {
-    console.log(res.data);
     workflows.value = res.data;
   })
   .catch((err) => {
