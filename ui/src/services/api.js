@@ -1,5 +1,6 @@
 import axios from "axios";
 import config from "../config";
+import router from "@/router";
 
 const token = ref(useLocalStorage("token", ""));
 
@@ -20,11 +21,17 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// axiosInstance.interceptors.response.use(
-//   (res) => res,
-//   (err) => {
-//     console.log("intercept", err);
-//   }
-// );
+axiosInstance.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response && err.response.status === 401) {
+      console.log("Error: Unauthorized", err);
+
+      // logout
+      router.push("/auth/logout");
+    }
+    return Promise.reject(err);
+  }
+);
 
 export default axiosInstance;
