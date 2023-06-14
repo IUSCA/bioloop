@@ -313,10 +313,11 @@
 <script setup>
 import moment from "moment";
 import DatasetService from "@/services/dataset";
-import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const props = defineProps({ datasetId: String });
 

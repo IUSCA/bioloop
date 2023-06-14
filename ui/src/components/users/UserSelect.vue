@@ -26,8 +26,9 @@
 </template>
 
 <script setup>
-import toast from "@/services/toast";
 import userService from "@/services/user";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const props = defineProps({
   selected: {

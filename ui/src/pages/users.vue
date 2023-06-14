@@ -208,9 +208,10 @@
 <script setup>
 import moment from "moment";
 import UserService from "@/services/user";
-import toast from "@/services/toast";
 import { cmp } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const auth = useAuthStore();
 

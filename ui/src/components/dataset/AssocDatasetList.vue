@@ -24,7 +24,8 @@
 import moment from "moment";
 import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/dataset";
-import toast from "@/services/toast";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const props = defineProps({
   dataset_ids: {

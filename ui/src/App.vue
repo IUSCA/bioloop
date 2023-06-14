@@ -11,8 +11,15 @@
 </template>
 
 <script setup>
+import { useToast } from "vuestic-ui";
+
 import { useAuthStore } from "./stores/auth";
+import { useToastStore } from "./stores/toast";
+
 const auth = useAuthStore();
+const toast = useToastStore();
+toast.setup(useToast());
+
 onBeforeMount(() => {
   auth.initialize();
 });

@@ -52,9 +52,10 @@
 </template>
 
 <script setup>
-import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import MetricService from "@/services/metrics";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const disk_usage_metrics = ref([]);
 

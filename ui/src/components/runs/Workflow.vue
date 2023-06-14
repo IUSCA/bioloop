@@ -95,8 +95,9 @@
 <script setup>
 import moment from "moment";
 // import { capitalize } from "../../services/utils";
-import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const props = defineProps({ workflow: Object });
 const emit = defineEmits(["update"]);

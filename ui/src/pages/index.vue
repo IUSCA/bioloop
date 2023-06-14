@@ -53,9 +53,10 @@
 </template>
 
 <script setup>
-import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import DatasetService from "@/services/dataset";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
 const workflows = ref([]);
 const raw_data_stats = ref({});
