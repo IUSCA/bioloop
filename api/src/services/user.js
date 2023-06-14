@@ -1,6 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-// const { renameKey } = require('../utils');
 
 const prisma = new PrismaClient();
 
@@ -163,6 +162,23 @@ async function updateUser(username, data) {
   return updatedUser ? transformUser(updatedUser) : updatedUser;
 }
 
+async function canUpdateUser(username, requester) {
+  if (
+    requester.username === username
+    || requester.roles.includes('admin')
+  ) { return true; }
+  const resource = transformUser(
+    await prisma.user.findUniqueOrThrow(
+      {
+        where: { username },
+        include: INCLUDE_ROLES_LOGIN,
+      },
+    ),
+  );
+
+  return resource.roles?.includes('user');
+}
+
 module.exports = {
   transformUser,
   findActiveUserBy,
@@ -173,4 +189,6 @@ module.exports = {
   softDeleteUser,
   updateUser,
   findRoles,
+  canUpdateUser,
+  INCLUDE_ROLES_LOGIN,
 };

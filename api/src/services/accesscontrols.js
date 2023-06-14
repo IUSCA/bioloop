@@ -36,8 +36,9 @@ const grantsObject = {
   // operator role permissions
   operator: {
     user: {
-      'read:own': ['*'],
-      'update:own': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*', '!roles'],
+      'create:any': ['*', '!roles'],
     },
     workflow: {
       'create:any': ['*'],
