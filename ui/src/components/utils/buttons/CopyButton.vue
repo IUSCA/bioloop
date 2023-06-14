@@ -3,10 +3,11 @@
     <va-popover :message="copied ? 'Copied' : 'Copy'">
       <va-button
         @click="copy(props.text)"
-        icon="content_copy"
         preset="primary"
-        class="h-1"
+        :border-color="copied ? 'success' : ''"
       >
+        <i-mdi-check-bold style="color: var(--va-success)" v-if="copied" />
+        <i-mdi-content-copy v-else />
       </va-button>
     </va-popover>
   </div>

@@ -69,11 +69,7 @@
               </va-card-title>
               <va-card-content>
                 <div>
-                  <span> {{ dataset.archive_path }} </span>
-                  <copy-button
-                    :text="dataset.archive_path"
-                    class="inline-block ml-3"
-                  />
+                  <CopyText :text="dataset.archive_path" />
                 </div>
               </va-card-content>
             </va-card>
@@ -91,10 +87,7 @@
               <va-card-content>
                 <div class="">
                   <span> {{ DatasetService.get_staged_path(dataset) }} </span>
-                  <copy-button
-                    :text="DatasetService.get_staged_path(dataset)"
-                    class="inline-block ml-3"
-                  />
+                  <CopyText :text="dataset.archive_path" />
                 </div>
               </va-card-content>
             </va-card>
@@ -456,3 +449,8 @@ function delete_archive() {
     });
 }
 </script>
+
+<route lang="yaml">
+meta:
+  title: Dataset
+</route>
