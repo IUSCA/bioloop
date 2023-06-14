@@ -1,5 +1,5 @@
-# BIOLOOP
-Portal and Pipeline Application Stater Project
+<h1 align="center">BIOLOOP</h1>
+<p align="center">Genomics Data Portal and Pipeline Application Stater Project</p>
 
 ## Getting started
 - [API](api/README.md)
