@@ -54,7 +54,7 @@ function show() {
 }
 
 function handleOk() {
-  // loading.value = true;
+  loading.value = true;
   const id = props.data.id;
 
   console.log("updating", id, "description", description.value);
@@ -73,7 +73,6 @@ function handleOk() {
       toast.error("Unable to update the dataset");
     })
     .finally(() => {
-      loading.value = false;
       hide();
     });
 }

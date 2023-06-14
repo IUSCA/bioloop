@@ -187,22 +187,7 @@
   </va-modal>
 
   <!-- Log in as User modal -->
-  <va-modal
-    title="Log in as this user?"
-    :model-value="login_modal.visible"
-    size="small"
-    okText="Confirm"
-    @ok="logInAsUser"
-    @cancel="resetLogInAsUserModal"
-  >
-    <div class="flex flex-col gap-3">
-      <span>
-        Are you sure you want to log in as
-        <span class="font-bold"> {{ login_modal.selected.name }} </span> ? You
-        will need to completely log out to revert this change.
-      </span>
-    </div>
-  </va-modal>
+  <SudoUserModal ref="sudoModal" :user="selected" />
 </template>
 
 <script setup>
@@ -223,9 +208,6 @@ const modifyFormRef = ref(null);
 const modal_loading = ref(false);
 const editMode = ref("modify");
 const data_loading = ref(false);
-const login_modal = ref({
-  visible: false,
-});
 
 const editModalTitle = computed(() => {
   return editMode.value == "modify" ? "Modify User" : "Create User";
@@ -307,21 +289,14 @@ function resetEditModal() {
   editedUser.value = {};
 }
 
+// sudo user modal
+
+const sudoModal = ref(null);
+const selected = ref({});
+
 function openModaltoLogInAsUser(rowData) {
-  login_modal.value.visible = true;
-  login_modal.value.selected = rowData;
-  //
-}
-
-function resetLogInAsUserModal() {
-  login_modal.value.visible = false;
-  login_modal.value.selected = null;
-}
-
-function logInAsUser() {
-  const rowData = login_modal.value.selected;
-  auth.spoof(rowData.username);
-  resetLogInAsUserModal();
+  selected.value = rowData;
+  sudoModal.value.show();
 }
 
 function modifyUser() {

@@ -104,16 +104,11 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function spoof(username) {
-    return authService
-      .spoof(username)
-      .then((res) => {
-        onLogin(res.data);
-        // reload entire app to reload all components
-        window.location.href = "/";
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+    return authService.spoof(username).then((res) => {
+      onLogin(res.data);
+      // reload entire app to reload all components
+      window.location.href = "/";
+    });
   }
 
   return {
