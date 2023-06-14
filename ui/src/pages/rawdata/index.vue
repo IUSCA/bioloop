@@ -8,4 +8,5 @@
 <route lang="yaml">
 meta:
   title: Raw Data
+  requiresRoles: ["operator", "admin"]
 </route>

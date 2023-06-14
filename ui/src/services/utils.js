@@ -28,6 +28,18 @@ function union(setA, setB) {
   return _union;
 }
 
+function setIntersection(setA, setB) {
+  const _setA = new Set(setA);
+  const _setB = new Set(setB);
+  const _intersection = new Set();
+  // eslint-disable-next-line no-restricted-syntax
+  for (const elem of _setA) {
+    if (_setB.has(elem)) _intersection.add(elem);
+  }
+
+  return _intersection;
+}
+
 // https://stackoverflow.com/questions/27194359/javascript-pluralize-an-english-string
 function maybePluralize(count, noun, suffix = "s") {
   return `${count} ${noun}${count !== 1 ? suffix : ""}`;
@@ -105,4 +117,5 @@ export {
   utc_date_to_local_tz,
   lxor,
   cmp,
+  setIntersection,
 };

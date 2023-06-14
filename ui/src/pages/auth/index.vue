@@ -20,7 +20,12 @@
             <va-divider />
           </div>
           <div class="flex justify-between px-8 mb-2">
-            <va-button to="/auth/iucas" class="py-2">
+            <va-button
+              class="py-2"
+              @click="
+                $router.push({ path: '/auth/iucas', query: $route.query })
+              "
+            >
               <span class="text-lg font-medium"
                 >Continue with Indiana University</span
               >

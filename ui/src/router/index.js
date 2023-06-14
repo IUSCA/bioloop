@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import generatedRoutes from "virtual:generated-pages";
 import { setupLayouts } from "virtual:generated-layouts";
-import { isLiveToken } from "../services/utils";
+import { isLiveToken, setIntersection } from "../services/utils";
 import config from "../config";
 
 // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
@@ -13,16 +13,16 @@ const router = createRouter({
 });
 
 const token = ref(useLocalStorage("token", ""));
+const user = ref(useLocalStorage("user", {}));
 
-// Authentication and Authorization navigation guard
-router.beforeEach((to, _from) => {
+function auth_guard(to, _from) {
   // console.log("to", to.path);
   // console.log("from", _from.path);
   // routeRequiresAuth is false only when requiresAuth is explicitly set to a falsy value
   const routeRequiresAuth = !(
     Object.hasOwn(to.meta, "requiresAuth") && !to.meta.requiresAuth
   );
-  const isRoleRestrictedRoute = Object.hasOwn(to.meta, "requiresRole");
+  const isRoleRestrictedRoute = Object.hasOwn(to.meta, "requiresRoles");
 
   let isLoggedIn = false;
   if (isLiveToken(token.value)) {
@@ -35,7 +35,23 @@ router.beforeEach((to, _from) => {
   if (routeRequiresAuth) {
     if (isLoggedIn) {
       if (isRoleRestrictedRoute) {
-        console.log("do role check");
+        const required_roles = to.meta.requiresRoles;
+        const user_roles = user.value?.roles || [];
+
+        const common_roles = [
+          ...setIntersection(new Set(required_roles), new Set(user_roles)),
+        ];
+        // console.log({
+        //   required_roles,
+        //   user_roles,
+        //   common_roles,
+        // });
+
+        if (common_roles.length == 0) {
+          // does not have at least one required role
+          // stop navigation
+          return false;
+        }
       }
     } else {
       // route requires auth and user is not logged in
@@ -54,7 +70,10 @@ router.beforeEach((to, _from) => {
       return "/";
     }
   }
-});
+}
+
+// Authentication and Authorization navigation guard
+router.beforeEach(auth_guard);
 
 // set title based on route record meta properties after navigation
 // https://github.com/vuejs/vue-router/issues/914#issuecomment-1019253370

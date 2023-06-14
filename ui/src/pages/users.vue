@@ -390,4 +390,5 @@ fetch_all_users();
 <route lang="yaml">
 meta:
   title: Users
+  requiresRoles: ["operator", "admin"]
 </route>

@@ -1,6 +1,6 @@
 <template>
-  <div class="flex justify-center">
-    <div class="max-w-lg mt-10" v-if="notAuthorized || authFailure">
+  <div class="flex justify-center items-center h-full">
+    <div class="max-w-lg" v-if="notAuthorized || authFailure">
       <va-card>
         <va-card-content>
           <div
@@ -31,6 +31,16 @@
         </va-card-content>
       </va-card>
     </div>
+    <div v-if="validation_loading" class="max-w-lg">
+      <va-card>
+        <va-card-content class="grid grid-cols-6 text-center">
+          <va-inner-loading loading class="col-span-1" />
+          <span class="text-xl font-bold tracking-wide col-span-5">
+            Validating Authorization Data ...
+          </span>
+        </va-card-content>
+      </va-card>
+    </div>
   </div>
 </template>
 
@@ -45,9 +55,11 @@ const router = useRouter();
 const redirectPath = ref(useLocalStorage("auth.redirect", ""));
 const notAuthorized = ref(false);
 const authFailure = ref(false);
+const validation_loading = ref(false);
 
 const ticket = route.query.ticket;
 if (ticket) {
+  validation_loading.value = true;
   auth
     .casLogin(ticket)
     .then((user) => {
@@ -70,6 +82,9 @@ if (ticket) {
     .catch((err) => {
       authFailure.value = true;
       console.error(err);
+    })
+    .finally(() => {
+      validation_loading.value = false;
     });
 } else {
   if (route.query.redirect_to) {
