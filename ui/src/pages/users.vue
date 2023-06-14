@@ -58,7 +58,11 @@
     </template>
 
     <template #cell(is_deleted)="{ source }">
-      <span>{{ source ? "Disabled" : "Enabled" }}</span>
+      <!-- <span> {{ source ? "Disabled" : "Enabled" }} </span> -->
+      <BinaryStatusChip
+        :status="!source"
+        :icons="['mdi:account-off-outline', 'mdi:account-badge-outline']"
+      />
     </template>
 
     <template #cell(login)="{ source }">
@@ -77,13 +81,14 @@
             preset="plain"
             color="secondary"
             @click="openModalToEditItem(rowData)"
+            :disabled="!canEdit(rowData)"
           >
             <i-mdi-pencil class="text-lg" />
           </va-button>
         </div>
 
         <!-- spoof button -->
-        <div class="flex-none" v-if="auth.hasRole('admin')">
+        <div class="flex-none" v-if="auth.canAdmin">
           <va-popover message="Log in as User" placement="top">
             <va-button
               size="small"
@@ -97,7 +102,7 @@
         </div>
 
         <!-- delete button -->
-        <div class="flex-none">
+        <div class="flex-none" v-if="auth.canAdmin">
           <va-button size="small" preset="primary" color="danger">
             <i-mdi-delete />
           </va-button>
@@ -219,9 +224,9 @@ const effectFn = computed(() => {
 function get_role_color(role) {
   return (
     {
-      user: "success",
+      user: "secondary",
       admin: "info",
-      operator: "secondary",
+      operator: "warning",
     }[role] || null
   );
 }
@@ -259,6 +264,12 @@ function fetch_all_users() {
     .finally(() => {
       data_loading.value = false;
     });
+}
+
+function canEdit(user) {
+  if (auth.canAdmin) return true;
+  if (user.username == auth.user.username) return true;
+  if (user.roles.includes("user") || user.roles.length === 0) return true;
 }
 
 function openModalToEditItem(rowData) {

@@ -10,6 +10,12 @@ export const useAuthStore = defineStore("auth", () => {
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
+  const canOperate = computed(() => {
+    return hasRole("operator") || hasRole("admin");
+  });
+  const canAdmin = computed(() => {
+    return hasRole("admin");
+  });
 
   function initialize() {
     if (user.value && token.value) {
@@ -121,6 +127,8 @@ export const useAuthStore = defineStore("auth", () => {
     hasRole,
     saveSettings,
     spoof,
+    canOperate,
+    canAdmin,
   };
 });
 

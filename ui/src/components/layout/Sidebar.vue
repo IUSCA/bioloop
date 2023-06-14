@@ -35,8 +35,28 @@
       </va-sidebar-item-content>
     </va-sidebar-item>
 
-    <div v-if="isAdmin">
-      <va-divider />
+    <va-divider v-if="user_items.length > 0" />
+
+    <!-- operator items -->
+    <div v-if="auth.canOperate">
+      <va-sidebar-item
+        v-for="(item, i) in operator_items"
+        :key="i"
+        :to="item.path"
+        :active="isActive(item.path)"
+      >
+        <va-sidebar-item-content>
+          <Icon :icon="item.icon" class="text-2xl" />
+          <!-- User can hide item with css if he wants -->
+          <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
+        </va-sidebar-item-content>
+      </va-sidebar-item>
+
+      <va-divider v-if="operator_items.length > 0" />
+    </div>
+
+    <!-- admin items -->
+    <div v-if="auth.canAdmin">
       <va-sidebar-item
         v-for="(item, i) in admin_items"
         :key="i"
@@ -49,9 +69,9 @@
           <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
-    </div>
 
-    <va-divider />
+      <va-divider v-if="admin_items.length > 0" />
+    </div>
 
     <va-sidebar-item
       v-for="(item, i) in bottom_items"
@@ -75,8 +95,6 @@ import { useAuthStore } from "@/stores/auth";
 const auth = useAuthStore();
 const route = useRoute();
 
-const isAdmin = ref(auth.hasRole("admin"));
-
 function isActive(path) {
   return route.path.startsWith(path);
 }
@@ -97,19 +115,9 @@ const user_items = ref([
   //   title: "Sessions",
   //   path: "/sessions",
   // },
-  {
-    icon: "mdi-dna",
-    title: "Raw Data",
-    path: "/rawdata",
-  },
-  {
-    icon: "mdi-package-variant-closed",
-    title: "Data Products",
-    path: "/dataproducts",
-  },
 ]);
 
-const admin_items = ref([
+const operator_items = ref([
   // {
   //   icon: "mdi-monitor-dashboard",
   //   title: "Dashboard",
@@ -131,6 +139,16 @@ const admin_items = ref([
   //   path: "/datauploader",
   // },
   {
+    icon: "mdi-dna",
+    title: "Raw Data",
+    path: "/rawdata",
+  },
+  {
+    icon: "mdi-package-variant-closed",
+    title: "Data Products",
+    path: "/dataproducts",
+  },
+  {
     icon: "mdi-table-account",
     title: "User Management",
     path: "/users",
@@ -151,6 +169,8 @@ const admin_items = ref([
   //   path: "/stats",
   // },
 ]);
+
+const admin_items = ref([]);
 
 const bottom_items = ref([
   {
