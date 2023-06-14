@@ -8,4 +8,5 @@
 <route lang="yaml">
 meta:
   title: Data Products
+  requiresRoles: ["operator", "admin"]
 </route>
