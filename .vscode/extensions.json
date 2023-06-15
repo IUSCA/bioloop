@@ -10,6 +10,16 @@
     "csstools.postcss",
     "lokalise.i18n-ally",
     "jmfirth.vsc-space-block-jumper",
-    "adpyke.vscode-sql-formatter"
+    "adpyke.vscode-sql-formatter",
+    "shenjiaolong.vue-helper",
+    "formulahendry.auto-close-tag",
+    "formulahendry.auto-rename-tag",
+    "jeff-hykin.better-shellscript-syntax",
+    "ms-azuretools.vscode-docker",
+    "dbaeumer.vscode-eslint",
+    "antfu.iconify",
+    "bradlc.vscode-tailwindcss",
+    "austenc.tailwind-docs",
+    "foxundermoon.shell-format"
   ]
 }
