@@ -56,7 +56,7 @@
           <i-mdi-update class="inline-block text-slate-700 pl-1" />
         </va-popover>
         <span class="text-sm pl-2">
-          {{ moment.utc(workflow.updated_at).fromNow() }}
+          {{ datetime.approx_relative_time(workflow.updated_at) }}
         </span>
       </div>
     </div>
@@ -68,6 +68,7 @@ import moment from "moment-timezone";
 import WorkflowStatusIcon from "@/components/runs/WorkflowStatusIcon.vue";
 import { format_duration, utc_date_to_local_tz } from "@/services/utils";
 import workflowService from "@/services/workflow";
+import * as datetime from "@/services/datetime";
 
 const props = defineProps({
   workflow: Object,

@@ -54,7 +54,7 @@
     </template>
 
     <template #cell(created_at)="{ value }">
-      <span>{{ moment(value).utc().format("MMM D YYYY") }}</span>
+      <span>{{ datetime.date(value) }}</span>
     </template>
 
     <template #cell(is_deleted)="{ source }">
@@ -66,9 +66,9 @@
     </template>
 
     <template #cell(login)="{ source }">
-      <span v-if="source?.last_login">{{
-        moment(source.last_login).utc().fromNow()
-      }}</span>
+      <span v-if="source?.last_login">
+        {{ datetime.approx_relative_time(source.last_login) }}</span
+      >
     </template>
 
     <!-- actions -->
@@ -196,9 +196,10 @@
 </template>
 
 <script setup>
-import moment from "moment";
 import UserService from "@/services/user";
 import { cmp } from "@/services/utils";
+import * as datetime from "@/services/datetime";
+
 import { useAuthStore } from "@/stores/auth";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();

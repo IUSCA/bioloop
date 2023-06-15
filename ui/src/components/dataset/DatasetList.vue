@@ -35,7 +35,7 @@
       </template>
 
       <template #cell(created_at)="{ value }">
-        <span>{{ moment(value).utc().format("MMM D YYYY") }}</span>
+        <span>{{ datetime.date(value) }}</span>
       </template>
 
       <template #cell(archived)="{ source }">
@@ -58,7 +58,7 @@
       </template>
 
       <template #cell(updated_at)="{ value }">
-        <span>{{ moment(value).fromNow() }}</span>
+        <span>{{ datetime.approx_relative_time(value) }}</span>
       </template>
 
       <template #cell(du_size)="{ source }">
@@ -174,9 +174,9 @@
 </template>
 
 <script setup>
-import moment from "moment";
 import DatasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
+import * as datetime from "@/services/datetime";
 import config from "@/config";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();

@@ -9,14 +9,14 @@
         <tr>
           <td>Start Date</td>
           <td>
-            {{ utc_date_to_local_tz(props.dataset.created_at) }}
+            {{ datetime.absolute(props.dataset.created_at) }}
           </td>
         </tr>
         <tr>
           <td>Last Updated</td>
           <td>
             <span class="">
-              {{ utc_date_to_local_tz(props.dataset.updated_at) }}
+              {{ datetime.absolute(props.dataset.updated_at) }}
             </span>
           </td>
         </tr>
@@ -58,7 +58,9 @@
 </template>
 
 <script setup>
-import { formatBytes, utc_date_to_local_tz } from "../../services/utils";
+import { formatBytes } from "@/services/utils";
+import * as datetime from "@/services/datetime";
+
 const props = defineProps({ dataset: Object });
 </script>
 

@@ -15,15 +15,15 @@
     </template>
 
     <template #cell(updated_at)="{ value }">
-      <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
+      <span>{{ datetime.date(value) }}</span>
     </template>
   </va-data-table>
 </template>
 
 <script setup>
-import moment from "moment";
 import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/dataset";
+import * as datetime from "@/services/datetime";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 

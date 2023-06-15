@@ -38,8 +38,6 @@ defineExpose({
 const visible = ref(false);
 const loading = ref(false);
 
-console.log("props.user", props.user);
-
 function hide() {
   loading.value = false;
   visible.value = false;
