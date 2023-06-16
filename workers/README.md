@@ -42,10 +42,18 @@ Worker automatically run with updated code except for the code in
 
 - Add `module load python/3.10.5` to ~/.modules
 - Update `.env` (make a copy of `.env.example` and add values)
+- Install dependencies
+
+```bash
+poetry export --without-hashes --format=requirements.txt > requirements.txt
+pip install -r requirements.txt
+```
 
 ```bash
 cd ~/app/workers
 pm2 start ecosystem.config.js
+# optional
+pm2 save
 ```
 
 ## Testing with workers running on local machine
@@ -146,6 +154,7 @@ colo23> git pull
   - `cd <app>/api`
   - `node src/scripts/issue_token.js <service_account>`
   - ex: `node src/scripts/issue_token.js svc_tasks`
+  - docker ex: `sudo docker compose -f "docker-compose-prod.yml" exec api node src/scripts/issue_token.js svc_tasks`
 
 - install dependencies using poetry and start celery workers
 

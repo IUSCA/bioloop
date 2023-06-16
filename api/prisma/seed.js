@@ -214,7 +214,7 @@ async function main() {
   })));
 
   // Create default admins
-  const admins = ['ccbrandt', 'deduggi', 'svc_tasks'];
+  const admins = ['ccbrandt', 'deduggi', 'ryanlong', 'svc_tasks'];
 
   const admin_promises = admins.map((username) => prisma.user.upsert({
     where: { email: `${username}@iu.edu` },
@@ -225,7 +225,7 @@ async function main() {
       cas_id: username,
       name: username,
       user_role: {
-        create: [{ role_id: 1 }, { role_id: 2 }],
+        create: [{ role_id: 1 }],
       },
     },
   }));
@@ -262,6 +262,37 @@ async function main() {
   }));
 
   await Promise.all(user_promises);
+
+  // create operators
+  const operators = [
+    {
+      username: 'arodriguez',
+      name: 'Alex Rodriguez',
+    },
+    {
+      username: 'bfoster',
+      name: 'Benjamin Foster',
+    },
+    {
+      username: 'ejohnson',
+      name: 'Emma Johnson',
+    },
+  ];
+  const operator_promises = operators.map((user) => prisma.user.upsert({
+    where: { email: `${user.username}@iu.edu` },
+    update: {},
+    create: {
+      username: user.username,
+      email: `${user.username}@iu.edu`,
+      cas_id: user.username,
+      name: user.name,
+      user_role: {
+        create: [{ role_id: 2 }],
+      },
+    },
+  }));
+
+  await Promise.all(operator_promises);
 
   const datasetPromises = datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
