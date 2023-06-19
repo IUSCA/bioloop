@@ -4,7 +4,7 @@ Docker standardizes the server environment and makes it easier to get a local de
 
 ## Setup
 
-Requires `docker` and `docker-compose`. Docker desktop should work too. 
+Requires `docker`. Docker desktop should work too. 
 
 Shared volumes are used in `docker-compose.yml` to ensure container `node_modules` are not confused with host level `node_modules`. This approach also keeps `node_modules` folders out of the local directory to make it easier to `find` and `grep`.
 
@@ -16,7 +16,7 @@ Set up the [front-end ui client](ui/README.md) or [back-end api server](api/READ
 
 ### .env files
 
-`ui/` and `api/` contains `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
+`ui/`, `api/` and `workers` all contain `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
 
 ### OpenSSL
 
@@ -44,30 +44,30 @@ Run this script from the project root.
 - It builds both the api and worker_api images
 - It runs all the containers (ui, api, worker_api, queue, postgres, mongo_db)
 
-If you only memorize three docker commands, these are good ones to know.
+### Docker Compose
 
 Bring up the containers:
 
 ```
-docker-compose up -d
+docker compose up -d
 ```
 
 Make sure everything is running (no Exit 1 States):
 
 ```
-docker-compose ps
+docker compose ps
 ```
 
 To shut down the containers:
 
 ```
-docker-compose down -v
+docker compose down -v
 ```
 
 To see what is going on in a specific container:
 
 ```
-docker-compose logs -f api
+docker compose logs -f api
 ```
 
 
@@ -85,7 +85,7 @@ chown -R ${USER}:docker db/queue/
 Add any usernames you need to work with in `api/prisma/seed.js` then seed the db
 
 ```
-docker-compose exec api bash
+docker compose exec api bash
 npx prisma db seed
 ```
 
@@ -118,11 +118,11 @@ The above commands can get tiring to type every time you want to take action wit
 Add the following to your .bashrc file (or equivalent)
 
 ```
-alias dcu='docker-compose up -d'
-alias dcd='docker-compose down --remove-orphans'
-alias dcp='docker-compose ps'
-alias dce='docker-compose exec'
-alias dcl='docker-compose logs'
+alias dcu='docker compose up -d'
+alias dcd='docker compose down --remove-orphans'
+alias dcp='docker compose ps'
+alias dce='docker compose exec'
+alias dcl='docker compose logs'
 ```
 via
 https://charlesbrandt.com/system/virtualization/docker-compose.html#shell-shortcuts
@@ -134,7 +134,7 @@ https://charlesbrandt.com/system/virtualization/docker-compose.html#shell-shortc
 Most containers have `curl` available. Connect to one and then try making requests to the service you're having issue with.
 
 ```
-docker-compose exec web bash
+docker compose exec web bash
 curl -X GET http://api:3030/
 ```
 
@@ -156,5 +156,5 @@ netstat -panl | grep " LISTEN "
 If you have a compose file named something other than `docker-compose.yml`, you can specify the name with a `-f` flag:
 
 ```
-docker-compose -f docker-compose-prod.yml up -d
+docker compose -f docker-compose-prod.yml up -d
 ```
