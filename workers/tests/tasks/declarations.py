@@ -5,6 +5,7 @@ from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 
 import workers.config.celeryconfig as celeryconfig
+from workers import exceptions as exc
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -26,12 +27,17 @@ def task1(celery_task, dataset_id, **kwargs):
 
 
 @app.task(base=WorkflowTask, bind=True, name='task2',
-          autoretry_for=(Exception,),
-          max_retries=1,
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
           **default_task_kwargs)
 def task2(celery_task, dataset_id, **kwargs):
     from tests.tasks.tasksA import task2 as task_body
-    return task_body(celery_task, dataset_id, **kwargs)
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.ValidationFailed:
+        raise
+    except Exception as e:
+        raise exc.RetryableException(e)
 
 
 @app.task(base=WorkflowTask, bind=True, name='task3',

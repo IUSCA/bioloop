@@ -66,7 +66,7 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> None:
                                     celery_task=celery_task)
 
     # extract the tar file to stage directory
-    dataset_type = dataset['type'].lower()
+    dataset_type = dataset['type']
     staging_dir = Path(config['paths'][dataset_type]['stage'])
     target_dir = staging_dir / dataset['name']  # path to the staged dataset
 

@@ -8,6 +8,7 @@ import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
+from workers import exceptions as exc
 from workers.config import config
 
 app = Celery("tasks")
@@ -29,8 +30,8 @@ def generate_metadata(celery_task, source: Path):
     metadata = []
     errors = []
     if not utils.is_readable(source):
-        msg = f'{source} is not readable/traversable'
-        # raise nonRetryableException(msg) - TODO
+        msg = f'source {source} is either not readable or not traversable'
+        raise exc.InspectionFailed(msg)
 
     paths = list(source.rglob('*'))
     progress = Progress(celery_task=celery_task, name='', units='items')
@@ -55,10 +56,8 @@ def generate_metadata(celery_task, source: Path):
         else:
             errors.append(f'{p} is not readable/traversable')
 
-    # TODO: raise non retryable exception
     if len(errors) > 0:
-        pass
-        # raise nonRetryableException(errors)
+        raise exc.InspectionFailed(errors)
 
     return num_files, num_directories, size, num_genome_files, metadata
 
@@ -83,4 +82,3 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
     api.add_files_to_dataset(dataset_id=dataset_id, files=metadata)
 
     return dataset_id,
-

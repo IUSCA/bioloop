@@ -63,7 +63,7 @@ def create_report(celery_task: WorkflowTask, dataset_dir: Path, dataset_qc_dir: 
 
 def generate_reports(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    dataset_type = dataset['type'].lower()
+    dataset_type = dataset['type']
     dataset_qc_dir = Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'
     staged_path = Path(config['paths'][dataset_type]['stage']) / dataset['name']
 

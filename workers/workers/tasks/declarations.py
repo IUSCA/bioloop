@@ -2,6 +2,7 @@ from celery import Celery
 from sca_rhythm import WorkflowTask
 
 import workers.config.celeryconfig as celeryconfig
+from workers import exceptions as exc
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -35,12 +36,17 @@ def download_illumina_dataset(celery_task, dataset_id, **kwargs):
 
 
 @app.task(base=WorkflowTask, bind=True, name='inspect_dataset',
-          autoretry_for=(Exception,),
+          autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
 def inspect_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.inspect import inspect_dataset as task_body
-    return task_body(celery_task, dataset_id, **kwargs)
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.InspectionFailed:
+        raise
+    except Exception as e:
+        raise exc.RetryableException(e)
 
 
 @app.task(base=WorkflowTask, bind=True, name='generate_reports',
@@ -62,9 +68,14 @@ def stage_dataset(celery_task, dataset_id, **kwargs):
 
 
 @app.task(base=WorkflowTask, bind=True, name='validate_dataset',
-          autoretry_for=(Exception,),
+          autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
 def validate_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.validate import validate_dataset as task_body
-    return task_body(celery_task, dataset_id, **kwargs)
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.ValidationFailed:
+        raise
+    except Exception as e:
+        raise exc.RetryableException(e)

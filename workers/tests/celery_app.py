@@ -2,10 +2,7 @@ from celery import Celery
 
 # noinspection PyUnresolvedReferences
 import tests.tasks.declarations
-# # noinspection PyUnresolvedReferences
-# import tests.tasks.tasksA
-# # noinspection PyUnresolvedReferences
-# import tests.tasks.tasksB
+
 from workers.config import celeryconfig
 
 app = Celery("tasks")

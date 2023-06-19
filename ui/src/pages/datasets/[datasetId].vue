@@ -71,8 +71,7 @@
               </va-card-title>
               <va-card-content>
                 <div class="">
-                  <span> {{ DatasetService.get_staged_path(dataset) }} </span>
-                  <CopyText :text="dataset.archive_path" />
+                  <CopyText :text="DatasetService.get_staged_path(dataset)" />
                 </div>
               </va-card-content>
             </va-card>

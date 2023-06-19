@@ -45,7 +45,7 @@ class BaseSpaceRegistration:
         # has anything been modified in the project?
         delta = datetime.utcnow() - project['DateModified']
         print('has_no_recent_activity delta', delta)
-        return delta.total_seconds() > config['illumina']['registration']['recency_threshold']
+        return delta.total_seconds() > config['illumina']['registration']['recency_threshold_seconds']
 
     def scan(self):
         latest_project = self.get_latest_project()
@@ -120,6 +120,6 @@ if __name__ == '__main__':
     while True:
         bs_reg.register()
 
-        sleep_duration = config['illumina']['registration']['wait_between_scans']
+        sleep_duration = config['illumina']['registration']['wait_between_scans_seconds']
         print(f'sleeping for {sleep_duration} seconds')
         time.sleep(sleep_duration)

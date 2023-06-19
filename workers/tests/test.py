@@ -7,14 +7,27 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 # print('\n'.join(app.tasks.keys()))
 
+APP_ID = 'tests'
+
 steps = [
     {
-        'name': 'archive',
-        'task': 'task2'
+        'name': 'task1',
+        'task': 'task1',
+        'queue': f'{APP_ID}.q'
+    },
+    {
+        'name': 'task2',
+        'task': 'task2',
+        'queue': f'{APP_ID}.q'
+    },
+    {
+        'name': 'task3',
+        'task': 'task2',
+        'queue': f'{APP_ID}.q'
     }
 ]
 
-wf = Workflow(app, steps=steps, name='test_wf', app_id='tests')
+wf = Workflow(app, steps=steps, name='test_wf', app_id=APP_ID)
 wf.start('dataset-id-tests')
 print('workflow_id', wf.workflow['_id'])
 
