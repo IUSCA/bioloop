@@ -36,14 +36,49 @@
         </div>
       </va-card-content>
     </va-card>
+
+    <!-- Color theme and dark mode switcher -->
+    <va-card class="mt-5">
+      <va-card-content>
+        <div class="flex flex-col gap-5">
+          <div class="flex items-center gap-3">
+            Primary color:
+            <VaColorPalette v-model="colors.primary" :palette="palette" />
+          </div>
+
+          <div class="flex items-center gap-3">
+            Dark mode:
+            <VaSwitch
+              v-model="switchValue"
+              true-value="dark"
+              false-value="light"
+              size="small"
+            />
+          </div>
+        </div>
+      </va-card-content>
+    </va-card>
   </div>
 </template>
 
 <script setup>
+import { useColors } from "vuestic-ui";
 import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
 
 const auth = useAuthStore();
+const { applyPreset, currentPresetName, colors } = useColors();
+
+const palette = ["#2c82e0", "#ef476f", "#ffd166", "#06d6a0", "#8338ec"];
+
+const switchValue = computed({
+  get() {
+    return currentPresetName.value;
+  },
+  set(value) {
+    applyPreset(value);
+  },
+});
 
 const profile = auth.user;
 </script>

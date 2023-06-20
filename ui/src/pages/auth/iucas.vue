@@ -36,7 +36,7 @@
         <va-card-content class="grid grid-cols-6 text-center">
           <va-inner-loading loading class="col-span-1" />
           <span class="text-xl font-bold tracking-wide col-span-5">
-            Validating Authorization Data ...
+            Logging in ...
           </span>
         </va-card-content>
       </va-card>
