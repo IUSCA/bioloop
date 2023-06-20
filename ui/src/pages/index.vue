@@ -100,4 +100,5 @@ DatasetService.getStats({ type: "DATA_PRODUCT" })
 <route lang="yaml">
 meta:
   title: Dashboard
+  requiresAuth: false
 </route>

@@ -16,7 +16,13 @@ Set up the [front-end ui client](ui/README.md) or [back-end api server](api/READ
 
 ### .env files
 
-`ui/`, `api/` and `workers` all contain `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
+`ui/`, `api/` and `workers/` all contain `.env.example` files. Copy these to a corresponding `.env` file and update values accordingly.
+
+```
+cp ui/.env.example ui/.env
+cp api/.env.example api/.env
+cp workers/.env.example workers/.env
+```
 
 ### OpenSSL
 
@@ -34,17 +40,19 @@ cd api/keys
 > Note: when running under Windows, it may be necessary to run the openssl commands via Cygwin
 
 
+## Seed the database
+
+Add any usernames you need to work with in `api/prisma/seed.js` then seed the db
+
+```
+docker compose exec api bash
+npx prisma db seed
+```
+
+
 ## Starting / Stopping
 
-```bash
-bin/dev.sh
-```
-Run this script from the project root. 
-- It creates a `.env` file in the project root which has the user id (uid) and group id (gid) of the project root directory's owner. The processes inside the api and worker_api docker containers are run as a user with this UID and GID.
-- It builds both the api and worker_api images
-- It runs all the containers (ui, api, worker_api, queue, postgres, mongo_db)
-
-### Docker Compose
+Use Docker Compose
 
 Bring up the containers:
 
@@ -71,25 +79,6 @@ docker compose logs -f api
 ```
 
 
-## Queue
-
-Queue folders need to belong to docker group
-
-```
-chown -R ${USER}:docker db/queue/
-```
-
-
-## Seed the database
-
-Add any usernames you need to work with in `api/prisma/seed.js` then seed the db
-
-```
-docker compose exec api bash
-npx prisma db seed
-```
-
-
 ## Testing
 
 Try it out how it is. Open a browser and go to:
@@ -109,24 +98,28 @@ https://hoppscotch.io/
 To POST a request, choose `POST`, specify the URL, and in `Body` choose `application/x-www-form-urlencoded` for the `Content Type`
 
 
-## Shortcuts
+## Queue
 
-Create bash aliases
+This application makes use of the [Rhythm API](https://github.com/IUSCA/rhythm_api) for managing worker queues. 
 
-The above commands can get tiring to type every time you want to take action with a compose environment. These shortcuts help.
-
-Add the following to your .bashrc file (or equivalent)
+Queue folders need to belong to docker group
 
 ```
-alias dcu='docker compose up -d'
-alias dcd='docker compose down --remove-orphans'
-alias dcp='docker compose ps'
-alias dce='docker compose exec'
-alias dcl='docker compose logs'
+db/queue/
+chown -R ${USER}:docker db/queue/
 ```
-via
-https://charlesbrandt.com/system/virtualization/docker-compose.html#shell-shortcuts
 
+## Quick start
+
+Getting the user permissions set correctly is an important step in making the application run. 
+
+```bash
+bin/dev.sh
+```
+Run this script from the project root. 
+- It creates a `.env` file in the project root which has the user id (uid) and group id (gid) of the project root directory's owner. The processes inside the api and worker_api docker containers are run as a user with this UID and GID.
+- It builds both the api and worker_api images
+- It runs all the containers (ui, api, worker_api, queue, postgres, mongo_db)
 
 
 ## Troubleshooting
@@ -158,3 +151,22 @@ If you have a compose file named something other than `docker-compose.yml`, you 
 ```
 docker compose -f docker-compose-prod.yml up -d
 ```
+
+## TIP: Shortcuts
+
+Create bash aliases
+
+The above commands can get tiring to type every time you want to take action with a compose environment. These shortcuts help.
+
+Add the following to your .bashrc file (or equivalent)
+
+```
+alias dcu='docker compose up -d'
+alias dcd='docker compose down --remove-orphans'
+alias dcp='docker compose ps'
+alias dce='docker compose exec'
+alias dcl='docker compose logs'
+```
+via
+https://charlesbrandt.com/system/virtualization/docker-compose.html#shell-shortcuts
+
