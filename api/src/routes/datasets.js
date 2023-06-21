@@ -434,4 +434,23 @@ router.put(
   }),
 );
 
+router.get(
+  '/:id/files',
+  validate([
+    param('id').isInt().toInt(),
+    query('basepath').default(''),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get a list of files and directories under basepath
+    const files = await datasetService.files_ls({
+      dataset_id: req.params.id,
+      base: req.query.base,
+    });
+    // 1 week
+    res.set('Cache-control', 'private, max-age=604800, immutable');
+    res.json(files);
+  }),
+);
+
 module.exports = router;

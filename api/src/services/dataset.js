@@ -1,7 +1,9 @@
 const assert = require('assert');
+const path = require('node:path');
 
 const { PrismaClient } = require('@prisma/client');
 const config = require('config');
+const _ = require('lodash/fp');
 
 const wfService = require('./workflow');
 const userService = require('./user');
@@ -193,6 +195,76 @@ async function get_dataset({
   return null;
 }
 
+async function files_ls({ dataset_id, base = '' }) {
+  /**
+   * root base should be ''
+   * non-root base should end with '/'
+   *
+   * handle non-unix paths
+   * handle paths with escaped /
+   */
+  let base_path = '';
+  if (base === '' || base === '/') base_path = '';
+  else if (!base.endsWith('/')) base_path = `${base}/`;
+  else base_path = base;
+
+  /**
+   * Find files of a dataset which are immediate children of `base` path
+   *
+   * Query: filter rows by dataset_id, rows starting with `base`,
+   * and rows where the path after `base` does not have /
+   *
+   * Ex: base: 'dir1/', query matches 'dir1/readme.txt', 'dir1/image.jpg'
+   * query does not match 'dir1/dir2/readme.txt'
+   */
+  const filesPromise = prisma.$queryRaw`
+    select *
+    from dataset_file
+    where dataset_id = ${dataset_id}
+      and path like ${base_path}||'%'
+      and position('/' IN substring(path, length(${base_path})+1)) = 0;
+  `;
+
+  /**
+   * Find directories of a dataset which are immediate children of `base` path
+   *
+   * Query: filter rows by dataset_id, rows starting with `base`,
+   * and rows where the path after `base` does have / (these files are not immediate children)
+   *
+   * Transform the substring path after `base` by matching with regex
+   * which selects characters which are not /
+   * Returns unique values after transformation
+   *
+   * Ex: base: 'dir1/', query matches 'dir1/dir2/readme.txt', 'dir1/dir3/image.jpg'
+   * does not match 'dir1/readme.txt'.
+   *
+   *
+   * Matched items gets transformed:
+   * 'dir1/dir2/readme.txt' -> 'dir2'
+   * 'dir1/dir3/image.jpg' -> 'dir3'
+   */
+  const directoriesPromise = prisma.$queryRaw`
+    select distinct substring(substring(path, length(${base_path})+1), '([^/]+)') as name
+    from dataset_file
+    where dataset_id = ${dataset_id}
+      and path like ${base_path}||'%'
+      and position('/' IN substring(path, length(${base_path})+1)) != 0;
+  `;
+
+  // both queries are run asynchronously, wait for them to complete
+  const files = await filesPromise;
+
+  // for directories, only names are returned
+  // transform them to have similar schema as files
+  const directories = (await directoriesPromise).map((dir) => ({
+    path: path.join(base_path, dir.name),
+    filetype: 'directory',
+  }));
+
+  // return a single list of files and directories
+  return _.concat(files)(directories);
+}
+
 module.exports = {
   soft_delete,
   hard_delete,
@@ -200,4 +272,5 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
+  files_ls,
 };
