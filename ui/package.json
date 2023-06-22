@@ -38,6 +38,7 @@
     "material-design-icons-iconfont": "^6.7.0",
     "postcss": "^8.4.24",
     "prettier": "^2.8.8",
+    "rollup-plugin-visualizer": "^5.9.2",
     "sass": "^1.62.1",
     "tailwindcss": "^3.3.2",
     "unplugin-auto-import": "^0.12.2",

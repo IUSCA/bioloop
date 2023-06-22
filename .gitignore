@@ -54,3 +54,5 @@ app.pid
 
 qc
 backup
+
+!db/postgres

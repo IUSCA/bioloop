@@ -32,3 +32,6 @@ coverage
 components.d.ts
 
 src/pages/test.vue
+
+# rollup visualizer output
+stats.html

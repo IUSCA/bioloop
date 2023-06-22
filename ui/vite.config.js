@@ -10,6 +10,7 @@ import Layouts from "vite-plugin-vue-layouts";
 // import basicSsl from "@vitejs/plugin-basic-ssl";
 import Icons from "unplugin-icons/vite";
 import IconsResolver from "unplugin-icons/resolver";
+import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vitejs.dev/config/
 // eslint-disable-next-line no-unused-vars
@@ -66,6 +67,9 @@ export default defineConfig(({ command, mode }) => {
 
       // https://github.com/vitejs/vite-plugin-basic-ssl
       // basicSsl(),
+
+      // https://www.npmjs.com/package/rollup-plugin-visualizer
+      visualizer(),
     ],
     define: { "process.env": {} },
     resolve: {

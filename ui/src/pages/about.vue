@@ -51,3 +51,9 @@ div.banner h1.heading_text {
   font-weight: 500;
 }
 </style>
+
+<route lang="yaml">
+meta:
+  title: Dashboard
+  requiresAuth: false
+</route>

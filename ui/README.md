@@ -37,6 +37,7 @@ In the developement environment, the API calls from the UI are proxied by the vi
 - [https dev](https://vitejs.dev/config/server-options.html#server-https)
 - Docker
 - Dark mode (TODO)
+- [Rollup Dependencies Visualizer](https://www.npmjs.com/package/rollup-plugin-visualizer) - Visualize and analyze your Rollup bundle to see which modules are taking up space. Run `pnpm build` and open `stats.html`
 
 ## Icons
 
@@ -51,6 +52,7 @@ Iconify icons are installed using
 - Installation: option-1: https://docs.iconify.design/icon-components/vue/
 - Installation: option-2: https://github.com/antfu/unplugin-icons and [autoimporting](https://github.com/antfu/unplugin-icons#auto-importing)
   - need to install [specific packs](https://github.com/antfu/unplugin-icons#icons-data) ex: `pnpm i -D @iconify-json/mdi`
+  - mdi is installed in this repo and is a recommended icon library to use
 
 ## Colors
 
@@ -132,3 +134,32 @@ Add the name and value of the environment variable to the `.env` file. This file
 ## Authentication
 
 Users are authenticated using IU CAS. [More on auth module](docs/auth_explained.md).
+
+By default any page will require user authentication
+
+```html
+<route lang="yaml">
+meta:
+  title: Dashboard
+</route>
+```
+
+Page requires user authentication + role constrained.
+```html
+<route lang="yaml">
+meta:
+  title: Dashboard
+  requiresRoles: ['operator', 'admin']
+</route>
+```
+Only users with either operator or admin role can access this page
+
+No authentication, anonymous view
+```html
+<route lang="yaml">
+meta:
+  title: Dashboard
+  requiresAuth: false
+</route>
+```
+
