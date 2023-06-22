@@ -3,6 +3,7 @@
   --va-popover-content-font-size: 0.8rem;
   --va-popover-content-padding: 0.5rem 0.5rem;
   --va-popover-content-opacity: 0.9;
+  --va-input-bordered-color: rgb(107 114 128);
 }
 
 input.va-input__content__input {

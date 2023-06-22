@@ -7,7 +7,7 @@
     <div class="flex-1">
       <va-input
         v-model="filterInput"
-        class="flex flex-col border-gray-800 border border-solid"
+        class="flex flex-col"
         placeholder="search users"
         outline
         clearable
