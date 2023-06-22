@@ -445,7 +445,7 @@ router.get(
     // #swagger.summary = Get a list of files and directories under basepath
     const files = await datasetService.files_ls({
       dataset_id: req.params.id,
-      base: req.query.base,
+      base: req.query.basepath,
     });
     // 1 week
     res.set('Cache-control', 'private, max-age=604800, immutable');
