@@ -1,3 +1,4 @@
+<!-- Adapted from and improved upon https://stevencotterill.com/articles/how-to-build-an-autocomplete-field-with-vue-3 -->
 <template>
   <div class="relative">
     <OnClickOutside @trigger="closeResults">
@@ -77,7 +78,7 @@ const visible = ref(false);
 // when text is entered, show the results ul
 // when clicked outside, hide the results ul
 // when clicked on input when there is some text entered, show the results ul
-// when click on a search result, clear text and hide the results
+// when clicked on a search result, clear text and hide the results ul
 
 const search_results = computed(() => {
   if (text.value === "") return [];
@@ -116,10 +117,5 @@ function handleSelect(item) {
   .va-input-wrapper__field i.va-icon {
     font-size: 24px !important;
   }
-
-  // .va-input-wrapper--focused {
-  //   --va-input-wrapper-border-color: var(--va-input-wrapper-color);
-  // }
-  // --va-input-wrapper-border-color: rgb(107 114 128);
 }
 </style>

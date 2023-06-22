@@ -54,7 +54,7 @@
       </template>
 
       <template #cell(num_genome_files)="{ rowData }">
-        <maybe :data="rowData?.metadata?.num_genome_files" />
+        <Maybe :data="rowData?.metadata?.num_genome_files" />
       </template>
 
       <template #cell(updated_at)="{ value }">
