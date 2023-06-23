@@ -8,7 +8,7 @@ from sca_rhythm import Workflow
 import workers.api as api
 import workers.workflow_utils as wf_utils
 from workers import cmd
-from workers.celery_app import app as celery_app
+from workers.archive_celery_app import app as celery_app
 from workers.config import config
 
 logging.basicConfig()

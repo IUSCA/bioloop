@@ -1,5 +1,5 @@
-<h1 align="center">BIOLOOP</h1>
-<p align="center">Genomics Data Portal and Pipeline Application Stater Project</p>
+<h1 align="center">CPA-SCA</h1>
+<p align="center">Data Portal and Pipeline Application</p>
 
 ## Getting started
 - [API](api/README.md)

@@ -14,7 +14,7 @@ ONE_GIGABYTE = 1024 * 1024 * 1024
 FIVE_MINUTES = 5 * 60
 
 config = {
-    'app_id': 'bioloop-dev.sca.iu.edu',
+    'app_id': 'cpa-dev.sca.iu.edu',
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
@@ -24,57 +24,65 @@ config = {
         'read_timeout': 30  # seconds
     },
     'paths': {
-        'scratch': '/path/to/scratch',
+        'archive_scratch': '/opt/sca/scratch/development',
+        'scratch': '/N/scratch/cpauser/cpa/development/scratch',
         'RAW_DATA': {
             'archive': f'development/{YEAR}/raw_data',
-            'stage': '/path/to/staged/raw_data',
-            'qc': '/path/to/qc'
+            'stage': '/N/scratch/cpauser/cpa/development/stage/raw_data',
+            # 'qc': '/N/scratch/cpauser/cpa/development/data_products'
         },
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
-            'stage': '/path/to/staged/data_products',
+            'stage': '/N/scratch/cpauser/cpa/development/stage/data_products',
         }
     },
     'registration': {
         'RAW_DATA': {
-            'source_dir': '/path/to/source/raw_data',
+            'source_dir': '/opt/sca/proteome/raw_data/',
             'rejects': ['.snapshots'],
         },
         'DATA_PRODUCT': {
-            'source_dir': '/path/to/source/data_products',
+            'source_dir': '/opt/sca/proteome/data_products/',
             'rejects': ['.snapshots'],
         },
         'recency_threshold_seconds': ONE_HOUR,
-        'minimum_project_size': ONE_GIGABYTE,
-        'wait_between_scans_seconds': FIVE_MINUTES,
+        'minimum_dataset_size': ONE_GIGABYTE,
+        'wait_between_stability_checks_seconds': FIVE_MINUTES,
+        'poll_interval_seconds': 10
     },
-    'service_user': 'bioloopuser',
+    'service_user': 'cpauser',
     'workflow_registry': {
         'integrated': {
             'steps': [
                 {
                     'name': 'await stability',
-                    'task': 'await_stability'
+                    'task': 'await_stability',
+                    'queue': 'archive.cpa.sca.iu.edu.q'
                 },
                 {
                     'name': 'inspect',
-                    'task': 'inspect_dataset'
+                    'task': 'inspect_dataset',
+                    'queue': 'archive.cpa.sca.iu.edu.q'
                 },
                 {
                     'name': 'archive',
-                    'task': 'archive_dataset'
+                    'task': 'archive_dataset',
+                    'queue': 'archive.cpa.sca.iu.edu.q'
                 },
                 {
                     'name': 'stage',
-                    'task': 'stage_dataset'
+                    'task': 'stage_dataset',
+                    'queue': 'fetch.cpa.sca.iu.edu.q'
                 },
                 {
                     'name': 'validate',
-                    'task': 'validate_dataset'
+                    'task': 'validate_dataset',
+                    'queue': 'fetch.cpa.sca.iu.edu.q'
                 },
                 {
-                    'name': 'generate_reports',
-                    'task': 'generate_reports'
+                    'name': 'delete source directory',
+                    'task': 'delete_source',
+                    'queue': 'archive.cpa.sca.iu.edu.q'
                 }
             ]
         }
