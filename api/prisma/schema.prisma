@@ -28,6 +28,7 @@ model dataset {
   states           dataset_state[]
   derived_datasets dataset_hierarchy[] @relation("source_datasets")
   source_datasets  dataset_hierarchy[] @relation("derived_datasets")
+  projects         project_dataset[]
 
   @@unique([name, type])
 }
@@ -89,6 +90,7 @@ model user {
   settings      user_settings?
   contacts      contact[]
   dataset_audit dataset_audit[]
+  projects      project_user[]
   password      user_password?
   login         user_login?
 }
@@ -118,12 +120,13 @@ model user_settings {
 }
 
 model contact {
-  id          Int     @id @default(autoincrement())
+  id          Int               @id @default(autoincrement())
   type        String
   value       String
   description String?
   user_id     Int?
-  user        user?   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        user?             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  projects    project_contact[]
 
   @@unique([type, value])
 }
@@ -161,4 +164,49 @@ model metric {
   tags        Json?
 
   @@id([timestamp, measurement, subject])
+}
+
+model project {
+  id              String            @id @default(uuid())
+  slug            String            @unique
+  name            String
+  description     String?
+  browser_enabled Boolean           @default(false)
+  funding         String?
+  metadata        Json?
+  created_at      DateTime          @default(now()) @db.Timestamp(6)
+  updated_at      DateTime          @default(now()) @updatedAt @db.Timestamp(6)
+  users           project_user[]
+  datasets        project_dataset[]
+  contacts        project_contact[]
+}
+
+model project_user {
+  project_id  String
+  user_id     Int
+  assigned_at DateTime @default(now()) @db.Timestamp(6)
+  project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([project_id, user_id])
+}
+
+model project_dataset {
+  project_id  String
+  dataset_id  Int
+  assigned_at DateTime @default(now()) @db.Timestamp(6)
+  project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  dataset     dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+
+  @@id([project_id, dataset_id])
+}
+
+model project_contact {
+  project_id  String
+  contact_id  Int
+  assigned_at DateTime @default(now()) @db.Timestamp(6)
+  project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  contact     contact  @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+
+  @@id([project_id, contact_id])
 }

@@ -15,5 +15,6 @@ router.use('/datasets', require('./datasets'));
 router.use('/metrics', require('./metrics'));
 router.use('/users', require('./users'));
 router.use('/workflows', require('./workflows'));
+router.use('/projects', require('./projects'));
 
 module.exports = router;

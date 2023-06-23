@@ -20,6 +20,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    projects: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     auth: {
       'create:any': ['*'],
     },
@@ -30,6 +36,9 @@ const grantsObject = {
     user: {
       'read:own': ['*'],
       'update:own': ['*'],
+    },
+    projects: {
+      'read:own': ['*'],
     },
   },
 
@@ -47,6 +56,12 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     dataset: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    projects: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

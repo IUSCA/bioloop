@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { normalize_name } = require('../src/services/project');
 
 const prisma = new PrismaClient();
 
@@ -193,6 +194,78 @@ const contacts = [{
   value: 'emily.jones42@example.net',
 }];
 
+const projects = [
+  {
+    id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+    name: 'ILMN_2518_Jackson_DNAseq8_June2023',
+  },
+  {
+    id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    name: 'ILMN_8902_Anderson_DNAseq3_July2023',
+  },
+  {
+    id: 'D77C44B9-3905-4DC2-ACB0-BA285361755A',
+    name: 'ILMN_6247_Sanchez_DNAseq9_August2023',
+  },
+];
+
+const project_user_assoc = [
+  {
+    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+    user_id: 1,
+  },
+  {
+    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+    user_id: 2,
+  },
+  {
+    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+    user_id: 3,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    user_id: 5,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    user_id: 6,
+  },
+];
+
+const project_dataset_assoc = [
+  {
+    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+    dataset_id: 7,
+  },
+  {
+    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+    dataset_id: 8,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    dataset_id: 7,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    dataset_id: 8,
+  },
+];
+
+const project_contact_assoc = [
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    contact_id: 1,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    contact_id: 2,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    contact_id: 3,
+  },
+];
+
 async function update_seq(table) {
   // Get the current maximum value of the id column
   const result = await prisma[table].aggregate({
@@ -341,6 +414,53 @@ async function main() {
       },
       update: {},
       create: c,
+    })),
+  );
+
+  // create project data
+  await Promise.all(
+    projects.map((p) => prisma.project.upsert({
+      where: {
+        id: p.id,
+      },
+      update: {},
+      create: {
+        slug: normalize_name(p.name),
+        ...p,
+      },
+    })),
+  );
+
+  // create project user associations
+  await Promise.all(
+    project_user_assoc.map((pu) => prisma.project_user.upsert({
+      where: {
+        project_id_user_id: pu,
+      },
+      update: {},
+      create: pu,
+    })),
+  );
+
+  // create project dataset associations
+  await Promise.all(
+    project_dataset_assoc.map((pd) => prisma.project_dataset.upsert({
+      where: {
+        project_id_dataset_id: pd,
+      },
+      update: {},
+      create: pd,
+    })),
+  );
+
+  // create project contact associations
+  await Promise.all(
+    project_contact_assoc.map((pc) => prisma.project_contact.upsert({
+      where: {
+        project_id_contact_id: pc,
+      },
+      update: {},
+      create: pc,
     })),
   );
 
