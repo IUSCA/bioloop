@@ -54,8 +54,7 @@ config = {
             'steps': [
                 {
                     'name': 'await stability',
-                    'task': 'await_stability',
-                    'queue': 'archive.cpa.sca.iu.edu.q'
+                    'task': 'await_stability'
                 },
                 {
                     'name': 'inspect',

@@ -33,7 +33,7 @@ def get_wf_body(wf_name: str) -> dict:
 
 
 def get_archive_dir(dataset_type: str) -> str:
-    sda_dir = config["paths"][dataset_type.lower()]["archive"]
+    sda_dir = config["paths"][dataset_type]["archive"]
     sda.ensure_directory(sda_dir)  # create the directory if it does not exist
     return sda_dir
 

@@ -1,9 +1,19 @@
+import logging
 import time
 from pathlib import Path
 from typing import Callable
 
+from sca_rhythm import Workflow
+
 import workers.api as api
+import workers.workflow_utils as wf_utils
+from workers import cmd
+from workers.celery_app import app as celery_app
 from workers.config import config
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class Observer:
@@ -56,68 +66,63 @@ class Poller:
                     try:
                         observer.watch()
                     except Exception as e:
-                        print('exception in calling observer', e)
+                        logger.error('exception in calling observer', exc_info=e)
                     last_call_times[observer.name] = current_time
             time.sleep(1)
 
 
-def register_raw_data(event: str, new_dirs: list[Path]) -> None:
-    if event != 'add':
-        return
-    reg_config = config['registration']['raw_data']
-    registered_names = [dataset['name'] for dataset in api.get_all_datasets(dataset_type='RAW_DATA')]
-    candidates = [
-        p for p in new_dirs
-        if all([
-            p.name not in set(registered_names),
-            p.name not in set(reg_config['rejects'])
-        ])
-    ]
-    for candidate in candidates:
-        print('registering raw data', candidate.name)
-        dataset = {
-            'name': candidate.name,
-            'type': 'RAW_DATA',
-            'origin_path': str(candidate.resolve()),
-        }
-        api.create_dataset(dataset)
+class Register:
+    def __init__(self, dataset_type):
+        self.dataset_type = dataset_type
+        self.reg_config = config['registration'][self.dataset_type]
+        self.rejects: set[str] = set(self.reg_config['rejects'])
+        self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
+        self.wf_body = wf_utils.get_wf_body(wf_name='integrated')
 
+    def get_registered_dataset_names(self):
+        datasets = api.get_all_datasets(dataset_type=self.dataset_type)
+        return [b['name'] for b in datasets]
 
-def register_data_products(event: str, new_dirs: list[Path]) -> None:
-    if event != 'add':
-        return
-    reg_config = config['registration']['data_products']
-    registered_names = [dataset['name'] for dataset in api.get_all_datasets(dataset_type='DATA_PRODUCT')]
-    candidates = [
-        p for p in new_dirs
-        if all([
-            p.name not in set(registered_names),
-            p.name not in set(reg_config['rejects'])
-        ])
-    ]
-    for candidate in candidates:
-        print('registering data product', candidate.name)
-        dataset = {
-            'name': candidate.name,
-            'type': 'DATA_PRODUCT',
-            'origin_path': str(candidate.resolve()),
-        }
-        created_dataset = api.create_dataset(dataset)
+    def register(self, event: str, new_dirs: list[Path]) -> None:
+        if event != 'add':
+            return
 
-        # Find raw_data with the same and add an association
-        source_datasets = api.get_all_datasets(dataset_type='RAW_DATA', name=candidate.name)
-        if len(source_datasets) > 0:
-            api.add_associations([{
-                'source_id': source_datasets[0]['id'],
-                'derived_id': created_dataset['id']
-            }])
+        candidates = [
+            p for p in new_dirs
+            if all([
+                p.name not in self.completed,
+                p.name not in set(self.rejects),
+                cmd.total_size(p) >= config['registration']['minimum_dataset_size']
+            ])
+        ]
+
+        for candidate in candidates:
+            logger.info(f'registering dataset - {candidate.name}')
+            wf = Workflow(celery_app=celery_app, **self.wf_body)
+            dataset = {
+                'name': candidate.name,
+                'type': self.dataset_type,
+                'origin_path': str(candidate.resolve()),
+                'workflow_id': wf.workflow['_id']
+            }
+            created_dataset = api.create_dataset(dataset)
+            wf.start(created_dataset['id'])
+            self.completed.add(candidate.name)
 
 
 if __name__ == "__main__":
-    path1 = config['registration']['raw_data']['source_dir']
-    path2 = config['registration']['data_products']['source_dir']
-    obs1 = Observer('raw_data_obs', path1, register_raw_data, interval=5)
-    obs2 = Observer('data_products_obs', path2, register_data_products, interval=5)
+    obs1 = Observer(
+        name='raw_data_obs',
+        dir_path=config['registration']['RAW_DATA']['source_dir'],
+        callback=Register('RAW_DATA').register,
+        interval=config['registration']['poll_interval_seconds']
+    )
+    obs2 = Observer(
+        name='data_products_obs',
+        dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
+        callback=Register('DATA_PRODUCT').register,
+        interval=config['registration']['poll_interval_seconds']
+    )
 
     poller = Poller()
     poller.register(obs1)
