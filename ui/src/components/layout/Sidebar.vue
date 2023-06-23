@@ -100,11 +100,11 @@ function isActive(path) {
 }
 
 const user_items = ref([
-  // {
-  //   icon: "mdi-flask",
-  //   title: "Projects",
-  //   path: "/projects",
-  // },
+  {
+    icon: "mdi-flask",
+    title: "Projects",
+    path: "/projects",
+  },
   // {
   //   icon: "mdi-chart-gantt",
   //   title: "Tracks",

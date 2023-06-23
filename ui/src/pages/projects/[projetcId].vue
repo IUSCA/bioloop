@@ -1,0 +1,204 @@
+<template>
+  <va-inner-loading :loading="data_loading">
+    <!-- title -->
+    <div class="flex items-center mb-4">
+      <span class="text-3xl flex-none"> Project: {{ project.name }} </span>
+    </div>
+
+    <!-- body -->
+    <div class="flex flex-col gap-3">
+      <!-- Associated datasets -->
+      <div>
+        <!-- <span class="text-2xl"> Associated Datasets</span> -->
+        <va-card class="">
+          <va-card-title>
+            <span class="text-xl"> Associated Datasets </span>
+          </va-card-title>
+          <va-card-content>
+            <ProjectAssociatedDatasets :datasets="project.datasets" />
+          </va-card-content>
+        </va-card>
+      </div>
+
+      <!-- General Info and Access Permissions -->
+      <div class="grid gird-cols-1 lg:grid-cols-2 gap-3">
+        <!-- General Info -->
+        <div class="">
+          <va-card class="general-info">
+            <va-card-title>
+              <span class="text-xl"> General Info </span>
+            </va-card-title>
+            <va-card-content>
+              <ProjectInfo :project="project" />
+            </va-card-content>
+          </va-card>
+        </div>
+
+        <!-- Access Permissions -->
+        <div class="">
+          <va-card>
+            <va-card-title>
+              <span class="text-xl"> Access Permissions </span>
+            </va-card-title>
+            <va-card-content>
+              <ProjectUsers :users="project.users" />
+            </va-card-content>
+          </va-card>
+        </div>
+      </div>
+
+      <!-- Maintenance Actions -->
+      <div>
+        <va-card>
+          <va-card-title>
+            <span class="text-xl"> Maintenance Actions </span>
+          </va-card-title>
+          <va-card-content>
+            <div class="flex gap-9">
+              <!-- edit button -->
+              <va-button
+                preset="secondary"
+                border-color="primary"
+                class="flex-none"
+                @click="openModalToEditProject"
+              >
+                <div class="flex items-center gap-2">
+                  <i-mdi-edit />
+                  <span> Edit Project </span>
+                </div>
+              </va-button>
+
+              <!-- merge button -->
+              <va-button
+                preset="secondary"
+                border-color="info"
+                class="flex-none"
+                color="info"
+                disabled
+              >
+                <div class="flex items-center gap-2">
+                  <i-mdi-merge />
+                  <span> Merge Project </span>
+                </div>
+              </va-button>
+
+              <!-- delete button -->
+              <va-button
+                preset="secondary"
+                border-color="danger"
+                class="flex-none"
+                color="danger"
+                @click="openModalToDeleteProject"
+              >
+                <div class="flex items-center gap-2">
+                  <i-mdi-delete />
+                  <span> Delete Project </span>
+                </div>
+              </va-button>
+            </div>
+          </va-card-content>
+        </va-card>
+      </div>
+    </div>
+  </va-inner-loading>
+
+  <!-- edit modal -->
+  <EditProjectModal
+    ref="editModal"
+    :id="project.id"
+    @update="handleEditUpdate"
+  />
+
+  <!-- delete modal -->
+  <DeleteProjectModal
+    ref="deleteModal"
+    :data="project"
+    @update="router.push('/projects')"
+  />
+</template>
+
+<script setup>
+import ProjectAssociatedDatasets from "@/components/project/ProjectAssociatedDatasets.vue";
+import projectService from "@/services/projects";
+import toast from "@/services/toast";
+import { useAuthStore } from "@/stores/auth";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
+
+const props = defineProps(["projetcId"]);
+const auth = useAuthStore();
+const router = useRouter();
+const projectFormStore = useProjectFormStore();
+
+const admin_view = auth.hasRole("admin") || auth.hasRole("operator");
+const project = ref({});
+const data_loading = ref(false);
+
+function fetch_project() {
+  data_loading.value = true;
+  return projectService
+    .getById({
+      id: project.value?.id || props.projetcId,
+      forSelf: !admin_view,
+    })
+    .then((res) => {
+      project.value = res.data;
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to fetch project details");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
+}
+
+fetch_project();
+
+// edit modal code
+// template ref binding
+const editModal = ref(null);
+
+function openModalToEditProject() {
+  const data = { ...project.value };
+  data.users = (data.users || []).map((obj) => ({
+    id: obj?.user?.id,
+    username: obj?.user?.username,
+  }));
+  projectFormStore.$patch(data);
+  editModal.value.show();
+}
+
+function handleEditUpdate() {
+  const old_slug = project.value.slug;
+  // fetch project by id in project object or id in props
+  // this always works even if the slug has changed
+  fetch_project().then(() => {
+    // if slug changed, the url is invalid, navigate to new url
+    const new_slug = project.value.slug;
+    if (old_slug !== new_slug) {
+      router.push({
+        path: `/projects/${new_slug}`,
+      });
+    }
+  });
+}
+
+// delete modal code
+// template ref binding
+const deleteModal = ref(null);
+
+function openModalToDeleteProject() {
+  deleteModal.value.show();
+}
+</script>
+
+<route lang="yaml">
+meta:
+title: Projects
+</route>
+
+<style scoped>
+.general-info {
+  --va-card-padding: 0.75rem;
+}
+</style>

@@ -1,0 +1,79 @@
+<template>
+  <div class="va-table-responsive">
+    <table class="va-table">
+      <tbody>
+        <tr>
+          <td>ID</td>
+          <td>{{ props.project.id }}</td>
+        </tr>
+        <tr>
+          <td>Name</td>
+          <td>{{ props.project.name }}</td>
+        </tr>
+        <tr>
+          <td>Alias</td>
+          <td>
+            <span>
+              {{ props.project.slug }}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td>Created Date</td>
+          <td>
+            {{ utc_date_to_local_tz(props.project.created_at) }}
+          </td>
+        </tr>
+        <tr>
+          <td>Last Updated</td>
+          <td>
+            <span class="">
+              {{ utc_date_to_local_tz(props.project.updated_at) }}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td>Genome Browser</td>
+          <td>
+            <va-chip
+              size="small"
+              :color="props.project.browser_enabled ? 'success' : 'secondary'"
+            >
+              <span>
+                {{ props.project.browser_enabled ? "ENABLED" : "DISABLED" }}
+              </span>
+            </va-chip>
+          </td>
+        </tr>
+        <tr>
+          <td>Description</td>
+          <td>
+            <div class="max-h-[11.5rem] overflow-y-scroll">
+              {{ props.project.description }}
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>Funding</td>
+          <td>{{ props.project.funding }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>
+
+<script setup>
+import { utc_date_to_local_tz } from "../../services/utils";
+const props = defineProps({ project: Object });
+</script>
+
+<style lang="scss" scoped>
+div.va-table-responsive {
+  overflow: auto;
+
+  // first column min width
+  td:first-child {
+    min-width: 135px;
+  }
+}
+</style>
