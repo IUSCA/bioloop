@@ -11,8 +11,16 @@
       <div>
         <!-- <span class="text-2xl"> Associated Datasets</span> -->
         <va-card class="">
-          <va-card-title>
-            <span class="text-xl"> Associated Datasets </span>
+          <va-card-title class="py-3">
+            <div class="flex flex-nowrap items-center w-full">
+              <span class="text-lg"> Associated Datasets </span>
+
+              <AddEditButton
+                class="flex-none"
+                show-text
+                :edit="project.datasets?.length > 0"
+              />
+            </div>
           </va-card-title>
           <va-card-content>
             <ProjectAssociatedDatasets :datasets="project.datasets" />
@@ -25,8 +33,15 @@
         <!-- General Info -->
         <div class="">
           <va-card class="general-info">
-            <va-card-title>
-              <span class="text-xl"> General Info </span>
+            <va-card-title class="py-3">
+              <div class="flex flex-nowrap items-center w-full">
+                <span class="text-lg"> General Info </span>
+                <AddEditButton
+                  class="flex-none"
+                  edit
+                  @click="openModalToEditProject"
+                />
+              </div>
             </va-card-title>
             <va-card-content>
               <ProjectInfo :project="project" />
@@ -37,8 +52,14 @@
         <!-- Access Permissions -->
         <div class="">
           <va-card>
-            <va-card-title>
-              <span class="text-xl"> Access Permissions </span>
+            <va-card-title class="py-3">
+              <div class="flex flex-nowrap items-center w-full">
+                <span class="text-lg"> Access Permissions </span>
+                <AddEditButton
+                  class="flex-none"
+                  :edit="project.users?.length > 0"
+                />
+              </div>
             </va-card-title>
             <va-card-content>
               <ProjectUsers :users="project.users" />
@@ -55,19 +76,6 @@
           </va-card-title>
           <va-card-content>
             <div class="flex gap-9">
-              <!-- edit button -->
-              <va-button
-                preset="secondary"
-                border-color="primary"
-                class="flex-none"
-                @click="openModalToEditProject"
-              >
-                <div class="flex items-center gap-2">
-                  <i-mdi-edit />
-                  <span> Edit Project </span>
-                </div>
-              </va-button>
-
               <!-- merge button -->
               <va-button
                 preset="secondary"
@@ -118,7 +126,6 @@
 </template>
 
 <script setup>
-import ProjectAssociatedDatasets from "@/components/project/ProjectAssociatedDatasets.vue";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";

@@ -9,7 +9,6 @@
     <template #cell(stage)="{ rowData }">
       <div class="">
         <va-button
-          size="large"
           class="shadow"
           preset="primary"
           color="info"
@@ -22,7 +21,6 @@
     <template #cell(download)="{ rowData }">
       <div class="">
         <va-button
-          size="large"
           class="shadow"
           preset="primary"
           color="info"
@@ -35,7 +33,6 @@
     <template #cell(share)="{ rowData }">
       <div class="">
         <va-button
-          size="large"
           class="shadow"
           preset="primary"
           color="info"
