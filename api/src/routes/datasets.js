@@ -453,4 +453,22 @@ router.get(
   }),
 );
 
+router.get(
+  '/:id/filetree',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = Get the file tree
+    const files = await prisma.dataset_file.findMany({
+      where: {
+        dataset_id: req.params.id,
+      },
+    });
+    const root = datasetService.create_filetree(files);
+    res.json(root);
+  }),
+);
+
 module.exports = router;

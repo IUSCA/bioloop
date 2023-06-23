@@ -265,6 +265,35 @@ async function files_ls({ dataset_id, base = '' }) {
   return _.concat(files)(directories);
 }
 
+function create_filetree(files) {
+  const root = {
+    metadata: {},
+    children: {},
+  };
+
+  files.forEach((file) => {
+    const { path: relpath, ...rest } = file;
+    const pathObject = path.parse(relpath);
+    const parent_dir = pathObject.dir
+      .split(path.sep)
+      .reduce((parent, dir_name) => {
+        const curr = parent.children[dir_name] || {
+          metadata: {},
+          children: {},
+        };
+        // eslint-disable-next-line no-param-reassign
+        parent.children[dir_name] = curr;
+        return curr;
+      }, root);
+    // console.log(pathObject);
+    parent_dir.children[pathObject.base] = {
+      metadata: { ...rest },
+    };
+  });
+
+  return root;
+}
+
 module.exports = {
   soft_delete,
   hard_delete,
@@ -273,4 +302,5 @@ module.exports = {
   get_dataset,
   create_workflow,
   files_ls,
+  create_filetree,
 };

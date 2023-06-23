@@ -4,6 +4,7 @@ import hashlib
 import os
 from collections.abc import Iterable
 from contextlib import contextmanager
+from enum import Enum, unique
 from itertools import islice
 from pathlib import Path
 
@@ -114,3 +115,21 @@ def empty_context_manager():
         yield
     finally:
         pass
+
+
+@unique
+class FileType(str, Enum):
+    FILE = 'file'
+    DIRECTORY = 'directory'
+    SYMBOLIC_LINK = 'symbolic link'
+    OTHER = 'other'
+
+
+def filetype(p: Path) -> FileType:
+    if p.is_symlink():
+        return FileType.SYMBOLIC_LINK
+    if p.is_file():
+        return FileType.FILE
+    if p.is_dir():
+        return FileType.SYMBOLIC_LINK
+    return FileType.OTHER
