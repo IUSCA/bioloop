@@ -5,10 +5,10 @@
 dt=$(date +"%Y%m%dT%H%M%S");
 
 pg_dump\
-    --dbname=app \
+    --dbname=cpa \
     --file="$dt-dump.sql" \
     --column-inserts \
     --data-only \
-    --username=appuser \
+    --username=cpa \
     --host=localhost \
     --port=5433

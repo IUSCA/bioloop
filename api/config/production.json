@@ -1,12 +1,13 @@
 {
-  "app_id": "bioloop.sca.iu.edu",
+  "app_id": "cpa.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
   "postgres": {
     "hostname": "commons3.sca.iu.edu",
-    "db": "bioloop",
-    "schema": "public"
+    "user": "cpa",
+    "db": "cpa",
+    "schema": "cpa"
   },
   "workflow_server": {
     "base_url": "https://core-dev1.sca.iu.edu/rhythm"
@@ -14,7 +15,7 @@
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "bioloop.sca.iu.edu",
+      "iss": "cpa.sca.iu.edu",
       "ttl_milliseconds": 3600000
     }
   }

@@ -29,30 +29,30 @@
     }
   },
   "mode": "default",
-  "app_id": "bioloop-dev.sca.iu.edu",
+  "app_id": "cpa-dev.sca.iu.edu",
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
           "name": "inspect",
-          "task": "inspect_dataset"
+          "task": "inspect_dataset",
+          "queue": "archive.cpa.sca.iu.edu.q"
         },
         {
           "name": "archive",
-          "task": "archive_dataset"
+          "task": "archive_dataset",
+          "queue": "archive.cpa.sca.iu.edu.q"
         },
         {
           "name": "stage",
-          "task": "stage_dataset"
+          "task": "stage_dataset",
+          "queue": "fetch.cpa.sca.iu.edu.q"
         },
         {
           "name": "validate",
-          "task": "validate_dataset"
-        },
-        {
-          "name": "generate_reports",
-          "task": "generate_reports"
+          "task": "validate_dataset",
+          "queue": "fetch.cpa.sca.iu.edu.q"
         }
       ]
     },
@@ -60,15 +60,13 @@
       "steps": [
         {
           "name": "stage",
-          "task": "stage_dataset"
+          "task": "stage_dataset",
+          "queue": "fetch.cpa.sca.iu.edu.q"
         },
         {
           "name": "validate",
-          "task": "validate_dataset"
-        },
-        {
-          "name": "generate_reports",
-          "task": "generate_reports"
+          "task": "validate_dataset",
+          "queue": "fetch.cpa.sca.iu.edu.q"
         }
       ]
     },
@@ -76,7 +74,8 @@
       "steps": [
         {
           "name": "delete",
-          "task": "delete_dataset"
+          "task": "delete_dataset",
+          "queue": "archive.cpa.sca.iu.edu.q"
         }
       ]
     }

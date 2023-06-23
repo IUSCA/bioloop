@@ -2,7 +2,12 @@
   <div class="grid grid-cols-1 gap-5">
     <div class="banner flex items-end">
       <h1 class="heading_text p-[20px] text-center text-gray-800">
-        Diagnostic Genomics Laboratory
+        <a
+          href="https://cm.medicine.iu.edu/service-cores/facilities/proteomics"
+          target="_blank"
+        >
+          Center for Proteome Analysis
+        </a>
       </h1>
     </div>
     <!-- <div class="flex justify-center mt-10">
@@ -15,21 +20,28 @@
     <div class="">
       <va-card>
         <va-card-content>
-          <div class="p-3">
-            <span class="text-lg">
-              The Diagnostic Genomics Laboratory at Indiana University School of
-              Medicine is a newly established genomics laboratory under the
-              auspices of the Genetic Testing Laboratories in the Department of
-              Medical and Molecular Genetics Division of Diagnostic Genomics.
-              The Diagnostic Genomics Laboratory provides competitive clinical
-              somatic (cancer) and germline genomics testing services to IU
-              Health and state of Indiana. Enabled by state-of-the-art next
-              generation sequencing (NGS) technology and advanced bioinformatic
-              infrastructure, the lab currently offers a disease-targeted NGS
-              panel testing (somatic/cancer) for plasma cell myeloma (also known
-              as multiple myeloma), and will soon be offering clinical genome
-              and clinical exome diagnostic testing.
-            </span>
+          <div class="p-3 flex flex-col gap-3">
+            <p>
+              The Center for Proteome Analysis at Indiana University School of
+              Medicine provides protein and proteomic analysis services for
+              protein identification, characterization, and quantification. The
+              center encourages collaborations that apply the tools of
+              proteomics to cutting-edge biomedical research.
+            </p>
+
+            <p>
+              The Center for Proteome Analysis's vision is to deliver value to
+              the scientific community as a world-class proteomics core lab
+              providing services and collaborations to meet the critical needs
+              of biomedical researchers in life sciences.
+            </p>
+
+            <p>
+              The center's mission is to provide analytical resources for
+              qualitative and quantitative analysis of macromolecules and to
+              foster critical collaborations in proteomics and biomarker
+              development.
+            </p>
           </div>
         </va-card-content>
       </va-card>

@@ -6,7 +6,7 @@ const exports = {
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
-  appTitle: "BIOLOOP",
+  appTitle: "CPA-SCA",
   contact: {
     app_admin: "admin@sca.iu.edu",
     sca_admin: "sca-ops-l@list.iu.edu",
@@ -14,8 +14,8 @@ const exports = {
   dataset_polling_interval: 10000,
   paths: {
     stage: {
-      RAW_DATA: "/path/to/staged/raw_data",
-      DATA_PRODUCT: "/path/to/staged/data_products",
+      RAW_DATA: "/N/scratch/cpauser/cpa/production/stage/raw_data",
+      DATA_PRODUCT: "/N/scratch/cpauser/cpa/production/stage/data_products",
     },
   },
 };
