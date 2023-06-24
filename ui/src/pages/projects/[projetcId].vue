@@ -11,7 +11,7 @@
       <div>
         <!-- <span class="text-2xl"> Associated Datasets</span> -->
         <va-card class="">
-          <va-card-title class="py-3">
+          <va-card-title class="">
             <div class="flex flex-nowrap items-center w-full">
               <span class="text-lg"> Associated Datasets </span>
 
@@ -23,7 +23,7 @@
             </div>
           </va-card-title>
           <va-card-content>
-            <ProjectAssociatedDatasets :datasets="project.datasets" />
+            <ProjectDatasets :datasets="project.datasets" />
           </va-card-content>
         </va-card>
       </div>
@@ -33,7 +33,7 @@
         <!-- General Info -->
         <div class="">
           <va-card class="general-info">
-            <va-card-title class="py-3">
+            <va-card-title class="">
               <div class="flex flex-nowrap items-center w-full">
                 <span class="text-lg"> General Info </span>
                 <AddEditButton
@@ -51,18 +51,24 @@
 
         <!-- Access Permissions -->
         <div class="">
-          <va-card>
-            <va-card-title class="py-3">
+          <va-card class="h-full">
+            <va-card-title class="">
               <div class="flex flex-nowrap items-center w-full">
                 <span class="text-lg"> Access Permissions </span>
                 <AddEditButton
                   class="flex-none"
                   :edit="project.users?.length > 0"
+                  @click="openUsersModal"
                 />
               </div>
             </va-card-title>
             <va-card-content>
-              <ProjectUsers :users="project.users" />
+              <ProjectUsers
+                :users="users"
+                v-if="users?.length > 0"
+                show-assigned-date
+              />
+              <div v-else>This project has no associated users</div>
             </va-card-content>
           </va-card>
         </div>
@@ -123,6 +129,13 @@
     :data="project"
     @update="router.push('/projects')"
   />
+
+  <!-- Users modal -->
+  <ProjectUsersModal
+    ref="usersModal"
+    :id="project.id"
+    @update="handleEditUpdate"
+  />
 </template>
 
 <script setup>
@@ -161,17 +174,20 @@ function fetch_project() {
 
 fetch_project();
 
+const users = computed(() => {
+  return (project.value.users || []).map((obj) => ({
+    ...obj.user,
+    assigned_at: obj.assigned_at,
+  }));
+});
+
 // edit modal code
 // template ref binding
 const editModal = ref(null);
 
 function openModalToEditProject() {
-  const data = { ...project.value };
-  data.users = (data.users || []).map((obj) => ({
-    id: obj?.user?.id,
-    username: obj?.user?.username,
-  }));
-  projectFormStore.$patch(data);
+  const { name, description, browser_enabled, funding } = project.value;
+  projectFormStore.$patch({ name, description, browser_enabled, funding });
   editModal.value.show();
 }
 
@@ -197,6 +213,14 @@ const deleteModal = ref(null);
 function openModalToDeleteProject() {
   deleteModal.value.show();
 }
+
+// user modal code
+const usersModal = ref(null);
+
+function openUsersModal() {
+  projectFormStore.setUsers(users.value);
+  usersModal.value.show();
+}
 </script>
 
 <route lang="yaml">
@@ -205,7 +229,7 @@ title: Projects
 </route>
 
 <style scoped>
-.general-info {
+/* .general-info {
   --va-card-padding: 0.75rem;
-}
+} */
 </style>

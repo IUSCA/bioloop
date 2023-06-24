@@ -7,7 +7,7 @@
     hide-default-actions
   >
     <va-inner-loading :loading="loading">
-      <ProjectForm />
+      <ProjectInfoForm />
     </va-inner-loading>
     <template #footer>
       <div class="flex w-full justify-center gap-5">
@@ -59,7 +59,7 @@ function handleCreate() {
     loading.value = true;
 
     const user_ids = projectFormStore.user_ids;
-    const project_data = projectFormStore.project_data;
+    const project_data = projectFormStore.project_info;
 
     projectService
       .createProject({

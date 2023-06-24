@@ -7,7 +7,7 @@
     hide-default-actions
   >
     <va-inner-loading :loading="loading">
-      <ProjectForm />
+      <ProjectInfoForm />
     </va-inner-loading>
     <template #footer>
       <div class="flex w-full justify-center gap-5">
@@ -58,14 +58,9 @@ function handleEdit() {
   projectFormStore.form.validate();
   if (projectFormStore.form.isValid) {
     loading.value = true;
+    const project_data = projectFormStore.project_info;
 
-    const user_ids = projectFormStore.user_ids;
-    const project_data = projectFormStore.project_data;
-
-    Promise.allSettled([
-      projectService.modifyProject({ id: props.id, project_data }),
-      projectService.setUsers({ id: props.id, user_ids }),
-    ]).finally(() => {
+    projectService.modifyProject({ id: props.id, project_data }).finally(() => {
       loading.value = false;
       emit("update");
       hide();

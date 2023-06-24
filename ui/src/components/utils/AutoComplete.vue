@@ -10,8 +10,7 @@
           :placeholder="props.placeholder"
           v-model="text"
           class="w-full autocomplete-input"
-          @click="updateResultsVisibility"
-          @update:modelValue="updateResultsVisibility"
+          @click="openResults"
         />
       </va-form>
 
@@ -35,8 +34,13 @@
             {{ item[props.displayBy] }}
           </slot>
         </li>
-        <li v-if="active_query && search_results.length == 0" class="py-2 px-3">
-          None matched
+        <li v-if="search_results.length == 0" class="py-2 px-3">
+          <span
+            class="flex gap-2 items-center justify-center va-text-secondary"
+          >
+            <i-mdi:magnify-remove-outline class="flex-none text-xl" />
+            <span class="flex-none">None matched</span>
+          </span>
         </li>
       </ul>
     </OnClickOutside>
@@ -74,14 +78,12 @@ const emit = defineEmits(["select"]);
 const text = ref("");
 const visible = ref(false);
 
-// when there is no text, hide the results ul
-// when text is entered, show the results ul
 // when clicked outside, hide the results ul
-// when clicked on input when there is some text entered, show the results ul
+// when clicked on input show the results ul
 // when clicked on a search result, clear text and hide the results ul
 
 const search_results = computed(() => {
-  if (text.value === "") return [];
+  if (text.value === "") return props.data;
 
   const filterFn =
     props.filterFn instanceof Function
@@ -94,19 +96,17 @@ const search_results = computed(() => {
   return (props.data || []).filter(filterFn);
 });
 
-const active_query = computed(() => text.value !== "");
-
 function closeResults() {
   visible.value = false;
 }
 
-function updateResultsVisibility() {
-  visible.value = active_query.value;
+function openResults() {
+  visible.value = true;
 }
 
 function handleSelect(item) {
   text.value = "";
-  updateResultsVisibility();
+  closeResults();
   emit("select", item);
 }
 </script>

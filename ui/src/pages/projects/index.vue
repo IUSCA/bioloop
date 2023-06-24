@@ -247,7 +247,8 @@ const editModal = ref(null);
 const selectedId = ref(null);
 
 function openModalToEditProject(rowData) {
-  projectFormStore.$patch(rowData);
+  const { name, description, browser_enabled, funding } = rowData;
+  projectFormStore.$patch({ name, description, browser_enabled, funding });
   selectedId.value = rowData.id;
   editModal.value.show();
 }

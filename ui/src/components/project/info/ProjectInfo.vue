@@ -21,14 +21,14 @@
         <tr>
           <td>Created Date</td>
           <td>
-            {{ utc_date_to_local_tz(props.project.created_at) }}
+            {{ datetime.absolute(props.project.created_at) }}
           </td>
         </tr>
         <tr>
           <td>Last Updated</td>
           <td>
             <span class="">
-              {{ utc_date_to_local_tz(props.project.updated_at) }}
+              {{ datetime.absolute(props.project.updated_at) }}
             </span>
           </td>
         </tr>
@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { utc_date_to_local_tz } from "../../services/utils";
+import * as datetime from "@/services/datetime";
 const props = defineProps({ project: Object });
 </script>
 

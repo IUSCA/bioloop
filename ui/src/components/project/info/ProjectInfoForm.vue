@@ -1,31 +1,31 @@
 <template>
   <va-form
-    class="flex flex-col gap-4 h-[26rem] w-[26rem] justify-start"
+    class="flex flex-col gap-6 h-[26rem] w-[26rem] justify-start"
     ref="formRef"
   >
-    <va-input
-      class="flex-none"
-      label="Name"
-      v-model="name"
-      :rules="[
-        (value) => (value && value.length > 0) || 'Name is required',
-        (value) => (value && value.length > 5) || 'Name is too short',
-      ]"
-    />
+    <div class="flex-none">
+      <va-input
+        class="w-full"
+        label="Name"
+        v-model="name"
+        :rules="[
+          (value) => (value && value.length > 0) || 'Name is required',
+          (value) => (value && value.length > 5) || 'Name is too short',
+        ]"
+      />
 
-    <!-- <span class="flex-none va-text-secondary pl-2 text-sm mt-[-0.5rem] mb-2">
+      <!-- <span class="flex-none va-text-secondary pl-2 text-sm mt-[-0.5rem] mb-2">
       URL Alias:
       <span v-if="name && isValid"> /projects/{{ slug }} </span>
     </span> -->
 
-    <span
-      class="flex-none text-sm va-text-secondary flex items-center justify-start"
-    >
-      <i-mdi-alert class="text-lg" style="color: var(--va-warning)" />
-      <span> Changing the project name could change the URL alias. </span>
-    </span>
-
-    <user-select class="flex-none" v-model:selected="users" />
+      <span class="text-sm va-text-secondary flex items-center gap-2 px-1 mt-2">
+        <i-mdi-alert class="flex-none" style="color: var(--va-warning)" />
+        <span class="flex-none">
+          Altering the project name could potentially change the URL alias.
+        </span>
+      </span>
+    </div>
 
     <va-input
       class="flex-none"
@@ -33,6 +33,8 @@
       v-model="description"
       type="textarea"
       autosize
+      :min-rows="3"
+      :max-rows="10"
     />
 
     <va-input class="flex-none" label="Funding" v-model="funding" />
@@ -54,7 +56,7 @@ import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { storeToRefs } from "pinia";
 
 const projectFormStore = useProjectFormStore();
-const { name, description, users, browser_enabled, funding } =
+const { name, description, browser_enabled, funding } =
   storeToRefs(projectFormStore);
 // const slug = ref("");
 

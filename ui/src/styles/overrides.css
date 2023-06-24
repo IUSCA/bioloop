@@ -12,6 +12,11 @@ input.va-input__content__input {
   padding-bottom: 5px;
 }
 
+textarea.va-input__content__input {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
 div.va-select-content__autocomplete {
   padding-top: 10px;
   padding-bottom: 5px;
@@ -19,7 +24,7 @@ div.va-select-content__autocomplete {
 
 div.inner-loading__overlay {
   z-index: 1;
-  background-color: rgba(255,255,255,0.6)
+  background-color: rgba(255,255,255,0.6);
 }
 
 div.va-modal__title {

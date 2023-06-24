@@ -14,10 +14,16 @@ for file in $staged_files; do
   # Remove 'ui/' or 'api/' prefix and store in respective variables
   if [[ $file == ui/* ]]; then
     ui_file=${file#ui/}
-    ui_files="$ui_files $ui_file"
+    extension=${ui_file##*.}
+    if [[ $extension == vue || $extension == js || $extension == jsx || $extension == cjs || $extension == mjs ]]; then
+      ui_files="$ui_files $ui_file"
+    fi
   elif [[ $file == api/* ]]; then
     api_file=${file#api/}
-    api_files="$api_files $api_file"
+    extension=${api_file##*.}
+    if [[ $extension == vue || $extension == js || $extension == jsx || $extension == cjs || $extension == mjs ]]; then
+      api_files="$api_files $api_file"
+    fi
   fi
 done
 

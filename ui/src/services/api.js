@@ -21,6 +21,8 @@ axiosInstance.interceptors.request.use(
   }
 );
 
+// If API call has failed because of 401 Unauthorized
+// navigate to logout page
 axiosInstance.interceptors.response.use(
   (res) => res,
   (err) => {

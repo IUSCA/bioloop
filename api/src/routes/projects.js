@@ -7,6 +7,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
+const { setDifference } = require('../utils');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -188,6 +189,9 @@ router.post(
 router.put(
   '/:id/users',
   isPermittedTo('update', false),
+  validate([
+    body('user_ids').exists(),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate users to a project
@@ -195,21 +199,30 @@ router.put(
     */
 
     // get project or send 404 if not found
-    await prisma.project.findFirstOrThrow({
+    const project = await prisma.project.findFirstOrThrow({
       where: {
         id: req.params.id,
       },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
 
-    // delete existing associations
+    const cur_user_ids = project.users.map((obj) => obj.user.id);
+    const req_user_ids = req.body.user_ids || [];
+
+    const user_ids_to_add = [...setDifference(new Set(req_user_ids), new Set(cur_user_ids))];
+    const user_ids_to_remove = [...setDifference(new Set(cur_user_ids), new Set(req_user_ids))];
+
+    // delete associations
     const delete_assocs = prisma.project_user.deleteMany({
       where: {
         project_id: req.params.id,
+        user_id: {
+          in: user_ids_to_remove,
+        },
       },
     });
 
-    const user_ids = req.body.user_ids || [];
-    const data = user_ids.map((user_id) => ({
+    const data = user_ids_to_add.map((user_id) => ({
       project_id: req.params.id,
       user_id,
     }));
