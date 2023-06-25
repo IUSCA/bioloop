@@ -1,22 +1,7 @@
 <template>
   <div>
     <!-- Title and admin switch -->
-    <div class="flex items-center mb-4">
-      <span class="text-3xl font-bold flex-none">
-        {{ showing_all ? "All Projects" : "Projects" }}
-      </span>
-
-      <va-button
-        preset="primary"
-        v-if="admin_view"
-        class="ml-4 flex-none"
-        @click="showing_all = !showing_all"
-      >
-        {{ showing_all ? "Show only your projects" : "Show all projects" }}
-      </va-button>
-
-      <!-- {{ createModal }} -->
-    </div>
+    <h2 class="text-3xl font-bold mb-4">Projects</h2>
 
     <!-- search bar and create button -->
     <div class="flex items-center gap-3 mb-3">
@@ -24,7 +9,7 @@
       <div class="flex-1">
         <va-input
           v-model="filterInput"
-          class="border-gray-800 border border-solid w-full"
+          class="w-full"
           placeholder="Search projects by name, associated dataset names, and user names."
           outline
           clearable
@@ -32,7 +17,7 @@
       </div>
 
       <!-- create button -->
-      <div class="flex-none" v-if="admin_view">
+      <div class="flex-none" v-if="auth.canOperate">
         <va-button
           icon="add"
           class="px-1"
@@ -150,13 +135,10 @@ import { useProjectFormStore } from "@/stores/projects/projectForm";
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
 
-const admin_view = auth.hasRole("admin") || auth.hasRole("operator");
-
 const projects = ref([]);
 const filterInput = ref("");
 const debouncedFilterInput = refDebounced(filterInput, 200);
 const data_loading = ref(false);
-const showing_all = ref(admin_view);
 
 // initial sorting order
 const sortBy = ref("updated_at");
@@ -199,7 +181,7 @@ const row_items = computed(() => {
 });
 
 // This could've been split into two variables user_columns and admin_columns
-// and concataned based on admin_view
+// and concataned based on user roles
 // but the order of columns would not be preserved
 const columns = [
   { key: "name", sortable: true },
@@ -208,11 +190,11 @@ const columns = [
     sortable: true,
     width: 40,
   },
-  ...(admin_view ? [{ key: "users", sortable: true }] : []),
-  // ...(admin_view ? [{ key: "contacts", sortable: true }] : []),
+  ...(auth.canOperate ? [{ key: "users", sortable: true }] : []),
+  // ...(auth.canOperate ? [{ key: "contacts", sortable: true }] : []),
   { key: "created_at", sortable: true },
   { key: "updated_at", sortable: true },
-  ...(admin_view ? [{ key: "actions", width: 80 }] : []),
+  ...(auth.canOperate ? [{ key: "actions", width: 80 }] : []),
 ];
 
 function customFilteringFn(searchText, { name, users, datasets }) {
@@ -233,7 +215,7 @@ function fetch_projects() {
   data_loading.value = true;
   projectService
     .getAll({
-      forSelf: !showing_all.value,
+      forSelf: !auth.canOperate,
     })
     .then((res) => {
       projects.value = res.data;
@@ -242,8 +224,7 @@ function fetch_projects() {
       data_loading.value = false;
     });
 }
-
-watch(showing_all, fetch_projects, { immediate: true });
+fetch_projects();
 
 // edit modal code
 // template ref binding
