@@ -35,14 +35,7 @@
         <tr>
           <td>Genome Browser</td>
           <td>
-            <va-chip
-              size="small"
-              :color="props.project.browser_enabled ? 'success' : 'secondary'"
-            >
-              <span>
-                {{ props.project.browser_enabled ? "ENABLED" : "DISABLED" }}
-              </span>
-            </va-chip>
+            <BinaryStatusChip :status="props.project.browser_enabled" />
           </td>
         </tr>
         <tr>
