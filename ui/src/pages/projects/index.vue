@@ -1,7 +1,22 @@
 <template>
   <div>
     <!-- Title and admin switch -->
-    <h2 class="text-3xl font-bold mb-4">Projects</h2>
+    <div class="flex items-center mb-4">
+      <span class="text-3xl font-bold flex-none">
+        {{ showing_all ? "All Projects" : "Projects" }}
+      </span>
+
+      <va-button
+        preset="primary"
+        v-if="admin_view"
+        class="ml-4 flex-none"
+        @click="showing_all = !showing_all"
+      >
+        {{ showing_all ? "Show only your projects" : "Show all projects" }}
+      </va-button>
+
+      <!-- {{ createModal }} -->
+    </div>
 
     <!-- search bar and create button -->
     <div class="flex items-center gap-3 mb-3">
@@ -9,8 +24,8 @@
       <div class="flex-1">
         <va-input
           v-model="filterInput"
-          class="w-full"
-          placeholder="Search projects by name, associated dataset names, and user names"
+          class="border-gray-800 border border-solid w-full"
+          placeholder="Search projects by name, associated dataset names, and user names."
           outline
           clearable
         />
@@ -141,6 +156,7 @@ const projects = ref([]);
 const filterInput = ref("");
 const debouncedFilterInput = refDebounced(filterInput, 200);
 const data_loading = ref(false);
+const showing_all = ref(admin_view);
 
 // initial sorting order
 const sortBy = ref("updated_at");
@@ -216,7 +232,9 @@ function customFilteringFn(searchText, { name, users, datasets }) {
 function fetch_projects() {
   data_loading.value = true;
   projectService
-    .getAll()
+    .getAll({
+      forSelf: !showing_all.value,
+    })
     .then((res) => {
       projects.value = res.data;
     })
@@ -224,7 +242,8 @@ function fetch_projects() {
       data_loading.value = false;
     });
 }
-fetch_projects();
+
+watch(showing_all, fetch_projects, { immediate: true });
 
 // edit modal code
 // template ref binding
