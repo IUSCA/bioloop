@@ -309,7 +309,7 @@ router.put(
       },
     });
 
-    const dataset_ids = req.body.user_ids || [];
+    const dataset_ids = req.body.dataset_ids || [];
     const data = dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
       dataset_id,

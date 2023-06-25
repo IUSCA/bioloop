@@ -80,6 +80,18 @@ class projectService {
       });
   }
 
+  setDatasets({ id, dataset_ids }) {
+    return api
+      .put(`/projects/${id}/datasets`, {
+        dataset_ids,
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to update project datasets");
+        return err;
+      });
+  }
+
   // calculateSlug(name) {
   //   return api.get(`/projects/slug/calculate/${name}`);
   // }

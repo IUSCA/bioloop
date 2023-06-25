@@ -19,6 +19,7 @@
                 class="flex-none"
                 show-text
                 :edit="project.datasets?.length > 0"
+                @click="openDatasetsModal"
               />
             </div>
           </va-card-title>
@@ -136,6 +137,13 @@
     :id="project.id"
     @update="handleEditUpdate"
   />
+
+  <!-- Datasets modal -->
+  <ProjectDatasetsModal
+    ref="datasetsModal"
+    :id="project.id"
+    @update="handleEditUpdate"
+  />
 </template>
 
 <script setup>
@@ -181,6 +189,13 @@ const users = computed(() => {
   }));
 });
 
+const datasets = computed(() => {
+  return (project.value.datasets || []).map((obj) => ({
+    ...obj.dataset,
+    assigned_at: obj.assigned_at,
+  }));
+});
+
 // edit modal code
 // template ref binding
 const editModal = ref(null);
@@ -220,6 +235,14 @@ const usersModal = ref(null);
 function openUsersModal() {
   projectFormStore.setUsers(users.value);
   usersModal.value.show();
+}
+
+// dataset modal code
+const datasetsModal = ref(null);
+
+function openDatasetsModal() {
+  projectFormStore.setDatasets(datasets.value);
+  datasetsModal.value.show();
 }
 </script>
 
