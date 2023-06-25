@@ -124,7 +124,11 @@
   </div>
 
   <!-- edit modal -->
-  <EditProjectModal ref="editModal" :id="selectedId" @update="fetch_projects" />
+  <EditProjectInfoModal
+    ref="editModal"
+    :id="selectedId"
+    @update="fetch_projects"
+  />
 
   <!-- create modal -->
   <CreateProjectModal ref="createModal" @update="fetch_projects" />

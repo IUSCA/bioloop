@@ -9,7 +9,7 @@
       </span>
     </div>
 
-    <ProjectUsers
+    <ProjectUsersList
       :users="projectFormStore.users"
       show-remove
       @remove="handleRemove"

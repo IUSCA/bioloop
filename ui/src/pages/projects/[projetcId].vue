@@ -24,7 +24,7 @@
             </div>
           </va-card-title>
           <va-card-content>
-            <ProjectDatasets :datasets="project.datasets" />
+            <ProjectDatasetsTable :datasets="project.datasets" />
           </va-card-content>
         </va-card>
       </div>
@@ -64,7 +64,7 @@
               </div>
             </va-card-title>
             <va-card-content>
-              <ProjectUsers
+              <ProjectUsersList
                 :users="users"
                 v-if="users?.length > 0"
                 show-assigned-date
@@ -118,7 +118,7 @@
   </va-inner-loading>
 
   <!-- edit modal -->
-  <EditProjectModal
+  <EditProjectInfoModal
     ref="editModal"
     :id="project.id"
     @update="handleEditUpdate"
