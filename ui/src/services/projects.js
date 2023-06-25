@@ -5,7 +5,7 @@ import toast from "@/services/toast";
 const auth = useAuthStore();
 
 class projectService {
-  getAll({ forSelf }) {
+  getAll({ forSelf = false } = {}) {
     const username = auth.user.username;
     return (
       forSelf ? api.get(`/projects/${username}/all`) : api.get("/projects/all")
