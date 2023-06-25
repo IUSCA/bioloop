@@ -6,9 +6,7 @@
       class=""
     >
       <va-list-item-section avatar>
-        <!-- <va-avatar size="small">
-          <span class="text-sm uppercase">{{ dataset.type }}</span>
-        </va-avatar> -->
+        <Icon :icon="datasetService.get_icon(dataset.type)" class="text-2xl" />
       </va-list-item-section>
 
       <va-list-item-section>
@@ -29,11 +27,11 @@
         </va-list-item-label>
 
         <va-list-item-label caption class="self-end">
-          Access granted
+          Assigned Date
         </va-list-item-label>
       </va-list-item-section>
 
-      <va-list-item-section v-if="props.showRemove">
+      <va-list-item-section v-if="props.showRemove" class="flex-none">
         <va-button
           preset="secondary"
           icon="delete"
@@ -49,6 +47,7 @@
 
 <script setup>
 import * as datetime from "@/services/datetime";
+import datasetService from "@/services/dataset";
 
 const props = defineProps({
   datasets: {

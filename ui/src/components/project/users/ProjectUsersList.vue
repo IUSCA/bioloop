@@ -27,7 +27,7 @@
         </va-list-item-label>
       </va-list-item-section>
 
-      <va-list-item-section v-if="props.showRemove">
+      <va-list-item-section v-if="props.showRemove" class="flex-none">
         <va-button
           preset="secondary"
           icon="person_remove"
