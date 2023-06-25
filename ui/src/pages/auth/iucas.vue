@@ -56,9 +56,9 @@ import { FingerprintSpinner } from "epic-spinners";
 import { useColors } from "vuestic-ui";
 const { colors } = useColors();
 
-import config from "../../config";
-import { useAuthStore } from "../../stores/auth";
-import authService from "../../services/auth";
+import config from "@/config";
+import { useAuthStore } from "@/stores/auth";
+import authService from "@/services/auth";
 
 const auth = useAuthStore();
 const route = useRoute();

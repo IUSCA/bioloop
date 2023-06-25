@@ -148,13 +148,14 @@
 
 <script setup>
 import projectService from "@/services/projects";
-import toast from "@/services/toast";
+import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps(["projetcId"]);
 const auth = useAuthStore();
 const router = useRouter();
+const toast = useToastStore();
 const projectFormStore = useProjectFormStore();
 
 const admin_view = auth.hasRole("admin") || auth.hasRole("operator");

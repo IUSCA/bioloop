@@ -1,8 +1,8 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
 import jwtDecode from "jwt-decode";
-import authService from "../services/auth";
-import config from "../config";
+import authService from "@/services/auth";
+import config from "@/config";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));

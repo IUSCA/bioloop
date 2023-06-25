@@ -26,7 +26,7 @@
     "pinia": "^2.1.4",
     "vue": "^3.3.4",
     "vue-router": "^4.2.2",
-    "vuestic-ui": "^1.6.6"
+    "vuestic-ui": "^1.7.0"
   },
   "devDependencies": {
     "@iconify-json/mdi": "^1.1.52",
@@ -36,7 +36,7 @@
     "@vue/eslint-config-prettier": "^7.1.0",
     "autoprefixer": "^10.4.14",
     "eslint": "^8.43.0",
-    "eslint-plugin-vue": "^9.15.0",
+    "eslint-plugin-vue": "^9.15.1",
     "material-design-icons-iconfont": "^6.7.0",
     "postcss": "^8.4.24",
     "prettier": "^2.8.8",

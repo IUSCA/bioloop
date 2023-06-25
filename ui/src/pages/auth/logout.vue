@@ -25,7 +25,7 @@
 
 <script setup>
 import config from "@/config";
-import { useAuthStore } from "../../stores/auth";
+import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 
