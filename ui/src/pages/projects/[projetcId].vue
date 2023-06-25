@@ -20,6 +20,7 @@
                 show-text
                 :edit="project.datasets?.length > 0"
                 @click="openDatasetsModal"
+                v-if="auth.canOperate"
               />
             </div>
           </va-card-title>
@@ -41,6 +42,7 @@
                   class="flex-none"
                   edit
                   @click="openModalToEditProject"
+                  v-if="auth.canOperate"
                 />
               </div>
             </va-card-title>
@@ -51,7 +53,7 @@
         </div>
 
         <!-- Access Permissions -->
-        <div class="">
+        <div class="" v-if="auth.canOperate">
           <va-card class="h-full">
             <va-card-title class="">
               <div class="flex flex-nowrap items-center w-full">
@@ -77,7 +79,7 @@
 
       <!-- Maintenance Actions -->
       <div>
-        <va-card>
+        <va-card v-if="auth.canOperate">
           <va-card-title>
             <span class="text-xl"> Maintenance Actions </span>
           </va-card-title>
@@ -158,7 +160,6 @@ const router = useRouter();
 const toast = useToastStore();
 const projectFormStore = useProjectFormStore();
 
-const admin_view = auth.hasRole("admin") || auth.hasRole("operator");
 const project = ref({});
 const data_loading = ref(false);
 
@@ -167,7 +168,7 @@ function fetch_project() {
   return projectService
     .getById({
       id: project.value?.id || props.projetcId,
-      forSelf: !admin_view,
+      forSelf: !auth.canOperate,
     })
     .then((res) => {
       project.value = res.data;

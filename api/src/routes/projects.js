@@ -106,7 +106,8 @@ router.get(
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(projects);
+    // don't know why projects.map(req.permission.filter) wouldn't work
+    res.json(projects.map((p) => req.permission.filter(p)));
   }),
 );
 
@@ -139,7 +140,7 @@ router.get(
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(projects);
+    res.json(req.permission.filter(projects));
   }),
 );
 
