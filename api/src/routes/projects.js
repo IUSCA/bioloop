@@ -187,6 +187,76 @@ router.post(
   }),
 );
 
+router.post(
+  '/merge/:src',
+  isPermittedTo('update', false),
+  validate([
+    body('dataset_ids').exists(),
+    body('delete_merged').toBoolean().default(false),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = merge multiple projects into a source project
+    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    */
+
+    // get source project
+    const source_porject = await prisma.project.findFirstOrThrow({
+      where: {
+        id: req.params.src,
+      },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
+    });
+
+    // get target projects
+    const target_projects = await prisma.project.findMany({
+      where: {
+        id: {
+          in: req.body.dataset_ids,
+        },
+      },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
+    });
+
+    // assemble all unique dataset_ids associated with the target projects
+    const target_dataset_ids = new Set(_.flatten(
+      target_projects.map((p) => p.datasets.map((obj) => obj.dataset.id)),
+    ));
+
+    // find dataset ids which are not already associated with the source project
+    const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
+
+    const dataset_ids_to_add = [
+      ...setDifference(target_dataset_ids, new Set(source_dataset_ids)),
+    ];
+
+    // associate these with source project
+    const data = dataset_ids_to_add.map((dataset_id) => ({
+      project_id: req.params.src,
+      dataset_id,
+    }));
+    const add_assocs = prisma.project_dataset.createMany({
+      data,
+    });
+
+    // if delete merged is true, delete targer projects as well as its user and dataset associations
+    if (req.body.delete_merge) {
+      const deletes = prisma.project.deleteMany({
+        where: {
+          id: {
+            in: req.body.dataset_ids,
+          },
+        },
+      });
+      await prisma.$transaction([add_assocs, deletes]);
+    } else {
+      await add_assocs;
+    }
+
+    res.send();
+  }),
+);
+
 router.put(
   '/:id/users',
   isPermittedTo('update', false),

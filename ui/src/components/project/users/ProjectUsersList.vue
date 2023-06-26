@@ -1,6 +1,12 @@
 <template>
-  <va-list class="flex flex-col gap-3">
-    <va-list-item v-for="(user, index) in props.users" :key="index" class="">
+  <va-list
+    :class="['grid', 'gap-3', props.wrap ? 'grid-cols-2' : 'grid-cols-1']"
+  >
+    <va-list-item
+      v-for="(user, index) in props.users"
+      :key="index"
+      class="col-span-1"
+    >
       <va-list-item-section avatar>
         <va-avatar :color="stringToRGB(user.name || '')" size="small">
           <span class="text-sm uppercase">{{ initials(user.name) }}</span>
@@ -55,6 +61,10 @@ const props = defineProps({
     default: false,
   },
   showAssignedDate: {
+    type: Boolean,
+    default: false,
+  },
+  wrap: {
     type: Boolean,
     default: false,
   },

@@ -19,7 +19,10 @@
       <span v-if="name && isValid"> /projects/{{ slug }} </span>
     </span> -->
 
-      <span class="text-sm va-text-secondary flex items-center gap-2 px-1 mt-2">
+      <span
+        class="text-sm va-text-secondary flex items-center gap-2 px-1 mt-2"
+        v-if="showSlugWarning"
+      >
         <i-mdi-alert class="flex-none" style="color: var(--va-warning)" />
         <span class="flex-none">
           Altering the project name could potentially change the URL alias.

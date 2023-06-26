@@ -80,9 +80,9 @@ const rows = computed(() => {
 
 const columns = [
   { key: "name", sortable: true, sortingOptions: ["desc", "asc", null] },
-  { key: "stage", width: "50px", thAlign: "center", tdAlign: "center" },
-  { key: "download", width: "50px", thAlign: "center", tdAlign: "center" },
-  { key: "share", width: "50px", thAlign: "center", tdAlign: "center" },
+  { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
+  { key: "download", width: "70px", thAlign: "center", tdAlign: "center" },
+  { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
   { key: "type", sortable: true },
   {
     key: "updated_at",
