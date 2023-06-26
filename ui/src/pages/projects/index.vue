@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- Title and admin switch -->
+    <!-- Title -->
     <h2 class="text-3xl font-bold mb-4">Projects</h2>
 
     <!-- search bar and create button -->
@@ -22,7 +22,7 @@
           icon="add"
           class="px-1"
           color="success"
-          @click="openModalToCreateProject"
+          @click="router.push('/projects/new')"
         >
           Create Project
         </va-button>
@@ -116,7 +116,7 @@
   />
 
   <!-- create modal -->
-  <CreateProjectModal ref="createModal" @update="fetch_projects" />
+  <!-- <CreateProjectModal ref="createModal" @update="fetch_projects" /> -->
 
   <!-- delete modal -->
   <DeleteProjectModal
@@ -134,6 +134,7 @@ import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
+const router = useRouter();
 
 const projects = ref([]);
 const filterInput = ref("");
@@ -239,11 +240,11 @@ function openModalToEditProject(rowData) {
 }
 
 // create modal code
-const createModal = ref(null);
+// const createModal = ref(null);
 
-function openModalToCreateProject() {
-  createModal.value.show();
-}
+// function openModalToCreateProject() {
+//   createModal.value.show();
+// }
 
 // delete modal code
 // template ref binding

@@ -7,7 +7,10 @@
     @ok="handleOk"
     @close="hide"
   >
-    <va-inner-loading :loading="loading">
+    <va-inner-loading
+      :loading="loading"
+      class="sm:w-96 sm:min-h-[50vh] sm:max-h-[65vh]"
+    >
       <ProjectUsersForm />
     </va-inner-loading>
   </va-modal>

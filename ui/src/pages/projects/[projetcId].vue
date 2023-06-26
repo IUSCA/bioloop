@@ -31,7 +31,7 @@
       </div>
 
       <!-- General Info and Access Permissions -->
-      <div class="grid gird-cols-1 lg:grid-cols-2 gap-3">
+      <div class="grid gird-cols-1 md:grid-cols-2 gap-3">
         <!-- General Info -->
         <div class="">
           <va-card class="general-info">
@@ -69,7 +69,8 @@
               <ProjectUsersList
                 :users="users"
                 v-if="users?.length > 0"
-                show-assigned-date
+                :show-assigned-date="users?.length < 10"
+                :wrap="users?.length >= 10"
               />
               <div v-else>This project has no associated users</div>
             </va-card-content>

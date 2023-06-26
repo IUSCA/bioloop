@@ -6,7 +6,7 @@
     fixed-layout
     hide-default-actions
   >
-    <va-inner-loading :loading="loading">
+    <va-inner-loading :loading="loading" class="sm:w-96">
       <ProjectInfoForm />
     </va-inner-loading>
     <template #footer>

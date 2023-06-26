@@ -7,11 +7,9 @@
     hide-default-actions
   >
     <va-inner-loading :loading="loading">
-      <div class="h-[calc(80vh)] w-full">
-        <CreateProjectStepper />
-      </div>
+      <div class="h-[calc(80vh)] w-full"></div>
     </va-inner-loading>
-    <!-- <template #footer>
+    <template #footer>
       <div class="flex w-full justify-center gap-5">
         <va-button preset="secondary" class="flex-none" @click="hide">
           Cancel
@@ -24,7 +22,7 @@
           Create
         </va-button>
       </div>
-    </template> -->
+    </template>
   </va-modal>
 </template>
 

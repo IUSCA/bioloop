@@ -1,9 +1,9 @@
 <template>
-  <div class="md:w-[400px] h-[calc(100vh-180px)] md:max-h-[30rem] space-y-4">
+  <div class="space-y-4">
     <DatasetSelect @select="handleSelect" />
 
     <div class="flex flex-row justify-between px-1">
-      <span class="text-lg font-bold tracking-wide">Assigned Datasets</span>
+      <span class="text-lg font-bold tracking-wide">Datasets to assign</span>
       <span class="text-right"
         >{{ maybePluralize(projectFormStore.datasets.length, "dataset") }}
       </span>

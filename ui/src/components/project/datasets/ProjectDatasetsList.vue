@@ -1,9 +1,11 @@
 <template>
-  <va-list class="flex flex-col gap-3">
+  <va-list
+    :class="['grid', 'gap-3', props.wrap ? 'grid-cols-2' : 'grid-cols-1']"
+  >
     <va-list-item
       v-for="(dataset, index) in props.datasets"
       :key="index"
-      class=""
+      class="col-span-1"
     >
       <va-list-item-section avatar>
         <Icon :icon="datasetService.get_icon(dataset.type)" class="text-2xl" />
@@ -59,6 +61,10 @@ const props = defineProps({
     default: false,
   },
   showAssignedDate: {
+    type: Boolean,
+    default: false,
+  },
+  wrap: {
     type: Boolean,
     default: false,
   },

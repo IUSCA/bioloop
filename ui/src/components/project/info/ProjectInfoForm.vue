@@ -1,8 +1,5 @@
 <template>
-  <va-form
-    class="flex flex-col gap-6 h-[26rem] w-[26rem] justify-start"
-    ref="formRef"
-  >
+  <va-form class="flex flex-col gap-6 w-full justify-start" ref="formRef">
     <div class="flex-none">
       <va-input
         class="w-full"
@@ -21,7 +18,7 @@
 
       <span
         class="text-sm va-text-secondary flex items-center gap-2 px-1 mt-2"
-        v-if="showSlugWarning"
+        v-if="props.showSlugWarning"
       >
         <i-mdi-alert class="flex-none" style="color: var(--va-warning)" />
         <span class="flex-none">
@@ -58,6 +55,13 @@ import { useForm } from "vuestic-ui";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { storeToRefs } from "pinia";
 
+const props = defineProps({
+  showSlugWarning: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const projectFormStore = useProjectFormStore();
 const { name, description, browser_enabled, funding } =
   storeToRefs(projectFormStore);
@@ -65,21 +69,4 @@ const { name, description, browser_enabled, funding } =
 
 // const { isValid } = useForm("formRef");
 projectFormStore.form = useForm("formRef");
-
-// watchDebounced(
-//   name,
-//   () => {
-//     if (name.value) {
-//       projectService
-//         .calculateSlug(name.value)
-//         .then((res) => {
-//           slug.value = res.data.slug;
-//         })
-//         .catch((err) => {
-//           console.error(err);
-//         });
-//     }
-//   },
-//   { debounce: 300, maxWait: 500, immediate: true }
-// );
 </script>
