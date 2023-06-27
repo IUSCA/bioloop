@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.get(
   '/:username',
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const user = await userService.findActiveUserBy('username', req.params.username);
@@ -27,10 +27,10 @@ router.get(
 
 router.get(
   '/',
+  isPermittedTo('read'),
   validate([
     addSortSantizer(query('sort').default('username:asc')),
   ]),
-  isPermittedTo('read', false),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const users = await userService.findAll(req.query.sort);
@@ -41,7 +41,7 @@ router.get(
 
 router.post(
   '/',
-  isPermittedTo('create', false),
+  isPermittedTo('create'),
   validate([
     body('username').isLength({ max: 100 }),
     body('email').isEmail(),
@@ -62,7 +62,7 @@ router.post(
 
 router.patch(
   '/:username',
-  isPermittedTo('update'),
+  isPermittedTo('update', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
 
@@ -107,7 +107,7 @@ router.patch(
 
 router.delete(
   '/:username',
-  isPermittedTo('delete'),
+  isPermittedTo('delete', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const deletedUser = await userService.softDeleteUser(req.params.username);

@@ -11,15 +11,18 @@ const _ = require('lodash/fp');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
+const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 
+const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // stats - UI
 router.get(
   '/stats',
+  isPermittedTo('read'),
   validate([
     query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
   ]),
@@ -102,6 +105,7 @@ const assoc_body_schema = {
 };
 router.post(
   '/associations',
+  isPermittedTo('update'),
   validate([
     checkSchema(assoc_body_schema),
   ]),
@@ -118,6 +122,7 @@ router.post(
 // get all - worker + UI
 router.get(
   '/',
+  isPermittedTo('read'),
   validate([
     query('deleted').toBoolean().optional(),
     query('processed').toBoolean().optional(),
@@ -148,6 +153,7 @@ router.get(
 // get by id - worker + UI
 router.get(
   '/:id',
+  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
     query('files').toBoolean().default(false),
@@ -176,6 +182,7 @@ router.get(
 // create - worker
 router.post(
   '/',
+  isPermittedTo('create'),
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
@@ -224,6 +231,7 @@ router.post(
 // modify - worker
 router.patch(
   '/:id',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
     body('du_size').optional().notEmpty().bail()
@@ -268,6 +276,7 @@ router.patch(
 // add files to dataset - worker
 router.post(
   '/:id/files',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
   ]),
@@ -294,6 +303,7 @@ router.post(
 // add workflow ids to dataset
 router.post(
   '/:id/workflows',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
     body('workflow_id').notEmpty(),
@@ -314,6 +324,7 @@ router.post(
 // add state to dataset
 router.post(
   '/:id/states',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
     body('state').notEmpty(),
@@ -335,6 +346,7 @@ router.post(
 // delete - UI
 router.delete(
   '/:id',
+  isPermittedTo('delete'),
   validate([
     param('id').isInt().toInt(),
     query('soft_delete').toBoolean().default(true),
@@ -369,6 +381,7 @@ router.delete(
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
     param('wf').isIn(['stage', 'integrated']),
@@ -421,6 +434,7 @@ const report_storage = multer.diskStorage({
 // upload a report - worker
 router.put(
   '/:id/report',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
   ]),
@@ -436,6 +450,7 @@ router.put(
 
 router.get(
   '/:id/files',
+  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
     query('basepath').default(''),
@@ -455,6 +470,7 @@ router.get(
 
 router.get(
   '/:id/filetree',
+  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
   ]),

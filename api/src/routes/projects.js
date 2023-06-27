@@ -48,7 +48,7 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
 
 router.get(
   '/all',
-  isPermittedTo('read', false),
+  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects.
@@ -87,7 +87,7 @@ router.get(
 
 router.get(
   '/:username/all',
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects associated with a username
@@ -113,7 +113,7 @@ router.get(
 
 router.get(
   '/:username/:id',
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project associated with a username
@@ -146,7 +146,7 @@ router.get(
 
 router.post(
   '/',
-  isPermittedTo('create', false),
+  isPermittedTo('create'),
   validate([
     body('name').isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),
@@ -189,7 +189,7 @@ router.post(
 
 router.post(
   '/merge/:src',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   validate([
     body('dataset_ids').exists(),
     body('delete_merged').toBoolean().default(false),
@@ -259,7 +259,7 @@ router.post(
 
 router.put(
   '/:id/users',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   validate([
     body('user_ids').exists(),
   ]),
@@ -312,7 +312,7 @@ router.put(
 
 router.put(
   '/:id/contacts',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate contacts / external users to a project
@@ -359,7 +359,7 @@ router.put(
 
 router.put(
   '/:id/datasets',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
@@ -400,7 +400,7 @@ router.put(
 
 router.patch(
   '/:id',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   validate([
     body('name').optional().isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),
@@ -447,7 +447,7 @@ router.patch(
 
 router.delete(
   '/:id',
-  isPermittedTo('delete', false),
+  isPermittedTo('delete'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = delete a project and all its associations

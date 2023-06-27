@@ -13,8 +13,7 @@ const prisma = new PrismaClient();
 
 router.get(
   '/',
-  isPermittedTo('read', false),
-
+  isPermittedTo('read'),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
@@ -33,8 +32,7 @@ router.get(
 
 router.get(
   '/:id',
-  isPermittedTo('read', false),
-
+  isPermittedTo('read'),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
@@ -50,8 +48,7 @@ router.get(
 
 router.post(
   '/:id/pause',
-  isPermittedTo('update', false),
-
+  isPermittedTo('update'),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
@@ -63,8 +60,7 @@ router.post(
 
 router.post(
   '/:id/resume',
-  isPermittedTo('update', false),
-
+  isPermittedTo('update'),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
@@ -76,8 +72,7 @@ router.post(
 
 router.delete(
   '/:id',
-  isPermittedTo('delete', false),
-
+  isPermittedTo('delete'),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
