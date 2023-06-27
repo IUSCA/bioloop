@@ -1,6 +1,6 @@
 <template>
   <!-- Title -->
-  <h2 class="text-3xl font-bold mb-4">Projects: Create New</h2>
+  <h2 class="text-3xl mb-4">Projects: Create New</h2>
 
   <!-- Form -->
   <div class="w-full flex justify-center">
@@ -27,4 +27,5 @@ onUnmounted(() => {
 <route lang="yaml">
 meta:
   title: Create Project
+  requiresRoles: ["operator", "admin"]
 </route>

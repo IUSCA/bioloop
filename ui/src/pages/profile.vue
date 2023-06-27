@@ -1,5 +1,5 @@
 <template>
-  <h2 class="text-4xl font-bold">Profile</h2>
+  <h2 class="text-3xl font-bold">Profile</h2>
   <div>
     <div class="py-3"></div>
     <va-card>
@@ -82,3 +82,8 @@ const switchValue = computed({
 
 const profile = auth.user;
 </script>
+
+<route lang="yaml">
+meta:
+  title: Profile
+</route>

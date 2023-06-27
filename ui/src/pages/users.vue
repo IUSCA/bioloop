@@ -1,5 +1,5 @@
 <template>
-  <h2 class="text-3xl font-bold mb-4">Registered Users</h2>
+  <h2 class="text-3xl mb-4">Registered Users</h2>
 
   <!-- search bar and create button -->
   <div class="flex items-center gap-3 mb-3">
