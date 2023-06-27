@@ -448,7 +448,7 @@ router.get(
       base: req.query.basepath,
     });
     // 1 week
-    res.set('Cache-control', 'private, max-age=604800, immutable');
+    res.set('Cache-control', 'private, max-age=604800');
     res.json(files);
   }),
 );

@@ -3,7 +3,7 @@
     <div class="w-3/4 flex-none">
       <!-- BreadCrumbs Navigation -->
       <!-- border border-solid border-slate-400 -->
-      <div class="pl-1">
+      <div class="">
         <va-breadcrumbs>
           <va-breadcrumbs-item
             class="text-2xl cursor-pointer hover:bg-slate-300 rounded-full p-2"
@@ -28,21 +28,41 @@
         </va-breadcrumbs>
       </div>
 
+      <!-- filter input and number of results -->
+      <div class="grid grid-cols-12 gap-3 mt-3">
+        <!-- search bar -->
+        <div class="col-span-10">
+          <va-input
+            v-model="filterInput"
+            class="w-full"
+            placeholder="Search current directory"
+            outline
+            clearable
+          />
+        </div>
+
+        <!-- filter -->
+        <div class="col-span-2 flex items-center">
+          {{ maybePluralize(rows.length, "item") }}
+        </div>
+      </div>
+
       <!-- File Table -->
-      <div class="mt-3">
+      <div class="">
         <va-data-table
-          :items="filelist"
+          :items="rows"
           :columns="columns"
           v-model:sort-by="sortBy"
           v-model:sorting-order="sortingOrder"
           :loading="data_loading"
+          :filter="filterInput"
           hoverable
           clickable
           @row:click="onClick"
           virtual-scroller
           sticky-header
-          style="height: calc(100vh - 9rem)"
-          class="p-1"
+          style="height: calc(100vh - 11rem)"
+          class="py-1"
         >
           <template #cell(size)="{ rowData }">
             <span v-if="rowData.filetype !== 'directory'">
@@ -85,17 +105,18 @@
 <script setup>
 // import * as datetime from "@/services/datetime";
 import datasetService from "@/services/dataset";
-import { formatBytes, cmp } from "@/services/utils";
+import { formatBytes, cmp, maybePluralize } from "@/services/utils";
 
 const props = defineProps({ datasetId: String });
 
 const filelist = ref([]);
 const pwd = ref("");
+const filterInput = ref("");
 const columns = [
   { key: "name", sortable: true },
   // { key: "lastModified", label: "Last Modified", sortable: true },
-  { key: "size", sortable: true, sortingFn: cmp },
-  { key: "filetype", label: "type", sortable: true },
+  { key: "size", sortable: true, sortingFn: cmp, width: "120px" },
+  { key: "filetype", label: "type", sortable: true, width: "120px" },
   { key: "md5" },
 ];
 
@@ -130,6 +151,10 @@ const path_items = computed(() => {
     rel_path: parts.slice(0, i + 1).join("/"),
   }));
   return result;
+});
+
+const rows = computed(() => {
+  return filelist.value.filter((file) => file.name.includes(filterInput.value));
 });
 
 function filename(path) {
