@@ -115,9 +115,9 @@ const filterInput = ref("");
 const columns = [
   { key: "name", sortable: true },
   // { key: "lastModified", label: "Last Modified", sortable: true },
-  { key: "size", sortable: true, sortingFn: cmp, width: "120px" },
-  { key: "filetype", label: "type", sortable: true, width: "120px" },
-  { key: "md5" },
+  { key: "size", sortable: true, sortingFn: cmp, width: "100px" },
+  { key: "filetype", label: "type", sortable: true, width: "100px" },
+  { key: "md5", width: "250px" },
 ];
 
 // initial sorting order
