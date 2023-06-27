@@ -17,7 +17,7 @@
 import {
   vsiFileExtensionsToIcons,
   vsiFileNamesToIcons,
-} from "@/services/vsiFileIconName";
+} from "./vsiFileIconName";
 
 const props = defineProps(["filename"]);
 

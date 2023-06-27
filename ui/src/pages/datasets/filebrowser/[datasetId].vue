@@ -1,5 +1,12 @@
 <template>
-  <div>{{ dataset.name }}</div>
+  <div>
+    <span class="text-xl capitalize" v-if="dataset.type">
+      {{ dataset.type.replace("_", " ").toLowerCase() }}:
+    </span>
+    <span class="text-2xl"> {{ dataset.name }} Files</span>
+    <va-divider />
+  </div>
+  <FileBrowser :dataset-id="props.datasetId" />
 </template>
 
 <script setup>
@@ -21,13 +28,9 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
     if (err?.response?.status == 404) toast.error("Could not find the dataset");
     else toast.error("Something went wrong. Could not fetch datatset");
   });
-
-DatasetService.list_files({ id: props.datasetId, basepath: "dir1/" })
-  .then((res) => {
-    console.log(res.data);
-  })
-  .catch((err) => {
-    console.error(err);
-    toast.error("Something went wrong. Could not fetch datatset files");
-  });
 </script>
+
+<route lang="yaml">
+meta:
+  title: File Browser
+</route>

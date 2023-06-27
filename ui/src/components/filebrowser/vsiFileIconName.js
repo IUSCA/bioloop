@@ -45,7 +45,7 @@ export const vsiFileExtensionsToIcons = {
   cfm: "cfm2",
   clojure: "clojure",
   clojurescript: "clojurescript",
-  yml: "cloudfoundry",
+  yml: "yaml",
   cmake: "cmake",
   "CMakeCache.txt": "cmake",
   cbl: "cobol",

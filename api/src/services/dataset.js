@@ -252,13 +252,16 @@ async function files_ls({ dataset_id, base = '' }) {
   `;
 
   // both queries are run asynchronously, wait for them to complete
-  const files = await filesPromise;
+  const files = (await filesPromise).map(
+    (file) => Object.assign(file, { size: parseInt(file.size, 10) }),
+  );
 
   // for directories, only names are returned
   // transform them to have similar schema as files
   const directories = (await directoriesPromise).map((dir) => ({
     path: path.join(base_path, dir.name),
     filetype: 'directory',
+    size: 0,
   }));
 
   // return a single list of files and directories

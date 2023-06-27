@@ -2,7 +2,7 @@
   <va-inner-loading :loading="loading">
     <!-- Title -->
     <div>
-      <span class="text-3xl capitalize" v-if="dataset.type">
+      <span class="text-2xl capitalize" v-if="dataset.type">
         {{ dataset.type.replace("_", " ").toLowerCase() }} :
       </span>
       <span class="text-3xl"> {{ dataset.name }} </span>

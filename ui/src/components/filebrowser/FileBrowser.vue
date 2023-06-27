@@ -41,17 +41,19 @@
           @row:click="onClick"
           virtual-scroller
           sticky-header
-          style="height: calc(100vh - 11rem)"
+          style="height: calc(100vh - 9rem)"
           class="p-1"
         >
-          <template #cell(size)="{ source }">
-            <span>{{ source != null ? formatBytes(source) : "" }}</span>
+          <template #cell(size)="{ rowData }">
+            <span v-if="rowData.filetype !== 'directory'">
+              {{ rowData.size != null ? formatBytes(rowData.size) : "" }}
+            </span>
           </template>
 
           <template #cell(name)="{ rowData }">
             <div class="flex items-center gap-1">
               <Icon
-                v-if="rowData.isDir"
+                v-if="rowData.filetype === 'directory'"
                 icon="mdi-folder"
                 class="text-2xl flex-none text-gray-700"
               />
@@ -61,8 +63,18 @@
             </div>
           </template>
 
-          <template #cell(lastModified)="{ source }">
-            <span>{{ moment(source).utc().format("MMM DD, YYYY") }}</span>
+          <!-- <template #cell(lastModified)="{ source }">
+            <span>{{ datetime.date(source) }}</span>
+          </template> -->
+
+          <template #cell(md5)="{ source }">
+            <span class="text-sm"> {{ source }} </span>
+          </template>
+
+          <template #cell(filetype)="{ source }">
+            <span>
+              {{ source.startsWith(".") ? source.slice(1) : source }}
+            </span>
           </template>
         </va-data-table>
       </div>
@@ -71,35 +83,44 @@
 </template>
 
 <script setup>
-import moment from "moment";
-import dirListService from "@/services/dir_list";
-import { formatBytes } from "@/services/utils";
+// import * as datetime from "@/services/datetime";
+import datasetService from "@/services/dataset";
+import { formatBytes, cmp } from "@/services/utils";
 
-// const props = defineProps({ id: String });
-
-const route = useRoute();
-// const router = useRouter();
-
-console.log({
-  app_id: route.query.app_id,
-  path: route.query.path,
-});
+const props = defineProps({ datasetId: String });
 
 const filelist = ref([]);
 const pwd = ref("");
 const columns = [
   { key: "name", sortable: true },
-  { key: "lastModified", label: "Last Modified", sortable: true },
-  { key: "size", sortable: true },
+  // { key: "lastModified", label: "Last Modified", sortable: true },
+  { key: "size", sortable: true, sortingFn: cmp },
+  { key: "filetype", label: "type", sortable: true },
+  { key: "md5" },
 ];
 
 // initial sorting order
-const sortBy = ref("name");
+const sortBy = ref("size");
 const sortingOrder = ref("asc");
 
 const data_loading = ref(false);
 
 const path_items = computed(() => {
+  /**
+   * if pwd is 'dir1/dir2/dir3/file.txt'
+   * then path_items is
+   * [{
+   *    name: 'dir1',
+   *    rel_path: 'dir1'
+   * }, {
+   *    name: 'dir2',
+   *    rel_path: 'dir1/dir2'
+   * }, {
+   *    name: 'dir3',
+   *    rel_path: 'dir1/dir2/dir3'
+   * }]
+   */
+
   if (pwd.value === "") {
     return [];
   }
@@ -108,20 +129,30 @@ const path_items = computed(() => {
     name: t,
     rel_path: parts.slice(0, i + 1).join("/"),
   }));
-  console.log({
-    pwd: pwd.value,
-    parts,
-    result,
-  });
   return result;
 });
 
+function filename(path) {
+  return path.split("/").slice(-1)[0];
+}
+
+function extension(name) {
+  return name.split(".").slice(-1)[0];
+}
+
 function get_filelist(path) {
   data_loading.value = true;
-  dirListService
-    .getListing(path)
+  datasetService
+    .list_files({ id: props.datasetId, basepath: path })
     .then((res) => {
-      filelist.value = res.data;
+      filelist.value = res.data.map((obj) => {
+        const name = filename(obj.path);
+        return {
+          ...obj,
+          name,
+          filetype: obj.filetype || `.${extension(name)}`,
+        };
+      });
     })
     .catch((err) => {
       console.log(err);
@@ -141,15 +172,9 @@ watch(
 
 function onClick(event) {
   const row = event.item;
-  console.log("click", row.name, row.isDir, row.path);
 
-  if (row.isDir) {
+  if (row.filetype === "directory") {
     pwd.value = row.path;
   }
 }
 </script>
-
-<route lang="yaml">
-meta:
-  title: Dashboard
-</route>
