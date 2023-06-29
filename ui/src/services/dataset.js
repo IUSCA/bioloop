@@ -68,6 +68,12 @@ class DatasetService {
   update({ id, updated_data }) {
     return api.patch(`/datasets/${id}`, updated_data);
   }
+
+  get_icon(dataset_type) {
+    return dataset_type === "RAW_DATA"
+      ? "mdi-dna"
+      : "mdi-package-variant-closed";
+  }
 }
 
 export default new DatasetService();

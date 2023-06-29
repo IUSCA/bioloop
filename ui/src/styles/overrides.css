@@ -3,9 +3,16 @@
   --va-popover-content-font-size: 0.8rem;
   --va-popover-content-padding: 0.5rem 0.5rem;
   --va-popover-content-opacity: 0.9;
+  --va-input-bordered-color: rgb(107 114 128);
+  --va-list-item-label-caption-color: rgb(148 163 184);
 }
 
 input.va-input__content__input {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+textarea.va-input__content__input {
   padding-top: 5px;
   padding-bottom: 5px;
 }
@@ -17,7 +24,7 @@ div.va-select-content__autocomplete {
 
 div.inner-loading__overlay {
   z-index: 1;
-  background-color: rgba(255,255,255,0.6)
+  background-color: rgba(255,255,255,0.6);
 }
 
 div.va-modal__title {

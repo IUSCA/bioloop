@@ -1,8 +1,9 @@
 import api from "./api";
 import { useAuthStore } from "@/stores/auth";
-import toast from "@/services/toast";
+import { useToastStore } from "@/stores/toast";
 
 const auth = useAuthStore();
+const toast = useToastStore();
 
 class projectService {
   getAll({ forSelf }) {
@@ -76,6 +77,18 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to update project users");
+        return err;
+      });
+  }
+
+  setDatasets({ id, dataset_ids }) {
+    return api
+      .put(`/projects/${id}/datasets`, {
+        dataset_ids,
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to update project datasets");
         return err;
       });
   }

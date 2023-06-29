@@ -1,15 +1,18 @@
 <template>
-  <va-data-table :items="rows" :columns="columns" :loading="data_loading">
+  <va-data-table :items="rows" :columns="columns">
     <template #cell(name)="{ rowData }">
       <router-link :to="`/datasets/${rowData.id}`" class="va-link">
         {{ rowData.name }}
       </router-link>
     </template>
 
+    <template #cell(type)="{ value }">
+      <DatasetType :type="value" class="" show-icon />
+    </template>
+
     <template #cell(stage)="{ rowData }">
       <div class="">
         <va-button
-          size="large"
           class="shadow"
           preset="primary"
           color="info"
@@ -22,7 +25,6 @@
     <template #cell(download)="{ rowData }">
       <div class="">
         <va-button
-          size="large"
           class="shadow"
           preset="primary"
           color="info"
@@ -35,7 +37,6 @@
     <template #cell(share)="{ rowData }">
       <div class="">
         <va-button
-          size="large"
           class="shadow"
           preset="primary"
           color="info"
@@ -45,7 +46,7 @@
       </div>
     </template>
 
-    <template #cell(num_genome_files)="{ rowData }">
+    <template #cell(metadata)="{ rowData }">
       <maybe :data="rowData?.metadata?.num_genome_files" />
     </template>
 
@@ -54,20 +55,14 @@
     </template>
 
     <template #cell(updated_at)="{ value }">
-      <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
-    </template>
-
-    <template #cell(assigned_at)="{ value }">
-      <span>{{ moment(value).utc().format("YYYY-MM-DD") }}</span>
+      <span>{{ datetime.date(value) }}</span>
     </template>
   </va-data-table>
 </template>
 
 <script setup>
-import moment from "moment";
-import { formatBytes } from "@/services/utils";
-// import DatasetService from "@/services/dataset";
-// import toast from "@/services/toast";
+import * as datetime from "@/services/datetime";
+import { formatBytes, cmp } from "@/services/utils";
 
 const props = defineProps({
   datasets: {
@@ -75,10 +70,6 @@ const props = defineProps({
     default: () => [],
   },
 });
-
-// const data_loading = ref(false);
-
-console.log(props.datasets);
 
 const rows = computed(() => {
   return props.datasets.map((obj) => ({
@@ -89,29 +80,28 @@ const rows = computed(() => {
 
 const columns = [
   { key: "name", sortable: true, sortingOptions: ["desc", "asc", null] },
-  { key: "stage", width: "50px", thAlign: "center", tdAlign: "center" },
-  { key: "download", width: "50px", thAlign: "center", tdAlign: "center" },
-  { key: "share", width: "50px", thAlign: "center", tdAlign: "center" },
+  { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
+  { key: "download", width: "70px", thAlign: "center", tdAlign: "center" },
+  { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
+  { key: "type", sortable: true },
   {
     key: "updated_at",
     label: "last updated",
     sortable: true,
-    sortingOptions: ["desc", "asc", null],
   },
   {
-    key: "num_genome_files",
+    key: "metadata",
     label: "data files",
     sortable: true,
-    sortingOptions: ["desc", "asc", null],
+
+    sortingFn: (a, b) => cmp(a?.num_genome_files, b?.num_genome_files),
   },
   {
     key: "du_size",
     label: "size",
     sortable: true,
-    sortingOptions: ["desc", "asc", null],
-    width: 80,
+
     sortingFn: (a, b) => a - b,
   },
-  { key: "assigned_at", sortable: true, label: "assigned on" },
 ];
 </script>

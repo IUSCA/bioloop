@@ -1,5 +1,5 @@
 import api from "./api";
-import config from "../config";
+import config from "@/config";
 
 class AuthService {
   casVerify(casTicket) {

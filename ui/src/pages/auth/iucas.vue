@@ -33,11 +33,18 @@
     </div>
     <div v-if="validation_loading" class="max-w-lg">
       <va-card>
-        <va-card-content class="grid grid-cols-6 text-center">
-          <va-inner-loading loading class="col-span-1" />
-          <span class="text-xl font-bold tracking-wide col-span-5">
-            Logging in ...
+        <va-card-content class="flex items-center gap-2 justify-center">
+          <!-- <va-inner-loading loading class="col-span-1" /> -->
+          <span class="text-2xl text-slate-500 tracking-wide flex-none">
+            Logging in
           </span>
+          <fingerprint-spinner
+            class="flex-none"
+            :animation-duration="2000"
+            :dot-size="10"
+            :dots-num="3"
+            :color="colors.primary"
+          />
         </va-card-content>
       </va-card>
     </div>
@@ -45,9 +52,13 @@
 </template>
 
 <script setup>
-import config from "../../config";
-import { useAuthStore } from "../../stores/auth";
-import authService from "../../services/auth";
+import { FingerprintSpinner } from "epic-spinners";
+import { useColors } from "vuestic-ui";
+const { colors } = useColors();
+
+import config from "@/config";
+import { useAuthStore } from "@/stores/auth";
+import authService from "@/services/auth";
 
 const auth = useAuthStore();
 const route = useRoute();

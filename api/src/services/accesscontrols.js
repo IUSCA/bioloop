@@ -38,7 +38,7 @@ const grantsObject = {
       'update:own': ['*'],
     },
     projects: {
-      'read:own': ['*'],
+      'read:own': ['*', '!users'],
     },
   },
 

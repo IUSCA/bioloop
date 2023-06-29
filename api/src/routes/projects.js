@@ -7,6 +7,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
+const { setDifference } = require('../utils');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -105,7 +106,8 @@ router.get(
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(projects);
+    // don't know why projects.map(req.permission.filter) wouldn't work
+    res.json(projects.map((p) => req.permission.filter(p)));
   }),
 );
 
@@ -138,7 +140,7 @@ router.get(
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(projects);
+    res.json(req.permission.filter(projects));
   }),
 );
 
@@ -185,9 +187,82 @@ router.post(
   }),
 );
 
+router.post(
+  '/merge/:src',
+  isPermittedTo('update', false),
+  validate([
+    body('dataset_ids').exists(),
+    body('delete_merged').toBoolean().default(false),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = merge multiple projects into a source project
+    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    */
+
+    // get source project
+    const source_porject = await prisma.project.findFirstOrThrow({
+      where: {
+        id: req.params.src,
+      },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
+    });
+
+    // get target projects
+    const target_projects = await prisma.project.findMany({
+      where: {
+        id: {
+          in: req.body.dataset_ids,
+        },
+      },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
+    });
+
+    // assemble all unique dataset_ids associated with the target projects
+    const target_dataset_ids = new Set(_.flatten(
+      target_projects.map((p) => p.datasets.map((obj) => obj.dataset.id)),
+    ));
+
+    // find dataset ids which are not already associated with the source project
+    const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
+
+    const dataset_ids_to_add = [
+      ...setDifference(target_dataset_ids, new Set(source_dataset_ids)),
+    ];
+
+    // associate these with source project
+    const data = dataset_ids_to_add.map((dataset_id) => ({
+      project_id: req.params.src,
+      dataset_id,
+    }));
+    const add_assocs = prisma.project_dataset.createMany({
+      data,
+    });
+
+    // if delete merged is true, delete targer projects as well as its user and dataset associations
+    if (req.body.delete_merge) {
+      const deletes = prisma.project.deleteMany({
+        where: {
+          id: {
+            in: req.body.dataset_ids,
+          },
+        },
+      });
+      await prisma.$transaction([add_assocs, deletes]);
+    } else {
+      await add_assocs;
+    }
+
+    res.send();
+  }),
+);
+
 router.put(
   '/:id/users',
   isPermittedTo('update', false),
+  validate([
+    body('user_ids').exists(),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate users to a project
@@ -195,21 +270,30 @@ router.put(
     */
 
     // get project or send 404 if not found
-    await prisma.project.findFirstOrThrow({
+    const project = await prisma.project.findFirstOrThrow({
       where: {
         id: req.params.id,
       },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
 
-    // delete existing associations
+    const cur_user_ids = project.users.map((obj) => obj.user.id);
+    const req_user_ids = req.body.user_ids || [];
+
+    const user_ids_to_add = [...setDifference(new Set(req_user_ids), new Set(cur_user_ids))];
+    const user_ids_to_remove = [...setDifference(new Set(cur_user_ids), new Set(req_user_ids))];
+
+    // delete associations
     const delete_assocs = prisma.project_user.deleteMany({
       where: {
         project_id: req.params.id,
+        user_id: {
+          in: user_ids_to_remove,
+        },
       },
     });
 
-    const user_ids = req.body.user_ids || [];
-    const data = user_ids.map((user_id) => ({
+    const data = user_ids_to_add.map((user_id) => ({
       project_id: req.params.id,
       user_id,
     }));
@@ -296,7 +380,7 @@ router.put(
       },
     });
 
-    const dataset_ids = req.body.user_ids || [];
+    const dataset_ids = req.body.dataset_ids || [];
     const data = dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
       dataset_id,

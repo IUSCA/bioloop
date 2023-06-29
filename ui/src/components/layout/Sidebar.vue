@@ -96,7 +96,11 @@ const auth = useAuthStore();
 const route = useRoute();
 
 function isActive(path) {
-  return route.path.startsWith(path);
+  if (path === "/") {
+    return route.path === "/";
+  } else {
+    return route.path.startsWith(path);
+  }
 }
 
 const user_items = ref([
@@ -118,11 +122,11 @@ const user_items = ref([
 ]);
 
 const operator_items = ref([
-  // {
-  //   icon: "mdi-monitor-dashboard",
-  //   title: "Dashboard",
-  //   path: "/",
-  // },
+  {
+    icon: "mdi-monitor-dashboard",
+    title: "Dashboard",
+    path: "/dashboard",
+  },
   // {
   //   icon: "mdi-file-lock",
   //   title: "Data Products",
