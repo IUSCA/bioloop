@@ -3,6 +3,7 @@ name: cpa
 services:
   ui:
     container_name: ui
+    restart: unless-stopped
     image: node:19
     volumes:
       - ./ui/:/opt/sca/app
@@ -13,6 +14,7 @@ services:
 
   api:
     container_name: api
+    restart: unless-stopped
     build:
       context: ./api
       args:
