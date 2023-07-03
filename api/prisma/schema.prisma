@@ -46,7 +46,7 @@ model dataset_hierarchy {
 model dataset_file {
   id         Int     @id @default(autoincrement())
   path       String
-  md5        String
+  md5        String?
   size       BigInt
   filetype   String?
   metadata   Json?
