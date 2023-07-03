@@ -402,7 +402,7 @@ const isPermittedTo = accessControl('user');
 router.get(
   '/:username',
   authenticate,
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     const user = await userService.findActiveUserBy('username', req.params.username);
     if (user) { return res.json(user); }

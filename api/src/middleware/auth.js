@@ -68,7 +68,7 @@ function buildActions(action) {
 const accessControl = _.curry((
   resource,
   action,
-  checkOwnerShip = true,
+  { checkOwnerShip = false } = {},
   // resourceOwnerFn = null,
   // requesterFn = null,
 ) => {

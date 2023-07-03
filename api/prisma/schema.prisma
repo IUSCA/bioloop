@@ -44,14 +44,17 @@ model dataset_hierarchy {
 }
 
 model dataset_file {
-  id         Int      @id @default(autoincrement())
+  id         Int     @id @default(autoincrement())
   path       String
-  md5        String
+  md5        String?
   size       BigInt?
+  filetype   String?
   metadata   Json?
   status     String?
-  dataset_id Int?
-  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dataset_id Int
+  dataset    dataset @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
+
+  @@index([dataset_id])
 }
 
 model dataset_audit {
@@ -116,7 +119,7 @@ model user_settings {
   id       Int  @id @default(autoincrement())
   user_id  Int  @unique
   settings Json
-  users    user @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users    user @relation(fields: [user_id], references: [id], onDelete: NoAction)
 }
 
 model contact {
@@ -125,7 +128,7 @@ model contact {
   value       String
   description String?
   user_id     Int?
-  user        user?             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        user?             @relation(fields: [user_id], references: [id], onDelete: NoAction)
   projects    project_contact[]
 
   @@unique([type, value])

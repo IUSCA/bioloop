@@ -74,6 +74,14 @@ class DatasetService {
       ? "mdi-dna"
       : "mdi-package-variant-closed";
   }
+
+  list_files({ id, basepath }) {
+    return api.get(`/datasets/${id}/files`, {
+      params: {
+        basepath,
+      },
+    });
+  }
 }
 
 export default new DatasetService();

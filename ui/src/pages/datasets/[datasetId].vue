@@ -2,7 +2,7 @@
   <va-inner-loading :loading="loading">
     <!-- Title -->
     <div>
-      <span class="text-3xl capitalize" v-if="dataset.type">
+      <span class="text-2xl capitalize" v-if="dataset.type">
         {{ dataset.type.replace("_", " ").toLowerCase() }} :
       </span>
       <span class="text-3xl"> {{ dataset.name }} </span>
@@ -28,7 +28,21 @@
             </va-card-title>
             <va-card-content v-if="Object.keys(dataset || {}).length > 0">
               <dataset-info :dataset="dataset"></dataset-info>
-              <div class="flex justify-end mt-3 pr-3">
+              <div class="flex justify-end mt-3 pr-3 gap-3">
+                <!-- file browser -->
+                <va-button
+                  v-if="dataset.num_files"
+                  preset="primary"
+                  @click="
+                    router.push(`/datasets/filebrowser/${props.datasetId}`)
+                  "
+                  class="flex-none"
+                  color="#A020F0"
+                >
+                  <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
+                </va-button>
+
+                <!-- edit description -->
                 <va-button
                   preset="primary"
                   @click="openModalToEditDataset"
@@ -302,6 +316,7 @@ import config from "@/config";
 import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
+const router = useRouter();
 
 const props = defineProps({ datasetId: String });
 
