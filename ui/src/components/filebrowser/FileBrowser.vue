@@ -1,18 +1,18 @@
 <template>
   <div class="flex justify-center">
-    <div class="w-3/4 flex-none">
+    <div class="w-full flex-none">
       <!-- BreadCrumbs Navigation -->
       <!-- border border-solid border-slate-400 -->
       <div class="">
         <va-breadcrumbs>
           <va-breadcrumbs-item
-            class="text-2xl cursor-pointer hover:bg-slate-300 rounded-full p-2"
+            class="text-xl cursor-pointer hover:bg-slate-300 rounded-full p-2"
             @click="pwd = ''"
           >
-            <i-mdi-home class="" />
+            <i-mdi-folder-home class="hover:text-blue-600" />
           </va-breadcrumbs-item>
           <va-breadcrumbs-item
-            class="text-2xl cursor-pointer"
+            class="text-xl cursor-pointer"
             v-if="path_items.length > 3"
           >
             ...
@@ -22,16 +22,16 @@
             :label="path_item.name"
             v-for="(path_item, idx) in path_items.slice(-3)"
             :key="idx"
-            class="text-2xl cursor-pointer"
+            class="text-xl cursor-pointer"
             @click="pwd = path_item.rel_path"
           />
         </va-breadcrumbs>
       </div>
 
       <!-- filter input and number of results -->
-      <div class="grid grid-cols-12 gap-3 mt-3">
+      <div class="grid grid-cols-12 gap-3 mt-2">
         <!-- search bar -->
-        <div class="col-span-10">
+        <div class="col-span-11">
           <va-input
             v-model="filterInput"
             class="w-full"
@@ -42,8 +42,10 @@
         </div>
 
         <!-- filter -->
-        <div class="col-span-2 flex items-center">
-          {{ maybePluralize(rows.length, "item") }}
+        <div class="col-span-1 flex items-center">
+          <div class="text-right">
+            {{ maybePluralize(rows.length, "item") }}
+          </div>
         </div>
       </div>
 
@@ -117,7 +119,7 @@ const columns = [
   // { key: "lastModified", label: "Last Modified", sortable: true },
   { key: "size", sortable: true, sortingFn: cmp, width: "100px" },
   { key: "filetype", label: "type", sortable: true, width: "100px" },
-  { key: "md5", width: "250px" },
+  { key: "md5", width: "250px", label: "MD5 Checksum" },
 ];
 
 // initial sorting order

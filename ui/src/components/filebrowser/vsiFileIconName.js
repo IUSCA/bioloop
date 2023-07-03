@@ -1,6 +1,16 @@
 // https://github.com/minhazmiraz/file-extension-icon-JS/blob/master/src/components/gen/vsiFileIconsName.js
 
+// generic icons
+// vscode-icons:file-type-helix
+// vscode-icons:file-type-paket
+// vscode-icons:file-type-saltstack
+// vscode-icons:file-type-tuc
+// vscode-icons:file-type-typedoc
+
 export const vsiFileExtensionsToIcons = {
+  //
+
+  //
   as: "actionscript2",
   ada: "ada",
   prw: "advpl",
@@ -370,7 +380,7 @@ export const vsiFileExtensionsToIcons = {
   ogg: "audio",
   opus: "audio",
   ra: "audio",
-  raw: "audio",
+  raw: "image",
   tta: "audio",
   vox: "audio",
   wav: "audio",
