@@ -31,7 +31,7 @@
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
                 <va-button
-                  v-if="dataset.num_files && auth.canAdmin"
+                  v-if="dataset.num_files"
                   preset="primary"
                   @click="
                     router.push(`/datasets/filebrowser/${props.datasetId}`)
@@ -315,10 +315,8 @@ import workflowService from "@/services/workflow";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
-import { useAuthStore } from "@/stores/auth";
 const toast = useToastStore();
 const router = useRouter();
-const auth = useAuthStore();
 
 const props = defineProps({ datasetId: String });
 
