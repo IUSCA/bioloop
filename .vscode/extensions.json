@@ -20,6 +20,7 @@
     "antfu.iconify",
     "bradlc.vscode-tailwindcss",
     "austenc.tailwind-docs",
-    "foxundermoon.shell-format"
+    "foxundermoon.shell-format",
+    "42Crunch.vscode-openapi"
   ]
 }
