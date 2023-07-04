@@ -184,7 +184,8 @@ function get_filelist(path) {
         return {
           ...obj,
           name,
-          filetype: obj.filetype || `.${extension(name)}`,
+          filetype:
+            obj.filetype === "directory" ? obj.filetype : `.${extension(name)}`,
         };
       });
     })

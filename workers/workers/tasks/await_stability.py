@@ -33,7 +33,7 @@ def await_stability(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     origin_path = Path(dataset['origin_path'])
 
-    while True:
+    while origin_path.exists():
         mod_time = dir_last_modified_time(origin_path)
         delta = time.time() - mod_time
 
