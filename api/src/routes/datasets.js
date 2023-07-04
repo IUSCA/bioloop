@@ -290,6 +290,8 @@ router.post(
       dataset_id: req.params.id,
       path: f.path,
       md5: f.md5,
+      size: BigInt(f.size),
+      filetype: f.type,
     }));
 
     await prisma.dataset_file.createMany({

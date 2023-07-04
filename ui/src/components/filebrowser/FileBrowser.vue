@@ -107,7 +107,12 @@
 <script setup>
 // import * as datetime from "@/services/datetime";
 import datasetService from "@/services/dataset";
-import { formatBytes, cmp, maybePluralize } from "@/services/utils";
+import {
+  formatBytes,
+  cmp,
+  maybePluralize,
+  caseInsensitiveIncludes,
+} from "@/services/utils";
 
 const props = defineProps({ datasetId: String });
 
@@ -156,7 +161,9 @@ const path_items = computed(() => {
 });
 
 const rows = computed(() => {
-  return filelist.value.filter((file) => file.name.includes(filterInput.value));
+  return filelist.value.filter((file) =>
+    caseInsensitiveIncludes(file?.name, filterInput.value)
+  );
 });
 
 function filename(path) {
@@ -177,7 +184,8 @@ function get_filelist(path) {
         return {
           ...obj,
           name,
-          filetype: obj.filetype || `.${extension(name)}`,
+          filetype:
+            obj.filetype === "directory" ? obj.filetype : `.${extension(name)}`,
         };
       });
     })
