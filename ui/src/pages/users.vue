@@ -11,7 +11,11 @@
         placeholder="search users"
         outline
         clearable
-      />
+      >
+        <template #prependInner>
+          <Icon icon="material-symbols:search" class="text-xl" />
+        </template>
+      </va-input>
     </div>
 
     <!-- create button -->
