@@ -4,7 +4,9 @@ const path = require('path');
 // has same value when used in any js file in this project
 global.__basedir = path.join(__dirname, '..');
 
-require('dotenv-safe').config();
+require('dotenv-safe').config({
+  allowEmptyValues: true
+});
 require('./db');
 const config = require('config');
 const app = require('./app');

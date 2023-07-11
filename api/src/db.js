@@ -1,4 +1,6 @@
-require('dotenv-safe').config();
+require('dotenv-safe').config({
+  allowEmptyValues: true
+});
 const config = require('config');
 const process = require('process');
 
