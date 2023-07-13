@@ -11,22 +11,40 @@
       <div>
         <!-- <span class="text-2xl"> Associated Datasets</span> -->
         <va-card class="">
-          <va-card-title>
-            <span class="text-xl"> Associated Datasets </span>
+          <va-card-title class="">
+            <div class="flex flex-nowrap items-center w-full">
+              <span class="text-lg"> Associated Datasets </span>
+
+              <AddEditButton
+                class="flex-none"
+                show-text
+                :edit="project.datasets?.length > 0"
+                @click="openDatasetsModal"
+                v-if="auth.canOperate"
+              />
+            </div>
           </va-card-title>
           <va-card-content>
-            <ProjectAssociatedDatasets :datasets="project.datasets" />
+            <ProjectDatasetsTable :datasets="project.datasets" />
           </va-card-content>
         </va-card>
       </div>
 
       <!-- General Info and Access Permissions -->
-      <div class="grid gird-cols-1 lg:grid-cols-2 gap-3">
+      <div class="grid gird-cols-1 md:grid-cols-2 gap-3">
         <!-- General Info -->
         <div class="">
           <va-card class="general-info">
-            <va-card-title>
-              <span class="text-xl"> General Info </span>
+            <va-card-title class="">
+              <div class="flex flex-nowrap items-center w-full">
+                <span class="text-lg"> General Info </span>
+                <AddEditButton
+                  class="flex-none"
+                  edit
+                  @click="openModalToEditProject"
+                  v-if="auth.canOperate"
+                />
+              </div>
             </va-card-title>
             <va-card-content>
               <ProjectInfo :project="project" />
@@ -35,13 +53,26 @@
         </div>
 
         <!-- Access Permissions -->
-        <div class="">
-          <va-card>
-            <va-card-title>
-              <span class="text-xl"> Access Permissions </span>
+        <div class="" v-if="auth.canOperate">
+          <va-card class="h-full">
+            <va-card-title class="">
+              <div class="flex flex-nowrap items-center w-full">
+                <span class="text-lg"> Access Permissions </span>
+                <AddEditButton
+                  class="flex-none"
+                  :edit="project.users?.length > 0"
+                  @click="openUsersModal"
+                />
+              </div>
             </va-card-title>
             <va-card-content>
-              <ProjectUsers :users="project.users" />
+              <ProjectUsersList
+                :users="users"
+                v-if="users?.length > 0"
+                :show-assigned-date="users?.length < 10"
+                :wrap="users?.length >= 10"
+              />
+              <div v-else>This project has no associated users</div>
             </va-card-content>
           </va-card>
         </div>
@@ -49,25 +80,12 @@
 
       <!-- Maintenance Actions -->
       <div>
-        <va-card>
+        <va-card v-if="auth.canOperate">
           <va-card-title>
             <span class="text-xl"> Maintenance Actions </span>
           </va-card-title>
           <va-card-content>
             <div class="flex gap-9">
-              <!-- edit button -->
-              <va-button
-                preset="secondary"
-                border-color="primary"
-                class="flex-none"
-                @click="openModalToEditProject"
-              >
-                <div class="flex items-center gap-2">
-                  <i-mdi-edit />
-                  <span> Edit Project </span>
-                </div>
-              </va-button>
-
               <!-- merge button -->
               <va-button
                 preset="secondary"
@@ -103,7 +121,7 @@
   </va-inner-loading>
 
   <!-- edit modal -->
-  <EditProjectModal
+  <EditProjectInfoModal
     ref="editModal"
     :id="project.id"
     @update="handleEditUpdate"
@@ -115,21 +133,34 @@
     :data="project"
     @update="router.push('/projects')"
   />
+
+  <!-- Users modal -->
+  <ProjectUsersModal
+    ref="usersModal"
+    :id="project.id"
+    @update="handleEditUpdate"
+  />
+
+  <!-- Datasets modal -->
+  <ProjectDatasetsModal
+    ref="datasetsModal"
+    :id="project.id"
+    @update="handleEditUpdate"
+  />
 </template>
 
 <script setup>
-import ProjectAssociatedDatasets from "@/components/project/ProjectAssociatedDatasets.vue";
 import projectService from "@/services/projects";
-import toast from "@/services/toast";
+import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps(["projetcId"]);
 const auth = useAuthStore();
 const router = useRouter();
+const toast = useToastStore();
 const projectFormStore = useProjectFormStore();
 
-const admin_view = auth.hasRole("admin") || auth.hasRole("operator");
 const project = ref({});
 const data_loading = ref(false);
 
@@ -138,7 +169,7 @@ function fetch_project() {
   return projectService
     .getById({
       id: project.value?.id || props.projetcId,
-      forSelf: !admin_view,
+      forSelf: !auth.canOperate,
     })
     .then((res) => {
       project.value = res.data;
@@ -154,17 +185,27 @@ function fetch_project() {
 
 fetch_project();
 
+const users = computed(() => {
+  return (project.value.users || []).map((obj) => ({
+    ...obj.user,
+    assigned_at: obj.assigned_at,
+  }));
+});
+
+const datasets = computed(() => {
+  return (project.value.datasets || []).map((obj) => ({
+    ...obj.dataset,
+    assigned_at: obj.assigned_at,
+  }));
+});
+
 // edit modal code
 // template ref binding
 const editModal = ref(null);
 
 function openModalToEditProject() {
-  const data = { ...project.value };
-  data.users = (data.users || []).map((obj) => ({
-    id: obj?.user?.id,
-    username: obj?.user?.username,
-  }));
-  projectFormStore.$patch(data);
+  const { name, description, browser_enabled, funding } = project.value;
+  projectFormStore.$patch({ name, description, browser_enabled, funding });
   editModal.value.show();
 }
 
@@ -190,6 +231,22 @@ const deleteModal = ref(null);
 function openModalToDeleteProject() {
   deleteModal.value.show();
 }
+
+// user modal code
+const usersModal = ref(null);
+
+function openUsersModal() {
+  projectFormStore.setUsers(users.value);
+  usersModal.value.show();
+}
+
+// dataset modal code
+const datasetsModal = ref(null);
+
+function openDatasetsModal() {
+  projectFormStore.setDatasets(datasets.value);
+  datasetsModal.value.show();
+}
 </script>
 
 <route lang="yaml">
@@ -198,7 +255,7 @@ title: Projects
 </route>
 
 <style scoped>
-.general-info {
+/* .general-info {
   --va-card-padding: 0.75rem;
-}
+} */
 </style>

@@ -40,14 +40,17 @@ def generate_metadata(celery_task, source: Path):
         if utils.is_readable(p):
             if p.is_file():
                 num_files += 1
-                file_size = p.stat().st_size
+                # if symlink only add the size of the symlink, not the pointed file
+                file_size = p.lstat().st_size
                 size += file_size
-                hex_digest = utils.checksum(p)
+                # do not compute checksum for symlinks
+                hex_digest = utils.checksum(p) if not p.is_symlink() else None
                 relpath = p.relative_to(source)
                 metadata.append({
                     'path': str(relpath),
                     'md5': hex_digest,
-                    'size': file_size
+                    'size': file_size,
+                    'type': utils.filetype(p)
                 })
                 if ''.join(p.suffixes) in config['genome_file_types'] and not p.is_symlink():
                     num_genome_files += 1

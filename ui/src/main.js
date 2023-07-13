@@ -9,6 +9,7 @@ import "./styles/overrides.css";
 
 import App from "./App.vue";
 import router from "./router";
+import vVisible from "./directives/v-visible";
 
 // Tree-shake extra vuestic styles, so there is no conflict with Tailwind
 // https://vuestic.dev/en/getting-started/tree-shaking#css-code-split
@@ -20,5 +21,6 @@ const app = createApp(App);
 app.use(createVuestic({ config }));
 app.use(createPinia());
 app.use(router);
+app.use(vVisible);
 
 app.mount("#app");

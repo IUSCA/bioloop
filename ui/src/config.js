@@ -6,7 +6,7 @@ const exports = {
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
-  appTitle: "BIOLOOP",
+  appTitle: "CfN-DAP",
   contact: {
     app_admin: "admin@sca.iu.edu",
     sca_admin: "sca-ops-l@list.iu.edu",

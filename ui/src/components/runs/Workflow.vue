@@ -94,7 +94,6 @@
 
 <script setup>
 import moment from "moment";
-// import { capitalize } from "../../services/utils";
 import workflowService from "@/services/workflow";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();

@@ -21,33 +21,31 @@
         <tr>
           <td>Created Date</td>
           <td>
-            {{ utc_date_to_local_tz(props.project.created_at) }}
+            {{ datetime.absolute(props.project.created_at) }}
           </td>
         </tr>
         <tr>
           <td>Last Updated</td>
           <td>
             <span class="">
-              {{ utc_date_to_local_tz(props.project.updated_at) }}
+              {{ datetime.absolute(props.project.updated_at) }}
             </span>
           </td>
         </tr>
         <tr>
           <td>Genome Browser</td>
           <td>
-            <va-chip
-              size="small"
-              :color="props.project.browser_enabled ? 'success' : 'secondary'"
-            >
-              <span>
-                {{ props.project.browser_enabled ? "ENABLED" : "DISABLED" }}
-              </span>
-            </va-chip>
+            <BinaryStatusChip :status="props.project.browser_enabled" />
           </td>
         </tr>
         <tr>
           <td>Description</td>
           <td>
+            <!-- 
+              Fraction height of 11.5rem is crucial. It cuts off the last line when the text overflows
+              This is a visual cue to the user indicating that the entire text is not visible 
+              and prompting them to scroll further. Mac browsers will not show scroll bar unless scrolled
+            -->
             <div class="max-h-[11.5rem] overflow-y-scroll">
               {{ props.project.description }}
             </div>
@@ -63,7 +61,7 @@
 </template>
 
 <script setup>
-import { utc_date_to_local_tz } from "../../services/utils";
+import * as datetime from "@/services/datetime";
 const props = defineProps({ project: Object });
 </script>
 

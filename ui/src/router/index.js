@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
 import generatedRoutes from "virtual:generated-pages";
 import { setupLayouts } from "virtual:generated-layouts";
-import { isLiveToken, setIntersection } from "../services/utils";
-import config from "../config";
+import { isLiveToken, setIntersection } from "@/services/utils";
+import config from "@/config";
 
 // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
 const routes = setupLayouts(generatedRoutes);

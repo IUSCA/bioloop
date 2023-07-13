@@ -1,5 +1,5 @@
-<h1 align="center">BIOLOOP</h1>
-<p align="center">Genomics Data Portal and Pipeline Application Stater Project</p>
+<h1 align="center">CfN-DAP</h1>
+<p align="center">Center for Neuroimaging Data Access Portal</p>
 
 ## Getting started
 - [API](api/README.md)

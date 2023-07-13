@@ -89,7 +89,7 @@ if (!['production', 'test'].includes(config.get('mode'))) {
 router.post(
   '/spoof/:username',
   authenticate,
-  isPermittedTo('create', false),
+  isPermittedTo('create'),
   asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Auth']
     const user = await userService.findActiveUserBy('username', req.params.username);

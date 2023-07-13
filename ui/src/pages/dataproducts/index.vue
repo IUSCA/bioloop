@@ -1,5 +1,5 @@
 <template>
-  <h2 class="text-3xl font-semibold mb-4">Data Products</h2>
+  <h2 class="text-3xl mb-4">Data Products</h2>
   <dataset-list dtype="DATA_PRODUCT" label="Data Product"></dataset-list>
 </template>
 

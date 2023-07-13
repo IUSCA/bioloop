@@ -4,6 +4,7 @@ import moment from "moment-timezone";
 
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
+  if (!bytes) return "";
 
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
@@ -104,6 +105,28 @@ function cmp(a, b) {
   return a != null && b != null ? (a < b ? -1 : a > b ? 1 : 0) : 0;
 }
 
+function caseInsensitiveIncludes(str, searchValue) {
+  /**
+   * const text = "Hello, World!";
+   * f(text, "hello")); // true
+   * f(text, "WORLD")); // true
+   * f(text, "Hi"));    // false
+   * f(text, null));    // false
+   * f(null, null));    // true
+   */
+
+  // Handle undefined and / or null values separately
+  if (str == null || searchValue == null) {
+    return str === searchValue;
+  }
+
+  // Convert both strings to lowercase for case-insensitive comparison
+  const lowerStr = str.toLowerCase();
+  const lowerSearchValue = searchValue.toLowerCase();
+
+  return lowerStr.includes(lowerSearchValue);
+}
+
 export {
   formatBytes,
   difference,
@@ -118,4 +141,5 @@ export {
   lxor,
   cmp,
   setIntersection,
+  caseInsensitiveIncludes,
 };

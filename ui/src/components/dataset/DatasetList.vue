@@ -6,7 +6,7 @@
       <div class="flex-1">
         <va-input
           v-model="filterInput"
-          class="border-gray-800 border border-solid w-full"
+          class="w-full"
           :placeholder="`search ${props.label.toLowerCase()}`"
           outline
           clearable
@@ -54,7 +54,7 @@
       </template>
 
       <template #cell(num_genome_files)="{ rowData }">
-        <maybe :data="rowData?.metadata?.num_genome_files" />
+        <Maybe :data="rowData?.metadata?.num_genome_files" />
       </template>
 
       <template #cell(updated_at)="{ value }">

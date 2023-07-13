@@ -1,3 +1,4 @@
+/* eslint-disable linebreak-style */
 // Create default roles
 const roles = [{
   id: 1,
@@ -25,6 +26,9 @@ const admins = [
   }, {
     name: 'Ryan Long',
     username: 'ryanlong',
+  }, {
+    name: 'Matt Tharp',
+    username: 'tharpm',
   }, {
     name: 'svc_tasks',
     username: 'svc_tasks',

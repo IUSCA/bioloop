@@ -1,12 +1,14 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-const { body } = require('express-validator');
+const { query, param, body } = require('express-validator');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
+const datasetService = require('../services/dataset');
+const { setDifference } = require('../utils');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -47,7 +49,7 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
 
 router.get(
   '/all',
-  isPermittedTo('read', false),
+  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects.
@@ -86,7 +88,7 @@ router.get(
 
 router.get(
   '/:username/all',
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects associated with a username
@@ -105,13 +107,14 @@ router.get(
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(projects);
+    // don't know why projects.map(req.permission.filter) wouldn't work
+    res.json(projects.map((p) => req.permission.filter(p)));
   }),
 );
 
 router.get(
   '/:username/:id',
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project associated with a username
@@ -138,13 +141,67 @@ router.get(
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(projects);
+    res.json(req.permission.filter(projects));
+  }),
+);
+
+router.get(
+  '/:username/:project_id/:dataset_id/files',
+  accessControl('project_dataset_files', 'read', { checkOwnerShip: true }),
+  validate([
+    param('dataset_id').isInt().toInt(),
+    query('basepath').default(''),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = get file listings of a dataset in a project associated with given username
+    /* #swagger.description = user role: can only see their project dataset files.
+      operator, admin: can see anyone's project dataset files
+    */
+
+    // check if there exists a project with project_id / slug
+    // and has username and dataset_id associations
+    await prisma.project.findFirstOrThrow({
+      where: {
+        OR: [
+          {
+            id: req.params.project_id,
+          },
+          {
+            slug: req.params.project_id,
+          },
+        ],
+        users: {
+          some: {
+            user: {
+              username: req.params.username,
+            },
+          },
+        },
+        datasets: {
+          some: {
+            dataset: {
+              id: req.params.dataset_id,
+            },
+          },
+        },
+      },
+    });
+
+    // call ls_files function to return files
+    const files = await datasetService.files_ls({
+      dataset_id: req.params.dataset_id,
+      base: req.query.basepath,
+    });
+    // 1 week
+    res.set('Cache-control', 'private, max-age=604800');
+    res.json(files);
   }),
 );
 
 router.post(
   '/',
-  isPermittedTo('create', false),
+  isPermittedTo('create'),
   validate([
     body('name').isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),
@@ -185,9 +242,82 @@ router.post(
   }),
 );
 
+router.post(
+  '/merge/:src',
+  isPermittedTo('update'),
+  validate([
+    body('dataset_ids').exists(),
+    body('delete_merged').toBoolean().default(false),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = merge multiple projects into a source project
+    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    */
+
+    // get source project
+    const source_porject = await prisma.project.findFirstOrThrow({
+      where: {
+        id: req.params.src,
+      },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
+    });
+
+    // get target projects
+    const target_projects = await prisma.project.findMany({
+      where: {
+        id: {
+          in: req.body.dataset_ids,
+        },
+      },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
+    });
+
+    // assemble all unique dataset_ids associated with the target projects
+    const target_dataset_ids = new Set(_.flatten(
+      target_projects.map((p) => p.datasets.map((obj) => obj.dataset.id)),
+    ));
+
+    // find dataset ids which are not already associated with the source project
+    const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
+
+    const dataset_ids_to_add = [
+      ...setDifference(target_dataset_ids, new Set(source_dataset_ids)),
+    ];
+
+    // associate these with source project
+    const data = dataset_ids_to_add.map((dataset_id) => ({
+      project_id: req.params.src,
+      dataset_id,
+    }));
+    const add_assocs = prisma.project_dataset.createMany({
+      data,
+    });
+
+    // if delete merged is true, delete targer projects as well as its user and dataset associations
+    if (req.body.delete_merge) {
+      const deletes = prisma.project.deleteMany({
+        where: {
+          id: {
+            in: req.body.dataset_ids,
+          },
+        },
+      });
+      await prisma.$transaction([add_assocs, deletes]);
+    } else {
+      await add_assocs;
+    }
+
+    res.send();
+  }),
+);
+
 router.put(
   '/:id/users',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
+  validate([
+    body('user_ids').exists(),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate users to a project
@@ -195,21 +325,30 @@ router.put(
     */
 
     // get project or send 404 if not found
-    await prisma.project.findFirstOrThrow({
+    const project = await prisma.project.findFirstOrThrow({
       where: {
         id: req.params.id,
       },
+      include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
 
-    // delete existing associations
+    const cur_user_ids = project.users.map((obj) => obj.user.id);
+    const req_user_ids = req.body.user_ids || [];
+
+    const user_ids_to_add = [...setDifference(new Set(req_user_ids), new Set(cur_user_ids))];
+    const user_ids_to_remove = [...setDifference(new Set(cur_user_ids), new Set(req_user_ids))];
+
+    // delete associations
     const delete_assocs = prisma.project_user.deleteMany({
       where: {
         project_id: req.params.id,
+        user_id: {
+          in: user_ids_to_remove,
+        },
       },
     });
 
-    const user_ids = req.body.user_ids || [];
-    const data = user_ids.map((user_id) => ({
+    const data = user_ids_to_add.map((user_id) => ({
       project_id: req.params.id,
       user_id,
     }));
@@ -228,7 +367,7 @@ router.put(
 
 router.put(
   '/:id/contacts',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate contacts / external users to a project
@@ -275,7 +414,7 @@ router.put(
 
 router.put(
   '/:id/datasets',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
@@ -296,7 +435,7 @@ router.put(
       },
     });
 
-    const dataset_ids = req.body.user_ids || [];
+    const dataset_ids = req.body.dataset_ids || [];
     const data = dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
       dataset_id,
@@ -316,7 +455,7 @@ router.put(
 
 router.patch(
   '/:id',
-  isPermittedTo('update', false),
+  isPermittedTo('update'),
   validate([
     body('name').optional().isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),
@@ -363,7 +502,7 @@ router.patch(
 
 router.delete(
   '/:id',
-  isPermittedTo('delete', false),
+  isPermittedTo('delete'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = delete a project and all its associations

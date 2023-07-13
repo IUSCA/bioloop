@@ -1,13 +1,13 @@
 <template>
   <va-modal
+    class="createproject"
     v-model="visible"
     title="Create a New Project"
-    no-outside-dismiss
     fixed-layout
     hide-default-actions
   >
     <va-inner-loading :loading="loading">
-      <ProjectForm />
+      <div class="h-[calc(80vh)] w-full"></div>
     </va-inner-loading>
     <template #footer>
       <div class="flex w-full justify-center gap-5">
@@ -59,12 +59,14 @@ function handleCreate() {
     loading.value = true;
 
     const user_ids = projectFormStore.user_ids;
-    const project_data = projectFormStore.project_data;
+    const project_data = projectFormStore.project_info;
+    const dataset_ids = projectFormStore.dataset_ids;
 
     projectService
       .createProject({
         project_data,
         user_ids,
+        dataset_ids,
       })
       .finally(() => {
         loading.value = false;
@@ -74,3 +76,9 @@ function handleCreate() {
   }
 }
 </script>
+
+<style lang="scss">
+.createproject {
+  // --va-modal-width: calc(30vw);
+}
+</style>
