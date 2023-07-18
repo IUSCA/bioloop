@@ -83,14 +83,10 @@ const switchValue = computed({
 const profile = auth.user;
 
 watch([colors, switchValue], () => {
-  console.log("switchValue.value")
-  console.log(switchValue.value)
   auth.setTheme({
     primary: colors.primary,
     mode: switchValue.value
   });
-  console.log("auth.user.theme")
-  console.log(auth.user.theme)
 }, { deep: true })
 
 </script>
