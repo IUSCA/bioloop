@@ -117,6 +117,12 @@ export const useAuthStore = defineStore("auth", () => {
     });
   }
 
+  const setTheme = theme => {
+    user.value.theme = theme;
+  }
+
+  const getTheme = () => user.value.theme;
+
   return {
     user,
     loggedIn,
@@ -129,6 +135,8 @@ export const useAuthStore = defineStore("auth", () => {
     spoof,
     canOperate,
     canAdmin,
+    setTheme,
+    getTheme
   };
 });
 

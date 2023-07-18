@@ -81,6 +81,14 @@ const switchValue = computed({
 });
 
 const profile = auth.user;
+
+watch([colors, switchValue], () => {
+  auth.setTheme({
+    primary: colors.primary,
+    mode: switchValue.value
+  });
+}, { deep: true })
+
 </script>
 
 <route lang="yaml">
