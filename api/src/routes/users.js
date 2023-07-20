@@ -2,7 +2,6 @@ const express = require('express');
 const { query, body } = require('express-validator');
 const createError = require('http-errors');
 const { PrismaClient } = require('@prisma/client');
-const _ = require('lodash/fp');
 
 // const logger = require('../services/logger');
 const userService = require('../services/user');
@@ -53,7 +52,7 @@ router.post(
     // if the roles is unset, set the roles as ['user']
     // clears the roles attribute when requester has no admin role
     const user_data = req.permission.filter(req.body);
-    user_data.roles = _.defaultTo(user_data.roles, ['user']);
+    user_data.roles = user_data.roles || ['user'];
 
     const user = await userService.createUser(user_data);
     res.json(user);
@@ -92,7 +91,7 @@ router.patch(
         || resource.roles.length === 0
       ) {
         can_update = true;
-        updates.roles = _.defaultTo(resource.roles, ['user']);
+        updates.roles = resource.roles || ['user'];
       }
     }
 
