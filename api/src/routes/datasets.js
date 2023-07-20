@@ -561,9 +561,10 @@ router.get(
       }
     }
 
-    const file = await prisma.dataset_file.findUnique({
+    const file = await prisma.dataset_file.findFirstOrThrow({
       where: {
         id: req.params.file_id,
+        dataset_id: req.params.id,
       },
     });
 
