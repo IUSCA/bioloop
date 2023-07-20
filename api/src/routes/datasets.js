@@ -155,7 +155,6 @@ router.get(
 // get by id - worker + UI
 router.get(
   '/:id',
-  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
     query('files').toBoolean().default(false),
@@ -166,6 +165,23 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is true
+
+    // access check
+    const permission = getPermission({
+      resource: 'datasets',
+      action: 'read',
+      requester_roles: req?.user?.roles,
+    });
+    if (!permission.granted) {
+      const user_dataset_assoc = await datasetService.has_dataset_assoc({
+        username: req.user.username,
+        dataset_id: req.params.id,
+      });
+      if (!user_dataset_assoc) {
+        return next(createError.Forbidden());
+      }
+    }
+
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
       files: req.query.files,
@@ -173,11 +189,7 @@ router.get(
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
     });
-    if (dataset) {
-      res.json(dataset);
-    } else {
-      next(createError(404));
-    }
+    res.json(dataset);
   }),
 );
 
@@ -454,7 +466,6 @@ router.put(
 
 router.get(
   '/:id/files',
-  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
     query('basepath').default(''),
@@ -462,6 +473,23 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
+
+    // access check
+    const permission = getPermission({
+      resource: 'datasets',
+      action: 'read',
+      requester_roles: req?.user?.roles,
+    });
+    if (!permission.granted) {
+      const user_dataset_assoc = await datasetService.has_dataset_assoc({
+        username: req.user.username,
+        dataset_id: req.params.id,
+      });
+      if (!user_dataset_assoc) {
+        return next(createError.Forbidden());
+      }
+    }
+
     const files = await datasetService.files_ls({
       dataset_id: req.params.id,
       base: req.query.basepath,
@@ -474,13 +502,29 @@ router.get(
 
 router.get(
   '/:id/filetree',
-  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = Get the file tree
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get the file tree
+
+    // access check
+    const permission = getPermission({
+      resource: 'datasets',
+      action: 'read',
+      requester_roles: req?.user?.roles,
+    });
+    if (!permission.granted) {
+      const user_dataset_assoc = await datasetService.has_dataset_assoc({
+        username: req.user.username,
+        dataset_id: req.params.id,
+      });
+      if (!user_dataset_assoc) {
+        return next(createError.Forbidden());
+      }
+    }
+
     const files = await prisma.dataset_file.findMany({
       where: {
         dataset_id: req.params.id,
@@ -508,26 +552,11 @@ router.get(
       requester_roles: req?.user?.roles,
     });
     if (!permission.granted) {
-      const projects = await prisma.project.findMany({
-        where: {
-          users: {
-            some: {
-              user: {
-                username: req.params.username,
-              },
-            },
-          },
-          datasets: {
-            some: {
-              dataset: {
-                id: req.params.id,
-              },
-            },
-          },
-        },
+      const user_dataset_assoc = await datasetService.has_dataset_assoc({
+        username: req.user.username,
+        dataset_id: req.params.id,
       });
-
-      if (projects.length === 0) {
+      if (!user_dataset_assoc) {
         return next(createError.Forbidden());
       }
     }

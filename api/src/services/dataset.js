@@ -164,7 +164,7 @@ async function get_dataset({
     },
   } : false;
 
-  const dataset = await prisma.dataset.findFirst({
+  const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
       files: fileSelect,
@@ -297,6 +297,31 @@ function create_filetree(files) {
   return root;
 }
 
+async function has_dataset_assoc({
+  dataset_id, username,
+}) {
+  const projects = await prisma.project.findMany({
+    where: {
+      users: {
+        some: {
+          user: {
+            username,
+          },
+        },
+      },
+      datasets: {
+        some: {
+          dataset: {
+            id: dataset_id,
+          },
+        },
+      },
+    },
+  });
+
+  return projects.length > 0;
+}
+
 module.exports = {
   soft_delete,
   hard_delete,
@@ -306,4 +331,5 @@ module.exports = {
   create_workflow,
   files_ls,
   create_filetree,
+  has_dataset_assoc,
 };
