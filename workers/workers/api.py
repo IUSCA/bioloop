@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -6,6 +7,26 @@ from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
 from workers.config import config
+
+logger = logging.getLogger(__name__)
+
+
+class LogRetry(Retry):
+    
+    def increment(self,
+                  method=None,
+                  url=None,
+                  response=None,
+                  error=None,
+                  _pool=None,
+                  _stacktrace=None, ):
+        """Override the increment method to log a warning when retries happen."""
+        retries = super().increment(method=method, url=url, response=response, error=error, _pool=_pool,
+                                    _stacktrace=_stacktrace)
+        if retries:
+            logger.warning(
+                f"Retrying {method} request to {url} (retry number {len(self.history)}). Error: ${error.args}")
+        return retries
 
 
 def make_retry_adapter():
@@ -25,7 +46,7 @@ def make_retry_adapter():
     # delay = {backoff factor} * (2 ** ({number of total retries} - 1))
     # backoff_factor=5, delays = [0, 10, 20, 40, 80, 120, 120, 120, 120]
     # max idle time is 10 min 30s
-    return HTTPAdapter(max_retries=Retry(
+    return HTTPAdapter(max_retries=LogRetry(
         total=9,
         backoff_factor=5,
         allowed_methods=None,
@@ -102,11 +123,12 @@ def dataset_setter(dataset: dict):
     return dataset
 
 
-def get_all_datasets(dataset_type=None, name=None):
+def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
             'name': name,
+            'days_since_last_staged': days_since_last_staged
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
