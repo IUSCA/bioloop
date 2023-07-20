@@ -23,6 +23,7 @@
     "random-js": "^2.1.0"
   },
   "dependencies": {
+    "@badgateway/oauth2-client": "^2.2.1",
     "@iusca/iulogin-helper": "^0.1.4",
     "@prisma/client": "^4.16.2",
     "accesscontrol": "^2.2.1",

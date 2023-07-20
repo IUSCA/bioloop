@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@badgateway/oauth2-client':
+    specifier: ^2.2.1
+    version: 2.2.1
   '@iusca/iulogin-helper':
     specifier: ^0.1.4
     version: 0.1.4
@@ -98,6 +101,11 @@ packages:
     resolution: {integrity: sha512-1Yjs2SvM8TflER/OD3cOjhWWOZb58A2t7wpE2S9XfBYTiIl+XFhQG2bjy4Pu1I+EAlCNUzRDYDdFwFYUKvXcIA==}
     engines: {node: '>=0.10.0'}
     dev: true
+
+  /@badgateway/oauth2-client@2.2.1:
+    resolution: {integrity: sha512-V5bFl4bzdQDPDfy/55z19EJ6QsmZMVvrPB0389YZeX/dJd9VmcHZBN079TdRoQCH7VPMYYJWmG0NDQYpOTLJ2g==}
+    engines: {node: '>= 14'}
+    dev: false
 
   /@colors/colors@1.5.0:
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}

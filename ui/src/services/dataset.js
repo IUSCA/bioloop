@@ -82,6 +82,10 @@ class DatasetService {
       },
     });
   }
+
+  get_file_download_data({ dataset_id, file_id }) {
+    return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
+  }
 }
 
 export default new DatasetService();

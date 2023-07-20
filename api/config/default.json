@@ -28,6 +28,17 @@
       "sign_algorithm": "RS256"
     }
   },
+  "oauth": {
+    "base_url": "http://127.0.0.1:5000",
+    "download": {
+      "client_id": "",
+      "client_secret": "",
+      "scope_prefix": "download_file:"
+    }
+  },
+  "download_server": {
+    "base_url": "http://localhost:8000"
+  },
   "mode": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "workflow_registry": {
