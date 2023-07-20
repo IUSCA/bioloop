@@ -8,12 +8,14 @@ const {
 } = require('express-validator');
 const multer = require('multer');
 const _ = require('lodash/fp');
+const config = require('config');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
+const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const authService = require('../services/auth');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
@@ -486,6 +488,62 @@ router.get(
     });
     const root = datasetService.create_filetree(files);
     res.json(root);
+  }),
+);
+
+router.get(
+  '/:id/files/:file_id/download',
+  validate([
+    param('id').isInt().toInt(),
+    param('file_id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get file download URL and token
+
+    // access check
+    const permission = getPermission({
+      resource: 'datasets',
+      action: 'read',
+      requester_roles: req?.user?.roles,
+    });
+    if (!permission.granted) {
+      const projects = await prisma.project.findMany({
+        where: {
+          users: {
+            some: {
+              user: {
+                username: req.params.username,
+              },
+            },
+          },
+          datasets: {
+            some: {
+              dataset: {
+                id: req.params.id,
+              },
+            },
+          },
+        },
+      });
+
+      if (projects.length === 0) {
+        return next(createError.Forbidden());
+      }
+    }
+
+    const file = await prisma.dataset_file.findUnique({
+      where: {
+        id: req.params.file_id,
+      },
+    });
+
+    const download_token = await authService.get_download_token(file.path);
+
+    res.json({
+      url: (new URL(file.path, config.get('download_server.base_url'))).href,
+      bearer_token: download_token.accessToken,
+    });
   }),
 );
 

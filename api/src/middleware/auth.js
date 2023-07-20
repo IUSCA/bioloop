@@ -100,7 +100,27 @@ const accessControl = _.curry((
   };
 });
 
+function getPermission({
+  resource,
+  action,
+  requester_roles,
+  checkOwnerShip = false,
+  requester,
+  resourceOwner,
+}) {
+  const actions = buildActions(action);
+  // filter user roles that match defined roles
+  const roles = [...setIntersection(ac.getRoles(), requester_roles || [])];
+  if (roles && roles.length > 0) {
+    const acQuery = ac.can(roles);
+    return (checkOwnerShip && requester === resourceOwner)
+      ? acQuery[actions.own](resource)
+      : acQuery[actions.any](resource);
+  }
+}
+
 module.exports = {
   authenticate,
   accessControl,
+  getPermission,
 };
