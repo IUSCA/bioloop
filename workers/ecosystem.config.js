@@ -43,6 +43,18 @@ module.exports = {
       out_file: "../logs/workers/metrics.log",
       cron_restart: "0 * * * *",
       autorestart: false
+    },
+    {
+      name: "purge_datasets",
+      script: "python",
+      args: "-u -m workers.scripts.purge_datasets",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/workers/metrics.err",
+      out_file: "../logs/workers/metrics.log",
+      cron_restart: "00 07 * * *",
+      autorestart: false
     }
   ]
 }

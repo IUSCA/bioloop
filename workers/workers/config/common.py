@@ -49,6 +49,11 @@ config = {
         'wait_between_scans_seconds': FIVE_MINUTES,
     },
     'service_user': 'bioloopuser',
+    'stage': {
+        'purge': {
+            'days_to_live': 20
+        }
+    },
     'workflow_registry': {
         'integrated': {
             'steps': [

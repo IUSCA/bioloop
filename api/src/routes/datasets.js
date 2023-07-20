@@ -147,7 +147,7 @@ router.get(
       query_obj.workflows = { [req.query.processed ? 'some' : 'none']: {} };
     }
 
-    // datasets where there is no state called STAGED in last x days
+    // staged datasets where there is no STAGED state in last x days
     if (_.isNumber(req.query.days_since_last_staged)) {
       const xDaysAgo = new Date();
       xDaysAgo.setDate(xDaysAgo.getDate() - req.query.days_since_last_staged);
