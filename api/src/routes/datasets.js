@@ -130,16 +130,43 @@ router.get(
     query('processed').toBoolean().optional(),
     query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
     query('name').optional(),
+    query('days_since_last_staged').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
+    const query_obj = _.omitBy(_.isUndefined)({
+      is_deleted: req.query.deleted,
+      type: req.query.type,
+      name: req.query.name,
+    });
+
+    // processed=true: datasets with one or more workflows associated
+    // processed=false: datasets with no workflows associated
+    // processed=undefined/null: no query based on workflow association
+    if (!_.isNil(req.query.processed)) {
+      query_obj.workflows = { [req.query.processed ? 'some' : 'none']: {} };
+    }
+
+    // datasets where there is no state called STAGED in last x days
+    if (_.isNumber(req.query.days_since_last_staged)) {
+      const xDaysAgo = new Date();
+      xDaysAgo.setDate(xDaysAgo.getDate() - req.query.days_since_last_staged);
+
+      query_obj.is_staged = true;
+      query_obj.NOT = {
+        states: {
+          some: {
+            state: 'STAGED',
+            timestamp: {
+              gte: xDaysAgo,
+            },
+          },
+        },
+      };
+    }
+
     const datasets = await prisma.dataset.findMany({
-      where: {
-        ...(_.isUndefined(req.query.deleted) ? {} : { is_deleted: req.query.deleted }),
-        ...(_.isUndefined(req.query.processed) ? {} : { workflows: ({ [req.query.processed ? 'some' : 'none']: {} }) }),
-        ...(req.query.type ? { type: req.query.type } : {}),
-        ...(req.query.name ? { name: req.query.name } : {}),
-      },
+      where: query_obj,
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...datasetService.INCLUDE_STATES,
