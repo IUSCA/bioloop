@@ -179,6 +179,26 @@ router.get(
   }),
 );
 
+const dataset_access_check = asyncHandler(async (req, res, next) => {
+  // assumes req.params.id is the dataset id user is requesting
+  // access check
+  const permission = getPermission({
+    resource: 'datasets',
+    action: 'read',
+    requester_roles: req?.user?.roles,
+  });
+  if (!permission.granted) {
+    const user_dataset_assoc = await datasetService.has_dataset_assoc({
+      username: req.user.username,
+      dataset_id: req.params.id,
+    });
+    if (!user_dataset_assoc) {
+      return next(createError.Forbidden());
+    }
+  }
+  next();
+});
+
 // get by id - worker + UI
 router.get(
   '/:id',
@@ -188,26 +208,12 @@ router.get(
     query('workflows').toBoolean().default(false),
     query('last_task_run').toBoolean().default(false),
     query('prev_task_runs').toBoolean().default(false),
+    query('only_active').toBoolean().default(false),
   ]),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is true
-
-    // access check
-    const permission = getPermission({
-      resource: 'datasets',
-      action: 'read',
-      requester_roles: req?.user?.roles,
-    });
-    if (!permission.granted) {
-      const user_dataset_assoc = await datasetService.has_dataset_assoc({
-        username: req.user.username,
-        dataset_id: req.params.id,
-      });
-      if (!user_dataset_assoc) {
-        return next(createError.Forbidden());
-      }
-    }
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -215,6 +221,7 @@ router.get(
       workflows: req.query.workflows,
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
+      only_active: req.query.only_active,
     });
     res.json(dataset);
   }),
@@ -497,25 +504,10 @@ router.get(
     param('id').isInt().toInt(),
     query('basepath').default(''),
   ]),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
-
-    // access check
-    const permission = getPermission({
-      resource: 'datasets',
-      action: 'read',
-      requester_roles: req?.user?.roles,
-    });
-    if (!permission.granted) {
-      const user_dataset_assoc = await datasetService.has_dataset_assoc({
-        username: req.user.username,
-        dataset_id: req.params.id,
-      });
-      if (!user_dataset_assoc) {
-        return next(createError.Forbidden());
-      }
-    }
 
     const files = await datasetService.files_ls({
       dataset_id: req.params.id,
@@ -532,25 +524,10 @@ router.get(
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get the file tree
-
-    // access check
-    const permission = getPermission({
-      resource: 'datasets',
-      action: 'read',
-      requester_roles: req?.user?.roles,
-    });
-    if (!permission.granted) {
-      const user_dataset_assoc = await datasetService.has_dataset_assoc({
-        username: req.user.username,
-        dataset_id: req.params.id,
-      });
-      if (!user_dataset_assoc) {
-        return next(createError.Forbidden());
-      }
-    }
 
     const files = await prisma.dataset_file.findMany({
       where: {
@@ -568,25 +545,10 @@ router.get(
     param('id').isInt().toInt(),
     param('file_id').isInt().toInt(),
   ]),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
-
-    // access check
-    const permission = getPermission({
-      resource: 'datasets',
-      action: 'read',
-      requester_roles: req?.user?.roles,
-    });
-    if (!permission.granted) {
-      const user_dataset_assoc = await datasetService.has_dataset_assoc({
-        username: req.user.username,
-        dataset_id: req.params.id,
-      });
-      if (!user_dataset_assoc) {
-        return next(createError.Forbidden());
-      }
-    }
 
     const file = await prisma.dataset_file.findFirstOrThrow({
       where: {

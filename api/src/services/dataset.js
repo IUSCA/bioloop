@@ -156,6 +156,7 @@ async function get_dataset({
   workflows = false,
   last_task_run = false,
   prev_task_runs = false,
+  only_active = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -176,23 +177,21 @@ async function get_dataset({
     },
   });
 
-  if (dataset) {
-    let _dataset = dataset;
-    if (workflows) {
-      // include workflow with dataset
-      const _includeWorkflows = wfService.includeWorkflows(
-        last_task_run,
-        prev_task_runs,
-      );
-      _dataset = await _includeWorkflows(dataset);
-    }
-    _dataset?.audit_logs?.forEach((log) => {
-      // eslint-disable-next-line no-param-reassign
-      if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+  if (workflows && dataset.workflows.length > 0) {
+    // include workflow objects with dataset
+    const wf_res = await wfService.getAll({
+      only_active,
+      last_task_run,
+      prev_task_runs,
+      workflow_ids: dataset.workflows.map((x) => x.id),
     });
-    return _dataset;
+    dataset.workflows = wf_res.data;
   }
-  return null;
+  dataset?.audit_logs?.forEach((log) => {
+    // eslint-disable-next-line no-param-reassign
+    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+  });
+  return dataset;
 }
 
 async function files_ls({ dataset_id, base = '' }) {

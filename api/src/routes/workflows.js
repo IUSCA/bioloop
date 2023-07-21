@@ -24,6 +24,7 @@ router.get(
         app_id: config.app_id,
         skip: req.query.skip,
         limit: req.query.limit,
+        workflow_ids: req.query.workflow_id,
       });
       res.json(api_res.data);
     },
