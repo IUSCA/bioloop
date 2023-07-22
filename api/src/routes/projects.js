@@ -1,13 +1,13 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-const { query, param, body } = require('express-validator');
+const { body } = require('express-validator');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
-const datasetService = require('../services/dataset');
+const wfService = require('../services/workflow');
 const { setDifference } = require('../utils');
 
 const isPermittedTo = accessControl('projects');
@@ -23,7 +23,15 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
   },
   datasets: {
     select: {
-      dataset: true,
+      dataset: {
+        include: {
+          workflows: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      },
       assigned_at: true,
     },
   },
@@ -69,7 +77,7 @@ router.get(
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project irrespective of user association.
     // #swagger.description = admin and operator roles are allowed and user role is forbidden
-    const projects = await prisma.project.findFirstOrThrow({
+    const project = await prisma.project.findFirstOrThrow({
       where: {
         OR: [
           {
@@ -82,7 +90,27 @@ router.get(
       }, // filter by username
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(projects);
+
+    // include workflow objects with dataset
+    const wfPromises = project.datasets.map(async (ds) => {
+      const { dataset, assigned_at } = ds;
+      if (dataset.workflows.length > 0) {
+        const wf_res = await wfService.getAll({
+          only_active: true,
+          last_task_run: false,
+          prev_task_runs: false,
+          workflow_ids: dataset.workflows.map((x) => x.id),
+        });
+        return {
+          assigned_at,
+          dataset: Object.assign(dataset, { workflows: wf_res.data }),
+        };
+      }
+      return ds;
+    });
+    project.datasets = await Promise.all(wfPromises);
+
+    res.json(project);
   }),
 );
 
@@ -121,7 +149,7 @@ router.get(
     /* #swagger.description = user role: can only see their project.
       operator, admin: can see anyone's project
     */
-    const projects = await prisma.project.findFirstOrThrow({
+    const project = await prisma.project.findFirstOrThrow({
       where: {
         OR: [
           {
@@ -141,61 +169,27 @@ router.get(
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
-    res.json(req.permission.filter(projects));
-  }),
-);
 
-router.get(
-  '/:username/:project_id/:dataset_id/files',
-  accessControl('project_dataset_files', 'read', { checkOwnerShip: true }),
-  validate([
-    param('dataset_id').isInt().toInt(),
-    query('basepath').default(''),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Projects']
-    // #swagger.summary = get file listings of a dataset in a project associated with given username
-    /* #swagger.description = user role: can only see their project dataset files.
-      operator, admin: can see anyone's project dataset files
-    */
-
-    // check if there exists a project with project_id / slug
-    // and has username and dataset_id associations
-    await prisma.project.findFirstOrThrow({
-      where: {
-        OR: [
-          {
-            id: req.params.project_id,
-          },
-          {
-            slug: req.params.project_id,
-          },
-        ],
-        users: {
-          some: {
-            user: {
-              username: req.params.username,
-            },
-          },
-        },
-        datasets: {
-          some: {
-            dataset: {
-              id: req.params.dataset_id,
-            },
-          },
-        },
-      },
+    // include workflow objects with dataset
+    const wfPromises = project.datasets.map(async (ds) => {
+      const { dataset, assigned_at } = ds;
+      if (dataset.workflows.length > 0) {
+        const wf_res = await wfService.getAll({
+          only_active: true,
+          last_task_run: false,
+          prev_task_runs: false,
+          workflow_ids: dataset.workflows.map((x) => x.id),
+        });
+        return {
+          assigned_at,
+          dataset: Object.assign(dataset, { workflows: wf_res.data }),
+        };
+      }
+      return ds;
     });
+    project.datasets = await Promise.all(wfPromises);
 
-    // call ls_files function to return files
-    const files = await datasetService.files_ls({
-      dataset_id: req.params.dataset_id,
-      base: req.query.basepath,
-    });
-    // 1 week
-    res.set('Cache-control', 'private, max-age=604800');
-    res.json(files);
+    res.json(req.permission.filter(project));
   }),
 );
 
