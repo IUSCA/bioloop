@@ -1,5 +1,5 @@
 <template>
-  <va-data-table :items="rows" :columns="columns">
+  <va-data-table :items="rows" :columns="columns" class="min-h-[100px]">
     <template #cell(name)="{ rowData }">
       <router-link :to="`/datasets/${rowData.id}`" class="va-link">
         {{ rowData.name }}
@@ -15,10 +15,12 @@
         <va-button
           class="shadow"
           preset="primary"
-          color="info"
+          :color="rowData.is_staging_pending ? 'warning' : 'info'"
           icon="cloud_sync"
-          @click="handleStage(rowData)"
+          @click="openModalToStageProject(rowData)"
+          :disabled="rowData.is_staged || rowData.is_staging_pending"
         />
+        <!-- datasetsDetails[rowData.id]?.is_staging_pending -->
       </div>
     </template>
 
@@ -30,11 +32,12 @@
           color="info"
           icon="cloud_download"
           @click="openModalToDownloadProject(rowData)"
+          :disabled="!rowData.is_staged"
         />
       </div>
     </template>
 
-    <template #cell(share)="{ rowData }">
+    <!-- <template #cell(share)="{ rowData }">
       <div class="">
         <va-button
           class="shadow"
@@ -44,7 +47,7 @@
           @click="openModalToShareProject(rowData)"
         />
       </div>
-    </template>
+    </template> -->
 
     <template #cell(metadata)="{ rowData }">
       <maybe :data="rowData?.metadata?.num_genome_files" />
@@ -58,16 +61,27 @@
       <span>{{ datetime.date(value) }}</span>
     </template>
   </va-data-table>
+
+  <!-- Download Modal -->
+  <DatasetDownloadModal
+    ref="downloadModal"
+    :dataset="datasetToDownload"
+    :project-id="props.project.id"
+  />
 </template>
 
 <script setup>
 import * as datetime from "@/services/datetime";
 import { formatBytes, cmp } from "@/services/utils";
+import wfService from "@/services/workflow";
 
 const props = defineProps({
   datasets: {
     type: Array,
     default: () => [],
+  },
+  project: {
+    type: Object,
   },
 });
 
@@ -75,14 +89,18 @@ const rows = computed(() => {
   return props.datasets.map((obj) => ({
     ...obj.dataset,
     assigned_at: obj.assigned_at,
+    is_staging_pending: wfService.is_step_pending(
+      "STAGE",
+      obj.dataset.workflows
+    ),
   }));
 });
 
 const columns = [
   { key: "name", sortable: true, sortingOptions: ["desc", "asc", null] },
   { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
-  { key: "download", width: "70px", thAlign: "center", tdAlign: "center" },
-  { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
+  { key: "download", width: "100px", thAlign: "center", tdAlign: "center" },
+  // { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
   { key: "type", sortable: true },
   {
     key: "updated_at",
@@ -104,4 +122,16 @@ const columns = [
     sortingFn: (a, b) => a - b,
   },
 ];
+
+const downloadModal = ref(null);
+const datasetToDownload = ref(null);
+
+function openModalToDownloadProject(dataset) {
+  datasetToDownload.value = dataset;
+  downloadModal.value.show();
+}
+
+function openModalToStageProject(dataset) {
+  console.log("openModalToStageProject", dataset);
+}
 </script>

@@ -9,7 +9,6 @@
     <div class="flex flex-col gap-3">
       <!-- Associated datasets -->
       <div>
-        <!-- <span class="text-2xl"> Associated Datasets</span> -->
         <va-card class="">
           <va-card-title class="">
             <div class="flex flex-nowrap items-center w-full">
@@ -25,7 +24,10 @@
             </div>
           </va-card-title>
           <va-card-content>
-            <ProjectDatasetsTable :datasets="project.datasets" />
+            <ProjectDatasetsTable
+              :datasets="project.datasets"
+              :project="project"
+            />
           </va-card-content>
         </va-card>
       </div>
