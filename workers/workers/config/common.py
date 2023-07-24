@@ -78,8 +78,8 @@ config = {
                     'task': 'validate_dataset'
                 },
                 {
-                    'name': 'generate_reports',
-                    'task': 'generate_reports'
+                    'name': 'generate_qc',
+                    'task': 'generate_qc'
                 }
             ]
         }
