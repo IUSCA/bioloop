@@ -7,6 +7,7 @@ const _ = require('lodash/fp');
 
 const wfService = require('./workflow');
 const userService = require('./user');
+const { log_axios_error } = require('../utils');
 
 const prisma = new PrismaClient();
 
@@ -179,13 +180,18 @@ async function get_dataset({
 
   if (workflows && dataset.workflows.length > 0) {
     // include workflow objects with dataset
-    const wf_res = await wfService.getAll({
-      only_active,
-      last_task_run,
-      prev_task_runs,
-      workflow_ids: dataset.workflows.map((x) => x.id),
-    });
-    dataset.workflows = wf_res.data;
+    try {
+      const wf_res = await wfService.getAll({
+        only_active,
+        last_task_run,
+        prev_task_runs,
+        workflow_ids: dataset.workflows.map((x) => x.id),
+      });
+      dataset.workflows = wf_res.data;
+    } catch (error) {
+      log_axios_error(error);
+      dataset.workflows = [];
+    }
   }
   dataset?.audit_logs?.forEach((log) => {
     // eslint-disable-next-line no-param-reassign

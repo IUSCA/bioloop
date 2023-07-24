@@ -8,7 +8,7 @@ const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
 const wfService = require('../services/workflow');
-const { setDifference } = require('../utils');
+const { setDifference, log_axios_error } = require('../utils');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -95,16 +95,21 @@ router.get(
     const wfPromises = project.datasets.map(async (ds) => {
       const { dataset, assigned_at } = ds;
       if (dataset.workflows.length > 0) {
-        const wf_res = await wfService.getAll({
+        return wfService.getAll({
           only_active: true,
           last_task_run: false,
           prev_task_runs: false,
           workflow_ids: dataset.workflows.map((x) => x.id),
-        });
-        return {
+        }).then((wf_res) => ({
           assigned_at,
           dataset: Object.assign(dataset, { workflows: wf_res.data }),
-        };
+        })).catch((error) => {
+          log_axios_error(error);
+          return {
+            assigned_at,
+            dataset: Object.assign(dataset, { workflows: [] }),
+          };
+        });
       }
       return ds;
     });
@@ -174,16 +179,21 @@ router.get(
     const wfPromises = project.datasets.map(async (ds) => {
       const { dataset, assigned_at } = ds;
       if (dataset.workflows.length > 0) {
-        const wf_res = await wfService.getAll({
+        return wfService.getAll({
           only_active: true,
           last_task_run: false,
           prev_task_runs: false,
           workflow_ids: dataset.workflows.map((x) => x.id),
-        });
-        return {
+        }).then((wf_res) => ({
           assigned_at,
           dataset: Object.assign(dataset, { workflows: wf_res.data }),
-        };
+        })).catch((error) => {
+          log_axios_error(error);
+          return {
+            assigned_at,
+            dataset: Object.assign(dataset, { workflows: [] }),
+          };
+        });
       }
       return ds;
     });
