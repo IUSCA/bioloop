@@ -33,7 +33,8 @@ config = {
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
-        }
+        },
+        'download_dir': '/path/to/download_dir'
     },
     'registration': {
         'RAW_DATA': {

@@ -557,12 +557,23 @@ router.get(
       },
     });
 
-    const download_token = await authService.get_download_token(file.path);
-
-    res.json({
-      url: (new URL(file.path, config.get('download_server.base_url'))).href,
-      bearer_token: download_token.accessToken,
+    const dataset = await prisma.dataset.findFirstOrThrow({
+      where: {
+        id: req.params.id,
+      },
     });
+
+    if (dataset.metadata.download_alias) {
+      const download_token = await authService.get_download_token(file.path);
+
+      const url = new URL(`${dataset.metadata.download_alias}/${file.path}`, config.get('download_server.base_url'));
+      res.json({
+        url: url.href,
+        bearer_token: download_token.accessToken,
+      });
+    } else {
+      next(createError.NotFound('Dataset is not prepared for download'));
+    }
   }),
 );
 
