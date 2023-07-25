@@ -94,11 +94,11 @@
                 border-color="info"
                 class="flex-none"
                 color="info"
-                disabled
+                @click="openMergeModal"
               >
                 <div class="flex items-center gap-2">
                   <i-mdi-merge />
-                  <span> Merge Project </span>
+                  <span> Merge Projects </span>
                 </div>
               </va-button>
 
@@ -146,6 +146,13 @@
   <!-- Datasets modal -->
   <ProjectDatasetsModal
     ref="datasetsModal"
+    :id="project.id"
+    @update="handleEditUpdate"
+  />
+
+  <!-- Merge modal -->
+  <MergeProjectModal
+    ref="mergeModal"
     :id="project.id"
     @update="handleEditUpdate"
   />
@@ -248,6 +255,13 @@ const datasetsModal = ref(null);
 function openDatasetsModal() {
   projectFormStore.setDatasets(datasets.value);
   datasetsModal.value.show();
+}
+
+// merge modal
+const mergeModal = ref(null);
+
+function openMergeModal() {
+  mergeModal.value.show();
 }
 </script>
 

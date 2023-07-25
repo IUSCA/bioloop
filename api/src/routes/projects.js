@@ -250,7 +250,7 @@ router.post(
   '/merge/:src',
   isPermittedTo('update'),
   validate([
-    body('dataset_ids').exists(),
+    body('target_project_ids').exists(),
     body('delete_merged').toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -271,7 +271,7 @@ router.post(
     const target_projects = await prisma.project.findMany({
       where: {
         id: {
-          in: req.body.dataset_ids,
+          in: req.body.target_project_ids,
         },
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
@@ -298,12 +298,12 @@ router.post(
       data,
     });
 
-    // if delete merged is true, delete targer projects as well as its user and dataset associations
-    if (req.body.delete_merge) {
+    // if delete merged is true, delete target projects as well as its user and dataset associations
+    if (req.body.delete_merged) {
       const deletes = prisma.project.deleteMany({
         where: {
           id: {
-            in: req.body.dataset_ids,
+            in: req.body.target_project_ids,
           },
         },
       });
