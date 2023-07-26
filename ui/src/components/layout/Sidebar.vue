@@ -20,7 +20,7 @@
       </va-list>
     </va-sidebar-item>
 
-    <va-divider />
+    <!-- <va-divider /> -->
 
     <va-sidebar-item
       v-for="(item, i) in user_items"

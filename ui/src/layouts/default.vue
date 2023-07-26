@@ -1,4 +1,5 @@
 <template>
+  <Header></Header>
   <div class="flex flex-row h-screen">
     <nav
       aria-label="menu nav"
