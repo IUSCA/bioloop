@@ -39,16 +39,53 @@
             </va-list-item-section>
           </va-list-item>
         </va-list>
-      </va-navbar-item>  
+      </va-navbar-item>
+
+      <va-navbar-item>
+        <va-switch
+          v-model="switchValue"
+          true-value="dark"
+          false-value="light"
+          size="small"
+          >
+          <template #innerLabel>
+            <div class="va-text-center">
+              <va-icon
+                size="24px"
+                :name="switchValue === 'dark' ? 'dark_mode' : 'light_mode'"
+              />
+            </div>
+          </template>
+        </va-switch>
+      </va-navbar-item>
     </template>
   </va-navbar>
 </template>
 
 <script setup>
+import { useColors } from "vuestic-ui";
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
+const { applyPreset, currentPresetName, colors } = useColors();
+
+const switchValue = computed({
+  get() {
+    return currentPresetName.value;
+  },
+  set(value) {
+    applyPreset(value);
+  },
+});
+
+watch([colors, switchValue], () => {
+  console.log(`watch says: switchValue = ${switchValue.value}`)
+  auth.setTheme({
+    primary: colors.primary,
+    mode: switchValue.value
+  });
+}, { deep: true })
 
 const navbar_items = ref([
   {
@@ -67,6 +104,16 @@ const navbar_items = ref([
     path: "/auth/logout",
   },
 ]);
+
+// const THEMES = {
+//   LIGHT: 'light',
+//   DARK: 'dark'
+// }
+
+// const VA_THEME_MODES = {
+//   LIGHT: 'light_mode',
+//   DARK: 'dark_mode'
+// }
 </script>
 
 <style>

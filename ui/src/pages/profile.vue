@@ -45,16 +45,6 @@
             Primary color:
             <VaColorPalette v-model="colors.primary" :palette="palette" />
           </div>
-
-          <div class="flex items-center gap-3">
-            Dark mode:
-            <VaSwitch
-              v-model="switchValue"
-              true-value="dark"
-              false-value="light"
-              size="small"
-            />
-          </div>
         </div>
       </va-card-content>
     </va-card>
@@ -67,31 +57,10 @@ import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
 
 const auth = useAuthStore();
-const { applyPreset, currentPresetName, colors } = useColors();
+const { colors } = useColors();
 
 const palette = ["#2c82e0", "#ef476f", "#ffd166", "#06d6a0", "#8338ec"];
-
-const switchValue = computed({
-  get() {
-    return currentPresetName.value;
-  },
-  set(value) {
-    applyPreset(value);
-  },
-});
-
 const profile = auth.user;
-
-watch(
-  [colors, switchValue],
-  () => {
-    auth.setTheme({
-      primary: colors.primary,
-      mode: switchValue.value,
-    });
-  },
-  { deep: true }
-);
 </script>
 
 <route lang="yaml">
