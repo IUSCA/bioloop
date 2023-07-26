@@ -8,6 +8,7 @@ YEAR = datetime.datetime.now().year
 AUTH_TOKEN = os.environ['AUTH_TOKEN']
 QUEUE_PASSWORD = os.environ['QUEUE_PASS']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
+ALIAS_SALT = os.environ['ALIAS_SALT']
 
 ONE_HOUR = 60 * 60
 ONE_GIGABYTE = 1024 * 1024 * 1024
@@ -53,7 +54,8 @@ config = {
     'stage': {
         'purge': {
             'days_to_live': 20
-        }
+        },
+        'alias_salt': ''
     },
     'workflow_registry': {
         'integrated': {

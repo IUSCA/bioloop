@@ -63,8 +63,10 @@ class DatasetService {
   }
 
   get_staged_path(dataset) {
-    const dataset_type = dataset.type;
-    return `${config.paths.stage[dataset_type]}/${dataset.name}`;
+    if (dataset?.metadata?.stage_alias) {
+      const dataset_type = dataset.type;
+      return `${config.paths.stage[dataset_type]}/${dataset.metadata.stage_alias}/${dataset.name}`;
+    }
   }
 
   update({ id, updated_data }) {
