@@ -1,0 +1,36 @@
+node_modules
+
+# Keep environment variables out of version control
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Optional npm cache directory
+.npm
+.pnpm-store
+
+# Optional REPL history
+.node_repl_history
+.pnpm-store
+
+# keys
+keys/*.pub
+keys/*.key
+keys/jwks.json
+
+#swagger auto generate file
+swagger_output.json
+
+# generated reports
+reports
+
+test.js
+src/test.js
