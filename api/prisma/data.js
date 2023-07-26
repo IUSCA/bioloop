@@ -17,6 +17,9 @@ const roles = [{
 
 const admins = [
   {
+    name: 'Rishi Pandey',
+    username: 'ripandey',
+  }, {
     name: 'Charles Brandt',
     username: 'ccbrandt',
   }, {

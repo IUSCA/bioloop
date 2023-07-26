@@ -8,6 +8,8 @@
 
 - [Docker](README-docker.md)
 
+- [Create a new project from this template](docs/new_project.md)
+
 ## Architecture
 <img src="docs/architecture.png" >
 
