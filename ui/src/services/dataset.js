@@ -18,6 +18,7 @@ class DatasetService {
     workflows = true,
     last_task_run = false,
     prev_task_runs = false,
+    only_active = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -25,6 +26,7 @@ class DatasetService {
         workflows,
         last_task_run,
         prev_task_runs,
+        only_active,
       },
     });
   }
@@ -61,8 +63,10 @@ class DatasetService {
   }
 
   get_staged_path(dataset) {
-    const dataset_type = dataset.type;
-    return `${config.paths.stage[dataset_type]}/${dataset.name}`;
+    if (dataset?.metadata?.stage_alias) {
+      const dataset_type = dataset.type;
+      return `${config.paths.stage[dataset_type]}/${dataset.metadata.stage_alias}/${dataset.name}`;
+    }
   }
 
   update({ id, updated_data }) {
@@ -81,6 +85,10 @@ class DatasetService {
         basepath,
       },
     });
+  }
+
+  get_file_download_data({ dataset_id, file_id }) {
+    return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
   }
 }
 

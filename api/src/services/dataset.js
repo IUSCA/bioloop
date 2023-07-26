@@ -7,6 +7,7 @@ const _ = require('lodash/fp');
 
 const wfService = require('./workflow');
 const userService = require('./user');
+const { log_axios_error } = require('../utils');
 
 const prisma = new PrismaClient();
 
@@ -156,6 +157,7 @@ async function get_dataset({
   workflows = false,
   last_task_run = false,
   prev_task_runs = false,
+  only_active = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -164,7 +166,7 @@ async function get_dataset({
     },
   } : false;
 
-  const dataset = await prisma.dataset.findFirst({
+  const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
       files: fileSelect,
@@ -176,23 +178,26 @@ async function get_dataset({
     },
   });
 
-  if (dataset) {
-    let _dataset = dataset;
-    if (workflows) {
-      // include workflow with dataset
-      const _includeWorkflows = wfService.includeWorkflows(
+  if (workflows && dataset.workflows.length > 0) {
+    // include workflow objects with dataset
+    try {
+      const wf_res = await wfService.getAll({
+        only_active,
         last_task_run,
         prev_task_runs,
-      );
-      _dataset = await _includeWorkflows(dataset);
+        workflow_ids: dataset.workflows.map((x) => x.id),
+      });
+      dataset.workflows = wf_res.data;
+    } catch (error) {
+      log_axios_error(error);
+      dataset.workflows = [];
     }
-    _dataset?.audit_logs?.forEach((log) => {
-      // eslint-disable-next-line no-param-reassign
-      if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
-    });
-    return _dataset;
   }
-  return null;
+  dataset?.audit_logs?.forEach((log) => {
+    // eslint-disable-next-line no-param-reassign
+    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+  });
+  return dataset;
 }
 
 async function files_ls({ dataset_id, base = '' }) {
@@ -297,6 +302,31 @@ function create_filetree(files) {
   return root;
 }
 
+async function has_dataset_assoc({
+  dataset_id, username,
+}) {
+  const projects = await prisma.project.findMany({
+    where: {
+      users: {
+        some: {
+          user: {
+            username,
+          },
+        },
+      },
+      datasets: {
+        some: {
+          dataset: {
+            id: dataset_id,
+          },
+        },
+      },
+    },
+  });
+
+  return projects.length > 0;
+}
+
 module.exports = {
   soft_delete,
   hard_delete,
@@ -306,4 +336,5 @@ module.exports = {
   create_workflow,
   files_ls,
   create_filetree,
+  has_dataset_assoc,
 };

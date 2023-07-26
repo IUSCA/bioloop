@@ -15,7 +15,7 @@
     "schema": "public"
   },
   "workflow_server": {
-    "base_url": "http://localhost:5000",
+    "base_url": "http://127.0.0.1:5000",
     "auth_token": ""
   },
   "auth": {
@@ -27,6 +27,17 @@
       "key": "keys/auth.key",
       "sign_algorithm": "RS256"
     }
+  },
+  "oauth": {
+    "base_url": "http://127.0.0.1:5050",
+    "download": {
+      "client_id": "",
+      "client_secret": "",
+      "scope_prefix": "download_file:"
+    }
+  },
+  "download_server": {
+    "base_url": "http://localhost:8000"
   },
   "mode": "default",
   "app_id": "cpa-dev.sca.iu.edu",

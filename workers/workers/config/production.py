@@ -20,7 +20,8 @@ config = {
         'DATA_PRODUCT': {
             'archive': f'archive/{YEAR}/data_products',
             'stage': '/N/scratch/cpauser/cpa/production/stage/data_products',
-        }
+        },
+        'download_dir': '/N/scratch/cpauser/cpa/production/download'
     },
     'registration': {
         'RAW_DATA': {

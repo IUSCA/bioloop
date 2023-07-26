@@ -8,6 +8,7 @@ YEAR = datetime.datetime.now().year
 AUTH_TOKEN = os.environ['AUTH_TOKEN']
 QUEUE_PASSWORD = os.environ['QUEUE_PASS']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
+ALIAS_SALT = os.environ['ALIAS_SALT']
 
 ONE_HOUR = 60 * 60
 ONE_GIGABYTE = 1024 * 1024 * 1024
@@ -34,7 +35,8 @@ config = {
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/N/scratch/cpauser/cpa/development/stage/data_products',
-        }
+        },
+        'download_dir': '/N/scratch/cpauser/cpa/development/download'
     },
     'registration': {
         'RAW_DATA': {
@@ -51,6 +53,12 @@ config = {
         'poll_interval_seconds': 10
     },
     'service_user': 'cpauser',
+    'stage': {
+        'purge': {
+            'days_to_live': 20
+        },
+        'alias_salt': ''
+    },
     'workflow_registry': {
         'integrated': {
             'steps': [

@@ -96,6 +96,19 @@ class projectService {
   // calculateSlug(name) {
   //   return api.get(`/projects/slug/calculate/${name}`);
   // }
+
+  mergeProjects({ src_project_id, target_project_ids, delete_merged = false }) {
+    return api
+      .post(`/projects/merge/${src_project_id}`, {
+        target_project_ids,
+        delete_merged,
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to merge projects");
+        return err;
+      });
+  }
 }
 
 export default new projectService();

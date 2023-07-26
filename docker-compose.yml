@@ -2,7 +2,6 @@ version: "3"
 name: cpa
 services:
   ui:
-    container_name: ui
     image: node:19
     volumes:
       - ./ui/:/opt/sca/app
@@ -19,7 +18,6 @@ services:
         npm install && exec /opt/sca/app/node_modules/.bin/vite --host
 
   api:
-    container_name: api
     image: node:19
     # user: ${APP_UID}:${APP_GID}
     # build:
@@ -55,7 +53,6 @@ services:
      - postgres
 
   postgres:
-    container_name: postgres
     image: postgres:14.5
     # restart: unless-stopped
     environment:
@@ -69,6 +66,17 @@ services:
       - 127.0.0.1:5432:5432
     expose:
       - 5432
+
+  nginx:
+    image: nginx:1.25
+    ports:
+        - 8000:8000
+    volumes:
+        - ./nginx/src:/usr/share/nginx/html
+        - ./nginx/conf:/etc/nginx/conf.d
+        - ./data:/opt/sca/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
 
 
 volumes:
