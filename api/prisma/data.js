@@ -81,7 +81,7 @@ const datasets = [
     metadata: {
       num_genome_files: 60,
       report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
-      download_alias: 'ea497ac769f2236b6cd9ae70f288a008',
+      stage_alias: 'ea497ac769f2236b6cd9ae70f288a008',
     },
   },
   {

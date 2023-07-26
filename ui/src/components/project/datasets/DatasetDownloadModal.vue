@@ -119,7 +119,7 @@ const downloadURL = computed(() => {
 });
 
 const downloadPath = computed(() => {
-  return `${config.paths.download}/${props.dataset.metadata?.download_alias}`;
+  return `${config.paths.download}/${props.dataset.metadata?.stage_alias}`;
 });
 
 const visible = ref(false);

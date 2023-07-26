@@ -83,6 +83,8 @@ router.delete(
         where: {
           id: req.params.id,
         },
+      }).catch((err) => {
+        console.warn('Unable to delete workflow from the app database', err);
       });
       res.json(api_res.data);
     },
