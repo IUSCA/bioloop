@@ -55,7 +55,7 @@ config = {
         'purge': {
             'days_to_live': 20
         },
-        'alias_salt': ''
+        'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
         'integrated': {

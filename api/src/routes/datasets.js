@@ -563,10 +563,10 @@ router.get(
       },
     });
 
-    if (dataset.metadata.download_alias) {
+    if (dataset.metadata.stage_alias) {
       const download_token = await authService.get_download_token(file.path);
 
-      const url = new URL(`${dataset.metadata.download_alias}/${file.path}`, config.get('download_server.base_url'));
+      const url = new URL(`${dataset.metadata.stage_alias}/${file.path}`, config.get('download_server.base_url'));
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,
