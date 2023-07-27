@@ -4,6 +4,21 @@ Fork this repo IUSCA/<app_name> (only the org owners can do this, ask Charles.)
 
 Turn on issues in the new repo (only repo owners can do this, ask Charles.)
 
+Clone repository
+```bash
+git clone <url>
+cd <project>
+```
+
+Add bioloop as remote
+```bash
+git remote add origin git@github.com:IUSCA/bioloop.git
+
+# to merge updates from bioloop
+# git fetch bioloop
+# git merge bioloop/main
+```
+
 Replace the name "bioloop" with the new project name (<app_name>) in these files:
 - docker-compose.yml and docker-compose-prod.yml: Change "name"
 - ui/src/config.js - Change "appTitle"
