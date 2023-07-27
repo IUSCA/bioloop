@@ -9,6 +9,7 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
 from workers.dataset import compute_staging_path
+from workers.exceptions import ValidationFailed
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -39,8 +40,7 @@ def setup_download(celery_task, dataset_id, **kwargs):
 
     if not staged_path.exists():
         # TODO: more robust validation?
-        # TODO: non-retryable error
-        pass
+        raise ValidationFailed(f'Staged path does not exist {staged_path}')
 
     download_path = Path(config['paths']['download_dir']).resolve() / alias
 

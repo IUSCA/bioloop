@@ -82,11 +82,10 @@ def stage_dataset(celery_task, dataset_id, **kwargs):
     alias = stage(celery_task, dataset)
 
     update_data = {
-        'is_staged': True,
         'metadata': {
             'stage_alias': alias
         }
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
-    api.add_state_to_dataset(dataset_id=dataset_id, state='STAGED')
+    api.add_state_to_dataset(dataset_id=dataset_id, state='FETCHED')
     return dataset_id,

@@ -40,3 +40,17 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
         raise
     except Exception as e:
         raise exc.RetryableException(e)
+
+
+@app.task(base=WorkflowTask, bind=True, name='setup_dataset_download',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def setup_dataset_download(celery_task, dataset_id, **kwargs):
+    from workers.tasks.download import setup_download as task_body
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.ValidationFailed:
+        raise
+    except Exception as e:
+        raise exc.RetryableException(e)
