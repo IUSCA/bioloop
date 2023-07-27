@@ -7,7 +7,7 @@ Turn on issues in the new repo (only repo owners can do this, ask Charles.)
 Replace the name "bioloop" with the new project name (<app_name>) in these files:
 - docker-compose.yml and docker-compose-prod.yml: Change "name"
 - ui/src/config.js - Change "appTitle"
-- api/config/default.json and api/config/production.json: Change "app_id"
+- api/config/default.json and api/config/production.json: Change "app_id", "auth.jwt.iss"
 - workers/workers/config/common.py: Change "app_id" and "service_user"
 - workers/workers/config/production.py and workers/workers/scripts/start_worker.sh: Change "app_id" and "base_url"
 - workers/ecosystem.config.js (line 7): change celery hostname and queues values
@@ -28,8 +28,8 @@ cd keys
 ./genkeys.sh
 cd ..
 
-pnpm install
-pnpm swagger
+npm install && npm install --save-dev
+npm run swagger
 ```
 
 This step is required only if you are working with workflows, otherwise you can set `WORKFLOW_AUTH_TOKEN` to any value and API calls to Rhythm API will fail but the App will still run.
@@ -61,7 +61,7 @@ npx prisma db push
 npx prisma db seed
 ```
 
-Start the server: `pnpm start`
+Start the server: `npm run start`
 
 ## Steps to setup UI and run natively on development machine (not using docker)
 
@@ -76,7 +76,7 @@ cp .env.example .env
 mkdir .cert
 openssl req -subj '/CN=localhost' -x509 -newkey rsa:4096 -nodes -keyout ./.cert/key.pem -out ./.cert/cert.pem
 
-pnpm install
+npm install && npm install --save-dev
 ```
 Make these changes to ui/.env file:
 - change the hostname in VITE_API_REDIRECT_URL to localhost
@@ -85,7 +85,7 @@ Make these changes to ui/.env file:
 VITE_API_REDIRECT_URL=http://localhost:3030
 ```
 
-Start the vite server: `pnpm dev`
+Start the vite server: `npm run dev`
 
 
 ## Set Up Workers locally
@@ -157,12 +157,12 @@ poetry run dev
 
 ```bash
 cd <app_name>/api
-pnpm start
+npm run start
 ```
 
 ```bash
 cd <app_name>/ui
-pnpm dev
+npm run dev
 ```
 
 - Reverse port forward API, mongo and queue. let the clients on remote machine talk to a server

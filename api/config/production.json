@@ -5,7 +5,6 @@
   },
   "postgres": {
     "hostname": "commons3.sca.iu.edu",
-    "db": "bioloop",
     "schema": "public"
   },
   "workflow_server": {
