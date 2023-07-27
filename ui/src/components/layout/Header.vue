@@ -20,8 +20,38 @@
       </va-navbar-item>
     </template>
 
-    <!-- TODO - isActive method is missing. -->
     <template #right>
+      <va-button-dropdown
+        class="mr-2"
+        preset="plain"
+        size="large"
+        icon="account_circle"
+      >
+      <template>
+        <p>Hello</p>
+        <!-- <va-list>
+          <va-list-item
+          class="col-span-1"
+          >
+          <va-list-item-section avatar>
+            <va-avatar color="blue" size="small">
+              <span class="text-sm uppercase">RP</span>
+            </va-avatar>
+          </va-list-item-section>
+          <va-list-item-section>
+          <va-list-item-label>
+            Rishi Pandey
+          </va-list-item-label>
+          <va-list-item-label caption>
+            ripandey@iu.edu
+          </va-list-item-label>
+        </va-list-item-section>
+
+          </va-list-item>
+        </va-list> -->
+      </template>
+      </va-button-dropdown>
+
       <va-navbar-item
         v-for="(item, i) in navbar_items"
         :key="i">
