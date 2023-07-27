@@ -42,5 +42,9 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
         logger.warning(f'{len(validation_errors)} validation errors for dataset id: {dataset_id} path: {staged_path}')
         raise exc.ValidationFailed(validation_errors)
 
-    api.add_state_to_dataset(dataset_id=dataset_id, state='VALIDATED')
+    update_data = {
+        'is_staged': True
+    }
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    api.add_state_to_dataset(dataset_id=dataset_id, state='STAGED')
     return dataset_id, validation_errors
