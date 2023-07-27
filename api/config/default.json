@@ -8,7 +8,7 @@
   },
   "postgres": {
     "hostname": "localhost",
-    "port": "5433",
+    "port": "5432",
     "user": "appuser",
     "password": "",
     "db": "app",
@@ -29,7 +29,7 @@
     }
   },
   "mode": "default",
-  "app_id": "bioloop-dev.sca.iu.edu",
+  "app_id": "cfndap-test.sca.iu.edu",
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",

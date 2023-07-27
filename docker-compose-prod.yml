@@ -1,8 +1,7 @@
 version: "3"
-name: bioloop
+name: cfndap
 services:
   ui:
-    container_name: ui
     restart: unless-stopped
     image: node:19
     volumes:
@@ -13,7 +12,6 @@ services:
     
 
   api:
-    container_name: api
     restart: unless-stopped
     build:
       context: ./api

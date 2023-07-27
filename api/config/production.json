@@ -1,11 +1,10 @@
 {
-  "app_id": "bioloop.sca.iu.edu",
+  "app_id": "cfndap-test.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
   "postgres": {
     "hostname": "commons3.sca.iu.edu",
-    "db": "bioloop",
     "schema": "public"
   },
   "workflow_server": {
@@ -14,7 +13,7 @@
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "bioloop.sca.iu.edu",
+      "iss": "cfndap-test.sca.iu.edu",
       "ttl_milliseconds": 3600000
     }
   }

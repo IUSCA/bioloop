@@ -14,7 +14,7 @@ ONE_GIGABYTE = 1024 * 1024 * 1024
 FIVE_MINUTES = 5 * 60
 
 config = {
-    'app_id': 'bioloop-dev.sca.iu.edu',
+    'app_id': 'cfndap-test.sca.iu.edu',
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
@@ -48,7 +48,7 @@ config = {
         'minimum_project_size': ONE_GIGABYTE,
         'wait_between_scans_seconds': FIVE_MINUTES,
     },
-    'service_user': 'bioloopuser',
+    'service_user': 'scauser',
     'workflow_registry': {
         'integrated': {
             'steps': [

@@ -5,9 +5,9 @@ YEAR = datetime.datetime.now().year
 # Production overrides
 
 config = {
-    'app_id': 'bioloop.sca.iu.edu',
+    'app_id': 'cfndap-test.sca.iu.edu',
     'api': {
-        'base_url': 'https://bioloop.sca.iu.edu/api/',  # trailing slash is required
+        'base_url': 'https://cfndap-test.sca.iu.edu/api/',  # trailing slash is required
     },
     'celery': {
         'queue': {
