@@ -1,6 +1,6 @@
 <template>
   <va-sidebar>
-    <va-sidebar-item to="/">
+    <!-- <va-sidebar-item to="/">
       <va-list>
         <va-list-item>
           <va-list-item-section icon>
@@ -18,7 +18,7 @@
           </va-list-item-section>
         </va-list-item>
       </va-list>
-    </va-sidebar-item>
+    </va-sidebar-item> -->
 
     <!-- <va-divider /> -->
 
