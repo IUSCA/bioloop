@@ -62,7 +62,7 @@ services:
       - ./db/db_postgres:/var/lib/postgresql/data
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
     ports:
-      - 127.0.0.1:5432:5432
+      - 127.0.0.1:5433:5432
     expose:
       - 5432
 
