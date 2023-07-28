@@ -26,18 +26,20 @@
           disabled
         />
       </div>
-      <div v-else>
+      <div v-else class="flex justify-center">
         <!-- dataset is not staged and a workflow with staging is pending -->
         <half-circle-spinner
+          class="flex-none"
           v-if="rowData.is_staging_pending"
           :animation-duration="1000"
-          :size="20"
+          :size="24"
           :color="colors.warning"
         />
 
         <!-- dataset is not staged and is not being staged -->
         <va-button
-          class="shadow"
+          v-else
+          class="shadow flex-none"
           preset="primary"
           color="info"
           icon="cloud_sync"
