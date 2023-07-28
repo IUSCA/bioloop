@@ -64,6 +64,11 @@
           "name": "validate",
           "task": "validate_dataset",
           "queue": "fetch.cpa.sca.iu.edu.q"
+        },
+        {
+          "name": "setup_download",
+          "task": "setup_dataset_download",
+          "queue": "fetch.cpa.sca.iu.edu.q"
         }
       ]
     },
@@ -77,6 +82,11 @@
         {
           "name": "validate",
           "task": "validate_dataset",
+          "queue": "fetch.cpa.sca.iu.edu.q"
+        },
+        {
+          "name": "setup_download",
+          "task": "setup_dataset_download",
           "queue": "fetch.cpa.sca.iu.edu.q"
         }
       ]

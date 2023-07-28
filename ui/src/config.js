@@ -17,7 +17,7 @@ const exports = {
       RAW_DATA: "/N/scratch/cpauser/cpa/production/stage/raw_data",
       DATA_PRODUCT: "/N/scratch/cpauser/cpa/production/stage/data_products",
     },
-    download: "/N/scratch/bioloop/production/download",
+    download: "/N/scratch/cpauser/cpa/production/download",
   },
 };
 

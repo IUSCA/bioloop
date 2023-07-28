@@ -36,7 +36,8 @@ config = {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/N/scratch/cpauser/cpa/development/stage/data_products',
         },
-        'download_dir': '/N/scratch/cpauser/cpa/development/download'
+        'download_dir': '/N/scratch/cpauser/cpa/development/download',
+        'root': '/N/scratch/cpauser/cpa'
     },
     'registration': {
         'RAW_DATA': {
@@ -85,6 +86,11 @@ config = {
                 {
                     'name': 'validate',
                     'task': 'validate_dataset',
+                    'queue': 'fetch.cpa.sca.iu.edu.q'
+                },
+                {
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download',
                     'queue': 'fetch.cpa.sca.iu.edu.q'
                 },
                 {
