@@ -35,7 +35,8 @@ config = {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
         },
-        'download_dir': '/path/to/download_dir'
+        'download_dir': '/path/to/download_dir',
+        'root': '/path/to/root'
     },
     'registration': {
         'RAW_DATA': {
@@ -79,6 +80,10 @@ config = {
                 {
                     'name': 'validate',
                     'task': 'validate_dataset'
+                },
+                {
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download'
                 },
                 {
                     'name': 'generate_qc',

@@ -45,11 +45,14 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
         if extraction_dir.exists():
             shutil.rmtree(extraction_dir)
 
-        # extracts the tar contents to temp directory
-        # move the contents to extraction_dir
-        with tempfile.TemporaryDirectory(dir=target_dir.parent) as tmpdir:
-            archive.extractall(path=tmpdir)
-            shutil.move(Path(tmpdir) / archive_name, extraction_dir)
+        # create parent directories if missing
+        extraction_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        # extracts the tar contents to a temp directory
+        # move the contents to the extraction_dir
+        with tempfile.TemporaryDirectory(dir=extraction_dir.parent) as tmp_dir:
+            archive.extractall(path=tmp_dir)
+            shutil.move(Path(tmp_dir) / archive_name, extraction_dir)
 
 
 def stage(celery_task: WorkflowTask, dataset: dict) -> str:
