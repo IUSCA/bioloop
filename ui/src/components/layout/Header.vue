@@ -74,15 +74,15 @@
       <va-navbar-item>
         <va-switch
           v-model="switchValue"
-          true-value="dark"
-          false-value="light"
+          :true-value=THEMES.DARK
+          :false-value=THEMES.LIGHT
           size="small"
           >
           <template #innerLabel>
             <div class="va-text-center">
               <va-icon
                 size="24px"
-                :name="switchValue === 'dark' ? 'dark_mode' : 'light_mode'"
+                :name="switchValue === THEMES.DARK ? 'dark_mode' : 'light_mode'"
               />
             </div>
           </template>
@@ -135,15 +135,10 @@ const navbar_items = ref([
   },
 ]);
 
-// const THEMES = {
-//   LIGHT: 'light',
-//   DARK: 'dark'
-// }
-
-// const VA_THEME_MODES = {
-//   LIGHT: 'light_mode',
-//   DARK: 'dark_mode'
-// }
+const THEMES = {
+  LIGHT: 'light',
+  DARK: 'dark'
+}
 </script>
 
 <style>
