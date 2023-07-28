@@ -5,6 +5,7 @@ from pathlib import Path
 import workers.api as api
 from workers.config import config
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # sanity check. If the API accidentally returns all datasets do not blindly delete them

@@ -1,5 +1,8 @@
 import api from "./api";
 import config from "@/config";
+import { useToastStore } from "@/stores/toast";
+
+const toast = useToastStore();
 
 class DatasetService {
   getAll({ deleted = null, processed = null, type = null } = {}) {
@@ -32,7 +35,16 @@ class DatasetService {
   }
 
   stage_dataset(id) {
-    return api.post(`/datasets/${id}/workflow/stage`);
+    return api
+      .post(`/datasets/${id}/workflow/stage`)
+      .then(() => {
+        toast.success("A workflow has started to stage the dataset");
+      })
+      .catch((err) => {
+        console.error("unable to stage the dataset", err);
+        toast.error("Unable to stage the dataset");
+        return Promise.reject(err);
+      });
   }
 
   archive_dataset(id) {

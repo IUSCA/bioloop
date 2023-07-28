@@ -1,5 +1,10 @@
 <template>
-  <va-data-table :items="rows" :columns="columns" class="min-h-[100px]">
+  <va-data-table
+    :items="rows"
+    :columns="columns"
+    class="min-h-[100px]"
+    :loading="loading"
+  >
     <template #cell(name)="{ rowData }">
       <router-link :to="`/datasets/${rowData.id}`" class="va-link">
         {{ rowData.name }}
@@ -68,12 +73,20 @@
     :dataset="datasetToDownload"
     :project-id="props.project.id"
   />
+
+  <!-- Stage Modal -->
+  <StageDatasetModal
+    ref="stageModal"
+    :dataset="datasetToStage"
+    @update="fetch_and_update_dataset"
+  />
 </template>
 
 <script setup>
 import * as datetime from "@/services/datetime";
 import { formatBytes, cmp } from "@/services/utils";
 import wfService from "@/services/workflow";
+import DatasetService from "@/services/dataset";
 
 const props = defineProps({
   datasets: {
@@ -85,15 +98,72 @@ const props = defineProps({
   },
 });
 
+const loading = ref(false);
+const _datasets = ref({});
+
+// populate _datasets from props
+watch(
+  () => props.datasets,
+  () => {
+    _datasets.value = props.datasets.reduce((acc, obj) => {
+      acc[obj.dataset.id] = obj.dataset;
+      return acc;
+    }, {});
+    console.log("_datasets from props", _datasets.value);
+  },
+  {
+    immediate: true,
+  }
+);
+
 const rows = computed(() => {
-  return props.datasets.map((obj) => ({
-    ...obj.dataset,
-    assigned_at: obj.assigned_at,
-    is_staging_pending: wfService.is_step_pending(
-      "STAGE",
-      obj.dataset.workflows
-    ),
+  return Object.values(_datasets.value).map((ds) => ({
+    ...ds,
+    is_staging_pending: wfService.is_step_pending("STAGE", ds.workflows),
   }));
+});
+
+const tracking = computed(() => {
+  const t = rows.value.filter((ds) => ds.is_staging_pending).map((ds) => ds.id);
+  console.log("tracking", t);
+  return t;
+});
+
+function fetch_and_update_dataset(id) {
+  console.log("fetch_and_update_dataset", id);
+  DatasetService.getById({ id })
+    .then((res) => {
+      _datasets.value[id] = res.data;
+    })
+    .catch((err) => {
+      console.error("unable to fetch dataset", id, err);
+    });
+}
+
+function poll_datasets() {
+  tracking.value.forEach(fetch_and_update_dataset);
+}
+
+const poll = useIntervalFn(
+  () => {
+    console.log("polling", tracking.value, _datasets.value);
+    poll_datasets();
+  },
+  2000,
+  {
+    immediate: false,
+  }
+);
+
+watch(tracking, () => {
+  console.log("watch tracking", tracking.value.length);
+  if (tracking.value.length > 0) {
+    // start poll
+    poll.resume();
+  } else {
+    // stop poll
+    poll.pause();
+  }
 });
 
 const columns = [
@@ -123,6 +193,7 @@ const columns = [
   },
 ];
 
+// download modal
 const downloadModal = ref(null);
 const datasetToDownload = ref(null);
 
@@ -131,7 +202,14 @@ function openModalToDownloadProject(dataset) {
   downloadModal.value.show();
 }
 
+// stage modal
+const stageModal = ref(null);
+const datasetToStage = ref({});
+
 function openModalToStageProject(dataset) {
   console.log("openModalToStageProject", dataset);
+
+  datasetToStage.value = dataset;
+  stageModal.value.show();
 }
 </script>
