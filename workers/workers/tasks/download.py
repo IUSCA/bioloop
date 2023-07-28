@@ -34,6 +34,13 @@ def grant_read_permissions_to_others(root: Path):
             p.chmod(p.stat().st_mode | stat.S_IROTH)
 
 
+def grant_access_to_parent_chain(leaf: Path, root: Path):
+    p = leaf.parent
+    while p != root:
+        p.chmod(p.stat().st_mode | stat.S_IXOTH)
+        p = p.parent
+
+
 def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     staged_path, alias = compute_staging_path(dataset)
@@ -48,5 +55,8 @@ def setup_download(celery_task, dataset_id, **kwargs):
     rm(download_path)
     download_path.symlink_to(staged_path, target_is_directory=True)
 
-    # enable others to read and cd into directory
+    # enable others to read and cd into stage directory
     grant_read_permissions_to_others(staged_path)
+
+    # enable others to navigate to leaf by granting execute permission on parent directories
+    grant_access_to_parent_chain(staged_path, root=Path(config['paths']['root']))
