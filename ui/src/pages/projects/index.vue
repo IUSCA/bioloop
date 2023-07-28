@@ -203,7 +203,6 @@ const columns = [
 ];
 
 function customFilteringFn(searchText, { name, users, datasets }) {
-  console.log("filtering", { searchText });
   return (
     searchText === "" ||
     (name || "").toLowerCase().includes(searchText) ||

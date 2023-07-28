@@ -25,14 +25,14 @@ module.exports = {
       autorestart: false
     },
     {
-      name: "purge_datasets",
+      name: "purge_staged_datasets",
       script: "python",
-      args: "-u -m workers.scripts.purge_datasets",
+      args: "-u -m workers.scripts.purge_staged_datasets",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "../logs/workers/metrics.err",
-      out_file: "../logs/workers/metrics.log",
+      error_file: "../logs/workers/purge_staged_datasets.err",
+      out_file: "../logs/workers/purge_staged_datasets.log",
       cron_restart: "00 07 * * *",
       autorestart: false
     }

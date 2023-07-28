@@ -87,9 +87,10 @@
 
             <!-- file -->
             <div
-              class="flex items-center gap-1 cursor-pointer"
+              class="flex items-center gap-1"
+              :class="{ 'cursor-pointer': showDownload }"
               v-else
-              @click="initiate_file_download(rowData)"
+              @click="showDownload ? initiate_file_download(rowData) : () => {}"
             >
               <FileTypeIcon :filename="rowData.name" />
 
@@ -101,6 +102,7 @@
                 preset="plain"
                 color="primary"
                 icon="download"
+                v-if="showDownload"
               >
               </va-button>
             </div>
@@ -138,7 +140,13 @@ import {
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 
-const props = defineProps({ datasetId: String });
+const props = defineProps({
+  datasetId: String,
+  showDownload: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const filelist = ref([]);
 const pwd = ref("");

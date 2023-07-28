@@ -56,7 +56,8 @@ config = {
     'service_user': 'cpauser',
     'stage': {
         'purge': {
-            'days_to_live': 20
+            'days_to_live': 20,
+            'max_purges': 10
         },
         'alias_salt': ALIAS_SALT
     },
