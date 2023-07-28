@@ -55,12 +55,12 @@ class DatasetService {
     });
   }
 
-  is_staged(states) {
-    return (
-      (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
-        .length > 0
-    );
-  }
+  // is_staged(states) {
+  //   return (
+  //     (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
+  //       .length > 0
+  //   );
+  // }
 
   get_staged_path(dataset) {
     if (dataset?.metadata?.stage_alias) {

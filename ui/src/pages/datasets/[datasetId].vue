@@ -75,10 +75,7 @@
           </div>
 
           <!-- Staged for processing -->
-          <div
-            class="flex-none"
-            v-if="DatasetService.is_staged(dataset?.states)"
-          >
+          <div class="flex-none" v-if="dataset.is_staged">
             <va-card>
               <va-card-title>
                 <span class="text-lg">Staged for Processing</span>

@@ -6,7 +6,10 @@
     <span class="text-2xl"> {{ dataset.name }} Files</span>
     <va-divider />
   </div>
-  <FileBrowser :dataset-id="props.datasetId" />
+  <FileBrowser
+    :dataset-id="props.datasetId"
+    :show-download="dataset.is_staged"
+  />
 </template>
 
 <script setup>
@@ -21,7 +24,6 @@ const dataset = ref({});
 DatasetService.getById({ id: props.datasetId, workflows: false })
   .then((res) => {
     dataset.value = res.data;
-    console.log(dataset.value);
   })
   .catch((err) => {
     console.error(err);

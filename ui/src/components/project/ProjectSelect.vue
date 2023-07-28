@@ -41,7 +41,6 @@ const props = defineProps({
 const projects = ref([]);
 
 projectService.getAll({ forSelf: false }).then((res) => {
-  console.log(props.excludeIds);
   projects.value = (res.data || []).filter(
     (p) => !props.excludeIds.includes(p.id)
   );
