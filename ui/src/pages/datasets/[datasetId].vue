@@ -421,12 +421,7 @@ function stage_dataset() {
   loading.value = true;
   DatasetService.stage_dataset(dataset.value.id)
     .then(() => {
-      toast.success("A workflow has started to stage the dataset");
       fetch_dataset(true);
-    })
-    .catch((err) => {
-      console.error("unable to stage the dataset", err);
-      toast.error("Unable to stage the dataset");
     })
     .finally(() => {
       loading.value = false;

@@ -13,6 +13,7 @@ class projectService {
     ).catch((err) => {
       console.error(err);
       toast.error("Unable to fetch projects");
+      return Promise.reject(err);
     });
   }
 
@@ -37,7 +38,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to create project");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -51,7 +52,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to update project details");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -65,7 +66,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to delete project");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -77,7 +78,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to update project users");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -89,7 +90,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to update project datasets");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -106,7 +107,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to merge projects");
-        return err;
+        return Promise.reject(err);
       });
   }
 }
