@@ -16,16 +16,33 @@
     </template>
 
     <template #cell(stage)="{ rowData }">
-      <div class="">
+      <!-- dataset is staged -->
+      <div v-if="rowData.is_staged">
         <va-button
           class="shadow"
           preset="primary"
-          :color="rowData.is_staging_pending ? 'warning' : 'info'"
+          color="info"
+          icon="cloud_sync"
+          disabled
+        />
+      </div>
+      <div v-else>
+        <!-- dataset is not staged and a workflow with staging is pending -->
+        <half-circle-spinner
+          v-if="rowData.is_staging_pending"
+          :animation-duration="1000"
+          :size="20"
+          :color="colors.warning"
+        />
+
+        <!-- dataset is not staged and is not being staged -->
+        <va-button
+          class="shadow"
+          preset="primary"
+          color="info"
           icon="cloud_sync"
           @click="openModalToStageProject(rowData)"
-          :disabled="rowData.is_staged || rowData.is_staging_pending"
         />
-        <!-- datasetsDetails[rowData.id]?.is_staging_pending -->
       </div>
     </template>
 
@@ -87,6 +104,10 @@ import * as datetime from "@/services/datetime";
 import { formatBytes, cmp } from "@/services/utils";
 import wfService from "@/services/workflow";
 import DatasetService from "@/services/dataset";
+import config from "@/config";
+import { HalfCircleSpinner } from "epic-spinners";
+import { useColors } from "vuestic-ui";
+const { colors } = useColors();
 
 const props = defineProps({
   datasets: {
@@ -109,7 +130,7 @@ watch(
       acc[obj.dataset.id] = obj.dataset;
       return acc;
     }, {});
-    console.log("_datasets from props", _datasets.value);
+    // console.log("_datasets from props", _datasets.value);
   },
   {
     immediate: true,
@@ -119,18 +140,18 @@ watch(
 const rows = computed(() => {
   return Object.values(_datasets.value).map((ds) => ({
     ...ds,
-    is_staging_pending: wfService.is_step_pending("STAGE", ds.workflows),
+    is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
   }));
 });
 
 const tracking = computed(() => {
   const t = rows.value.filter((ds) => ds.is_staging_pending).map((ds) => ds.id);
-  console.log("tracking", t);
+  // console.log("tracking", t);
   return t;
 });
 
 function fetch_and_update_dataset(id) {
-  console.log("fetch_and_update_dataset", id);
+  // console.log("fetch_and_update_dataset", id);
   DatasetService.getById({ id })
     .then((res) => {
       _datasets.value[id] = res.data;
@@ -146,17 +167,17 @@ function poll_datasets() {
 
 const poll = useIntervalFn(
   () => {
-    console.log("polling", tracking.value, _datasets.value);
+    // console.log("polling", tracking.value, _datasets.value);
     poll_datasets();
   },
-  2000,
+  config.dataset_polling_interval,
   {
     immediate: false,
   }
 );
 
 watch(tracking, () => {
-  console.log("watch tracking", tracking.value.length);
+  // console.log("watch tracking", tracking.value.length);
   if (tracking.value.length > 0) {
     // start poll
     poll.resume();
@@ -207,8 +228,7 @@ const stageModal = ref(null);
 const datasetToStage = ref({});
 
 function openModalToStageProject(dataset) {
-  console.log("openModalToStageProject", dataset);
-
+  // console.log("openModalToStageProject", dataset);
   datasetToStage.value = dataset;
   stageModal.value.show();
 }

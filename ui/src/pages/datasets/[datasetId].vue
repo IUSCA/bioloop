@@ -121,7 +121,7 @@
                   <!-- Stage Action Button-->
                   <va-button
                     v-if="dataset.archive_path"
-                    :disabled="is_stage_pending"
+                    :disabled="is_stage_pending || dataset.is_staged"
                     color="primary"
                     border-color="primary"
                     preset="secondary"
