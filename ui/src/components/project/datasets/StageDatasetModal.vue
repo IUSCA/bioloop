@@ -49,7 +49,7 @@ function show() {
 
 function handleOk() {
   loading.value = true;
-  DatasetService.stage_dataset(props.id)
+  DatasetService.stage_dataset(props.dataset.id)
     .then(() => {
       emit("update", props.dataset.id);
     })
