@@ -23,26 +23,7 @@
     <template #right>
       <va-button-dropdown class="mr-2" preset="plain" size="large" icon="account_circle">
         <va-list>
-          <!-- <va-list-item
-          class="col-span-1"
-          >
-          <va-list-item-section avatar>
-            <va-avatar color="blue" size="small">
-              <span class="text-sm uppercase">RP</span>
-            </va-avatar>
-          </va-list-item-section>
-          <va-list-item-section>
-          <va-list-item-label>
-            Rishi Pandey
-          </va-list-item-label>
-          <va-list-item-label caption>
-            ripandey@iu.edu
-          </va-list-item-label>
-        </va-list-item-section>
-
-          </va-list-item> -->
-
-          <va-list-item class="col-span-1">
+          <va-list-item to="/profile" class="navbar-dropdown-profile-list-item">
             <va-list-item-section avatar>
               <va-avatar :color="stringToRGB(profile.name || '')" size="small">
                 <span class="text-sm uppercase">{{ initials(profile.name) }}</span>
@@ -59,9 +40,18 @@
               </va-list-item-label>
             </va-list-item-section>
           </va-list-item>
+
+          <va-list-item class="navbar-dropdown-profile-list-item" to="/auth/logout">
+            <va-list-item-section icon>
+              <Icon icon="mdi-logout-variant" class="text-2xl" />
+            </va-list-item-section>
+            <va-list-item-section>
+              <va-list-item-label>
+                Logout
+              </va-list-item-label>
+            </va-list-item-section>
+          </va-list-item>
         </va-list>
-
-
       </va-button-dropdown>
 
       <va-navbar-item v-for="(item, i) in navbar_items" :key="i">
@@ -126,16 +116,16 @@ const navbar_items = ref([
     title: "About",
     path: "/about",
   },
-  {
-    icon: "mdi-account-details",
-    title: "Profile",
-    path: "/profile",
-  },
-  {
-    icon: "mdi-logout-variant",
-    title: "Logout",
-    path: "/auth/logout",
-  },
+  // {
+  //   icon: "mdi-account-details",
+  //   title: "Profile",
+  //   path: "/profile",
+  // },
+  // {
+  //   icon: "mdi-logout-variant",
+  //   title: "Logout",
+  //   path: "/auth/logout",
+  // },
 ]);
 
 const THEMES = {
@@ -154,6 +144,14 @@ function initials(name) {
 </script>
 
 <style>
+.navbar-dropdown-profile-list-item .va-list-item-section--icon {
+  --va-list-item-section-icon-margin: 0.6rem 1.5rem 0.6rem 0;
+}
+
+.navbar-dropdown-profile-list-item .va-list-item-section--main {
+  margin: 0.6rem 0.75rem 0.6rem 0;
+}
+
 .navbar-list-item-icon-container {
   flex: none;
 }
