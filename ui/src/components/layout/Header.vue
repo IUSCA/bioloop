@@ -108,8 +108,6 @@ const profile = auth.user
 
 const props = defineProps({isSidebarCollapsed: Boolean})
 
-const sidebarIconName = computed(() => "menu" + props.isSidebarCollapsed ? "_open" : "")
-
 // const isSidebarCollapsed = ref(false)
 
 // const toggleSidebarVisibility = () => {
