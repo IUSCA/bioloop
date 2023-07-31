@@ -1,5 +1,5 @@
 <template>
-  <va-sidebar>
+  <va-sidebar :minimized="props.isSidebarCollapsed">
     <!-- <va-sidebar-item to="/">
       <va-list>
         <va-list-item>
@@ -76,8 +76,10 @@
 </template>
 
 <script setup>
-import config from "@/config";
+// import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
+
+const props = defineProps({isSidebarCollapsed: Boolean})
 
 const auth = useAuthStore();
 const route = useRoute();
