@@ -1,6 +1,6 @@
 <template>
-  <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
-  <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
+  <p>Breakpoint: {{ breakpoint.current }}</p>
+  <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p>
   <Header 
     :isSidebarCollapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility"
@@ -32,7 +32,7 @@ const breakpoint = useBreakpoint()
 let isSidebarCollapsed = ref(false)
 
 watch(() => breakpoint.current, () => {
-  isSidebarCollapsed.value = breakpoint.current !== 'xl' && breakpoint.current !== 'lg' && breakpoint.current !== 'md'
+  isSidebarCollapsed.value = !(breakpoint.xl || breakpoint.lg || breakpoint.md)
 })
 
 const toggleSidebarVisibility = () => {
