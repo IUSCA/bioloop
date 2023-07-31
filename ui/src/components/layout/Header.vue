@@ -21,16 +21,9 @@
     </template>
 
     <template #right>
-      <va-button-dropdown
-        class="mr-2"
-        preset="plain"
-        size="large"
-        icon="account_circle"
-      >
-      <template>
-        <p>Hello</p>
-        <!-- <va-list>
-          <va-list-item
+      <va-button-dropdown class="mr-2" preset="plain" size="large" icon="account_circle">
+        <va-list>
+          <!-- <va-list-item
           class="col-span-1"
           >
           <va-list-item-section avatar>
@@ -47,18 +40,33 @@
           </va-list-item-label>
         </va-list-item-section>
 
+          </va-list-item> -->
+
+          <va-list-item class="col-span-1">
+            <va-list-item-section avatar>
+              <va-avatar :color="stringToRGB(profile.name || '')" size="small">
+                <span class="text-sm uppercase">{{ initials(profile.name) }}</span>
+              </va-avatar>
+            </va-list-item-section>
+
+            <va-list-item-section>
+              <va-list-item-label>
+                {{ profile.name }}
+              </va-list-item-label>
+
+              <va-list-item-label caption>
+                {{ profile.email }}
+              </va-list-item-label>
+            </va-list-item-section>
           </va-list-item>
-        </va-list> -->
-      </template>
+        </va-list>
+
+
       </va-button-dropdown>
 
-      <va-navbar-item
-        v-for="(item, i) in navbar_items"
-        :key="i">
+      <va-navbar-item v-for="(item, i) in navbar_items" :key="i">
         <va-list>
-          <va-list-item
-           :to="item.path"
-           >
+          <va-list-item :to="item.path">
             <va-list-item-section class="navbar-list-item-icon-container">
               <Icon :icon="item.icon" class="text-2xl" />
             </va-list-item-section>
@@ -72,18 +80,10 @@
       </va-navbar-item>
 
       <va-navbar-item>
-        <va-switch
-          v-model="switchValue"
-          :true-value=THEMES.DARK
-          :false-value=THEMES.LIGHT
-          size="small"
-          >
+        <va-switch v-model="switchValue" :true-value=THEMES.DARK :false-value=THEMES.LIGHT size="small">
           <template #innerLabel>
             <div class="va-text-center">
-              <va-icon
-                size="24px"
-                :name="switchValue === THEMES.DARK ? 'dark_mode' : 'light_mode'"
-              />
+              <va-icon size="24px" :name="switchValue === THEMES.DARK ? 'dark_mode' : 'light_mode'" />
             </div>
           </template>
         </va-switch>
@@ -96,9 +96,12 @@
 import { useColors } from "vuestic-ui";
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
+import { stringToRGB } from "@/services/colors";
 
 const auth = useAuthStore();
 const { applyPreset, currentPresetName, colors } = useColors();
+
+const profile = auth.user
 
 const switchValue = computed({
   get() {
@@ -139,6 +142,15 @@ const THEMES = {
   LIGHT: 'light',
   DARK: 'dark'
 }
+
+function initials(name) {
+  const parts = (name || "").split(" ");
+  if (parts.length == 1) return parts[0][0];
+  else {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`;
+  }
+}
+
 </script>
 
 <style>
