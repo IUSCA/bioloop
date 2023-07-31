@@ -1,6 +1,6 @@
 <template>
-  <p>Breakpoint: {{ breakpoint.current }}</p>
-  <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p>
+  <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
+  <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
   <Header 
     :isSidebarCollapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility"
@@ -31,7 +31,14 @@ const breakpoint = useBreakpoint()
 
 let isSidebarCollapsed = ref(false)
 
-watch(() => breakpoint.current, () => {
+watch(() => breakpoint.current, (newValue, oldValue) => {
+  // When going from screen size sm to xs, or xs to sm, if sidebar is already open, we should not close it.
+  if (!isSidebarCollapsed.value) {
+    if ((oldValue === 'xs' && newValue === 'sm') || (oldValue === 'sm' && newValue === 'xs')) {
+      return
+    }
+  }
+
   isSidebarCollapsed.value = !(breakpoint.xl || breakpoint.lg || breakpoint.md)
 })
 
