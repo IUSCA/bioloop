@@ -331,20 +331,13 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
-    // #swagger.autoBody=true
-    // #swagger.autoQuery=true
-    // #swagger.autoHeaders=true
-    const files = req.body.map((f) => ({
-      dataset_id: req.params.id,
+    const data = req.body.map((f) => ({
       path: f.path,
       md5: f.md5,
       size: BigInt(f.size),
       filetype: f.type,
     }));
-
-    await prisma.dataset_file.createMany({
-      data: files,
-    });
+    datasetService.add_files({ dataset_id: req.params.id, data });
 
     res.sendStatus(200);
   }),
