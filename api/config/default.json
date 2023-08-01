@@ -1,4 +1,6 @@
 {
+  "mode": "default",
+  "app_id": "cpa-dev.sca.iu.edu",
   "express": {
     "port": 3030,
     "host": "localhost"
@@ -39,8 +41,6 @@
   "download_server": {
     "base_url": "http://localhost:8000"
   },
-  "mode": "default",
-  "app_id": "cpa-dev.sca.iu.edu",
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",

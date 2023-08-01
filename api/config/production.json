@@ -1,4 +1,5 @@
 {
+  "mode": "production",
   "app_id": "cpa.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
@@ -23,6 +24,6 @@
     "base_url": "https://oauth-dev.sca.iu.edu"
   },
   "download_server": {
-    "base_url": "https://download.cpa.sca.iu.edu"
+    "base_url": "https://cpa2.sca.iu.edu"
   }
 }
