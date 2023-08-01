@@ -1,7 +1,10 @@
 <template>
   <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
   <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
-  <Header :isSidebarCollapsed="isSidebarCollapsed" @toggle-sidebar-visibility="toggleSidebarVisibility"></Header>
+  <Header
+   :isSidebarCollapsed="isSidebarCollapsed"
+   @toggle-sidebar-visibility="toggleSidebarVisibility">
+  </Header>
   <div class="flex flex-row h-screen">
     <nav aria-label="menu nav" class="relative h-full content-center flex-none shadow-xl">
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
@@ -36,7 +39,8 @@ watch(() => breakpoint.current, (newValue, oldValue) => {
   isSidebarCollapsed.value = !(
     breakpoint.xl ||
     breakpoint.lg ||
-    breakpoint.md)
+    breakpoint.md
+  )
 })
 
 const toggleSidebarVisibility = () => {
