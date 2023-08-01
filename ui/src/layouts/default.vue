@@ -10,7 +10,7 @@
   </Header>
   <nav>
     <div
-    v-if="isMobileView && isMobileNavVisible"
+    v-show="isMobileView && isMobileNavVisible"
     class="w-full text-right px-5 py-5">
       <va-button
       icon="close"
