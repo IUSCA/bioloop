@@ -1,26 +1,34 @@
 <template>
   <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
   <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
-  <Header
-    v-show="!isMobileNavVisible"
-    :is-mobile-view="isMobileView"
-    :is-sidebar-collapsed="isSidebarCollapsed"
-    @toggle-sidebar-visibility="toggleSidebarVisibility"
-    @toggle-mobile-nav-visibility="toggleMobileNavVisibility">
+  <Header v-show="!isMobileNavVisible" :is-mobile-view="isMobileView" :is-sidebar-collapsed="isSidebarCollapsed"
+    @toggle-sidebar-visibility="toggleSidebarVisibility" @toggle-mobile-nav-visibility="toggleMobileNavVisibility">
   </Header>
-  <nav>
-    <div
-    v-show="isMobileView && isMobileNavVisible"
-    class="w-full text-right px-5 py-5">
-      <va-button
-      icon="close"
-      @click="toggleMobileNavVisibility"
-      />
+  <nav v-show="isMobileView && isMobileNavVisible">
+    <div class="w-full text-right px-5 py-5">
+      <va-button icon="close" @click="toggleMobileNavVisibility" />
+    </div>
+    <div>
+      <va-list>
+        <va-list-item>
+          <va-list-item-section>
+            <about />
+          </va-list-item-section>
+        </va-list-item>
+        <va-list-item>
+          <va-list-item-section>
+            <profile-dropdown />
+          </va-list-item-section>
+        </va-list-item>
+        <va-list-item>
+          <va-list-item-section>
+            <dark-mode />
+          </va-list-item-section>
+        </va-list-item>
+      </va-list>
     </div>
   </nav>
-  <div
-    v-show="!isMobileNavVisible"
-    class="flex flex-row h-screen">
+  <div v-show="!isMobileNavVisible" class="flex flex-row h-screen">
     <nav aria-label="menu nav" class="relative h-full content-center flex-none shadow-xl">
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
@@ -36,6 +44,9 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useBreakpoint } from "vuestic-ui"
+import About from '@/components/layout/About.vue';
+import DarkMode from '@/components/layout/DarkMode.vue';
+import ProfileDropdown from '@/components/layout/ProfileDropdown.vue';
 
 const breakpoint = useBreakpoint()
 
@@ -57,7 +68,7 @@ watch(() => breakpoint.current, (newValue, oldValue) => {
   // If sidebar is already open when going from screen size SM to XS, or XS 
   // to SM, it should stay open.
   if (!isSidebarCollapsed.value) {
-    if ((oldValue === 'xs' && newValue === 'sm') 
+    if ((oldValue === 'xs' && newValue === 'sm')
       || (oldValue === 'sm' && newValue === 'xs')) {
       return
     }
