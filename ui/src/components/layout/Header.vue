@@ -31,7 +31,12 @@
     </template>
 
     <template #right>
-      <navbar-right></navbar-right>
+      <va-button
+        icon="menu"
+        @click="$emit('toggleMobileNavVisibility')"
+        v-if="props.isMobileView"
+       />
+       <navbar-right v-else></navbar-right>
     </template>
   </va-navbar>
 </template>
@@ -43,7 +48,11 @@ import NavbarRight from '@/components/layout/NavbarRight.vue'
 
 const auth = useAuthStore();
 
-const props = defineProps({isSidebarCollapsed: Boolean})
+const props = defineProps({
+  isMobileView: Boolean,
+  isSidebarCollapsed: Boolean,
+  isMobileNavVisible: Boolean
+})
 
 // const isSidebarCollapsed = ref(false)
 

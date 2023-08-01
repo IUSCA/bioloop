@@ -2,10 +2,25 @@
   <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
   <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
   <Header
-   :isSidebarCollapsed="isSidebarCollapsed"
-   @toggle-sidebar-visibility="toggleSidebarVisibility">
+    v-show="!isMobileNavVisible"
+    :is-mobile-view="isMobileView"
+    :is-sidebar-collapsed="isSidebarCollapsed"
+    @toggle-sidebar-visibility="toggleSidebarVisibility"
+    @toggle-mobile-nav-visibility="toggleMobileNavVisibility">
   </Header>
-  <div class="flex flex-row h-screen">
+  <nav>
+    <div
+    v-if="isMobileView && isMobileNavVisible"
+    class="w-full text-right px-5 py-5">
+      <va-button
+      icon="close"
+      @click="toggleMobileNavVisibility"
+      />
+    </div>
+  </nav>
+  <div
+    v-show="!isMobileNavVisible"
+    class="flex flex-row h-screen">
     <nav aria-label="menu nav" class="relative h-full content-center flex-none shadow-xl">
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
@@ -25,6 +40,8 @@ import { useBreakpoint } from "vuestic-ui"
 const breakpoint = useBreakpoint()
 
 let isSidebarCollapsed = ref(false)
+let isMobileNavVisible = ref(false)
+let isMobileView = ref(false)
 
 watch(() => breakpoint.current, (newValue, oldValue) => {
   // If sidebar is already open when going from screen size SM to XS, or XS 
@@ -36,15 +53,23 @@ watch(() => breakpoint.current, (newValue, oldValue) => {
     }
   }
 
-  isSidebarCollapsed.value = !(
+  isMobileView = !(
     breakpoint.xl ||
     breakpoint.lg ||
     breakpoint.md
   )
+
+  // isMobileNavVisible.value = isMobileView
+  isSidebarCollapsed.value = isMobileView
 })
 
 const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
 
+const toggleMobileNavVisibility = () => {
+  isMobileNavVisible.value = !isMobileNavVisible.value
+}
+
 </script>
+
