@@ -31,6 +31,7 @@ router.get('*', (req, res, next) => {
 
   if (req_path === token_file_path) {
     res.set('X-Accel-Redirect', `/data/${token_file_path}`);
+    res.set('content-type', 'application/octet-stream; charset=utf-8');
     res.send('');
   } else {
     return next(createError.Forbidden('Invalid path'));
