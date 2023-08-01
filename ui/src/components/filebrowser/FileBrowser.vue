@@ -59,7 +59,7 @@
           :loading="data_loading"
           :filter="filterInput"
           hoverable
-          clickable
+          :row-bind="getRowBind"
           @row:click="onClick"
           virtual-scroller
           sticky-header
@@ -73,15 +73,38 @@
           </template>
 
           <template #cell(name)="{ rowData }">
-            <div class="flex items-center gap-1">
+            <!-- directory -->
+            <div
+              class="flex items-center gap-1"
+              v-if="rowData.filetype === 'directory'"
+            >
               <Icon
-                v-if="rowData.filetype === 'directory'"
                 icon="mdi-folder"
                 class="text-2xl flex-none text-gray-700"
               />
-
-              <FileTypeIcon v-else :filename="rowData.name" />
               <span> {{ rowData.name }} </span>
+            </div>
+
+            <!-- file -->
+            <div
+              class="flex items-center gap-1"
+              :class="{ 'cursor-pointer': showDownload }"
+              v-else
+              @click="showDownload ? initiate_file_download(rowData) : () => {}"
+            >
+              <FileTypeIcon :filename="rowData.name" />
+
+              <span> {{ rowData.name }} </span>
+
+              <!-- donwload button -->
+              <va-button
+                class="flex-none"
+                preset="plain"
+                color="primary"
+                icon="download"
+                v-if="showDownload"
+              >
+              </va-button>
             </div>
           </template>
 
@@ -112,9 +135,18 @@ import {
   cmp,
   maybePluralize,
   caseInsensitiveIncludes,
+  downloadFile,
 } from "@/services/utils";
+import { useToastStore } from "@/stores/toast";
+const toast = useToastStore();
 
-const props = defineProps({ datasetId: String });
+const props = defineProps({
+  datasetId: String,
+  showDownload: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const filelist = ref([]);
 const pwd = ref("");
@@ -128,7 +160,7 @@ const columns = [
 ];
 
 // initial sorting order
-const sortBy = ref("size");
+const sortBy = ref("name");
 const sortingOrder = ref("asc");
 
 const data_loading = ref(false);
@@ -190,7 +222,7 @@ function get_filelist(path) {
       });
     })
     .catch((err) => {
-      console.log(err);
+      console.error(err);
     })
     .finally(() => {
       data_loading.value = false;
@@ -210,6 +242,40 @@ function onClick(event) {
 
   if (row.filetype === "directory") {
     pwd.value = row.path;
+  }
+}
+
+function initiate_file_download(row) {
+  // to download a file
+  // get file url and token from the API to create a download url
+  // and trigger file download through browser
+
+  data_loading.value = true;
+  datasetService
+    .get_file_download_data({
+      dataset_id: props.datasetId,
+      file_id: row.id,
+    })
+    .then((res) => {
+      const url = new URL(res.data.url);
+      url.searchParams.set("token", res.data.bearer_token);
+      downloadFile({
+        url: url.toString(),
+        filename: row.name,
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to download file");
+    })
+    .finally(() => {
+      data_loading.value = false;
+    });
+}
+
+function getRowBind(row) {
+  if (row.filetype === "directory") {
+    return { class: ["cursor-pointer"] };
   }
 }
 </script>

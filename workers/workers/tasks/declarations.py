@@ -31,7 +31,7 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
           max_retries=3,
           default_retry_delay=5)
 def download_illumina_dataset(celery_task, dataset_id, **kwargs):
-    from workers.tasks.download import download_illumina_dataset as task_body
+    from workers.tasks.illumina_download import download_illumina_dataset as task_body
     return task_body(celery_task, dataset_id, **kwargs)
 
 
@@ -49,12 +49,12 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         raise exc.RetryableException(e)
 
 
-@app.task(base=WorkflowTask, bind=True, name='generate_reports',
+@app.task(base=WorkflowTask, bind=True, name='generate_qc',
           autoretry_for=(Exception,),
           max_retries=3,
           default_retry_delay=5)
-def generate_reports(celery_task, dataset_id, **kwargs):
-    from workers.tasks.report import generate_reports as task_body
+def generate_qc(celery_task, dataset_id, **kwargs):
+    from workers.tasks.qc import generate_qc as task_body
     return task_body(celery_task, dataset_id, **kwargs)
 
 
@@ -73,6 +73,20 @@ def stage_dataset(celery_task, dataset_id, **kwargs):
           default_retry_delay=5)
 def validate_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.validate import validate_dataset as task_body
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.ValidationFailed:
+        raise
+    except Exception as e:
+        raise exc.RetryableException(e)
+
+
+@app.task(base=WorkflowTask, bind=True, name='setup_dataset_download',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def setup_dataset_download(celery_task, dataset_id, **kwargs):
+    from workers.tasks.download import setup_download as task_body
     try:
         return task_body(celery_task, dataset_id, **kwargs)
     except exc.ValidationFailed:

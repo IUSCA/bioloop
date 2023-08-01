@@ -74,12 +74,14 @@ const datasets = [
     du_size: 160612542453,
     size: 160612394997,
     description: null,
+    is_staged: true,
     origin_path: '/N/scratch/scauser/bs_test/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     metadata: {
       num_genome_files: 60,
       report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
+      stage_alias: 'ea497ac769f2236b6cd9ae70f288a008',
     },
   },
   {
@@ -126,6 +128,7 @@ const datasets = [
     du_size: 137206108342,
     size: 137205924022,
     description: null,
+    is_staged: true,
     origin_path: '/N/scratch/scauser/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
@@ -143,6 +146,7 @@ const datasets = [
     du_size: 87839405520,
     size: 87835338192,
     description: null,
+    is_staged: true,
     origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
     metadata: {

@@ -8,12 +8,14 @@ const {
 } = require('express-validator');
 const multer = require('multer');
 const _ = require('lodash/fp');
+const config = require('config');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
+const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const authService = require('../services/auth');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
@@ -128,16 +130,43 @@ router.get(
     query('processed').toBoolean().optional(),
     query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
     query('name').optional(),
+    query('days_since_last_staged').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
+    const query_obj = _.omitBy(_.isUndefined)({
+      is_deleted: req.query.deleted,
+      type: req.query.type,
+      name: req.query.name,
+    });
+
+    // processed=true: datasets with one or more workflows associated
+    // processed=false: datasets with no workflows associated
+    // processed=undefined/null: no query based on workflow association
+    if (!_.isNil(req.query.processed)) {
+      query_obj.workflows = { [req.query.processed ? 'some' : 'none']: {} };
+    }
+
+    // staged datasets where there is no STAGED state in last x days
+    if (_.isNumber(req.query.days_since_last_staged)) {
+      const xDaysAgo = new Date();
+      xDaysAgo.setDate(xDaysAgo.getDate() - req.query.days_since_last_staged);
+
+      query_obj.is_staged = true;
+      query_obj.NOT = {
+        states: {
+          some: {
+            state: 'STAGED',
+            timestamp: {
+              gte: xDaysAgo,
+            },
+          },
+        },
+      };
+    }
+
     const datasets = await prisma.dataset.findMany({
-      where: {
-        ...(_.isUndefined(req.query.deleted) ? {} : { is_deleted: req.query.deleted }),
-        ...(_.isUndefined(req.query.processed) ? {} : { workflows: ({ [req.query.processed ? 'some' : 'none']: {} }) }),
-        ...(req.query.type ? { type: req.query.type } : {}),
-        ...(req.query.name ? { name: req.query.name } : {}),
-      },
+      where: query_obj,
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...datasetService.INCLUDE_STATES,
@@ -150,32 +179,51 @@ router.get(
   }),
 );
 
+const dataset_access_check = asyncHandler(async (req, res, next) => {
+  // assumes req.params.id is the dataset id user is requesting
+  // access check
+  const permission = getPermission({
+    resource: 'datasets',
+    action: 'read',
+    requester_roles: req?.user?.roles,
+  });
+  if (!permission.granted) {
+    const user_dataset_assoc = await datasetService.has_dataset_assoc({
+      username: req.user.username,
+      dataset_id: req.params.id,
+    });
+    if (!user_dataset_assoc) {
+      return next(createError.Forbidden());
+    }
+  }
+  next();
+});
+
 // get by id - worker + UI
 router.get(
   '/:id',
-  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
     query('files').toBoolean().default(false),
     query('workflows').toBoolean().default(false),
     query('last_task_run').toBoolean().default(false),
     query('prev_task_runs').toBoolean().default(false),
+    query('only_active').toBoolean().default(false),
   ]),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is true
+
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
       files: req.query.files,
       workflows: req.query.workflows,
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
+      only_active: req.query.only_active,
     });
-    if (dataset) {
-      res.json(dataset);
-    } else {
-      next(createError(404));
-    }
+    res.json(dataset);
   }),
 );
 
@@ -452,14 +500,15 @@ router.put(
 
 router.get(
   '/:id/files',
-  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
     query('basepath').default(''),
   ]),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
+
     const files = await datasetService.files_ls({
       dataset_id: req.params.id,
       base: req.query.basepath,
@@ -472,13 +521,14 @@ router.get(
 
 router.get(
   '/:id/filetree',
-  isPermittedTo('read'),
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = Get the file tree
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get the file tree
+
     const files = await prisma.dataset_file.findMany({
       where: {
         dataset_id: req.params.id,
@@ -486,6 +536,45 @@ router.get(
     });
     const root = datasetService.create_filetree(files);
     res.json(root);
+  }),
+);
+
+router.get(
+  '/:id/files/:file_id/download',
+  validate([
+    param('id').isInt().toInt(),
+    param('file_id').isInt().toInt(),
+  ]),
+  dataset_access_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get file download URL and token
+
+    const file = await prisma.dataset_file.findFirstOrThrow({
+      where: {
+        id: req.params.file_id,
+        dataset_id: req.params.id,
+      },
+    });
+
+    const dataset = await prisma.dataset.findFirstOrThrow({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    if (dataset.metadata.stage_alias) {
+      const download_file_path = `${dataset.metadata.stage_alias}/${file.path}`;
+      const download_token = await authService.get_download_token(download_file_path);
+
+      const url = new URL(download_file_path, config.get('download_server.base_url'));
+      res.json({
+        url: url.href,
+        bearer_token: download_token.accessToken,
+      });
+    } else {
+      next(createError.NotFound('Dataset is not prepared for download'));
+    }
   }),
 );
 

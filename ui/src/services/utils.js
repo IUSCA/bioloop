@@ -127,6 +127,32 @@ function caseInsensitiveIncludes(str, searchValue) {
   return lowerStr.includes(lowerSearchValue);
 }
 
+function getFileNameFromUrl(fileUrl) {
+  // Extract the filename from the URL by splitting on '/'
+  const url = new URL(fileUrl);
+  const parts = url.pathname.split("/");
+  return parts[parts.length - 1];
+}
+
+function downloadFile({ url, filename = null }) {
+  const anchor = document.createElement("a");
+  anchor.style.display = "none";
+  anchor.href = url;
+  anchor.target = "_blank";
+
+  // Set the file name (you can extract it from the URL or hardcode it)
+  anchor.download = filename || getFileNameFromUrl(url);
+
+  // Append the anchor to the DOM
+  document.body.appendChild(anchor);
+
+  // Trigger a click on the anchor to initiate the download
+  anchor.click();
+
+  // Clean up: remove the anchor from the DOM
+  document.body.removeChild(anchor);
+}
+
 export {
   formatBytes,
   difference,
@@ -142,4 +168,5 @@ export {
   cmp,
   setIntersection,
   caseInsensitiveIncludes,
+  downloadFile,
 };

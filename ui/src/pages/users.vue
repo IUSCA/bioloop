@@ -159,29 +159,36 @@
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
-          <va-switch
-            v-model="editedUser.status"
-            true-label="Enabled"
-            false-label="Disabled"
-            class="flex-[1_1_100%]"
-            color="success"
-          />
 
-          <va-input
-            v-model="editedUser.roles_str"
-            label="Roles"
-            class="flex-[1_1_100%]"
-            :rules="[
-              (value) => (value && value.length > 0) || 'Field is required',
-              (value) =>
-                value
-                  .split(',')
-                  .map((r) => r?.trim())
-                  .map((r) => r && r.length > 0)
-                  .reduce((acc, curr) => acc && curr, true) ||
-                'Invalid role specified',
-            ]"
-          />
+          <div class="flex-[1_1_100%] flex items-center gap-3">
+            <span
+              class="flex-none text-sm font-bold ml-3"
+              style="color: var(--va-primary)"
+            >
+              STATUS
+            </span>
+            <va-switch
+              v-model="editedUser.status"
+              true-label="Enabled"
+              false-label="Disabled"
+              color="success"
+            />
+          </div>
+
+          <div class="flex-[1_1_100%] ml-3">
+            <span
+              class="block text-sm font-bold mb-3"
+              style="color: var(--va-primary)"
+            >
+              ROLES
+            </span>
+            <va-option-list
+              :disabled="!auth.canAdmin"
+              v-model="editedUser.roles"
+              label="Role"
+              :options="roleOptions"
+            />
+          </div>
 
           <va-input
             v-model="editedUser.notes"
@@ -218,6 +225,7 @@ const modifyFormRef = ref(null);
 const modal_loading = ref(false);
 const editMode = ref("modify");
 const data_loading = ref(false);
+const roleOptions = ["user", "operator", "admin"];
 
 const editModalTitle = computed(() => {
   return editMode.value == "modify" ? "Modify User" : "Create User";
@@ -285,7 +293,7 @@ function openModalToEditItem(rowData) {
   editedUser.value = {
     ...user,
     status: !user.is_deleted,
-    roles_str: (user.roles || []).join(", "),
+    roles: user.roles || [],
     orig_username: user.username,
   };
 }
@@ -296,7 +304,7 @@ function openModalToCreateUser() {
   // eslint-disable-next-line no-unused-vars
   editedUser.value = {
     status: true,
-    roles_str: "",
+    roles: ["user"],
   };
 }
 
@@ -317,12 +325,9 @@ function openModaltoLogInAsUser(rowData) {
 
 function modifyUser() {
   if (modifyFormRef.value.validate()) {
-    const { roles_str, orig_username, status, ...updates } = editedUser.value;
+    const { roles, orig_username, status, ...updates } = editedUser.value;
     updates.is_deleted = !status;
-    updates.roles = roles_str
-      .split(",")
-      .map((r) => r?.trim())
-      .filter((r) => r && r.length > 0);
+    updates.roles = roles;
 
     modal_loading.value = true;
 
@@ -344,12 +349,9 @@ function modifyUser() {
 
 function createUser() {
   if (modifyFormRef.value.validate()) {
-    const { roles_str, status, ...updates } = editedUser.value;
+    const { roles, status, ...updates } = editedUser.value;
     updates.is_deleted = !status;
-    updates.roles = roles_str
-      .split(",")
-      .map((r) => r?.trim())
-      .filter((r) => r && r.length > 0);
+    updates.roles = roles;
 
     modal_loading.value = true;
 

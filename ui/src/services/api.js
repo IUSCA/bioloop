@@ -27,7 +27,7 @@ axiosInstance.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response && err.response.status === 401) {
-      console.log("Error: Unauthorized", err);
+      console.error("Error: Unauthorized", err);
 
       // logout
       router.push("/auth/logout");

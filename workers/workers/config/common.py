@@ -8,6 +8,7 @@ YEAR = datetime.datetime.now().year
 AUTH_TOKEN = os.environ['AUTH_TOKEN']
 QUEUE_PASSWORD = os.environ['QUEUE_PASS']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
+ALIAS_SALT = os.environ['ALIAS_SALT']
 
 ONE_HOUR = 60 * 60
 ONE_GIGABYTE = 1024 * 1024 * 1024
@@ -33,7 +34,9 @@ config = {
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
-        }
+        },
+        'download_dir': '/path/to/download_dir',
+        'root': '/path/to/root'
     },
     'registration': {
         'RAW_DATA': {
@@ -49,6 +52,13 @@ config = {
         'wait_between_scans_seconds': FIVE_MINUTES,
     },
     'service_user': 'bioloopuser',
+    'stage': {
+        'purge': {
+            'days_to_live': 20,
+            'max_purges': 10
+        },
+        'alias_salt': ALIAS_SALT
+    },
     'workflow_registry': {
         'integrated': {
             'steps': [
@@ -73,8 +83,12 @@ config = {
                     'task': 'validate_dataset'
                 },
                 {
-                    'name': 'generate_reports',
-                    'task': 'generate_reports'
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download'
+                },
+                {
+                    'name': 'generate_qc',
+                    'task': 'generate_qc'
                 }
             ]
         }
