@@ -1,23 +1,22 @@
 <template>
   <va-navbar>
     <template #left>
-      <!-- <va-navbar-item> -->
+      <va-navbar-item class="mr-0">
         <div
           role="button"
           aria-label="to be decided"
-          tabindex="0"
           @click="$emit('toggleSidebarVisibility')">
-          <va-icon :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')" />
+          <va-icon size="large" :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')" />
         </div>
-      <!-- </va-navbar-item> -->
+      </va-navbar-item>
       
-      <!-- <va-navbar-item> -->
+      <va-navbar-item>
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
               <img class="w-11 h-11" src="/logo.svg" />
             </va-list-item-section>
-            <va-list-item-section>
+            <va-list-item-section class="m-0">
               <va-list-item-label class="text-3xl">
                 {{ config.appTitle }}
               </va-list-item-label>
@@ -27,7 +26,7 @@
             </va-list-item-section>
           </va-list-item>
         </va-list>
-      <!-- </va-navbar-item> -->
+      </va-navbar-item>
     </template>
 
     <template #right>
