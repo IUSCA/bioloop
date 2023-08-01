@@ -1,10 +1,10 @@
 <template>
       <va-navbar-item>
-          <profile-dropdown />
+        <about/>
       </va-navbar-item>
 
       <va-navbar-item>
-        <about/>
+          <profile-dropdown />
       </va-navbar-item>
 
       <va-navbar-item>
