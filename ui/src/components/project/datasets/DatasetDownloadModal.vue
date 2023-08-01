@@ -30,7 +30,10 @@
             <va-list-item-label>
               <span class="text-lg">Direct Download</span>
               <span class="px-1"> - </span>
-              <span class=""> Transfer will use 450 MB of bandwidth </span>
+              <span class="">
+                Transfer of all files will use
+                {{ formatBytes(dataset.du_size) }} of bandwidth
+              </span>
             </va-list-item-label>
 
             <va-list-item-label caption>
@@ -96,6 +99,7 @@
 
 <script setup>
 import config from "@/config";
+import { formatBytes } from "@/services/utils";
 
 const props = defineProps({
   dataset: {
