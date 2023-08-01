@@ -6,9 +6,14 @@
     :loading="loading"
   >
     <template #cell(name)="{ rowData }">
-      <router-link :to="`/datasets/${rowData.id}`" class="va-link">
+      <router-link
+        :to="`/datasets/${rowData.id}`"
+        class="va-link"
+        v-if="auth.canOperate"
+      >
         {{ rowData.name }}
       </router-link>
+      <span v-else> {{ rowData.name }} </span>
     </template>
 
     <template #cell(type)="{ value }">
@@ -109,7 +114,10 @@ import DatasetService from "@/services/dataset";
 import config from "@/config";
 import { HalfCircleSpinner } from "epic-spinners";
 import { useColors } from "vuestic-ui";
+import { useAuthStore } from "@/stores/auth";
+
 const { colors } = useColors();
+const auth = useAuthStore();
 
 const props = defineProps({
   datasets: {
