@@ -1,18 +1,10 @@
 <template>
   <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
   <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
-  <Header 
-    :isSidebarCollapsed="isSidebarCollapsed"
-    @toggle-sidebar-visibility="toggleSidebarVisibility"
-  ></Header>
+  <Header :isSidebarCollapsed="isSidebarCollapsed" @toggle-sidebar-visibility="toggleSidebarVisibility"></Header>
   <div class="flex flex-row h-screen">
-    <nav
-      aria-label="menu nav"
-      class="relative h-full content-center flex-none shadow-xl"
-    >
-      <Sidebar
-        :isSidebarCollapsed="isSidebarCollapsed"
-      ></Sidebar>
+    <nav aria-label="menu nav" class="relative h-full content-center flex-none shadow-xl">
+      <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
     <main class="overflow-y-scroll">
       <div class="px-4 pb-10 pt-3 min-h-screen">
@@ -32,14 +24,19 @@ const breakpoint = useBreakpoint()
 let isSidebarCollapsed = ref(false)
 
 watch(() => breakpoint.current, (newValue, oldValue) => {
-  // When going from screen size sm to xs, or xs to sm, if sidebar is already open, we should not close it.
+  // If sidebar is already open when going from screen size SM to XS, or XS 
+  // to SM, it should stay open.
   if (!isSidebarCollapsed.value) {
-    if ((oldValue === 'xs' && newValue === 'sm') || (oldValue === 'sm' && newValue === 'xs')) {
+    if ((oldValue === 'xs' && newValue === 'sm') 
+      || (oldValue === 'sm' && newValue === 'xs')) {
       return
     }
   }
 
-  isSidebarCollapsed.value = !(breakpoint.xl || breakpoint.lg || breakpoint.md)
+  isSidebarCollapsed.value = !(
+    breakpoint.xl ||
+    breakpoint.lg ||
+    breakpoint.md)
 })
 
 const toggleSidebarVisibility = () => {
