@@ -35,66 +35,23 @@
       </va-navbar-item>
 
       <va-navbar-item>
-        <va-list>
-          <va-list-item to="/about">
-            <va-list-item-section class="navbar-list-item-icon-container">
-              <Icon icon="mdi-information" class="text-2xl" />
-            </va-list-item-section>
-            <va-list-item-section>
-              <va-list-item-label>
-                About
-              </va-list-item-label>
-            </va-list-item-section>
-          </va-list-item>
-        </va-list>
+        <about/>
       </va-navbar-item>
 
       <va-navbar-item>
-        <va-switch 
-          v-model="switchValue"
-          :true-value=THEMES.DARK
-          :false-value=THEMES.LIGHT 
-          size="small">
-          <template #innerLabel>
-            <div class="va-text-center">
-              <va-icon
-                size="24px" 
-                :name="switchValue === THEMES.DARK ? 'dark_mode' : 
-                  'light_mode'"
-              />
-            </div>
-          </template>
-        </va-switch>
+        <dark-mode></dark-mode>
       </va-navbar-item>
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { useColors } from "vuestic-ui";
 import { stringToRGB } from "@/services/colors";
 import { useAuthStore } from "@/stores/auth";
+import DarkMode from "./DarkMode.vue";
+import About from "./About.vue";
 
 const auth = useAuthStore();
-const { applyPreset, currentPresetName, colors } = useColors();
 
 const profile = auth.user
-
-const switchValue = computed({
-  get() {
-    return currentPresetName.value;
-  },
-  set(value) {
-    applyPreset(value);
-  },
-});
-
-watch([colors, switchValue], () => {
-  // console.log(`watch says: switchValue = ${switchValue.value}`)
-  auth.setTheme({
-    primary: colors.primary,
-    mode: switchValue.value
-  });
-}, { deep: true })
 
 function initials(name) {
   const parts = (name || "").split(" ");
@@ -103,12 +60,6 @@ function initials(name) {
     return `${parts[0][0]}${parts[parts.length - 1][0]}`;
   }
 }
-
-const THEMES = {
-  LIGHT: 'light',
-  DARK: 'dark'
-}
-
 </script>
 
 <style>
@@ -118,9 +69,5 @@ const THEMES = {
 
 .navbar-dropdown-profile-list-item .va-list-item-section--main {
   margin: 0.6rem 0.75rem 0.6rem 0;
-}
-
-.navbar-list-item-icon-container {
-  flex: none;
 }
 </style>
