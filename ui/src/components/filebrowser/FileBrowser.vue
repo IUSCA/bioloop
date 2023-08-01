@@ -160,7 +160,7 @@ const columns = [
 ];
 
 // initial sorting order
-const sortBy = ref("size");
+const sortBy = ref("name");
 const sortingOrder = ref("asc");
 
 const data_loading = ref(false);
