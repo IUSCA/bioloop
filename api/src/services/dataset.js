@@ -386,7 +386,7 @@ async function files_ls({ dataset_id, base = '' }) {
 }
 
 async function search_files({
-  dataset_id, query = '', base = '', skip = 0, take = 10,
+  dataset_id, query = '', base = '', skip, take,
 }) {
   // TODO: filter by extension, size, filetype, status
 

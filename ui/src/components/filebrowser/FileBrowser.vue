@@ -33,12 +33,28 @@
         <!-- search bar -->
         <div class="col-span-11">
           <va-input
-            v-model="filterInput"
+            v-model="searchInput"
             class="w-full"
-            placeholder="Search current directory"
+            :placeholder="
+              search_scope_global
+                ? 'Search everywhere'
+                : 'Search current directory'
+            "
             outline
             clearable
-          />
+          >
+            <template #prependInner>
+              <va-switch
+                v-model="search_scope_global"
+                true-inner-label="Global"
+                false-inner-label="Local"
+                size="small"
+                class="pr-3"
+                color="info"
+              />
+              <Icon icon="material-symbols:search" class="text-xl" />
+            </template>
+          </va-input>
         </div>
 
         <!-- filter -->
@@ -50,14 +66,13 @@
       </div>
 
       <!-- File Table -->
-      <div class="">
+      <div class="" v-if="!seachView">
         <va-data-table
           :items="rows"
           :columns="columns"
           v-model:sort-by="sortBy"
           v-model:sorting-order="sortingOrder"
           :loading="data_loading"
-          :filter="filterInput"
           hoverable
           :row-bind="getRowBind"
           @row:click="onClick"
@@ -123,6 +138,14 @@
           </template>
         </va-data-table>
       </div>
+
+      <!-- Search Results -->
+      <div v-else>
+        <FileBrowserSearchResults
+          :query="searchInput"
+          :dataset-id="props.datasetId"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -151,6 +174,8 @@ const props = defineProps({
 const filelist = ref([]);
 const pwd = ref("");
 const filterInput = ref("");
+const searchInput = ref("");
+const seachView = ref(true);
 const columns = [
   { key: "name", sortable: true },
   // { key: "lastModified", label: "Last Modified", sortable: true },
@@ -164,6 +189,7 @@ const sortBy = ref("name");
 const sortingOrder = ref("asc");
 
 const data_loading = ref(false);
+const search_scope_global = ref(false); // local vs global
 
 const path_items = computed(() => {
   /**

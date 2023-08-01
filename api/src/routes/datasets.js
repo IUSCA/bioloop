@@ -571,4 +571,31 @@ router.get(
   }),
 );
 
+router.get(
+  '/:id/files/search',
+  validate([
+    param('id').isInt().toInt(),
+    query('basepath').default(''),
+    query('query').default(''),
+    query('skip').isInt().toInt().optional()
+      .default(0),
+    query('take').isInt().toInt().optional()
+      .default(10),
+  ]),
+  dataset_access_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get a list of files and directories under basepath
+
+    const files = await datasetService.search_files({
+      dataset_id: req.params.id,
+      base: req.query.basepath,
+      query: req.query.query,
+      skip: req.query.skip,
+      take: req.query.take,
+    });
+    res.json(files);
+  }),
+);
+
 module.exports = router;
