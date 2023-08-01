@@ -44,6 +44,12 @@ let isMobileNavVisible = ref(false)
 let isMobileView = ref(false)
 
 watch(() => breakpoint.current, (newValue, oldValue) => {
+  isMobileView = !(
+    breakpoint.xl ||
+    breakpoint.lg ||
+    breakpoint.md
+  )
+
   // If sidebar is already open when going from screen size SM to XS, or XS 
   // to SM, it should stay open.
   if (!isSidebarCollapsed.value) {
@@ -52,12 +58,6 @@ watch(() => breakpoint.current, (newValue, oldValue) => {
       return
     }
   }
-
-  isMobileView = !(
-    breakpoint.xl ||
-    breakpoint.lg ||
-    breakpoint.md
-  )
 
   // isMobileNavVisible.value = isMobileView
   isSidebarCollapsed.value = isMobileView
