@@ -33,12 +33,14 @@
     </template>
 
     <template #right>
-      <va-button
-        icon="menu"
-        @click="$emit('toggleMobileNavVisibility')"
-        v-if="props.isMobileView"
-       />
-       <navbar-right v-else></navbar-right>
+      <va-navbar-item
+        v-if="props.isMobileView">
+        <va-button
+          icon="menu"
+          @click="$emit('toggleMobileNavVisibility')"
+        />
+      </va-navbar-item>
+      <navbar-right v-else></navbar-right>
     </template>
   </va-navbar>
 </template>
