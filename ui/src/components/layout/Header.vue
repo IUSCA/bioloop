@@ -2,15 +2,16 @@
   <va-navbar class="navbar-container flex-row">
     <template #left>
       <va-navbar-item class="navbar-logo-container">
-        <div
-          role="button"
-          :aria-label="props.isSidebarCollapsed ? 'minimize navigation menu' : 'expand navigation menu'"
-          @click="$emit('toggleSidebarVisibility')">
-          <va-icon 
+        <va-list>
+          <va-list-item to="#">
+            <va-list-item-section class="m-0" icon>
+              <va-icon 
             size="2.8rem"
             :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
              />
-        </div>
+            </va-list-item-section>
+        </va-list-item>
+        </va-list>
       </va-navbar-item>
       
       <va-navbar-item class="ml-0 navbar-title-container">
