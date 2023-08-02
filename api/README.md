@@ -65,9 +65,9 @@ Assumptions:
 
 ## Typical request flow through the Express Server
 1. Express creates a [`request`](https://expressjs.com/en/4x/api.html#req) object that represents the HTTP request and has properties for the request query string, parameters, body, HTTP headers, and so on.
-2. [app.js](app.js) - The body, query parameters, and cookies are parsed and converted to objects and `req` object is updated.
-3. [app.js](app.js) - CORS?
-4. [Index Router](routers/index.js) - Intial [routing](https://expressjs.com/en/guide/routing.html) is performed to select a sub-router to send the request to. 
+2. [app.js](src/app.js) - The body, query parameters, and cookies are parsed and converted to objects and `req` object is updated.
+3. [app.js](src/app.js) - CORS?
+4. [Index Router](src/routers/index.js) - Intial [routing](https://expressjs.com/en/guide/routing.html) is performed to select a sub-router to send the request to. 
 5. [Authentication](#authentication) - Validate JWT and attach user profile to `req.user` or send 401 error response<sup>*</sup>. 
 6. [AceessControl](#authorization-role-based-access-control) - Determine whether the requester has enough permissions to perform the desired operation on a particular resource and attach the permission object to `req.permission` or send 403 error response.
 7. [Request Validation](#request-validation) - Validate if the request query, params, or the body is in expected format or send 400 error.
@@ -88,7 +88,7 @@ Assumptions:
 \* For the routes that are registered before `authenticate` such as `/health` and `/auth`, this middleware not invoked.
 
 ## Project Structure
-files 
+files in `src/`
 - `index.js` - import app and start
 - `app.js` - create and configure express application
 - `routes/index.js` - main router
@@ -109,7 +109,7 @@ Source: [Express Error Handling](https://expressjs.com/en/guide/error-handling.h
 - When `next` is called with any argument except `'route'`, express assumes it is due to an error and skips any remaining non-error handling routing and middleware functions.
 
 ### Asynchronous Error Handler
-`asyncMiddleware` in [middleware/error.js](middleware/asyncHandler.js)
+`asyncMiddleware` in [middleware/error.js](src/middleware/asyncHandler.js)
 
 Usage: Wrap the route handler middleware with `asyncHandler` to produce a middleware funtion that can catch the asynchronous error and pass on to the default error handler.
 
@@ -144,14 +144,14 @@ router.get('/user', async (req, res, next) => {
 - The body will be the HTML of the status code message when in production environment, otherwise will be `err.stack`. (environment variable NODE_ENV=production)
 
 ### Custom Default Error Handler
-- `errorHandler` in [middleware/error.js](middleware/error.js)
+- `errorHandler` in [middleware/error.js](src/middleware/error.js)
 - Logs error to console
 - send actual message to client only if `err.expose` is true otherwise send a generic Internal server error.  For http errors such as (`throw createError(400, 'foo bar')`), the client receives `{"message":"foo bar"}` with status code to 400.
 - For non http errors such as  `throw new Error('business logic error')`, only the `err.message` is set others are not. For such error, this handler will send a generic message. Client's will not see `business logic error` in thier response object.
 - Does not log to console stack trace for 4xx errors
 
 ### 404 handler
-- `notFound` in [middleware/error.js](middleware/error.js)
+- `notFound` in [middleware/error.js](src/middleware/error.js)
 
 ### http-errors module:
 - Helps to create http specific error objects which can be thrown or passed to next
@@ -246,9 +246,9 @@ The API uses IU CAS authnetication model.
 
 <img src="docs/assets/api_auth.png" >
 
-All the routes and sub-routers added after the [`authenticate`](middleware/auth.js) middleware in [index router](routes/index.js) require authentication. The routes that do not require authentication such as [auth routes](routes/auth.js) are added before this.
+All the routes and sub-routers added after the [`authenticate`](src/middleware/auth.js) middleware in [index router](src/routes/index.js) require authentication. The routes that do not require authentication such as [auth routes](src/routes/auth.js) are added before this.
 
-The [`authenticate`](middleware/auth.js) middleware, parses the `Authorization` header for the bearer token and cryptographically verifies the JWT. If the JWT is deemed valid, the payload is decoded and added to the request as `req.user`
+The [`authenticate`](src/middleware/auth.js) middleware, parses the `Authorization` header for the bearer token and cryptographically verifies the JWT. If the JWT is deemed valid, the payload is decoded and added to the request as `req.user`
 
 To add authentication to a single route:
 ```javascript
@@ -265,7 +265,7 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
 Uses [express-validator](https://express-validator.github.io/docs/) to validate if the request query, params, or the body is of the expected format and has acceptable values. This module helps to write declarative code that reduces repeatitive Spaghetti safety checking code inside the route handler. The route can now confidently presume that all of the required properties/keys of `req.params`, `req.query`, or `req.body` exist and have appropriate values and optional keys set to default values.
 
 
-Using the [`validate`](middleware/validators.js) higher order function, the error checking code is factored out from the route specific middleware functions.
+Using the [`validate`](src/middleware/validators.js) higher order function, the error checking code is factored out from the route specific middleware functions.
 
 ```javascript
 app.post(
@@ -317,9 +317,9 @@ Roles in this application:
 - admin
 - superadmin
 
-Each role defines CRUD permissions on resources with two scopes: "own" and "any". These are configured in [services/accesscontrols.js](services/accesscontrols.js).
+Each role defines CRUD permissions on resources with two scopes: "own" and "any". These are configured in [services/accesscontrols.js](src/services/accesscontrols.js).
 
-The goal of the [accessControl](middleware/auth.js) middleware is to determine from an incoming request whether the requester has enough permissions to perform the desired operation on a particular resource.
+The goal of the [accessControl](src/middleware/auth.js) middleware is to determine from an incoming request whether the requester has enough permissions to perform the desired operation on a particular resource.
 
 ### A simple use case: 
 
@@ -384,7 +384,7 @@ readOwn permission is verified against user roles if the requester and resource 
 
 ### AccessControl Middleware Usage
 
-[accessControl](middleware/auth.js) middleware is a generic function to handle authorization for any action or resource with optional ownership checking.
+[accessControl](src/middleware/auth.js) middleware is a generic function to handle authorization for any action or resource with optional ownership checking.
 
 The above code can be written consicely with the help of accessControl middleware.
 

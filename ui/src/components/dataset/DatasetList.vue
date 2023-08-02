@@ -48,11 +48,8 @@
         </span>
       </template>
 
-      <template #cell(staged)="{ rowData }">
-        <span
-          v-if="DatasetService.is_staged(rowData?.states)"
-          class="flex justify-center"
-        >
+      <template #cell(staged)="{ source }">
+        <span v-if="source" class="flex justify-center">
           <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
@@ -220,15 +217,13 @@ const columns = ref([
     sortable: true,
   },
   {
-    key: "states",
+    key: "is_staged",
     name: "staged",
     label: "staged",
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
     width: 40,
-    sortingFn: (a, b) =>
-      DatasetService.is_staged(a) - DatasetService.is_staged(b),
   },
   {
     key: "updated_at",

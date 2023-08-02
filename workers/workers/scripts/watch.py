@@ -11,9 +11,8 @@ from workers import cmd
 from workers.celery_app import app as celery_app
 from workers.config import config
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class Observer:

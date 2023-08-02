@@ -9,7 +9,6 @@
     <div class="flex flex-col gap-3">
       <!-- Associated datasets -->
       <div>
-        <!-- <span class="text-2xl"> Associated Datasets</span> -->
         <va-card class="">
           <va-card-title class="">
             <div class="flex flex-nowrap items-center w-full">
@@ -25,7 +24,10 @@
             </div>
           </va-card-title>
           <va-card-content>
-            <ProjectDatasetsTable :datasets="project.datasets" />
+            <ProjectDatasetsTable
+              :datasets="project.datasets"
+              :project="project"
+            />
           </va-card-content>
         </va-card>
       </div>
@@ -92,11 +94,11 @@
                 border-color="info"
                 class="flex-none"
                 color="info"
-                disabled
+                @click="openMergeModal"
               >
                 <div class="flex items-center gap-2">
                   <i-mdi-merge />
-                  <span> Merge Project </span>
+                  <span> Merge Projects </span>
                 </div>
               </va-button>
 
@@ -144,6 +146,13 @@
   <!-- Datasets modal -->
   <ProjectDatasetsModal
     ref="datasetsModal"
+    :id="project.id"
+    @update="handleEditUpdate"
+  />
+
+  <!-- Merge modal -->
+  <MergeProjectModal
+    ref="mergeModal"
     :id="project.id"
     @update="handleEditUpdate"
   />
@@ -246,6 +255,13 @@ const datasetsModal = ref(null);
 function openDatasetsModal() {
   projectFormStore.setDatasets(datasets.value);
   datasetsModal.value.show();
+}
+
+// merge modal
+const mergeModal = ref(null);
+
+function openMergeModal() {
+  mergeModal.value.show();
 }
 </script>
 

@@ -1,41 +1,62 @@
+import itertools
+import shutil
+import stat
 from pathlib import Path
 
 from celery import Celery
-from sca_rhythm import WorkflowTask
-from sca_rhythm.progress import Progress
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-from workers import illumina
 from workers.config import config
+from workers.dataset import compute_staging_path
+from workers.exceptions import ValidationFailed
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
 
-def download_recent_datasets(celery_task: WorkflowTask, download_dir: Path, n_days: int):
-    download_dir.mkdir(exist_ok=True, parents=True)
-    ds_metas = illumina.list_datasets(n_days)
-    ds_ids = [ds_meta['Id'] for ds_meta in ds_metas]
+def rm(p: Path):
+    if p.is_symlink():
+        p.unlink()
+    else:
+        if p.exists():
+            if p.is_dir():
+                shutil.rmtree(p)
+            else:
+                p.unlink()
 
-    progress = Progress(celery_task=celery_task, name='datasets', units='items')
 
-    for ds_id in progress(ds_ids):
-        illumina.download_dataset(ds_id, str(download_dir))
+def grant_read_permissions_to_others(root: Path):
+    for p in itertools.chain([root], root.rglob('*')):
+        if p.is_dir():
+            p.chmod(p.stat().st_mode | stat.S_IROTH | stat.S_IXOTH)
+        else:
+            p.chmod(p.stat().st_mode | stat.S_IROTH)
 
 
-def download_illumina_dataset(celery_task, dataset_id, **kwargs):
+def grant_access_to_parent_chain(leaf: Path, root: Path):
+    p = leaf.parent
+    while p != root:
+        p.chmod(p.stat().st_mode | stat.S_IXOTH)
+        p = p.parent
+
+
+def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    project_name = dataset['name']
-    download_path = Path(config['paths']['scratch']) / project_name
+    staged_path, alias = compute_staging_path(dataset)
 
-    # illumina.download_project(project_name, download_path)
-    n_days = config['illumina']['download']['datasets']['n_days']
-    download_recent_datasets(celery_task, download_path, n_days)
+    if not staged_path.exists():
+        # TODO: more robust validation?
+        raise ValidationFailed(f'Staged path does not exist {staged_path}')
 
-    update_data = {
-        'origin_path': str(download_path)
-    }
-    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
-    api.add_state_to_dataset(dataset_id=dataset_id, state='DOWNLOADED')
-    return dataset_id,
+    download_path = Path(config['paths']['download_dir']).resolve() / alias
+
+    # remove if exists and create a symlink in download dir pointing to the staged path
+    rm(download_path)
+    download_path.symlink_to(staged_path, target_is_directory=True)
+
+    # enable others to read and cd into stage directory
+    grant_read_permissions_to_others(staged_path)
+
+    # enable others to navigate to leaf by granting execute permission on parent directories
+    grant_access_to_parent_chain(staged_path, root=Path(config['paths']['root']))

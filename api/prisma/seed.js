@@ -183,6 +183,13 @@ async function main() {
     })),
   );
 
+  // upsert dataset_files
+  put_dataset_files({ dataset_id: 1, num_files: 100, max_depth: 1 });
+  put_dataset_files({ dataset_id: 2, num_files: 100, max_depth: 3 });
+  put_dataset_files({ dataset_id: 3, num_files: 1000, max_depth: 2 });
+  put_dataset_files({ dataset_id: 7, num_files: 100, max_depth: 1 });
+  put_dataset_files({ dataset_id: 8, num_files: 100 });
+
   // update the auto increment id's sequence numbers
   const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact'];
   await Promise.all(tables.map(update_seq));

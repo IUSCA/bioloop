@@ -8,5 +8,11 @@
   "mode": "NODE_ENV",
   "workflow_server": {
     "auth_token": "WORKFLOW_AUTH_TOKEN"
+  },
+  "oauth": {
+    "download": {
+      "client_id": "OAUTH_DOWNLOAD_CLIENT_ID",
+      "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
+    }
   }
 }
