@@ -6,7 +6,10 @@
           role="button"
           aria-label="to be decided"
           @click="$emit('toggleSidebarVisibility')">
-          <va-icon size="2.8rem" :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')" />
+          <va-icon 
+            size="2.8rem"
+            :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
+             />
         </div>
       </va-navbar-item>
       

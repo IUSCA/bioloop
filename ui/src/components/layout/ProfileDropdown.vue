@@ -1,5 +1,5 @@
 <template>
-  <va-button-dropdown class="mr-2" preset="plain" size="large" icon="account_circle">
+  <va-button-dropdown class="mr-2 profile-dropdown-list" preset="plain" size="large" icon="account_circle">
     <va-list>
       <va-list-item to="/profile" class="navbar-dropdown-profile-list-item">
         <va-list-item-section avatar>
@@ -56,5 +56,9 @@ function initials(name) {
 
 .navbar-dropdown-profile-list-item .va-list-item-section--main {
   margin: 0.6rem 0.75rem 0.6rem 0;
+}
+
+.profile-dropdown-list {
+  padding-bottom: 0.075rem;
 }
 </style>
