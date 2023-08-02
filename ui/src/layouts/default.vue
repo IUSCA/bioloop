@@ -85,24 +85,3 @@ const toggleSidebarVisibility = () => {
 //   isMobileNavVisible.value = !isMobileNavVisible.value
 // }
 </script>
-
-<style>
-.mobile-nav .va-list, .mobile-nav .va-button-dropdown, .mobile-nav .va-message-list-wrapper {
-  max-height: 100px;
-  display: flex;
-  justify-content: center;
-}
-
-.mobile-nav .va-message-list-wrapper .va-switch__container {
-  justify-content: center;
-}
-
-.mobile-nav-close-button-container {
-  height: 104px;
-  max-height: 104px;
-  padding-top: 2.125rem;
-  padding-bottom: 2.125rem;
-  padding-right: 1rem;
-  text-align: right;
-}
-</style>
