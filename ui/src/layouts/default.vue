@@ -89,6 +89,12 @@ const toggleMobileNavVisibility = () => {
 <style>
 .mobile-nav .va-list, .mobile-nav .va-button-dropdown, .mobile-nav .va-message-list-wrapper {
   max-height: 100px;
+  display: flex;
+  justify-content: center;
+}
+
+.mobile-nav .va-message-list-wrapper .va-switch__container {
+  justify-content: center;
 }
 
 .mobile-nav-close-button-container {
