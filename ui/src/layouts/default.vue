@@ -4,24 +4,24 @@
   <Header v-show="!isMobileNavVisible" :is-mobile-view="isMobileView" :is-sidebar-collapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility" @toggle-mobile-nav-visibility="toggleMobileNavVisibility">
   </Header>
-  <nav v-show="isMobileView && isMobileNavVisible" class="flex flex-col h-screen">
-    <div class="flex-initial text-right px-5 py-5">
+  <nav v-show="isMobileView && isMobileNavVisible" class="flex flex-col">
+    <div class="mobile-nav-close-button-container">
       <va-button icon="close" @click="toggleMobileNavVisibility" />
     </div>
     <!-- <div class="flex flex-col"> -->
     <!-- <div> -->
-      <va-list class="flex flex-col">
-        <va-list-item class="mobile-nav-item">
+      <va-list class="">
+        <va-list-item class="">
           <va-list-item-section>
             <about />
           </va-list-item-section>
         </va-list-item>
-        <va-list-item class="mobile-nav-item">
+        <va-list-item class="">
           <va-list-item-section>
             <profile-dropdown />
           </va-list-item-section>
         </va-list-item>
-        <va-list-item class="mobile-nav-item">
+        <va-list-item class="">
           <va-list-item-section>
             <dark-mode />
           </va-list-item-section>
@@ -86,8 +86,12 @@ const toggleMobileNavVisibility = () => {
 }
 </script>
 
-<!-- <style>
-.mobile-nav-item {
-  flex: 0.5 1 auto;
+<style>
+.mobile-nav-close-button-container {
+  height: 104px;
+  padding-top: 2.125rem;
+  padding-bottom: 2.125rem;
+  padding-right: 1rem;
+  text-align: right;
 }
-</style> -->
+</style>
