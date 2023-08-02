@@ -4,7 +4,7 @@
       <va-navbar-item class="navbar-logo-container">
         <div
           role="button"
-          aria-label="to be decided"
+          :aria-label="props.isSidebarCollapsed ? 'minimize navigation menu' : 'expand navigation menu'"
           @click="$emit('toggleSidebarVisibility')">
           <va-icon 
             size="2.8rem"
