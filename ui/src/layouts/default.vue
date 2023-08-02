@@ -4,29 +4,29 @@
   <Header v-show="!isMobileNavVisible" :is-mobile-view="isMobileView" :is-sidebar-collapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility" @toggle-mobile-nav-visibility="toggleMobileNavVisibility">
   </Header>
-  <nav v-show="isMobileView && isMobileNavVisible" class="flex flex-col">
+  <nav v-show="isMobileView && isMobileNavVisible" class="flex flex-col h-screen mobile-nav">
     <div class="mobile-nav-close-button-container">
       <va-button icon="close" @click="toggleMobileNavVisibility" />
     </div>
     <!-- <div class="flex flex-col"> -->
     <!-- <div> -->
-      <va-list class="">
+      <!-- <va-list class="">
         <va-list-item class="">
-          <va-list-item-section>
+          <va-list-item-section> -->
             <about />
-          </va-list-item-section>
+          <!-- </va-list-item-section>
         </va-list-item>
         <va-list-item class="">
-          <va-list-item-section>
+          <va-list-item-section> -->
             <profile-dropdown />
-          </va-list-item-section>
+          <!-- </va-list-item-section>
         </va-list-item>
         <va-list-item class="">
-          <va-list-item-section>
+          <va-list-item-section> -->
             <dark-mode />
-          </va-list-item-section>
+          <!-- </va-list-item-section>
         </va-list-item>
-      </va-list>
+      </va-list> -->
     <!-- </div> -->
   </nav>
   <div v-show="!isMobileNavVisible" class="flex flex-row h-screen">
@@ -87,8 +87,13 @@ const toggleMobileNavVisibility = () => {
 </script>
 
 <style>
+.mobile-nav .va-list, .mobile-nav .va-button-dropdown, .mobile-nav .va-message-list-wrapper {
+  max-height: 100px;
+}
+
 .mobile-nav-close-button-container {
   height: 104px;
+  max-height: 104px;
   padding-top: 2.125rem;
   padding-bottom: 2.125rem;
   padding-right: 1rem;
