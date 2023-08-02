@@ -1,5 +1,5 @@
 <template>
-  <va-navbar class="navbar-container">
+  <va-navbar class="navbar-container flex-row">
     <template #left>
       <va-navbar-item class="logo-container">
         <div
@@ -63,24 +63,20 @@ const props = defineProps({
 </script>
 
 <style>
-.logo-container {
-  margin-right: 0 !important;
-  padding-right: 1rem;
-}
-
-.navbar-container {
-  flex-direction: row;
+.navbar-container .logo-container {
+  margin-right: 0;
+  padding-right: 1rem !important;
 }
 
 .navbar-container .va-navbar__right {
   justify-content: end;
 }
 
-.navbar-right-container .va-list-item__inner {
-  min-width: 11.86rem;
-}
-
 .navbar-container .title-container {
   margin-left: 0;
+}
+
+.navbar-right-container .va-list-item__inner {
+  min-width: 11.86rem;
 }
 </style>
