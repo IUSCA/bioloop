@@ -13,12 +13,12 @@
       <!-- <va-list class="">
         <va-list-item class="">
           <va-list-item-section> -->
-            <about />
+            <!-- <about /> -->
           <!-- </va-list-item-section>
         </va-list-item>
         <va-list-item class="">
           <va-list-item-section> -->
-            <profile-dropdown />
+            <!-- <profile-dropdown /> -->
           <!-- </va-list-item-section>
         </va-list-item>
         <va-list-item class="">
@@ -45,9 +45,9 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useBreakpoint } from "vuestic-ui"
-import About from '@/components/layout/About.vue';
+// import About from '@/components/layout/About.vue';
 import DarkMode from '@/components/layout/DarkMode.vue';
-import ProfileDropdown from '@/components/layout/ProfileDropdown.vue';
+// import ProfileDropdown from '@/components/layout/ProfileDropdown.vue';
 
 const breakpoint = useBreakpoint()
 

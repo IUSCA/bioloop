@@ -30,7 +30,7 @@
     >
       <va-sidebar-item-content>
         <Icon :icon="item.icon" class="text-2xl" />
-        <!-- User can hide item with css if he wants -->
+        <!-- User can hide item with css if they want -->
         <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
       </va-sidebar-item-content>
     </va-sidebar-item>
@@ -65,13 +65,26 @@
       >
         <va-sidebar-item-content>
           <Icon :icon="item.icon" class="text-2xl" />
-          <!-- User can hide item with css if he wants -->
+          <!-- User can hide item with css if they want -->
           <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
 
       <va-divider v-if="admin_items.length > 0" />
     </div>
+
+    <va-sidebar-item
+      v-for="(item, i) in bottom_items"
+      :key="i"
+      :to="item.path"
+      :active="isActive(item.path)"
+    >
+      <va-sidebar-item-content>
+        <Icon :icon="item.icon" class="text-2xl" />
+        <!-- User can hide item with css if they want -->
+        <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
+      </va-sidebar-item-content>
+    </va-sidebar-item>
   </va-sidebar>
 </template>
 
@@ -161,6 +174,24 @@ const operator_items = ref([
   //   title: "Stats/Tracking",
   //   path: "/stats",
   // },
+]);
+
+const bottom_items = ref([
+  {
+    icon: "mdi-information",
+    title: "About",
+    path: "/about",
+  },
+  {
+    icon: "mdi-account-details",
+    title: "Profile",
+    path: "/profile",
+  },
+  {
+    icon: "mdi-logout-variant",
+    title: "Logout",
+    path: "/auth/logout",
+  },
 ]);
 
 const admin_items = ref([]);
