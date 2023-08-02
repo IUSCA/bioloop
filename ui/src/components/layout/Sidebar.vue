@@ -1,5 +1,5 @@
 <template>
-  <va-sidebar :minimized="props.isSidebarCollapsed">
+  <va-sidebar minimized-width="4.8rem" :minimized="props.isSidebarCollapsed">
     <!-- <va-sidebar-item to="/">
       <va-list>
         <va-list-item>

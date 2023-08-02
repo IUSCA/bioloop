@@ -1,16 +1,16 @@
 <template>
   <va-navbar>
     <template #left>
-      <va-navbar-item class="mr-0">
+      <va-navbar-item class="logo-container">
         <div
           role="button"
           aria-label="to be decided"
           @click="$emit('toggleSidebarVisibility')">
-          <va-icon size="large" :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')" />
+          <va-icon size="2.8rem" :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')" />
         </div>
       </va-navbar-item>
       
-      <va-navbar-item>
+      <va-navbar-item class="ml-0">
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
@@ -63,3 +63,9 @@ const props = defineProps({
 
 </script>
 
+<style>
+.logo-container {
+  margin-right: 0 !important;
+  padding-right: 1rem;
+}
+</style>
