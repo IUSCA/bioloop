@@ -1,5 +1,5 @@
 <template>
-  <va-navbar>
+  <va-navbar class="navbar-container">
     <template #left>
       <va-navbar-item class="logo-container">
         <div
@@ -70,5 +70,13 @@ const props = defineProps({
 .logo-container {
   margin-right: 0 !important;
   padding-right: 1rem;
+}
+
+.navbar-container {
+  flex-direction: row;
+}
+
+.navbar-container .va-navbar__right {
+  justify-content: end;
 }
 </style>
