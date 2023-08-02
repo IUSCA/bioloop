@@ -69,7 +69,7 @@ const props = defineProps({
 }
 
 .navbar-container .va-navbar__right {
-  justify-content: end;
+  justify-content: flex-end;
 }
 
 .navbar-container .navbar-title {
