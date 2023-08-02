@@ -47,7 +47,7 @@
       >
         <va-sidebar-item-content>
           <Icon :icon="item.icon" class="text-2xl" />
-          <!-- User can hide item with css if he wants -->
+          <!-- User can hide item with css if they want -->
           <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
