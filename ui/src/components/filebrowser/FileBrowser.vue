@@ -4,28 +4,7 @@
       <!-- BreadCrumbs Navigation -->
       <!-- border border-solid border-slate-400 -->
       <div class="">
-        <va-breadcrumbs>
-          <va-breadcrumbs-item
-            class="text-xl cursor-pointer hover:bg-slate-300 rounded-full p-2"
-            @click="pwd = ''"
-          >
-            <i-mdi-folder-home class="hover:text-blue-600" />
-          </va-breadcrumbs-item>
-          <va-breadcrumbs-item
-            class="text-xl cursor-pointer"
-            v-if="path_items.length > 3"
-          >
-            ...
-          </va-breadcrumbs-item>
-          <!-- lg:hover:bg-slate-200 lg:rounded-full lg:px-2 lg:pb-2 lg:pt-1 -->
-          <va-breadcrumbs-item
-            :label="path_item.name"
-            v-for="(path_item, idx) in path_items.slice(-3)"
-            :key="idx"
-            class="text-xl cursor-pointer"
-            @click="pwd = path_item.rel_path"
-          />
-        </va-breadcrumbs>
+        <FileBrowserNav v-model:pwd="pwd" />
       </div>
 
       <!-- filter input and number of results -->
@@ -35,29 +14,22 @@
           <va-input
             v-model="searchInput"
             class="w-full"
-            :placeholder="
-              search_scope_global
-                ? 'Search everywhere'
-                : 'Search current directory'
-            "
+            placeholder="Search everywhere"
             outline
             clearable
           >
             <template #prependInner>
-              <va-switch
-                v-model="search_scope_global"
-                true-inner-label="Global"
-                false-inner-label="Local"
-                size="small"
-                class="pr-3"
-                color="info"
-              />
               <Icon icon="material-symbols:search" class="text-xl" />
+            </template>
+            <template #appendInner>
+              <va-button preset="secondary" round>
+                <Icon icon="mdi:tune" class="text-xl" />
+              </va-button>
             </template>
           </va-input>
         </div>
 
-        <!-- filter -->
+        <!-- number of results -->
         <div class="col-span-1 flex items-center">
           <div class="text-right">
             {{ maybePluralize(rows.length, "item") }}
@@ -66,7 +38,7 @@
       </div>
 
       <!-- File Table -->
-      <div class="" v-if="!seachView">
+      <div class="">
         <va-data-table
           :items="rows"
           :columns="columns"
@@ -79,7 +51,7 @@
           virtual-scroller
           sticky-header
           style="height: calc(100vh - 11rem)"
-          class="py-1"
+          class="py-1 filetable"
         >
           <template #cell(size)="{ rowData }">
             <span v-if="rowData.filetype !== 'directory'">
@@ -93,10 +65,7 @@
               class="flex items-center gap-1"
               v-if="rowData.filetype === 'directory'"
             >
-              <Icon
-                icon="mdi-folder"
-                class="text-2xl flex-none text-gray-700"
-              />
+              <Icon icon="mdi-folder" class="text-xl flex-none text-gray-700" />
               <span> {{ rowData.name }} </span>
             </div>
 
@@ -138,14 +107,6 @@
           </template>
         </va-data-table>
       </div>
-
-      <!-- Search Results -->
-      <div v-else>
-        <FileBrowserSearchResults
-          :query="searchInput"
-          :dataset-id="props.datasetId"
-        />
-      </div>
     </div>
   </div>
 </template>
@@ -153,13 +114,7 @@
 <script setup>
 // import * as datetime from "@/services/datetime";
 import datasetService from "@/services/dataset";
-import {
-  formatBytes,
-  cmp,
-  maybePluralize,
-  caseInsensitiveIncludes,
-  downloadFile,
-} from "@/services/utils";
+import { formatBytes, maybePluralize, downloadFile } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 
@@ -173,13 +128,11 @@ const props = defineProps({
 
 const filelist = ref([]);
 const pwd = ref("");
-const filterInput = ref("");
 const searchInput = ref("");
-const seachView = ref(true);
 const columns = [
   { key: "name", sortable: true },
   // { key: "lastModified", label: "Last Modified", sortable: true },
-  { key: "size", sortable: true, sortingFn: cmp, width: "100px" },
+  { key: "size", sortable: true, sortingFn: (a, b) => a - b, width: "100px" },
   { key: "filetype", label: "type", sortable: true, width: "100px" },
   { key: "md5", width: "250px", label: "MD5 Checksum" },
 ];
@@ -189,39 +142,9 @@ const sortBy = ref("name");
 const sortingOrder = ref("asc");
 
 const data_loading = ref(false);
-const search_scope_global = ref(false); // local vs global
-
-const path_items = computed(() => {
-  /**
-   * if pwd is 'dir1/dir2/dir3/file.txt'
-   * then path_items is
-   * [{
-   *    name: 'dir1',
-   *    rel_path: 'dir1'
-   * }, {
-   *    name: 'dir2',
-   *    rel_path: 'dir1/dir2'
-   * }, {
-   *    name: 'dir3',
-   *    rel_path: 'dir1/dir2/dir3'
-   * }]
-   */
-
-  if (pwd.value === "") {
-    return [];
-  }
-  const parts = pwd.value.split("/");
-  const result = parts.map((t, i) => ({
-    name: t,
-    rel_path: parts.slice(0, i + 1).join("/"),
-  }));
-  return result;
-});
 
 const rows = computed(() => {
-  return filelist.value.filter((file) =>
-    caseInsensitiveIncludes(file?.name, filterInput.value)
-  );
+  return filelist.value;
 });
 
 function filename(path) {
@@ -305,3 +228,9 @@ function getRowBind(row) {
   }
 }
 </script>
+
+<style scoped>
+.filetable {
+  --va-data-table-cell-padding: 8px;
+}
+</style>
