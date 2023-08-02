@@ -13,13 +13,13 @@
         </div>
       </va-navbar-item>
       
-      <va-navbar-item class="ml-0">
+      <va-navbar-item class="ml-0 navbar-right-container">
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
               <img class="w-11 h-11" src="/logo.svg" />
             </va-list-item-section>
-            <va-list-item-section class="m-0">
+            <va-list-item-section class="m-0 title-container">
               <va-list-item-label class="text-3xl">
                 {{ config.appTitle }}
               </va-list-item-label>
@@ -80,5 +80,13 @@ const props = defineProps({
 
 .navbar-container .va-navbar__right {
   justify-content: end;
+}
+
+.navbar-right-container .va-list-item__inner {
+  min-width: 11.86rem;
+}
+
+.navbar-container .title-container {
+  margin-left: 0;
 }
 </style>
