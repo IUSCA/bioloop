@@ -4,31 +4,6 @@
   <Header :is-mobile-view="isMobileView" :is-sidebar-collapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility">
   </Header>
-  <!-- <nav v-show="isMobileView && isMobileNavVisible" class="flex flex-col h-screen mobile-nav">
-    <div class="mobile-nav-close-button-container">
-      <va-button icon="close" @click="toggleMobileNavVisibility" />
-    </div> -->
-    <!-- <div class="flex flex-col"> -->
-    <!-- <div> -->
-      <!-- <va-list class="">
-        <va-list-item class="">
-          <va-list-item-section> -->
-            <!-- <about /> -->
-          <!-- </va-list-item-section>
-        </va-list-item>
-        <va-list-item class="">
-          <va-list-item-section> -->
-            <!-- <profile-dropdown /> -->
-          <!-- </va-list-item-section>
-        </va-list-item>
-        <va-list-item class="">
-          <va-list-item-section> -->
-            <!-- <dark-mode /> -->
-          <!-- </va-list-item-section>
-        </va-list-item>
-      </va-list> -->
-    <!-- </div> -->
-  <!-- </nav> -->
   <div class="flex flex-row h-screen">
     <nav aria-label="menu nav" class="relative h-full content-center flex-none shadow-xl">
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
@@ -46,7 +21,6 @@
 import { ref, watch } from 'vue'
 import { useBreakpoint } from "vuestic-ui"
 // import About from '@/components/layout/About.vue';
-// import DarkMode from '@/components/layout/DarkMode.vue';
 // import ProfileDropdown from '@/components/layout/ProfileDropdown.vue';
 
 const breakpoint = useBreakpoint()

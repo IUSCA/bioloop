@@ -34,7 +34,7 @@
 
     <template #right>
       <va-navbar-item>
-        <dark-mode></dark-mode>
+        <theme-toggle></theme-toggle>
       </va-navbar-item>
     </template>
   </va-navbar>
@@ -43,7 +43,7 @@
 <script setup>
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
-import DarkMode from '@/components/layout/DarkMode.vue'
+import ThemeToggle from '@/components/layout/ThemeToggle.vue'
 
 const auth = useAuthStore();
 
