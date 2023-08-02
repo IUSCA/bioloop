@@ -1,7 +1,7 @@
 <template>
   <va-navbar class="navbar-container flex-row">
     <template #left>
-      <va-navbar-item class="logo-container">
+      <va-navbar-item class="navbar-logo-container">
         <div
           role="button"
           aria-label="to be decided"
@@ -13,13 +13,13 @@
         </div>
       </va-navbar-item>
       
-      <va-navbar-item class="ml-0 navbar-right-container">
+      <va-navbar-item class="ml-0 navbar-title-container">
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
               <img class="w-11 h-11" src="/logo.svg" />
             </va-list-item-section>
-            <va-list-item-section class="m-0 title-container">
+            <va-list-item-section class="m-0 navbar-title">
               <va-list-item-label class="text-3xl">
                 {{ config.appTitle }}
               </va-list-item-label>
@@ -63,7 +63,7 @@ const props = defineProps({
 </script>
 
 <style>
-.navbar-container .logo-container {
+.navbar-container .navbar-logo-container {
   margin-right: 0;
   padding-right: 1rem !important;
 }
@@ -72,11 +72,11 @@ const props = defineProps({
   justify-content: end;
 }
 
-.navbar-container .title-container {
+.navbar-container .navbar-title {
   margin-left: 0;
 }
 
-.navbar-right-container .va-list-item__inner {
+.navbar-title-container .va-list-item__inner {
   min-width: 11.86rem;
 }
 </style>
