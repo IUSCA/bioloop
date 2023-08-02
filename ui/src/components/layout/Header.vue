@@ -49,17 +49,7 @@ const auth = useAuthStore();
 
 const props = defineProps({
   isSidebarCollapsed: Boolean,
-  // isMobileNavVisible: Boolean
 })
-
-// const isSidebarCollapsed = ref(false)
-
-// const toggleSidebarVisibility = () => {
-//   isSidebarCollapsed.value = !isSidebarCollapsed.value
-// }
-
-
-
 </script>
 
 <style>

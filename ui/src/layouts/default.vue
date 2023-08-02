@@ -20,13 +20,10 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useBreakpoint } from "vuestic-ui"
-// import About from '@/components/layout/About.vue';
-// import ProfileDropdown from '@/components/layout/ProfileDropdown.vue';
 
 const breakpoint = useBreakpoint()
 
 let isSidebarCollapsed = ref(false)
-// let isMobileNavVisible = ref(false)
 let isMobileView = ref(false)
 
 watch(() => breakpoint.current, (newValue, oldValue) => {
@@ -35,10 +32,6 @@ watch(() => breakpoint.current, (newValue, oldValue) => {
     breakpoint.lg ||
     breakpoint.md
   )
-
-  // if (isMobileNavVisible.value && !isMobileView) {
-  //   isMobileNavVisible.value = false
-  // }
 
   // If sidebar is already open when going from screen size SM to XS, or XS 
   // to SM, it should stay open.
@@ -54,8 +47,4 @@ watch(() => breakpoint.current, (newValue, oldValue) => {
 const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
-
-// const toggleMobileNavVisibility = () => {
-//   isMobileNavVisible.value = !isMobileNavVisible.value
-// }
 </script>
