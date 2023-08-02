@@ -1,13 +1,13 @@
 <template>
   <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
   <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
-  <Header v-show="!isMobileNavVisible" :is-mobile-view="isMobileView" :is-sidebar-collapsed="isSidebarCollapsed"
-    @toggle-sidebar-visibility="toggleSidebarVisibility" @toggle-mobile-nav-visibility="toggleMobileNavVisibility">
+  <Header :is-mobile-view="isMobileView" :is-sidebar-collapsed="isSidebarCollapsed"
+    @toggle-sidebar-visibility="toggleSidebarVisibility">
   </Header>
-  <nav v-show="isMobileView && isMobileNavVisible" class="flex flex-col h-screen mobile-nav">
+  <!-- <nav v-show="isMobileView && isMobileNavVisible" class="flex flex-col h-screen mobile-nav">
     <div class="mobile-nav-close-button-container">
       <va-button icon="close" @click="toggleMobileNavVisibility" />
-    </div>
+    </div> -->
     <!-- <div class="flex flex-col"> -->
     <!-- <div> -->
       <!-- <va-list class="">
@@ -23,13 +23,13 @@
         </va-list-item>
         <va-list-item class="">
           <va-list-item-section> -->
-            <dark-mode />
+            <!-- <dark-mode /> -->
           <!-- </va-list-item-section>
         </va-list-item>
       </va-list> -->
     <!-- </div> -->
-  </nav>
-  <div v-show="!isMobileNavVisible" class="flex flex-row h-screen">
+  <!-- </nav> -->
+  <div class="flex flex-row h-screen">
     <nav aria-label="menu nav" class="relative h-full content-center flex-none shadow-xl">
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
@@ -46,13 +46,13 @@
 import { ref, watch } from 'vue'
 import { useBreakpoint } from "vuestic-ui"
 // import About from '@/components/layout/About.vue';
-import DarkMode from '@/components/layout/DarkMode.vue';
+// import DarkMode from '@/components/layout/DarkMode.vue';
 // import ProfileDropdown from '@/components/layout/ProfileDropdown.vue';
 
 const breakpoint = useBreakpoint()
 
 let isSidebarCollapsed = ref(false)
-let isMobileNavVisible = ref(false)
+// let isMobileNavVisible = ref(false)
 let isMobileView = ref(false)
 
 watch(() => breakpoint.current, (newValue, oldValue) => {
@@ -62,9 +62,9 @@ watch(() => breakpoint.current, (newValue, oldValue) => {
     breakpoint.md
   )
 
-  if (isMobileNavVisible.value && !isMobileView) {
-    isMobileNavVisible.value = false
-  }
+  // if (isMobileNavVisible.value && !isMobileView) {
+  //   isMobileNavVisible.value = false
+  // }
 
   // If sidebar is already open when going from screen size SM to XS, or XS 
   // to SM, it should stay open.
@@ -81,9 +81,9 @@ const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
 
-const toggleMobileNavVisibility = () => {
-  isMobileNavVisible.value = !isMobileNavVisible.value
-}
+// const toggleMobileNavVisibility = () => {
+//   isMobileNavVisible.value = !isMobileNavVisible.value
+// }
 </script>
 
 <style>

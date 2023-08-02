@@ -33,14 +33,9 @@
     </template>
 
     <template #right>
-      <va-navbar-item
-        v-if="props.isMobileView">
-        <va-button
-          icon="menu"
-          @click="$emit('toggleMobileNavVisibility')"
-        />
+      <va-navbar-item>
+        <dark-mode></dark-mode>
       </va-navbar-item>
-      <navbar-right v-else></navbar-right>
     </template>
   </va-navbar>
 </template>
@@ -48,14 +43,13 @@
 <script setup>
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
-import NavbarRight from '@/components/layout/NavbarRight.vue'
+import DarkMode from '@/components/layout/DarkMode.vue'
 
 const auth = useAuthStore();
 
 const props = defineProps({
-  isMobileView: Boolean,
   isSidebarCollapsed: Boolean,
-  isMobileNavVisible: Boolean
+  // isMobileNavVisible: Boolean
 })
 
 // const isSidebarCollapsed = ref(false)
