@@ -37,7 +37,7 @@
       </va-card-content>
     </va-card>
 
-    <!-- Color theme and dark mode switcher -->
+    <!-- Color theme switcher -->
     <va-card class="mt-5">
       <va-card-content>
         <div class="flex flex-col gap-5">
