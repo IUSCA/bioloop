@@ -15,7 +15,7 @@
             <va-list-item-section class="m-0" icon>
               <va-icon 
                 @click="$emit('toggleSidebarVisibility')"
-                size="3.5rem"
+                size="2rem"
                 :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
              />
             </va-list-item-section>
@@ -75,7 +75,9 @@ const props = defineProps({
 
 .navbar-container .navbar-sidebar-toggle-container {
   margin-right: 0;
-  padding-right: 0.7rem !important;
+  /* padding-right: 0.7rem !important; */
+  padding-right: 1rem !important;
+
 }
 
 .navbar-container .va-navbar__right {
