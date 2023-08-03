@@ -30,7 +30,7 @@
               <img class="w-12 h-12" src="/logo.svg" />
             </va-list-item-section>
             <va-list-item-section class="m-0 navbar-title">
-              <va-list-item-label class="text-3xl">
+              <va-list-item-label>
                 <h3 class="text-3xl m-0">
                   {{ config.appTitle }}
                 </h3>
