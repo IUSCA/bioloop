@@ -1,7 +1,6 @@
 <template>
   <p>{{ breakpoint.current }}</p>
   <Header
-    :is-mobile-view="isMobileView"
     :is-sidebar-collapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility"
   >
@@ -29,16 +28,12 @@ import { useBreakpoint } from "vuestic-ui";
 const breakpoint = useBreakpoint();
 
 let isSidebarCollapsed = ref(false);
-let isMobileView = ref(false);
 
 watch(
   () => breakpoint.current,
   (newValue, oldValue) => {
-    isMobileView.value = !(breakpoint.xl || breakpoint.lg || breakpoint.md);
-
     // When going from screen size SM to XS, or XS to SM, the sidebar's
     // open/collapsed state should not change
-    // 
     if (
       (oldValue === "xs" && newValue === "sm") ||
       (oldValue === "sm" && newValue === "xs")
@@ -46,18 +41,19 @@ watch(
       return;
     }
 
-    // if (isSidebarCollapsed.value) {
-      // decrease width should not open it
-      
-    // }
+    // When going from screen size XL to LG, or LG to MD, if sidebar is
+    // already collapsed, it should stay collapsed
+    if (
+        (oldValue === 'xl' && newValue === 'lg') ||
+        (oldValue === 'lg' && newValue === 'md')
+    ) {
+      if (isSidebarCollapsed.value) {
+        return;
+      }  
+    }
 
-    // if (!isSidebarCollapsed.value) {
-      // increase width should not close it
-      
-    // }
-
-
-    isSidebarCollapsed.value = isMobileView.value;  
+    // In all other cases, update the open/collapse state acc. to screen size
+    isSidebarCollapsed.value = !(breakpoint.xl || breakpoint.lg || breakpoint.md);  
   }
 );
 
