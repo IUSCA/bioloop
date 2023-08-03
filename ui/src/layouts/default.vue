@@ -1,6 +1,4 @@
 <template>
-  <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
-  <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
   <Header 
     :is-mobile-view="isMobileView"
     :is-sidebar-collapsed="isSidebarCollapsed"
