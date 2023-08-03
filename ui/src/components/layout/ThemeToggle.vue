@@ -3,7 +3,7 @@
     v-model="switchValue"
     :true-value="THEMES.DARK"
     :false-value="THEMES.LIGHT"
-    size="small"
+    size="medium"
   >
     <template #innerLabel>
       <div class="va-text-center">
