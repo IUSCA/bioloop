@@ -1,4 +1,5 @@
 <template>
+  <p>{{ breakpoint.current }}</p>
   <Header
     :is-mobile-view="isMobileView"
     :is-sidebar-collapsed="isSidebarCollapsed"
@@ -35,17 +36,29 @@ watch(
   (newValue, oldValue) => {
     isMobileView.value = !(breakpoint.xl || breakpoint.lg || breakpoint.md);
 
-    // If sidebar is already open when going from screen size SM to XS, or XS
-    // to SM, it should stay open.
-    if (!isSidebarCollapsed.value) {
-      if (
-        (oldValue === "xs" && newValue === "sm") ||
-        (oldValue === "sm" && newValue === "xs")
-      ) {
-        return;
-      }
+    // When going from screen size SM to XS, or XS to SM, the sidebar's
+    // open/collapsed state should not change
+    // 
+    if (
+      (oldValue === "xs" && newValue === "sm") ||
+      (oldValue === "sm" && newValue === "xs")
+    ) {
+      return;
     }
-    isSidebarCollapsed.value = isMobileView.value;  }
+
+    // if (isSidebarCollapsed.value) {
+      // decrease width should not open it
+      
+    // }
+
+    // if (!isSidebarCollapsed.value) {
+      // increase width should not close it
+      
+    // }
+
+
+    isSidebarCollapsed.value = isMobileView.value;  
+  }
 );
 
 const toggleSidebarVisibility = () => {
