@@ -173,3 +173,10 @@ const bottom_items = ref([
 
 const admin_items = ref([]);
 </script>
+
+<style>
+/* In minimized state, the default right margin is making the icons smaller */
+aside.va-sidebar--minimized .va-sidebar__item__content > * {
+  margin-right: 0;
+}
+</style>
