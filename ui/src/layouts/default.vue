@@ -1,7 +1,9 @@
 <template>
   <!-- <p>Breakpoint: {{ breakpoint.current }}</p>
   <p>isSidebarCollapsed: {{ isSidebarCollapsed }}</p> -->
-  <Header :is-mobile-view="isMobileView" :is-sidebar-collapsed="isSidebarCollapsed"
+  <Header 
+    :is-mobile-view="isMobileView"
+    :is-sidebar-collapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility">
   </Header>
   <div class="flex flex-row h-screen">
