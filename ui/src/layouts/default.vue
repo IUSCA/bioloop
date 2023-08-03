@@ -1,5 +1,4 @@
 <template>
-  <p>{{ breakpoint.current }}</p>
   <Header
     :is-sidebar-collapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility"
