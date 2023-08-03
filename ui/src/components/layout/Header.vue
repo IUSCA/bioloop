@@ -97,7 +97,6 @@ const props = defineProps({
   font-size: 2.7rem;
 }
 
-/* Skip link */
 .skip-to-content {
   transform: translateY(-100%);
   transition: transform 0.3s;
