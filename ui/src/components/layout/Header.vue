@@ -1,8 +1,11 @@
 <template>
   <va-navbar class="navbar-container flex-row">
     <template #left>      
-      <va-button class="fixed top-0 left-0 rounded-none skip-to-content" href="#main">Skip to content</va-button>
-      
+      <va-button
+        class="fixed top-0 left-0 rounded-none skip-to-content"
+        href="#main">
+        Skip to content
+      </va-button>
       <va-navbar-item class="navbar-logo-container">
         <va-list>
           <va-list-item to="#">
