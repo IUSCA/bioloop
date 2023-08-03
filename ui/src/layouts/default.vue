@@ -44,16 +44,20 @@ watch(
     // When going from screen size XL to LG, or LG to MD, if sidebar is
     // already collapsed, it should stay collapsed
     if (
-        (oldValue === 'xl' && newValue === 'lg') ||
-        (oldValue === 'lg' && newValue === 'md')
+      (oldValue === "xl" && newValue === "lg") ||
+      (oldValue === "lg" && newValue === "md")
     ) {
       if (isSidebarCollapsed.value) {
         return;
-      }  
+      }
     }
 
     // In all other cases, update the open/collapse state acc. to screen size
-    isSidebarCollapsed.value = !(breakpoint.xl || breakpoint.lg || breakpoint.md);  
+    isSidebarCollapsed.value = !(
+      breakpoint.xl ||
+      breakpoint.lg ||
+      breakpoint.md
+    );
   }
 );
 
