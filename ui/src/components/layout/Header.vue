@@ -83,7 +83,6 @@ const props = defineProps({
 
 .navbar-container .navbar-sidebar-toggle-container {
   margin-right: 0;
-  /* padding-right: 0.7rem !important; */
   padding-right: 1rem !important;
 
 }
