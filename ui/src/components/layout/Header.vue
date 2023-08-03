@@ -23,7 +23,7 @@
         </va-list>
       </va-navbar-item>
       
-      <va-navbar-item class="ml-0 navbar-title-container">
+      <va-navbar-item class="navbar-title-container">
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
@@ -83,7 +83,7 @@ const props = defineProps({
 }
 
 .navbar-title-container .va-list-item__inner {
-  min-width: 11.86rem;
+  min-width: 13.45rem;
 }
 
 .navbar-title-heading {
