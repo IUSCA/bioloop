@@ -82,7 +82,11 @@ const props = defineProps({
   min-width: 11.86rem;
 }
 
- /* Skip link */
+.navbar-title {
+  --va-list-item-label-color: var(--va-text-primary);
+}
+
+/* Skip link */
 .skip-to-content {
   transform: translateY(-100%);
   transition: transform 0.3s;
