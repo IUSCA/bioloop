@@ -6,14 +6,14 @@
         href="#main">
         Skip to content
       </va-button>
-      
+
       <va-navbar-item class="navbar-logo-container">
         <va-list>
           <va-list-item to="#">
             <va-list-item-section class="m-0" icon>
               <va-icon 
-            size="2.8rem"
-            :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
+                size="2.8rem"
+                :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
              />
             </va-list-item-section>
         </va-list-item>
