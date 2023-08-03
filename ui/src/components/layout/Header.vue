@@ -31,11 +31,11 @@
             </va-list-item-section>
             <va-list-item-section class="m-0 navbar-title">
               <va-list-item-label>
-                <h3 class="text-3xl m-0">
+                <h3 class="text-3xl m-0 navbar-title-heading">
                   {{ config.appTitle }}
                 </h3>
               </va-list-item-label>
-              <va-list-item-label v-if="auth.user?.username">
+              <va-list-item-label class="pl-0.5" v-if="auth.user?.username">
                 Logged in as {{ auth.user.username }}
               </va-list-item-label>
             </va-list-item-section>
@@ -84,6 +84,10 @@ const props = defineProps({
 
 .navbar-title {
   --va-list-item-label-color: var(--va-text-primary);
+}
+
+.navbar-title-heading {
+  font-size: 2.7rem;
 }
 
 /* Skip link */
