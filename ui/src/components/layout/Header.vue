@@ -27,7 +27,7 @@
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
-              <img class="w-11 h-11" src="/logo.svg" />
+              <img class="w-12 h-12" src="/logo.svg" />
             </va-list-item-section>
             <va-list-item-section class="m-0 navbar-title">
               <va-list-item-label class="text-3xl">
