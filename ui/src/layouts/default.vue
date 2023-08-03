@@ -8,7 +8,7 @@
     <nav aria-label="menu nav" class="relative h-full content-center flex-none shadow-xl">
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
-    <main class="overflow-y-scroll">
+    <main id="main" class="overflow-y-scroll">
       <div class="px-4 pb-10 pt-3 min-h-screen">
         <router-view></router-view>
       </div>
