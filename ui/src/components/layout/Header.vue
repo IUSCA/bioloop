@@ -1,6 +1,8 @@
 <template>
   <va-navbar class="navbar-container flex-row">
-    <template #left>
+    <template #left>      
+      <va-button class="fixed top-0 left-0 rounded-none skip-to-content" href="#main">Skip to content</va-button>
+      
       <va-navbar-item class="navbar-logo-container">
         <va-list>
           <va-list-item to="#">
@@ -69,5 +71,15 @@ const props = defineProps({
 
 .navbar-title-container .va-list-item__inner {
   min-width: 11.86rem;
+}
+
+ /* Skip link */
+.skip-to-content {
+  transform: translateY(-100%);
+  transition: transform 0.3s;
+}
+
+.skip-to-content:focus {
+  transform: translateY(0%);
 }
 </style>
