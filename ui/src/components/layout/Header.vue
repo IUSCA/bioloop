@@ -6,6 +6,7 @@
         href="#main">
         Skip to content
       </va-button>
+      
       <va-navbar-item class="navbar-logo-container">
         <va-list>
           <va-list-item to="#">
