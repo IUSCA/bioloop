@@ -7,11 +7,12 @@
         Skip to content
       </va-button>
 
-      <va-navbar-item class="navbar-logo-container">
+      <va-navbar-item class="navbar-sidebar-toggle-container">
         <va-list>
-          <va-list-item to="#">
+          <va-list-item>
             <va-list-item-section class="m-0" icon>
               <va-icon 
+                @click="$emit('toggleSidebarVisibility')"
                 size="2.8rem"
                 :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
              />
@@ -60,7 +61,7 @@ const props = defineProps({
 </script>
 
 <style>
-.navbar-container .navbar-logo-container {
+.navbar-container .navbar-sidebar-toggle-container {
   margin-right: 0;
   padding-right: 1rem !important;
 }
