@@ -9,7 +9,9 @@
 
       <va-navbar-item class="navbar-sidebar-toggle-container">
         <va-list>
-          <va-list-item>
+          <va-list-item
+          @keyup.enter="$emit('toggleSidebarVisibility')"
+          >
             <va-list-item-section class="m-0" icon>
               <va-icon 
                 @click="$emit('toggleSidebarVisibility')"
