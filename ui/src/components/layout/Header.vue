@@ -15,7 +15,7 @@
             <va-list-item-section class="m-0" icon>
               <va-icon 
                 @click="$emit('toggleSidebarVisibility')"
-                size="2.8rem"
+                size="3.5rem"
                 :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
              />
             </va-list-item-section>

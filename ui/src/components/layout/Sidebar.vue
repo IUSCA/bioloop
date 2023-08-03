@@ -1,27 +1,5 @@
 <template>
-  <va-sidebar minimized-width="4.5rem" :minimized="props.isSidebarCollapsed">
-    <!-- <va-sidebar-item to="/">
-      <va-list>
-        <va-list-item>
-          <va-list-item-section icon>
-            <img class="w-12 h-12" src="/logo.svg" />
-          </va-list-item-section>
-
-          <va-list-item-section>
-            <va-list-item-label class="text-3xl">
-              {{ config.appTitle }}
-            </va-list-item-label>
-
-            <va-list-item-label v-if="auth.user?.username">
-              Logged in as {{ auth.user.username }}
-            </va-list-item-label>
-          </va-list-item-section>
-        </va-list-item>
-      </va-list>
-    </va-sidebar-item> -->
-
-    <!-- <va-divider /> -->
-
+  <va-sidebar minimized-width="5.5rem" :minimized="props.isSidebarCollapsed">
     <va-sidebar-item
       v-for="(item, i) in user_items"
       :key="i"
@@ -89,7 +67,6 @@
 </template>
 
 <script setup>
-// import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({isSidebarCollapsed: Boolean})
