@@ -2,7 +2,7 @@
   <va-navbar class="navbar-container flex-row">
     <template #left>      
       <va-button
-        class="fixed top-0 left-0 rounded-none skip-to-content"
+        class="fixed top-0 left-0 rounded-none font-normal skip-to-content"
         href="#main">
         Skip to content
       </va-button>
