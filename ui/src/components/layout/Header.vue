@@ -65,6 +65,14 @@ const props = defineProps({
 </script>
 
 <style>
+.navbar-title {
+  --va-list-item-label-color: var(--va-text-primary);
+}
+
+.navbar-container .navbar-title {
+  margin-left: 0;
+}
+
 .navbar-container .navbar-sidebar-toggle-container {
   margin-right: 0;
   padding-right: 0.7rem !important;
@@ -74,16 +82,8 @@ const props = defineProps({
   justify-content: flex-end;
 }
 
-.navbar-container .navbar-title {
-  margin-left: 0;
-}
-
 .navbar-title-container .va-list-item__inner {
   min-width: 11.86rem;
-}
-
-.navbar-title {
-  --va-list-item-label-color: var(--va-text-primary);
 }
 
 .navbar-title-heading {
