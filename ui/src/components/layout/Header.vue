@@ -69,6 +69,10 @@ const props = defineProps({
   --va-list-item-label-color: var(--va-text-primary);
 }
 
+.navbar-container {
+  --va-navbar-mobile-height: 5.9rem;
+}
+
 .navbar-container .navbar-title {
   margin-left: 0;
 }
