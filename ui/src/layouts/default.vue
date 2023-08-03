@@ -45,8 +45,7 @@ watch(
         return;
       }
     }
-    isSidebarCollapsed.value = isMobileView;
-  }
+    isSidebarCollapsed.value = isMobileView.value;  }
 );
 
 const toggleSidebarVisibility = () => {
