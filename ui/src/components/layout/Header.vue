@@ -31,7 +31,9 @@
             </va-list-item-section>
             <va-list-item-section class="m-0 navbar-title">
               <va-list-item-label class="text-3xl">
-                {{ config.appTitle }}
+                <h3 class="text-3xl va-h3 m-0">
+                  {{ config.appTitle }}
+                </h3>
               </va-list-item-label>
               <va-list-item-label v-if="auth.user?.username">
                 Logged in as {{ auth.user.username }}
