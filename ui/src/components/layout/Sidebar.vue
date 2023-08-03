@@ -69,7 +69,7 @@
 <script setup>
 import { useAuthStore } from "@/stores/auth";
 
-const props = defineProps({ isSidebarCollapsed: Boolean })
+const props = defineProps({ isSidebarCollapsed: Boolean });
 
 const auth = useAuthStore();
 const route = useRoute();

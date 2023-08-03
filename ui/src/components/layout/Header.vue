@@ -1,28 +1,27 @@
 <template>
   <va-navbar class="navbar-container flex-row">
-    <template #left>      
+    <template #left>
       <va-button
         class="fixed top-0 left-0 rounded-none font-normal skip-to-content"
-        href="#main">
+        href="#main"
+      >
         Skip to content
       </va-button>
 
       <va-navbar-item class="navbar-sidebar-toggle-container">
         <va-list>
-          <va-list-item
-          @keyup.enter="$emit('toggleSidebarVisibility')"
-          >
+          <va-list-item @keyup.enter="$emit('toggleSidebarVisibility')">
             <va-list-item-section class="m-0" icon>
-              <va-icon 
+              <va-icon
                 @click="$emit('toggleSidebarVisibility')"
                 size="2rem"
                 :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
-             />
+              />
             </va-list-item-section>
-        </va-list-item>
+          </va-list-item>
         </va-list>
       </va-navbar-item>
-      
+
       <va-navbar-item class="navbar-title-container">
         <va-list>
           <va-list-item to="/">
@@ -55,13 +54,13 @@
 <script setup>
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
-import ThemeToggle from '@/components/layout/ThemeToggle.vue'
+import ThemeToggle from "@/components/layout/ThemeToggle.vue";
 
 const auth = useAuthStore();
 
 const props = defineProps({
   isSidebarCollapsed: Boolean,
-})
+});
 </script>
 
 <style>
@@ -84,7 +83,6 @@ const props = defineProps({
 .navbar-container .navbar-sidebar-toggle-container {
   margin-right: 0;
   padding-right: 1rem !important;
-
 }
 
 .navbar-container .va-navbar__right {

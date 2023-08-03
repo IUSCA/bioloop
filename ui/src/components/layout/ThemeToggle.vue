@@ -1,9 +1,15 @@
 <template>
-  <va-switch v-model="switchValue" :true-value=THEMES.DARK :false-value=THEMES.LIGHT size="small">
+  <va-switch
+    v-model="switchValue"
+    :true-value="THEMES.DARK"
+    :false-value="THEMES.LIGHT"
+    size="small"
+  >
     <template #innerLabel>
       <div class="va-text-center">
-        <va-icon :name="switchValue === THEMES.DARK ? 'dark_mode' :
-          'light_mode'" />
+        <va-icon
+          :name="switchValue === THEMES.DARK ? 'dark_mode' : 'light_mode'"
+        />
       </div>
     </template>
   </va-switch>
@@ -26,15 +32,19 @@ const switchValue = computed({
   },
 });
 
-watch([colors, switchValue], () => {
-  auth.setTheme({
-    primary: colors.primary,
-    mode: switchValue.value
-  });
-}, { deep: true })
+watch(
+  [colors, switchValue],
+  () => {
+    auth.setTheme({
+      primary: colors.primary,
+      mode: switchValue.value,
+    });
+  },
+  { deep: true }
+);
 
 const THEMES = {
-  LIGHT: 'light',
-  DARK: 'dark'
-}
+  LIGHT: "light",
+  DARK: "dark",
+};
 </script>
