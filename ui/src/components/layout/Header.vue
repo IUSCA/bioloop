@@ -65,7 +65,7 @@ const props = defineProps({
 <style>
 .navbar-container .navbar-sidebar-toggle-container {
   margin-right: 0;
-  padding-right: 1rem !important;
+  padding-right: 0.7rem !important;
 }
 
 .navbar-container .va-navbar__right {
