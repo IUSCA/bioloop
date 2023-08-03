@@ -31,7 +31,7 @@
             </va-list-item-section>
             <va-list-item-section class="m-0 navbar-title">
               <va-list-item-label class="text-3xl">
-                <h3 class="text-3xl va-h3 m-0">
+                <h3 class="text-3xl m-0">
                   {{ config.appTitle }}
                 </h3>
               </va-list-item-label>
