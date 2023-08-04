@@ -105,6 +105,10 @@ const props = defineProps({
   min-width: 13.45rem;
 }
 
+.navbar-title-heading {
+  transition: font-size 0.3s;
+}
+
 @media all and (min-width: 1024px) {
   .navbar-title-heading {
     font-size: 2.7rem;
