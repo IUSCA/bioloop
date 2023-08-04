@@ -78,6 +78,8 @@ const props = defineProps({
 
 .navbar-container {
   --va-navbar-mobile-height: 5.9rem;
+  --va-navbar-height: 5.9rem;
+  min-height: 5.9rem;
 }
 
 .navbar-container .navbar-title {
