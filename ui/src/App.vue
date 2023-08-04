@@ -13,16 +13,21 @@
 <script setup>
 import { useToast } from "vuestic-ui";
 import { useColors } from "vuestic-ui";
+import { useBreakpoint } from "vuestic-ui";
 
 import { useAuthStore } from "@/stores/auth";
 import { useToastStore } from "@/stores/toast";
+import { useUIStore } from "@/stores/ui";
 
+const breakpoint = useBreakpoint();
+const ui = useUIStore();
 const auth = useAuthStore();
 const toast = useToastStore();
 toast.setup(useToast());
 
 onMounted(() => {
   setupTheme();
+  setViewType();
 });
 
 watch(
@@ -32,6 +37,20 @@ watch(
   },
   { deep: true }
 );
+
+watch(
+  () => breakpoint.current, () => {
+    setViewType();
+  }
+)
+
+const setViewType = () => {
+  ui.setMobileView(!(
+      breakpoint.xl ||
+      breakpoint.lg ||
+      breakpoint.md
+    ));
+}
 
 const setupTheme = () => {
   if ("user" in auth && "theme" in auth.user) {

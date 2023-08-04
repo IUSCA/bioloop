@@ -26,7 +26,7 @@
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
-              <img class="w-12 h-12" src="/logo.svg" />
+              <img :class="ui.isMobileView ? 'w-10 h10' : 'w-12 h-12'" src="/logo.svg" />
             </va-list-item-section>
             <va-list-item-section class="m-0 navbar-title">
               <va-list-item-label>
@@ -34,7 +34,7 @@
                   {{ config.appTitle }}
                 </h3>
               </va-list-item-label>
-              <va-list-item-label class="pl-0.5" v-if="auth.user?.username">
+              <va-list-item-label class="pl-0.5 text-md" v-if="auth.user?.username">
                 Logged in as {{ auth.user.username }}
               </va-list-item-label>
             </va-list-item-section>
@@ -45,7 +45,9 @@
 
     <template #right>
       <va-navbar-item>
-        <theme-toggle></theme-toggle>
+        <theme-toggle
+          :size="ui.isMobileView ? 'small' : 'medium'"
+        ></theme-toggle>
       </va-navbar-item>
     </template>
   </va-navbar>
@@ -54,8 +56,10 @@
 <script setup>
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
+import { useUIStore } from "@/stores/ui";
 import ThemeToggle from "@/components/layout/ThemeToggle.vue";
 
+const ui = useUIStore();
 const auth = useAuthStore();
 
 const props = defineProps({
@@ -93,8 +97,16 @@ const props = defineProps({
   min-width: 13.45rem;
 }
 
-.navbar-title-heading {
-  font-size: 2.7rem;
+@media all and (min-width: 1024px) {
+  .navbar-title-heading {
+    font-size: 2.7rem;
+  }
+}
+
+@media all and (max-width: 1024px) {
+  .navbar-title-heading {
+    line-height: 1.875rem;
+  }
 }
 
 .skip-to-content {
