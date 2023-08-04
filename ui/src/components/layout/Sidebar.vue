@@ -1,5 +1,5 @@
 <template>
-  <va-sidebar :minimized="props.isSidebarCollapsed">
+  <va-sidebar :minimized="props.isSidebarCollapsed" class="pt-2">
     <va-sidebar-item
       v-for="(item, i) in user_items"
       :key="i"

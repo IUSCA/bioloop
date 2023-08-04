@@ -43,11 +43,42 @@
     </template>
 
     <template #right>
-      <va-navbar-item class="hidden md:block">
-        <span>Logged in as {{ auth.user.username }}</span>
+      <va-navbar-item class="flex items-center" v-if="auth.user?.username">
+        <!-- <span>Logged in as {{ auth.user.username }}</span> -->
+
+        <va-dropdown>
+          <template #anchor>
+            <va-avatar :color="stringToRGB(auth.user.name || '')" size="small">
+              <span class="text-sm uppercase">{{
+                initials(auth.user.name)
+              }}</span>
+            </va-avatar>
+          </template>
+          <va-dropdown-content placement="auto" offset="10">
+            <div class="space-y-1">
+              <router-link class="flex gap-3 p-1 va-link" to="/profile">
+                <div class="flex-none">
+                  <Icon icon="mdi-account-details" class="text-2xl" />
+                </div>
+                <div>
+                  <span class=""> Profile </span>
+                </div>
+              </router-link>
+
+              <router-link class="flex gap-3 p-1 va-link" to="/auth/logout">
+                <div class="flex-none">
+                  <Icon icon="mdi-logout-variant" class="text-2xl" />
+                </div>
+                <div>
+                  <span class=""> Logout </span>
+                </div>
+              </router-link>
+            </div>
+          </va-dropdown-content>
+        </va-dropdown>
       </va-navbar-item>
-      <va-navbar-item>
-        <theme-toggle></theme-toggle>
+      <va-navbar-item class="flex items-center">
+        <ThemeToggle></ThemeToggle>
       </va-navbar-item>
     </template>
   </va-navbar>
@@ -56,7 +87,8 @@
 <script setup>
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
-import ThemeToggle from "@/components/layout/ThemeToggle.vue";
+import { stringToRGB } from "@/services/colors";
+import { initials } from "@/services/utils";
 
 const auth = useAuthStore();
 
@@ -75,11 +107,6 @@ const props = defineProps({
   align-items: center;
   justify-content: start;
 }
-
-/* .navbar-container .navbar-sidebar-toggle-container {
-  margin-right: 0;
-  padding-right: 1rem !important;
-} */
 
 .navbar-container .va-navbar__right {
   justify-content: flex-end;

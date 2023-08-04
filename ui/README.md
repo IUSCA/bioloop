@@ -166,3 +166,6 @@ meta:
 ## Utility Components
 
 Vue Components developed in house to be reused in the app. [Documentation](docs/util_components.md)
+
+## Coding Conventions
+- Use custom component names as `<CustomComponent>`

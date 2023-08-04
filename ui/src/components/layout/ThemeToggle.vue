@@ -1,5 +1,5 @@
 <template>
-  <va-switch
+  <!-- <va-switch
     v-model="switchValue"
     :true-value="THEMES.DARK"
     :false-value="THEMES.LIGHT"
@@ -12,7 +12,14 @@
         />
       </div>
     </template>
-  </va-switch>
+  </va-switch> -->
+  <va-button
+    round
+    :icon="switchValue === THEMES.DARK ? 'light_mode' : 'dark_mode'"
+    @click="toggleValue"
+    preset="primary"
+    :color="switchValue === THEMES.DARK ? 'warning' : 'primary'"
+  ></va-button>
 </template>
 
 <script setup>
@@ -47,4 +54,9 @@ const THEMES = {
   LIGHT: "light",
   DARK: "dark",
 };
+
+function toggleValue() {
+  switchValue.value =
+    switchValue.value === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK;
+}
 </script>
