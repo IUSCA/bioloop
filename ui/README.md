@@ -169,3 +169,9 @@ Vue Components developed in house to be reused in the app. [Documentation](docs/
 
 ## Coding Conventions
 - Use custom component names as `<CustomComponent>`
+
+## Adding Additional Fonts
+- Search for fonts on https://fontsource.org/
+- Install - `npm install @fontsource/audiowide`
+- Add `import '@fontsource/audiowide';` in [main.js](src/main.js)
+- Add 'Audiowide' to `font-family: ` in body styles in [base.css](src/styles/base.css)

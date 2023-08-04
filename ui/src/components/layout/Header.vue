@@ -29,7 +29,9 @@
             </va-list-item-section>
             <va-list-item-section>
               <va-list-item-label>
-                <h3 class="text-3xl m-0 hidden md:block">
+                <h3
+                  class="text-3xl m-0 hidden md:block lowercase font-[audiowide]"
+                >
                   {{ config.appTitle }}
                 </h3>
               </va-list-item-label>
