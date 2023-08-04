@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-row gap-4">
+  <div class="flex flex-row gap-4 overflow-x-scroll">
     <div
       v-for="(metric, i) in disk_usage_metrics"
       :key="i"
@@ -23,7 +23,7 @@
             </div>
 
             <div>
-              <div class="pb-1">
+              <div class="pb-1 text-center">
                 <span class="va-text-secondary">
                   {{
                     metric.measurement.includes("files")
