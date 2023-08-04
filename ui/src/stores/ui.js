@@ -1,5 +1,5 @@
-import { ref } from "vue"
-import { defineStore } from 'pinia'
+import { ref } from "vue";
+import { defineStore } from "pinia";
 
 export const useUIStore = defineStore("UI", () => {
   const isMobileView = ref(false);
@@ -9,4 +9,4 @@ export const useUIStore = defineStore("UI", () => {
   }
 
   return { isMobileView, setMobileView };
-})
+});

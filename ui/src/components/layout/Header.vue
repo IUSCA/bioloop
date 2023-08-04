@@ -26,7 +26,10 @@
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0" icon>
-              <img :class="ui.isMobileView ? 'w-10 h10' : 'w-12 h-12'" src="/logo.svg" />
+              <img
+                :class="ui.isMobileView ? 'w-10 h10' : 'w-12 h-12'"
+                src="/logo.svg"
+              />
             </va-list-item-section>
             <va-list-item-section class="m-0 navbar-title">
               <va-list-item-label>
@@ -34,7 +37,10 @@
                   {{ config.appTitle }}
                 </h3>
               </va-list-item-label>
-              <va-list-item-label class="pl-0.5 text-md" v-if="auth.user?.username">
+              <va-list-item-label
+                class="pl-0.5 text-md"
+                v-if="auth.user?.username"
+              >
                 Logged in as {{ auth.user.username }}
               </va-list-item-label>
             </va-list-item-section>

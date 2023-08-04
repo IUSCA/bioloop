@@ -62,7 +62,7 @@
         <!-- User can hide item with css if they want -->
         <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
       </va-sidebar-item-content>
-    </va-sidebar-item>    
+    </va-sidebar-item>
   </va-sidebar>
 </template>
 

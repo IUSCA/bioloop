@@ -54,7 +54,7 @@ watch(
     }
 
     // In all other cases, update the open/collapse state acc. to screen size
-    isSidebarCollapsed.value = ui.isMobileView
+    isSidebarCollapsed.value = ui.isMobileView;
   }
 );
 

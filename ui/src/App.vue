@@ -39,18 +39,15 @@ watch(
 );
 
 watch(
-  () => breakpoint.current, () => {
+  () => breakpoint.current,
+  () => {
     setViewType();
   }
-)
+);
 
 const setViewType = () => {
-  ui.setMobileView(!(
-      breakpoint.xl ||
-      breakpoint.lg ||
-      breakpoint.md
-    ));
-}
+  ui.setMobileView(!(breakpoint.xl || breakpoint.lg || breakpoint.md));
+};
 
 const setupTheme = () => {
   if ("user" in auth && "theme" in auth.user) {
