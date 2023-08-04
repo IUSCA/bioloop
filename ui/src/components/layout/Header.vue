@@ -24,13 +24,18 @@
       <va-navbar-item>
         <va-list>
           <va-list-item to="/">
-            <va-list-item-section class="m-0" icon>
-              <img class="w-7 h-7" src="/logo.svg" />
+            <va-list-item-section class="m-0 hidden md:block" icon>
+              <img
+                class="w-8 h-8"
+                :src="
+                  currentPresetName === 'dark' ? '/dark-logo.svg' : '/logo.svg'
+                "
+              />
             </va-list-item-section>
             <va-list-item-section>
               <va-list-item-label>
                 <h3
-                  class="text-3xl m-0 hidden md:block lowercase font-[audiowide]"
+                  class="text-3xl m-0 md:block lowercase font-[audiowide] text-slate-700 dark:text-slate-300"
                 >
                   {{ config.appTitle }}
                 </h3>
@@ -91,8 +96,10 @@ import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 import { stringToRGB } from "@/services/colors";
 import { initials } from "@/services/utils";
+import { useColors } from "vuestic-ui";
 
 const auth = useAuthStore();
+const { currentPresetName } = useColors();
 
 const props = defineProps({
   isSidebarCollapsed: Boolean,
