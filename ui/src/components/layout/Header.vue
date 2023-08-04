@@ -51,41 +51,11 @@
 
     <template #right>
       <va-navbar-item class="flex items-center" v-if="auth.user?.username">
+        <HeaderUserDropdown />
         <!-- <span>Logged in as {{ auth.user.username }}</span> -->
-
-        <va-dropdown>
-          <template #anchor>
-            <va-avatar :color="stringToRGB(auth.user.name || '')" size="small">
-              <span class="text-sm uppercase">{{
-                initials(auth.user.name)
-              }}</span>
-            </va-avatar>
-          </template>
-          <va-dropdown-content placement="auto" offset="10">
-            <div class="space-y-1">
-              <router-link class="flex gap-3 p-1 va-link" to="/profile">
-                <div class="flex-none">
-                  <Icon icon="mdi-account-details" class="text-2xl" />
-                </div>
-                <div>
-                  <span class=""> Profile </span>
-                </div>
-              </router-link>
-
-              <router-link class="flex gap-3 p-1 va-link" to="/auth/logout">
-                <div class="flex-none">
-                  <Icon icon="mdi-logout-variant" class="text-2xl" />
-                </div>
-                <div>
-                  <span class=""> Logout </span>
-                </div>
-              </router-link>
-            </div>
-          </va-dropdown-content>
-        </va-dropdown>
       </va-navbar-item>
       <va-navbar-item class="flex items-center">
-        <ThemeToggle></ThemeToggle>
+        <ThemeToggle />
       </va-navbar-item>
     </template>
   </va-navbar>
@@ -94,8 +64,6 @@
 <script setup>
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
-import { stringToRGB } from "@/services/colors";
-import { initials } from "@/services/utils";
 import { useColors } from "vuestic-ui";
 
 const auth = useAuthStore();
