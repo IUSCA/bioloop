@@ -25,12 +25,7 @@
         <va-list>
           <va-list-item to="/">
             <va-list-item-section class="m-0 hidden md:block" icon>
-              <img
-                class="w-8 h-8"
-                :src="
-                  currentPresetName === 'dark' ? '/dark-logo.svg' : '/logo.svg'
-                "
-              />
+              <AppIcon />
             </va-list-item-section>
             <va-list-item-section>
               <va-list-item-label>
@@ -64,10 +59,8 @@
 <script setup>
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
-import { useColors } from "vuestic-ui";
 
 const auth = useAuthStore();
-const { currentPresetName } = useColors();
 
 const props = defineProps({
   isSidebarCollapsed: Boolean,

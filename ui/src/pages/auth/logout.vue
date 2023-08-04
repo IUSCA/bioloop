@@ -3,10 +3,10 @@
     <div class="max-w-md">
       <va-card class="mt-10 lg:mt-20">
         <va-card-content>
-          <div class="flex justify-center opacity-70">
+          <div class="flex justify-center opacity-90">
             <div class="flex flex-col gap-2 items-center">
-              <img class="h-12" src="/logo.svg" />
-              <span class="text-3xl tracking-wide">
+              <AppIcon size="12" />
+              <span class="text-3xl tracking-wide font-[audiowide] lowercase">
                 {{ config.appTitle }}
               </span>
             </div>
