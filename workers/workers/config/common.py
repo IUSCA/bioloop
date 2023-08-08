@@ -81,14 +81,6 @@ config = {
                 {
                     'name': 'validate',
                     'task': 'validate_dataset'
-                },
-                {
-                    'name': 'setup_download',
-                    'task': 'setup_dataset_download'
-                },
-                {
-                    'name': 'generate_qc',
-                    'task': 'generate_qc'
                 }
             ]
         }

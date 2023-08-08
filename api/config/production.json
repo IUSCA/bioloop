@@ -1,12 +1,14 @@
 {
   "mode": "production",
-  "app_id": "cfndap-test.sca.iu.edu",
+  "app_id": "cfndap.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
   "postgres": {
     "hostname": "commons3.sca.iu.edu",
-    "schema": "public"
+    "user": "cfndap",
+    "db": "cfndap",
+    "schema": "cfndap"
   },
   "workflow_server": {
     "base_url": "https://core-dev1.sca.iu.edu/rhythm"
@@ -14,7 +16,7 @@
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "cfndap-test.sca.iu.edu",
+      "iss": "cfndap.sca.iu.edu",
       "ttl_milliseconds": 3600000
     }
   },
