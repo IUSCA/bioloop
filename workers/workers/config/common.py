@@ -48,8 +48,9 @@ config = {
             'rejects': ['.snapshots'],
         },
         'recency_threshold_seconds': ONE_HOUR,
-        'minimum_project_size': ONE_GIGABYTE,
-        'wait_between_scans_seconds': FIVE_MINUTES,
+        'minimum_dataset_size': ONE_GIGABYTE,
+        'wait_between_stability_checks_seconds': FIVE_MINUTES,
+        'poll_interval_seconds': 10
     },
     'service_user': 'bioloopuser',
     'stage': {
