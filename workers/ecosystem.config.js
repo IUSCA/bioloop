@@ -13,24 +13,14 @@ module.exports = {
       kill_timeout: "10000"
     },
     {
-      name: "register",
-      script: "python",
-      args: "-u -m workers.scripts.register",
-      watch: false,
-      interpreter: "",
-      log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "../logs/workers/register.err",
-      out_file: "../logs/workers/register.log"
-    },
-    {
-      name: "watch_register",
+      name: "watch",
       script: "python",
       args: "-u -m workers.scripts.watch",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "../logs/workers/watch_register.err",
-      out_file: "../logs/workers/watch_register.log"
+      error_file: "../logs/workers/watch.err",
+      out_file: "../logs/workers/watch.log"
     },
     {
       name: "metrics",
