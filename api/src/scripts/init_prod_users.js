@@ -43,18 +43,29 @@ async function main() {
   console.log(`created ${roles.length} roles`);
 
   // Create default admins
-  const admins = ['ccbrandt', 'deduggi', 'svc_tasks'];
+  const admins = [
+    {
+      name: 'Charles Brandt',
+      username: 'ccbrandt',
+    }, {
+      name: 'Deepak Duggirala',
+      username: 'deduggi',
+    }, {
+      name: 'svc_tasks',
+      username: 'svc_tasks',
+    },
+  ];
 
-  const admin_promises = admins.map((username) => prisma.user.upsert({
-    where: { email: `${username}@iu.edu` },
+  const admin_promises = admins.map((admin) => prisma.user.upsert({
+    where: { email: `${admin.username}@iu.edu` },
     update: {},
     create: {
-      username,
-      email: `${username}@iu.edu`,
-      cas_id: username,
-      name: username,
+      username: admin.username,
+      email: `${admin.username}@iu.edu`,
+      cas_id: admin.username,
+      name: admin.name,
       user_role: {
-        create: [{ role_id: 1 }, { role_id: 2 }],
+        create: [{ role_id: 1 }],
       },
     },
   }));
