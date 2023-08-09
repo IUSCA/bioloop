@@ -128,14 +128,6 @@
       <va-inner-loading :loading="modal_loading">
         <va-form class="flex flex-wrap gap-2 gap-y-6" ref="modifyFormRef">
           <va-input
-            v-model="editedUser.username"
-            label="Username"
-            class="w-64"
-            :rules="[
-              (value) => (value && value.length > 0) || 'Field is required',
-            ]"
-          />
-          <va-input
             v-model="editedUser.name"
             label="Name"
             class="w-64"
@@ -152,7 +144,17 @@
             ]"
           />
           <va-input
-            v-model="editedUser.cas_id"
+            :modelValue="editedUser.username || autofill.username"
+            @update:modelValue="editedUser.username = $event"
+            label="Username"
+            class="w-64"
+            :rules="[
+              (value) => (value && value.length > 0) || 'Field is required',
+            ]"
+          />
+          <va-input
+            :modelValue="editedUser.cas_id || autofill.cas_id"
+            @update:modelValue="editedUser.cas_id = $event"
             label="CAS ID"
             class="flex-[1_1_100%]"
             :rules="[
@@ -226,6 +228,10 @@ const modal_loading = ref(false);
 const editMode = ref("modify");
 const data_loading = ref(false);
 const roleOptions = ["user", "operator", "admin"];
+const autofill = ref({
+  username: "",
+  cas_id: "",
+});
 
 const editModalTitle = computed(() => {
   return editMode.value == "modify" ? "Modify User" : "Create User";
@@ -328,6 +334,8 @@ function modifyUser() {
     const { roles, orig_username, status, ...updates } = editedUser.value;
     updates.is_deleted = !status;
     updates.roles = roles;
+    updates.username = editedUser.value.username || autofill.value.username;
+    updates.cas_id = editedUser.value.cas_id || autofill.value.cas_id;
 
     modal_loading.value = true;
 
@@ -352,6 +360,8 @@ function createUser() {
     const { roles, status, ...updates } = editedUser.value;
     updates.is_deleted = !status;
     updates.roles = roles;
+    updates.username = editedUser.value.username || autofill.value.username;
+    updates.cas_id = editedUser.value.cas_id || autofill.value.cas_id;
 
     modal_loading.value = true;
 
@@ -370,6 +380,18 @@ function createUser() {
       });
   }
 }
+
+watch(
+  () => editedUser.value.email,
+  () => {
+    const email = editedUser.value.email;
+    if (email) {
+      const username = email.split("@")[0];
+      autofill.value.username = username;
+      autofill.value.cas_id = username;
+    }
+  }
+);
 
 fetch_all_users();
 </script>
