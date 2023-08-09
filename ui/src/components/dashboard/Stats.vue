@@ -5,7 +5,9 @@
         <span class="text-xl"> {{ props.title }} </span>
       </va-card-title>
       <va-card-content>
-        <div class="grid grid-cols-4 lg:grid-cols-2 gap-3 gap-y-5">
+        <div
+          class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3 gap-y-5"
+        >
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.count != undefined"
