@@ -20,7 +20,7 @@ config = {
     },
     'registration': {
         'RAW_DATA': {
-            'source_dir': '/N/scratch/radyuser/cfndap/production/source',
+            'source_dir': '/N/project/KBASE-Genome/RNA-Seq/ILMN_1629_Saykin_KBase_totalRNAseq1142_Feb2023/KBASE2_results',
             'rejects': ['.snapshots'],
         },
     },
