@@ -50,6 +50,7 @@
 <script setup>
 import { stringToRGB } from "@/services/colors";
 import * as datetime from "@/services/datetime";
+import { initials } from "@/services/utils";
 
 const props = defineProps({
   users: {
@@ -71,12 +72,4 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["remove"]);
-
-function initials(name) {
-  const parts = (name || "").split(" ");
-  if (parts.length == 1) return parts[0][0];
-  else {
-    return `${parts[0][0]}${parts[parts.length - 1][0]}`;
-  }
-}
 </script>
