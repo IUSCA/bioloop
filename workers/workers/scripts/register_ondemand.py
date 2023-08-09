@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # argument parser
     parser = argparse.ArgumentParser(
         description='Register a dataset - kicks off a full workflow')
-    parser.add_argument('dataset_name', type=str, required=True, help='Dataset Name')
+    parser.add_argument('dataset_name', type=str, help='Dataset Name')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-r', '--raw-data', action='store_true', help="register raw_data dataset")
     group.add_argument('-d', '--data-product', action='store_true', help="register data_product dataset")
