@@ -93,3 +93,21 @@ def setup_dataset_download(celery_task, dataset_id, **kwargs):
         raise
     except Exception as e:
         raise exc.RetryableException(e)
+
+
+@app.task(base=WorkflowTask, bind=True, name='await_stability',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def await_stability(celery_task, dataset_id, **kwargs):
+    from workers.tasks.await_stability import await_stability as task_body
+    return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='delete_source',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def delete_source(celery_task, dataset_id, **kwargs):
+    from workers.tasks.delete_source import delete_source as task_body
+    return task_body(celery_task, dataset_id, **kwargs)
