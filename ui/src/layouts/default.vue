@@ -23,8 +23,10 @@
 <script setup>
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
+import { useUIStore } from "@/stores/ui";
 
 const breakpoint = useBreakpoint();
+const ui = useUIStore();
 
 let isSidebarCollapsed = ref(false);
 
@@ -52,11 +54,7 @@ watch(
     }
 
     // In all other cases, update the open/collapse state acc. to screen size
-    isSidebarCollapsed.value = !(
-      breakpoint.xl ||
-      breakpoint.lg ||
-      breakpoint.md
-    );
+    isSidebarCollapsed.value = ui.isMobileView;
   }
 );
 

@@ -3,7 +3,7 @@
     v-model="switchValue"
     :true-value="THEMES.DARK"
     :false-value="THEMES.LIGHT"
-    size="small"
+    :size="props.size"
   >
     <template #innerLabel>
       <div class="va-text-center">
@@ -29,6 +29,10 @@ import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 const { applyPreset, currentPresetName, colors } = useColors();
+
+// const props = defineProps({
+//   size: String,
+// });
 
 const switchValue = computed({
   get() {

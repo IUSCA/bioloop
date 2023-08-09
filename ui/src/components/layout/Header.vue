@@ -30,7 +30,7 @@
             <va-list-item-section>
               <va-list-item-label>
                 <h3
-                  class="text-3xl m-0 md:block lowercase font-[audiowide] text-slate-700 dark:text-slate-300"
+                  class="text-3xl m-0 lowercase font-[audiowide] text-slate-700 dark:text-slate-300"
                 >
                   {{ config.appTitle }}
                 </h3>
@@ -90,5 +90,25 @@ const props = defineProps({
 
 .skip-to-content:focus {
   transform: translateY(0%);
+}
+
+.title-text {
+  transition: font-size 0.3s;
+}
+
+.navbar-title-heading {
+  font-size: 2.7rem;
+}
+
+@media all and (min-width: 1024px) {
+  .navbar-title-heading {
+    font-size: 2.7rem;
+  }
+}
+
+@media all and (max-width: 1024px) {
+  .navbar-title-heading {
+    line-height: 1.875rem;
+  }
 }
 </style>

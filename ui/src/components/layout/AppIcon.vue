@@ -15,4 +15,13 @@ const props = defineProps({
     default: "8",
   },
 });
+
+/**
+ * :class="
+                  'title-text ' + (ui.isMobileView ? 'w-10 h10' : 'w-12 h-12')
+                "
+
+                import { useUIStore } from "@/stores/ui";
+                const ui = useUIStore();
+ */
 </script>
