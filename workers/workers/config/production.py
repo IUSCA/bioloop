@@ -11,15 +11,15 @@ config = {
     },
     'paths': {
         'scratch': '/N/scratch/radyuser/cfndap/production/scratch',
-        'RAW_DATA': {
-            'archive': f'production/{YEAR}/raw_data',
-            'stage': '/N/scratch/radyuser/cfndap/production/stage/raw_data',
+        'DATA_PRODUCT': {
+            'archive': f'production/{YEAR}/data_products',
+            'stage': '/N/scratch/radyuser/cfndap/production/stage/data_products',
         },
         'download_dir': '/N/scratch/radyuser/cfndap/production/download',
         'root': '/N/scratch/radyuser/'
     },
     'registration': {
-        'RAW_DATA': {
+        'DATA_PRODUCT': {
             'source_dir': '/N/project/KBASE-Genome/RNA-Seq/ILMN_1629_Saykin_KBase_totalRNAseq1142_Feb2023/KBASE2_results',
             'rejects': ['.snapshots'],
         },
