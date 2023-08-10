@@ -1,6 +1,6 @@
 <template>
   <img
-    :class="`w-${props.size} h-${props.size}`"
+    :style="`width: ${props.size};`"
     :src="currentPresetName === 'dark' ? '/dark-logo.svg' : '/logo.svg'"
   />
 </template>
@@ -12,16 +12,7 @@ const { currentPresetName } = useColors();
 const props = defineProps({
   size: {
     type: String,
-    default: "8",
+    default: "2rem",
   },
 });
-
-/**
- * :class="
-                  'title-text ' + (ui.isMobileView ? 'w-10 h10' : 'w-12 h-12')
-                "
-
-                import { useUIStore } from "@/stores/ui";
-                const ui = useUIStore();
- */
 </script>

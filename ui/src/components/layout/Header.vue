@@ -29,11 +29,7 @@
             </va-list-item-section>
             <va-list-item-section>
               <va-list-item-label>
-                <h3
-                  class="text-3xl m-0 lowercase font-[audiowide] text-slate-700 dark:text-slate-300"
-                >
-                  {{ config.appTitle }}
-                </h3>
+                <AppTitle />
               </va-list-item-label>
               <!-- <va-list-item-label class="pl-0.5" v-if="auth.user?.username">
                 Logged in as {{ auth.user.username }}
@@ -57,7 +53,6 @@
 </template>
 
 <script setup>
-import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
