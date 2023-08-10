@@ -22,21 +22,16 @@
       </va-navbar-item>
 
       <va-navbar-item>
-        <va-list>
-          <va-list-item to="/">
-            <va-list-item-section class="m-0 hidden md:block" icon>
+        <router-link to="/">
+          <div class="flex flex-row flex-nowrap gap-2 items-center">
+            <div class="hidden md:block">
               <AppIcon />
-            </va-list-item-section>
-            <va-list-item-section>
-              <va-list-item-label>
-                <AppTitle />
-              </va-list-item-label>
-              <!-- <va-list-item-label class="pl-0.5" v-if="auth.user?.username">
-                Logged in as {{ auth.user.username }}
-              </va-list-item-label> -->
-            </va-list-item-section>
-          </va-list-item>
-        </va-list>
+            </div>
+            <div>
+              <AppTitle />
+            </div>
+          </div>
+        </router-link>
       </va-navbar-item>
     </template>
 
