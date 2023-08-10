@@ -5,10 +5,8 @@
         <va-card-content>
           <div class="flex justify-center opacity-90">
             <div class="flex flex-col gap-2 items-center">
-              <AppIcon size="12" />
-              <span class="text-3xl tracking-wide lowercase font-[audiowide]">
-                {{ config.appTitle }}
-              </span>
+              <AppIcon size="3rem" />
+              <AppTitle />
             </div>
           </div>
           <div class="text-center mt-8">
@@ -37,9 +35,7 @@
   </div>
 </template>
 
-<script setup>
-import config from "@/config";
-</script>
+<script setup></script>
 
 <route lang="yaml">
 meta:
