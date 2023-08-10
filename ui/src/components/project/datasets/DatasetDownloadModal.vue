@@ -2,7 +2,6 @@
   <va-modal
     v-model="visible"
     title="Data Access Options"
-    no-outside-dismiss
     fixed-layout
     hide-default-actions
   >
