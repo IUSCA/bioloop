@@ -153,6 +153,14 @@ function downloadFile({ url, filename = null }) {
   document.body.removeChild(anchor);
 }
 
+function initials(name) {
+  const parts = (name || "").split(" ");
+  if (parts.length == 1) return parts[0][0];
+  else {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`;
+  }
+}
+
 export {
   formatBytes,
   difference,
@@ -169,4 +177,5 @@ export {
   setIntersection,
   caseInsensitiveIncludes,
   downloadFile,
+  initials,
 };

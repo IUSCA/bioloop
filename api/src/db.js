@@ -1,6 +1,6 @@
 require('dotenv-safe').config();
-const config = require('config');
 const process = require('process');
+const config = require('config');
 
 function makeDatabaseUrl() {
   const user = config.get('postgres.user');
