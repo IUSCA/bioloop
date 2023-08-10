@@ -2,7 +2,6 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { createVuestic } from "vuestic-ui";
 import config from "../vuestic.config.js"; // https://vuestic.dev/en/styles/tailwind
-import "@fontsource/audiowide";
 import "vuestic-ui/css";
 import "./styles/main.css";
 import "./styles/overrides.css";

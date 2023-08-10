@@ -1,6 +1,6 @@
 <template>
   <span
-    class="text-3xl lowercase font-[audiowide] whitespace-nowrap text-[--va-text-primary]"
+    class="text-2xl font-semibold whitespace-nowrap text-[--va-text-primary]"
   >
     {{ config.appTitle }}
   </span>
