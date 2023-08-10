@@ -136,8 +136,7 @@
             {{ config.paths.stage[props.dtype] }}/{{
               launch_modal.selected?.name
             }}
-          </span>
-          and generate QC (Quality Control) files and report.
+          </span>.
         </p>
         <p>
           Please be aware that the time it takes to complete this process
