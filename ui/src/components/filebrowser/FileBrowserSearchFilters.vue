@@ -7,15 +7,15 @@
       class="flex-none"
       closeable
       outline
-      v-if="store.nameFilter"
-      @update:model-value="store.nameFilter = ''"
+      v-if="store.filters.name"
+      @update:model-value="store.filters.name = ''"
     >
       Name has &nbsp;
-      <span class="font-semibold"> {{ store.nameFilter }} </span>
+      <span class="font-semibold"> {{ store.filters.name }} </span>
     </va-chip>
 
     <!-- location filter -->
-    <va-chip class="flex-none" closeable outline v-if="store.locationFilter">
+    <va-chip class="flex-none" closeable outline v-if="store.filters.location">
       Location: {{ store.filters.location }}
     </va-chip>
   </div>

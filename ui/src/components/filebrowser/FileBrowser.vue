@@ -5,16 +5,16 @@
         <!-- BreadCrumbs Navigation / Search Filters -->
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
         <div class="h-[40px] flex items-center">
-          <FileBrowserSearchFilters
-            v-if="store.isInSearchMode"
-            class="flex-none"
-          />
+          <FileBrowserSearchFilters v-if="isInSearchMode" class="flex-none" />
 
           <FileBrowserNav v-else v-model:pwd="pwd" />
         </div>
 
         <!-- filters -->
-        <FileBrowserSearchBar class="mt-2" />
+        <div class="mt-2">
+          <FileBrowserSearchBar />
+          {{ filters }}
+        </div>
 
         <!-- File Table -->
         <FileTable :show-download="props.showDownload" :files="files" />
@@ -29,19 +29,18 @@ import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
 
 const store = useFileBrowserStore();
+const { pwd, filters, isInSearchMode } = storeToRefs(store);
 
 const props = defineProps({
   datasetId: String,
   showDownload: Boolean,
 });
 
-const { pwd, nameFilter, locationFilter } = storeToRefs(store);
-
 const data_loading = ref(false);
 const fileList = ref([]);
 const searchResults = ref([]);
 const files = computed(() => {
-  return store.isInSearchMode ? searchResults.value : fileList.value;
+  return isInSearchMode.value ? searchResults.value : fileList.value;
 });
 
 function get_file_list(path) {
@@ -64,8 +63,7 @@ function search_files() {
   datasetService
     .search_files({
       id: props.datasetId,
-      query: debouncedNameFilter.value,
-      basepath: locationFilter.value,
+      query: filters.value.name,
     })
     .then((res) => {
       searchResults.value = res.data;
@@ -82,21 +80,19 @@ watch(
   pwd,
   () => {
     // navigating to a directory disables the search mode
+    store.resetFilters();
+    isInSearchMode.value = false;
     get_file_list(pwd.value);
-    store.clearSearchFilters();
   },
   { immediate: true }
 );
 
-const debouncedNameFilter = refDebounced(nameFilter, 200);
+const nameRef = toRefs(store.filters).name;
+const debouncedNameFilter = refDebounced(nameRef, 200);
 
-watch([debouncedNameFilter], () => {
-  if (debouncedNameFilter.value || locationFilter.value) {
+watch([isInSearchMode, debouncedNameFilter], () => {
+  if (isInSearchMode.value) {
     search_files();
-    store.isInSearchMode = true;
-  } else {
-    // empty filters - disable the search mode
-    store.isInSearchMode = false;
   }
 });
 </script>
