@@ -386,25 +386,70 @@ async function files_ls({ dataset_id, base = '' }) {
 }
 
 async function search_files({
-  dataset_id, query = '', base = '', skip, take,
+  dataset_id, query = '', base = '',
+  skip, take,
+  extension = null, filetype = null, min_file_size = null, max_file_size = null,
 }) {
   // TODO: filter by extension, size, filetype, status
 
   let base_path = '';
-  if (base === '' || base === '/') base_path = '';
+  if (base === '/') base_path = '';
   else if (base.endsWith('/')) base_path = base.replace(/\/+$/, '');
   else base_path = base;
 
-  return prisma.dataset_file.findMany({
-    where: {
-      dataset_id,
+  let size_query = {};
+  if (min_file_size && max_file_size) {
+    size_query = {
+      size: {
+        gte: min_file_size,
+        lte: max_file_size,
+      },
+    };
+  } else if (min_file_size) {
+    size_query = {
+      size: {
+        gte: min_file_size,
+      },
+    };
+  } else if (max_file_size) {
+    size_query = {
+      size: {
+        lte: max_file_size,
+      },
+    };
+  }
+
+  let name_query = {};
+  if (query && extension) {
+    name_query = {
+      AND: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { name: { endsWith: extension, mode: 'insensitive' } },
+      ],
+    };
+  } else if (query) {
+    name_query = {
       name: {
         contains: query,
         mode: 'insensitive',
       },
-      path: {
-        startsWith: base_path,
+    };
+  } else if (extension) {
+    name_query = {
+      name: {
+        endsWith: `.${extension}`,
+        mode: 'insensitive',
       },
+    };
+  }
+
+  return prisma.dataset_file.findMany({
+    where: {
+      dataset_id,
+      ...name_query,
+      ...(base_path ? { path: { startsWith: base_path } } : {}),
+      ...(filetype ? { filetype } : {}),
+      ...size_query,
     },
     skip,
     take,

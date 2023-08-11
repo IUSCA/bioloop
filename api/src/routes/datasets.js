@@ -575,24 +575,25 @@ router.get(
   '/:id/files/search',
   validate([
     param('id').isInt().toInt(),
-    query('basepath').default(''),
     query('query').default(''),
+    query('basepath').optional().default(''),
+    query('filetype').isIn(['file', 'directory', 'symbolic link']).optional(),
+    query('extension').optional(),
+    query('min_file_size').isInt().toInt().optional(),
+    query('max_file_size').isInt().toInt().optional(),
     query('skip').isInt().toInt().optional()
       .default(0),
     query('take').isInt().toInt().optional()
-      .default(10),
+      .default(1000),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
-
     const files = await datasetService.search_files({
       dataset_id: req.params.id,
       base: req.query.basepath,
-      query: req.query.query,
-      skip: req.query.skip,
-      take: req.query.take,
+      ...req.query,
     });
     res.json(files);
   }),

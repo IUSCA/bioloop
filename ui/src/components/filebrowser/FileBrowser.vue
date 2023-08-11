@@ -13,7 +13,6 @@
         <!-- filters -->
         <div class="mt-2">
           <FileBrowserSearchBar />
-          {{ filters }}
         </div>
 
         <!-- File Table -->
