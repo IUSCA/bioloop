@@ -21,10 +21,17 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
     filters.value = defaultFilters();
   }
 
+  function reset(key) {
+    console.log("resetting", key, filters.value[key], defaultFilters()[key]);
+    filters.value[key] = defaultFilters()[key];
+  }
+
   return {
     pwd,
     isInSearchMode,
     filters,
     resetFilters,
+    reset,
+    defaultFilters,
   };
 });

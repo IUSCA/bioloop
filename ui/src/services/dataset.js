@@ -103,13 +103,27 @@ class DatasetService {
     return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
   }
 
-  search_files({ id, query, basepath, skip, take }) {
+  search_files({
+    id,
+    query,
+    basepath,
+    skip,
+    take,
+    extension,
+    filetype,
+    minSize,
+    maxSize,
+  }) {
     return api.get(`/datasets/${id}/files/search`, {
       params: {
         query,
         basepath,
         skip,
         take,
+        extension,
+        filetype,
+        min_file_size: minSize,
+        max_file_size: maxSize,
       },
     });
   }

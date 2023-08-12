@@ -5,14 +5,19 @@
         <!-- BreadCrumbs Navigation / Search Filters -->
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
         <div class="h-[40px] flex items-center">
-          <FileBrowserSearchFilters v-if="isInSearchMode" class="flex-none" />
+          <FileBrowserSearchFilters
+            v-if="isInSearchMode"
+            class="flex-none"
+            @search="search_files"
+          />
 
           <FileBrowserNav v-else v-model:pwd="pwd" />
         </div>
 
         <!-- filters -->
         <div class="mt-2">
-          <FileBrowserSearchBar />
+          <FileBrowserSearchBar @advanced-search="openModal" />
+          <!-- {{ filters }} -->
         </div>
 
         <!-- File Table -->
@@ -20,6 +25,8 @@
       </va-inner-loading>
     </div>
   </div>
+
+  <FileBrowserSearchModal ref="advancedSearchModal" @search="search_files" />
 </template>
 
 <script setup>
@@ -57,12 +64,26 @@ function get_file_list(path) {
     });
 }
 
+function payload() {
+  return {
+    query: filters.value.name,
+    basepath:
+      filters.value.location === "pwd" ? store.pwd : filters.value.location,
+    filetype: filters.value.filetype === "any" ? null : filters.value.filetype,
+    extension: filters.value.extension,
+    minSize: filters.value.minSize,
+    maxSize: isFinite(filters.value.maxSize) ? filters.value.maxSize : null,
+  };
+}
+
 function search_files() {
   data_loading.value = true;
+  const p = payload();
+  // console.log("payload", p);
   datasetService
     .search_files({
       id: props.datasetId,
-      query: filters.value.name,
+      ...p,
     })
     .then((res) => {
       searchResults.value = res.data;
@@ -87,11 +108,22 @@ watch(
 );
 
 const nameRef = toRefs(store.filters).name;
-const debouncedNameFilter = refDebounced(nameRef, 200);
+const debouncedNameFilter = refDebounced(nameRef, 300);
 
-watch([isInSearchMode, debouncedNameFilter], () => {
-  if (isInSearchMode.value) {
-    search_files();
-  }
-});
+watch(
+  [debouncedNameFilter],
+  () => {
+    // console.log("name changed", filters.value.name);
+    if (isInSearchMode.value) {
+      search_files();
+    }
+  },
+  { immediate: true }
+);
+
+const advancedSearchModal = ref(null);
+
+function openModal() {
+  advancedSearchModal.value.show();
+}
 </script>

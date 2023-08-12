@@ -97,6 +97,8 @@ defineExpose({
   hide,
 });
 
+const emit = defineEmits(["search"]);
+
 const store = useFileBrowserStore();
 const { filters } = storeToRefs(store);
 
@@ -153,5 +155,6 @@ const fileTypeOptions = [
 function handleSearch() {
   store.isInSearchMode = true;
   hide();
+  emit("search");
 }
 </script>

@@ -6,19 +6,16 @@
     outline
     clearable
     input-class="search-input"
-    @keydown="handleChange"
   >
     <template #prependInner>
       <Icon icon="material-symbols:search" class="text-xl" />
     </template>
     <template #appendInner>
-      <va-button preset="secondary" round @click="openModal">
+      <va-button preset="secondary" round @click="emit('advancedSearch')">
         <Icon icon="mdi:tune" class="text-xl" />
       </va-button>
     </template>
   </va-input>
-
-  <FileBrowserSearchModal ref="advancedSearchModal" />
 </template>
 
 <script setup>
@@ -28,6 +25,8 @@ import { useFileBrowserStore } from "@/stores/fileBrowser";
 const store = useFileBrowserStore();
 useSearchKeyShortcut();
 
+const emit = defineEmits(["advancedSearch"]);
+
 const state = computed({
   get() {
     return store.filters.name;
@@ -35,14 +34,7 @@ const state = computed({
   set(newValue) {
     store.filters.name = newValue;
     // enable search view when the search input has value
-    // disable search view when the searh input is cleared
-    store.isInSearchMode = !!store.filters.name;
+    if (newValue) store.isInSearchMode = true;
   },
 });
-
-const advancedSearchModal = ref(null);
-
-function openModal() {
-  advancedSearchModal.value.show();
-}
 </script>
