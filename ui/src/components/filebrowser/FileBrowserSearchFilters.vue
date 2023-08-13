@@ -7,8 +7,7 @@
       class="flex-none"
       closeable
       outline
-      size="small"
-      v-if="filters.name"
+      v-if="filterStatus.name"
       @update:model-value="reset('name')"
     >
       Name has &nbsp;
@@ -20,11 +19,11 @@
       class="flex-none"
       closeable
       outline
-      size="small"
-      v-if="filters.location !== '/'"
+      v-if="filterStatus.location"
       @update:model-value="reset('location')"
     >
-      Location: {{ store.pwd }}
+      Location: &nbsp;
+      <span class="font-semibold"> {{ store.pwd || "/" }} </span>
     </va-chip>
 
     <!-- filetype filter -->
@@ -32,11 +31,11 @@
       class="flex-none"
       closeable
       outline
-      size="small"
-      v-if="filters.filetype !== 'any'"
+      v-if="filterStatus.filetype"
       @update:model-value="reset('filetype')"
     >
-      Type: {{ filters.filetype }}
+      Type: &nbsp;
+      <span class="font-semibold"> {{ filters.filetype }} </span>
     </va-chip>
 
     <!-- extension filter -->
@@ -44,11 +43,11 @@
       class="flex-none"
       closeable
       outline
-      size="small"
-      v-if="filters.extension"
+      v-if="filterStatus.extension"
       @update:model-value="reset('extension')"
     >
-      Extension: {{ filters.extension }}
+      Extension: &nbsp;
+      <span class="font-semibold"> {{ filters.extension }} </span>
     </va-chip>
 
     <!-- min size filter -->
@@ -56,11 +55,11 @@
       class="flex-none"
       closeable
       outline
-      size="small"
-      v-if="filters.minSize"
+      v-if="filterStatus.minSize"
       @update:model-value="reset('minSize')"
     >
-      Size &gt; {{ formatBytes(filters.minSize) }}
+      Size &gt; &nbsp;
+      <span class="font-semibold"> {{ formatBytes(filters.minSize) }} </span>
     </va-chip>
 
     <!-- max size filter -->
@@ -68,11 +67,11 @@
       class="flex-none"
       closeable
       outline
-      size="small"
-      v-if="filters.maxSize && isFinite(filters.maxSize)"
+      v-if="filterStatus.maxSize"
       @update:model-value="reset('maxSize')"
     >
-      Size &lt; {{ formatBytes(filters.maxSize) }}
+      Size &lt; &nbsp;
+      <span class="font-semibold"> {{ formatBytes(filters.maxSize) }} </span>
     </va-chip>
 
     <!-- close search -->
@@ -94,7 +93,7 @@ import { formatBytes } from "@/services/utils";
 // import { toValue } from "vue";
 
 const store = useFileBrowserStore();
-const { filters } = storeToRefs(store);
+const { filters, filterStatus } = storeToRefs(store);
 // const props = defineProps({})
 
 const emit = defineEmits(["search"]);

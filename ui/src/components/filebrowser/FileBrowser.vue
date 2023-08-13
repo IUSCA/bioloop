@@ -17,7 +17,6 @@
         <!-- filters -->
         <div class="mt-2">
           <FileBrowserSearchBar @advanced-search="openModal" />
-          <!-- {{ filters }} -->
         </div>
 
         <!-- File Table -->

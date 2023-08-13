@@ -168,6 +168,13 @@ function arrayEquals(array1, array2) {
   );
 }
 
+function mapValues(obj, fn) {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    acc[key] = fn(key, value);
+    return acc;
+  }, {});
+}
+
 export {
   formatBytes,
   difference,
@@ -186,4 +193,5 @@ export {
   downloadFile,
   initials,
   arrayEquals,
+  mapValues,
 };

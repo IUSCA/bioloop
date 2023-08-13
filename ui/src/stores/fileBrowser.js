@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
+import { mapValues } from "@/services/utils";
 
 export const useFileBrowserStore = defineStore("fileBrowser", () => {
   function defaultFilters() {
@@ -12,6 +13,7 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
       maxSize: Infinity,
     };
   }
+  const defaults = defaultFilters();
 
   const pwd = ref("");
   const isInSearchMode = ref(false);
@@ -26,6 +28,10 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
     filters.value[key] = defaultFilters()[key];
   }
 
+  const filterStatus = computed(() => {
+    return mapValues(filters.value, (key, value) => value !== defaults[key]);
+  });
+
   return {
     pwd,
     isInSearchMode,
@@ -33,5 +39,6 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
     resetFilters,
     reset,
     defaultFilters,
+    filterStatus,
   };
 });
