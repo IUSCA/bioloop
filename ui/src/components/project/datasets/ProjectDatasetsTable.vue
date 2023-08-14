@@ -7,7 +7,10 @@
   >
     <template #cell(name)="{ rowData }">
       <router-link
-        :to="`/datasets/${rowData.id}`"
+        :to="{
+          path: `/datasets/${rowData.id}`,
+          query: { project: props.project.name },
+        }"
         class="va-link"
         v-if="auth.canOperate"
       >
@@ -131,6 +134,13 @@ const props = defineProps({
 
 const loading = ref(false);
 const _datasets = ref({});
+
+watch(
+  () => props.project.name,
+  () => {
+    console.log(`project name is : ${props.project.name}`);
+  }
+);
 
 // populate _datasets from props
 watch(
