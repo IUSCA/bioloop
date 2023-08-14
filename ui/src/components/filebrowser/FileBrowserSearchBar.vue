@@ -32,6 +32,7 @@ const state = computed({
     return store.filters.name;
   },
   set(newValue) {
+    // console.log("setting  store.filters.name", newValue);
     store.filters.name = newValue;
     // enable search view when the search input has value
     if (newValue) store.isInSearchMode = true;

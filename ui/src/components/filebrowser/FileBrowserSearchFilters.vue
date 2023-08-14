@@ -90,7 +90,6 @@
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
 import { formatBytes } from "@/services/utils";
-// import { toValue } from "vue";
 
 const store = useFileBrowserStore();
 const { filters, filterStatus } = storeToRefs(store);
@@ -106,19 +105,9 @@ function closeSearch() {
 
 // reset a single filter
 function reset(field) {
-  console.log("reset", field);
-  store.reset(field);
+  store.resetByKey(field);
   emit("search");
 }
-
-// monitor if all filters are cleared and display back button
-// const noFilters = ref(false);
-// const filtersRefs = Object.values(toRefs(store.filters));
-// const defaults = Object.values(store.defaultFilters());
-// watch(filtersRefs, () => {
-//   const filterValues = filtersRefs.map((x) => toValue(x));
-//   noFilters.value = arrayEquals(filterValues, defaults);
-// });
 </script>
 
 <style>

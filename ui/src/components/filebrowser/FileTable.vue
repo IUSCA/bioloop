@@ -65,6 +65,17 @@
         {{ source.startsWith(".") ? source.slice(1) : source }}
       </span>
     </template>
+
+    <template #cell(path)="{ rowData }">
+      <FileBrowserShortPath
+        :data="rowData"
+        @click="
+          (path) => {
+            store.pwd = path;
+          }
+        "
+      />
+    </template>
   </va-data-table>
 </template>
 
@@ -90,7 +101,12 @@ const props = defineProps({
 
 const columns = computed(() => {
   if (store.isInSearchMode) {
-    return [{ key: "name" }, { key: "path" }, { key: "size" }, { key: "md5" }];
+    return [
+      { key: "name" },
+      { key: "path", label: "Location" },
+      { key: "size", width: "100px" },
+      { key: "md5", width: "250px", label: "MD5 Checksum" },
+    ];
   } else {
     return [
       { key: "name", sortable: true },

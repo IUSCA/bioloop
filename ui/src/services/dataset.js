@@ -105,8 +105,8 @@ class DatasetService {
 
   search_files({
     id,
-    query,
-    basepath,
+    name,
+    location,
     skip,
     take,
     extension,
@@ -116,8 +116,8 @@ class DatasetService {
   }) {
     return api.get(`/datasets/${id}/files/search`, {
       params: {
-        query,
-        basepath,
+        name,
+        basepath: location,
         skip,
         take,
         extension,

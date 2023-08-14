@@ -386,7 +386,7 @@ async function files_ls({ dataset_id, base = '' }) {
 }
 
 async function search_files({
-  dataset_id, query = '', base = '',
+  dataset_id, name = '', base = '',
   skip, take,
   extension = null, filetype = null, min_file_size = null, max_file_size = null,
 }) {
@@ -420,17 +420,17 @@ async function search_files({
   }
 
   let name_query = {};
-  if (query && extension) {
+  if (name && extension) {
     name_query = {
       AND: [
-        { name: { contains: query, mode: 'insensitive' } },
+        { name: { contains: name, mode: 'insensitive' } },
         { name: { endsWith: extension, mode: 'insensitive' } },
       ],
     };
-  } else if (query) {
+  } else if (name) {
     name_query = {
       name: {
-        contains: query,
+        contains: name,
         mode: 'insensitive',
       },
     };

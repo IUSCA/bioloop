@@ -17,6 +17,7 @@
         <!-- filters -->
         <div class="mt-2">
           <FileBrowserSearchBar @advanced-search="openModal" />
+          <!-- {{ filterStatus }} -->
         </div>
 
         <!-- File Table -->
@@ -32,9 +33,10 @@
 import datasetService from "@/services/dataset";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
+import { filterByValues } from "@/services/utils";
 
 const store = useFileBrowserStore();
-const { pwd, filters, isInSearchMode } = storeToRefs(store);
+const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
 
 const props = defineProps({
   datasetId: String,
@@ -64,15 +66,14 @@ function get_file_list(path) {
 }
 
 function payload() {
-  return {
-    query: filters.value.name,
-    basepath:
-      filters.value.location === "pwd" ? store.pwd : filters.value.location,
-    filetype: filters.value.filetype === "any" ? null : filters.value.filetype,
-    extension: filters.value.extension,
-    minSize: filters.value.minSize,
-    maxSize: isFinite(filters.value.maxSize) ? filters.value.maxSize : null,
-  };
+  // only consider enabled filters
+  const p = filterByValues(filters.value, (key, _) => filterStatus.value[key]);
+
+  // set pwd
+  if (p.location === "pwd") {
+    p.location = store.pwd;
+  }
+  return p;
 }
 
 function search_files() {
@@ -112,7 +113,6 @@ const debouncedNameFilter = refDebounced(nameRef, 300);
 watch(
   [debouncedNameFilter],
   () => {
-    // console.log("name changed", filters.value.name);
     if (isInSearchMode.value) {
       search_files();
     }
@@ -125,4 +125,8 @@ const advancedSearchModal = ref(null);
 function openModal() {
   advancedSearchModal.value.show();
 }
+
+onUnmounted(() => {
+  store.reset();
+});
 </script>

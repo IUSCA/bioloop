@@ -17,28 +17,37 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
 
   const pwd = ref("");
   const isInSearchMode = ref(false);
-  const filters = ref(defaultFilters);
+  const filters = ref(defaultFilters());
 
   function resetFilters() {
-    filters.value = defaultFilters();
+    Object.keys(filters.value).forEach((key) => {
+      filters.value[key] = defaults[key];
+    });
   }
 
-  function reset(key) {
-    console.log("resetting", key, filters.value[key], defaultFilters()[key]);
-    filters.value[key] = defaultFilters()[key];
+  function resetByKey(key) {
+    console.log("resetting", key, filters.value[key], defaults[key]);
+    filters.value[key] = defaults[key];
   }
 
   const filterStatus = computed(() => {
     return mapValues(filters.value, (key, value) => value !== defaults[key]);
   });
 
+  function reset() {
+    pwd.value = "";
+    isInSearchMode.value = false;
+    resetFilters();
+  }
+
   return {
     pwd,
     isInSearchMode,
     filters,
     resetFilters,
-    reset,
+    resetByKey,
     defaultFilters,
     filterStatus,
+    reset,
   };
 });

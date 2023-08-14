@@ -575,7 +575,7 @@ router.get(
   '/:id/files/search',
   validate([
     param('id').isInt().toInt(),
-    query('query').default(''),
+    query('name').default(''),
     query('basepath').optional().default(''),
     query('filetype').isIn(['file', 'directory', 'symbolic link']).optional(),
     query('extension').optional(),

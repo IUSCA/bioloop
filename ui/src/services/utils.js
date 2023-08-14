@@ -175,6 +175,17 @@ function mapValues(obj, fn) {
   }, {});
 }
 
+function filterByValues(obj, pred) {
+  return Object.entries(obj)
+    .filter(([k, v]) => {
+      return pred(k, v);
+    })
+    .reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+}
+
 export {
   formatBytes,
   difference,
@@ -194,4 +205,5 @@ export {
   initials,
   arrayEquals,
   mapValues,
+  filterByValues,
 };
