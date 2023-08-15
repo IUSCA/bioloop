@@ -56,3 +56,5 @@ qc
 backup
 
 !db/postgres
+
+.pm2

@@ -19,6 +19,8 @@ const app = express();
 // remove fingerprinting header
 app.disable('x-powered-by');
 
+app.set('etag', false);
+
 // request logger - https://github.com/expressjs/morgan
 app.use(requestLogger('dev'));
 

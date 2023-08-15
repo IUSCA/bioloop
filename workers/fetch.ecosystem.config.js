@@ -10,7 +10,9 @@ module.exports = {
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/workers/celery_worker.err",
       out_file: "../logs/workers/celery_worker.log",
-      kill_timeout: "10000"
+      kill_timeout: "10000",
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
     },
     {
       name: "metrics",
@@ -22,7 +24,9 @@ module.exports = {
       error_file: "../logs/workers/metrics.err",
       out_file: "../logs/workers/metrics.log",
       cron_restart: "0 * * * *",
-      autorestart: false
+      autorestart: false,
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
     },
     {
       name: "purge_staged_datasets",
@@ -34,7 +38,9 @@ module.exports = {
       error_file: "../logs/workers/purge_staged_datasets.err",
       out_file: "../logs/workers/purge_staged_datasets.log",
       cron_restart: "00 07 * * *",
-      autorestart: false
+      autorestart: false,
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
     }
   ]
 }
