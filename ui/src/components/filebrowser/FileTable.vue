@@ -89,6 +89,9 @@ const store = useFileBrowserStore();
 const toast = useToastStore();
 
 const props = defineProps({
+  datasetId: {
+    type: String,
+  },
   files: {
     type: Array,
     default: () => [],
@@ -122,7 +125,7 @@ const columns = computed(() => {
         sortingFn: (a, b) => a - b,
         width: "100px",
       },
-      { key: "filetype", label: "type", sortable: true, width: "100px" },
+      { key: "filetype", label: "type", sortable: true },
       { key: "md5", width: "250px", label: "MD5 Checksum" },
     ];
   }
@@ -135,7 +138,7 @@ const data_loading = ref(false);
 
 function extension(name) {
   const parts = name.split(".");
-  if (parts.length > 0) return parts.slice(-1)[0];
+  if (parts.length > 1) return parts.slice(-1)[0];
   else return "";
 }
 
