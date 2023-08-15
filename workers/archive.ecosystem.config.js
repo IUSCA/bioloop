@@ -10,7 +10,9 @@ module.exports = {
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/workers/celery_worker.err",
       out_file: "../logs/workers/celery_worker.log",
-      kill_timeout: "10000"
+      kill_timeout: "10000",
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
     },
     {
       name: "watch",
@@ -20,7 +22,9 @@ module.exports = {
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/workers/watch.err",
-      out_file: "../logs/workers/watch.log"
+      out_file: "../logs/workers/watch.log",
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
     }
   ]
 }

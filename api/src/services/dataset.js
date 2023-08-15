@@ -3,11 +3,12 @@ const path = require('node:path');
 
 const { PrismaClient } = require('@prisma/client');
 const config = require('config');
-const _ = require('lodash/fp');
+// const _ = require('lodash/fp');
 
 const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
+const FileGraph = require('./fileGraph');
 
 const prisma = new PrismaClient();
 
@@ -164,6 +165,11 @@ async function get_dataset({
       path: true,
       md5: true,
     },
+    where: {
+      NOT: {
+        filetype: 'directory',
+      },
+    },
   } : false;
 
   const dataset = await prisma.dataset.findFirstOrThrow({
@@ -200,78 +206,78 @@ async function get_dataset({
   return dataset;
 }
 
-async function files_ls({ dataset_id, base = '' }) {
-  /**
-   * root base should be ''
-   * non-root base should end with '/'
-   *
-   * handle non-unix paths
-   * handle paths with escaped /
-   */
-  let base_path = '';
-  if (base === '' || base === '/') base_path = '';
-  else if (!base.endsWith('/')) base_path = `${base}/`;
-  else base_path = base;
+// async function files_ls({ dataset_id, base = '' }) {
+//   /**
+//    * root base should be ''
+//    * non-root base should end with '/'
+//    *
+//    * handle non-unix paths
+//    * handle paths with escaped /
+//    */
+//   let base_path = '';
+//   if (base === '' || base === '/') base_path = '';
+//   else if (!base.endsWith('/')) base_path = `${base}/`;
+//   else base_path = base;
 
-  /**
-   * Find files of a dataset which are immediate children of `base` path
-   *
-   * Query: filter rows by dataset_id, rows starting with `base`,
-   * and rows where the path after `base` does not have /
-   *
-   * Ex: base: 'dir1/', query matches 'dir1/readme.txt', 'dir1/image.jpg'
-   * query does not match 'dir1/dir2/readme.txt'
-   */
-  const filesPromise = prisma.$queryRaw`
-    select *
-    from dataset_file
-    where dataset_id = ${dataset_id}
-      and path like ${base_path}||'%'
-      and position('/' IN substring(path, length(${base_path})+1)) = 0;
-  `;
+//   /**
+//    * Find files of a dataset which are immediate children of `base` path
+//    *
+//    * Query: filter rows by dataset_id, rows starting with `base`,
+//    * and rows where the path after `base` does not have /
+//    *
+//    * Ex: base: 'dir1/', query matches 'dir1/readme.txt', 'dir1/image.jpg'
+//    * query does not match 'dir1/dir2/readme.txt'
+//    */
+//   const filesPromise = prisma.$queryRaw`
+//     select *
+//     from dataset_file
+//     where dataset_id = ${dataset_id}
+//       and path like ${base_path}||'%'
+//       and position('/' IN substring(path, length(${base_path})+1)) = 0;
+//   `;
 
-  /**
-   * Find directories of a dataset which are immediate children of `base` path
-   *
-   * Query: filter rows by dataset_id, rows starting with `base`,
-   * and rows where the path after `base` does have / (these files are not immediate children)
-   *
-   * Transform the substring path after `base` by matching with regex
-   * which selects characters which are not /
-   * Returns unique values after transformation
-   *
-   * Ex: base: 'dir1/', query matches 'dir1/dir2/readme.txt', 'dir1/dir3/image.jpg'
-   * does not match 'dir1/readme.txt'.
-   *
-   *
-   * Matched items gets transformed:
-   * 'dir1/dir2/readme.txt' -> 'dir2'
-   * 'dir1/dir3/image.jpg' -> 'dir3'
-   */
-  const directoriesPromise = prisma.$queryRaw`
-    select distinct substring(substring(path, length(${base_path})+1), '([^/]+)') as name
-    from dataset_file
-    where dataset_id = ${dataset_id}
-      and path like ${base_path}||'%'
-      and position('/' IN substring(path, length(${base_path})+1)) != 0;
-  `;
+//   /**
+//    * Find directories of a dataset which are immediate children of `base` path
+//    *
+//    * Query: filter rows by dataset_id, rows starting with `base`,
+//    * and rows where the path after `base` does have / (these files are not immediate children)
+//    *
+//    * Transform the substring path after `base` by matching with regex
+//    * which selects characters which are not /
+//    * Returns unique values after transformation
+//    *
+//    * Ex: base: 'dir1/', query matches 'dir1/dir2/readme.txt', 'dir1/dir3/image.jpg'
+//    * does not match 'dir1/readme.txt'.
+//    *
+//    *
+//    * Matched items gets transformed:
+//    * 'dir1/dir2/readme.txt' -> 'dir2'
+//    * 'dir1/dir3/image.jpg' -> 'dir3'
+//    */
+//   const directoriesPromise = prisma.$queryRaw`
+//     select distinct substring(substring(path, length(${base_path})+1), '([^/]+)') as name
+//     from dataset_file
+//     where dataset_id = ${dataset_id}
+//       and path like ${base_path}||'%'
+//       and position('/' IN substring(path, length(${base_path})+1)) != 0;
+//   `;
 
-  // both queries are run asynchronously, wait for them to complete
-  const files = (await filesPromise).map(
-    (file) => Object.assign(file, { size: parseInt(file.size, 10) }),
-  );
+//   // both queries are run asynchronously, wait for them to complete
+//   const files = (await filesPromise).map(
+//     (file) => Object.assign(file, { size: parseInt(file.size, 10) }),
+//   );
 
-  // for directories, only names are returned
-  // transform them to have similar schema as files
-  const directories = (await directoriesPromise).map((dir) => ({
-    path: path.join(base_path, dir.name),
-    filetype: 'directory',
-    size: 0,
-  }));
+//   // for directories, only names are returned
+//   // transform them to have similar schema as files
+//   const directories = (await directoriesPromise).map((dir) => ({
+//     path: path.join(base_path, dir.name),
+//     filetype: 'directory',
+//     size: 0,
+//   }));
 
-  // return a single list of files and directories
-  return _.concat(files)(directories);
-}
+//   // return a single list of files and directories
+//   return _.concat(files)(directories);
+// }
 
 function create_filetree(files) {
   const root = {
@@ -327,6 +333,182 @@ async function has_dataset_assoc({
   return projects.length > 0;
 }
 
+// async function search_files({ dataset_id, query }) {
+//   const file_matches_promise = prisma.$queryRaw`
+//     select
+//       *
+//     from
+//       dataset_file
+//     where
+//       dataset_id = ${dataset_id}
+//       and substring(path, '([^/]*$)') ilike '%'||${query}||'%'
+//   `;
+
+//   const dir_matches_promise = prisma.$queryRaw`
+//     select
+//       distinct substring(path, '(^.+/)')
+//     from
+//       dataset_file
+//     where
+//       dataset_id = ${dataset_id}
+//       and substring(path, '(^.+/)') like '%dir%'
+//   `;
+
+//   const file_matches = await file_matches_promise;
+//   const dir_matches = await dir_matches_promise;
+
+//   return {
+//     file_matches,
+//     dir_matches,
+//   };
+// }
+
+async function files_ls({ dataset_id, base = '' }) {
+  let base_path = '';
+  if (base === '' || base === '/') base_path = '';
+  else if (base.endsWith('/')) base_path = base.replace(/\/+$/, '');
+  else base_path = base;
+
+  const results = await prisma.dataset_file.findFirstOrThrow({
+    where: {
+      dataset_id,
+      path: base_path,
+    },
+    include: {
+      children: {
+        include: {
+          child: true,
+        },
+      },
+    },
+  });
+  return results.children.map((row) => row.child);
+}
+
+async function search_files({
+  dataset_id, name = '', base = '',
+  skip, take,
+  extension = null, filetype = null, min_file_size = null, max_file_size = null,
+}) {
+  // TODO: filter by extension, size, filetype, status
+
+  let base_path = '';
+  if (base === '/') base_path = '';
+  else if (base.endsWith('/')) base_path = base.replace(/\/+$/, '');
+  else base_path = base;
+
+  let size_query = {};
+  if (min_file_size && max_file_size) {
+    size_query = {
+      size: {
+        gte: min_file_size,
+        lte: max_file_size,
+      },
+    };
+  } else if (min_file_size) {
+    size_query = {
+      size: {
+        gte: min_file_size,
+      },
+    };
+  } else if (max_file_size) {
+    size_query = {
+      size: {
+        lte: max_file_size,
+      },
+    };
+  }
+
+  let name_query = {};
+  if (name && extension) {
+    name_query = {
+      AND: [
+        { name: { contains: name, mode: 'insensitive' } },
+        { name: { endsWith: extension, mode: 'insensitive' } },
+      ],
+    };
+  } else if (name) {
+    name_query = {
+      name: {
+        contains: name,
+        mode: 'insensitive',
+      },
+    };
+  } else if (extension) {
+    name_query = {
+      name: {
+        endsWith: `.${extension}`,
+        mode: 'insensitive',
+      },
+    };
+  }
+
+  return prisma.dataset_file.findMany({
+    where: {
+      dataset_id,
+      ...name_query,
+      ...(base_path ? { path: { startsWith: base_path } } : {}),
+      ...(filetype ? { filetype } : {}),
+      ...size_query,
+    },
+    skip,
+    take,
+  });
+}
+
+async function add_files({ dataset_id, data }) {
+  const files = data.map((f) => ({
+    dataset_id,
+    name: path.parse(f.path).name,
+    ...f,
+  }));
+
+  // create a file tree using graph datastructure
+  const graph = new FileGraph(files.map((f) => f.path));
+
+  // query non leaf nodes (directories) from the graph datastrucure
+  const directories = graph.non_leaf_nodes().map((p) => ({
+    dataset_id,
+    name: path.parse(p).name,
+    path: p,
+    filetype: 'directory',
+  }));
+
+  // create files and directory metadata
+  await prisma.dataset_file.createMany({
+    data: files.concat(directories),
+    skipDuplicates: true,
+  });
+
+  // retrive all files and directories for this dataset to get their ids
+  const fileObjs = await prisma.dataset_file.findMany({
+    where: {
+      dataset_id,
+    },
+    select: {
+      id: true,
+      path: true,
+    },
+  });
+
+  // create a map to lookup ids based on path
+  const path_to_ids = fileObjs.reduce((acc, fileObj) => {
+    acc[fileObj.path] = fileObj.id;
+    return acc;
+  }, {});
+
+  // query edges / parent-child relationships from the graph datastructure
+  const edges = graph.edges().map(([src, dst]) => ({
+    parent_id: path_to_ids[src],
+    child_id: path_to_ids[dst],
+  }));
+
+  await prisma.dataset_file_hierarchy.createMany({
+    data: edges,
+    skipDuplicates: true,
+  });
+}
+
 module.exports = {
   soft_delete,
   hard_delete,
@@ -334,7 +516,10 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
-  files_ls,
+
   create_filetree,
   has_dataset_assoc,
+  files_ls,
+  search_files,
+  add_files,
 };

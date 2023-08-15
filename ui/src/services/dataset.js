@@ -102,6 +102,31 @@ class DatasetService {
   get_file_download_data({ dataset_id, file_id }) {
     return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
   }
+
+  search_files({
+    id,
+    name,
+    location,
+    skip,
+    take,
+    extension,
+    filetype,
+    minSize,
+    maxSize,
+  }) {
+    return api.get(`/datasets/${id}/files/search`, {
+      params: {
+        name,
+        basepath: location,
+        skip,
+        take,
+        extension,
+        filetype,
+        min_file_size: minSize,
+        max_file_size: maxSize,
+      },
+    });
+  }
 }
 
 export default new DatasetService();

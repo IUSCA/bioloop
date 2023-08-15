@@ -40,7 +40,7 @@ def generate_metadata(celery_task, source: Path):
         if utils.is_readable(p):
             if p.is_file():
                 num_files += 1
-                # if symlink only add the size of the symlink, not the pointed file
+                # if symlink, only add the size of the symlink, not the pointed file
                 file_size = p.lstat().st_size
                 size += file_size
                 # do not compute checksum for symlinks
