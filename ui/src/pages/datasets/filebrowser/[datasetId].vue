@@ -8,12 +8,13 @@
   </div>
   <FileBrowser
     :dataset-id="props.datasetId"
-    :show-download="dataset.is_staged"
+    :show-download="config.enable_dataset_file_downloads && dataset.is_staged"
   />
 </template>
 
 <script setup>
 import DatasetService from "@/services/dataset";
+import config from "@/config";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 

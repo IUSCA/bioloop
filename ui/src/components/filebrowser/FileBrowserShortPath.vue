@@ -26,7 +26,7 @@ function getShortPath(path, isDirectory) {
   const parts = path.split("/");
 
   if (!isDirectory) {
-    if (parts.length >= 4) return `.../${parts.slice(-3, -1).join("/")}`;
+    if (parts.length >= 4) return `.../${parts.slice(-3, -1).join("/")}/`;
     return parts.slice(0, -1).join("/");
   } else {
     if (parts.length >= 3) `.../${parts.slice(-2).join("/")}`;

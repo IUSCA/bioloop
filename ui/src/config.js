@@ -19,6 +19,7 @@ const exports = {
     },
     download: "/N/scratch/cpauser/cpa/production/download",
   },
+  enable_dataset_file_downloads: true,
 };
 
 export default exports;
