@@ -183,6 +183,17 @@ async function main() {
     })),
   );
 
+ // create adni imaging data
+ await Promise.all(
+  data.adni_imaging.map((ad) => prisma.adni_imaging.upsert({
+    where: {
+      rand_id: ad.rand_id
+    },
+    update: {},
+    create: ad,
+  })),
+);
+
   // update the auto increment id's sequence numbers
   const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact'];
   await Promise.all(tables.map(update_seq));
