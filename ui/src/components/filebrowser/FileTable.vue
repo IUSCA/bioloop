@@ -19,7 +19,7 @@
       </span>
     </template>
 
-    <template #cell(name)="{ rowData }">
+    <template #cell(typeSortableName)="{ rowData }">
       <!-- directory -->
       <div
         class="flex items-center gap-1"
@@ -81,7 +81,7 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
-import { formatBytes, downloadFile } from "@/services/utils";
+import { formatBytes, downloadFile, cmp } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { useToastStore } from "@/stores/toast";
 
@@ -102,14 +102,19 @@ const props = defineProps({
 const columns = computed(() => {
   if (store.isInSearchMode) {
     return [
-      { key: "name" },
+      { key: "typeSortableName", label: "name" },
       { key: "path", label: "Location" },
       { key: "size", width: "100px" },
       { key: "md5", width: "250px", label: "MD5 Checksum" },
     ];
   } else {
     return [
-      { key: "name", sortable: true },
+      {
+        key: "typeSortableName",
+        label: "name",
+        sortable: true,
+        sortingFn: nameSortingFn,
+      },
       // { key: "lastModified", label: "Last Modified", sortable: true },
       {
         key: "size",
@@ -124,7 +129,7 @@ const columns = computed(() => {
 });
 
 // initial sorting order
-const sortBy = ref("name");
+const sortBy = ref("typeSortableName");
 const sortingOrder = ref("asc");
 const data_loading = ref(false);
 
@@ -138,6 +143,7 @@ const rows = computed(() => {
       ...obj,
       filetype:
         obj.filetype === "directory" ? obj.filetype : `.${extension(obj.name)}`,
+      typeSortableName: { name: obj.name, filetype: obj.filetype },
     };
   });
 });
@@ -181,6 +187,18 @@ function initiate_file_download(row) {
 function getRowBind(row) {
   if (row.filetype === "directory") {
     return { class: ["cursor-pointer"] };
+  }
+}
+
+function nameSortingFn(a, b) {
+  // compare filetypes and then compare names
+  // in ascending order directories appear first, i.e. cmp(dir, file) < 0
+  if (a.filetype === b.filetype) {
+    return cmp(a.name, b.name);
+  } else if (a.filetype === "directory") {
+    return -1;
+  } else {
+    return 1;
   }
 }
 </script>

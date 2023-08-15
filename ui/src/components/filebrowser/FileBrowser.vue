@@ -9,6 +9,7 @@
             v-if="isInSearchMode"
             class="flex-none"
             @search="search_files"
+            @advanced-search="openModal"
           />
 
           <FileBrowserNav v-else v-model:pwd="pwd" />
@@ -108,7 +109,7 @@ watch(
 );
 
 const nameRef = toRefs(store.filters).name;
-const debouncedNameFilter = refDebounced(nameRef, 300);
+const debouncedNameFilter = refDebounced(nameRef, 215);
 
 watch(
   [debouncedNameFilter],

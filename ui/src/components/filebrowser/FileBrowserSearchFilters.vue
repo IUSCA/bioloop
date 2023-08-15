@@ -8,6 +8,7 @@
       closeable
       outline
       v-if="filterStatus.name"
+      @click="emit('advancedSearch')"
       @update:model-value="reset('name')"
     >
       Name has &nbsp;
@@ -20,6 +21,7 @@
       closeable
       outline
       v-if="filterStatus.location"
+      @click="emit('advancedSearch')"
       @update:model-value="reset('location')"
     >
       Location: &nbsp;
@@ -32,6 +34,7 @@
       closeable
       outline
       v-if="filterStatus.filetype"
+      @click="emit('advancedSearch')"
       @update:model-value="reset('filetype')"
     >
       Type: &nbsp;
@@ -44,6 +47,7 @@
       closeable
       outline
       v-if="filterStatus.extension"
+      @click="emit('advancedSearch')"
       @update:model-value="reset('extension')"
     >
       Extension: &nbsp;
@@ -56,6 +60,7 @@
       closeable
       outline
       v-if="filterStatus.minSize"
+      @click="emit('advancedSearch')"
       @update:model-value="reset('minSize')"
     >
       Size &gt; &nbsp;
@@ -68,6 +73,7 @@
       closeable
       outline
       v-if="filterStatus.maxSize"
+      @click="emit('advancedSearch')"
       @update:model-value="reset('maxSize')"
     >
       Size &lt; &nbsp;
@@ -95,7 +101,7 @@ const store = useFileBrowserStore();
 const { filters, filterStatus } = storeToRefs(store);
 // const props = defineProps({})
 
-const emit = defineEmits(["search"]);
+const emit = defineEmits(["search", "advancedSearch"]);
 
 // reset all filters and close search view
 function closeSearch() {
