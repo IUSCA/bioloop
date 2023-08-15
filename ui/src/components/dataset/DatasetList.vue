@@ -7,9 +7,10 @@
         <va-input
           v-model="filterInput"
           class="w-full"
-          :placeholder="`search ${props.label.toLowerCase()}`"
+          :placeholder="`Type / to search ${props.label.toLowerCase()}`"
           outline
           clearable
+          input-class="search-input"
         >
           <template #prependInner>
             <Icon icon="material-symbols:search" class="text-xl" />
@@ -178,8 +179,11 @@ import DatasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 import config from "@/config";
+import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { useToastStore } from "@/stores/toast";
+
 const toast = useToastStore();
+useSearchKeyShortcut();
 
 const props = defineProps({
   dtype: String,

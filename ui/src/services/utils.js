@@ -161,6 +161,31 @@ function initials(name) {
   }
 }
 
+function arrayEquals(array1, array2) {
+  return (
+    array1.length === array2.length &&
+    array1.every((value, index) => value === array2[index])
+  );
+}
+
+function mapValues(obj, fn) {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    acc[key] = fn(key, value);
+    return acc;
+  }, {});
+}
+
+function filterByValues(obj, pred) {
+  return Object.entries(obj)
+    .filter(([k, v]) => {
+      return pred(k, v);
+    })
+    .reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+}
+
 export {
   formatBytes,
   difference,
@@ -178,4 +203,7 @@ export {
   caseInsensitiveIncludes,
   downloadFile,
   initials,
+  arrayEquals,
+  mapValues,
+  filterByValues,
 };

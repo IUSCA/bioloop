@@ -131,5 +131,5 @@ def filetype(p: Path) -> FileType:
     if p.is_file():
         return FileType.FILE
     if p.is_dir():
-        return FileType.SYMBOLIC_LINK
+        return FileType.DIRECTORY
     return FileType.OTHER

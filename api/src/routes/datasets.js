@@ -331,20 +331,13 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
-    // #swagger.autoBody=true
-    // #swagger.autoQuery=true
-    // #swagger.autoHeaders=true
-    const files = req.body.map((f) => ({
-      dataset_id: req.params.id,
+    const data = req.body.map((f) => ({
       path: f.path,
       md5: f.md5,
       size: BigInt(f.size),
       filetype: f.type,
     }));
-
-    await prisma.dataset_file.createMany({
-      data: files,
-    });
+    datasetService.add_files({ dataset_id: req.params.id, data });
 
     res.sendStatus(200);
   }),
@@ -575,6 +568,34 @@ router.get(
     } else {
       next(createError.NotFound('Dataset is not prepared for download'));
     }
+  }),
+);
+
+router.get(
+  '/:id/files/search',
+  validate([
+    param('id').isInt().toInt(),
+    query('name').default(''),
+    query('basepath').optional().default(''),
+    query('filetype').isIn(['file', 'directory', 'symbolic link']).optional(),
+    query('extension').optional(),
+    query('min_file_size').isInt().toInt().optional(),
+    query('max_file_size').isInt().toInt().optional(),
+    query('skip').isInt().toInt().optional()
+      .default(0),
+    query('take').isInt().toInt().optional()
+      .default(1000),
+  ]),
+  dataset_access_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get a list of files and directories under basepath
+    const files = await datasetService.search_files({
+      dataset_id: req.params.id,
+      base: req.query.basepath,
+      ...req.query,
+    });
+    res.json(files);
   }),
 );
 
