@@ -182,6 +182,17 @@ async function main() {
     })),
   );
 
+ // create adni imaging data
+ await Promise.all(
+  data.adni_imaging.map((ad) => prisma.adni_imaging.upsert({
+    where: {
+      rand_id: ad.rand_id
+    },
+    update: {},
+    create: ad,
+  })),
+);
+
   // upsert dataset_files
   put_dataset_files({ dataset_id: 1, num_files: 100, max_depth: 1 });
   put_dataset_files({ dataset_id: 2, num_files: 100, max_depth: 3 });

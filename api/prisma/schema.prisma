@@ -227,3 +227,36 @@ model project_contact {
 
   @@id([project_id, contact_id])
 }
+
+model adni_imaging {
+  rand_id             String
+  subject_id          String?
+  project             String?
+  phase               String?
+  sex                 String?
+  weight              String?
+  research_group      String?
+  apoe_a1             String?
+  apoe_a2             String?
+  visit               String?
+  study_date          String?
+  archive_date        String?
+  age                 String?
+  global_cdr          String?
+  npiq_total_score    String?
+  mmse_total_score    String?
+  gdscale_total_score String?
+  faq_total_score     String?
+  modality            String?
+  description         String?
+  type                String?
+  imaging_protocol    String?
+  image_id            String?
+  structure           String?
+  laterality          String?
+  image_type          String?
+  registration        String?
+  tissue              String?
+
+  @@id([rand_id])
+}

@@ -84,9 +84,9 @@ function isActive(path) {
 
 const user_items = ref([
   {
-    icon: "mdi-flask",
-    title: "Projects",
-    path: "/projects",
+    icon: "mdi-alpha-a-circle",
+    title: "ADNI",
+    path: "/adni",
   },
   // {
   //   icon: "mdi-chart-gantt",
@@ -101,11 +101,11 @@ const user_items = ref([
 ]);
 
 const operator_items = ref([
-  {
-    icon: "mdi-monitor-dashboard",
-    title: "Dashboard",
-    path: "/dashboard",
-  },
+  // {
+  //   icon: "mdi-monitor-dashboard",
+  //   title: "Dashboard",
+  //   path: "/dashboard",
+  // },
   // {
   //   icon: "mdi-file-lock",
   //   title: "Data Products",
@@ -121,21 +121,21 @@ const operator_items = ref([
   //   title: "Data Uploader",
   //   path: "/datauploader",
   // },
-  {
-    icon: "mdi-dna",
-    title: "Raw Data",
-    path: "/rawdata",
-  },
-  {
-    icon: "mdi-package-variant-closed",
-    title: "Data Products",
-    path: "/dataproducts",
-  },
-  {
-    icon: "mdi-table-account",
-    title: "User Management",
-    path: "/users",
-  },
+  // {
+  //   icon: "mdi-dna",
+  //   title: "Raw Data",
+  //   path: "/rawdata",
+  // },
+  // {
+  //   icon: "mdi-package-variant-closed",
+  //   title: "Data Products",
+  //   path: "/dataproducts",
+  // },
+  // {
+  //   icon: "mdi-table-account",
+  //   title: "User Management",
+  //   path: "/users",
+  // },
   // {
   //   icon: "mdi-account-multiple",
   //   title: "Group Management",

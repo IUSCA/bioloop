@@ -10,7 +10,7 @@
   },
   "postgres": {
     "hostname": "localhost",
-    "port": "5432",
+    "port": "5433",
     "user": "appuser",
     "password": "",
     "db": "app",
