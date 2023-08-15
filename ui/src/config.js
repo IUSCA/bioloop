@@ -19,7 +19,7 @@ const exports = {
     },
     download: "/N/scratch/radyuser/cfndap/production/download",
   },
-  enable_dataset_file_downloads: true,
+  enable_dataset_file_downloads: false,
 };
 
 export default exports;
