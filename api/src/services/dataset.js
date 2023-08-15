@@ -459,7 +459,7 @@ async function search_files({
 async function add_files({ dataset_id, data }) {
   const files = data.map((f) => ({
     dataset_id,
-    name: path.parse(f.path).name,
+    name: path.parse(f.path).base,
     ...f,
   }));
 
@@ -469,7 +469,7 @@ async function add_files({ dataset_id, data }) {
   // query non leaf nodes (directories) from the graph datastrucure
   const directories = graph.non_leaf_nodes().map((p) => ({
     dataset_id,
-    name: path.parse(p).name,
+    name: path.parse(p).base,
     path: p,
     filetype: 'directory',
   }));

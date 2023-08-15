@@ -22,7 +22,11 @@
         </div>
 
         <!-- File Table -->
-        <FileTable :show-download="props.showDownload" :files="files" />
+        <FileTable
+          :show-download="props.showDownload"
+          :files="files"
+          :dataset-id="props.datasetId"
+        />
       </va-inner-loading>
     </div>
   </div>
