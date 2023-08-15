@@ -506,8 +506,8 @@ router.get(
       dataset_id: req.params.id,
       base: req.query.basepath,
     });
-    // 1 week
-    res.set('Cache-control', 'private, max-age=604800');
+    // 1 day
+    res.set('Cache-control', 'private, max-age=86400');
     res.json(files);
   }),
 );

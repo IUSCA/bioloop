@@ -134,7 +134,9 @@ const sortingOrder = ref("asc");
 const data_loading = ref(false);
 
 function extension(name) {
-  return name.split(".").slice(-1)[0];
+  const parts = name.split(".");
+  if (parts.length > 0) return parts.slice(-1)[0];
+  else return "";
 }
 
 const rows = computed(() => {
