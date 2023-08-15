@@ -109,6 +109,11 @@ const user_items = ref([
     title: "Projects",
     path: "/projects",
   },
+  {
+    icon: "mdi-database",
+    title: "ADNI",
+    path: "/adni",
+  },
   // {
   //   icon: "mdi-chart-gantt",
   //   title: "Tracks",
