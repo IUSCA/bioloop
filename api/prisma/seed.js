@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const { normalize_name } = require('../src/services/project');
 const data = require('./data');
 const { random_files } = require('./random_paths');
+const datasetService = require('../src/services/dataset');
 
 const prisma = new PrismaClient();
 
@@ -23,9 +24,7 @@ async function put_dataset_files({ dataset_id, num_files = 1000, max_depth = 5 }
   await prisma.dataset_file.deleteMany({
     where: { dataset_id },
   });
-  await prisma.dataset_file.createMany({
-    data: files.map((f) => ({ dataset_id, ...f })),
-  });
+  await datasetService.add_files({ dataset_id, data: files });
 }
 
 async function main() {
@@ -193,6 +192,13 @@ async function main() {
     create: ad,
   })),
 );
+
+  // upsert dataset_files
+  put_dataset_files({ dataset_id: 1, num_files: 100, max_depth: 1 });
+  put_dataset_files({ dataset_id: 2, num_files: 100, max_depth: 3 });
+  put_dataset_files({ dataset_id: 3, num_files: 1000, max_depth: 2 });
+  put_dataset_files({ dataset_id: 7, num_files: 100, max_depth: 1 });
+  put_dataset_files({ dataset_id: 8, num_files: 100 });
 
   // update the auto increment id's sequence numbers
   const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact'];

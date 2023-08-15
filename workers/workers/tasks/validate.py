@@ -9,7 +9,7 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 from workers import exceptions as exc
-from workers.config import config
+from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -33,8 +33,7 @@ def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: li
 
 def validate_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, files=True)
-    dataset_type = dataset['type']
-    staged_path = Path(config['paths'][dataset_type]['stage']) / dataset['name']
+    staged_path, _ = compute_staging_path(dataset)
     validation_errors = check_files(celery_task=celery_task,
                                     dataset_dir=staged_path,
                                     files_metadata=dataset['files'])
@@ -43,5 +42,9 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
         logger.warning(f'{len(validation_errors)} validation errors for dataset id: {dataset_id} path: {staged_path}')
         raise exc.ValidationFailed(validation_errors)
 
-    api.add_state_to_dataset(dataset_id=dataset_id, state='VALIDATED')
+    update_data = {
+        'is_staged': True
+    }
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    api.add_state_to_dataset(dataset_id=dataset_id, state='STAGED')
     return dataset_id, validation_errors

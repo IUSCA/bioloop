@@ -11,9 +11,8 @@ from workers import cmd
 from workers.celery_app import app as celery_app
 from workers.config import config
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class Observer:
@@ -72,11 +71,12 @@ class Poller:
 
 
 class Register:
-    def __init__(self, dataset_type):
+    def __init__(self, dataset_type, run_workflow=True):
         self.dataset_type = dataset_type
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
         self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
+        self.run_workflow = run_workflow
         self.wf_body = wf_utils.get_wf_body(wf_name='integrated')
 
     def get_registered_dataset_names(self):
@@ -98,33 +98,36 @@ class Register:
 
         for candidate in candidates:
             logger.info(f'registering dataset - {candidate.name}')
-            wf = Workflow(celery_app=celery_app, **self.wf_body)
             dataset = {
                 'name': candidate.name,
                 'type': self.dataset_type,
                 'origin_path': str(candidate.resolve()),
-                'workflow_id': wf.workflow['_id']
             }
-            created_dataset = api.create_dataset(dataset)
-            wf.start(created_dataset['id'])
+            if self.run_workflow:
+                wf = Workflow(celery_app=celery_app, **self.wf_body)
+                dataset['workflow_id'] = wf.workflow['_id']
+                created_dataset = api.create_dataset(dataset)
+                wf.start(created_dataset['id'])
+            else:
+                api.create_dataset(dataset)
             self.completed.add(candidate.name)
 
 
 if __name__ == "__main__":
-    obs1 = Observer(
-        name='raw_data_obs',
-        dir_path=config['registration']['RAW_DATA']['source_dir'],
-        callback=Register('RAW_DATA').register,
-        interval=config['registration']['poll_interval_seconds']
-    )
+    # obs1 = Observer(
+    #     name='raw_data_obs',
+    #     dir_path=config['registration']['RAW_DATA']['source_dir'],
+    #     callback=Register('RAW_DATA').register,
+    #     interval=config['registration']['poll_interval_seconds']
+    # )
     obs2 = Observer(
         name='data_products_obs',
         dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
-        callback=Register('DATA_PRODUCT').register,
+        callback=Register('DATA_PRODUCT', run_workflow=False).register,
         interval=config['registration']['poll_interval_seconds']
     )
 
     poller = Poller()
-    poller.register(obs1)
+    # poller.register(obs1)
     poller.register(obs2)
     poller.poll()

@@ -14,9 +14,10 @@ const exports = {
   dataset_polling_interval: 10000,
   paths: {
     stage: {
-      RAW_DATA: "/path/to/staged/raw_data",
-      DATA_PRODUCT: "/path/to/staged/data_products",
+      RAW_DATA: "/N/scratch/radyuser/cfndap/production/stage/raw_data",
+      DATA_PRODUCT: "/N/scratch/radyuser/cfndap/production/stage/data_products",
     },
+    download: "/N/scratch/radyuser/cfndap/production/download",
   },
 };
 

@@ -3,12 +3,10 @@
     <div class="max-w-md">
       <va-card class="mt-10 lg:mt-20" stripe stripe-color="success">
         <va-card-content>
-          <div class="flex justify-center opacity-70">
+          <div class="flex justify-center opacity-90">
             <div class="flex flex-col gap-2 items-center">
-              <img class="h-12" src="/logo.svg" />
-              <span class="text-3xl tracking-wide">
-                {{ config.appTitle }}
-              </span>
+              <AppIcon size="3rem" />
+              <AppTitle />
             </div>
           </div>
           <div class="text-center mt-8">
@@ -37,9 +35,7 @@
   </div>
 </template>
 
-<script setup>
-import config from "@/config";
-</script>
+<script setup></script>
 
 <route lang="yaml">
 meta:

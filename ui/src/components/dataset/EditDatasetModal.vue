@@ -42,8 +42,6 @@ const visible = ref(false);
 const loading = ref(false);
 const description = ref(props.data.description);
 
-console.log("props.data", props.data);
-
 function hide() {
   loading.value = false;
   visible.value = false;
@@ -55,9 +53,6 @@ function show() {
 
 function handleOk() {
   loading.value = true;
-  const id = props.data.id;
-
-  console.log("updating", id, "description", description.value);
 
   DatasetService.update({
     id: props.data.id,

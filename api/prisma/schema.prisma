@@ -21,6 +21,7 @@ model dataset {
   origin_path      String?
   archive_path     String?
   is_deleted       Boolean             @default(false)
+  is_staged        Boolean             @default(false)
   metadata         Json?
   workflows        workflow[]
   files            dataset_file[]
@@ -44,7 +45,8 @@ model dataset_hierarchy {
 }
 
 model dataset_file {
-  id         Int     @id @default(autoincrement())
+  id         Int                      @id @default(autoincrement())
+  name       String?
   path       String
   md5        String?
   size       BigInt?
@@ -52,9 +54,21 @@ model dataset_file {
   metadata   Json?
   status     String?
   dataset_id Int
-  dataset    dataset @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
+  dataset    dataset                  @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
+  parents    dataset_file_hierarchy[] @relation("child")
+  children   dataset_file_hierarchy[] @relation("parent")
 
+  @@unique([path, dataset_id])
   @@index([dataset_id])
+}
+
+model dataset_file_hierarchy {
+  parent_id Int
+  child_id  Int
+  parent    dataset_file? @relation(name: "parent", fields: [parent_id], references: [id])
+  child     dataset_file? @relation(name: "child", fields: [child_id], references: [id])
+
+  @@id([parent_id, child_id])
 }
 
 model dataset_audit {

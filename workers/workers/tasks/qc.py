@@ -12,6 +12,7 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 from workers.config import config
+from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -61,11 +62,11 @@ def create_report(celery_task: WorkflowTask, dataset_dir: Path, dataset_qc_dir: 
     return report_id
 
 
-def generate_reports(celery_task, dataset_id, **kwargs):
+def generate_qc(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     dataset_type = dataset['type']
     dataset_qc_dir = Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'
-    staged_path = Path(config['paths'][dataset_type]['stage']) / dataset['name']
+    staged_path, _ = compute_staging_path(dataset)
 
     report_id = create_report(
         celery_task=celery_task,

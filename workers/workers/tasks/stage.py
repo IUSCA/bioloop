@@ -12,6 +12,7 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.config import config
+from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -44,14 +45,17 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
         if extraction_dir.exists():
             shutil.rmtree(extraction_dir)
 
-        # extracts the tar contents to temp directory
-        # move the contents to extraction_dir
-        with tempfile.TemporaryDirectory(dir=target_dir.parent) as tmpdir:
-            archive.extractall(path=tmpdir)
-            shutil.move(Path(tmpdir) / archive_name, extraction_dir)
+        # create parent directories if missing
+        extraction_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        # extracts the tar contents to a temp directory
+        # move the contents to the extraction_dir
+        with tempfile.TemporaryDirectory(dir=extraction_dir.parent) as tmp_dir:
+            archive.extractall(path=tmp_dir)
+            shutil.move(Path(tmp_dir) / archive_name, extraction_dir)
 
 
-def stage(celery_task: WorkflowTask, dataset: dict) -> None:
+def stage(celery_task: WorkflowTask, dataset: dict) -> str:
     """
     gets the tar from SDA and extracts it
 
@@ -66,20 +70,25 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> None:
                                     celery_task=celery_task)
 
     # extract the tar file to stage directory
-    dataset_type = dataset['type']
-    staging_dir = Path(config['paths'][dataset_type]['stage'])
-    target_dir = staging_dir / dataset['name']  # path to the staged dataset
-
+    target_dir, alias = compute_staging_path(dataset)
     logger.info(f'extracting tar {scratch_tar_path} to {target_dir}')
     extract_tarfile(tar_path=scratch_tar_path, target_dir=target_dir, override_arcname=True)
 
     # delete the local tar copy after extraction
     # scratch_tar_path.unlink()
 
+    return alias
+
 
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    stage(celery_task, dataset)
+    alias = stage(celery_task, dataset)
 
-    api.add_state_to_dataset(dataset_id=dataset_id, state='STAGED')
+    update_data = {
+        'metadata': {
+            'stage_alias': alias
+        }
+    }
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    api.add_state_to_dataset(dataset_id=dataset_id, state='FETCHED')
     return dataset_id,

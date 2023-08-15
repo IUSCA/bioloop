@@ -7,12 +7,19 @@ class WorkflowService {
     last_task_run = false,
     prev_task_runs = false,
     only_active = false,
+    workflow_ids = null,
   } = {}) {
     return api.get("/workflows", {
       params: {
         last_task_run,
         prev_task_runs,
         only_active,
+        workflow_id: workflow_ids,
+      },
+      paramsSerializer: {
+        // to create workflow_id=123&workflow_id=456
+        // instead of workflow_id[]=123&workflow_id[]=456
+        indexes: null, // by default: false
       },
     });
   }

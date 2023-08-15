@@ -1,4 +1,6 @@
 {
+  "mode": "default",
+  "app_id": "cfndap-test.sca.iu.edu",
   "express": {
     "port": 3030,
     "host": "localhost"
@@ -15,7 +17,7 @@
     "schema": "public"
   },
   "workflow_server": {
-    "base_url": "http://localhost:5000",
+    "base_url": "http://127.0.0.1:5000",
     "auth_token": ""
   },
   "auth": {
@@ -28,33 +30,42 @@
       "sign_algorithm": "RS256"
     }
   },
-  "mode": "default",
-  "app_id": "cfndap-test.sca.iu.edu",
+  "oauth": {
+    "base_url": "http://127.0.0.1:5050",
+    "download": {
+      "client_id": "",
+      "client_secret": "",
+      "scope_prefix": "download_file:"
+    }
+  },
+  "download_server": {
+    "base_url": "http://localhost:8000"
+  },
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
-          "name": "inspect",
-          "task": "inspect_dataset"
+            "name": "await stability",
+            "task": "await_stability"
         },
         {
-          "name": "archive",
-          "task": "archive_dataset"
+            "name": "inspect",
+            "task": "inspect_dataset"
         },
         {
-          "name": "stage",
-          "task": "stage_dataset"
+            "name": "archive",
+            "task": "archive_dataset"
         },
         {
-          "name": "validate",
-          "task": "validate_dataset"
+            "name": "stage",
+            "task": "stage_dataset"
         },
         {
-          "name": "generate_reports",
-          "task": "generate_reports"
+            "name": "validate",
+            "task": "validate_dataset"
         }
-      ]
+    ]
     },
     "stage": {
       "steps": [
@@ -67,8 +78,8 @@
           "task": "validate_dataset"
         },
         {
-          "name": "generate_reports",
-          "task": "generate_reports"
+          "name": "generate_qc",
+          "task": "generate_qc"
         }
       ]
     },

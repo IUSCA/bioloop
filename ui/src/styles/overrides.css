@@ -31,9 +31,9 @@ div.va-modal__title {
   font-size: initial;
 }
 
-div.va-dropdown__content.va-dropdown__content-wrapper {
+/* div.va-dropdown__content.va-dropdown__content-wrapper {
   z-index: 1;
-}
+} */
 
 /* Clear icon is too big and its font size is set by element style tag in the vuestic library */
 .va-input-wrapper__field i.va-icon {
