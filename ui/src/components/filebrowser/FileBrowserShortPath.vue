@@ -4,11 +4,18 @@
     :class="{ 'cursor-pointer': !isDir }"
     @click="isDir ? null : emit('click', parent)"
   >
-    <va-popover :message="isDir ? props.data.path : parent" placement="top">
+    <div v-if="depth >= 4">
+      <va-popover :message="isDir ? props.data.path : parent" placement="top">
+        <span>
+          {{ getShortPath(props.data.path, isDir).replaceAll("/", " / ") }}
+        </span>
+      </va-popover>
+    </div>
+    <div v-else>
       <span>
         {{ getShortPath(props.data.path, isDir).replaceAll("/", " / ") }}
       </span>
-    </va-popover>
+    </div>
   </div>
 </template>
 
@@ -27,7 +34,7 @@ function getShortPath(path, isDirectory) {
 
   if (!isDirectory) {
     if (parts.length >= 4) return `.../${parts.slice(-3, -1).join("/")}/`;
-    return parts.slice(0, -1).join("/");
+    return `${parts.slice(0, -1).join("/")}/`;
   } else {
     if (parts.length >= 3) `.../${parts.slice(-2).join("/")}`;
     return parts.join("/");
@@ -41,5 +48,9 @@ const isDir = computed(() => {
 const parent = computed(() => {
   const parts = props.data.path.split("/");
   return parts.slice(0, -1).join("/");
+});
+
+const depth = computed(() => {
+  return props.data.path.split("/").length;
 });
 </script>
