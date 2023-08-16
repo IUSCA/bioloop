@@ -95,6 +95,7 @@ class DatasetService {
     return api.get(`/datasets/${id}/files`, {
       params: {
         basepath,
+        id: config.file_browser.cache_busting_id,
       },
     });
   }

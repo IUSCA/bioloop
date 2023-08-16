@@ -19,7 +19,10 @@ const exports = {
     },
     download: "/N/scratch/radyuser/cfndap/production/download",
   },
-  enable_dataset_file_downloads: false,
+  file_browser: {
+    enable_downloads: false,
+    cache_busting_id: "fe09b01", // any random string different from the previous value will work
+  },
 };
 
 export default exports;
