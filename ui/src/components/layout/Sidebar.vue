@@ -101,16 +101,11 @@ const user_items = ref([
 ]);
 
 const operator_items = ref([
-  // {
-  //   icon: "mdi-monitor-dashboard",
-  //   title: "Dashboard",
-  //   path: "/dashboard",
-  // },
-  // {
-  //   icon: "mdi-file-lock",
-  //   title: "Data Products",
-  //   path: "/dataproducts",
-  // },
+  {
+    icon: "mdi-monitor-dashboard",
+    title: "Dashboard",
+    path: "/dashboard",
+  },
   // {
   //   icon: "mdi-transition",
   //   title: "Conversions",
@@ -121,21 +116,21 @@ const operator_items = ref([
   //   title: "Data Uploader",
   //   path: "/datauploader",
   // },
-  // {
-  //   icon: "mdi-dna",
-  //   title: "Raw Data",
-  //   path: "/rawdata",
-  // },
-  // {
-  //   icon: "mdi-package-variant-closed",
-  //   title: "Data Products",
-  //   path: "/dataproducts",
-  // },
-  // {
-  //   icon: "mdi-table-account",
-  //   title: "User Management",
-  //   path: "/users",
-  // },
+  {
+    icon: "mdi-dna",
+    title: "Raw Data",
+    path: "/rawdata",
+  },
+  {
+    icon: "mdi-package-variant-closed",
+    title: "Data Products",
+    path: "/dataproducts",
+  },
+  {
+    icon: "mdi-table-account",
+    title: "User Management",
+    path: "/users",
+  },
   // {
   //   icon: "mdi-account-multiple",
   //   title: "Group Management",
