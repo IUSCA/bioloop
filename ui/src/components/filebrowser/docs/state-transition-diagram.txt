@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> Browser
+    Browser --> Browser: click on nav / directory
+    Browser --> Search: type in search bar
+    Browser --> Modal/Browser: adv search btn
+    Modal/Browser --> Browser: cancel
+    Modal/Browser --> Search: search btn
+    Search --> Modal/Search: click on filter / adv search btn
+    Modal/Search --> Search: search btn / cancel
+    Search --> Browser: close
+    Search --> Search: reset a filter
