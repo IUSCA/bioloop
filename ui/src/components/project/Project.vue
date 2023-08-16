@@ -265,11 +265,6 @@ function openMergeModal() {
 }
 </script>
 
-<route lang="yaml">
-meta:
-title: Projects
-</route>
-
 <style scoped>
 /* .general-info {
   --va-card-padding: 0.75rem;

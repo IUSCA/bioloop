@@ -7,10 +7,7 @@
   >
     <template #cell(name)="{ rowData }">
       <router-link
-        :to="{
-          path: `/datasets/${rowData.id}`,
-          query: { project: props.project.name },
-        }"
+        :to="`${props.project.slug}/datasets/${rowData.id}`"
         class="va-link"
         v-if="auth.canOperate"
       >
