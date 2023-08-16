@@ -8,7 +8,7 @@
   </div>
   <FileBrowser
     :dataset-id="props.datasetId"
-    :show-download="config.enable_dataset_file_downloads && dataset.is_staged"
+    :show-download="config.file_browser.enable_downloads && dataset.is_staged"
   />
 </template>
 
