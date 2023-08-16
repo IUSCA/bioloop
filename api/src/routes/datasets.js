@@ -506,8 +506,9 @@ router.get(
       dataset_id: req.params.id,
       base: req.query.basepath,
     });
-    // 1 day
-    res.set('Cache-control', 'private, max-age=86400');
+    // cache indefinitely - 1 year
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
+    res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
 );
