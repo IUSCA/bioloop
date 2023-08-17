@@ -311,8 +311,12 @@ import workflowService from "@/services/workflow";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
+import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
+
+const breadcrumbsStore = useBreadcrumbsStore();
 const toast = useToastStore();
 const router = useRouter();
+const route = useRoute();
 
 const props = defineProps({ datasetId: String });
 
@@ -323,6 +327,16 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
+
+watch(
+  () => dataset.value.name,
+  () => {
+    breadcrumbsStore.setBreadcrumbs({
+      label: dataset.value.name,
+      to: route.params.fullPath,
+    });
+  }
+);
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
