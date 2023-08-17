@@ -1,10 +1,13 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const config = require('config');
+const { query, checkSchema } = require('express-validator');
+const _ = require('lodash/fp');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const wf_service = require('../services/workflow');
 const { accessControl } = require('../middleware/auth');
+const { validate } = require('../middleware/validators');
 
 const isPermittedTo = accessControl('workflow');
 
@@ -91,4 +94,78 @@ router.delete(
   ),
 );
 
+// make sure that the request body is array of objects which at least will have a "message" key
+const append_log_schema = {
+  '0.message': {
+    in: ['body'],
+  },
+};
+router.post(
+  '/:id/logs',
+  isPermittedTo('update'),
+  validate([checkSchema(append_log_schema)]),
+  asyncHandler(
+    async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = publish logs of a worker process
+      const data = req.body.map((log) => {
+        const {
+          timestamp, message, level, pid, task_id, step, tags,
+        } = log;
+        return {
+          timestamp,
+          message,
+          level,
+          pid,
+          task_id,
+          step,
+          tags,
+          workflow_id: req.params.id,
+        };
+      });
+
+      const result = await prisma.worker_log.createMany({
+        data,
+      });
+      res.json(result);
+    },
+  ),
+);
+
+router.get(
+  '/:id/logs',
+  isPermittedTo('read'),
+  validate([
+    query('skip').isInt().toInt().optional()
+      .default(0),
+    query('take').isInt().toInt().optional()
+      .default(100),
+    query('latest').toBoolean().default(false),
+  ]),
+  asyncHandler(
+    async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = get logs of a worker process
+
+      const filters = _.flow([
+        _.pick(['level', 'pid', 'step', 'task_id']),
+        _.omitBy(_.isNil),
+      ])(req.query);
+
+      const rows = await prisma.worker_log.findMany({
+        where: {
+          workflow_id: req.params.id,
+          ...filters,
+        },
+        orderBy: {
+          timestamp: req.query.latest ? 'desc' : 'asc',
+        },
+        skip: req.query.skip,
+        take: req.query.take,
+      });
+
+      res.json(rows);
+    },
+  ),
+);
 module.exports = router;
