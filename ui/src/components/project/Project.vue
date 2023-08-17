@@ -164,7 +164,7 @@ import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
-const props = defineProps(["projetcId"]);
+const props = defineProps(["projectId"]);
 const auth = useAuthStore();
 const router = useRouter();
 const toast = useToastStore();
@@ -177,7 +177,7 @@ function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: project.value?.id || props.projetcId,
+      id: project.value?.id || props.projectId,
       forSelf: !auth.canOperate,
     })
     .then((res) => {
