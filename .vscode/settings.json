@@ -16,6 +16,7 @@
   "i18n-ally.localesPaths": "locales",
   "i18n-ally.sortKeys": true,
   "prettier.enable": false,
+  "files.eol": "\n",
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
   },
@@ -33,4 +34,5 @@
   "editor.detectIndentation": false,
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
+  "prettier.endOfLine": "lf",
 }

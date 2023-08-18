@@ -34,3 +34,6 @@ reports
 
 test.js
 src/test.js
+
+prisma/adni.json
+prisma/old_adni.json

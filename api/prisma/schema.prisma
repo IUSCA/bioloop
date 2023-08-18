@@ -213,3 +213,91 @@ model project_contact {
 
   @@id([project_id, contact_id])
 }
+
+model adni_subject {
+  main_id             String       @id
+  subject_id          String
+  num_images          Int?
+  num_as_dx_dasc      Int?
+  num_as_dx_dsbc      Int?
+  adni_imaging        adni_imaging[]
+  as_dx_dasc          as_dx_dasc[]
+}
+
+model adni_imaging {
+  adni_subject        adni_subject @relation(fields: [main_id], references: [main_id])
+  aimg_id             String       @id
+  main_id             String
+  image_id            String       
+  rid                 String?
+  tid                 String?
+  project             String?
+  phase               String?
+  sex                 String?
+  weight              String?
+  research_group      String?
+  apoe_a1             String?
+  apoe_a2             String?
+  visit               String?
+  study_date          String?
+  archive_date        String?
+  age                 String?
+  global_cdr          String?
+  npiq_total_score    String?
+  mmse_total_score    String?
+  gdscale_total_score String?
+  faq_total_score     String?
+  modality            String?
+  description         String?
+  type                String?
+  imaging_protocol    String?
+  structure           String?
+  laterality          String?
+  image_type          String?
+  registration        String?
+  tissue              String?
+}
+
+model as_dx_dasc {
+	adni_subject    adni_subject @relation(fields: [main_id], references: [main_id])
+  as_dx_dasc_id   String       @id
+	main_id         String
+  rid 			      String
+	site_id 		    String?
+	vis_code 		    String?
+	vis_code2 		  String?
+	user_date 		  String?
+	user_date2 		  String?
+	exam_date 		  String?
+	ax_nausea 		  String?
+	ax_vomit 		    String?
+	ax_diarrh 		  String?
+	ax_constp 		  String?
+	ax_abdomn 		  String?
+	ax_sweatn 		  String?
+	ax_dizzy 		    String?
+	ax_energy 		  String?
+	ax_drowsy 		  String?
+	ax_vision 		  String?
+	ax_hdache 		  String?
+	ax_drymth 		  String?
+	ax_breath 		  String?
+	ax_cough 		    String?
+	ax_palpit 		  String?
+	ax_chest 		    String?
+	ax_urndis 		  String?
+	ax_urnfrq 		  String?
+	ax_ankle 		    String?
+	ax_muscle 		  String?
+	ax_rash 		    String?
+	ax_insomn 		  String?
+	ax_dpmood 		  String?
+	ax_crying 		  String?
+	ax_elmood 		  String?
+	ax_wander 		  String?
+	ax_fall 		    String?
+	ax_other 		    String?
+	ax_specif 		  String?
+	update_stamp 	  String?
+}
+

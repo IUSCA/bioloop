@@ -12,7 +12,12 @@ router.get("/count/", async function (req, res, next) {
 });
 
 router.get("/all/", async function (req, res, next) {
-  const adni_imaging = await prisma.adni_imaging.findMany({});
+  const adni_imaging = await prisma.adni_imaging.findMany({take: 5000});
+  res.json(adni_imaging);
+});
+
+router.get("/subjs/", async function (req, res, next) {
+  const adni_imaging = await prisma.adni_subject.findMany();
   res.json(adni_imaging);
 });
 

@@ -10,6 +10,15 @@ class ViewService {
       })
   }
 
+  getSubjects(include_checksums = false) {
+    return api
+      .get("/view/subjs/", {
+        params: {
+          include_checksums,
+        },
+      })
+  }
+
   postSelects(selectedItems, include_checksums = false) {
     return api
       .post("/view/select/", {

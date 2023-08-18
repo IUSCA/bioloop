@@ -112,7 +112,12 @@ const user_items = ref([
   {
     icon: "mdi-database",
     title: "ADNI",
-    path: "/adni",
+    path: "/adni1",
+  },
+  {
+    icon: "mdi-database",
+    title: "ADNI",
+    path: "/adni2",
   },
   // {
   //   icon: "mdi-chart-gantt",
