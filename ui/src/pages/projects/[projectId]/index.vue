@@ -181,7 +181,7 @@ watch(
   () => {
     breadcrumbsStore.pushNavItem({
       label: project.value.name,
-      to: route.params.fullPath,
+      to: route.fullPath,
     });
   }
 );

@@ -333,7 +333,7 @@ watch(
   () => {
     breadcrumbsStore.pushNavItem({
       label: dataset.value.name,
-      to: route.params.fullPath,
+      to: route.fullPath,
     });
   }
 );
