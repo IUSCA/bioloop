@@ -202,8 +202,7 @@ function delete_workflow() {
   loading.value = true;
   workflowService
     .delete(workflow.value.id)
-    .then((res) => {
-      console.log(res);
+    .then(() => {
       toast.success("Deleted workflow");
     })
     .catch((err) => {
@@ -221,7 +220,6 @@ function resume_workflow() {
   workflowService
     .resume(workflow.value.id)
     .then((res) => {
-      console.log(res.data);
       if (res.data?.resumed) {
         toast.success("Resumed workflow");
       } else {
@@ -248,7 +246,6 @@ function pause_workflow() {
   workflowService
     .pause(workflow.value.id)
     .then((res) => {
-      console.log(res.data);
       if (res.data?.paused) {
         toast.success("Stopped workflow");
       } else {

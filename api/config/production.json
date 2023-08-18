@@ -1,12 +1,14 @@
 {
-  "app_id": "bioloop.sca.iu.edu",
+  "mode": "production",
+  "app_id": "cfndap.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
   "postgres": {
     "hostname": "commons3.sca.iu.edu",
-    "db": "bioloop",
-    "schema": "public"
+    "user": "cfndap",
+    "db": "cfndap",
+    "schema": "cfndap"
   },
   "workflow_server": {
     "base_url": "https://core-dev1.sca.iu.edu/rhythm"
@@ -14,8 +16,14 @@
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "bioloop.sca.iu.edu",
+      "iss": "cfndap.sca.iu.edu",
       "ttl_milliseconds": 3600000
     }
+  },
+  "oauth": {
+    "base_url": "https://oauth-dev.sca.iu.edu"
+  },
+  "download_server": {
+    "base_url": "https://bioloop2.sca.iu.edu"
   }
 }

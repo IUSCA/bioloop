@@ -45,7 +45,6 @@ function hide() {
 
 function show() {
   visible.value = true;
-  console.log(visible.value);
 }
 
 function handleOk() {

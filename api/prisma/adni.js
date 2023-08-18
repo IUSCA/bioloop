@@ -1,46 +1,47 @@
-const { PrismaClient } = require("@prisma/client");
-const fs = require("fs");
-const prisma = new PrismaClient();
-const data = fs.readFileSync("adni.json", "utf8");
-const jsonData = JSON.parse(data);
-let scount = 0
+const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
 
-async function insertData() {
-  await prisma.as_dx_dasc.deleteMany()
-  await prisma.adni_imaging.deleteMany()
-  await prisma.adni_subject.deleteMany()
-  total_subjs = Object.keys(jsonData).length
+const prisma = new PrismaClient();
+const data = fs.readFileSync('adni.json', 'utf8');
+const jsonData = JSON.parse(data);
+let scount = 0;
+
+function insertData() {
+  prisma.as_dx_dasc.deleteMany();
+  prisma.adni_imaging.deleteMany();
+  prisma.adni_subject.deleteMany();
+  total_subjs = Object.keys(jsonData).length;
   try {
     for (const obj of jsonData) {
-      aimg = obj.adni_imaging
-      await prisma.adni_subject.create({
+      aimg = obj.adni_imaging;
+      prisma.adni_subject.create({
         data: {
           main_id: obj.main_id,
           subject_id: obj.subject_id,
           num_images: obj.num_images,
           num_as_dx_dasc: obj.num_as_dx_dasc,
           num_as_dx_dsbc: obj.num_as_dx_dsbc,
-        }
-      })
-    }  
+        },
+      });
+    }
     for (const obj of jsonData) {
-      scount = scount + 1
-      console.log('Participant ' + scount + ' out of ' + total_subjs)
-      aimg = obj.adni_imaging
+      scount += 1;
+      console.log(`Participant ${scount} out of ${total_subjs}`);
+      aimg = obj.adni_imaging;
       for (img of aimg) {
-        await prisma.adni_imaging.create({
+        prisma.adni_imaging.create({
           data: {
             rid: img.rid,
             aimg_id: img.aimg_id,
             subject_id: img.subject_id,
             project: img.project,
             phase: img.phase,
-            sex: img.sex,  
-            weight: img.weight,         
+            sex: img.sex,
+            weight: img.weight,
             research_group: img.research_group,
             apoe_a1: img.apoe_a1,
-            apoe_a2: img.apoe_a2,     
-            visit: img.visit,       
+            apoe_a2: img.apoe_a2,
+            visit: img.visit,
             study_date: img.study_date,
             archive_date: img.archive_date,
             age: img.age,
@@ -56,19 +57,19 @@ async function insertData() {
             image_id: img.image_id,
             structure: img.structure,
             laterality: img.laterality,
-            image_type: img.image_type, 
+            image_type: img.image_type,
             registration: img.registration,
             tissue: img.tissue,
             adni_subject: {
               connect: {
                 main_id: obj.main_id,
-              }
-            }
-          }        
-        })
+              },
+            },
+          },
+        });
       }
-      for (var i = 0; i < obj.as_dx_dasc.length; i++) {
-        await prisma.as_dx_dasc.create({
+      for (let i = 0; i < obj.as_dx_dasc.length; i++) {
+        prisma.as_dx_dasc.create({
           data: {
             as_dx_dasc_id: obj.as_dx_dasc[i].as_dx_dasc_id,
             rid: obj.as_dx_dasc[i].rid,
@@ -80,7 +81,7 @@ async function insertData() {
             exam_date: obj.as_dx_dasc[i].exam_date,
             ax_nausea: obj.as_dx_dasc[i].ax_nausea,
             ax_vomit: obj.as_dx_dasc[i].ax_vomit,
-            ax_diarrh: obj.as_dx_dasc[i].ax_diarrh,		
+            ax_diarrh: obj.as_dx_dasc[i].ax_diarrh,
             ax_constp: obj.as_dx_dasc[i].ax_constp,
             ax_abdomn: obj.as_dx_dasc[i].ax_abdomn,
             ax_sweatn: obj.as_dx_dasc[i].ax_sweatn,
@@ -92,8 +93,8 @@ async function insertData() {
             ax_drymth: obj.as_dx_dasc[i].ax_drymth,
             ax_breath: obj.as_dx_dasc[i].ax_breath,
             ax_cough: obj.as_dx_dasc[i].ax_cough,
-            ax_palpit: obj.as_dx_dasc[i].ax_palpit,		
-            ax_chest: obj.as_dx_dasc[i].ax_chest,	
+            ax_palpit: obj.as_dx_dasc[i].ax_palpit,
+            ax_chest: obj.as_dx_dasc[i].ax_chest,
             ax_urndis: obj.as_dx_dasc[i].ax_urndis,
             ax_urnfrq: obj.as_dx_dasc[i].ax_urnfrq,
             ax_ankle: obj.as_dx_dasc[i].ax_ankle,
@@ -111,17 +112,17 @@ async function insertData() {
             adni_subject: {
               connect: {
                 main_id: obj.main_id,
-              }
-            }
-          }
-        })
+              },
+            },
+          },
+        });
       }
     }
-    console.log("Data inserted successfully!");
+    console.log('Data inserted successfully!');
   } catch (error) {
-    console.error("Error inserting data:", error);
+    console.error('Error inserting data:', error);
   } finally {
-    await prisma.$disconnect();
+    prisma.$disconnect();
   }
 }
 

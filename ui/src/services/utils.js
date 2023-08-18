@@ -127,6 +127,65 @@ function caseInsensitiveIncludes(str, searchValue) {
   return lowerStr.includes(lowerSearchValue);
 }
 
+function getFileNameFromUrl(fileUrl) {
+  // Extract the filename from the URL by splitting on '/'
+  const url = new URL(fileUrl);
+  const parts = url.pathname.split("/");
+  return parts[parts.length - 1];
+}
+
+function downloadFile({ url, filename = null }) {
+  const anchor = document.createElement("a");
+  anchor.style.display = "none";
+  anchor.href = url;
+  anchor.target = "_blank";
+
+  // Set the file name (you can extract it from the URL or hardcode it)
+  anchor.download = filename || getFileNameFromUrl(url);
+
+  // Append the anchor to the DOM
+  document.body.appendChild(anchor);
+
+  // Trigger a click on the anchor to initiate the download
+  anchor.click();
+
+  // Clean up: remove the anchor from the DOM
+  document.body.removeChild(anchor);
+}
+
+function initials(name) {
+  const parts = (name || "").split(" ");
+  if (parts.length == 1) return parts[0][0];
+  else {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`;
+  }
+}
+
+function arrayEquals(array1, array2) {
+  return (
+    array1.length === array2.length &&
+    array1.every((value, index) => value === array2[index])
+  );
+}
+
+function mapValues(obj, fn) {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    acc[key] = fn(key, value);
+    return acc;
+  }, {});
+}
+
+function filterByValues(obj, pred) {
+  return Object.entries(obj)
+    .filter(([k, v]) => {
+      return pred(k, v);
+    })
+    .reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+}
+
 export {
   formatBytes,
   difference,
@@ -142,4 +201,9 @@ export {
   cmp,
   setIntersection,
   caseInsensitiveIncludes,
+  downloadFile,
+  initials,
+  arrayEquals,
+  mapValues,
+  filterByValues,
 };

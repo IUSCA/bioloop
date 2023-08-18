@@ -13,6 +13,7 @@ class projectService {
     ).catch((err) => {
       console.error(err);
       toast.error("Unable to fetch projects");
+      return Promise.reject(err);
     });
   }
 
@@ -37,7 +38,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to create project");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -51,7 +52,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to update project details");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -65,7 +66,7 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to delete project");
-        return err;
+        return Promise.reject(err);
       });
   }
 
@@ -77,7 +78,19 @@ class projectService {
       .catch((err) => {
         console.error(err);
         toast.error("Failed to update project users");
-        return err;
+        return Promise.reject(err);
+      });
+  }
+
+  setDatasets({ id, dataset_ids }) {
+    return api
+      .put(`/projects/${id}/datasets`, {
+        dataset_ids,
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to update project datasets");
+        return Promise.reject(err);
       });
   }
 
@@ -96,6 +109,19 @@ class projectService {
   // calculateSlug(name) {
   //   return api.get(`/projects/slug/calculate/${name}`);
   // }
+
+  mergeProjects({ src_project_id, target_project_ids, delete_merged = false }) {
+    return api
+      .post(`/projects/merge/${src_project_id}`, {
+        target_project_ids,
+        delete_merged,
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to merge projects");
+        return Promise.reject(err);
+      });
+  }
 }
 
 export default new projectService();

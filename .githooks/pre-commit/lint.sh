@@ -3,7 +3,7 @@ set -e
 set -o pipefail
 
 # Get the list of staged files
-staged_files=$(git diff --name-only --cached)
+staged_files=$(git diff --cached --name-status | grep -E '^(A|M)' | awk '{print $2}')
 
 # Initialize variables
 ui_files=""

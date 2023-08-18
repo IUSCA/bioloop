@@ -4,7 +4,7 @@ from diagrams.onprem.compute import Server
 from diagrams.onprem.database import Mongodb, Postgresql
 from diagrams.onprem.network import Nginx
 from diagrams.onprem.queue import Rabbitmq, Celery
-from diagrams.programming.framework import Vue, Fastapi
+from diagrams.programming.framework import Vue, Fastapi, Flask
 from diagrams.programming.language import Javascript, Python
 
 with Diagram("Architecture", show=False) as diag:
@@ -19,15 +19,17 @@ with Diagram("Architecture", show=False) as diag:
     celery = Celery("Celery")
     workers = Python("Workers")
     file_server = Nginx("File Server")
+    secure_download = Javascript("Secure Download")
 
     celery >> workers
+    file_server - secure_download
 
     with Cluster("HPFS"):
       sda = Storage("SDA")
       scratch = Storage("Slate Scratch")
       celery - sda
       celery - scratch
-      file_server >> scratch
+      file_server - scratch
 
   with Cluster("commons"):
     app_db = Postgresql("App DB")
@@ -38,7 +40,7 @@ with Diagram("Architecture", show=False) as diag:
     core_reverse_proxy = Nginx("Proxy")
     rhythm_api = Fastapi("Rhythm")
     core_reverse_proxy - rhythm_api
-    auth = Server("auth")
+    auth = Flask("signet")
     core_reverse_proxy - auth
 
   app_api - app_db
@@ -48,3 +50,4 @@ with Diagram("Architecture", show=False) as diag:
   celery - celery_db
   rhythm_api - celery_queue
   rhythm_api - celery_db
+  ui - file_server

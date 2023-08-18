@@ -68,7 +68,7 @@ docker-compose up queue mongo -d
 Start Workers
 
 ```bash
-python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'bioloop-celery-w1@%h' --autoscale=2,1 --queues 'bioloop-dev.sca.iu.edu.q'
+python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'cfndap-test-celery-w1@%h' --autoscale=2,1 --queues 'cfndap-test.sca.iu.edu'
 ```
 
 `--concurrency 1`: number of worker processed to pre-fork
@@ -138,7 +138,7 @@ ssh \
   -R 3130:localhost:3030 \
   -R 28017:localhost:27017 \
   -R 5772:localhost:5672 \
-  bioloopuser@colo23.carbonate.uits.iu.edu
+  scauseruser@colo23.carbonate.uits.iu.edu
 ```
 
 - pull latest changes in dev branch to `<bioloop_dev>`
@@ -162,7 +162,7 @@ colo23> git pull
 colo23> cd workers
 colo23> poetry install
 colo23> poetry shell
-colo23> python -m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'bioloop-dev-celery-w1@%h' --autoscale=2,1
+colo23> python -m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'cfndap-test-celery-w1@%h' --autoscale=2,1
 ```
 
 

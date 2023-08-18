@@ -36,9 +36,29 @@ function setIntersection(setA, setB) {
   return _intersection;
 }
 
+function log_axios_error(error) {
+  if (error.response) {
+    // The request was made and the server responded with a status code
+    console.error(
+      'Axios Error: The request was made and the server responded with a status code',
+      `Error ${error.response.status}: ${JSON.stringify(error.response.data, null, 2)}`,
+    );
+  } else if (error.request) {
+    // The request was made but no response was received
+    console.error('Axios Error: The request was made but no response was received');
+  } else {
+    // Something else happened in making the request that triggered an error
+    console.error(
+      'Axios Error:  Something else happened in making the request that triggered an error',
+      error.message,
+    );
+  }
+}
+
 module.exports = {
   renameKey,
   setDifference,
   setUnion,
   setIntersection,
+  log_axios_error,
 };

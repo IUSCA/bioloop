@@ -7,10 +7,15 @@
         <va-input
           v-model="filterInput"
           class="w-full"
-          :placeholder="`search ${props.label.toLowerCase()}`"
+          :placeholder="`Type / to search ${props.label.toLowerCase()}`"
           outline
           clearable
-        />
+          input-class="search-input"
+        >
+          <template #prependInner>
+            <Icon icon="material-symbols:search" class="text-xl" />
+          </template>
+        </va-input>
       </div>
 
       <!-- filter -->
@@ -44,11 +49,8 @@
         </span>
       </template>
 
-      <template #cell(staged)="{ rowData }">
-        <span
-          v-if="DatasetService.is_staged(rowData?.states)"
-          class="flex justify-center"
-        >
+      <template #cell(staged)="{ source }">
+        <span v-if="source" class="flex justify-center">
           <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
@@ -134,9 +136,8 @@
           <span class="path bg-slate-200">
             {{ config.paths.stage[props.dtype] }}/{{
               launch_modal.selected?.name
-            }}
-          </span>
-          and generate QC (Quality Control) files and report.
+            }} </span
+          >.
         </p>
         <p>
           Please be aware that the time it takes to complete this process
@@ -178,8 +179,11 @@ import DatasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 import config from "@/config";
+import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { useToastStore } from "@/stores/toast";
+
 const toast = useToastStore();
+useSearchKeyShortcut();
 
 const props = defineProps({
   dtype: String,
@@ -216,15 +220,13 @@ const columns = ref([
     sortable: true,
   },
   {
-    key: "states",
+    key: "is_staged",
     name: "staged",
     label: "staged",
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
     width: 40,
-    sortingFn: (a, b) =>
-      DatasetService.is_staged(a) - DatasetService.is_staged(b),
   },
   {
     key: "updated_at",

@@ -18,6 +18,9 @@ const roles = [{
 
 const admins = [
   {
+    name: 'Rishi Pandey',
+    username: 'ripandey',
+  }, {
     name: 'Charles Brandt',
     username: 'ccbrandt',
   }, {
@@ -75,12 +78,14 @@ const datasets = [
     du_size: 160612542453,
     size: 160612394997,
     description: null,
+    is_staged: true,
     origin_path: '/N/scratch/scauser/bs_test/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     metadata: {
       num_genome_files: 60,
       report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
+      stage_alias: 'ea497ac769f2236b6cd9ae70f288a008',
     },
   },
   {
@@ -127,6 +132,7 @@ const datasets = [
     du_size: 137206108342,
     size: 137205924022,
     description: null,
+    is_staged: true,
     origin_path: '/N/scratch/scauser/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
@@ -144,6 +150,7 @@ const datasets = [
     du_size: 87839405520,
     size: 87835338192,
     description: null,
+    is_staged: true,
     origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
     metadata: {
@@ -311,6 +318,39 @@ const project_contact_assoc = [
   },
 ];
 
+const adni_imaging = [
+  {
+    "subject_id": "002_S_0295",
+    "project": "ADNI",
+    "phase": "ADNI 1",
+    "sex": "M",
+    "weight": "74.5",
+    "research_group": "CN",
+    "apoe_a1": "3",
+    "apoe_a2": "4",
+    "visit": "ADNI Screening",
+    "study_date": "4/18/2006",
+    "archive_date": "4/18/2006",
+    "age": "84.9",
+    "global_cdr": "0.0",
+    "npiq_total_score": "",
+    "mmse_total_score": "28.0",
+    "gdscale_total_score": "1.0",
+    "faq_total_score": "",
+    "modality": "MRI",
+    "description": "B1-Calibration Body",
+    "type": "Original",
+    "imaging_protocol": "Acquisition Plane=SAGITTAL;Slice Thickness=2.5;Matrix Z=92.0;Acquisition Type=3D;Manufacturer=GE MEDICAL SYSTEMS;Mfg Model=SIGNA EXCITE;Field Strength=1.5;Weighting=T1",
+    "image_id": "13710",
+    "structure": "Brain",
+    "laterality": "Both",
+    "image_type": "",
+    "registration": "native",
+    "tissue": "All",
+    "rand_id": "208716920568690824746"
+  },
+];
+
 module.exports = {
   roles,
   admins,
@@ -325,4 +365,5 @@ module.exports = {
   project_user_assoc,
   project_dataset_assoc,
   project_contact_assoc,
+  adni_imaging,
 };

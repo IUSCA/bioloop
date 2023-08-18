@@ -13,7 +13,11 @@
           placeholder="Search projects by name, associated dataset names, and user names."
           outline
           clearable
-        />
+        >
+          <template #prependInner>
+            <Icon icon="material-symbols:search" class="text-xl" />
+          </template>
+        </va-input>
       </div>
 
       <!-- create button -->
@@ -199,7 +203,6 @@ const columns = [
 ];
 
 function customFilteringFn(searchText, { name, users, datasets }) {
-  console.log("filtering", { searchText });
   return (
     searchText === "" ||
     (name || "").toLowerCase().includes(searchText) ||

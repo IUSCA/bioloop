@@ -4,6 +4,7 @@ const path = require('path');
 const jsonwt = require('jsonwebtoken');
 const _ = require('lodash/fp');
 const config = require('config');
+const { OAuth2Client } = require('@badgateway/oauth2-client');
 
 const logger = require('./logger');
 const userService = require('./user');
@@ -48,9 +49,25 @@ function checkJWT(token) {
   }
 }
 
+const oAuth2DownloadClient = new OAuth2Client({
+  // The base URI of your OAuth2 server
+  server: config.get('oauth.base_url'),
+  // OAuth2 client id
+  clientId: config.get('oauth.download.client_id'),
+  clientSecret: config.get('oauth.download.client_secret'),
+  tokenEndpoint: 'oauth/token',
+});
+
+function get_download_token(file_path) {
+  return oAuth2DownloadClient.clientCredentials({
+    scope: [`${config.get('oauth.download.scope_prefix')}${file_path}`],
+  });
+}
+
 module.exports = {
   onLogin,
   issueJWT,
   checkJWT,
   get_user_profile,
+  get_download_token,
 };

@@ -1,27 +1,5 @@
 <template>
-  <va-sidebar>
-    <va-sidebar-item to="/">
-      <va-list>
-        <va-list-item>
-          <va-list-item-section icon>
-            <img class="w-12 h-12" src="/logo.svg" />
-          </va-list-item-section>
-
-          <va-list-item-section>
-            <va-list-item-label class="text-3xl">
-              {{ config.appTitle }}
-            </va-list-item-label>
-
-            <va-list-item-label v-if="auth.user?.username">
-              Logged in as {{ auth.user.username }}
-            </va-list-item-label>
-          </va-list-item-section>
-        </va-list-item>
-      </va-list>
-    </va-sidebar-item>
-
-    <va-divider />
-
+  <va-sidebar :minimized="props.isSidebarCollapsed" class="pt-2">
     <va-sidebar-item
       v-for="(item, i) in user_items"
       :key="i"
@@ -30,7 +8,7 @@
     >
       <va-sidebar-item-content>
         <Icon :icon="item.icon" class="text-2xl" />
-        <!-- User can hide item with css if he wants -->
+        <!-- User can hide item with css if they want -->
         <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
       </va-sidebar-item-content>
     </va-sidebar-item>
@@ -47,7 +25,7 @@
       >
         <va-sidebar-item-content>
           <Icon :icon="item.icon" class="text-2xl" />
-          <!-- User can hide item with css if he wants -->
+          <!-- User can hide item with css if they want -->
           <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
@@ -65,7 +43,7 @@
       >
         <va-sidebar-item-content>
           <Icon :icon="item.icon" class="text-2xl" />
-          <!-- User can hide item with css if he wants -->
+          <!-- User can hide item with css if they want -->
           <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
@@ -81,7 +59,7 @@
     >
       <va-sidebar-item-content>
         <Icon :icon="item.icon" class="text-2xl" />
-        <!-- User can hide item with css if he wants -->
+        <!-- User can hide item with css if they want -->
         <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
       </va-sidebar-item-content>
     </va-sidebar-item>
@@ -89,8 +67,9 @@
 </template>
 
 <script setup>
-import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
+
+const props = defineProps({ isSidebarCollapsed: Boolean });
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -105,9 +84,9 @@ function isActive(path) {
 
 const user_items = ref([
   {
-    icon: "mdi-flask",
-    title: "Projects",
-    path: "/projects",
+    icon: "mdi-alpha-a-circle",
+    title: "ADNI",
+    path: "/adni",
   },
   {
     icon: "mdi-database",
@@ -137,11 +116,6 @@ const operator_items = ref([
     title: "Dashboard",
     path: "/dashboard",
   },
-  // {
-  //   icon: "mdi-file-lock",
-  //   title: "Data Products",
-  //   path: "/dataproducts",
-  // },
   // {
   //   icon: "mdi-transition",
   //   title: "Conversions",
@@ -184,8 +158,6 @@ const operator_items = ref([
   // },
 ]);
 
-const admin_items = ref([]);
-
 const bottom_items = ref([
   {
     icon: "mdi-information",
@@ -203,4 +175,13 @@ const bottom_items = ref([
     path: "/auth/logout",
   },
 ]);
+
+const admin_items = ref([]);
 </script>
+
+<style>
+/* In minimized state, the default right margin is making the icons smaller */
+aside.va-sidebar--minimized .va-sidebar__item__content > * {
+  margin-right: 0;
+}
+</style>

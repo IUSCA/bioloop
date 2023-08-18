@@ -8,13 +8,14 @@ YEAR = datetime.datetime.now().year
 AUTH_TOKEN = os.environ['AUTH_TOKEN']
 QUEUE_PASSWORD = os.environ['QUEUE_PASS']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
+ALIAS_SALT = os.environ['ALIAS_SALT']
 
 ONE_HOUR = 60 * 60
 ONE_GIGABYTE = 1024 * 1024 * 1024
 FIVE_MINUTES = 5 * 60
 
 config = {
-    'app_id': 'bioloop-dev.sca.iu.edu',
+    'app_id': 'cfndap-test.sca.iu.edu',
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
@@ -33,7 +34,9 @@ config = {
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
-        }
+        },
+        'download_dir': '/path/to/download_dir',
+        'root': '/path/to/root'
     },
     'registration': {
         'RAW_DATA': {
@@ -45,10 +48,18 @@ config = {
             'rejects': ['.snapshots'],
         },
         'recency_threshold_seconds': ONE_HOUR,
-        'minimum_project_size': ONE_GIGABYTE,
-        'wait_between_scans_seconds': FIVE_MINUTES,
+        'minimum_dataset_size': ONE_GIGABYTE,
+        'wait_between_stability_checks_seconds': FIVE_MINUTES,
+        'poll_interval_seconds': 10
     },
-    'service_user': 'bioloopuser',
+    'service_user': 'scauser',
+    'stage': {
+        'purge': {
+            'days_to_live': 20,
+            'max_purges': 10
+        },
+        'alias_salt': ALIAS_SALT
+    },
     'workflow_registry': {
         'integrated': {
             'steps': [
@@ -71,10 +82,6 @@ config = {
                 {
                     'name': 'validate',
                     'task': 'validate_dataset'
-                },
-                {
-                    'name': 'generate_reports',
-                    'task': 'generate_reports'
                 }
             ]
         }
