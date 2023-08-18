@@ -331,7 +331,7 @@ const delete_archive_modal = ref({
 watch(
   () => dataset.value.name,
   () => {
-    breadcrumbsStore.setBreadcrumbs({
+    breadcrumbsStore.pushNavItem({
       label: dataset.value.name,
       to: route.params.fullPath,
     });

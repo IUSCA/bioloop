@@ -4,9 +4,9 @@ import { defineStore } from "pinia";
 export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   const breadcrumbs = ref([]);
 
-  function setBreadcrumbs(value) {
+  function pushNavItem(value) {
     breadcrumbs.value.push(value);
   }
 
-  return { breadcrumbs, setBreadcrumbs };
+  return { breadcrumbs, pushNavItem };
 });

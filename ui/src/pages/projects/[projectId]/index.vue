@@ -179,7 +179,7 @@ const data_loading = ref(false);
 watch(
   () => project.value.name,
   () => {
-    breadcrumbsStore.setBreadcrumbs({
+    breadcrumbsStore.pushNavItem({
       label: project.value.name,
       to: route.params.fullPath,
     });
