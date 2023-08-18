@@ -1,9 +1,6 @@
 <template>
   <va-inner-loading :loading="data_loading">
-    <!-- title -->
-    <div class="flex items-center mb-4">
-      <span class="text-3xl flex-none"> Project: {{ project.name }} </span>
-    </div>
+    <va-divider />
 
     <!-- body -->
     <div class="flex flex-col gap-3">

@@ -1,13 +1,6 @@
 <template>
   <va-inner-loading :loading="loading">
-    <!-- Title -->
-    <div>
-      <span class="text-2xl capitalize" v-if="dataset.type">
-        {{ dataset.type.replace("_", " ").toLowerCase() }} :
-      </span>
-      <span class="text-3xl"> {{ dataset.name }} </span>
-      <va-divider />
-    </div>
+    <va-divider />
 
     <!-- Content -->
     <div class="flex flex-col gap-3">
