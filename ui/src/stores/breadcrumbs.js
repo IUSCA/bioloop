@@ -19,15 +19,30 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     breadcrumbs.value.pop();
   }
 
+  function resetNavItems() {
+    breadcrumbs.value = [];
+  }
+
   function updateNavItems(to, from) {
-    // If user is going from the */datasets* path to outside of the */datasets* path, or
-    // from the /projects* path to outside of the /projects* path, the last breadcrumb
-    // nav item can be removed
+    // If user is going from /projects/:projectId/datasets/:datasetId to /projects/:projectId,
+    // remove the dataset's entry in the breadcrumb nav
     if (
-      (from.params.datasetId && !to.params.datasetId) ||
-      (from.params.projectId && !to.params.projectId)
+      from.params.projectId &&
+      from.params.datasetId &&
+      !to.params.datasetId
     ) {
       popNavItem();
+    }
+    // If user is going from the /datasets* path to outside of the /datasets* path, or
+    // from the /projects* path to outside of the /projects* path, the breadcrumb items
+    // can be reset
+    if (
+      (from.params.datasetId &&
+        !from.params.projectId &&
+        !to.params.datasetId) ||
+      (from.params.projectId && !to.params.projectId)
+    ) {
+      resetNavItems();
     }
   }
   return {
