@@ -13,8 +13,4 @@
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 
 const breadcrumbsStore = useBreadcrumbsStore();
-
-// const breadcrumbs = computed(() => {
-//   return route.meta.breadcrumbs;
-// });
 </script>

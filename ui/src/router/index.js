@@ -1,22 +1,21 @@
 import { createRouter, createWebHistory } from "vue-router";
-// import generatedRoutes, onRoutesGenerated from "virtual:generated-pages";
 import generatedRoutes from "virtual:generated-pages";
 import { setupLayouts } from "virtual:generated-layouts";
 import { isLiveToken, setIntersection } from "@/services/utils";
 import config from "@/config";
-// import dataset from "@/pages/datasets/dataset.vue";
+import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 
 // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
 const routes = setupLayouts(generatedRoutes);
-// console.log("routes", routes);
-// routes.push({
-//   path: "/projects/:projectId/datasets/:datasetId",
-//   component: [datasetId],
-// });
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+});
+
+router.beforeEach((to, from) => {
+  const breadcrumbs = useBreadcrumbsStore();
+  breadcrumbs.updateNavItems(to, from);
 });
 
 const token = ref(useLocalStorage("token", ""));

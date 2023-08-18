@@ -328,6 +328,12 @@ const delete_archive_modal = ref({
   input: "",
 });
 
+// If another dataset is to be rendered, pop the current dataset's details
+// from the breadcrumb nav
+onBeforeRouteUpdate(() => {
+  breadcrumbsStore.popNavItem();
+});
+
 watch(
   () => dataset.value.name,
   () => {

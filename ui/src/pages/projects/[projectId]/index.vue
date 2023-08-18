@@ -179,12 +179,38 @@ const data_loading = ref(false);
 watch(
   () => project.value.name,
   () => {
-    breadcrumbsStore.pushNavItem({
-      label: project.value.name,
-      to: route.fullPath,
-    });
+    const currentBreadcrumbNavItems = breadcrumbsStore.breadcrumbs;
+    // If this project's path doesn't already exist in the current breadcrumb nav, add it
+    if (
+      (
+        currentBreadcrumbNavItems.filter(
+          (item) => item.label === project.value.name
+        ) || []
+      ).length === 0
+    ) {
+      breadcrumbsStore.pushNavItem({
+        label: project.value.name,
+        to: route.fullPath,
+      });
+    }
   }
 );
+
+// not called when going from /project/:id to /project/:id/dataset/:id
+// onBeforeRouteUpdate(() => {
+//   breadcrumbsStore.popNavItem();
+// });
+
+// called when going from /project/:id to /project/:id/dataset/:id
+// onBeforeRouteLeave(() => {
+//   // console.log("onBeforeRouteLeaveL: route.params");
+//   // console.log(route.params);
+
+//   // If route has a projectId
+//   if (!route.params.projectId) {
+//     breadcrumbsStore.popNavItem();
+//   }
+// });
 
 function fetch_project() {
   data_loading.value = true;
