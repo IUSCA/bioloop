@@ -396,18 +396,6 @@ function fetch_dataset(show_loading = false) {
     });
 }
 
-// onMounted(() => {
-//   console.log("[datasetId].vue has been mounted");
-//   console.log(props);
-// });
-
-// watch(
-//   () => props.class,
-//   () => {
-//     console.log(`(datasetId) class is : ${props.class}`);
-//   }
-// );
-
 // initial data fetch
 watch(
   [() => props.datasetId],
