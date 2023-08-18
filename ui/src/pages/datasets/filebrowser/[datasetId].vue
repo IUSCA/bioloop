@@ -1,9 +1,5 @@
 <template>
   <div>
-    <span class="text-xl capitalize" v-if="dataset.type">
-      {{ dataset.type.replace("_", " ").toLowerCase() }}:
-    </span>
-    <span class="text-2xl"> {{ dataset.name }} Files</span>
     <va-divider />
   </div>
   <FileBrowser
