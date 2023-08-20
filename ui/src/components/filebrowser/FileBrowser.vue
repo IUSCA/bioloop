@@ -119,7 +119,7 @@ function search_files() {
 // );
 
 watch(
-  pwd,
+  () => pwd,
   () => {
     // navigating to a directory disables the search mode
     store.resetFilters();

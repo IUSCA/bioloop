@@ -2,25 +2,41 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 
 export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
-  const breadcrumbs = ref([]);
+  const appBreadcrumbs = ref([]);
+  const fileBrowserBreadcrumbsPath = ref("");
+
+  function setFileBrowserBreadcrumbsPath(path) {
+    fileBrowserBreadcrumbsPath.value = path;
+  }
+
+  const fileBrowserBreadcrumbsItems = computed(() => {
+    if (fileBrowserBreadcrumbsPath.value === null) {
+      return [];
+    }
+    const parts = fileBrowserBreadcrumbsPath.value.split("/");
+    return parts.map((t, i) => ({
+      label: t,
+      rel_path: parts.slice(0, i + 1).join("/"),
+    }));
+  });
 
   // function logNavItems() {
   //   console.log("nav item are:");
-  //   for (const item in breadcrumbs.value) {
+  //   for (const item in appBreadcrumbs.value) {
   //     console.log(item);
   //   }
   // }
 
   function pushNavItem(value) {
-    breadcrumbs.value.push(value);
+    appBreadcrumbs.value.push(value);
   }
 
   function popNavItem() {
-    breadcrumbs.value.pop();
+    appBreadcrumbs.value.pop();
   }
 
   function resetNavItems() {
-    breadcrumbs.value = [];
+    appBreadcrumbs.value = [];
   }
 
   function updateNavItems(to, from) {
@@ -45,11 +61,15 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       resetNavItems();
     }
   }
+
   return {
-    breadcrumbs,
+    appBreadcrumbs,
     pushNavItem,
     popNavItem,
     updateNavItems,
+    fileBrowserBreadcrumbsItems,
+    fileBrowserBreadcrumbsPath,
+    setFileBrowserBreadcrumbsPath,
     // logNavItems
   };
 });

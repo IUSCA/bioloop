@@ -176,7 +176,7 @@ const data_loading = ref(false);
 watch(
   () => project.value.name,
   () => {
-    const currentBreadcrumbNavItems = breadcrumbsStore.breadcrumbs;
+    const currentBreadcrumbNavItems = breadcrumbsStore.appBreadcrumbs;
     // If this project's path doesn't already exist in the current breadcrumb nav, add it
     if (
       (
