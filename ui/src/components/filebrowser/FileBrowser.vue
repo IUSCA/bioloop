@@ -101,6 +101,23 @@ function search_files() {
     });
 }
 
+// watch(
+//   () => props.datasetId,
+//   () => {
+//     datasetService
+//       .getById({ id: props.datasetId, workflows: false })
+//       .then((res) => {
+//         dataset.value = res.data;
+//       })
+//       .catch((err) => {
+//         console.error(err);
+//         if (err?.response?.status == 404)
+//           toast.error("Could not find the dataset");
+//         else toast.error("Something went wrong. Could not fetch dataset");
+//       });
+//   }
+// );
+
 watch(
   pwd,
   () => {

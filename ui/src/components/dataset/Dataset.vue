@@ -26,9 +26,7 @@
                 <va-button
                   v-if="dataset.num_files"
                   preset="primary"
-                  @click="
-                    router.push(`/datasets/filebrowser/${props.datasetId}`)
-                  "
+                  @click="router.push(`${route.path}/filebrowser`)"
                   class="flex-none"
                   color="#A020F0"
                 >
