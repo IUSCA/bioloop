@@ -5,8 +5,9 @@
       :key="`${item}-${index}`"
       :label="item.label"
       :to="item.to"
-    />
-    <!-- <i-mdi-folder-home class="hover:text-blue-600" v-if="" /> -->
+    >
+      <va-icon :name="item.icon" v-if="!!item.icon" />
+    </va-breadcrumbs-item>
   </va-breadcrumbs>
 </template>
 

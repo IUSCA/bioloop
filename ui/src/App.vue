@@ -18,14 +18,11 @@ import { useBreakpoint } from "vuestic-ui";
 import { useAuthStore } from "@/stores/auth";
 import { useToastStore } from "@/stores/toast";
 import { useUIStore } from "@/stores/ui";
-import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
 
-const breadcrumbs = useBreadcrumbsStore();
-const { applyPreset, colors } = useColors();
 const toast = useToastStore();
 toast.setup(useToast());
 
@@ -34,7 +31,6 @@ const isDark = useDark();
 onMounted(() => {
   setupTheme();
   setViewType();
-  breadcrumbs.pushNavItem({ label: "Home", to: "/" });
 });
 
 const setViewType = () => {

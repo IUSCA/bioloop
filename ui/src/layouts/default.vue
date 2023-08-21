@@ -25,11 +25,17 @@
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
 import { useUIStore } from "@/stores/ui";
+import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
+const breadcrumbs = useBreadcrumbsStore();
 
 let isSidebarCollapsed = ref(false);
+
+onMounted(() => {
+  breadcrumbs.pushNavItem({ icon: "home", to: "/" });
+});
 
 watch(
   () => breakpoint.current,
