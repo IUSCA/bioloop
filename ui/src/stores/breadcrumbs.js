@@ -24,13 +24,6 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     }));
   });
 
-  // function logNavItems() {
-  //   console.log("nav item are:");
-  //   for (const item in appBreadcrumbs.value) {
-  //     console.log(item);
-  //   }
-  // }
-
   function pushNavItem(value) {
     appBreadcrumbs.value.push(value);
   }
@@ -44,29 +37,28 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   }
 
   function updateNavItems(to, from) {
+    // Navigating away the FileBrowser view
     if (from.path.includes("/filebrowser")) {
       resetFileBrowserBreadcrumbItems();
     }
 
-    // If user is going from /projects/:projectId/datasets/:datasetId to /projects/:projectId,
-    // remove the dataset's entry in the breadcrumb nav
-    if (
-      from.params.projectId &&
-      from.params.datasetId &&
-      !to.params.datasetId
-    ) {
+    // Navigating from Project view to outside the Project view
+    if (from.params.projectId && !to.params.projectId) {
+      resetNavItems();
+    }
+
+    // Navigating from Dataset view to outside the Dataset view
+    if (from.params.datasetId && !to.params.datasetId) {
       popNavItem();
     }
-    // If user is going from the /datasets* path to outside of the /datasets* path, or
-    // from the /projects* path to outside of the /projects* path, the breadcrumb items
-    // can be reset
+
+    // Navigating from one datasets to another
     if (
-      (from.params.datasetId &&
-        !from.params.projectId &&
-        !to.params.datasetId) ||
-      (from.params.projectId && !to.params.projectId)
+      from.params.datasetId &&
+      to.params.datasetId &&
+      from.params.datasetId !== to.params.datasetId
     ) {
-      resetNavItems();
+      popNavItem();
     }
   }
 
@@ -79,6 +71,5 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     fileBrowserBreadcrumbsPath,
     setFileBrowserBreadcrumbsPath,
     resetFileBrowserBreadcrumbItems,
-    // logNavItems
   };
 });
