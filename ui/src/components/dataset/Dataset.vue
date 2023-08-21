@@ -328,10 +328,20 @@ onBeforeRouteUpdate(() => {
 watch(
   () => dataset.value.name,
   () => {
+    const currentBreadcrumbNavItems = breadcrumbsStore.appBreadcrumbs;
+    // If this dataset's path doesn't already exist in the current breadcrumb nav, add it
+    if (
+      (
+        currentBreadcrumbNavItems.filter(
+          (item) => item.label === dataset.value.name
+        ) || []
+      ).length === 0
+    ) {
     breadcrumbsStore.pushNavItem({
       label: dataset.value.name,
       to: route.fullPath,
     });
+  }
   }
 );
 
