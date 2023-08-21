@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 
 export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   const appBreadcrumbs = ref([]);
-  const fileBrowserBreadcrumbsPath = ref("");
+  const fileBrowserBreadcrumbsPath = ref(null);
 
   function setFileBrowserBreadcrumbsPath(path) {
     fileBrowserBreadcrumbsPath.value = path;
