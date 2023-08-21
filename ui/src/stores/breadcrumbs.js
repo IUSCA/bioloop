@@ -9,6 +9,10 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     fileBrowserBreadcrumbsPath.value = path;
   }
 
+  function resetFileBrowserBreadcrumbItems() {
+    setFileBrowserBreadcrumbsPath(null);
+  }
+
   const fileBrowserBreadcrumbsItems = computed(() => {
     if (fileBrowserBreadcrumbsPath.value === null) {
       return [];
@@ -40,6 +44,10 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   }
 
   function updateNavItems(to, from) {
+    if (from.path.includes("/filebrowser")) {
+      resetFileBrowserBreadcrumbItems();
+    }
+
     // If user is going from /projects/:projectId/datasets/:datasetId to /projects/:projectId,
     // remove the dataset's entry in the breadcrumb nav
     if (
@@ -70,6 +78,7 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     fileBrowserBreadcrumbsItems,
     fileBrowserBreadcrumbsPath,
     setFileBrowserBreadcrumbsPath,
+    resetFileBrowserBreadcrumbItems,
     // logNavItems
   };
 });
