@@ -27,7 +27,12 @@
                   v-if="dataset.num_files"
                   preset="primary"
                   @click="
-                    router.push(`/datasets/filebrowser/${props.datasetId}`)
+                    router.push(
+                      `${route.path.substr(
+                        0,
+                        route.path.lastIndexOf('/')
+                      )}/filebrowser/${props.datasetId}`
+                    )
                   "
                   class="flex-none"
                   color="#A020F0"
