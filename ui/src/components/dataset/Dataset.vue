@@ -324,7 +324,7 @@ const delete_archive_modal = ref({
 watch(
   () => dataset.value.name,
   () => {
-    const currentBreadcrumbNavItems = breadcrumbsStore.appBreadcrumbs;
+    const currentBreadcrumbNavItems = breadcrumbsStore.breadcrumbs;
     // If this dataset's path doesn't already exist in the current breadcrumb nav, add it
     if (
       (
