@@ -56,15 +56,16 @@ def make_retry_adapter():
 
 # https://stackoverflow.com/a/51026159/2580077
 class APIServerSession(requests.Session):
-    def __init__(self):
+    def __init__(self, enable_retry: bool = True):
         super().__init__()
         # Every step in the workflow calls this API at least twice
         # Failing a long run step because the API is momentarily down for maintenance is wasteful
         # Retry adapter will keep trying to re-connect on connection and other transient errors up to 10m30s
-        adapter = make_retry_adapter()
-        # noinspection HttpUrlsUsage
-        self.mount("http://", adapter)
-        self.mount("https://", adapter)
+        if enable_retry:
+            adapter = make_retry_adapter()
+            # noinspection HttpUrlsUsage
+            self.mount("http://", adapter)
+            self.mount("https://", adapter)
         self.base_url = config['api']['base_url']
         self.timeout = (config['api']['conn_timeout'], config['api']['read_timeout'])
         self.auth_token = config['api']['auth_token']
@@ -94,8 +95,8 @@ def int_to_str(d: dict, key: str):
 
 
 def dataset_getter(dataset: dict):
-    DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
-    DATE_KEYS = ['created_at', 'updated_at']
+    date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
+    date_keys = ['created_at', 'updated_at']
 
     # convert du_size and size from string to int
     if dataset is None:
@@ -106,10 +107,10 @@ def dataset_getter(dataset: dict):
     dataset['files'] = [str_to_int(f, 'size') for f in dataset.get('files', [])]
 
     # convert date strings to date objects
-    for date_key in DATE_KEYS:
+    for date_key in date_keys:
         date_str = dataset.get(date_key, '')
         try:
-            dataset[date_key] = datetime.strptime(date_str, DATE_FORMAT)
+            dataset[date_key] = datetime.strptime(date_str, date_format)
         except ValueError:
             dataset[date_key] = None
     return dataset
@@ -169,10 +170,10 @@ def add_files_to_dataset(dataset_id, files: list[dict]):
 
 def upload_report(dataset_id, report_filename):
     filename = report_filename.name
-    fileobj = open(report_filename, 'rb')
+    file_obj = open(report_filename, 'rb')
     with APIServerSession() as s:
         r = s.put(f'datasets/{dataset_id}/report', files={
-            'report': (filename, fileobj)
+            'report': (filename, file_obj)
         })
         r.raise_for_status()
 
@@ -203,6 +204,12 @@ def add_workflow_to_dataset(dataset_id, workflow_id):
         r = s.post(f'datasets/{dataset_id}/workflows', json={
             'workflow_id': workflow_id
         })
+        r.raise_for_status()
+
+
+def post_worker_logs(workflow_id: str, logs: list[dict]):
+    with APIServerSession(enable_retry=False) as s:
+        r = s.post(f'workflows/{workflow_id}/logs', json=logs)
         r.raise_for_status()
 
 

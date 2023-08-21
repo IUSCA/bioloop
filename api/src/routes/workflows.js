@@ -94,6 +94,14 @@ router.delete(
   ),
 );
 
+function sanitize_timestamp(t) {
+  if (typeof (t) === 'string') {
+    const d = new Date(t);
+    // eslint-disable-next-line no-restricted-globals
+    if (!isNaN(d)) return d;
+  }
+}
+
 // make sure that the request body is array of objects which at least will have a "message" key
 const append_log_schema = {
   '0.message': {
@@ -112,8 +120,9 @@ router.post(
         const {
           timestamp, message, level, pid, task_id, step, tags,
         } = log;
+
         return {
-          timestamp,
+          timestamp: sanitize_timestamp(timestamp),
           message,
           level,
           pid,

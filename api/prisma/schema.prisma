@@ -234,12 +234,12 @@ model worker_log {
   timestamp   DateTime  @default(now()) @db.Timestamp(6)
   message     String
   level       String
-  pid         String?
+  pid         Int?
   task_id     String?
   step        String?
   workflow_id String?
   tags        Json?
-  workflow    workflow? @relation(fields: [workflow_id], references: [id])
+  workflow    workflow? @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
 
   @@index([timestamp, workflow_id])
 }
