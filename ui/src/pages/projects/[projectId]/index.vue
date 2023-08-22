@@ -230,6 +230,16 @@ function fetch_project() {
 
 onMounted(() => {
   fetch_project();
+  // setup page's breadcrumb nav
+  const currentBreadcrumbNavItems = breadcrumbsStore.breadcrumbs;
+  if (
+    (
+      currentBreadcrumbNavItems.filter((item) => item.label === "Projects") ||
+      []
+    ).length === 0
+  ) {
+    breadcrumbsStore.pushNavItem({ label: "Projects", to: "/projects" });
+  }
 });
 
 const users = computed(() => {

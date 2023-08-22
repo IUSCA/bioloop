@@ -6,7 +6,8 @@
       :label="item.label"
       :to="item.to"
     >
-      <va-icon :name="item.icon" v-if="!!item.icon" />
+      <!-- <Icon icon="data-matrix" /> -->
+      <Icon :icon="item.icon" v-if="!!item.icon" />
     </va-breadcrumbs-item>
   </va-breadcrumbs>
 </template>
@@ -15,4 +16,11 @@
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 
 const breadcrumbsStore = useBreadcrumbsStore();
+
+watch(
+  () => breadcrumbsStore.breadcrumbs,
+  () => {
+    console.log();
+  }
+);
 </script>

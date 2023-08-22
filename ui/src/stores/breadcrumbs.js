@@ -25,6 +25,10 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     // Navigating from Dataset view to outside the Dataset view
     if (from.params.datasetId && !to.params.datasetId) {
       popNavItem();
+      // clear the 'Datasets' item from the breadcrumb items
+      breadcrumbs.value = breadcrumbs.value.filter(
+        (item) => item.label !== "Datasets"
+      );
     }
 
     // Navigating from one datasets to another
