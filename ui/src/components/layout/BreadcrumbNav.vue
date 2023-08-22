@@ -9,6 +9,7 @@
       <Icon :icon="item.icon" v-if="!!item.icon" />
     </va-breadcrumbs-item>
   </va-breadcrumbs>
+  <va-divider v-if="showBreadcrumbNav" />
 </template>
 
 <script setup>

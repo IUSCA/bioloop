@@ -1,7 +1,5 @@
 <template>
   <va-inner-loading :loading="loading">
-    <va-divider />
-
     <!-- Content -->
     <div class="flex flex-col gap-3">
       <!-- Associated datasets -->
