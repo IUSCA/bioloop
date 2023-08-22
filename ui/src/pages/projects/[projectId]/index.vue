@@ -172,15 +172,12 @@ const projectStore = useProjectStore();
 const project = computed(() => projectStore.project);
 const data_loading = ref(false);
 
-watch(
-  () => project.name,
-  () => {
-    breadcrumbsStore.pushNavItem({
-      label: project.name,
-      to: route.fullPath,
-    });
-  }
-);
+watch(project, () => {
+  breadcrumbsStore.pushNavItem({
+    label: project.value.name,
+    to: route.fullPath,
+  });
+});
 
 function fetch_project() {
   data_loading.value = true;
