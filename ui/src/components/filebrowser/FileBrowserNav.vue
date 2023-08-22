@@ -1,11 +1,11 @@
 <template>
   <va-breadcrumbs>
-    <va-breadcrumbs-item
-      class="text-xl cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700 rounded-full p-2"
+    <!-- <va-breadcrumbs-item
+      class="text-xl cursor-pointer hover:bg-slate-300 rounded-full p-2"
       @click="emit('update:pwd', '')"
     >
       <i-mdi-folder-home class="hover:text-blue-600" />
-    </va-breadcrumbs-item>
+    </va-breadcrumbs-item> -->
     <va-breadcrumbs-item
       class="text-xl cursor-pointer"
       v-if="path_items.length > 3"

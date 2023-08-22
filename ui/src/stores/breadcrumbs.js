@@ -8,6 +8,22 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     breadcrumbs.value = breadcrumbs.value.slice(0, level + 1);
   }
 
+  function removeNavItem(item) {
+    // Remove the item that matches the given icon's label, icon, or to
+    let ret = breadcrumbs.value.map((e) => {
+      if (item.icon) {
+        return item.icon !== e.icon && e;
+      }
+      if (item.label) {
+        return item.label !== e.label && e;
+      }
+      if (item.to) {
+        return item.to !== e.to && e;
+      }
+    });
+    breadcrumbs.value = ret;
+  }
+
   function pushNavItem({ label, icon, to }, insertAt) {
     const item = { label, icon, to };
     const matchingBreadcrumbItems = computed(() => {
@@ -48,6 +64,13 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     }
     if (to.path.includes("/dataproducts")) {
       pushNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
+    }
+    if (to.path.includes("/filebrowser")) {
+      pushNavItem({ icon: "mdi-folder-home" });
+    } else {
+      if (from.path.includes("/filebrowser")) {
+        removeNavItem({ icon: "mdi-folder-home" });
+      }
     }
 
     // Navigating from Project view to outside the Project view
