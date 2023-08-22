@@ -1,7 +1,6 @@
 <template>
-  <h2 class="text-3xl font-bold">Profile</h2>
+  <h2 class="text-3xl mb-4">Profile</h2>
   <div>
-    <div class="py-3"></div>
     <va-card>
       <va-card-content>
         <va-form class="grid grid-cols-2 gap-5">
