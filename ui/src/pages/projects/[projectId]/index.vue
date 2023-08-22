@@ -183,7 +183,7 @@ function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: project.id || route.params.projectId,
+      id: project.value.id || route.params.projectId,
       forSelf: !auth.canOperate,
     })
     .then((res) => {
@@ -203,14 +203,14 @@ onMounted(() => {
 });
 
 const users = computed(() => {
-  return (project.users || []).map((obj) => ({
+  return (project.value.users || []).map((obj) => ({
     ...obj.user,
     assigned_at: obj.assigned_at,
   }));
 });
 
 const datasets = computed(() => {
-  return (project.datasets || []).map((obj) => ({
+  return (project.value.datasets || []).map((obj) => ({
     ...obj.dataset,
     assigned_at: obj.assigned_at,
   }));
@@ -221,18 +221,18 @@ const datasets = computed(() => {
 const editModal = ref(null);
 
 function openModalToEditProject() {
-  const { name, description, browser_enabled, funding } = project;
+  const { name, description, browser_enabled, funding } = project.value;
   projectFormStore.$patch({ name, description, browser_enabled, funding });
   editModal.value.show();
 }
 
 function handleEditUpdate() {
-  const old_slug = project.slug;
+  const old_slug = project.value.slug;
   // fetch project by id in project object or id in props
   // this always works even if the slug has changed
   fetch_project().then(() => {
     // if slug changed, the url is invalid, navigate to new url
-    const new_slug = project.slug;
+    const new_slug = project.value.slug;
     if (old_slug !== new_slug) {
       router.push({
         path: `/projects/${new_slug}`,
