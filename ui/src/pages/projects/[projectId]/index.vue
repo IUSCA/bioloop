@@ -159,54 +159,38 @@ import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
+import { useProjectStore } from "@/stores/projects/project";
 
-// const props = defineProps(["projectId"]);
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const toast = useToastStore();
 const breadcrumbsStore = useBreadcrumbsStore();
 const projectFormStore = useProjectFormStore();
+const projectStore = useProjectStore();
 
-const project = ref({});
+const project = computed(() => projectStore.project);
 const data_loading = ref(false);
 
 watch(
-  () => project.value.name,
+  () => project.name,
   () => {
     breadcrumbsStore.pushNavItem({
-      label: project.value.name,
+      label: project.name,
       to: route.fullPath,
     });
-    // }
   }
 );
-
-// not called when going from /project/:id to /project/:id/dataset/:id
-// onBeforeRouteUpdate(() => {
-//   breadcrumbsStore.popNavItem();
-// });
-
-// called when going from /project/:id to /project/:id/dataset/:id
-// onBeforeRouteLeave(() => {
-//   // console.log("onBeforeRouteLeaveL: route.params");
-//   // console.log(route.params);
-
-//   // If route has a projectId
-//   if (!route.params.projectId) {
-//     breadcrumbsStore.popNavItem();
-//   }
-// });
 
 function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: project.value?.id || route.params.projectId,
+      id: project.id || route.params.projectId,
       forSelf: !auth.canOperate,
     })
     .then((res) => {
-      project.value = res.data;
+      projectStore.setProject(res.data);
     })
     .catch((err) => {
       console.error(err);
@@ -222,14 +206,14 @@ onMounted(() => {
 });
 
 const users = computed(() => {
-  return (project.value.users || []).map((obj) => ({
+  return (project.users || []).map((obj) => ({
     ...obj.user,
     assigned_at: obj.assigned_at,
   }));
 });
 
 const datasets = computed(() => {
-  return (project.value.datasets || []).map((obj) => ({
+  return (project.datasets || []).map((obj) => ({
     ...obj.dataset,
     assigned_at: obj.assigned_at,
   }));
@@ -240,18 +224,18 @@ const datasets = computed(() => {
 const editModal = ref(null);
 
 function openModalToEditProject() {
-  const { name, description, browser_enabled, funding } = project.value;
+  const { name, description, browser_enabled, funding } = project;
   projectFormStore.$patch({ name, description, browser_enabled, funding });
   editModal.value.show();
 }
 
 function handleEditUpdate() {
-  const old_slug = project.value.slug;
+  const old_slug = project.slug;
   // fetch project by id in project object or id in props
   // this always works even if the slug has changed
   fetch_project().then(() => {
     // if slug changed, the url is invalid, navigate to new url
-    const new_slug = project.value.slug;
+    const new_slug = project.slug;
     if (old_slug !== new_slug) {
       router.push({
         path: `/projects/${new_slug}`,
