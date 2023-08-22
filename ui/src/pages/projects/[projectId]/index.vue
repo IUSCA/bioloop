@@ -228,7 +228,9 @@ function fetch_project() {
     });
 }
 
-fetch_project();
+onMounted(() => {
+  fetch_project();
+});
 
 const users = computed(() => {
   return (project.value.users || []).map((obj) => ({
