@@ -5,6 +5,7 @@
       :key="`${item}-${index}`"
       :label="item.label"
       :to="item.to"
+      :disabled="index === breadcrumbsStore.breadcrumbs.length - 1"
     >
       <Icon :icon="item.icon" v-if="!!item.icon" />
     </va-breadcrumbs-item>
