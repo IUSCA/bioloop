@@ -65,6 +65,15 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     if (to.path.includes("/dataproducts")) {
       pushNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
     }
+    if (to.path.includes("/users")) {
+      pushNavItem({ label: "User Management", to: "/users" }, 1);
+    }
+    if (to.path.includes("/about")) {
+      pushNavItem({ label: "About", to: "/about" }, 1);
+    }
+    if (to.path.includes("/profile")) {
+      pushNavItem({ label: "Profile", to: "/profile" }, 1);
+    }
     if (to.path.includes("/filebrowser")) {
       pushNavItem({ icon: "mdi-folder-home" });
     } else {
