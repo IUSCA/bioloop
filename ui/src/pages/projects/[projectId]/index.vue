@@ -176,20 +176,11 @@ const data_loading = ref(false);
 watch(
   () => project.value.name,
   () => {
-    const currentBreadcrumbNavItems = breadcrumbsStore.breadcrumbs;
-    // If this project's path doesn't already exist in the current breadcrumb nav, add it
-    if (
-      (
-        currentBreadcrumbNavItems.filter(
-          (item) => item.label === project.value.name
-        ) || []
-      ).length === 0
-    ) {
-      breadcrumbsStore.pushNavItem({
-        label: project.value.name,
-        to: route.fullPath,
-      });
-    }
+    breadcrumbsStore.pushNavItem({
+      label: project.value.name,
+      to: route.fullPath,
+    });
+    // }
   }
 );
 
@@ -230,16 +221,6 @@ function fetch_project() {
 
 onMounted(() => {
   fetch_project();
-  // setup page's breadcrumb nav
-  const currentBreadcrumbNavItems = breadcrumbsStore.breadcrumbs;
-  if (
-    (
-      currentBreadcrumbNavItems.filter((item) => item.label === "Projects") ||
-      []
-    ).length === 0
-  ) {
-    breadcrumbsStore.pushNavItem({ label: "Projects", to: "/projects" });
-  }
 });
 
 const users = computed(() => {
