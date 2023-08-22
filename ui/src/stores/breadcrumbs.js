@@ -4,6 +4,10 @@ import { defineStore } from "pinia";
 export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   const breadcrumbs = ref([]);
 
+  function resetToLevel(level) {
+    breadcrumbs.value = breadcrumbs.value.slice(0, level + 1);
+  }
+
   function pushNavItem({ label, icon, to }, insertAt) {
     const item = { label, icon, to };
     const matchingBreadcrumbItems = computed(() => {
@@ -16,10 +20,10 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
 
     if (matchingBreadcrumbItems.value.length === 0) {
       if (typeof insertAt === "number") {
-        breadcrumbs.value[insertAt] = item;
-      } else {
-        breadcrumbs.value.push(item);
+        // insert given item at insertAt, clear the remaining array
+        breadcrumbs.value = breadcrumbs.value.slice(0, insertAt);
       }
+      breadcrumbs.value.push(item);
     }
   }
 
@@ -47,20 +51,20 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     }
 
     // Navigating from Project view to outside the Project view
-    if (from.params.projectId && !to.params.projectId) {
-      popNavItem();
+    if (to.path.includes("projects") && !to.params.projectId) {
+      resetToLevel(1);
     }
 
-    // Navigating from Dataset view to outside the Dataset view
-    if (from.params.datasetId && !to.params.datasetId) {
-      popNavItem();
-      // clear the 'Datasets' item from the breadcrumb items
-      breadcrumbs.value = breadcrumbs.value.filter(
-        (item) => item.label !== "Datasets"
-      );
+    // Navigating from Dataset view (within Project view) to some other component
+    if (
+      to.path.includes("projects") &&
+      to.params.projectId &&
+      !to.params.datasetId
+    ) {
+      resetToLevel(2);
     }
 
-    // Navigating from one datasets to another
+    // Navigating from one Dataset to another
     if (
       from.params.datasetId &&
       to.params.datasetId &&
@@ -74,9 +78,5 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     pushNavItem,
     popNavItem,
     updateNavItems,
-    // fileBrowserBreadcrumbsItems,
-    // fileBrowserBreadcrumbsPath,
-    // setFileBrowserBreadcrumbsPath,
-    // resetFileBrowserBreadcrumbItems,
   };
 });
