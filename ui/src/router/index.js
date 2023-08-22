@@ -14,8 +14,8 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from) => {
-  const breadcrumbs = useBreadcrumbsStore();
-  breadcrumbs.updateNavItems(to, from);
+  const breadcrumbsStore = useBreadcrumbsStore();
+  breadcrumbsStore.updateNavItems(to, from);
 });
 
 const token = ref(useLocalStorage("token", ""));
