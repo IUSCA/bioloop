@@ -19,8 +19,8 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     });
 
     if (matchingBreadcrumbItems.value.length === 0) {
+      // clear any array items after insertAt
       if (typeof insertAt === "number") {
-        // insert given item at insertAt, clear the remaining array
         breadcrumbs.value = breadcrumbs.value.slice(0, insertAt);
       }
       breadcrumbs.value.push(item);
@@ -55,13 +55,13 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       resetToLevel(1);
     }
 
-    // Navigating from Dataset view (within Project view) to some other component
-    if (
-      to.path.includes("projects") &&
-      to.params.projectId &&
-      !to.params.datasetId
-    ) {
-      resetToLevel(2);
+    // Navigating from Dataset view to outside the Dataset view
+    if (!to.params.datasetId) {
+      if (to.path.includes("projects") && to.params.projectId) {
+        resetToLevel(2);
+      } else {
+        resetToLevel(1);
+      }
     }
 
     // Navigating from one Dataset to another
