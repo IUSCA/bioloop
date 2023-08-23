@@ -4,10 +4,18 @@
     <div class="flex flex-col">
       <!-- Associated datasets -->
 
-      <assoc-datasets
-        :source_datasets_meta="dataset?.source_datasets"
-        :derived_datasets_meta="dataset?.derived_datasets"
-      />
+      <div
+        class="mb-3"
+        v-if="
+          dataset?.source_datasets?.length > 0 ||
+          dataset?.derived_datasets?.length > 0
+        "
+      >
+        <assoc-datasets
+          :source_datasets_meta="dataset?.source_datasets"
+          :derived_datasets_meta="dataset?.derived_datasets"
+        />
+      </div>
 
       <!-- Dataset Info + Status Cards -->
       <div class="grid gird-cols-1 lg:grid-cols-2 gap-3">
