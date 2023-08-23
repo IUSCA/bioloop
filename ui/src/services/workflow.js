@@ -58,6 +58,27 @@ class WorkflowService {
 
     return pending_steps.length > 0;
   }
+
+  getWorkflowLogs({
+    workflowId,
+    beforeId = null,
+    afterId = null,
+    level = null,
+    pid = null,
+    step = null,
+    taskId = null,
+  }) {
+    return api.get(`/workflows/${workflowId}/logs`, {
+      params: {
+        before_id: beforeId,
+        after_id: afterId,
+        level,
+        pid,
+        step,
+        task_id: taskId,
+      },
+    });
+  }
 }
 
 export default new WorkflowService();

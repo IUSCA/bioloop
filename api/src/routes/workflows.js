@@ -145,11 +145,9 @@ router.get(
   '/:id/logs',
   isPermittedTo('read'),
   validate([
-    query('skip').isInt().toInt().optional()
-      .default(0),
-    query('take').isInt().toInt().optional()
-      .default(100),
-    query('latest').toBoolean().default(false),
+    query('before_id').isInt().toInt().optional(),
+    query('after_id').isInt().toInt().optional(),
+    query('pid').isInt().toInt().optional(),
   ]),
   asyncHandler(
     async (req, res, next) => {
@@ -161,16 +159,45 @@ router.get(
         _.omitBy(_.isNil),
       ])(req.query);
 
+      let id_ordinal_filter = {};
+      if (req.query.before_id && req.query.after_id) {
+        id_ordinal_filter = {
+          AND: [
+            {
+              id: {
+                lt: req.query.before_id,
+              },
+            },
+            {
+              id: {
+                gt: req.query.after_id,
+              },
+            },
+          ],
+        };
+      } else if (req.query.before_id) {
+        id_ordinal_filter = {
+          id: {
+            lt: req.query.before_id,
+          },
+        };
+      } else if (req.query.after_id) {
+        id_ordinal_filter = {
+          id: {
+            gt: req.query.after_id,
+          },
+        };
+      }
+
       const rows = await prisma.worker_log.findMany({
         where: {
           workflow_id: req.params.id,
           ...filters,
+          ...id_ordinal_filter,
         },
         orderBy: {
-          timestamp: req.query.latest ? 'desc' : 'asc',
+          id: 'asc',
         },
-        skip: req.query.skip,
-        take: req.query.take,
       });
 
       res.json(rows);

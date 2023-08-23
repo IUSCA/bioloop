@@ -5,6 +5,8 @@
   --va-popover-content-opacity: 0.9;
   --va-input-bordered-color: rgb(107 114 128);
   --va-list-item-label-caption-color: rgb(148 163 184);
+  --va-checkbox-square-background-color: var(--va-background-element);
+  --va-checkbox-square-border: solid 0.0625rem var(--va-secondary);
 }
 
 input.va-input__content__input {
