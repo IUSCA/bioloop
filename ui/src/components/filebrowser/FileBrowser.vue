@@ -61,6 +61,8 @@ const props = defineProps({
 });
 
 const dataset = computed(() => datasetStore.dataset);
+const project = computed(() => projectStore.project);
+
 const showDownload = computed(
   () => config.file_browser.enable_downloads && dataset.value.is_staged
 );
@@ -71,6 +73,29 @@ const searchResults = ref([]);
 const files = computed(() => {
   return isInSearchMode.value ? searchResults.value : fileList.value;
 });
+
+const setupProjectBreadcrumbs = (project) => {
+  breadcrumbsStore.addNavItem(
+    {
+      label: project.name,
+      to: `/projects/${project.slug}`,
+    },
+    2
+  );
+};
+
+const setupDatasetBreadcrumbs = (dataset) => {
+  breadcrumbsStore.addNavItem(
+    {
+      label: dataset.name,
+      // to: "test",
+      to: `${route.path.slice(0, route.path.indexOf("filebrowser"))}${
+        route.params.datasetId
+      }`,
+    },
+    route.params.projectId ? 4 : 2
+  );
+};
 
 function get_file_list(path) {
   data_loading.value = true;
@@ -118,26 +143,13 @@ function search_files() {
     });
 }
 
-//
 function fetchDatasetAndProject(route) {
-  if (route.params.datasetId) {
+  // Fetch dataset, if it hasn't already been fetched
+  if (parseInt(route.params.datasetId) !== dataset.value.id) {
     datasetService
       .getById({ id: route.params.datasetId, workflows: false })
       .then((res) => {
-        const dataset = res.data;
-        // setup dataset details in store, in case other components need it
-        datasetStore.setDataset(dataset);
-        // setup dataset breadcrumbs
-        breadcrumbsStore.addNavItem(
-          {
-            label: dataset.name,
-            // to: "test",
-            to: `${route.path.slice(0, route.path.indexOf("filebrowser"))}${
-              route.params.datasetId
-            }`,
-          },
-          route.params.projectId ? 4 : 2
-        );
+        datasetStore.setDataset(res.data);
       })
       .catch((err) => {
         console.error(err);
@@ -145,47 +157,38 @@ function fetchDatasetAndProject(route) {
           toast.error("Could not find the dataset");
         else toast.error("Something went wrong. Could not fetch datatset");
       });
+  }
 
-    if (route.params.projectId) {
-      return projectService
-        .getById({
-          id: route.params.projectId,
-          forSelf: !auth.canOperate,
-        })
-        .then((res) => {
-          const project = res.data;
-          // setup project details in store
-          projectStore.setProject(project);
-          // setup project breadcrumbs
-          breadcrumbsStore.addNavItem(
-            {
-              label: project.name,
-              to: `/projects/${project.slug}`,
-            },
-            2
-          );
-        })
-        .catch((err) => {
-          console.error(err);
-          toast.error("Unable to fetch project details");
-        })
-        .finally(() => {
-          data_loading.value = false;
-        });
-    }
+  // Fetch project, if it hasn't already been fetched
+  if (route.params.projectId !== project.value.slug) {
+    projectService
+      .getById({
+        id: route.params.projectId,
+        forSelf: !auth.canOperate,
+      })
+      .then((res) => {
+        projectStore.setProject(res.data);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Unable to fetch project details");
+      })
+      .finally(() => {
+        data_loading.value = false;
+      });
   }
 }
 
 onMounted(() => {
   fetchDatasetAndProject(route);
+  setupDatasetBreadcrumbs(dataset.value);
+  setupProjectBreadcrumbs(project.value);
 });
 
-watch(
-  () => route.path,
-  () => {
-    fetchDatasetAndProject(route);
-  }
-);
+watch([dataset, project], () => {
+  setupDatasetBreadcrumbs(dataset.value);
+  setupProjectBreadcrumbs(project.value);
+});
 
 watch(
   pwd,
