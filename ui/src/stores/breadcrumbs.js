@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 
 export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   const breadcrumbs = ref([]);
-  const breadcrumbsToRender = computed(() =>
+  const breadcrumbNavItems = computed(() =>
     breadcrumbs.value.filter((e) => e !== undefined)
   );
 
@@ -17,6 +17,8 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       );
     });
 
+    // only add item if it doesn't already exist in
+    // the current breadcrumb nav items
     if (matchingBreadcrumbItems.value.length === 0) {
       if (typeof insertAtIndex === "number") {
         if (breadcrumbs.value.length < insertAtIndex) {
@@ -82,8 +84,7 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   }
 
   return {
-    breadcrumbs,
-    breadcrumbsToRender,
+    breadcrumbNavItems,
     addNavItem,
     updateNavItems,
   };

@@ -21,7 +21,7 @@ const breadcrumbsStore = useBreadcrumbsStore();
 let showBreadcrumbNav = ref(true);
 
 const breadcrumbs = computed(() => {
-  return breadcrumbsStore.breadcrumbsToRender;
+  return breadcrumbsStore.breadcrumbNavItems;
 });
 
 onMounted(() => {
