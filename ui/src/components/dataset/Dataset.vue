@@ -345,15 +345,23 @@ watch(retrievedProject, () => {
   configureProjectBreadcrumbs(retrievedProject);
 });
 
+onMounted(() => {
+  configureDatasetBreadcrumbs(dataset.value);
+});
+
 watch(dataset, () => {
+  configureDatasetBreadcrumbs(dataset.value);
+});
+
+const configureDatasetBreadcrumbs = (dataset) => {
   breadcrumbsStore.addNavItem(
     {
-      label: dataset.value.name,
+      label: dataset.name,
       to: route.fullPath,
     },
     route.params.projectId ? 4 : 3
   );
-});
+};
 
 const configureProjectBreadcrumbs = (project) => {
   breadcrumbsStore.addNavItem(
@@ -368,12 +376,12 @@ const configureProjectBreadcrumbs = (project) => {
 watch(
   () => props.datasetId,
   () => {
-    fetch_dataset(true);
+    // If dataset in the URL hasn't been fetched into the dataset store, fetch it
+    if (parseInt(route.params.datasetId) !== dataset.value.id) {
+      fetch_dataset(true);
+    }
     // If project in the URL hasn't been fetched into the project store, fetch it
-    if (
-      Object.keys(retrievedProject.value).length === 0 ||
-      route.params.projectId !== retrievedProject.value.slug
-    ) {
+    if (route.params.projectId !== retrievedProject.value.slug) {
       projectService
         .getById({
           id: route.params.projectId,
