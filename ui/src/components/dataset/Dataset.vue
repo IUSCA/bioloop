@@ -308,15 +308,17 @@ import config from "@/config";
 import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
+import { useDatasetStore } from "@/stores/dataset";
 
 const breadcrumbsStore = useBreadcrumbsStore();
+const datasetStore = useDatasetStore();
 const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
 
 const props = defineProps({ datasetId: String });
 
-const dataset = ref({});
+const dataset = computed(() => datasetStore.dataset);
 const loading = ref(false);
 const stage_modal = ref(false);
 const delete_archive_modal = ref({
@@ -325,7 +327,7 @@ const delete_archive_modal = ref({
 });
 
 watch(
-  () => dataset.value.name,
+  () => dataset,
   () => {
     breadcrumbsStore.pushNavItem({
       label: dataset.value.name,
@@ -373,7 +375,7 @@ function fetch_dataset(show_loading = false) {
             false,
         };
       });
-      dataset.value = _dataset;
+      datasetStore.setDataset(_dataset);
     })
     .catch((err) => {
       console.error(err);
