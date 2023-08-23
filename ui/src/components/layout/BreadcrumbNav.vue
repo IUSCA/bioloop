@@ -1,5 +1,5 @@
 <template>
-  <va-breadcrumbs v-if="showBreadcrumbNav">
+  <va-breadcrumbs v-if="showBreadcrumbNav" class="text-xl">
     <va-breadcrumbs-item
       v-for="(item, index) in breadcrumbs"
       :key="`${item}-${index}`"
