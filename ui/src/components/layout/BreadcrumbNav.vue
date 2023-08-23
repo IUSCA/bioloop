@@ -1,5 +1,8 @@
 <template>
-  <va-breadcrumbs v-if="showBreadcrumbNav" class="text-xl">
+  <va-breadcrumbs
+    v-if="showBreadcrumbNav"
+    :class="ui.isMobileView ? 'text-sm' : 'text-xl'"
+  >
     <va-breadcrumbs-item
       v-for="(item, index) in breadcrumbs"
       :key="`${item}-${index}`"
@@ -15,9 +18,12 @@
 
 <script setup>
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
+import { useUIStore } from "@/stores/ui";
 
 const route = useRoute();
 const breadcrumbsStore = useBreadcrumbsStore();
+const ui = useUIStore();
+
 let showBreadcrumbNav = ref(true);
 
 const breadcrumbs = computed(() => {
