@@ -302,6 +302,7 @@
 </template>
 
 <script setup>
+import projectService from "@/services/projects";
 import DatasetService from "@/services/dataset";
 import workflowService from "@/services/workflow";
 import config from "@/config";
@@ -309,16 +310,21 @@ import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { useDatasetStore } from "@/stores/dataset";
+import { useAuthStore } from "@/stores/auth";
 
+const props = defineProps({
+  datasetId: String,
+});
+
+const auth = useAuthStore();
 const breadcrumbsStore = useBreadcrumbsStore();
 const datasetStore = useDatasetStore();
 const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
 
-const props = defineProps({ datasetId: String });
-
 const dataset = computed(() => datasetStore.dataset);
+
 const loading = ref(false);
 const stage_modal = ref(false);
 const delete_archive_modal = ref({
@@ -326,11 +332,43 @@ const delete_archive_modal = ref({
   input: "",
 });
 
+watch(
+  () => props.datasetId,
+  () => {
+    fetch_dataset(true);
+    if (route.params.projectId) {
+      projectService
+        .getById({
+          id: route.params.projectId,
+          forSelf: !auth.canOperate,
+        })
+        .then((res) => {
+          const project = res.data;
+          breadcrumbsStore.addNavItem(
+            {
+              label: project.name,
+              to: route.fullPath,
+            },
+            2
+          );
+        })
+        .catch((err) => {
+          console.error(err);
+          toast.error("Unable to fetch project details");
+        });
+    }
+  },
+  { immediate: true }
+);
+
 watch(dataset, () => {
-  breadcrumbsStore.pushNavItem({
-    label: dataset.value.name,
-    to: route.fullPath,
-  });
+  breadcrumbsStore.addNavItem(
+    {
+      label: dataset.value.name,
+      to: route.fullPath,
+    },
+    route.params.projectId ? 4 : 3
+  );
 });
 
 const active_wf = computed(() => {
@@ -384,15 +422,6 @@ function fetch_dataset(show_loading = false) {
       loading.value = false;
     });
 }
-
-// data fetch
-watch(
-  [() => props.datasetId],
-  () => {
-    fetch_dataset(true);
-  },
-  { immediate: true }
-);
 
 /**
  * providing the interval directly will kick of the polling immediately

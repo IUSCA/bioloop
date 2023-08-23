@@ -173,10 +173,13 @@ const project = computed(() => projectStore.project);
 const data_loading = ref(false);
 
 watch(project, () => {
-  breadcrumbsStore.pushNavItem({
-    label: project.value.name,
-    to: route.fullPath,
-  });
+  breadcrumbsStore.addNavItem(
+    {
+      label: project.value.name,
+      to: route.fullPath,
+    },
+    2
+  );
 });
 
 function fetch_project() {

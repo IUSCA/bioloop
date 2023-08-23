@@ -1,11 +1,11 @@
 <template>
   <va-breadcrumbs v-if="showBreadcrumbNav">
     <va-breadcrumbs-item
-      v-for="(item, index) in breadcrumbsStore.breadcrumbs"
+      v-for="(item, index) in breadcrumbs"
       :key="`${item}-${index}`"
       :label="item.label"
       :to="item.to"
-      :disabled="index === breadcrumbsStore.breadcrumbs.length - 1"
+      :disabled="index === breadcrumbs.length - 1"
     >
       <Icon :icon="item.icon" v-if="!!item.icon" />
     </va-breadcrumbs-item>
@@ -20,6 +20,10 @@ const route = useRoute();
 const breadcrumbsStore = useBreadcrumbsStore();
 let showBreadcrumbNav = ref(true);
 
+const breadcrumbs = computed(() => {
+  return breadcrumbsStore.breadcrumbsToRender;
+});
+
 onMounted(() => {
   showBreadcrumbNav.value = shouldShowBreadcrumbs(route.path);
 });
@@ -31,5 +35,7 @@ watch(
   }
 );
 
-const shouldShowBreadcrumbs = (path) => path !== "/dashboard";
+const shouldShowBreadcrumbs = (path) => {
+  return path !== "/dashboard";
+};
 </script>

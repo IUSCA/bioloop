@@ -3,28 +3,11 @@ import { defineStore } from "pinia";
 
 export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   const breadcrumbs = ref([]);
+  const breadcrumbsToRender = computed(() =>
+    breadcrumbs.value.filter((e) => e !== undefined)
+  );
 
-  function resetToLevel(level) {
-    breadcrumbs.value = breadcrumbs.value.slice(0, level + 1);
-  }
-
-  function removeNavItem(item) {
-    // Remove the item that matches the given icon's label, icon, or to
-    let ret = breadcrumbs.value.map((e) => {
-      if (item.icon) {
-        return item.icon !== e.icon && e;
-      }
-      if (item.label) {
-        return item.label !== e.label && e;
-      }
-      if (item.to) {
-        return item.to !== e.to && e;
-      }
-    });
-    breadcrumbs.value = ret;
-  }
-
-  function pushNavItem({ label, icon, to }, insertAt) {
+  function addNavItem({ label, icon, to }, insertAtIndex) {
     const item = { label, icon, to };
     const matchingBreadcrumbItems = computed(() => {
       return (
@@ -35,80 +18,61 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     });
 
     if (matchingBreadcrumbItems.value.length === 0) {
-      // clear any array items after insertAt
-      if (typeof insertAt === "number") {
-        breadcrumbs.value = breadcrumbs.value.slice(0, insertAt);
+      if (typeof insertAtIndex === "number") {
+        if (breadcrumbs.value.length < insertAtIndex) {
+          Array(insertAtIndex - breadcrumbs.value.length).forEach(() => {
+            breadcrumbs.value.push(undefined);
+          });
+        }
+        breadcrumbs.value[insertAtIndex] = item;
       }
-      breadcrumbs.value.push(item);
     }
   }
 
-  function popNavItem() {
-    breadcrumbs.value.pop();
-  }
+  function updateNavItems(to) {
+    const home_breadcrumb_item = { icon: "mdi-home", to: "/" };
+    breadcrumbs.value = [home_breadcrumb_item];
 
-  function updateNavItems(to, from) {
-    if (to.path === "/dashboard") {
-      breadcrumbs.value = [{ icon: "mdi-home", to: "/" }];
-    } else {
-      pushNavItem({ icon: "mdi-home", to: "/" }, 0);
-    }
     if (to.path.includes("/projects")) {
-      pushNavItem({ label: "Projects", to: "/projects" }, 1);
+      addNavItem({ label: "Projects", to: "/projects" }, 1);
+      if (to.path.includes("/datasets")) {
+        addNavItem({ label: "Datasets" }, 3);
+        if (to.path.includes("/filebrowser")) {
+          addNavItem({ icon: "mdi-folder-home" }, 4);
+        }
+      }
     }
-    if (to.path.includes("/projects") && to.params.datasetId) {
-      pushNavItem({ label: "Datasets" });
-    }
+
     if (to.path.includes("/rawdata")) {
-      pushNavItem({ label: "Raw Data", to: "/rawdata" }, 1);
+      addNavItem({ label: "Raw Data", to: "/rawdata" }, 1);
+      if (to.path.includes("/filebrowser")) {
+        addNavItem({ icon: "mdi-folder-home" }, 3);
+      }
     }
     if (to.path.includes("/dataproducts")) {
-      pushNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
+      addNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
+      if (to.path.includes("/filebrowser")) {
+        addNavItem({ icon: "mdi-folder-home" }, 3);
+      }
     }
+
     if (to.path.includes("/users")) {
-      pushNavItem({ label: "User Management", to: "/users" }, 1);
+      addNavItem({ label: "User Management", to: "/users" }, 1);
     }
+
     if (to.path.includes("/about")) {
-      pushNavItem({ label: "About", to: "/about" }, 1);
+      addNavItem({ label: "About", to: "/about" }, 1);
     }
+
     if (to.path.includes("/profile")) {
-      pushNavItem({ label: "Profile", to: "/profile" }, 1);
-    }
-    if (to.path.includes("/filebrowser")) {
-      pushNavItem({ icon: "mdi-folder-home" });
-    } else {
-      if (from.path.includes("/filebrowser")) {
-        removeNavItem({ icon: "mdi-folder-home" });
-      }
-    }
-
-    // Navigating from Project view to outside the Project view
-    if (to.path.includes("projects") && !to.params.projectId) {
-      resetToLevel(1);
-    }
-
-    // Navigating from Dataset view to outside the Dataset view
-    if (!to.params.datasetId) {
-      if (to.path.includes("projects") && to.params.projectId) {
-        resetToLevel(2);
-      } else {
-        resetToLevel(1);
-      }
-    }
-
-    // Navigating from one Dataset to another
-    if (
-      from.params.datasetId &&
-      to.params.datasetId &&
-      from.params.datasetId !== to.params.datasetId
-    ) {
-      popNavItem();
+      addNavItem({ label: "Profile", to: "/profile" }, 1);
     }
   }
+
   return {
     breadcrumbs,
-    pushNavItem,
-    popNavItem,
+    breadcrumbsToRender,
+    addNavItem,
     updateNavItems,
   };
 });
