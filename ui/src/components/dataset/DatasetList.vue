@@ -34,7 +34,7 @@
       :filter="filterInput"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
+        <router-link :to="`${router.path}/${rowData.id}`" class="va-link">{{
           rowData.name
         }}</router-link>
       </template>
@@ -183,6 +183,7 @@ import config from "@/config";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { useToastStore } from "@/stores/toast";
 
+const router = useRoute();
 const toast = useToastStore();
 useSearchKeyShortcut();
 

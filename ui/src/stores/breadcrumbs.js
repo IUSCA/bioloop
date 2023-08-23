@@ -17,10 +17,11 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       );
     });
 
-    // only add item if it doesn't already exist in
+    // only add breadcrumb item if it doesn't already exist in
     // the current breadcrumb nav items
     if (matchingBreadcrumbItems.value.length === 0) {
       if (typeof insertAtIndex === "number") {
+        // fill the array until it is the size needed to insert at insertAtIndex
         if (breadcrumbs.value.length < insertAtIndex) {
           Array(insertAtIndex - breadcrumbs.value.length).forEach(() => {
             breadcrumbs.value.push(undefined);
@@ -31,7 +32,8 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     }
   }
 
-  function updateNavItems(to, from) {
+  // Builds the breadcrumb hierarchy. Is called every time the path changes
+  function updateNavItems(to) {
     const home_breadcrumb_item = { icon: "mdi-home", to: "/" };
     breadcrumbs.value = [home_breadcrumb_item];
 
@@ -44,30 +46,22 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
         }
       }
     }
-
     if (
-      !to.path.includes("/projects") &&
-      to.path.includes("/datasets") &&
-      to.params.datasetId
+      to.path.includes("/datasets") ||
+      to.path.includes("/rawdata") ||
+      to.path.includes("/dataproducts")
     ) {
-      if (from.path.includes("/rawdata")) {
+      if (to.path.includes("/rawdata")) {
         addNavItem({ label: "Raw Data", to: "/rawdata" }, 1);
-      } else if (from.path.includes("/dataproducts")) {
+      } else if (to.path.includes("/dataproducts")) {
         addNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
-      } else {
+      } else if (to.path.includes("/datasets")) {
         addNavItem({ label: "Dataset" }, 1);
       }
 
       if (to.path.includes("/filebrowser")) {
         addNavItem({ icon: "mdi-folder-home" }, 3);
       }
-    }
-
-    if (to.path.includes("/rawdata")) {
-      addNavItem({ label: "Raw Data", to: "/rawdata" }, 1);
-    }
-    if (to.path.includes("/dataproducts")) {
-      addNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
     }
 
     if (to.path.includes("/users")) {
