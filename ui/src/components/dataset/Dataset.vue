@@ -326,6 +326,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   datasetId: String,
+  projectId: String,
 });
 
 const auth = useAuthStore();
