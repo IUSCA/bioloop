@@ -336,11 +336,23 @@ const delete_archive_modal = ref({
 });
 
 onMounted(() => {
-  configureProjectBreadcrumbs(retrievedProject);
+  if (route.params.projectId) {
+    configureProjectBreadcrumbs(retrievedProject);
+  }
 });
 
 watch(retrievedProject, () => {
   configureProjectBreadcrumbs(retrievedProject);
+});
+
+watch(dataset, () => {
+  breadcrumbsStore.addNavItem(
+    {
+      label: dataset.value.name,
+      to: route.fullPath,
+    },
+    route.params.projectId ? 4 : 3
+  );
 });
 
 const configureProjectBreadcrumbs = (project) => {
@@ -379,17 +391,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(dataset, () => {
-  breadcrumbsStore.addNavItem(
-    {
-      label: dataset.value.name,
-      to: route.fullPath,
-    },
-    route.params.projectId ? 4 : 3
-  );
-});
-
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
     .map(workflowService.is_workflow_done)
