@@ -2,7 +2,6 @@
   <div class="flex justify-center">
     <div class="w-full flex-none">
       <va-inner-loading :loading="data_loading">
-        <!-- BreadCrumbs Navigation / Search Filters -->
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
         <div class="h-[40px] flex items-center">
           <FileBrowserSearchFilters
