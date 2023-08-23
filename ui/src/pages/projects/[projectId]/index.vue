@@ -172,17 +172,28 @@ const projectStore = useProjectStore();
 const project = computed(() => projectStore.project);
 const data_loading = ref(false);
 
+onMounted(() => {
+  setupBreadcrumbs(project.value);
+});
+
 watch(project, () => {
+  setupBreadcrumbs(project.value);
+});
+
+function setupBreadcrumbs(project) {
   breadcrumbsStore.addNavItem(
     {
-      label: project.value.name,
+      label: project.name,
       to: route.fullPath,
     },
     2
   );
-});
+}
 
 function fetch_project() {
+  if (route.params.projectId === project.value.slug) {
+    return;
+  }
   data_loading.value = true;
   return projectService
     .getById({
