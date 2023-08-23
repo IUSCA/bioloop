@@ -29,7 +29,7 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     }
   }
 
-  function updateNavItems(to) {
+  function updateNavItems(to, from) {
     const home_breadcrumb_item = { icon: "mdi-home", to: "/" };
     breadcrumbs.value = [home_breadcrumb_item];
 
@@ -43,17 +43,29 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       }
     }
 
-    if (to.path.includes("/rawdata")) {
-      addNavItem({ label: "Raw Data", to: "/rawdata" }, 1);
+    if (
+      !to.path.includes("/projects") &&
+      to.path.includes("/datasets") &&
+      to.params.datasetId
+    ) {
+      if (from.path.includes("/rawdata")) {
+        addNavItem({ label: "Raw Data", to: "/rawdata" }, 1);
+      } else if (from.path.includes("/dataproducts")) {
+        addNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
+      } else {
+        addNavItem({ label: "Datasets" }, 1);
+      }
+
       if (to.path.includes("/filebrowser")) {
         addNavItem({ icon: "mdi-folder-home" }, 3);
       }
     }
+
+    if (to.path.includes("/rawdata")) {
+      addNavItem({ label: "Raw Data", to: "/rawdata" }, 1);
+    }
     if (to.path.includes("/dataproducts")) {
       addNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
-      if (to.path.includes("/filebrowser")) {
-        addNavItem({ icon: "mdi-folder-home" }, 3);
-      }
     }
 
     if (to.path.includes("/users")) {
