@@ -378,23 +378,21 @@ watch(
   () => {
     // If dataset in the URL hasn't been fetched into the dataset store, fetch it
     if (parseInt(route.params.datasetId) !== dataset.value.id) {
-      fetch_dataset(true);
-    }
-    // If project in the URL hasn't been fetched into the project store, fetch it
-    if (route.params.projectId !== retrievedProject.value.slug) {
-      projectService
-        .getById({
-          id: route.params.projectId,
-          forSelf: !auth.canOperate,
-        })
-        .then((res) => {
-          const project = res.data;
-          projectStore.setProject(project);
-        })
-        .catch((err) => {
-          console.error(err);
-          toast.error("Unable to fetch project details");
-        });
+      DatasetService.getById({ id: props.datasetId }).then((res) => {
+        datasetStore.setDataset(res.data);
+        // If project in the URL hasn't been fetched into the project store, fetch it
+        if (route.params.projectId !== retrievedProject.value.slug) {
+          projectService
+            .getById({
+              id: route.params.projectId,
+              forSelf: !auth.canOperate,
+            })
+            .then((res) => {
+              const project = res.data;
+              projectStore.setProject(project);
+            });
+        }
+      });
     }
   },
   { immediate: true }

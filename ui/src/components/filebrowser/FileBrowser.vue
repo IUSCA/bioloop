@@ -74,6 +74,13 @@ const files = computed(() => {
   return isInSearchMode.value ? searchResults.value : fileList.value;
 });
 
+function setupBreadcrumbs() {
+  setupDatasetBreadcrumbs(dataset.value);
+  if (route.params.projectId) {
+    setupProjectBreadcrumbs(project.value);
+  }
+}
+
 const setupProjectBreadcrumbs = (project) => {
   breadcrumbsStore.addNavItem(
     {
@@ -156,38 +163,37 @@ function fetchDatasetAndProject(route) {
         if (err?.response?.status == 404)
           toast.error("Could not find the dataset");
         else toast.error("Something went wrong. Could not fetch datatset");
-      });
-  }
-
-  // Fetch project, if it hasn't already been fetched
-  if (route.params.projectId !== project.value.slug) {
-    projectService
-      .getById({
-        id: route.params.projectId,
-        forSelf: !auth.canOperate,
-      })
-      .then((res) => {
-        projectStore.setProject(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-        toast.error("Unable to fetch project details");
       })
       .finally(() => {
-        data_loading.value = false;
+        // Fetch project, if it hasn't already been fetched
+        if (route.params.projectId !== project.value.slug) {
+          projectService
+            .getById({
+              id: route.params.projectId,
+              forSelf: !auth.canOperate,
+            })
+            .then((res) => {
+              projectStore.setProject(res.data);
+            })
+            .catch((err) => {
+              console.error(err);
+              toast.error("Unable to fetch project details");
+            })
+            .finally(() => {
+              data_loading.value = false;
+            });
+        }
       });
   }
 }
 
 onMounted(() => {
   fetchDatasetAndProject(route);
-  setupDatasetBreadcrumbs(dataset.value);
-  setupProjectBreadcrumbs(project.value);
+  setupBreadcrumbs();
 });
 
 watch([dataset, project], () => {
-  setupDatasetBreadcrumbs(dataset.value);
-  setupProjectBreadcrumbs(project.value);
+  setupBreadcrumbs();
 });
 
 watch(
