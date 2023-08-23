@@ -183,7 +183,7 @@ function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: project.value.id || route.params.projectId,
+      id: route.params.projectId,
       forSelf: !auth.canOperate,
     })
     .then((res) => {
