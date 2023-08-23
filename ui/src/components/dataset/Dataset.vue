@@ -310,6 +310,7 @@ import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { useDatasetStore } from "@/stores/dataset";
+import { useProjectStore } from "@/stores/projects/project";
 import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
@@ -319,11 +320,13 @@ const props = defineProps({
 const auth = useAuthStore();
 const breadcrumbsStore = useBreadcrumbsStore();
 const datasetStore = useDatasetStore();
+const projectStore = useProjectStore();
 const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
 
 const dataset = computed(() => datasetStore.dataset);
+const retrievedProject = computed(() => projectStore.project);
 
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -332,11 +335,33 @@ const delete_archive_modal = ref({
   input: "",
 });
 
+onMounted(() => {
+  configureProjectBreadcrumbs(retrievedProject);
+});
+
+watch(retrievedProject, () => {
+  configureProjectBreadcrumbs(retrievedProject);
+});
+
+const configureProjectBreadcrumbs = (project) => {
+  breadcrumbsStore.addNavItem(
+    {
+      label: project.value.name,
+      to: `/projects/${project.value.slug}`,
+    },
+    2
+  );
+};
+
 watch(
   () => props.datasetId,
   () => {
     fetch_dataset(true);
-    if (route.params.projectId) {
+    // If project in the URL hasn't been fetched into the project store, fetch it
+    if (
+      Object.keys(retrievedProject.value).length === 0 ||
+      route.params.projectId !== retrievedProject.value.slug
+    ) {
       projectService
         .getById({
           id: route.params.projectId,
@@ -344,13 +369,7 @@ watch(
         })
         .then((res) => {
           const project = res.data;
-          breadcrumbsStore.addNavItem(
-            {
-              label: project.name,
-              to: `/projects/${project.slug}`,
-            },
-            2
-          );
+          projectStore.setProject(project);
         })
         .catch((err) => {
           console.error(err);
