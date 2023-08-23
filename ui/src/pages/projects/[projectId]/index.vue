@@ -172,6 +172,8 @@ const projectStore = useProjectStore();
 const project = computed(() => projectStore.project);
 const data_loading = ref(false);
 
+defineProps({ projectId: String });
+
 onMounted(() => {
   setupBreadcrumbs(project.value);
 });
