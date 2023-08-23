@@ -255,7 +255,10 @@
       </div>
 
       <!-- Audit logs -->
-      <div v-if="dataset.audit_logs && dataset.audit_logs.length > 0">
+      <div
+        v-if="dataset.audit_logs && dataset.audit_logs.length > 0"
+        class="mt-3"
+      >
         <va-card>
           <va-card-title>
             <span class="text-xl font-bold"> AUDIT LOG </span>
