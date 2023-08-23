@@ -326,15 +326,12 @@ const delete_archive_modal = ref({
   input: "",
 });
 
-watch(
-  () => dataset,
-  () => {
-    breadcrumbsStore.pushNavItem({
-      label: dataset.value.name,
-      to: route.fullPath,
-    });
-  }
-);
+watch(dataset, () => {
+  breadcrumbsStore.pushNavItem({
+    label: dataset.value.name,
+    to: route.fullPath,
+  });
+});
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
@@ -388,7 +385,7 @@ function fetch_dataset(show_loading = false) {
     });
 }
 
-// initial data fetch
+// data fetch
 watch(
   [() => props.datasetId],
   () => {
