@@ -347,7 +347,7 @@ watch(
           breadcrumbsStore.addNavItem(
             {
               label: project.name,
-              to: route.fullPath,
+              to: `/projects/${project.slug}`,
             },
             2
           );
