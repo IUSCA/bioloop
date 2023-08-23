@@ -36,7 +36,7 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     if (to.path.includes("/projects")) {
       addNavItem({ label: "Projects", to: "/projects" }, 1);
       if (to.path.includes("/datasets")) {
-        addNavItem({ label: "Datasets" }, 3);
+        addNavItem({ label: "Dataset" }, 3);
         if (to.path.includes("/filebrowser")) {
           addNavItem({ icon: "mdi-folder-home" }, 5);
         }
@@ -53,7 +53,7 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       } else if (from.path.includes("/dataproducts")) {
         addNavItem({ label: "Data Products", to: "/dataproducts" }, 1);
       } else {
-        addNavItem({ label: "Datasets" }, 1);
+        addNavItem({ label: "Dataset" }, 1);
       }
 
       if (to.path.includes("/filebrowser")) {
