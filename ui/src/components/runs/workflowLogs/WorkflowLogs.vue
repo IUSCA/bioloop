@@ -7,7 +7,6 @@
   <va-data-table
     :items="logs"
     :columns="columns"
-    hoverable
     clickable
     :row-bind="getRowBind"
     :scroll-bottom-margin="5"
@@ -71,15 +70,26 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  step: {
+    type: String,
+    default: null,
+  },
+  pid: {
+    type: Number,
+    default: null,
+  },
+  taskId: {
+    type: String,
+    default: null,
+  },
 });
 
-const step = "test_step";
 const ROWS_IN_VIEW = 15;
 
 const logs = ref([]);
 const highlight_errors = ref(true);
 const show_timestamps = ref(false);
-const live_updates = ref(false);
+const live_updates = ref(true);
 const tableRef = ref(null);
 
 const columns = computed(() => {
@@ -100,7 +110,9 @@ function fetchLogs({ afterId = null } = {}) {
   return workflowService
     .getWorkflowLogs({
       workflowId: props.workflowId,
-      step,
+      step: props.step,
+      task_id: props.taskId,
+      pid: props.pid,
       afterId,
     })
     .then((res) => {
@@ -120,7 +132,7 @@ function onClick(event) {
 function getRowBind(row) {
   const rowClasees = [];
   if (highlight_errors.value && row.level === "stderr") {
-    rowClasees.push(["bg-red-100"]);
+    rowClasees.push(["text-red-600"]);
   }
   return { class: rowClasees };
 }

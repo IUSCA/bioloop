@@ -204,4 +204,52 @@ router.get(
     },
   ),
 );
+
+router.get(
+  '/:id/:step/logs/summary',
+  isPermittedTo('read'),
+  asyncHandler(
+    async (req, res, next) => {
+      const begin_times_promise = prisma.$queryRaw`
+        select distinct on (task_id, pid) "timestamp", task_id, pid
+        from worker_log
+        where 
+          workflow_id = ${req.params.id} 
+          and step = ${req.params.step}
+        order by task_id, pid, "timestamp" asc
+      `;
+
+      const end_times_promise = prisma.$queryRaw`
+        select distinct on (task_id, pid) "timestamp", task_id, pid
+        from worker_log
+        where 
+          workflow_id = ${req.params.id} 
+          and step = ${req.params.step}
+        order by task_id, pid, "timestamp" desc
+      `;
+
+      const begin_times = await begin_times_promise;
+      const end_times = await end_times_promise;
+
+      // convert array of rows with start times into a nested object with task_id and pid as keys
+      const begin_times_obj = begin_times.reduce((acc, curr) => {
+        const { timestamp, task_id, pid } = curr;
+        const task_obj = acc[task_id] || {};
+        task_obj[pid] = { start: timestamp };
+        return Object.assign(acc, { [task_id]: task_obj });
+      }, {});
+
+      // convert array of rows with end times into a nested object with task_id and pid as keys
+      const end_times_obj = end_times.reduce((acc, curr) => {
+        const { timestamp, task_id, pid } = curr;
+        const task_obj = acc[task_id] || {};
+        task_obj[pid] = { end: timestamp };
+        return Object.assign(acc, { [task_id]: task_obj });
+      }, {});
+
+      const summary_obj = _.merge(begin_times_obj)(end_times_obj);
+      res.json(summary_obj);
+    },
+  ),
+);
 module.exports = router;

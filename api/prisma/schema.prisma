@@ -169,7 +169,7 @@ model workflow {
   id         String       @id
   dataset_id Int?
   dataset    dataset?     @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
-  logs       worker_log[]
+  // logs       worker_log[]
 }
 
 model metric {
@@ -234,12 +234,12 @@ model worker_log {
   timestamp   DateTime  @default(now()) @db.Timestamp(6)
   message     String
   level       String
-  pid         Int?
-  task_id     String?
+  pid         Int
+  task_id     String
   step        String?
-  workflow_id String?
+  workflow_id String
   tags        Json?
-  workflow    workflow? @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
+  // workflow    workflow? @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
 
-  @@index([timestamp, workflow_id])
+  @@index([workflow_id])
 }

@@ -48,7 +48,7 @@ const badgeText = computed(() => {
 // we need to wait for the DOM update to measure the total scroll level (scrollHeight - clientHeight)
 // nextTick does not wait till DOM update and scroll level is returned as 0
 // setTimeout seems to run after the DOM update
-watch(y, () => {
+watch([y, () => props.numItems], () => {
   setTimeout(() => {
     const scrollcontainer = props.elemRef?.scrollContainer;
     if (scrollcontainer) {
