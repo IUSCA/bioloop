@@ -318,39 +318,6 @@ const project_contact_assoc = [
   },
 ];
 
-const adni_imaging = [
-  {
-    "subject_id": "002_S_0295",
-    "project": "ADNI",
-    "phase": "ADNI 1",
-    "sex": "M",
-    "weight": "74.5",
-    "research_group": "CN",
-    "apoe_a1": "3",
-    "apoe_a2": "4",
-    "visit": "ADNI Screening",
-    "study_date": "4/18/2006",
-    "archive_date": "4/18/2006",
-    "age": "84.9",
-    "global_cdr": "0.0",
-    "npiq_total_score": "",
-    "mmse_total_score": "28.0",
-    "gdscale_total_score": "1.0",
-    "faq_total_score": "",
-    "modality": "MRI",
-    "description": "B1-Calibration Body",
-    "type": "Original",
-    "imaging_protocol": "Acquisition Plane=SAGITTAL;Slice Thickness=2.5;Matrix Z=92.0;Acquisition Type=3D;Manufacturer=GE MEDICAL SYSTEMS;Mfg Model=SIGNA EXCITE;Field Strength=1.5;Weighting=T1",
-    "image_id": "13710",
-    "structure": "Brain",
-    "laterality": "Both",
-    "image_type": "",
-    "registration": "native",
-    "tissue": "All",
-    "rand_id": "208716920568690824746"
-  },
-];
-
 module.exports = {
   roles,
   admins,
@@ -365,5 +332,4 @@ module.exports = {
   project_user_assoc,
   project_dataset_assoc,
   project_contact_assoc,
-  adni_imaging,
 };

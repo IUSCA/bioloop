@@ -236,6 +236,12 @@ model adni_subject {
   num_as_dx_dsbc      Int?
   adni_imaging        adni_imaging[]
   as_dx_dasc          as_dx_dasc[]
+  as_dx_dsbc          as_dx_dsbc[]
+  as_dx_smry          as_dx_smry[]
+  sc_fh_prnt          sc_fh_prnt[]
+  sc_sd_demo          sc_sd_demo[]
+  gn_gr_dskn          gn_gr_dskn[]
+  gn_gr_tomm          gn_gr_tomm[]
 }
 
 model adni_imaging {
@@ -315,3 +321,170 @@ model as_dx_dasc {
 	update_stamp 	  String?
 }
 
+model as_dx_dsbc {
+	adni_subject    adni_subject @relation(fields: [main_id], references: [main_id])
+  as_dx_dsbc_id   String       @id
+	main_id         String
+  rid 			      String
+  site_id			    String?
+  vis_code		    String?
+  vis_code2		    String?
+  user_date		    String?
+  user_date2	    String?
+  bc_predx		    String?
+  bc_adas			    String?
+  bc_mmse			    String?
+  bc_mmsrec		    String?
+  bc_nmmms		    String?
+  bc_neupsy		    String?
+  bc_nonmen		    String?
+  bc_faq			    String?
+  bc_cdr			    String?
+  bc_depres		    String?
+  bc_stroke		    String?
+  bc_delir		    String?
+  bc_extcir		    String?
+  bc_extsp		    String?
+  bc_coradl		    String?
+  bc_corcog		    String?
+  bc_summ			    String?
+  update_stamp	  String?
+}
+
+model as_dx_smry {
+  adni_subject    adni_subject @relation(fields: [main_id], references: [main_id])
+  as_dx_smry_id   String       @id
+	main_id         String
+  rid 			      String
+  site_id				  String?
+  vis_code				String?
+  vis_code2				String?
+  user_date				String?
+  user_date2 			String?   
+  exam_date				String?
+  dx_change				String?
+  dx_curren				String?
+  dx_conv				  String?
+  dx_contyp				String?
+  dx_rev				  String?
+  dx_norm				  String?
+  dx_nodep				String?
+  dx_mci				  String?
+  dx_mdes				  String?
+  dx_mptr1				String?
+  dx_mptr2				String?
+  dx_mptr3				String?
+  dx_mptr4				String?
+  dx_mptr5				String?
+  dx_mptr6				String?
+  dx_mdue				  String?
+  dx_mothet				String?
+  dx_mothsp				String?
+  dx_dsev				  String?
+  dx_ddue				  String?
+  dx_ad				    String?
+  dx_ades  				String?  
+  dx_app				  String?
+  dx_aprob				String?
+  dx_ametasp			String?
+  dx_aothersp			String?
+  dx_aposs				String?
+  dx_aatysp				String?
+  dx_ametsp   		String? 
+  dx_aothsp				String?
+  dx_park				  String?
+  dx_parksp				String?
+  dx_pdes				  String?
+  dx_pcog				  String?
+  dx_patyp				String?
+  dx_othsp				String?
+  dx_dep				  String?
+  dx_depsp				String?
+  dx_othdem				String?
+  dx_odes				  String?
+  dx_oothsp				String?
+  dx_confid				String?
+  diagnosis				String?
+  update_stamp    String?
+}
+
+model sc_fh_prnt {
+  adni_subject    adni_subject @relation(fields: [main_id], references: [main_id])
+  sc_fh_prnt      String       @id
+	main_id         String
+  rid 			      String
+  site_id					String?
+  vis_code				String?
+  vis_code2				String?
+  user_date				String?
+  user_date2			String?
+  moth_alive			String?
+  moth_age				String?
+  moth_dem				String?
+  moth_ad					String?
+  moth_sxage			String?
+  fath_alive			String?
+  fath_age				String?
+  fath_dem				String?
+  fath_ad  				String?
+  fath_sxage 			String?
+  comments 				String?
+  update_stamp 		String?
+}
+
+model sc_sd_demo {
+  adni_subject    adni_subject @relation(fields: [main_id], references: [main_id])
+  sc_sd_demo_id   String       @id
+	main_id         String
+  rid 			      String
+  site_id					String? 
+  vis_code				String? 
+  vis_code2				String? 
+  user_date				String? 
+  user_date2			String? 
+  pt_source				String? 
+  pt_gender				String? 
+  pt_dobmm				String? 
+  pt_dobyy				String? 
+  pt_hand					String? 
+  pt_marry				String? 
+  pt_educat				String? 
+  pt_workhs				String? 
+  pt_work 				String? 
+  pt_wrecnt				String? 
+  pt_notrt 				String? 
+  pt_rtyr 				String? 
+  pt_home 				String? 
+  pt_othome 			String? 
+  pt_tlang 				String? 
+  pt_plang 				String? 
+  pt_pspec				String? 
+  pt_cogbeg 			String? 
+  pt_mcibeg 			String? 
+  pt_adbeg 			  String? 
+  pt_addx 				String? 
+  pt_ethcat 			String? 
+  pt_raccat 			String? 
+  update_stamp 		String? 
+}
+
+model gn_gr_dskn {
+  adni_subject    adni_subject @relation(fields: [main_id], references: [main_id])
+  gn_gr_dskn_id   String       @id
+	main_id         String
+  rid 			      String
+  user_date				String?
+  phs					    String?
+  cir					    String?
+  update_stamp		String?
+}
+
+model gn_gr_tomm {
+  adni_subject    adni_subject @relation(fields: [main_id], references: [main_id])
+  gn_gr_tomm_id   String       @id
+	main_id         String
+  rid 			      String
+  tomm40_a1				String?
+  tomm40_a2				String?
+  update_stamp		String?
+}

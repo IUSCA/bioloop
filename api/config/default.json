@@ -9,11 +9,11 @@
     "level": "debug"
   },
   "postgres": {
-    "hostname": "localhost",
+    "hostname": "cfndap-postgres-1",
     "port": "5432",
-    "user": "postgres",
-    "password": "dmc123",
-    "db": "mydb",
+    "user": "appuser",
+    "password": "example",
+    "db": "app",
     "schema": "public"
   },
   "workflow_server": {

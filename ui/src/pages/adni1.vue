@@ -88,7 +88,7 @@
             class="flex flex-col mb-2 md6"
             placeholder="Filter..."
           />
-          <va-button @click="getProjects">Update</va-button>
+          <va-button @click="updateTable">Update</va-button>
         </div>
 
         <template v-if="items.length == 0">
@@ -655,6 +655,7 @@ export default defineComponent({
       this.items = [];
       const result = (await ViewService.getData()).data;
       this.items = result;
+      console.log(this.items.length)
     },
     async requestData() {
       this.isDisabled = true;
@@ -663,7 +664,8 @@ export default defineComponent({
       // window.location.reload()
     },
     updateTable() {
-      this.items = [];
+      console.log('hello')
+      console.log(items.length)
     },
   },
 });

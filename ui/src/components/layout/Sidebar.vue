@@ -84,18 +84,13 @@ function isActive(path) {
 
 const user_items = ref([
   {
-    icon: "mdi-alpha-a-circle",
-    title: "ADNI",
-    path: "/adni",
-  },
-  {
     icon: "mdi-database",
-    title: "ADNI",
+    title: "ADNI Imaging",
     path: "/adni1",
   },
   {
     icon: "mdi-database",
-    title: "ADNI",
+    title: "ADNI Participants",
     path: "/adni2",
   },
   // {

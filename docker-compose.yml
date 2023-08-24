@@ -42,9 +42,8 @@ services:
       - -c
       - |
         npm install \
-        && npx prisma db push \
+        && npx prisma db push --accept-data-loss \
         && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
-
 
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
