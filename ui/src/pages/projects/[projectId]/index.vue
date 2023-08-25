@@ -162,7 +162,6 @@ import { useProjectStore } from "@/stores/projects/project";
 
 const auth = useAuthStore();
 const router = useRouter();
-const route = useRoute();
 const toast = useToastStore();
 const projectFormStore = useProjectFormStore();
 const projectStore = useProjectStore();
@@ -170,16 +169,18 @@ const projectStore = useProjectStore();
 const project = computed(() => projectStore.project);
 const data_loading = ref(false);
 
-defineProps({ projectId: String });
+const props = defineProps({ projectId: String });
 
 function fetch_project() {
-  if (route.params.projectId === project.value.slug) {
+  // no need to fetch project if it's already in the store
+  if (props.projectId === project.value.slug) {
     return;
   }
+
   data_loading.value = true;
   return projectService
     .getById({
-      id: route.params.projectId,
+      id: props.projectId,
       forSelf: !auth.canOperate,
     })
     .then((res) => {

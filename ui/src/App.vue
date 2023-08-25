@@ -14,7 +14,6 @@
 import { useToast } from "vuestic-ui";
 import { useColors } from "vuestic-ui";
 import { useBreakpoint } from "vuestic-ui";
-
 import { useAuthStore } from "@/stores/auth";
 import { useToastStore } from "@/stores/toast";
 import { useUIStore } from "@/stores/ui";
@@ -22,7 +21,6 @@ import { useUIStore } from "@/stores/ui";
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
-
 const toast = useToastStore();
 toast.setup(useToast());
 

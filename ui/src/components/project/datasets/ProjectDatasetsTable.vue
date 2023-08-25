@@ -132,13 +132,6 @@ const props = defineProps({
 const loading = ref(false);
 const _datasets = ref({});
 
-watch(
-  () => props.project.name,
-  () => {
-    console.log(`project name is : ${props.project.name}`);
-  }
-);
-
 // populate _datasets from props
 watch(
   () => props.datasets,
