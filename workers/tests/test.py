@@ -16,15 +16,10 @@ steps = [
         'queue': f'{APP_ID}.q'
     },
     {
-        'name': 'task2',
-        'task': 'task2',
+        'name': 'task4',
+        'task': 'task4',
         'queue': f'{APP_ID}.q'
     },
-    {
-        'name': 'task3',
-        'task': 'task2',
-        'queue': f'{APP_ID}.q'
-    }
 ]
 
 wf = Workflow(app, steps=steps, name='test_wf', app_id=APP_ID)
