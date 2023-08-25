@@ -1,9 +1,10 @@
 <template>
-  <div class="grid grid-cols-6 lg:grid-cols-12 gap-5 items-center px-2">
+  <div class="grid grid-cols-6 lg:grid-cols-12 gap-3 lg:gap-5 items-center p-2">
     <div class="col-span-1">
       <WorkflowStatusIcon :status="workflow.status" class="text-xl" />
     </div>
 
+    <!-- name and id -->
     <div class="col-span-5 flex flex-col">
       <span class="text-lg font-semibold capitalize">
         {{ workflow.name }}
@@ -21,6 +22,7 @@
       </div>
     </div>
 
+    <!-- progress circle -->
     <div class="col-span-1">
       <div v-show="workflow.steps_done != workflow.total_steps">
         <va-progress-circle
@@ -32,17 +34,19 @@
       </div>
     </div>
 
+    <!-- created at -->
     <div class="col-span-3">
-      <va-popover message="Created On" hover-over-timeout="500">
+      <va-popover message="Created On" :hover-over-timeout="500">
         <i-mdi-calendar class="text-xl inline-block text-slate-700" />
       </va-popover>
-      <span class="pl-2">
-        {{ utc_date_to_local_tz(workflow.created_at) }}
+      <span class="pl-2 spacing-wider">
+        {{ datetime.absolute(workflow.created_at) }}
       </span>
     </div>
 
+    <!-- Elapsed time and last updated -->
     <div class="col-span-2">
-      <va-popover message="Duration" placement="top" hover-over-timeout="500">
+      <va-popover message="Duration" placement="top" :hover-over-timeout="500">
         <i-mdi-timer class="text-xl inline-block text-slate-700" />
       </va-popover>
       <span class="pl-2"> {{ elapsed_time }} </span>
@@ -52,11 +56,11 @@
           !workflowService.is_workflow_done(workflow) && workflow.updated_at
         "
       >
-        <va-popover message="Last Updated" hover-over-timeout="500">
+        <va-popover message="Last Updated" :hover-over-timeout="500">
           <i-mdi-update class="inline-block text-slate-700 pl-1" />
         </va-popover>
         <span class="text-sm pl-2">
-          {{ datetime.approx_relative_time(workflow.updated_at) }}
+          {{ datetime.fromNow(workflow.updated_at) }}
         </span>
       </div>
     </div>
@@ -64,9 +68,7 @@
 </template>
 
 <script setup>
-import moment from "moment-timezone";
 import WorkflowStatusIcon from "@/components/runs/WorkflowStatusIcon.vue";
-import { format_duration, utc_date_to_local_tz } from "@/services/utils";
 import workflowService from "@/services/workflow";
 import * as datetime from "@/services/datetime";
 
@@ -88,17 +90,14 @@ const dataset_id = computed(() => {
 });
 const elapsed_time = computed(() => {
   if (!workflowService.is_workflow_done(workflow.value)) {
-    const now = moment.utc();
-    const duration = moment.duration(
-      now - moment.utc(workflow.value.created_at)
-    );
-    return format_duration(duration);
+    const now = new Date();
+    const duration = now - new Date(workflow.value.created_at);
+    return datetime.formatDuration(duration);
   } else {
-    const duration = moment.duration(
-      moment.utc(workflow.value.updated_at) -
-        moment.utc(workflow.value.created_at)
-    );
-    return format_duration(duration);
+    const duration =
+      new Date(workflow.value.updated_at) - new Date(workflow.value.created_at);
+
+    return datetime.formatDuration(duration);
   }
 });
 
