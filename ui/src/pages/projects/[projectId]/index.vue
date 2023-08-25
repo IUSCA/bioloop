@@ -158,14 +158,12 @@ import projectService from "@/services/projects";
 import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
-import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { useProjectStore } from "@/stores/projects/project";
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const toast = useToastStore();
-const breadcrumbsStore = useBreadcrumbsStore();
 const projectFormStore = useProjectFormStore();
 const projectStore = useProjectStore();
 
@@ -173,24 +171,6 @@ const project = computed(() => projectStore.project);
 const data_loading = ref(false);
 
 defineProps({ projectId: String });
-
-onMounted(() => {
-  setupBreadcrumbs(project.value);
-});
-
-watch(project, () => {
-  setupBreadcrumbs(project.value);
-});
-
-function setupBreadcrumbs(project) {
-  breadcrumbsStore.addNavItem(
-    {
-      label: project.name,
-      to: route.fullPath,
-    },
-    2
-  );
-}
 
 function fetch_project() {
   if (route.params.projectId === project.value.slug) {

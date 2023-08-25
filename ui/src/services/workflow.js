@@ -50,7 +50,9 @@ class WorkflowService {
   }
 
   is_step_pending(step_name, workflows) {
-    const active_wfs = workflows.filter((wf) => !this.is_workflow_done(wf));
+    const active_wfs = (workflows || []).filter(
+      (wf) => !this.is_workflow_done(wf)
+    );
     const pending_steps = active_wfs
       .flatMap((wf) => wf.steps)
       .filter((step) => step.name.toLowerCase() === step_name.toLowerCase())

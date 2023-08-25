@@ -313,32 +313,24 @@
 </template>
 
 <script setup>
-import projectService from "@/services/projects";
 import DatasetService from "@/services/dataset";
 import workflowService from "@/services/workflow";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
-import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { useDatasetStore } from "@/stores/dataset";
-import { useProjectStore } from "@/stores/projects/project";
-import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   datasetId: String,
   projectId: String,
 });
 
-const auth = useAuthStore();
-const breadcrumbsStore = useBreadcrumbsStore();
 const datasetStore = useDatasetStore();
-const projectStore = useProjectStore();
 const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
 
 const dataset = computed(() => datasetStore.dataset);
-const retrievedProject = computed(() => projectStore.project);
 
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -347,68 +339,6 @@ const delete_archive_modal = ref({
   input: "",
 });
 
-onMounted(() => {
-  if (route.params.projectId) {
-    configureProjectBreadcrumbs(retrievedProject);
-  }
-});
-
-watch(retrievedProject, () => {
-  configureProjectBreadcrumbs(retrievedProject);
-});
-
-onMounted(() => {
-  configureDatasetBreadcrumbs(dataset.value);
-});
-
-watch(dataset, () => {
-  configureDatasetBreadcrumbs(dataset.value);
-});
-
-const configureDatasetBreadcrumbs = (dataset) => {
-  breadcrumbsStore.addNavItem(
-    {
-      label: dataset.name,
-      to: route.fullPath,
-    },
-    route.params.projectId ? 4 : 3
-  );
-};
-
-const configureProjectBreadcrumbs = (project) => {
-  breadcrumbsStore.addNavItem(
-    {
-      label: project.value.name,
-      to: `/projects/${project.value.slug}`,
-    },
-    2
-  );
-};
-
-watch(
-  () => props.datasetId,
-  () => {
-    // If dataset in the URL hasn't been fetched into the dataset store, fetch it
-    if (parseInt(route.params.datasetId) !== dataset.value.id) {
-      DatasetService.getById({ id: props.datasetId }).then((res) => {
-        datasetStore.setDataset(res.data);
-        // If project in the URL hasn't been fetched into the project store, fetch it
-        if (route.params.projectId !== retrievedProject.value.slug) {
-          projectService
-            .getById({
-              id: route.params.projectId,
-              forSelf: !auth.canOperate,
-            })
-            .then((res) => {
-              const project = res.data;
-              projectStore.setProject(project);
-            });
-        }
-      });
-    }
-  },
-  { immediate: true }
-);
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
     .map(workflowService.is_workflow_done)
@@ -460,6 +390,16 @@ function fetch_dataset(show_loading = false) {
       loading.value = false;
     });
 }
+
+datasetStore.$subscribe((mutation, state) => {
+  // This dataset may have been fetched in the store by
+  // another component, but its workflows may not be
+  // set yet. If so, fetch the dataset again, which will
+  // set the workflows.
+  if (!state.dataset.workflows) {
+    fetch_dataset();
+  }
+});
 
 /**
  * providing the interval directly will kick of the polling immediately

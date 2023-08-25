@@ -34,25 +34,15 @@
 </template>
 
 <script setup>
-import projectService from "@/services/projects";
 import datasetService from "@/services/dataset";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
-import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { storeToRefs } from "pinia";
 import { filterByValues } from "@/services/utils";
-import { useToastStore } from "@/stores/toast";
-import { useAuthStore } from "@/stores/auth";
 import { useDatasetStore } from "@/stores/dataset";
-import { useProjectStore } from "@/stores/projects/project";
 import config from "@/config";
 
 const store = useFileBrowserStore();
-const route = useRoute();
-const toast = useToastStore();
-const auth = useAuthStore();
-const breadcrumbsStore = useBreadcrumbsStore();
 const datasetStore = useDatasetStore();
-const projectStore = useProjectStore();
 
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
 
@@ -61,7 +51,6 @@ const props = defineProps({
 });
 
 const dataset = computed(() => datasetStore.dataset);
-const project = computed(() => projectStore.project);
 
 const showDownload = computed(
   () => config.file_browser.enable_downloads && dataset.value.is_staged
@@ -73,36 +62,6 @@ const searchResults = ref([]);
 const files = computed(() => {
   return isInSearchMode.value ? searchResults.value : fileList.value;
 });
-
-function setupBreadcrumbs() {
-  setupDatasetBreadcrumbs(dataset.value);
-  if (route.params.projectId) {
-    setupProjectBreadcrumbs(project.value);
-  }
-}
-
-const setupProjectBreadcrumbs = (project) => {
-  breadcrumbsStore.addNavItem(
-    {
-      label: project.name,
-      to: `/projects/${project.slug}`,
-    },
-    2
-  );
-};
-
-const setupDatasetBreadcrumbs = (dataset) => {
-  breadcrumbsStore.addNavItem(
-    {
-      label: dataset.name,
-      // to: "test",
-      to: `${route.path.slice(0, route.path.indexOf("filebrowser"))}${
-        route.params.datasetId
-      }`,
-    },
-    route.params.projectId ? 4 : 2
-  );
-};
 
 function get_file_list(path) {
   data_loading.value = true;
@@ -149,52 +108,6 @@ function search_files() {
       data_loading.value = false;
     });
 }
-
-function fetchDatasetAndProject(route) {
-  // Fetch dataset, if it hasn't already been fetched
-  if (parseInt(route.params.datasetId) !== dataset.value.id) {
-    datasetService
-      .getById({ id: route.params.datasetId, workflows: false })
-      .then((res) => {
-        datasetStore.setDataset(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-        if (err?.response?.status == 404)
-          toast.error("Could not find the dataset");
-        else toast.error("Something went wrong. Could not fetch datatset");
-      })
-      .finally(() => {
-        // Fetch project, if it hasn't already been fetched
-        if (route.params.projectId !== project.value.slug) {
-          projectService
-            .getById({
-              id: route.params.projectId,
-              forSelf: !auth.canOperate,
-            })
-            .then((res) => {
-              projectStore.setProject(res.data);
-            })
-            .catch((err) => {
-              console.error(err);
-              toast.error("Unable to fetch project details");
-            })
-            .finally(() => {
-              data_loading.value = false;
-            });
-        }
-      });
-  }
-}
-
-onMounted(() => {
-  fetchDatasetAndProject(route);
-  setupBreadcrumbs();
-});
-
-watch([dataset, project], () => {
-  setupBreadcrumbs();
-});
 
 watch(
   pwd,
