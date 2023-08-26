@@ -1,5 +1,6 @@
 <template>
   <va-breadcrumbs
+    separator=">"
     v-if="showBreadcrumbNav"
     :class="ui.isMobileView ? 'text-sm' : 'text-xl'"
   >
@@ -47,119 +48,42 @@ const dataset = computed(() => {
   return datasetStore.dataset;
 });
 
-const configureAppBreadcrumbs = (project, dataset) => {
-  if (route.path.includes("/dashboard")) {
-    showBreadcrumbNav.value = false;
-    return;
-  }
-
-  // add first two breadcrumb items
-  breadcrumbsStore.addNavItem({ icon: "mdi-home", to: "/" }, 0);
-  breadcrumbsStore.addNavItem(
-    Object.values(LEVEL_1_PATHS).find((path) => {
-      return route.path.includes(path.to);
-    }),
-    1
-  );
-
-  // add breadcrumb for project's label
-  if (route.params.projectId) {
-    configureProjectBreadcrumbs(project);
-  }
-
-  if (route.params.datasetId) {
-    // add breadcrumb to indicate type of dataset ('Raw Data', 'Data Products', etc.)
-    breadcrumbsStore.addNavItem(
-      Object.values(DATASET_PATHS).find((path) => {
-        return route.path.includes(path.label.trim().toLowerCase());
-      }),
-      route.params.projectId ? 3 : 1
-    );
-    // add breadcrumb for dataset's label
-    configureDatasetBreadcrumbs(dataset);
-    // add breadcrumb for file browser
-    if (route.path.includes("/filebrowser")) {
-      breadcrumbsStore.addNavItem(
-        { label: "Files" },
-        route.params.projectId ? 5 : 3
-      );
-    }
-  }
-};
-
-const configureProjectBreadcrumbs = (project) => {
-  const configureBreadcrumb = (project) => {
-    breadcrumbsStore.addNavItem(
-      {
-        label: project.name,
-        to: `/projects/${project.slug}`,
-      },
-      2
-    );
-  };
-
-  // If project in the route is the same as the one in the store,
-  // its breadcrumb can be configured now
-  if (route.params.projectId === project?.slug) {
-    configureBreadcrumb(project);
-  } else {
-    // If not, fetch project and configure its breadcrumb
-    fetch_project(route.params.projectId).then((project) => {
-      configureBreadcrumb(project);
-    });
-  }
-};
-
-const configureDatasetBreadcrumbs = (dataset) => {
-  const configureBreadcrumb = (dataset) => {
-    let to = "/";
-    if (route.params.projectId) {
-      to += `projects/${route.params.projectId}/`;
-    }
-    // If inside the Project view, dataset breadcrumb's URL will always
-    // be .../datasets/. Otherwise, it can be /datasets/, /rawdata/,
-    // or /dataproducts/, depending on current route.
-    const dataset_path_prefix = route.params.projectId
-      ? "datasets"
-      : route.path.slice(1, route.path.indexOf("/", 1));
-    to += `${dataset_path_prefix}/${route.params.datasetId}`;
-
-    breadcrumbsStore.addNavItem(
-      {
-        label: dataset.name,
-        to,
-      },
-      route.params.projectId ? 4 : 2
-    );
-  };
-
-  // If dataset in the route is the same as the one in the store,
-  // its breadcrumb can be configured now
-  if (route.params.datasetId === dataset?.id) {
-    configureBreadcrumb(dataset);
-  } else {
-    fetch_dataset(route.params.datasetId).then((dataset) => {
-      // If not, fetch dataset and configure its breadcrumb
-      configureBreadcrumb(dataset);
-    });
-  }
-};
-
 const fetch_project = (projectId) => {
-  return api
-    .get(
-      `/projects/${
-        !auth.canOperate ? `${auth.user.username}/${projectId}` : projectId
-      }`
-    )
-    .then((res) => {
-      const project = res.data;
-      projectStore.setProject(project);
-      return project;
-    });
+  // debugger;
+  if (!project) {
+    // debugger;
+  }
+  return (
+    api
+      .get(
+        `/projects/${
+          !auth.canOperate ? `${auth.user.username}/${projectId}` : projectId
+        }`
+      )
+      // .then((res) => {
+      //   debugger;
+      //   return new Promise((resolve) => {
+      //     setTimeout(() => {
+      //       debugger;
+      //       resolve(res);
+      //     }, 2000);
+      //   });
+      // })
+      .then((res) => {
+        const project = res.data;
+        projectStore.setProject(project);
+        // debugger;
+        return project;
+      })
+  );
 };
 
 const fetch_dataset = (datasetId) => {
+  // debugger;
+  if (!datasetId) {
+    // debugger;
+  }
+
   return api.get(`/datasets/${datasetId}`).then((res) => {
     const dataset = res.data;
     // configuring dataset's workflows requires external logic that is overkill to include here.
@@ -172,18 +96,135 @@ const fetch_dataset = (datasetId) => {
   });
 };
 
+const fetchResourcesForBreadcrumbs = () => {
+  const routeProjectId = route.params.projectId;
+  const routeDatasetId = route.params.datasetId;
+  const promises = [];
+
+  promises.push(
+    !routeDatasetId || routeDatasetId === dataset.value.id
+      ? Promise.resolve(dataset.value)
+      : fetch_dataset(routeDatasetId)
+  );
+  promises.push(
+    !routeProjectId || routeProjectId === project.value.slug
+      ? Promise.resolve(project.value)
+      : fetch_project(routeProjectId)
+  );
+
+  debugger;
+  return Promise.all(promises).then((values) => {
+    debugger;
+    return {
+      dataset: values[0],
+      project: values[1],
+    };
+  });
+};
+
 onMounted(() => {
-  configureAppBreadcrumbs(project.value, dataset.value);
+  debugger;
+  configureAppBreadcrumbs();
 });
 
 watch(
   () => route.path,
   () => {
-    configureAppBreadcrumbs(project.value, dataset.value);
+    // fetchResourcesForBreadcrumbs();
+    debugger;
+    configureAppBreadcrumbs();
   }
 );
 
+const configureProjectBreadcrumb = (project) => {
+  debugger;
+  if (!project.slug) {
+    return;
+  }
+  breadcrumbsStore.addNavItem(
+    {
+      label: project.name,
+      to: `/projects/${project.slug}`,
+    },
+    2
+  );
+};
+
+const configureDatasetBreadcrumbs = (dataset) => {
+  debugger;
+  if (!dataset.id) {
+    return;
+  }
+
+  breadcrumbsStore.addNavItem(
+    Object.values(DATASET_PATHS).find((path) => {
+      return route.path.includes(path.label.trim().toLowerCase());
+    }),
+    route.params.projectId ? 3 : 1
+  );
+
+  let dataset_path = "/";
+  if (route.params.projectId) {
+    dataset_path += `projects/${route.params.projectId}/`;
+  }
+  // If inside the Project view, dataset breadcrumb's URL will always
+  // be .../datasets/. Otherwise, it can be /datasets/, /rawdata/,
+  // or /dataproducts/, depending on current route.
+  const dataset_path_prefix = route.params.projectId
+    ? "datasets"
+    : route.path.slice(1, route.path.indexOf("/", 1));
+  dataset_path += `${dataset_path_prefix}/${route.params.datasetId}`;
+
+  breadcrumbsStore.addNavItem(
+    {
+      label: dataset.name,
+      to: dataset_path,
+    },
+    route.params.projectId ? 4 : 2
+  );
+};
+
+const configureAppBreadcrumbs = () => {
+  // debugger;
+
+  ui.setIsLoadingResource(true);
+
+  if (route.path.includes("/dashboard")) {
+    showBreadcrumbNav.value = false;
+    ui.setIsLoadingResource(false);
+    return;
+  }
+
+  // add first two breadcrumb items
+  breadcrumbsStore.addNavItem({ icon: "mdi-home", to: "/" }, 0);
+  breadcrumbsStore.addNavItem(
+    Object.values(LEVEL_1_PATHS).find((path) => {
+      return route.path.includes(path.to);
+    }),
+    1
+  );
+
+  fetchResourcesForBreadcrumbs().then(({ project, dataset }) => {
+    // debugger;
+    if (route.params.projectId) {
+      configureProjectBreadcrumb(project);
+    }
+    if (route.params.datasetId) {
+      configureDatasetBreadcrumbs(dataset);
+    }
+    if (route.path.includes("/filebrowser")) {
+      breadcrumbsStore.addNavItem(
+        { label: "Files" },
+        route.params.projectId ? 5 : 3
+      );
+    }
+
+    ui.setIsLoadingResource(false);
+  });
+};
+
 onBeforeRouteLeave((to) => {
+  // debugger;
   if (!to.params.projectId) {
     breadcrumbsStore.removeProjectBreadcrumbs();
   }

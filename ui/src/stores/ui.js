@@ -3,10 +3,20 @@ import { defineStore } from "pinia";
 
 export const useUIStore = defineStore("UI", () => {
   const isMobileView = ref(false);
+  const isLoadingResource = ref(false);
 
   function setMobileView(value) {
     isMobileView.value = value;
   }
 
-  return { isMobileView, setMobileView };
+  function setIsLoadingResource(value) {
+    isLoadingResource.value = value;
+  }
+
+  return {
+    isMobileView,
+    isLoadingResource,
+    setMobileView,
+    setIsLoadingResource,
+  };
 });
