@@ -228,14 +228,14 @@ const configureAppBreadcrumbs = () => {
     1
   );
 
-  fetchResourcesForBreadcrumbs().then(({ project, dataset, fileList }) => {
+  fetchResourcesForBreadcrumbs().then(({ project, dataset }) => {
     if (route.params.projectId && project.slug) {
       configureProjectBreadcrumb(project);
     }
     if (route.params.datasetId && dataset.name) {
       configureDatasetBreadcrumbs(dataset);
     }
-    if (route.path.includes("/filebrowser") && fileList) {
+    if (route.path.includes("/filebrowser")) {
       configureFileBrowserBreadcrumbs();
     }
 
