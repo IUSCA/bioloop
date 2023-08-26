@@ -2,12 +2,12 @@
   <va-breadcrumbs
     separator=">"
     v-show="showBreadcrumbNav"
-    :class="ui.isMobileView ? 'text-sm mt-3' : 'text-xl mb-3'"
+    :class="ui.isMobileView ? 'text-sm mt-1' : 'text-xl mb-3'"
   >
     <va-breadcrumbs-item
       v-for="(item, index) in breadcrumbs"
       :key="`${item}-${index}`"
-      :label="item.label"
+      :label="getItemLabel(item)"
       :to="item.to"
       :disabled="index === breadcrumbs.length - 1"
     >
@@ -36,6 +36,14 @@ const fileBrowserStore = useFileBrowserStore();
 const route = useRoute();
 const ui = useUIStore();
 const toast = useToastStore();
+
+const getItemLabel = (item) => {
+  const isLabelBreadcrumb =
+    Object.values(BREADCRUMBS).filter((e) => e.label === item.label).length > 0;
+  return isLabelBreadcrumb || !ui.isMobileView
+    ? item.label
+    : item.label?.slice(0, 7) + "...";
+};
 
 const showBreadcrumbNav = computed(
   () =>
@@ -176,7 +184,7 @@ const configureDatasetBreadcrumbs = (dataset) => {
   // add breadcrumb to indicate type of dataset (
   // 'Raw Data', 'Data Product', etc.)
   breadcrumbsStore.addNavItem(
-    Object.values(DATASET_PATHS).find((path) => {
+    Object.values(DATASET_BREADCRUMBS).find((path) => {
       return route.path.includes(path.label.trim().toLowerCase());
     }),
     route.params.projectId ? 3 : 1
@@ -222,7 +230,7 @@ const configureAppBreadcrumbs = () => {
   // add first two breadcrumb items
   breadcrumbsStore.addNavItem({ icon: "mdi-home", to: "/" }, 0);
   breadcrumbsStore.addNavItem(
-    Object.values(LEVEL_1_PATHS).find((path) => {
+    Object.values(BREADCRUMBS).find((path) => {
       return route.path.includes(path.to);
     }),
     1
@@ -247,7 +255,7 @@ onBeforeRouteLeave(() => {
   breadcrumbsStore.resetNavItems();
 });
 
-const LEVEL_1_PATHS = {
+const BREADCRUMBS = {
   PROJECTS: { label: "Projects", to: "/projects" },
   USERS: { label: "Users", to: "/users" },
   ABOUT: { label: "About", to: "/about" },
@@ -255,11 +263,12 @@ const LEVEL_1_PATHS = {
   RAW_DATA: { label: "Raw Data", to: "/rawdata" },
   DATA_PRODUCTS: { label: "Data Products", to: "/dataproducts" },
   DATASET: { label: "Dataset" },
+  FILES: { label: "Files" },
 };
 
-const DATASET_PATHS = {
-  RAW_DATA: LEVEL_1_PATHS.RAW_DATA,
-  DATA_PRODUCTS: LEVEL_1_PATHS.DATA_PRODUCTS,
-  DATASET: LEVEL_1_PATHS.DATASET,
+const DATASET_BREADCRUMBS = {
+  RAW_DATA: BREADCRUMBS.RAW_DATA,
+  DATA_PRODUCTS: BREADCRUMBS.DATA_PRODUCTS,
+  DATASET: BREADCRUMBS.DATASET,
 };
 </script>
