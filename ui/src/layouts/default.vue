@@ -12,10 +12,15 @@
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
     <main id="main" class="overflow-y-scroll">
-      <div class="px-4 pb-10 pt-3 min-h-screen">
-        <leave-breadcrumbs>
-          <router-view></router-view>
-        </leave-breadcrumbs>
+      <div class="px-4 pb-10 pt-3 min-h-screen relative">
+        <va-inner-loading
+          loading
+          class="absolute inset-0"
+          :size="50"
+          v-if="ui.isLoadingResource"
+        ></va-inner-loading>
+        <leave-breadcrumbs />
+        <router-view v-if="!ui.isLoadingResource"></router-view>
       </div>
       <Footer></Footer>
     </main>

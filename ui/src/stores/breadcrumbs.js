@@ -7,29 +7,6 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     breadcrumbs.value.filter((e) => e !== undefined)
   );
 
-  function removeProjectBreadcrumbs() {
-    breadcrumbs.value = breadcrumbs.value.filter((item) => {
-      return !item.to?.includes("projects");
-    });
-  }
-
-  function removeDatasetBreadcrumbs() {
-    breadcrumbs.value = breadcrumbs.value.filter((item) => {
-      return (
-        !item.label?.includes("Data Products") &&
-        !item.label?.includes("Raw Data") &&
-        !item.label?.includes("Dataset") &&
-        !item.to?.includes("/datasets")
-      );
-    });
-  }
-
-  function removeFilebrowserBreadcrumbs() {
-    breadcrumbs.value = breadcrumbs.value.filter((item) => {
-      return item.label !== "Files";
-    });
-  }
-
   function addNavItem(item, insertAtIndex) {
     if (!item) {
       return;
@@ -59,11 +36,13 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
     }
   }
 
+  function resetNavItems() {
+    breadcrumbs.value = [];
+  }
+
   return {
     breadcrumbNavItems,
     addNavItem,
-    removeProjectBreadcrumbs,
-    removeDatasetBreadcrumbs,
-    removeFilebrowserBreadcrumbs,
+    resetNavItems,
   };
 });

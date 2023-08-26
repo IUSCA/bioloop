@@ -51,13 +51,13 @@ const props = defineProps({
 });
 
 const dataset = computed(() => datasetStore.dataset);
+const fileList = computed(() => store.fileList);
 
 const showDownload = computed(
   () => config.file_browser.enable_downloads && dataset.value.is_staged
 );
 
 const data_loading = ref(false);
-const fileList = ref([]);
 const searchResults = ref([]);
 const files = computed(() => {
   return isInSearchMode.value ? searchResults.value : fileList.value;
@@ -68,7 +68,7 @@ function get_file_list(path) {
   datasetService
     .list_files({ id: props.datasetId, basepath: path })
     .then((res) => {
-      fileList.value = res.data;
+      store.setFileList(res.data);
     })
     .catch((err) => {
       console.error(err);

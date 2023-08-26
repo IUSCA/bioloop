@@ -18,6 +18,11 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
   const pwd = ref("");
   const isInSearchMode = ref(false);
   const filters = ref(defaultFilters());
+  const fileList = ref([]);
+
+  function setFileList(value) {
+    fileList.value = value;
+  }
 
   function resetFilters() {
     Object.keys(filters.value).forEach((key) => {
@@ -49,5 +54,7 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
     defaultFilters,
     filterStatus,
     reset,
+    fileList,
+    setFileList,
   };
 });

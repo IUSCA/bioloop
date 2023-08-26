@@ -172,11 +172,6 @@ const data_loading = ref(false);
 const props = defineProps({ projectId: String });
 
 function fetch_project() {
-  // no need to fetch project if it's already in the store
-  if (props.projectId === project.value.slug) {
-    return;
-  }
-
   data_loading.value = true;
   return projectService
     .getById({
@@ -194,10 +189,6 @@ function fetch_project() {
       data_loading.value = false;
     });
 }
-
-onMounted(() => {
-  fetch_project();
-});
 
 const users = computed(() => {
   return (project.value.users || []).map((obj) => ({
