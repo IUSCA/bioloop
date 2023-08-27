@@ -1,7 +1,7 @@
 <template>
   <va-breadcrumbs
     separator=">"
-    v-show="showBreadcrumbNav"
+    v-show="VISIBILITY.isBreadcrumbNavVisible"
     :class="ui.isMobileView ? 'text-sm mt-1' : 'text-xl mb-3'"
   >
     <va-breadcrumbs-item
@@ -14,7 +14,7 @@
       <Icon :icon="item.icon" v-if="!!item.icon" />
     </va-breadcrumbs-item>
   </va-breadcrumbs>
-  <va-divider v-if="showBreadcrumbNav" />
+  <va-divider v-if="VISIBILITY.isBreadcrumbNavVisible" />
 </template>
 
 <script setup>
@@ -25,7 +25,6 @@ import { useDatasetStore } from "@/stores/dataset";
 import { useProjectStore } from "@/stores/projects/project";
 import { useAuthStore } from "@/stores/auth";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
-import { onBeforeRouteLeave } from "vue-router";
 import { useToastStore } from "@/stores/toast";
 
 const auth = useAuthStore();
@@ -44,13 +43,6 @@ const getItemLabel = (item) => {
     ? item.label
     : item.label?.slice(0, 7) + "...";
 };
-
-const showBreadcrumbNav = computed(
-  () =>
-    route.path !== "/" &&
-    !route.path.includes("/dashboard") &&
-    !ui.isLoadingResource
-);
 
 const breadcrumbs = computed(() => {
   return breadcrumbsStore.breadcrumbNavItems;
@@ -220,15 +212,19 @@ const configureFileBrowserBreadcrumbs = () => {
 };
 
 const configureAppBreadcrumbs = () => {
-  ui.setIsLoadingResource(true);
+  VISIBILITY.isBreadcrumbNavVisible = false;
+
+  breadcrumbsStore.resetNavItems();
 
   if (route.path === "/" || route.path.includes("/dashboard")) {
-    ui.setIsLoadingResource(false);
+    VISIBILITY.isBreadcrumbNavVisible = true;
     return;
   }
 
-  // add first two breadcrumb items
+  // add breadcrumb item for home
   breadcrumbsStore.addNavItem({ icon: "mdi-home", to: "/" }, 0);
+
+  // add breadcrumb item for first level pages (Projects, Profile, etc.)
   breadcrumbsStore.addNavItem(
     Object.values(BREADCRUMBS).find((path) => {
       return route.path.includes(path.to);
@@ -236,6 +232,8 @@ const configureAppBreadcrumbs = () => {
     1
   );
 
+  // fetch any resources needed to setup further breadcrumb items
+  ui.setIsLoadingResource(true);
   fetchResourcesForBreadcrumbs().then(({ project, dataset }) => {
     if (route.params.projectId && project.slug) {
       configureProjectBreadcrumb(project);
@@ -246,14 +244,25 @@ const configureAppBreadcrumbs = () => {
     if (route.path.includes("/filebrowser")) {
       configureFileBrowserBreadcrumbs();
     }
-
     ui.setIsLoadingResource(false);
+
+    VISIBILITY.isBreadcrumbNavVisible = true;
   });
 };
 
-onBeforeRouteLeave(() => {
-  breadcrumbsStore.resetNavItems();
-});
+const VISIBILITY = {
+  _isBreadcrumbNavVisible: false,
+  get isBreadcrumbNavVisible() {
+    return (
+      route.path !== "/" &&
+      !route.path.includes("/dashboard") &&
+      !ui.isLoadingResource
+    );
+  },
+  set isBreadcrumbNavVisible(val) {
+    this._isBreadcrumbNavVisible = val;
+  },
+};
 
 const BREADCRUMBS = {
   PROJECTS: { label: "Projects", to: "/projects" },
