@@ -48,6 +48,7 @@ const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
 
 const props = defineProps({
   datasetId: String,
+  projectId: String,
 });
 
 const dataset = computed(() => datasetStore.dataset);
