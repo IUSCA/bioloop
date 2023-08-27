@@ -1,5 +1,5 @@
 <template>
-  <va-breadcrumbs>
+  <va-breadcrumbs class="text-sm">
     <va-breadcrumbs-item
       class="cursor-pointer hover:bg-slate-300 rounded-full p-2"
       @click="emit('update:pwd', '')"

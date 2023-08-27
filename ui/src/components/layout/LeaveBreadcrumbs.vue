@@ -2,7 +2,7 @@
   <va-breadcrumbs
     separator=">"
     v-show="VISIBILITY.isBreadcrumbNavVisible"
-    :class="ui.isMobileView ? 'text-sm mt-1' : 'text-xl mb-3'"
+    :class="'text-sm mb-3 breadcrumbs'"
   >
     <va-breadcrumbs-item
       v-for="(item, index) in breadcrumbs"
@@ -281,3 +281,11 @@ const DATASET_BREADCRUMBS = {
   DATASET: BREADCRUMBS.DATASET,
 };
 </script>
+
+<style>
+@media all and (max-width: 639px) {
+  .breadcrumbs {
+    padding-top: 0.25rem;
+  }
+}
+</style>
