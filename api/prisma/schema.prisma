@@ -166,10 +166,9 @@ model user_role {
 }
 
 model workflow {
-  id         String       @id
+  id         String   @id
   dataset_id Int?
-  dataset    dataset?     @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
-  // logs       worker_log[]
+  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
 }
 
 model metric {
@@ -229,17 +228,27 @@ model project_contact {
   @@id([project_id, contact_id])
 }
 
-model worker_log {
-  id          Int       @id @default(autoincrement())
-  timestamp   DateTime  @default(now()) @db.Timestamp(6)
-  message     String
-  level       String
+model log {
+  id                Int            @id @default(autoincrement())
+  timestamp         DateTime       @default(now()) @db.Timestamp(6)
+  message           String
+  level             String
+  worker_process_id Int
+  worker_log        worker_process @relation(fields: [worker_process_id], references: [id], onDelete: Cascade)
+
+  @@index([worker_process_id])
+}
+
+model worker_process {
+  id          Int      @id @default(autoincrement())
   pid         Int
   task_id     String
-  step        String?
+  step        String
   workflow_id String
   tags        Json?
-  // workflow    workflow? @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
+  start_time  DateTime @default(now()) @db.Timestamp(6)
+  hostname    String
+  logs        log[]
 
-  @@index([workflow_id])
+  @@unique([workflow_id, task_id, pid, start_time, hostname])
 }

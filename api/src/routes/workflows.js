@@ -1,7 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const config = require('config');
-const { query, checkSchema } = require('express-validator');
+const { query, param, checkSchema } = require('express-validator');
 const _ = require('lodash/fp');
 
 const asyncHandler = require('../middleware/asyncHandler');
@@ -30,6 +30,191 @@ router.get(
         workflow_ids: req.query.workflow_id,
       });
       res.json(api_res.data);
+    },
+  ),
+);
+
+const log_process_schema = {
+  workflow_id: { notEmpty: true },
+  pid: { notEmpty: true, isInt: true, toInt: true },
+  task_id: { notEmpty: true },
+  step: { notEmpty: true },
+  hostname: { notEmpty: true },
+};
+router.post(
+  '/processes',
+  isPermittedTo('update'),
+  validate([checkSchema(log_process_schema)]),
+  asyncHandler(
+    async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = register a process to send logs
+      const {
+        pid, task_id, step, tags, hostname, workflow_id,
+      } = req.body;
+      const log_process = await prisma.worker_process.create({
+        data: {
+          pid,
+          task_id,
+          step,
+          tags,
+          hostname,
+          workflow_id,
+        },
+      });
+      res.json(log_process);
+    },
+  ),
+);
+
+function sanitize_timestamp(t) {
+  if (typeof (t) === 'string') {
+    const d = new Date(t);
+    // eslint-disable-next-line no-restricted-globals
+    if (!isNaN(d)) return d;
+  }
+}
+
+// make sure that the request body is array of objects which at least will have a "message" key
+const append_log_schema = {
+  '0.message': {
+    in: ['body'],
+    notEmpty: true,
+  },
+  '0.level': {
+    in: ['body'],
+    default: 'stdout',
+  },
+};
+router.post(
+  '/processes/:process_id/logs',
+  isPermittedTo('update'),
+  validate([
+    param('process_id').isInt().toInt(),
+    checkSchema(append_log_schema),
+  ]),
+  asyncHandler(
+    async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = publish logs of a worker process
+      const data = req.body.map((log) => {
+        const {
+          timestamp, message, level,
+        } = log;
+
+        return {
+          timestamp: sanitize_timestamp(timestamp),
+          message,
+          level,
+          worker_process_id: req.params.process_id,
+        };
+      });
+
+      const result = await prisma.log.createMany({
+        data,
+      });
+      res.json(result);
+    },
+  ),
+);
+
+router.get(
+  '/processes',
+  isPermittedTo('read'),
+  validate([query('pid').isInt().toInt()]),
+  asyncHandler(
+    async (req, res, next) => {
+    // #swagger.tags = ['Workflow']
+    // #swagger.summary = get processes
+
+      const filters = _.flow([
+        _.pick(['step', 'task_id', 'pid', 'workflow_id']),
+        _.omitBy(_.isNil),
+      ])(req.query);
+
+      const processes = await prisma.worker_process.findMany({
+        where: {
+          ...filters,
+        },
+      });
+      res.json(processes);
+    },
+  ),
+);
+
+router.get(
+  '/processes/:process_id/logs',
+  isPermittedTo('read'),
+  validate([
+    param('process_id').isInt().toInt(),
+    query('before_id').isInt().toInt().optional(),
+    query('after_id').isInt().toInt().optional(),
+  ]),
+  asyncHandler(
+    async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = get logs of a worker process
+
+      let id_ordinal_filter = {};
+      if (req.query.before_id && req.query.after_id) {
+        id_ordinal_filter = {
+          AND: [
+            {
+              id: {
+                lt: req.query.before_id,
+              },
+            },
+            {
+              id: {
+                gt: req.query.after_id,
+              },
+            },
+          ],
+        };
+      } else if (req.query.before_id) {
+        id_ordinal_filter = {
+          id: {
+            lt: req.query.before_id,
+          },
+        };
+      } else if (req.query.after_id) {
+        id_ordinal_filter = {
+          id: {
+            gt: req.query.after_id,
+          },
+        };
+      }
+
+      const rows = await prisma.log.findMany({
+        where: {
+          worker_process_id: req.params.process_id,
+          ...id_ordinal_filter,
+        },
+        orderBy: {
+          id: 'asc',
+        },
+      });
+
+      res.json(rows);
+    },
+  ),
+);
+
+router.delete(
+  '/:workflow_id/processes',
+  isPermittedTo('delete'),
+
+  asyncHandler(
+    async (req, res, next) => {
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = delete all processes, its logs registered under a workflow
+
+      const result = await prisma.worker_process.deleteMany({
+        where: {
+          workflow_id: req.params.worker_process_id,
+        },
+      });
+      res.json(result);
     },
   ),
 );
@@ -94,162 +279,4 @@ router.delete(
   ),
 );
 
-function sanitize_timestamp(t) {
-  if (typeof (t) === 'string') {
-    const d = new Date(t);
-    // eslint-disable-next-line no-restricted-globals
-    if (!isNaN(d)) return d;
-  }
-}
-
-// make sure that the request body is array of objects which at least will have a "message" key
-const append_log_schema = {
-  '0.message': {
-    in: ['body'],
-  },
-};
-router.post(
-  '/:id/logs',
-  isPermittedTo('update'),
-  validate([checkSchema(append_log_schema)]),
-  asyncHandler(
-    async (req, res, next) => {
-      // #swagger.tags = ['Workflow']
-      // #swagger.summary = publish logs of a worker process
-      const data = req.body.map((log) => {
-        const {
-          timestamp, message, level, pid, task_id, step, tags,
-        } = log;
-
-        return {
-          timestamp: sanitize_timestamp(timestamp),
-          message,
-          level,
-          pid,
-          task_id,
-          step,
-          tags,
-          workflow_id: req.params.id,
-        };
-      });
-
-      const result = await prisma.worker_log.createMany({
-        data,
-      });
-      res.json(result);
-    },
-  ),
-);
-
-router.get(
-  '/:id/logs',
-  isPermittedTo('read'),
-  validate([
-    query('before_id').isInt().toInt().optional(),
-    query('after_id').isInt().toInt().optional(),
-    query('pid').isInt().toInt().optional(),
-  ]),
-  asyncHandler(
-    async (req, res, next) => {
-      // #swagger.tags = ['Workflow']
-      // #swagger.summary = get logs of a worker process
-
-      const filters = _.flow([
-        _.pick(['level', 'pid', 'step', 'task_id']),
-        _.omitBy(_.isNil),
-      ])(req.query);
-
-      let id_ordinal_filter = {};
-      if (req.query.before_id && req.query.after_id) {
-        id_ordinal_filter = {
-          AND: [
-            {
-              id: {
-                lt: req.query.before_id,
-              },
-            },
-            {
-              id: {
-                gt: req.query.after_id,
-              },
-            },
-          ],
-        };
-      } else if (req.query.before_id) {
-        id_ordinal_filter = {
-          id: {
-            lt: req.query.before_id,
-          },
-        };
-      } else if (req.query.after_id) {
-        id_ordinal_filter = {
-          id: {
-            gt: req.query.after_id,
-          },
-        };
-      }
-
-      const rows = await prisma.worker_log.findMany({
-        where: {
-          workflow_id: req.params.id,
-          ...filters,
-          ...id_ordinal_filter,
-        },
-        orderBy: {
-          id: 'asc',
-        },
-      });
-
-      res.json(rows);
-    },
-  ),
-);
-
-router.get(
-  '/:id/:step/logs/summary',
-  isPermittedTo('read'),
-  asyncHandler(
-    async (req, res, next) => {
-      const begin_times_promise = prisma.$queryRaw`
-        select distinct on (task_id, pid) "timestamp", task_id, pid
-        from worker_log
-        where 
-          workflow_id = ${req.params.id} 
-          and step = ${req.params.step}
-        order by task_id, pid, "timestamp" asc
-      `;
-
-      const end_times_promise = prisma.$queryRaw`
-        select distinct on (task_id, pid) "timestamp", task_id, pid
-        from worker_log
-        where 
-          workflow_id = ${req.params.id} 
-          and step = ${req.params.step}
-        order by task_id, pid, "timestamp" desc
-      `;
-
-      const begin_times = await begin_times_promise;
-      const end_times = await end_times_promise;
-
-      // convert array of rows with start times into a nested object with task_id and pid as keys
-      const begin_times_obj = begin_times.reduce((acc, curr) => {
-        const { timestamp, task_id, pid } = curr;
-        const task_obj = acc[task_id] || {};
-        task_obj[pid] = { start: timestamp };
-        return Object.assign(acc, { [task_id]: task_obj });
-      }, {});
-
-      // convert array of rows with end times into a nested object with task_id and pid as keys
-      const end_times_obj = end_times.reduce((acc, curr) => {
-        const { timestamp, task_id, pid } = curr;
-        const task_obj = acc[task_id] || {};
-        task_obj[pid] = { end: timestamp };
-        return Object.assign(acc, { [task_id]: task_obj });
-      }, {});
-
-      const summary_obj = _.merge(begin_times_obj)(end_times_obj);
-      res.json(summary_obj);
-    },
-  ),
-);
 module.exports = router;
