@@ -193,3 +193,5 @@ datetime.fromNow("2023-06-14T01:18:40.501Z") // "2 months ago"
 datetime.readableDuration(130*1000) // "2 minutes"
 datetime.formatDuration(12000 * 1000) // "3h 20m"
 ```
+
+If you have a usecase to display in formats other than above in more than one component, add a function to [datetime](src/services/datetime.js) service and use it.

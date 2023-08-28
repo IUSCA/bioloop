@@ -17,7 +17,7 @@ function date(value) {
   return dayjs(value).format("MMM D YYYY");
 }
 
-function absolute(value) {
+function absolute(value, timezoneOffset = true) {
   /**
    * This function is intended to convert an ISO 8601 datetime string
    * (with Z - UTC timezone) ex: "2023-06-14T01:18:40.501Z"
@@ -25,7 +25,8 @@ function absolute(value) {
    * ex: "2023-06-13 21:18:40 -04:00"
    */
   if (value == null) return null;
-  return dayjs(value).format("YYYY-MM-DD HH:mm:ss Z");
+  const formatString = "YYYY-MM-DD HH:mm:ss" + (timezoneOffset ? " Z" : "");
+  return dayjs(value).format(formatString);
 }
 
 function fromNow(value, withoutSuffix) {
