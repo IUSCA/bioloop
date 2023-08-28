@@ -11,7 +11,7 @@
       <tbody>
         <tr v-for="log in logs" :key="log.id">
           <td class="uppercase">{{ log.action }}</td>
-          <td>{{ utc_date_to_local_tz(log.timestamp) }}</td>
+          <td>{{ datetime.absolute(log.timestamp) }}</td>
           <td>
             <span class="">{{ log.user?.name }}</span>
             <span class="pl-1 va-text-secondary" v-if="log.user?.username">
@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { utc_date_to_local_tz } from "@/services/utils";
+import * as datetime from "@/services/datetime";
 defineProps({
   logs: Object,
 });

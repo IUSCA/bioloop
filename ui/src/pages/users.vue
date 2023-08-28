@@ -71,7 +71,7 @@
 
     <template #cell(login)="{ source }">
       <span v-if="source?.last_login">
-        {{ datetime.approx_relative_time(source.last_login) }}</span
+        {{ datetime.fromNow(source.last_login) }}</span
       >
     </template>
 

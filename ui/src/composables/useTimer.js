@@ -1,17 +1,18 @@
 import { ref, onMounted, onUnmounted } from "vue";
-import moment from "moment";
-import { format_duration } from "@/services/utils";
+import * as datetime from "@/services/datetime";
 
 export default function useTimer(start_time) {
+  // start_time is a ISO 8601 string in UTC time zone (with Z)
+  const start = new Date(start_time);
   const elapsed_time = ref(0);
 
   let timer_id;
 
   const startTimer = () => {
     timer_id = setInterval(() => {
-      const now = moment.utc();
-      const duration = moment.duration(now - moment.utc(start_time));
-      elapsed_time.value = format_duration(duration);
+      const now = new Date();
+      const elapsed_ms = now - start;
+      elapsed_time.value = datetime.formatDuration(elapsed_ms);
     }, 1000);
   };
 

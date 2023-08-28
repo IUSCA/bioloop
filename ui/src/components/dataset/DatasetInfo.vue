@@ -9,20 +9,27 @@
         <tr>
           <td>Start Date</td>
           <td>
-            {{ datetime.absolute(props.dataset.created_at) }}
+            <span class="spacing-wider">
+              {{ datetime.absolute(props.dataset.created_at) }}
+            </span>
           </td>
         </tr>
         <tr>
           <td>Last Updated</td>
           <td>
-            <span class="">
+            <span class="spacing-wider">
               {{ datetime.absolute(props.dataset.updated_at) }}
+            </span>
+            <span>
+              {{ datetime.fromNow(null) }}
             </span>
           </td>
         </tr>
         <tr>
           <td>Source Path</td>
-          <td>{{ props.dataset.origin_path }}</td>
+          <td>
+            <span class="path">{{ props.dataset.origin_path }}</span>
+          </td>
         </tr>
         <tr>
           <td>Size</td>

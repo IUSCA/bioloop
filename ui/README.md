@@ -37,7 +37,7 @@ In the developement environment, the API calls from the UI are proxied by the vi
 - [https dev](https://vitejs.dev/config/server-options.html#server-https)
 - Docker
 - Dark mode (TODO)
-- [Rollup Dependencies Visualizer](https://www.npmjs.com/package/rollup-plugin-visualizer) - Visualize and analyze your Rollup bundle to see which modules are taking up space. Run `pnpm build` and open `stats.html`
+- [Rollup Dependencies Visualizer](https://www.npmjs.com/package/rollup-plugin-visualizer) - Visualize and analyze your Rollup bundle to see which modules are taking up space. Run `npm run build` and open `stats.html`
 
 ## Icons
 
@@ -175,3 +175,23 @@ Vue Components developed in house to be reused in the app. [Documentation](docs/
 - Install - `npm install @fontsource/audiowide`
 - Add `import '@fontsource/audiowide';` in [main.js](src/main.js)
 - Add 'Audiowide' to `font-family: ` in body styles in [base.css](src/styles/base.css)
+
+## Dates and Times
+- All dates, timestamps are returned from API as ISO 8601 strings in UTC time zone
+- [datetime](src/services/datetime.js) module is used to consolidate the various date and time formats to use in the UI.
+- Use browser's local time zone to show date and time whenever possible.
+
+Usage:
+
+```javascript
+import * as datetime from '@/services/datetime.js'
+
+datetime.date("2023-06-14T01:18:40.501Z") // "Jun 14 2023"
+datetime.absolute("2023-06-14T01:18:40.501Z") // "2023-06-13 21:18:40 -04:00"
+
+datetime.fromNow("2023-06-14T01:18:40.501Z") // "2 months ago"
+datetime.readableDuration(130*1000) // "2 minutes"
+datetime.formatDuration(12000 * 1000) // "3h 20m"
+```
+
+If you have a usecase to display in formats other than above in more than one component, add a function to [datetime](src/services/datetime.js) service and use it.

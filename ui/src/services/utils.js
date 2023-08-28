@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import jwtDecode from "jwt-decode";
-import moment from "moment-timezone";
 
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
@@ -72,28 +71,6 @@ function isLiveToken(jwt) {
     }
   }
   return false;
-}
-
-function format_duration(duration) {
-  let formattedDuration = "";
-
-  if (duration.asSeconds() < 60) {
-    formattedDuration = duration.seconds() + "s";
-  } else if (duration.asMinutes() < 10) {
-    formattedDuration = duration.minutes() + "m " + duration.seconds() + "s";
-  } else if (duration.asMinutes() < 60) {
-    formattedDuration = duration.minutes() + "m ";
-  } else if (duration.asHours() < 24) {
-    formattedDuration = duration.hours() + "h " + duration.minutes() + "m ";
-  } else {
-    formattedDuration =
-      Math.floor(duration.asDays()) + "d " + duration.hours() + "h";
-  }
-  return formattedDuration;
-}
-
-function utc_date_to_local_tz(date) {
-  return moment.utc(date).tz(moment.tz.guess()).format("YYYY-MM-DD HH:mm:ss z");
 }
 
 function lxor(a, b) {
@@ -195,8 +172,6 @@ export {
   validateEmail,
   capitalize,
   isLiveToken,
-  format_duration,
-  utc_date_to_local_tz,
   lxor,
   cmp,
   setIntersection,

@@ -38,6 +38,9 @@
         <template #cell(status)="{ source }">
           <workflow-status-pill :status="source" />
         </template>
+        <template #cell(start_date)="{ source }">
+          <span class="spacing-wider"> {{ source }} </span>
+        </template>
       </va-data-table>
 
       <div class="flex justify-end">
@@ -93,9 +96,9 @@
 </template>
 
 <script setup>
-import moment from "moment";
 import workflowService from "@/services/workflow";
 import { useToastStore } from "@/stores/toast";
+import * as datetime from "@/services/datetime";
 const toast = useToastStore();
 
 const props = defineProps({ workflow: Object });
@@ -124,28 +127,15 @@ function compute_step_duration(step) {
       task.date_start &&
       (["PROGRESS", "STARTED"].includes(task.status) || task.date_done)
     ) {
-      const start_time = moment.utc(task.date_start);
+      const start_time = new Date(task.date_start);
       const end_time = ["PROGRESS", "STARTED"].includes(task.status)
-        ? moment.utc()
-        : moment.utc(task.date_done);
-      // console.log(start_time, end_time, moment);
-      const duration = moment.duration(end_time - start_time);
-      return duration.humanize();
+        ? new Date()
+        : new Date(task.date_done);
+      const duration = end_time - start_time;
+      return datetime.readableDuration(duration);
     }
   }
   return "";
-}
-function parse_time_remaining(t) {
-  if (t == null) {
-    return null;
-  } else {
-    if (t == 1e100) {
-      // infinity
-      return null;
-    } else {
-      return moment.duration(t * 1000).humanize();
-    }
-  }
 }
 
 function get_progress_obj(step) {
@@ -161,7 +151,9 @@ function get_progress_obj(step) {
     return {
       name: progress?.name,
       percent_done,
-      time_remaining: parse_time_remaining(progress.time_remaining_sec),
+      time_remaining: datetime.readableDuration(
+        progress.time_remaining_sec * 1000
+      ),
     };
   }
   return null;
@@ -175,7 +167,7 @@ const row_items = computed(() => {
         progress: get_progress_obj(s),
       },
       start_date: s?.last_task_run?.date_start
-        ? moment(s.last_task_run.date_start).utc().format("YYYY-MM-DD HH:mm:ss")
+        ? datetime.absolute(s.last_task_run.date_start)
         : "",
       status: s?.status || "PENDING",
       duration: compute_step_duration(s),

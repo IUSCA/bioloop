@@ -18,3 +18,18 @@ a {
   border-radius: 4px;
   word-break: break-all;
 }
+
+@layer utilities {
+  .spacing-normal {
+    word-spacing: normal;
+  }
+  .spacing-wide {
+    word-spacing: 0.2em;
+  }
+  .spacing-wider {
+    word-spacing: 0.3em;
+  }
+  .spacing-widest {
+    word-spacing: 0.4em;
+  }
+}
