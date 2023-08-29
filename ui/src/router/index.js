@@ -1,39 +1,15 @@
 import { createRouter, createWebHistory } from "vue-router";
-// import generatedRoutes from "virtual:generated-pages";
-// import { setupLayouts } from "virtual:generated-layouts";
+import generatedRoutes from "virtual:generated-pages";
+import { setupLayouts } from "virtual:generated-layouts";
 import { isLiveToken, setIntersection } from "@/services/utils";
 import config from "@/config";
-import index from "../components/pages/index.vue";
-import profile from "../components/pages/profile.vue";
-import projects from "../components/pages/projects.vue";
-// import testComponent from "../components/pages/testComponent.vue";
 
 // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
-// const routes = setupLayouts(generatedRoutes);
+const routes = setupLayouts(generatedRoutes);
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  // routes,
-  routes: [
-    {
-      path: "/",
-      component: index,
-      children: [
-        {
-          path: "projects",
-          component: projects,
-        },
-      ],
-    },
-    {
-      path: "/dashboard",
-      component: index,
-    },
-    {
-      path: "/profile",
-      component: profile,
-    },
-  ],
+  routes,
 });
 
 const token = ref(useLocalStorage("token", ""));

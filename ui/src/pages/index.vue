@@ -1,40 +1,10 @@
 <template>
-  <Header
-    :is-sidebar-collapsed="isSidebarCollapsed"
-    @toggle-sidebar-visibility="toggleSidebarVisibility"
-  >
-  </Header>
-  <div class="flex flex-row h-screen">
-    <nav
-      aria-label="menu nav"
-      class="relative h-full content-center flex-none shadow-xl"
-    >
-      <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
-    </nav>
-    <main id="main" class="overflow-y-scroll">
-      <div class="px-4 pb-10 pt-3 min-h-screen relative">
-        <va-inner-loading
-          loading
-          class="absolute inset-0"
-          :size="50"
-          v-if="ui.isLoadingResource"
-        ></va-inner-loading>
-        <leave-breadcrumbs />
-        <router-view v-if="!ui.isLoadingResource"></router-view>
-      </div>
-      <Footer></Footer>
-    </main>
-  </div>
+  <div></div>
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
-import { useBreakpoint } from "vuestic-ui";
-import { useUIStore } from "@/stores/ui";
 import { useAuthStore } from "@/stores/auth";
 
-const breakpoint = useBreakpoint();
-const ui = useUIStore();
 const auth = useAuthStore();
 const router = useRouter();
 
@@ -43,38 +13,4 @@ if (auth.canOperate) {
 } else {
   router.push("/projects");
 }
-
-let isSidebarCollapsed = ref(false);
-
-watch(
-  () => breakpoint.current,
-  (newValue, oldValue) => {
-    // When going from screen size SM to XS, or XS to SM, the sidebar's
-    // open/collapsed state should not change
-    if (
-      (oldValue === "xs" && newValue === "sm") ||
-      (oldValue === "sm" && newValue === "xs")
-    ) {
-      return;
-    }
-
-    // When going from screen size XL to LG, or LG to MD, if sidebar is
-    // already collapsed, it should stay collapsed
-    if (
-      (oldValue === "xl" && newValue === "lg") ||
-      (oldValue === "lg" && newValue === "md")
-    ) {
-      if (isSidebarCollapsed.value) {
-        return;
-      }
-    }
-
-    // In all other cases, update the open/collapse state acc. to screen size
-    isSidebarCollapsed.value = ui.isMobileView;
-  }
-);
-
-const toggleSidebarVisibility = () => {
-  isSidebarCollapsed.value = !isSidebarCollapsed.value;
-};
 </script>
