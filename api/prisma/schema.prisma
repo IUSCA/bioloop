@@ -249,6 +249,4 @@ model worker_process {
   start_time  DateTime @default(now()) @db.Timestamp(6)
   hostname    String
   logs        log[]
-
-  @@unique([workflow_id, task_id, pid, start_time, hostname])
 }

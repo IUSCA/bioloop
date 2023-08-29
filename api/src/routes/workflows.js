@@ -34,6 +34,14 @@ router.get(
   ),
 );
 
+function sanitize_timestamp(t) {
+  if (typeof (t) === 'string') {
+    const d = new Date(t);
+    // eslint-disable-next-line no-restricted-globals
+    if (!isNaN(d)) return d;
+  }
+}
+
 const log_process_schema = {
   workflow_id: { notEmpty: true },
   pid: { notEmpty: true, isInt: true, toInt: true },
@@ -52,6 +60,7 @@ router.post(
       const {
         pid, task_id, step, tags, hostname, workflow_id,
       } = req.body;
+      const start_time = sanitize_timestamp(req.body.start_time);
       const log_process = await prisma.worker_process.create({
         data: {
           pid,
@@ -60,20 +69,13 @@ router.post(
           tags,
           hostname,
           workflow_id,
+          ...(start_time ? { start_time } : {}),
         },
       });
       res.json(log_process);
     },
   ),
 );
-
-function sanitize_timestamp(t) {
-  if (typeof (t) === 'string') {
-    const d = new Date(t);
-    // eslint-disable-next-line no-restricted-globals
-    if (!isNaN(d)) return d;
-  }
-}
 
 // make sure that the request body is array of objects which at least will have a "message" key
 const append_log_schema = {

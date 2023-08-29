@@ -207,9 +207,16 @@ def add_workflow_to_dataset(dataset_id, workflow_id):
         r.raise_for_status()
 
 
-def post_worker_logs(workflow_id: str, logs: list[dict]):
+def register_process(worker_process: dict):
     with APIServerSession(enable_retry=False) as s:
-        r = s.post(f'workflows/{workflow_id}/logs', json=logs)
+        r = s.post(f'workflows/processes', json=worker_process)
+        r.raise_for_status()
+        return r.json()
+
+
+def post_worker_logs(process_id: str, logs: list[dict]):
+    with APIServerSession(enable_retry=False) as s:
+        r = s.post(f'workflows/processes/{process_id}/logs', json=logs)
         r.raise_for_status()
 
 

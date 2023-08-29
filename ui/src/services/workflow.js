@@ -59,23 +59,23 @@ class WorkflowService {
     return pending_steps.length > 0;
   }
 
-  getWorkflowLogs({
-    workflowId,
-    beforeId = null,
-    afterId = null,
-    level = null,
-    pid = null,
-    step = null,
-    taskId = null,
-  }) {
-    return api.get(`/workflows/${workflowId}/logs`, {
+  getWorkflowProcesses({ workflow_id, step, task_id, pid }) {
+    return api.get(`/workflows/processes`, {
+      params: {
+        workflow_id,
+        step,
+        task_id,
+        pid,
+      },
+    });
+  }
+
+  getLogs({ processId, beforeId = null, afterId = null, level = null }) {
+    return api.get(`/workflows/${processId}/logs`, {
       params: {
         before_id: beforeId,
         after_id: afterId,
         level,
-        pid,
-        step,
-        task_id: taskId,
       },
     });
   }

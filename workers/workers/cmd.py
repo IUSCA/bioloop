@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
+import socket
 import subprocess
 import time
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
 from queue import Queue
 from subprocess import Popen, PIPE
@@ -14,6 +14,7 @@ from subprocess import Popen, PIPE
 from sca_rhythm import WorkflowTask
 
 from workers import api
+from workers import utils
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ Log = namedtuple('Log', ['timestamp', 'level', 'message'])
 
 def enqueue_output(file, queue, level):
     for line in file:
-        timestamp = datetime.now().isoformat()
+        timestamp = utils.current_time_iso8601()
         queue.put(Log(timestamp=timestamp, level=level, message=line))
     file.close()
 
@@ -77,14 +78,30 @@ def read_popen_pipes(p, blocking_delay: float = 0.5):
             time.sleep(blocking_delay)
 
 
-def log_object(p, log, celery_task):
+def register_process(celery_task, process, process_start_time):
+    try:
+        hostname = socket.getfqdn()
+        worker_process = api.register_process({
+            'workflow_id': celery_task.workflow_id,
+            'step': celery_task.step,
+            'task_id': celery_task.id,
+            'pid': process.pid,
+            'hostname': hostname,
+            'start_time': process_start_time,
+            'tags': {
+                'args': process.args
+            }
+        })
+        return worker_process['id']
+    except Exception as e:
+        logger.warning(f'Unable to register process to send logs', exc_info=e)
+
+
+def log_object(log):
     return {
         'timestamp': log.timestamp,
         'level': log.level,
         'message': log.message,
-        'pid': p.pid,
-        'task_id': celery_task.id,
-        'step': celery_task.step,
     }
 
 
@@ -95,10 +112,15 @@ def execute_with_log_tracking(cmd: list[str], celery_task: WorkflowTask, cwd: st
                           stderr=subprocess.PIPE,
                           bufsize=1,
                           universal_newlines=True) as p:
+        process_start_time = utils.current_time_iso8601()
+        worker_process_id = register_process(celery_task, p, process_start_time)
         for lines in read_popen_pipes(p, blocking_delay):
-            data = [log_object(p, line, celery_task) for line in lines]
+
+            data = [log_object(line) for line in lines]
             try:
-                api.post_worker_logs(celery_task.workflow_id, data)
+                if not worker_process_id:
+                    worker_process_id = register_process(celery_task, p, process_start_time)
+                api.post_worker_logs(worker_process_id, data)
             except Exception as e:
                 logger.warning(f'Unable to send worker logs', exc_info=e)
 
