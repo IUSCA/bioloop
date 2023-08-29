@@ -54,7 +54,7 @@ function readableDuration(t, withSuffix) {
    * readableDuration(1e100) -> null
    *
    */
-  if (t == null) return null;
+  if (t == null || typeof t !== "number" || isNaN(t)) return null;
   if (t >= 1e100) return null; // infinity
   return dayjs.duration(t).humanize(withSuffix);
 }
@@ -72,6 +72,9 @@ function formatDuration(duration) {
    * formatDuration(1200000 * 1000)  -> "13d 21h"
    * formatDuration(12000000 * 1000) -> "138d 21h"
    */
+  if (duration == null || typeof duration !== "number" || isNaN(duration))
+    return null;
+  if (duration >= 1e100) return null; // infinity
   let ans = "";
   const d = dayjs.duration(duration);
 
