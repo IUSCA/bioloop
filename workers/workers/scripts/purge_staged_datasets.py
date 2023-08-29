@@ -1,9 +1,9 @@
 import logging
 import shutil
-from pathlib import Path
 
 import workers.api as api
 from workers.config import config
+from workers.dataset import compute_staging_path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,15 +25,15 @@ def main():
     }
     for dataset in datasets[:MAX_PURGES]:
         try:
-            dataset_type = dataset['type']
-            staging_dir = Path(config['paths'][dataset_type]['stage'])
-            staged_dataset_path = staging_dir / dataset['name']  # path to the staged dataset
-            shutil.rmtree(staged_dataset_path)
+            staged_dataset_path, alias = compute_staging_path(dataset)
+            if staged_dataset_path.exists():
+                shutil.rmtree(staged_dataset_path)
 
             api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
             api.add_state_to_dataset(dataset_id=dataset['id'], state='PURGED')
 
-            logger.info(f'Purged staged dataset #{dataset["id"]} {dataset["name"]} @ {staged_dataset_path}')
+            logger.info(
+                f'Purged staged dataset id:{dataset["id"]} name:{dataset["name"]} staged_path:{staged_dataset_path}')
 
         except Exception as e:
             logger.error(f'Error purging staged dataset #{dataset["id"]} {dataset["name"]}', exc_info=e)
