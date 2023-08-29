@@ -38,11 +38,11 @@ const ui = useUIStore();
 const auth = useAuthStore();
 const router = useRouter();
 
-if (auth.canOperate) {
-  router.push("/dashboard");
-} else {
-  router.push("/projects");
-}
+// if (auth.canOperate) {
+//   router.push("/dashboard");
+// } else {
+//   router.push("/projects");
+// }
 
 let isSidebarCollapsed = ref(false);
 

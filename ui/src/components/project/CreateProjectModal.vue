@@ -28,6 +28,7 @@
 
 <script setup>
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+// import { useToastStore } from "@/stores/toast";
 import projectService from "@/services/projects";
 
 const emit = defineEmits(["update"]);
@@ -38,6 +39,7 @@ defineExpose({
   hide,
 });
 
+// const toast = useToastStore();
 const projectFormStore = useProjectFormStore();
 
 const loading = ref(false);
@@ -68,6 +70,14 @@ function handleCreate() {
         user_ids,
         dataset_ids,
       })
+      // .then((res) => {
+      //   debugger;
+      //   toast.success(`Created project: ${res.data?.name}`);
+      // })
+      // .catch((err) => {
+      //   console.error(err);
+      // toast.error("Failed to create project");
+      // })
       .finally(() => {
         loading.value = false;
         emit("update");

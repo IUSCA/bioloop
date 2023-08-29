@@ -1,13 +1,20 @@
 import api from "./api";
-import { useAuthStore } from "@/stores/auth";
 import { useToastStore } from "@/stores/toast";
+import { useAuthStore } from "@/stores/auth";
 
-const auth = useAuthStore();
 const toast = useToastStore();
+const auth = useAuthStore();
+
+// const toast = {
+//   error: () => {},
+//   success: () => {},
+// };
 
 class projectService {
-  getAll({ forSelf }) {
-    const username = auth.user.username;
+  getAll({ forSelf, username }) {
+    if (forSelf && !username) {
+      return Promise.reject("Expected username, but received none");
+    }
     return (
       forSelf ? api.get(`/projects/${username}/all`) : api.get("/projects/all")
     ).catch((err) => {
@@ -17,29 +24,32 @@ class projectService {
     });
   }
 
-  getById({ id, forSelf }) {
-    const username = auth.user.username;
+  getById({ id, forSelf, username }) {
+    if (forSelf && !username) {
+      return Promise.reject("Expected username, but received none");
+    }
     return forSelf
       ? api.get(`/projects/${username}/${id}`)
       : api.get(`/projects/${id}`);
   }
 
   createProject({ project_data, dataset_ids, user_ids }) {
-    return api
-      .post("/projects", {
-        ...project_data,
-        dataset_ids,
-        user_ids,
-      })
-      .then((res) => {
-        toast.success(`Created project: ${res.data?.name}`);
-        return res.data;
-      })
-      .catch((err) => {
-        console.error(err);
-        toast.error("Failed to create project");
-        return Promise.reject(err);
-      });
+    return (
+      api
+        .post("/projects", {
+          ...project_data,
+          dataset_ids,
+          user_ids,
+        })
+        // .then((res) => {
+        //   return res.data;
+        // })
+        .catch((err) => {
+          console.error(err);
+          // toast.error("Failed to create project");
+          return Promise.reject(err);
+        })
+    );
   }
 
   modifyProject({ id, project_data }) {
