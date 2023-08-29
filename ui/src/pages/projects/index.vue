@@ -86,11 +86,11 @@
         </template> -->
 
         <template #cell(created_at)="{ value }">
-          <span>{{ moment(value).utc().format("MMM D YYYY") }}</span>
+          <span>{{ datetime.date(value) }}</span>
         </template>
 
         <template #cell(updated_at)="{ value }">
-          <span>{{ moment(value).utc().format("MMM D YYYY") }}</span>
+          <span>{{ datetime.date(value) }}</span>
         </template>
 
         <template #cell(actions)="{ rowData }">
@@ -131,10 +131,10 @@
 </template>
 
 <script setup>
-import moment from "moment";
 import projectService from "@/services/projects";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+import * as datetime from "@/services/datetime";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();

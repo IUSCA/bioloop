@@ -60,7 +60,7 @@
       </template>
 
       <template #cell(updated_at)="{ value }">
-        <span>{{ datetime.approx_relative_time(value) }}</span>
+        <span>{{ datetime.fromNow(value) }}</span>
       </template>
 
       <template #cell(du_size)="{ source }">

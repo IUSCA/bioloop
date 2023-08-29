@@ -306,7 +306,6 @@
 </template>
 
 <script setup>
-import moment from "moment";
 import DatasetService from "@/services/dataset";
 import workflowService from "@/services/workflow";
 import config from "@/config";
@@ -403,7 +402,7 @@ watch(active_wf, (newVal, _) => {
 
 function workflow_compare_fn(a, b) {
   /* compareFn: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
-   * sort by status, created_at
+   * sort by status and created_at
    * not done status has higher precedence
    */
   const is_a_done = workflowService.is_workflow_done(a);
@@ -411,7 +410,7 @@ function workflow_compare_fn(a, b) {
   const order_by_done = is_a_done - is_b_done;
 
   if (!order_by_done) {
-    return moment.duration(moment(b.created_at) - moment(a.created_at));
+    return new Date(b.created_at) - new Date(a.created_at);
   }
   return order_by_done;
 }

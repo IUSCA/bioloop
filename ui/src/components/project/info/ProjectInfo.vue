@@ -21,13 +21,15 @@
         <tr>
           <td>Created Date</td>
           <td>
-            {{ datetime.absolute(props.project.created_at) }}
+            <span class="spacing-wider">
+              {{ datetime.absolute(props.project.created_at) }}
+            </span>
           </td>
         </tr>
         <tr>
           <td>Last Updated</td>
           <td>
-            <span class="">
+            <span class="spacing-wider">
               {{ datetime.absolute(props.project.updated_at) }}
             </span>
           </td>
