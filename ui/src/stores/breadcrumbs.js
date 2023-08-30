@@ -12,7 +12,7 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       return;
     }
 
-    const { label, icon, to } = item;
+    const { label, icon, to, disabled } = item;
 
     const matchingBreadcrumbItems = computed(() => {
       return (

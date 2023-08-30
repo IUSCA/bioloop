@@ -2,14 +2,14 @@
   <va-breadcrumbs
     separator=">"
     v-show="VISIBILITY.isBreadcrumbNavVisible"
-    :class="'text-sm mb-3 breadcrumbs'"
+    :class="'text-lg mb-3 breadcrumbs'"
   >
     <va-breadcrumbs-item
       v-for="(item, index) in breadcrumbs"
       :key="`${item}-${index}`"
       :label="getItemLabel(item)"
       :to="item.to"
-      :disabled="index === breadcrumbs.length - 1"
+      :disabled="index === breadcrumbs.length - 1 || item.disabled"
     >
       <Icon :icon="item.icon" v-if="!!item.icon" />
     </va-breadcrumbs-item>
@@ -26,6 +26,7 @@ import { useProjectStore } from "@/stores/projects/project";
 import { useAuthStore } from "@/stores/auth";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { useToastStore } from "@/stores/toast";
+import { getDatasetPathPrefix } from "@/services/utils";
 
 const auth = useAuthStore();
 const breadcrumbsStore = useBreadcrumbsStore();
@@ -177,23 +178,26 @@ const configureDatasetBreadcrumbs = (dataset) => {
   // add breadcrumb to indicate type of dataset (
   // 'Raw Data', 'Data Product', etc.)
   breadcrumbsStore.addNavItem(
-    Object.values(DATASET_BREADCRUMBS).find((crumb) =>
-      route.path.includes(crumb.label.trim().toLowerCase())
-    ),
+    {
+      ...Object.values(DATASET_BREADCRUMBS).find((crumb) =>
+        crumb.to.includes(dataset.type.replace("_", "").toLowerCase())
+      ),
+      disabled: route.params.projectId && route.params.datasetId,
+    },
     route.params.projectId ? 3 : 1
   );
 
-  let dataset_path = "/";
+  let dataset_path = "";
   if (route.params.projectId) {
-    dataset_path += `projects/${route.params.projectId}/`;
+    dataset_path += `/projects/${route.params.projectId}`;
   }
   // If inside the Project view, dataset breadcrumb's URL will always
-  // be .../datasets/. Otherwise, it can be /datasets/, /rawdata/,
-  // or /dataproducts/, depending on current route.
-  const dataset_path_prefix = route.params.projectId
-    ? "datasets"
-    : route.path.slice(1, route.path.indexOf("/", 1));
-  dataset_path += `${dataset_path_prefix}/${route.params.datasetId}`;
+  // be .../datasets/. Else, it can be /rawdata/... or /dataproducts/...,
+  // depending on the type of dataset being rendered.
+  dataset_path += route.params.projectId
+    ? "/datasets/"
+    : `${getDatasetPathPrefix(dataset)}/`;
+  dataset_path += `${dataset.id}`;
 
   // add breadcrumb for actual dataset
   breadcrumbsStore.addNavItem(
@@ -270,14 +274,12 @@ const BREADCRUMBS = {
   PROFILE: { label: "Profile", to: "/profile" },
   RAW_DATA: { label: "Raw Data", to: "/rawdata" },
   DATA_PRODUCTS: { label: "Data Products", to: "/dataproducts" },
-  DATASET: { label: "Dataset" },
   FILES: { label: "Files" },
 };
 
 const DATASET_BREADCRUMBS = {
   RAW_DATA: BREADCRUMBS.RAW_DATA,
   DATA_PRODUCTS: BREADCRUMBS.DATA_PRODUCTS,
-  DATASET: BREADCRUMBS.DATASET,
 };
 </script>
 
@@ -286,5 +288,9 @@ const DATASET_BREADCRUMBS = {
   .breadcrumbs {
     padding-top: 0.25rem;
   }
+}
+
+.va-breadcrumbs__item:not(:last-child) {
+  color: rgb(118, 124, 136) !important;
 }
 </style>

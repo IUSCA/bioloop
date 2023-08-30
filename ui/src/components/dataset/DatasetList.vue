@@ -34,9 +34,11 @@
       :filter="filterInput"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="getDatasetPath(rowData)" class="va-link">{{
-          rowData.name
-        }}</router-link>
+        <router-link
+          :to="`${getDatasetPathPrefix(rowData)}/${rowData.id}`"
+          class="va-link"
+          >{{ rowData.name }}</router-link
+        >
       </template>
 
       <template #cell(created_at)="{ value }">
@@ -177,7 +179,7 @@
 
 <script setup>
 import DatasetService from "@/services/dataset";
-import { getDatasetPath } from "@/services/utils";
+import { getDatasetPathPrefix } from "@/services/utils";
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 import config from "@/config";

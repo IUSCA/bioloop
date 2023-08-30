@@ -163,14 +163,14 @@ function filterByValues(obj, pred) {
     }, {});
 }
 
-function getDatasetPath(dataset) {
+function getDatasetPathPrefix(dataset) {
   if (!dataset) {
     return;
   }
   const datasetPathPrefix =
     dataset.type.replace("_", "").toLowerCase() +
     (dataset.type === "DATA_PRODUCT" ? "s" : "");
-  return `/${datasetPathPrefix}/${dataset.id}`;
+  return `/${datasetPathPrefix}`;
 }
 
 export {
@@ -191,5 +191,5 @@ export {
   arrayEquals,
   mapValues,
   filterByValues,
-  getDatasetPath,
+  getDatasetPathPrefix,
 };
