@@ -1,5 +1,4 @@
 <template>
-  <h2 class="text-3xl mb-4">Profile</h2>
   <div>
     <va-card>
       <va-card-content>

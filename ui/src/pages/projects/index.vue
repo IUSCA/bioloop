@@ -1,8 +1,5 @@
 <template>
   <div>
-    <!-- Title -->
-    <h2 class="text-3xl mb-4">Projects</h2>
-
     <!-- search bar and create button -->
     <div class="flex items-center gap-3 mb-3">
       <!-- search bar -->
