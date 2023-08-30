@@ -34,7 +34,7 @@
       :filter="filterInput"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`${router.path}/${rowData.id}`" class="va-link">{{
+        <router-link :to="getDatasetPath(rowData)" class="va-link">{{
           rowData.name
         }}</router-link>
       </template>
@@ -177,13 +177,13 @@
 
 <script setup>
 import DatasetService from "@/services/dataset";
+import { getDatasetPath } from "@/services/utils";
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 import config from "@/config";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { useToastStore } from "@/stores/toast";
 
-const router = useRoute();
 const toast = useToastStore();
 useSearchKeyShortcut();
 

@@ -1,7 +1,7 @@
 <template>
   <va-data-table :items="datasets" :columns="columns" :loading="data_loading">
     <template #cell(name)="{ rowData }">
-      <router-link :to="`/datasets/${rowData.id}`" class="va-link">
+      <router-link :to="getDatasetPath(rowData)" class="va-link">
         {{ rowData.name }}
       </router-link>
     </template>
@@ -22,9 +22,11 @@
 
 <script setup>
 import { formatBytes } from "@/services/utils";
+import { getDatasetPath } from "@/services/utils";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import { useToastStore } from "@/stores/toast";
+
 const toast = useToastStore();
 
 const props = defineProps({
