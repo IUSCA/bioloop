@@ -38,7 +38,8 @@ const toast = useToastStore();
 
 const getItemLabel = (item) => {
   const isLabelBreadcrumb =
-    Object.values(BREADCRUMBS).filter((e) => e.label === item.label).length > 0;
+    Object.values(BREADCRUMBS).filter((crumb) => crumb.label === item.label)
+      .length > 0;
   return isLabelBreadcrumb || !ui.isMobileView
     ? item.label
     : item.label?.slice(0, 7) + "...";
@@ -176,9 +177,9 @@ const configureDatasetBreadcrumbs = (dataset) => {
   // add breadcrumb to indicate type of dataset (
   // 'Raw Data', 'Data Product', etc.)
   breadcrumbsStore.addNavItem(
-    Object.values(DATASET_BREADCRUMBS).find((path) => {
-      return route.path.includes(path.label.trim().toLowerCase());
-    }),
+    Object.values(DATASET_BREADCRUMBS).find((crumb) =>
+      route.path.includes(crumb.label.trim().toLowerCase())
+    ),
     route.params.projectId ? 3 : 1
   );
 
@@ -226,9 +227,7 @@ const configureAppBreadcrumbs = () => {
 
   // add breadcrumb item for first level pages (Projects, Profile, etc.)
   breadcrumbsStore.addNavItem(
-    Object.values(BREADCRUMBS).find((path) => {
-      return route.path.includes(path.to);
-    }),
+    Object.values(BREADCRUMBS).find((crumb) => route.path.includes(crumb.to)),
     1
   );
 
