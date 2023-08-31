@@ -56,7 +56,7 @@ onMounted(() => {
 });
 
 watch([() => project.value, () => dataset.value], () => {
-  configureAppBreadcrumbs(project.value, dataset.value);
+  configureAppBreadcrumbs();
 });
 
 const configureProjectBreadcrumb = (project) => {
@@ -118,7 +118,7 @@ const configureFileBrowserBreadcrumbs = () => {
   );
 };
 
-const configureAppBreadcrumbs = (project, dataset) => {
+const configureAppBreadcrumbs = () => {
   VISIBILITY.isBreadcrumbNavVisible = false;
 
   breadcrumbsStore.resetNavItems();
@@ -137,11 +137,11 @@ const configureAppBreadcrumbs = (project, dataset) => {
     1
   );
 
-  if (route.params.projectId && project?.slug) {
-    configureProjectBreadcrumb(project);
+  if (route.params.projectId && project.value?.slug) {
+    configureProjectBreadcrumb(project.value);
   }
-  if (route.params.datasetId && dataset?.name) {
-    configureDatasetBreadcrumbs(dataset);
+  if (route.params.datasetId && dataset.value?.name) {
+    configureDatasetBreadcrumbs(dataset.value);
   }
   if (route.path.includes("/filebrowser")) {
     configureFileBrowserBreadcrumbs();
