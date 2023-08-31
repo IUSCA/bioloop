@@ -26,6 +26,10 @@
       <span class="text-sm"> {{ source }} </span>
     </template>
 
+    <template #cell(timestamp)="{ source }">
+      <span class="spacing-wide"> {{ datetime.absolute(source, false) }} </span>
+    </template>
+
     <!-- footer -->
     <template #footer>
       <tr class="table-slots">
@@ -61,26 +65,19 @@
 <script setup>
 import workflowService from "@/services/workflow";
 import { useToastStore } from "@/stores/toast";
+import * as datetime from "@/services/datetime";
 
 const toast = useToastStore();
 const { copy } = useClipboard();
 
 const props = defineProps({
-  workflowId: {
+  processId: {
     type: String,
     required: true,
   },
-  step: {
-    type: String,
-    default: null,
-  },
-  pid: {
-    type: Number,
-    default: null,
-  },
-  taskId: {
-    type: String,
-    default: null,
+  live: {
+    type: Boolean,
+    default: true,
   },
 });
 
@@ -89,7 +86,7 @@ const ROWS_IN_VIEW = 15;
 const logs = ref([]);
 const highlight_errors = ref(true);
 const show_timestamps = ref(false);
-const live_updates = ref(true);
+const live_updates = ref(props.live);
 const tableRef = ref(null);
 
 const columns = computed(() => {
@@ -99,6 +96,7 @@ const columns = computed(() => {
     { key: "message" },
   ];
   if (show_timestamps.value) {
+    // add timestamp colum to the front of the cols array
     cols.unshift({ key: "timestamp", width: "200px" });
   }
   return cols;
@@ -108,11 +106,8 @@ const logSize = computed(() => logs.value.length);
 
 function fetchLogs({ afterId = null } = {}) {
   return workflowService
-    .getWorkflowLogs({
-      workflowId: props.workflowId,
-      step: props.step,
-      task_id: props.taskId,
-      pid: props.pid,
+    .getLogs({
+      processId: props.processId,
       afterId,
     })
     .then((res) => {
@@ -142,6 +137,7 @@ const { pause, resume } = useIntervalFn(() => {
   fetchLogs({ afterId: lastId });
 }, 5000);
 
+// start or stop timer by reacting to live_updates value
 watch(
   live_updates,
   (value) => {

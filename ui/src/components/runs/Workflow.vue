@@ -4,7 +4,7 @@
       <div class="mb-2" v-if="!workflowService.is_workflow_done(workflow)">
         <va-progress-bar indeterminate size="0.3rem" />
       </div>
-      <va-data-table :items="row_items" :columns="columns" :hoverable="true">
+      <va-data-table :items="row_items" :columns="columns">
         <template #cell(step)="{ source }">
           <div class="flex gap-3 justify-start items-center">
             <span style="text-transform: uppercase" class="flex-initial">
@@ -40,6 +40,26 @@
         </template>
         <template #cell(start_date)="{ source }">
           <span class="spacing-wider"> {{ source }} </span>
+        </template>
+
+        <template #cell(actions)="{ row, isExpanded }">
+          <va-button
+            @click="row.toggleRowDetails()"
+            :icon="isExpanded ? 'va-arrow-up' : 'va-arrow-down'"
+            preset="plain"
+          >
+            {{ isExpanded ? "Hide" : "More info" }}
+          </va-button>
+        </template>
+
+        <template #expandableRow="{ rowData }">
+          <div class="pl-5 pr-3 bg-slate-200 dark:bg-slate-800">
+            <StepProcesses
+              :workflow-id="workflow.id"
+              :step-name="rowData?.step?.name"
+              class="py-2 text-sm"
+            />
+          </div>
         </template>
       </va-data-table>
 
@@ -106,6 +126,7 @@ const emit = defineEmits(["update"]);
 
 const loading = ref(false);
 const workflow = ref(props.workflow);
+console.log(workflow.value);
 
 // to watch props make them reactive or wrap them in functions
 watch(
@@ -180,6 +201,7 @@ const columns = ref([
   { key: "status" },
   { key: "start_date" },
   { key: "duration" },
+  { key: "actions" },
 ]);
 
 function fetch_data(workflow_id) {

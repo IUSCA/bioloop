@@ -123,7 +123,7 @@ router.post(
 router.get(
   '/processes',
   isPermittedTo('read'),
-  validate([query('pid').isInt().toInt()]),
+  validate([query('pid').isInt().toInt().optional()]),
   asyncHandler(
     async (req, res, next) => {
     // #swagger.tags = ['Workflow']
@@ -137,6 +137,9 @@ router.get(
       const processes = await prisma.worker_process.findMany({
         where: {
           ...filters,
+        },
+        orderBy: {
+          start_time: 'asc',
         },
       });
       res.json(processes);
