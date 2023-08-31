@@ -1,5 +1,10 @@
 <template>
-  <div class="flex justify-center">
+  <va-inner-loading
+    loading
+    class="absolute inset-0"
+    v-if="ui.isLoadingResource"
+  />
+  <div class="flex justify-center" v-else>
     <div class="w-full flex-none">
       <va-inner-loading :loading="data_loading">
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
@@ -42,10 +47,12 @@ import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from "pinia";
 import { filterByValues } from "@/services/utils";
 import config from "@/config";
+import { useUIStore } from "@/stores/ui";
 
 const store = useFileBrowserStore();
 const datasetStore = useDatasetStore();
 const auth = useAuthStore();
+const ui = useUIStore();
 
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
 

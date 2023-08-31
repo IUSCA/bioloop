@@ -1,5 +1,9 @@
 <template>
-  <va-inner-loading loading v-if="ui.isLoadingResource"></va-inner-loading>
+  <va-inner-loading
+    loading
+    class="absolute inset-0"
+    v-if="ui.isLoadingResource"
+  />
   <!-- body -->
   <div v-else>
     <div class="flex flex-col gap-3">

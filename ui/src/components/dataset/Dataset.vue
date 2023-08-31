@@ -1,5 +1,9 @@
 <template>
-  <va-inner-loading loading v-if="ui.isLoadingResource"></va-inner-loading>
+  <va-inner-loading
+    loading
+    class="absolute inset-0"
+    v-if="ui.isLoadingResource"
+  />
   <!-- Content -->
   <div class="flex flex-col" v-else>
     <!-- Associated datasets -->
