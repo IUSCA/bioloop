@@ -1,7 +1,7 @@
 <template>
   <va-breadcrumbs
     separator=">"
-    v-show="VISIBILITY.isBreadcrumbNavVisible"
+    v-if="VISIBILITY.isBreadcrumbNavVisible"
     :class="'text-lg mb-3 breadcrumbs'"
   >
     <va-breadcrumbs-item
