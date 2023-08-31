@@ -16,10 +16,10 @@
 
       <ul
         v-if="visible"
-        class="absolute w-full bg-white border border-solid border-slate-200 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
+        class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
       >
         <li
-          class="pb-2 text-sm border-solid border-b border-slate-200 text-right va-text-secondary"
+          class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
           v-if="search_results.length"
         >
           Showing {{ search_results.length }} of {{ data.length }} results
@@ -27,7 +27,7 @@
         <li
           v-for="(item, idx) in search_results"
           :key="idx"
-          class="cursor-pointer hover:bg-gray-100 p-2 rounded"
+          class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded"
           @click="handleSelect(item)"
         >
           <slot name="filtered" :item="item">

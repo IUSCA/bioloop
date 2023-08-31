@@ -37,7 +37,9 @@
     <!-- created at -->
     <div class="col-span-3">
       <va-popover message="Created On" :hover-over-timeout="500">
-        <i-mdi-calendar class="text-xl inline-block text-slate-700" />
+        <i-mdi-calendar
+          class="text-xl inline-block text-slate-700 dark:text-slate-300"
+        />
       </va-popover>
       <span class="pl-2 spacing-wider">
         {{ datetime.absolute(workflow.created_at) }}
@@ -47,7 +49,9 @@
     <!-- Elapsed time and last updated -->
     <div class="col-span-2">
       <va-popover message="Duration" placement="top" :hover-over-timeout="500">
-        <i-mdi-timer class="text-xl inline-block text-slate-700" />
+        <i-mdi-timer
+          class="text-xl inline-block text-slate-700 dark:text-slate-300"
+        />
       </va-popover>
       <span class="pl-2"> {{ elapsed_time }} </span>
 
@@ -57,7 +61,9 @@
         "
       >
         <va-popover message="Last Updated" :hover-over-timeout="500">
-          <i-mdi-update class="inline-block text-slate-700 pl-1" />
+          <i-mdi-update
+            class="inline-block text-slate-700 dark:text-slate-300 pl-1"
+          />
         </va-popover>
         <span class="text-sm pl-2">
           {{ datetime.fromNow(workflow.updated_at) }}

@@ -1,7 +1,7 @@
 <template>
   <va-breadcrumbs>
     <va-breadcrumbs-item
-      class="text-xl cursor-pointer hover:bg-slate-300 rounded-full p-2"
+      class="text-xl cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-700 rounded-full p-2"
       @click="emit('update:pwd', '')"
     >
       <i-mdi-folder-home class="hover:text-blue-600" />
@@ -12,7 +12,6 @@
     >
       ...
     </va-breadcrumbs-item>
-    <!-- lg:hover:bg-slate-200 lg:rounded-full lg:px-2 lg:pb-2 lg:pt-1 -->
     <va-breadcrumbs-item
       v-for="(path_item, idx) in path_items.slice(-3)"
       :label="path_item.name"
