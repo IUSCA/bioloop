@@ -113,6 +113,17 @@ Using
 
 ```
 
+## Adding Breadcrumb navigation to pages
+The component [LeaveBreadcrumbs](https://github.com/IUSCA/bioloop/blob/main/ui/src/components/layout/LeaveBreadcrumbs.vue) allows the app to render breadcrumb navigation. This component sits in the [default layout](https://github.com/IUSCA/bioloop/blob/17-breadcrumbs/ui/src/layouts/default.vue), which renders the appropriate page, along with breadcrumb navigation. To add breadcrumb navigation for a new page, within the LeaveBreadcrumbs component:
+- Add an entry for the page in the BREADCRUMBS object. The entry may include the following optional attributes:
+  - label
+  - icon
+  - to
+  - disabled
+ - One of 'label' or 'icon' must be provided for the corresponding breadcrumb item to be rendered.
+ - The breadcrumbsStore#addNavItem(item:Object, insertAtIdex:Number) method is used to add a breadcrumb item at the specified index. This method is called when the app is mounted, as well as when a global resource that is included in the breadcrumb navigation changes.
+- For setting breadcrumbs for resources that first need to be retrieved through network calls, fetch the necessary resources, persist them to a global store, add a watcher for said resource(s) within LeaveBreadcrumbs, and call breadcrumbsStore#addNavItem(item:Object, insertAtIdex:Number) once the resources have been persisted to the global store.
+
 ## Configuration
 
 Layered and Hierarchical config system:
