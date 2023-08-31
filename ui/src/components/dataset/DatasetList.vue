@@ -133,7 +133,7 @@
           By clicking the "Archive" button, a workflow will be initiated to
           archive the {{ props.label.toLowerCase() }} to the SDA (Secure Data
           Archive). Additionally, it will stage the contents to
-          <span class="path bg-slate-200">
+          <span class="path bg-slate-200 dark:bg-slate-800">
             {{ config.paths.stage[props.dtype] }}/{{
               launch_modal.selected?.name
             }}

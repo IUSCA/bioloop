@@ -44,7 +44,7 @@
 
       <!-- review -->
       <template #step-content-3>
-        <div class="space-y-3 bg-slate-100 p-4 rounded">
+        <div class="space-y-3 bg-slate-100 dark:bg-slate-900 p-4 rounded">
           <div>
             <p class="font-bold mb-2">General Info</p>
             <div class="va-table-responsive">

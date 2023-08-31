@@ -6,4 +6,5 @@ module.exports = {
     extend: {},
   },
   plugins: [],
+  darkMode: "class", // https://tailwindcss.com/docs/dark-mode
 };

@@ -178,18 +178,14 @@
             </template>
 
             <div>
-              <p class="text-lg font-semibold">
-                Delete
-                <span class="capitalize"> {{ dataset.type }} </span>
-                : <span class="uppercase"> {{ dataset.name }} </span>
-              </p>
+              <p class="text-lg font-bold">Delete Archive?</p>
 
               <va-divider class="my-2" />
 
               <div class="flex flex-col items-center gap-2">
                 <div><i-mdi-zip-box-outline class="text-3xl" /></div>
-                <span class="text-xl font-semibold tracking-wide">
-                  {{ dataset.name }}
+                <span class="text-xl tracking-wide">
+                  {{ dataset.type }} / {{ dataset.name }}
                 </span>
                 <div class="flex items-center gap-5">
                   <div class="flex items-center gap-1">
@@ -198,7 +194,7 @@
                   </div>
                   <div class="flex items-center gap-1">
                     <i-mdi-file-multiple class="text-xl" />
-                    <span> {{ dataset.num_genome_files }} </span>
+                    <span> {{ dataset.metadata?.num_genome_files }} </span>
                   </div>
                 </div>
               </div>
@@ -220,8 +216,8 @@
                   <li>
                     This will permanently delete the
                     <b> {{ dataset.name }} </b> archive on the SDA at
-                    <span class="path bg-slate-200">
-                      {{ DatasetService.get_staged_path(dataset) }}
+                    <span class="path bg-slate-200 dark:bg-slate-800">
+                      {{ dataset.archive_path }}
                     </span>
                     , its associated workflows and task runs.
                   </li>
@@ -287,7 +283,10 @@
             </div>
           </collapsible>
         </div>
-        <div v-else class="text-center bg-slate-200 py-2 rounded shadow">
+        <div
+          v-else
+          class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow"
+        >
           <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
           <span class="text-lg">
             There are no workflows associated with this datatset.

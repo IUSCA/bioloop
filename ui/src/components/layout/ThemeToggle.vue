@@ -1,66 +1,14 @@
 <template>
-  <!-- <va-switch
-    v-model="switchValue"
-    :true-value="THEMES.DARK"
-    :false-value="THEMES.LIGHT"
-    :size="props.size"
-  >
-    <template #innerLabel>
-      <div class="va-text-center">
-        <va-icon
-          :name="switchValue === THEMES.DARK ? 'dark_mode' : 'light_mode'"
-        />
-      </div>
-    </template>
-  </va-switch> -->
   <va-button
     round
-    :icon="switchValue === THEMES.DARK ? 'light_mode' : 'dark_mode'"
-    @click="toggleValue"
+    :icon="isDark ? 'light_mode' : 'dark_mode'"
+    @click="toggleDark()"
     preset="primary"
-    :color="switchValue === THEMES.DARK ? 'warning' : 'primary'"
+    :color="isDark ? 'warning' : 'primary'"
   ></va-button>
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { useColors } from "vuestic-ui";
-import { useAuthStore } from "@/stores/auth";
-
-const auth = useAuthStore();
-const { applyPreset, currentPresetName, colors } = useColors();
-
-// const props = defineProps({
-//   size: String,
-// });
-
-const switchValue = computed({
-  get() {
-    return currentPresetName.value;
-  },
-  set(value) {
-    applyPreset(value);
-  },
-});
-
-watch(
-  [colors, switchValue],
-  () => {
-    auth.setTheme({
-      primary: colors.primary,
-      mode: switchValue.value,
-    });
-  },
-  { deep: true }
-);
-
-const THEMES = {
-  LIGHT: "light",
-  DARK: "dark",
-};
-
-function toggleValue() {
-  switchValue.value =
-    switchValue.value === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK;
-}
+const isDark = useDark();
+const toggleDark = useToggle(isDark);
 </script>

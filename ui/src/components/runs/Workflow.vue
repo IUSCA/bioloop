@@ -12,9 +12,10 @@
             </span>
 
             <span
-              v-if="source?.progress?.name"
+              v-if="!source?.progress?.name"
               class="text-slate-500 flex-initial text-sm"
             >
+              fastqc
               {{ source?.progress?.name }}
             </span>
 

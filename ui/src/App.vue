@@ -22,21 +22,23 @@ import { useUIStore } from "@/stores/ui";
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
+const { applyPreset, colors } = useColors();
 const toast = useToastStore();
 toast.setup(useToast());
 
-onMounted(() => {
-  setupTheme();
-  setViewType();
-});
+const isDark = useDark();
 
-watch(
-  auth.user.theme,
-  () => {
-    setupTheme();
-  },
-  { deep: true }
-);
+const setViewType = () => {
+  ui.setMobileView(!(breakpoint.xl || breakpoint.lg || breakpoint.md));
+};
+
+// read the custom theme's primary color from local storage and update vuestic
+// user.auth.theme is set from the profile page when user chooses a color from the palette
+const setupTheme = () => {
+  if (auth?.user?.theme?.primary) {
+    colors.primary = auth.user.theme.primary;
+  }
+};
 
 watch(
   () => breakpoint.current,
@@ -45,20 +47,26 @@ watch(
   }
 );
 
-const setViewType = () => {
-  ui.setMobileView(!(breakpoint.xl || breakpoint.lg || breakpoint.md));
-};
-
-const setupTheme = () => {
-  if ("user" in auth && "theme" in auth.user) {
-    const { applyPreset, colors } = useColors();
-
-    applyPreset(auth.user?.theme?.mode);
-    colors.primary = auth.user.theme?.primary;
+// change vuestic dark mode status reacting to isDark
+// isDark's value is read from local storage "vueuse-color-scheme" which has values "auto" and "dark"
+// isDark is also set by the window property "prefers-color-scheme" that is set according to the browser / system's theme
+// isDark is also changed by the dark mode toggle button in the header
+watch(
+  isDark,
+  () => {
+    applyPreset(isDark.value ? "dark" : "light");
+  },
+  {
+    immediate: true,
   }
-};
+);
 
 onBeforeMount(() => {
   auth.initialize();
+});
+
+onMounted(() => {
+  setupTheme();
+  setViewType();
 });
 </script>

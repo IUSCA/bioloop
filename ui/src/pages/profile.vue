@@ -43,7 +43,11 @@
         <div class="flex flex-col gap-5">
           <div class="flex items-center gap-3">
             Primary color:
-            <VaColorPalette v-model="colors.primary" :palette="palette" />
+            <VaColorPalette
+              v-model="colors.primary"
+              :palette="palette"
+              @update:model-value="persistTheme"
+            />
           </div>
         </div>
       </va-card-content>
@@ -59,8 +63,14 @@ import config from "@/config";
 const auth = useAuthStore();
 const { colors } = useColors();
 
-const palette = ["#2c82e0", "#ef476f", "#ffd166", "#06d6a0", "#8338ec"];
+const palette = ["#154ec1", "#ef476f", "#ffd166", "#06d6a0", "#8338ec"];
 const profile = auth.user;
+
+function persistTheme() {
+  auth.setTheme({
+    primary: colors.primary,
+  });
+}
 </script>
 
 <route lang="yaml">

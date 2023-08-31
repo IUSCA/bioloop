@@ -11,7 +11,7 @@
             <div class="self-center">
               <Icon
                 :icon="getIcon(metric.measurement)"
-                class="text-5xl text-slate-600 rounded p-1"
+                class="text-5xl text-slate-700 dark:text-slate-300 rounded p-1"
               />
             </div>
 

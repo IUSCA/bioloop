@@ -39,3 +39,19 @@ div.va-modal__title {
 .va-input-wrapper__field i.va-icon {
   font-size: 24px !important;
 }
+
+/* In dark mode, the list item text color is not changing and the original color does not look good.
+ * Override the list item text color with general text color and it does change when switched to dark mode.
+*/
+.va-list-item-label {
+  color: var(--va-text-primary)
+}
+
+/* 
+ * For some reason, overrided list item label color takes precendence over va-list-item-label-caption-color
+ * Copied the same style here from the source, to increase precedence so that the caption does not have 
+ * the same color as the label.
+*/
+.va-list-item-label--caption {
+  color: var(--va-list-item-label-caption-color)
+}
