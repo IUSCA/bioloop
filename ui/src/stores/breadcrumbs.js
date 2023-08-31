@@ -8,7 +8,11 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
   );
 
   function addNavItem(item, insertAtIndex) {
-    if (!item) {
+    if (
+      !item ||
+      typeof insertAtIndex !== "number" ||
+      !(item.label || item.icon)
+    ) {
       return;
     }
 

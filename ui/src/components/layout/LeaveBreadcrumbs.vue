@@ -129,11 +129,13 @@ const configureAppBreadcrumbs = () => {
   }
 
   // add breadcrumb item for home
-  breadcrumbsStore.addNavItem({ icon: "mdi-home", to: "/" }, 0);
+  breadcrumbsStore.addNavItem(BREADCRUMBS.HOME, 0);
 
   // add breadcrumb item for first level pages (Projects, Profile, etc.)
   breadcrumbsStore.addNavItem(
-    Object.values(BREADCRUMBS).find((crumb) => route.path.includes(crumb.to)),
+    Object.values(BREADCRUMBS).find(
+      (crumb) => crumb.to !== "/" && route.path.includes(crumb.to)
+    ),
     1
   );
 
@@ -165,6 +167,7 @@ const VISIBILITY = {
 };
 
 const BREADCRUMBS = {
+  HOME: { icon: "mdi-home", to: "/" },
   PROJECTS: { label: "Projects", to: "/projects" },
   USERS: { label: "Users", to: "/users" },
   ABOUT: { label: "About", to: "/about" },
