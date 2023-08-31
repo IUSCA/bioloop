@@ -38,7 +38,6 @@
     <template #right>
       <va-navbar-item class="flex items-center" v-if="auth.user?.username">
         <HeaderUserDropdown />
-        <!-- <span>Logged in as {{ auth.user.username }}</span> -->
       </va-navbar-item>
       <va-navbar-item class="flex items-center">
         <ThemeToggle />
