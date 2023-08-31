@@ -21,6 +21,7 @@ import { useUIStore } from "@/stores/ui";
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
+const { applyPreset, colors } = useColors();
 const toast = useToastStore();
 toast.setup(useToast());
 
