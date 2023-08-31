@@ -1,9 +1,13 @@
 import api from "./api";
 import { useAuthStore } from "@/stores/auth";
+import { useProjectStore } from "@/stores/projects/project";
 import { useToastStore } from "@/stores/toast";
+import { useUIStore } from "@/stores/ui";
 
 const auth = useAuthStore();
 const toast = useToastStore();
+const projectStore = useProjectStore();
+const ui = useUIStore();
 
 class projectService {
   getAll({ forSelf }) {
@@ -108,6 +112,24 @@ class projectService {
         console.error(err);
         toast.error("Failed to merge projects");
         return Promise.reject(err);
+      });
+  }
+
+  loadProject(projectId, forSelf) {
+    ui.setIsLoadingResource(true);
+    return this.getById({
+      id: projectId,
+      forSelf,
+    })
+      .then((res) => {
+        projectStore.setProject(res.data);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Unable to fetch project details");
+      })
+      .finally(() => {
+        ui.setIsLoadingResource(false);
       });
   }
 }

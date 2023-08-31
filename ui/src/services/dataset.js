@@ -1,8 +1,13 @@
 import api from "./api";
 import config from "@/config";
+import { useUIStore } from "@/stores/ui";
+import { useDatasetStore } from "@/stores/dataset";
 import { useToastStore } from "@/stores/toast";
+import workflowService from "@/services/workflow";
 
 const toast = useToastStore();
+const ui = useUIStore();
+const datasetStore = useDatasetStore();
 
 class DatasetService {
   getAll({ deleted = null, processed = null, type = null } = {}) {
@@ -102,6 +107,36 @@ class DatasetService {
 
   get_file_download_data({ dataset_id, file_id }) {
     return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
+  }
+
+  loadDataset(id) {
+    ui.setIsLoadingResource(true);
+    return this.getById({ id })
+      .then((res) => {
+        const _dataset = res.data;
+        const _workflows = _dataset?.workflows || [];
+
+        // sort workflows
+        _workflows.sort(workflowService.workflow_compare_fn);
+        // add collapse_model to open running workflows
+        // keep workflows open that were open
+        _dataset.workflows = _workflows.map((w) => {
+          return {
+            ...w,
+            collapse_model: !workflowService.is_workflow_done(w) || false,
+          };
+        });
+        datasetStore.setDataset(_dataset);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (err?.response?.status == 404)
+          toast.error("Could not find the dataset");
+        else toast.error("Something went wrong. Could not fetch datatset");
+      })
+      .finally(() => {
+        ui.setIsLoadingResource(false);
+      });
   }
 
   search_files({

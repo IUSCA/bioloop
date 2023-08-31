@@ -34,15 +34,18 @@
 </template>
 
 <script setup>
+import projectService from "@/services/projects";
 import datasetService from "@/services/dataset";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
+import { useDatasetStore } from "@/stores/dataset";
+import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from "pinia";
 import { filterByValues } from "@/services/utils";
-import { useDatasetStore } from "@/stores/dataset";
 import config from "@/config";
 
 const store = useFileBrowserStore();
 const datasetStore = useDatasetStore();
+const auth = useAuthStore();
 
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
 
@@ -133,6 +136,13 @@ watch(
   },
   { immediate: true }
 );
+
+onMounted(() => {
+  datasetService.loadDataset(props.datasetId);
+  if (props.projectId) {
+    projectService.loadProject(props.projectId, !auth.canOperate);
+  }
+});
 
 const advancedSearchModal = ref(null);
 

@@ -60,6 +60,21 @@ class WorkflowService {
 
     return pending_steps.length > 0;
   }
+
+  workflow_compare_fn(a, b) {
+    /* compareFn: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
+     * sort by status, created_at
+     * not done status has higher precedence
+     */
+    const is_a_done = this.is_workflow_done(a);
+    const is_b_done = this.is_workflow_done(b);
+    const order_by_done = is_a_done - is_b_done;
+
+    if (!order_by_done) {
+      return new Date(b.created_at) - new Date(a.created_at);
+    }
+    return order_by_done;
+  }
 }
 
 export default new WorkflowService();

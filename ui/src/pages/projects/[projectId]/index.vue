@@ -1,6 +1,7 @@
 <template>
-  <va-inner-loading :loading="data_loading">
-    <!-- body -->
+  <va-inner-loading loading v-if="ui.isLoadingResource"></va-inner-loading>
+  <!-- body -->
+  <div v-else>
     <div class="flex flex-col gap-3">
       <!-- Associated datasets -->
       <div>
@@ -115,80 +116,64 @@
         </va-card>
       </div>
     </div>
-  </va-inner-loading>
 
-  <!-- edit modal -->
-  <EditProjectInfoModal
-    ref="editModal"
-    :id="project.id"
-    @update="handleEditUpdate"
-  />
+    <!-- edit modal -->
+    <EditProjectInfoModal
+      ref="editModal"
+      :id="project.id"
+      @update="handleEditUpdate"
+    />
 
-  <!-- delete modal -->
-  <DeleteProjectModal
-    ref="deleteModal"
-    :data="project"
-    @update="router.push('/projects')"
-  />
+    <!-- delete modal -->
+    <DeleteProjectModal
+      ref="deleteModal"
+      :data="project"
+      @update="router.push('/projects')"
+    />
 
-  <!-- Users modal -->
-  <ProjectUsersModal
-    ref="usersModal"
-    :id="project.id"
-    @update="handleEditUpdate"
-  />
+    <!-- Users modal -->
+    <ProjectUsersModal
+      ref="usersModal"
+      :id="project.id"
+      @update="handleEditUpdate"
+    />
 
-  <!-- Datasets modal -->
-  <ProjectDatasetsModal
-    ref="datasetsModal"
-    :id="project.id"
-    @update="handleEditUpdate"
-  />
+    <!-- Datasets modal -->
+    <ProjectDatasetsModal
+      ref="datasetsModal"
+      :id="project.id"
+      @update="handleEditUpdate"
+    />
 
-  <!-- Merge modal -->
-  <MergeProjectModal
-    ref="mergeModal"
-    :id="project.id"
-    @update="handleEditUpdate"
-  />
+    <!-- Merge modal -->
+    <MergeProjectModal
+      ref="mergeModal"
+      :id="project.id"
+      @update="handleEditUpdate"
+    />
+  </div>
 </template>
 
 <script setup>
 import projectService from "@/services/projects";
-import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useProjectStore } from "@/stores/projects/project";
+import { useUIStore } from "@/stores/ui";
 
+const ui = useUIStore();
 const auth = useAuthStore();
 const router = useRouter();
-const toast = useToastStore();
 const projectFormStore = useProjectFormStore();
 const projectStore = useProjectStore();
 
 const project = computed(() => projectStore.project);
-const data_loading = ref(false);
 
 const props = defineProps({ projectId: String });
 
-function fetch_project() {
-  data_loading.value = true;
-  return projectService
-    .getById({
-      id: props.projectId,
-      forSelf: !auth.canOperate,
-    })
-    .then((res) => {
-      projectStore.setProject(res.data);
-    })
-    .catch((err) => {
-      console.error(err);
-      toast.error("Unable to fetch project details");
-    })
-    .finally(() => {
-      data_loading.value = false;
-    });
-}
+onMounted(() => {
+  projectService.loadProject(props.projectId, !auth.canOperate);
+});
 
 const users = computed(() => {
   return (project.value.users || []).map((obj) => ({
@@ -218,7 +203,7 @@ function handleEditUpdate() {
   const old_slug = project.value.slug;
   // fetch project by id in project object or id in props
   // this always works even if the slug has changed
-  fetch_project().then(() => {
+  projectService.loadProject(props.projectId).then(() => {
     // if slug changed, the url is invalid, navigate to new url
     const new_slug = project.value.slug;
     if (old_slug !== new_slug) {

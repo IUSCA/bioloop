@@ -18,24 +18,17 @@
 </template>
 
 <script setup>
-import api from "@/services/api";
 import { useBreadcrumbsStore } from "@/stores/breadcrumbs";
 import { useUIStore } from "@/stores/ui";
 import { useDatasetStore } from "@/stores/dataset";
 import { useProjectStore } from "@/stores/projects/project";
-import { useAuthStore } from "@/stores/auth";
-import { useFileBrowserStore } from "@/stores/fileBrowser";
-import { useToastStore } from "@/stores/toast";
 import { getDatasetPathPrefix } from "@/services/utils";
 
-const auth = useAuthStore();
 const breadcrumbsStore = useBreadcrumbsStore();
 const datasetStore = useDatasetStore();
 const projectStore = useProjectStore();
-const fileBrowserStore = useFileBrowserStore();
 const route = useRoute();
 const ui = useUIStore();
-const toast = useToastStore();
 
 const getItemLabel = (item) => {
   const isLabelBreadcrumb =
@@ -58,104 +51,13 @@ const dataset = computed(() => {
   return datasetStore.dataset;
 });
 
-const fileList = computed(() => {
-  return fileBrowserStore.fileList;
-});
-
-const fetch_project = (projectId) => {
-  return api
-    .get(
-      `/projects/${
-        !auth.canOperate ? `${auth.user.username}/${projectId}` : projectId
-      }`
-    )
-    .then((res) => {
-      const project = res.data;
-      projectStore.setProject(project);
-      return project;
-    })
-    .catch((e) => {
-      console.error(e);
-      toast.error("Unable to fetch project details");
-    });
-};
-
-const fetch_dataset = (datasetId) => {
-  return api
-    .get(`/datasets/${datasetId}`)
-    .then((res) => {
-      const dataset = res.data;
-      // configuring dataset's workflows requires external logic that is overkill to include here.
-      // When the Dataset component mounts, the dataset fetches and sets its workflows, if
-      // they aren't already set.
-      delete dataset.workflows;
-      datasetStore.setDataset(dataset);
-      return dataset;
-    })
-    .catch((e) => {
-      console.error(e);
-      toast.error("Unable to fetch dataset details");
-    });
-};
-
-const fetch_file_list = (datasetId) => {
-  return api
-    .get(`/datasets/${datasetId}/files`, {
-      params: {
-        basepath: "",
-      },
-    })
-    .then((res) => {
-      const fileList = res.data;
-      fileBrowserStore.setFileList(fileList);
-      return fileList;
-    })
-    .catch((e) => {
-      console.error(e);
-      toast.error("Unable to fetch file list");
-    });
-};
-
-const fetchResourcesForBreadcrumbs = () => {
-  const routeProjectId = route.params.projectId;
-  const routeDatasetId = parseInt(route.params.datasetId);
-  const promises = [];
-
-  promises.push(
-    !routeDatasetId || routeDatasetId === dataset.value.id
-      ? Promise.resolve(dataset.value)
-      : fetch_dataset(routeDatasetId)
-  );
-  promises.push(
-    !routeProjectId || routeProjectId === project.value.slug
-      ? Promise.resolve(project.value)
-      : fetch_project(routeProjectId)
-  );
-  promises.push(
-    !route.path.includes("/filebrowser")
-      ? Promise.resolve(fileList.value)
-      : fetch_file_list(routeDatasetId)
-  );
-
-  return Promise.all(promises).then((values) => {
-    return {
-      dataset: values[0],
-      project: values[1],
-      fileList: values[2],
-    };
-  });
-};
-
 onMounted(() => {
   configureAppBreadcrumbs();
 });
 
-watch(
-  () => route.path,
-  () => {
-    configureAppBreadcrumbs();
-  }
-);
+watch([() => project.value, () => dataset.value], () => {
+  configureAppBreadcrumbs(project.value, dataset.value);
+});
 
 const configureProjectBreadcrumb = (project) => {
   if (!project.slug) {
@@ -216,7 +118,7 @@ const configureFileBrowserBreadcrumbs = () => {
   );
 };
 
-const configureAppBreadcrumbs = () => {
+const configureAppBreadcrumbs = (project, dataset) => {
   VISIBILITY.isBreadcrumbNavVisible = false;
 
   breadcrumbsStore.resetNavItems();
@@ -235,22 +137,17 @@ const configureAppBreadcrumbs = () => {
     1
   );
 
-  // fetch any resources needed to setup further breadcrumb items
-  ui.setIsLoadingResource(true);
-  fetchResourcesForBreadcrumbs().then(({ project, dataset }) => {
-    if (route.params.projectId && project.slug) {
-      configureProjectBreadcrumb(project);
-    }
-    if (route.params.datasetId && dataset.name) {
-      configureDatasetBreadcrumbs(dataset);
-    }
-    if (route.path.includes("/filebrowser")) {
-      configureFileBrowserBreadcrumbs();
-    }
-    ui.setIsLoadingResource(false);
+  if (route.params.projectId && project?.slug) {
+    configureProjectBreadcrumb(project);
+  }
+  if (route.params.datasetId && dataset?.name) {
+    configureDatasetBreadcrumbs(dataset);
+  }
+  if (route.path.includes("/filebrowser")) {
+    configureFileBrowserBreadcrumbs();
+  }
 
-    VISIBILITY.isBreadcrumbNavVisible = true;
-  });
+  VISIBILITY.isBreadcrumbNavVisible = true;
 };
 
 const VISIBILITY = {
@@ -291,6 +188,6 @@ const DATASET_BREADCRUMBS = {
 }
 
 .va-breadcrumbs__item:not(:last-child) {
-  color: rgb(118, 124, 136) !important;
+  color: rgb(118, 124, 136);
 }
 </style>
