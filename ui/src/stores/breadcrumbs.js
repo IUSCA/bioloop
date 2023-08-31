@@ -12,12 +12,11 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
       return;
     }
 
-    const { label, icon, to, disabled } = item;
-
     const matchingBreadcrumbItems = computed(() => {
       return (
         breadcrumbs.value.filter(
-          (e) => e.icon === icon && e.label === label && e.to === to
+          (e) =>
+            e.icon === item.icon && e.label === item.label && e.to === item.to
         ) || []
       );
     });

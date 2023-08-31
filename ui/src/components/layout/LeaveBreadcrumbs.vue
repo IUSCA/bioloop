@@ -6,7 +6,7 @@
   >
     <va-breadcrumbs-item
       v-for="(item, index) in breadcrumbs"
-      :key="`${item}-${index}`"
+      :key="`breadcrumb-item-${index}`"
       :label="getItemLabel(item)"
       :to="item.to"
       :disabled="index === breadcrumbs.length - 1 || item.disabled"
@@ -84,7 +84,7 @@ const configureDatasetBreadcrumbs = (dataset) => {
       ...Object.values(DATASET_BREADCRUMBS).find((crumb) =>
         crumb.to.includes(dataset.type.replace("_", "").toLowerCase())
       ),
-      disabled: route.params.projectId && route.params.datasetId,
+      disabled: !!route.params.projectId && !!route.params.datasetId,
     },
     route.params.projectId ? 3 : 1
   );
