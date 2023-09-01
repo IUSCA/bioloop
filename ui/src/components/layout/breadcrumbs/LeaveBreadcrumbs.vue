@@ -7,7 +7,7 @@
     <va-breadcrumbs-item
       v-for="(item, index) in breadcrumbs"
       :key="`breadcrumb-item-${index}`"
-      :label="getItemLabel(item)"
+      :label="getItemLabel(item, index)"
       :to="item.to"
       :disabled="index === breadcrumbs.length - 1 || item.disabled"
     >
@@ -31,16 +31,11 @@ const route = useRoute();
 const ui = useUIStore();
 
 const getItemLabel = (item) => {
-  const isLabelBreadcrumb =
-    Object.values(BREADCRUMBS).filter((crumb) => crumb.label === item.label)
-      .length > 0;
-  return isLabelBreadcrumb || !ui.isMobileView
-    ? item.label
-    : item.label?.slice(0, 7) + "...";
+  return !ui.isMobileView ? item.label : item.label?.slice(0, 10) + "...";
 };
 
 const breadcrumbs = computed(() => {
-  return breadcrumbsStore.breadcrumbNavItems;
+  return breadcrumbsStore.breadcrumbs;
 });
 
 const project = computed(() => {
@@ -60,7 +55,7 @@ watch([() => project.value, () => dataset.value], () => {
 });
 
 const configureProjectBreadcrumb = (project) => {
-  if (!project.slug) {
+  if (!project.id) {
     return;
   }
   breadcrumbsStore.addNavItem(
@@ -134,7 +129,7 @@ const configureAppBreadcrumbs = () => {
   // add breadcrumb item for first level pages (Projects, Profile, etc.)
   breadcrumbsStore.addNavItem(
     Object.values(BREADCRUMBS).find(
-      (crumb) => crumb.to !== "/" && route.path.includes(crumb.to)
+      (crumb) => crumb !== BREADCRUMBS.HOME && route.path.includes(crumb.to)
     ),
     1
   );

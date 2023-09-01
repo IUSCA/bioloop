@@ -2,17 +2,27 @@ import { ref, computed } from "vue";
 import { defineStore } from "pinia";
 
 export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
+  // Array containing the breadcrumb nav items currently being rendered in the
+  // app. Is exposed to the app.
   const breadcrumbs = ref([]);
-  const breadcrumbNavItems = computed(() =>
-    breadcrumbs.value.filter((e) => e !== undefined)
-  );
 
-  function addNavItem(item, insertAtIndex) {
-    if (
-      !item ||
-      typeof insertAtIndex !== "number" ||
-      !(item.label || item.icon)
-    ) {
+  /**
+   *
+   * @param {Object} item - Adds a new breadcrumb item to the breadcrumbs
+   * array. Is an object containing the following optional attributes:
+   * - label    - label for the breadcrumb item
+   * - icon     - icon for the breadcrumb item
+   * - to       - redirect URL for the breadcrumb item
+   * - disabled - prevents breadcrumb item from being clickable
+   *
+   * One of label or icon must be provided for the corresponding breadcrumb
+   * item to be rendered.
+   *
+   * If the provided item already exists in the breadcrumbs array, it won't
+   * be added.
+   */
+  function addNavItem(item) {
+    if (!item || !(item.label || item.icon)) {
       return;
     }
 
@@ -24,27 +34,21 @@ export const useBreadcrumbsStore = defineStore("breadcrumbs", () => {
         ) || []
       );
     });
-    // only add breadcrumb item if it doesn't already exist in
-    // the current breadcrumb nav items
+    // adds breadcrumb item if it doesn't already exist in the current state.
     if (matchingBreadcrumbItems.value.length === 0) {
-      if (typeof insertAtIndex === "number") {
-        // fill the array until it is the size needed to insert at insertAtIndex
-        if (breadcrumbs.value.length < insertAtIndex) {
-          Array(insertAtIndex - breadcrumbs.value.length).forEach(() => {
-            breadcrumbs.value.push(undefined);
-          });
-        }
-        breadcrumbs.value[insertAtIndex] = item;
-      }
+      breadcrumbs.value.push(item);
     }
   }
 
+  /**
+   * Resets breadcrumbs.
+   */
   function resetNavItems() {
     breadcrumbs.value = [];
   }
 
   return {
-    breadcrumbNavItems,
+    breadcrumbs,
     addNavItem,
     resetNavItems,
   };
