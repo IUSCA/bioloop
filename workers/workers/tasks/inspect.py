@@ -2,6 +2,7 @@ from pathlib import Path
 
 from celery import Celery
 from celery.utils.log import get_task_logger
+from sca_rhythm import WorkflowTask
 from sca_rhythm.progress import Progress
 
 import workers.api as api
@@ -16,7 +17,27 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def generate_metadata(celery_task, source: Path):
+def generate_metadata_parallel(celery_task: WorkflowTask, source: Path, n_proc: int = 8):
+    """
+    celery_task: Use it to send progress updates
+    source is Path to a directory to inspect
+    n_proc is number of parallel processes to employ
+
+    raises exc.InspectionFailed with array of strings if there are file errors
+    otherwise raises other exceptions
+    """
+
+    num_files, num_directories, size, num_genome_files = 0, 0, 0, 0
+    metadata = []
+    errors = []
+    if not utils.is_readable(source):
+        msg = f'source {source} is either not readable or not traversable'
+        raise exc.InspectionFailed(msg)
+
+    return num_files, num_directories, size, num_genome_files, metadata
+
+
+def generate_metadata(celery_task: WorkflowTask, source: Path):
     """
     source is a directory that exists and has to readable and executable (see files inside)
     all the files and directories under source should be readable

@@ -16,6 +16,19 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
+def check_files_parallel(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: list[dict], n_proc: int = 8):
+    """
+    celery_task: Use it to send progress updates
+    dataset_dir: path to directory to compute checksums and validate
+    files_metadata: checksum info from the database. ex: [{'path': '/a/b/c', 'md5': 'adf12af...',...]
+    n_proc: number of parallel processes to employ
+
+    returns list of strings - checksum mismatches
+    """
+    validation_errors = []
+    return validation_errors
+
+
 def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: list[dict]):
     progress = Progress(celery_task=celery_task, units='files')
     validation_errors = []
