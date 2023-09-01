@@ -1,71 +1,100 @@
 <template>
-  <div class="flex gap-3 my-3">
-    <va-checkbox v-model="highlight_errors" class="" label="Highlight Errors" />
-    <va-checkbox v-model="show_timestamps" class="" label="Show Timestamps" />
-    <va-checkbox v-model="live_updates" class="" label="Live Updates" />
-  </div>
-  <va-data-table
-    :items="logs"
-    :columns="columns"
-    clickable
-    :row-bind="getRowBind"
-    :scroll-bottom-margin="5"
-    @row:click="onClick"
-    virtual-scroller
-    sticky-header
-    sticky-footer
-    style="height: 30rem"
-    class="p-1 log-table"
-    ref="tableRef"
-  >
-    <template #cell(level)="{ source }">
-      <span class="uppercase text-sm"> {{ source }} </span>
-    </template>
+  <div class="">
+    <!-- filter and options -->
+    <div class="flex gap-3 mb-3 items-center">
+      <!-- search bar -->
+      <va-input
+        v-model="filterText"
+        class="w-[50%]"
+        placeholder="Type / to begin search"
+        outline
+        clearable
+        input-class="search-input"
+      >
+        <template #prependInner>
+          <Icon icon="material-symbols:search" class="text-xl" />
+        </template>
+      </va-input>
 
-    <template #cell(message)="{ source }">
-      <span class="text-sm"> {{ source }} </span>
-    </template>
+      <!-- checkboxes -->
+      <va-checkbox
+        v-model="highlight_errors"
+        class=""
+        label="Highlight Errors"
+      />
+      <va-checkbox v-model="show_timestamps" class="" label="Timestamps" />
+      <va-checkbox v-model="live_updates" class="" label="Live Updates" />
+    </div>
 
-    <template #cell(timestamp)="{ source }">
-      <span class="spacing-wide"> {{ datetime.absolute(source, false) }} </span>
-    </template>
+    <!-- table -->
+    <va-data-table
+      :items="rows"
+      :columns="columns"
+      clickable
+      :row-bind="getRowBind"
+      :scroll-bottom-margin="5"
+      @row:click="onClick"
+      virtual-scroller
+      sticky-header
+      sticky-footer
+      style="height: 34.5rem"
+      class="log-table"
+      ref="tableRef"
+    >
+      <template #cell(level)="{ source }">
+        <span class="uppercase text-sm"> {{ source }} </span>
+      </template>
 
-    <!-- footer -->
-    <template #footer>
-      <tr class="table-slots">
-        <th colspan="12" class="font-normal text-sm py-1">
-          <!-- live updates status -->
-          <div
-            v-if="live_updates"
-            class="flex gap-1 items-center justify-end px-2"
-          >
-            <i-mdi:record class="text-red-600 text-sm flex-none" />
-            <i-mdi-refresh class="flex-none" />
-            <span class="flex-none va-text-secondary"
-              >live updates enabled</span
+      <template #cell(message)="{ source }">
+        <span class="text-sm"> {{ source }} </span>
+      </template>
+
+      <template #cell(timestamp)="{ source }">
+        <span class="spacing-wide">
+          {{ datetime.absolute(source, false) }}
+        </span>
+      </template>
+
+      <!-- footer -->
+      <template #footer>
+        <tr class="table-slots">
+          <th colspan="12" class="font-normal text-sm">
+            <!-- live updates status -->
+            <div
+              v-if="live_updates"
+              class="flex gap-1 items-center justify-end px-2"
             >
-          </div>
+              <i-mdi:record class="text-red-600 text-sm flex-none" />
+              <i-mdi-refresh class="flex-none" />
+              <span class="flex-none va-text-secondary">
+                live updates enabled
+              </span>
+            </div>
 
-          <!-- scroll to bottom and back to top -->
-          <div class="absolute right-6 -top-12">
-            <ScrollJump
-              :elem-ref="tableRef"
-              :items-in-view="ROWS_IN_VIEW"
-              :num-items="logSize"
-              :key="tableRef"
-            />
-          </div>
-        </th>
-      </tr>
-    </template>
-  </va-data-table>
-  <va-backtop />
+            <!-- scroll to bottom and back to top -->
+            <div class="absolute right-6 -top-12">
+              <ScrollJump
+                :elem-ref="tableRef"
+                :items-in-view="ROWS_IN_VIEW"
+                :num-items="rows.length"
+                :total-items="logSize"
+                :key="tableRef"
+              />
+            </div>
+          </th>
+        </tr>
+      </template>
+    </va-data-table>
+  </div>
 </template>
 
 <script setup>
+import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import workflowService from "@/services/workflow";
 import { useToastStore } from "@/stores/toast";
 import * as datetime from "@/services/datetime";
+
+useSearchKeyShortcut();
 
 const toast = useToastStore();
 const { copy } = useClipboard();
@@ -81,13 +110,14 @@ const props = defineProps({
   },
 });
 
-const ROWS_IN_VIEW = 15;
+const ROWS_IN_VIEW = 19;
 
 const logs = ref([]);
 const highlight_errors = ref(true);
 const show_timestamps = ref(false);
 const live_updates = ref(props.live);
 const tableRef = ref(null);
+const filterText = ref("");
 
 const columns = computed(() => {
   const cols = [
@@ -100,6 +130,14 @@ const columns = computed(() => {
     cols.unshift({ key: "timestamp", width: "200px" });
   }
   return cols;
+});
+
+const rows = computed(() => {
+  return logs.value.filter(
+    (log) =>
+      log.message.toLowerCase().includes(filterText.value.toLowerCase()) ||
+      log.level.toLowerCase().includes(filterText.value.toLowerCase())
+  );
 });
 
 const logSize = computed(() => logs.value.length);
@@ -157,6 +195,6 @@ fetchLogs();
 
 <style lang="scss" scoped>
 .log-table {
-  --va-data-table-cell-padding: 3px;
+  --va-data-table-cell-padding: 2px;
 }
 </style>

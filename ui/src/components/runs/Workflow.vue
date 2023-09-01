@@ -58,6 +58,7 @@
               :workflow-id="workflow.id"
               :step-name="rowData?.step?.name"
               class="py-2 text-sm"
+              @show-logs="openLogsModal"
             />
           </div>
         </template>
@@ -113,6 +114,8 @@
       </div>
     </div>
   </va-inner-loading>
+
+  <ProcessLogsModal ref="logsModal" />
 </template>
 
 <script setup>
@@ -126,7 +129,7 @@ const emit = defineEmits(["update"]);
 
 const loading = ref(false);
 const workflow = ref(props.workflow);
-console.log(workflow.value);
+// console.log(workflow.value);
 
 // to watch props make them reactive or wrap them in functions
 watch(
@@ -276,5 +279,12 @@ function pause_workflow() {
       }, 2000);
       loading.value = false;
     });
+}
+
+// logs modal
+const logsModal = ref(null);
+
+function openLogsModal(id) {
+  logsModal.value.show(id);
 }
 </script>

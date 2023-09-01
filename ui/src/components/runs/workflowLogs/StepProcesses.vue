@@ -16,8 +16,7 @@
             </div>
             <div class="flex gap-1 flex-none">
               <i-mdi:server-network aria-label="hostname" class="flex-none" />
-              <!-- <span>{{ p.hostname }} </span> -->
-              <span> colo23.carbonate.uits.iu.edu </span>
+              <span>{{ p.hostname }} </span>
             </div>
           </div>
         </va-list-item-label>

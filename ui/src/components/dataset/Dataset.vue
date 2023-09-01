@@ -19,7 +19,7 @@
                   preset="primary"
                   @click="navigateToFileBrowser"
                   class="flex-none"
-                  color="#A020F0"
+                  :color="isDark ? '#9171f8' : '#A020F0'"
                 >
                   <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
                 </va-button>
@@ -302,6 +302,7 @@ import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
+const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 

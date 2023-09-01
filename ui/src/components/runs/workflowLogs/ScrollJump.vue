@@ -20,14 +20,14 @@
 </template>
 
 <script setup>
-const props = defineProps(["elemRef", "itemsInView", "numItems"]);
+const props = defineProps(["elemRef", "itemsInView", "numItems", "totalItems"]);
 
 const { y } = useScroll(props.elemRef);
 const isNearBottom = ref(false);
 const newItems = ref(false);
 
 watch(
-  () => props.numItems,
+  () => props.totalItems,
   (newVal, oldVal) => {
     if (oldVal !== 0 && newVal > oldVal) {
       newItems.value = true;
@@ -48,7 +48,7 @@ const badgeText = computed(() => {
 // we need to wait for the DOM update to measure the total scroll level (scrollHeight - clientHeight)
 // nextTick does not wait till DOM update and scroll level is returned as 0
 // setTimeout seems to run after the DOM update
-watch([y, () => props.numItems], () => {
+watch([y, () => props.totalItems], () => {
   setTimeout(() => {
     const scrollcontainer = props.elemRef?.scrollContainer;
     if (scrollcontainer) {
