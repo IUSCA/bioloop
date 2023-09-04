@@ -2082,13 +2082,13 @@ files = [
 
 [[package]]
 name = "sca-rhythm"
-version = "0.6.0"
+version = "0.6.2"
 description = "Create and manage workflows using Celery tasks"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "sca_rhythm-0.6.0-py3-none-any.whl", hash = "sha256:6ba155071164dc99c3b8c881d75feb9071e4495f1ed84f5a57cbbd28a959a589"},
-    {file = "sca_rhythm-0.6.0.tar.gz", hash = "sha256:3f172509b190df714f56570c3b6d10173e7f8b144ab20a26ada81ad51bfe6cbd"},
+    {file = "sca_rhythm-0.6.2-py3-none-any.whl", hash = "sha256:9948d55e45183ff032819c0ce151cecda5662105526a33642876ba7c3888401d"},
+    {file = "sca_rhythm-0.6.2.tar.gz", hash = "sha256:8de97c3e8ce57f4a7f38a8e44037d1543a801c1c3a19b7208ca0613a8b4ecda6"},
 ]
 
 [package.dependencies]
@@ -2405,4 +2405,4 @@ test = ["websockets"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "b9623923e119f25f45eded4c9923fff1fee26ba78be9e010cb8bfe235ddee7ed"
+content-hash = "e5ee492883b080b9a6e110cd7d9c14a982c7b2ccb9981371280748cdee37b39c"

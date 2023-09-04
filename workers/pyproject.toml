@@ -7,15 +7,15 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-celery = "^5.2.7"
+celery = "~5.2.7"        # 3.3 has broken the app
 python-dotenv = "^1.0.0"
 sca-rhythm = "^0.6.0"
-requests = "^2.30.0"
-urllib3 = "<2"
+requests = "^2.31.0"
+urllib3 = "<2"           # because of ssl conflicts
 glom = "^23.3.0"
 
 [tool.poetry.group.dev.dependencies]
-jupyterlab = "^4.0.3"
+jupyterlab = "^4.0.5"
 diagrams = "^0.23.3"
 
 [build-system]
