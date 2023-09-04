@@ -60,3 +60,4 @@ def setup_download(celery_task, dataset_id, **kwargs):
 
     # enable others to navigate to leaf by granting execute permission on parent directories
     grant_access_to_parent_chain(staged_path, root=Path(config['paths']['root']))
+    return dataset_id,

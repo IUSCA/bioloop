@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def get_wf_body(wf_name: str) -> dict:
     wf_body = config['workflow_registry'][wf_name]
-    wf_body['name'] = wf_name
+    wf_body['name'] = wf_body.get('name', wf_name)
     wf_body['app_id'] = config['app_id']
     for step in wf_body['steps']:
         if 'queue' not in step:

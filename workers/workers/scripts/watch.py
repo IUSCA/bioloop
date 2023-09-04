@@ -50,6 +50,10 @@ class Poller:
         observer.interval = int(observer.interval)
         assert observer.interval >= 1
         self.observers[observer.name] = observer
+        logger.info(
+            f'Observer {observer.name} registered. '
+            f'{observer.dir_path} will be polled every {observer.interval} seconds'
+        )
 
     def unregister(self, name):
         self.observers.pop(name)
@@ -65,19 +69,17 @@ class Poller:
                     try:
                         observer.watch()
                     except Exception as e:
-                        logger.error('exception in calling observer', exc_info=e)
+                        logger.error(f'exception in calling observer {observer.name}', exc_info=e)
                     last_call_times[observer.name] = current_time
             time.sleep(1)
 
 
 class Register:
-    def __init__(self, dataset_type, run_workflow=True):
+    def __init__(self, dataset_type):
         self.dataset_type = dataset_type
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
         self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
-        self.run_workflow = run_workflow
-        self.wf_body = wf_utils.get_wf_body(wf_name='integrated')
 
     def get_registered_dataset_names(self):
         datasets = api.get_all_datasets(dataset_type=self.dataset_type)
@@ -97,20 +99,30 @@ class Register:
         ]
 
         for candidate in candidates:
-            logger.info(f'registering dataset - {candidate.name}')
+            logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
             dataset = {
                 'name': candidate.name,
                 'type': self.dataset_type,
                 'origin_path': str(candidate.resolve()),
             }
-            if self.run_workflow:
-                wf = Workflow(celery_app=celery_app, **self.wf_body)
-                dataset['workflow_id'] = wf.workflow['_id']
-                created_dataset = api.create_dataset(dataset)
-                wf.start(created_dataset['id'])
-            else:
-                api.create_dataset(dataset)
+            created_dataset = api.create_dataset(dataset)
+            self.run_workflows(created_dataset)
             self.completed.add(candidate.name)
+
+    def run_workflows(self, dataset):
+        dataset_id = dataset['id']
+        wf_body = wf_utils.get_wf_body(wf_name='integrated')
+        wf = Workflow(celery_app=celery_app, **wf_body)
+        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+        wf.start()
+
+
+class RegisterDataProduct(Register):
+    def __init__(self):
+        super().__init__(dataset_type='DATA_PRODUCT')
+
+    def run_workflows(self, dataset):
+        pass
 
 
 if __name__ == "__main__":
@@ -123,7 +135,7 @@ if __name__ == "__main__":
     obs2 = Observer(
         name='data_products_obs',
         dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
-        callback=Register('DATA_PRODUCT').register,
+        callback=RegisterDataProduct().register,
         interval=config['registration']['poll_interval_seconds']
     )
 

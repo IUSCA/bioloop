@@ -29,7 +29,7 @@ def update_progress(celery_task, mod_time, delta):
     celery_task.update_progress(prog_obj)
 
 
-def await_stability(celery_task, dataset_id, **kwargs):
+def await_stability(celery_task, dataset_id, wait_seconds: int = None, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     origin_path = Path(dataset['origin_path'])
 
@@ -43,7 +43,7 @@ def await_stability(celery_task, dataset_id, **kwargs):
         if delta > config['registration']['recency_threshold_seconds']:
             break
 
-        time.sleep(config['registration']['wait_between_stability_checks_seconds'])
+        time.sleep(wait_seconds or config['registration']['wait_between_stability_checks_seconds'])
 
     api.add_state_to_dataset(dataset_id=dataset_id, state='READY')
     return dataset_id,

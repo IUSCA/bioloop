@@ -55,7 +55,7 @@ def convert_size_to_bytes(size_str: str) -> int:
 
 def merge(a: dict, b: dict) -> dict:
     """
-    "merges b into a"
+    "merges b into a" - overwrites values of a with that of b for conflicting keys
 
     a = {
         1: {"a":"A"},
