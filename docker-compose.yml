@@ -2,7 +2,7 @@ version: "3"
 name: bioloop
 services:
   ui:
-    image: node:19
+    image: node:20
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules
@@ -18,7 +18,7 @@ services:
         npm install && exec /opt/sca/app/node_modules/.bin/vite --host
 
   api:
-    image: node:19
+    image: node:20
     # user: ${APP_UID}:${APP_GID}
     # build:
       # context: ./api
