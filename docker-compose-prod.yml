@@ -3,7 +3,7 @@ name: cpa
 services:
   ui:
     restart: unless-stopped
-    image: node:19
+    image: node:20
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules

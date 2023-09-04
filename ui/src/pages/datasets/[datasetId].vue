@@ -381,7 +381,7 @@ watch(
   () => {
     fetch_dataset(true);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 /**

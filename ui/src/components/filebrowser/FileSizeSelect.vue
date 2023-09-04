@@ -70,7 +70,7 @@ watch(
       encodeBytes(Math.pow(k, fileSizeOptions.length - 1));
     else encodeBytes(props.modelValue);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch([size, units], () => {

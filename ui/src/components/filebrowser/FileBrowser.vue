@@ -109,7 +109,7 @@ watch(
     isInSearchMode.value = false;
     get_file_list(pwd.value);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const nameRef = toRefs(store.filters).name;
@@ -122,7 +122,7 @@ watch(
       search_files();
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const advancedSearchModal = ref(null);

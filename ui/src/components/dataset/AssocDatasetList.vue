@@ -68,8 +68,8 @@ watch(
     data_loading.value = true;
     Promise.all(
       props.dataset_ids.map((id) =>
-        DatasetService.getById({ id }).then((res) => res.data)
-      )
+        DatasetService.getById({ id }).then((res) => res.data),
+      ),
     )
       .then((_datasets) => {
         datasets.value = _datasets;
@@ -82,6 +82,6 @@ watch(
         data_loading.value = false;
       });
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>

@@ -18,7 +18,7 @@ axiosInstance.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // If API call has failed because of 401 Unauthorized
@@ -33,7 +33,7 @@ axiosInstance.interceptors.response.use(
       router.push("/auth/logout");
     }
     return Promise.reject(err);
-  }
+  },
 );
 
 export default axiosInstance;

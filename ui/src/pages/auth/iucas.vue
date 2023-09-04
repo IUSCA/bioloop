@@ -85,7 +85,7 @@ if (ticket) {
       } else {
         // User was authenticated with CAS but they are not a portal user
         console.log(
-          "User was authenticated with CAS but they are not a portal user"
+          "User was authenticated with CAS but they are not a portal user",
         );
         notAuthorized.value = true;
       }

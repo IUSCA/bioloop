@@ -207,10 +207,10 @@ function customFilteringFn(searchText, { name, users, datasets }) {
     searchText === "" ||
     (name || "").toLowerCase().includes(searchText) ||
     users.some((user) =>
-      (user?.username || "").toLowerCase().includes(searchText)
+      (user?.username || "").toLowerCase().includes(searchText),
     ) ||
     datasets.some((dataset) =>
-      (dataset?.name || "").toLowerCase().includes(searchText)
+      (dataset?.name || "").toLowerCase().includes(searchText),
     )
   );
 }

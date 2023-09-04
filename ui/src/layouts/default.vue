@@ -55,7 +55,7 @@ watch(
 
     // In all other cases, update the open/collapse state acc. to screen size
     isSidebarCollapsed.value = ui.isMobileView;
-  }
+  },
 );
 
 const toggleSidebarVisibility = () => {

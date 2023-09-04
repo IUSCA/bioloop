@@ -274,6 +274,24 @@
     "watchThrottled": true,
     "watchTriggerable": true,
     "watchWithFilter": true,
-    "whenever": true
+    "whenever": true,
+    "Component": true,
+    "ComponentPublicInstance": true,
+    "ComputedRef": true,
+    "InjectionKey": true,
+    "PropType": true,
+    "Ref": true,
+    "VNode": true,
+    "WritableComputedRef": true,
+    "createReusableTemplate": true,
+    "createTemplatePromise": true,
+    "toValue": true,
+    "useAnimate": true,
+    "useArrayDifference": true,
+    "useArrayIncludes": true,
+    "useParentElement": true,
+    "usePerformanceObserver": true,
+    "watchDeep": true,
+    "watchImmediate": true
   }
 }

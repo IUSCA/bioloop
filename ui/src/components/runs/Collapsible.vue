@@ -33,7 +33,7 @@ watch(
   () => props.modelValue,
   (newValue) => {
     isCollapsed.value = newValue;
-  }
+  },
 );
 
 function toggleCollapsible() {

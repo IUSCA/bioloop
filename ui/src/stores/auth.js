@@ -71,7 +71,7 @@ export const useAuthStore = defineStore("auth", () => {
           console.log(
             "auth store: refreshTokenBeforeExpiry: trigerring refreshToken in ",
             delay / 1000,
-            "seconds"
+            "seconds",
           );
           refreshTokenTimer = setTimeout(refreshToken, delay);
         }
