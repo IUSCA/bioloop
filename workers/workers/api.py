@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class LogRetry(Retry):
-    
+
     def increment(self,
                   method=None,
                   url=None,
@@ -194,6 +194,14 @@ def add_state_to_dataset(dataset_id, state, metadata=None):
         r = s.post(f'datasets/{dataset_id}/states', json={
             'state': state,
             'metadata': metadata
+        })
+        r.raise_for_status()
+
+
+def add_workflow_to_dataset(dataset_id, workflow_id):
+    with APIServerSession() as s:
+        r = s.post(f'datasets/{dataset_id}/workflows', json={
+            'workflow_id': workflow_id
         })
         r.raise_for_status()
 

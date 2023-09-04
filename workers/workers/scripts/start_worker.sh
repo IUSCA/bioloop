@@ -8,4 +8,4 @@ python -m celery \
   --hostname 'bioloop-celery-w1@%h' \
   --autoscale 8,3 \
   --queues 'bioloop.sca.iu.edu.q' \
-  --detach
+  # --detach
