@@ -43,7 +43,7 @@ const checkboxes = ref({
 const activeCountText = computed(() => {
   const activeCount = Object.values(checkboxes.value).reduce(
     (acc, curr) => acc + curr,
-    0
+    0,
   );
   return activeCount > 0 ? ` (${activeCount})` : "";
 });

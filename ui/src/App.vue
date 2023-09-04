@@ -44,7 +44,7 @@ watch(
   () => breakpoint.current,
   () => {
     setViewType();
-  }
+  },
 );
 
 // change vuestic dark mode status reacting to isDark
@@ -58,7 +58,7 @@ watch(
   },
   {
     immediate: true,
-  }
+  },
 );
 
 onBeforeMount(() => {

@@ -34,7 +34,7 @@ onLongPress(
   },
   {
     delay: 3000,
-  }
+  },
 );
 const isHovered = useElementHover(longBtn);
 </script>

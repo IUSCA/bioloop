@@ -117,7 +117,7 @@ watch(
   },
   {
     immediate: true,
-  }
+  },
 );
 
 function compute_step_duration(step) {
@@ -152,7 +152,7 @@ function get_progress_obj(step) {
       name: progress?.name,
       percent_done,
       time_remaining: datetime.readableDuration(
-        progress.time_remaining_sec * 1000
+        progress.time_remaining_sec * 1000,
       ),
     };
   }

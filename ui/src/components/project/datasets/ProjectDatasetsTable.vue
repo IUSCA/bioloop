@@ -144,7 +144,7 @@ watch(
   },
   {
     immediate: true,
-  }
+  },
 );
 
 const rows = computed(() => {
@@ -183,7 +183,7 @@ const poll = useIntervalFn(
   config.dataset_polling_interval,
   {
     immediate: false,
-  }
+  },
 );
 
 watch(tracking, () => {

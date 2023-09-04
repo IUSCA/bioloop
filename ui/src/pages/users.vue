@@ -390,7 +390,7 @@ watch(
       autofill.value.username = username;
       autofill.value.cas_id = username;
     }
-  }
+  },
 );
 
 fetch_all_users();
