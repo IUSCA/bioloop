@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center">
     <Icon
-      :icon="datasetService.get_icon(props.type)"
+      :icon="config.dataset.types[props.type].icon"
       class="text-2xl flex-none mr-2 va-text-secondary"
       v-if="props.showIcon"
     />
@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-import datasetService from "@/services/dataset";
+import config from "@/config";
 
 const props = defineProps({
   type: {

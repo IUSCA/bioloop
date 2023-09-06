@@ -1,7 +1,5 @@
 <template>
-  <h2 class="text-3xl font-bold">Profile</h2>
   <div>
-    <div class="py-3"></div>
     <va-card>
       <va-card-content>
         <va-form class="grid grid-cols-2 gap-5">
@@ -59,9 +57,17 @@
 import { useColors } from "vuestic-ui";
 import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
+import { useNavStore } from "@/stores/nav";
 
 const auth = useAuthStore();
 const { colors } = useColors();
+const nav = useNavStore();
+
+nav.setNavItems([
+  {
+    label: "Profile",
+  },
+]);
 
 const palette = ["#154ec1", "#ef476f", "#ffd166", "#06d6a0", "#8338ec"];
 const profile = auth.user;

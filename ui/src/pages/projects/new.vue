@@ -1,7 +1,4 @@
 <template>
-  <!-- Title -->
-  <h2 class="text-3xl mb-4">Projects: Create New</h2>
-
   <!-- Form -->
   <div class="w-full flex justify-center">
     <va-card class="md:max-w-xl md:h-[calc(85vh)]">
@@ -14,9 +11,21 @@
 
 <script setup>
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+import { useNavStore } from "@/stores/nav";
 
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
+const nav = useNavStore();
+
+nav.setNavItems([
+  {
+    label: "Projects",
+    to: "/projects",
+  },
+  {
+    label: "New Project",
+  },
+]);
 
 onUnmounted(() => {
   // clear project store when navigating away from this page

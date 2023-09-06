@@ -7,7 +7,7 @@
   >
     <template #cell(name)="{ rowData }">
       <router-link
-        :to="`/datasets/${rowData.id}`"
+        :to="`/projects/${props.project.slug}/datasets/${rowData.id}`"
         class="va-link"
         v-if="auth.canOperate"
       >
