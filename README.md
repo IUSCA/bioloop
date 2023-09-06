@@ -1,5 +1,9 @@
+<div align="center">
+<img width="100" height="100" src="ui/public/logo.svg" >
+</div>
+
 <h1 align="center">BIOLOOP</h1>
-<p align="center">Genomics Data Portal and Pipeline Application Stater Project</p>
+<p align="center">Data Management Portal and Pipeline Application Stater Project</p>
 
 ## Getting started
 - [API](api/README.md)
