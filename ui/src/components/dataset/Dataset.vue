@@ -10,12 +10,12 @@
             <va-card-title>
               <span class="text-xl">Info</span>
             </va-card-title>
-            <va-card-content v-if="Object.keys(dataset || {}).length > 0">
-              <dataset-info :dataset="dataset"></dataset-info>
+            <va-card-content>
+              <DatasetInfo :dataset="dataset"></DatasetInfo>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
                 <va-button
-                  v-if="dataset.num_files"
+                  :disabled="!dataset.num_files"
                   preset="primary"
                   @click="navigateToFileBrowser"
                   class="flex-none"
