@@ -1,6 +1,4 @@
 <template>
-  <h2 class="text-3xl mb-4">Registered Users</h2>
-
   <!-- search bar and create button -->
   <div class="flex items-center gap-3 mb-3">
     <!-- search bar -->
@@ -215,9 +213,17 @@ import * as datetime from "@/services/datetime";
 
 import { useAuthStore } from "@/stores/auth";
 import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
+import { useNavStore } from "@/stores/nav";
 
+const toast = useToastStore();
 const auth = useAuthStore();
+const nav = useNavStore();
+
+nav.setNavItems([
+  {
+    label: "Users",
+  },
+]);
 
 const users = ref([]);
 const filterInput = ref("");

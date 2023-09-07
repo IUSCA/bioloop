@@ -8,7 +8,10 @@
       class="col-span-1"
     >
       <va-list-item-section avatar>
-        <Icon :icon="datasetService.get_icon(dataset.type)" class="text-2xl" />
+        <Icon
+          :icon="config.dataset.types[dataset.type].icon"
+          class="text-2xl"
+        />
       </va-list-item-section>
 
       <va-list-item-section>
@@ -17,7 +20,7 @@
         </va-list-item-label>
 
         <va-list-item-label caption>
-          {{ dataset.type }}
+          {{ config.dataset.types[dataset.type].label }}
         </va-list-item-label>
       </va-list-item-section>
 
@@ -49,7 +52,7 @@
 
 <script setup>
 import * as datetime from "@/services/datetime";
-import datasetService from "@/services/dataset";
+import config from "@/config";
 
 const props = defineProps({
   datasets: {

@@ -13,6 +13,7 @@
     </nav>
     <main id="main" class="overflow-y-scroll">
       <div class="px-4 pb-10 pt-3 min-h-screen">
+        <LeaveBreadcrumbs class="mb-3" />
         <router-view></router-view>
       </div>
       <Footer></Footer>

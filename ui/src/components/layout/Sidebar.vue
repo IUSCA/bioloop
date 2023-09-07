@@ -68,19 +68,44 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
+import { useNavStore } from "@/stores/nav";
+import { storeToRefs } from "pinia";
+import config from "@/config";
 
 const props = defineProps({ isSidebarCollapsed: Boolean });
 
 const auth = useAuthStore();
 const route = useRoute();
+const router = useRouter();
+const nav = useNavStore();
+const { sidebarDatasetType } = storeToRefs(nav);
 
 function isActive(path) {
-  if (path === "/") {
-    return route.path === "/";
-  } else {
-    return route.path.startsWith(path);
+  /**
+   * This function is executed for every sidebar item rendered
+   * If the return value is true, that item is highlighted
+   * path is from the sidebar item config
+   * route.path is the actual path in the browser URL
+   *
+   * Since paths of all components start with '/', dashboard requires a special check
+   * All types of datasets use the same /datasets/ prefix, these require special handling
+   */
+  if (path === "/") return route.path === "/";
+  if (
+    route.path.startsWith("/datasets") &&
+    sidebarDatasetType.value in config.dataset.types
+  ) {
+    return (
+      path ===
+      `/${config.dataset.types[sidebarDatasetType.value].collection_path}`
+    );
   }
+  return route.path.startsWith(path);
 }
+
+router.beforeEach(() => {
+  sidebarDatasetType.value = null;
+});
 
 const user_items = ref([
   {

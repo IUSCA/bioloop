@@ -10,7 +10,7 @@
     @row:click="onClick"
     virtual-scroller
     sticky-header
-    style="height: calc(100vh - 12rem)"
+    style="height: calc(100vh - 13.75rem)"
     class="py-1 filetable"
   >
     <template #cell(size)="{ rowData }">

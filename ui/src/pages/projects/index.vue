@@ -1,8 +1,5 @@
 <template>
   <div>
-    <!-- Title -->
-    <h2 class="text-3xl mb-4">Projects</h2>
-
     <!-- search bar and create button -->
     <div class="flex items-center gap-3 mb-3">
       <!-- search bar -->
@@ -135,10 +132,18 @@ import projectService from "@/services/projects";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 import * as datetime from "@/services/datetime";
+import { useNavStore } from "@/stores/nav";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
+const nav = useNavStore();
+
+nav.setNavItems([
+  {
+    label: "Projects",
+  },
+]);
 
 const projects = ref([]);
 const filterInput = ref("");
