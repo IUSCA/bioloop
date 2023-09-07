@@ -195,3 +195,50 @@ datetime.formatDuration(12000 * 1000) // "3h 20m"
 ```
 
 If you have a usecase to display in formats other than above in more than one component, add a function to [datetime](src/services/datetime.js) service and use it.
+
+## Navigational Breadcrumbs
+
+To set static nav links for a page `/page1/page2`,
+
+```html
+<script setup>
+import { useNavStore } from "@/stores/nav";
+const nav = useNavStore();
+nav.setNavItems([
+  {
+    label: "Page Name 1",
+    to: "/page1"
+  },
+  {
+    label: "Page Name 2"
+  },
+]);
+</script>
+```
+
+
+To set dynamic nav links for a page `/page-dyn-1/page-dyn-2`
+
+
+```html
+<script setup>
+import { useNavStore } from "@/stores/nav";
+const nav = useNavStore();
+
+page1Promise = api.getP1()
+page2Promise = api.getP2()
+Promise.all([page1Promise, page2Promise]).then(results => {
+  const page1 = results[0]
+  const page2 = results[1]
+  nav.setNavItems([
+    {
+      label: page1.name,
+      to: "/page1"
+    },
+    {
+      label: page2.name
+    },
+  ]);
+})
+</script>
+```
