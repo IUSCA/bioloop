@@ -36,7 +36,7 @@
           </div>
         </template>
         <template #cell(status)="{ source }">
-          <workflow-status-pill :status="source" />
+          <WorkflowStatusPill :status="source" />
         </template>
         <template #cell(start_date)="{ source }">
           <span class="spacing-wider"> {{ source }} </span>
@@ -201,10 +201,10 @@ const row_items = computed(() => {
 
 const columns = ref([
   { key: "step" },
-  { key: "status" },
-  { key: "start_date" },
-  { key: "duration" },
-  { key: "actions" },
+  { key: "status", width: "100px", thAlign: "center", tdAlign: "center" },
+  { key: "start_date", width: "220px", thAlign: "center", tdAlign: "center" },
+  { key: "duration", width: "150px", thAlign: "center", tdAlign: "center" },
+  { key: "actions", width: "130px", thAlign: "center", tdAlign: "center" },
 ]);
 
 function fetch_data(workflow_id) {

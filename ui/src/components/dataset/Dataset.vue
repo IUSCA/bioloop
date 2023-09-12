@@ -252,16 +252,14 @@
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-        <div v-if="(dataset.workflows || []).length > 0">
+        <div v-if="(dataset.workflows || []).length > 0" class="space-y-2">
           <collapsible
             v-for="workflow in dataset.workflows"
             :key="workflow.id"
             v-model="workflow.collapse_model"
           >
             <template #header-content>
-              <div class="flex-[0_0_90%]">
-                <workflow-compact :workflow="workflow" />
-              </div>
+              <WorkflowCompact :workflow="workflow" />
             </template>
 
             <div>

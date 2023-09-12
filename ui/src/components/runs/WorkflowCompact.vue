@@ -1,11 +1,14 @@
 <template>
-  <div class="grid grid-cols-6 lg:grid-cols-12 gap-3 lg:gap-5 items-center p-2">
-    <div class="col-span-1">
+  <div class="grid grid-cols-6 lg:grid-cols-12 gap-1 lg:gap-3 items-center p-1">
+    <!-- Status -->
+    <div class="col-span-1 row-span-2 lg:row-span-1">
       <WorkflowStatusIcon :status="workflow.status" class="text-xl" />
     </div>
 
     <!-- name and id -->
-    <div class="col-span-5 flex flex-col">
+    <div
+      class="col-span-2 lg:col-span-6 row-span-2 lg:row-span-1 flex flex-col"
+    >
       <span class="text-lg font-semibold capitalize">
         {{ workflow.name }}
       </span>
@@ -23,7 +26,7 @@
     </div>
 
     <!-- progress circle -->
-    <div class="col-span-1">
+    <div class="col-span-1 row-span-2 lg:row-span-1">
       <div v-show="workflow.steps_done != workflow.total_steps">
         <va-progress-circle
           :thickness="0.1"
@@ -35,19 +38,19 @@
     </div>
 
     <!-- created at -->
-    <div class="col-span-3">
+    <div class="col-span-2 lg:col-span-3">
       <va-popover message="Created On" :hover-over-timeout="500">
         <i-mdi-calendar
           class="text-xl inline-block text-slate-700 dark:text-slate-300"
         />
       </va-popover>
-      <span class="pl-2 spacing-wider">
+      <span class="pl-2 lg:spacing-wider text-sm lg:text-base">
         {{ datetime.absolute(workflow.created_at) }}
       </span>
     </div>
 
     <!-- Elapsed time and last updated -->
-    <div class="col-span-2">
+    <div class="col-span-1">
       <va-popover message="Duration" placement="top" :hover-over-timeout="500">
         <i-mdi-timer
           class="text-xl inline-block text-slate-700 dark:text-slate-300"
@@ -55,7 +58,7 @@
       </va-popover>
       <span class="pl-2"> {{ elapsed_time }} </span>
 
-      <div
+      <!-- <div
         v-if="
           !workflowService.is_workflow_done(workflow) && workflow.updated_at
         "
@@ -68,7 +71,7 @@
         <span class="text-sm pl-2">
           {{ datetime.fromNow(workflow.updated_at) }}
         </span>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
