@@ -1,6 +1,4 @@
 <template>
-  <h2 class="text-3xl mb-4">Registered Users</h2>
-
   <!-- search bar and create button -->
   <div class="flex items-center gap-3 mb-3">
     <!-- search bar -->
@@ -164,7 +162,7 @@
 
           <div class="flex-[1_1_100%] flex items-center gap-3">
             <span
-              class="flex-none text-sm font-bold ml-3"
+              class="flex-none text-xs font-semibold"
               style="color: var(--va-primary)"
             >
               STATUS
@@ -177,9 +175,9 @@
             />
           </div>
 
-          <div class="flex-[1_1_100%] ml-3">
+          <div class="flex-[1_1_100%]">
             <span
-              class="block text-sm font-bold mb-3"
+              class="block text-xs font-semibold mb-3"
               style="color: var(--va-primary)"
             >
               ROLES
@@ -192,12 +190,12 @@
             />
           </div>
 
-          <va-input
+          <va-textarea
             v-model="editedUser.notes"
-            type="textarea"
             label="Notes"
             autosize
-            :min-rows="3"
+            :min-rows="5"
+            resize
           />
         </va-form>
       </va-inner-loading>
@@ -215,9 +213,17 @@ import * as datetime from "@/services/datetime";
 
 import { useAuthStore } from "@/stores/auth";
 import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
+import { useNavStore } from "@/stores/nav";
 
+const toast = useToastStore();
 const auth = useAuthStore();
+const nav = useNavStore();
+
+nav.setNavItems([
+  {
+    label: "Users",
+  },
+]);
 
 const users = ref([]);
 const filterInput = ref("");

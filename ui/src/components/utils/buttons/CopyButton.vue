@@ -1,13 +1,13 @@
 <template>
-  <div v-if="isSupported">
-    <va-popover :message="copied ? 'Copied' : 'Copy'">
-      <va-button
-        @click="copy(props.text)"
-        :preset="props.preset"
-        :border-color="copied ? 'success' : ''"
-      >
+  <div v-if="isSupported" class="flex items-center justify-center">
+    <va-popover
+      :message="copied ? 'Copied' : 'Copy'"
+      :hover-over-timeout="1000"
+      class="flex-none"
+    >
+      <va-button @click="copy(props.text)" :preset="props.preset">
         <i-mdi-check-bold style="color: var(--va-success)" v-if="copied" />
-        <i-mdi-content-copy v-else />
+        <i-mdi-content-copy v-else style="color: var(--va-primary)" />
       </va-button>
     </va-popover>
   </div>

@@ -48,6 +48,15 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { useNavStore } from "@/stores/nav";
+
+const nav = useNavStore();
+
+nav.setNavItems([], false);
+</script>
+
 <style scoped>
 div.banner {
   height: 250px;

@@ -2,7 +2,7 @@ version: "3"
 name: cpa
 services:
   ui:
-    image: node:20
+    image: node:19
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules
@@ -18,7 +18,7 @@ services:
         npm install && exec /opt/sca/app/node_modules/.bin/vite --host
 
   api:
-    image: node:20
+    image: node:19
     # user: ${APP_UID}:${APP_GID}
     # build:
       # context: ./api
@@ -43,7 +43,7 @@ services:
       - -c
       - |
         npm install \
-        && npx prisma db push \
+        && npx prisma db push --accept-data-loss \
         && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
 
 

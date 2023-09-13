@@ -10,7 +10,7 @@
     <va-select
       v-model="units"
       :options="fileSizeOptions"
-      class="h-[42px] w-32"
+      class="w-32 mt-auto"
       :disabled="props.disabled"
     />
   </div>

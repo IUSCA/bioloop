@@ -51,7 +51,7 @@ def task3(celery_task, dataset_id, **kwargs):
 
 @app.task(base=WorkflowTask, bind=True, name='task4',
           autoretry_for=(Exception,),
-          max_retries=3,
+          max_retries=1,
           default_retry_delay=5)
 def task4(celery_task, dataset_id, **kwargs):
     from tests.tasks.tasksB import task4 as task_body

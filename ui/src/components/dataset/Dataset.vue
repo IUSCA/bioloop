@@ -1,23 +1,7 @@
 <template>
   <va-inner-loading :loading="loading">
-    <!-- Title -->
-    <div>
-      <span class="text-2xl capitalize" v-if="dataset.type">
-        {{ dataset.type.replace("_", " ").toLowerCase() }} :
-      </span>
-      <span class="text-3xl"> {{ dataset.name }} </span>
-      <va-divider />
-    </div>
-
     <!-- Content -->
     <div class="flex flex-col gap-3">
-      <!-- Associated datasets -->
-
-      <assoc-datasets
-        :source_datasets_meta="dataset?.source_datasets"
-        :derived_datasets_meta="dataset?.derived_datasets"
-      />
-
       <!-- Dataset Info + Status Cards -->
       <div class="grid gird-cols-1 lg:grid-cols-2 gap-3">
         <!-- Dataset Info -->
@@ -26,18 +10,16 @@
             <va-card-title>
               <span class="text-xl">Info</span>
             </va-card-title>
-            <va-card-content v-if="Object.keys(dataset || {}).length > 0">
-              <dataset-info :dataset="dataset"></dataset-info>
+            <va-card-content>
+              <DatasetInfo :dataset="dataset"></DatasetInfo>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
                 <va-button
-                  v-if="dataset.num_files"
+                  :disabled="!dataset.num_files"
                   preset="primary"
-                  @click="
-                    router.push(`/datasets/filebrowser/${props.datasetId}`)
-                  "
+                  @click="navigateToFileBrowser"
                   class="flex-none"
-                  color="#A020F0"
+                  :color="isDark ? '#9171f8' : '#A020F0'"
                 >
                   <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
                 </va-button>
@@ -185,7 +167,8 @@
               <div class="flex flex-col items-center gap-2">
                 <div><i-mdi-zip-box-outline class="text-3xl" /></div>
                 <span class="text-xl tracking-wide">
-                  {{ dataset.type }} / {{ dataset.name }}
+                  {{ config.dataset.types[dataset.type]?.label }} /
+                  {{ dataset.name }}
                 </span>
                 <div class="flex items-center gap-5">
                   <div class="flex items-center gap-1">
@@ -246,6 +229,12 @@
         </div>
       </div>
 
+      <!-- Associated datasets -->
+      <assoc-datasets
+        :source_datasets_meta="dataset?.source_datasets"
+        :derived_datasets_meta="dataset?.derived_datasets"
+      />
+
       <!-- Audit logs -->
       <div v-if="dataset.audit_logs && dataset.audit_logs.length > 0">
         <va-card>
@@ -263,16 +252,14 @@
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-        <div v-if="(dataset.workflows || []).length > 0">
+        <div v-if="(dataset.workflows || []).length > 0" class="space-y-2">
           <collapsible
             v-for="workflow in dataset.workflows"
             :key="workflow.id"
             v-model="workflow.collapse_model"
           >
             <template #header-content>
-              <div class="flex-[0_0_90%]">
-                <workflow-compact :workflow="workflow" />
-              </div>
+              <WorkflowCompact :workflow="workflow" />
             </template>
 
             <div>
@@ -312,8 +299,10 @@ import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 const router = useRouter();
+const route = useRoute();
+const isDark = useDark();
 
-const props = defineProps({ datasetId: String });
+const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
 const dataset = ref({});
 const loading = ref(false);
@@ -447,6 +436,14 @@ const editModal = ref(null);
 
 function openModalToEditDataset() {
   editModal.value.show();
+}
+
+function navigateToFileBrowser() {
+  if (props.appendFileBrowserUrl) {
+    router.push(route.path + "/filebrowser");
+  } else {
+    router.push(`/datasets/${props.datasetId}/filebrowser`);
+  }
 }
 </script>
 

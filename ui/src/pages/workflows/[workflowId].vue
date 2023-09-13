@@ -1,10 +1,11 @@
 <template>
-  <div>Workflow: {{ props.workflowId }}</div>
-
-  <WorkflowLogs :workflow-id="props.workflowId" />
+  <!-- <WorkflowLogs process-id="16" :live="false" /> -->
+  <StepProcesses :workflow-id="props.workflowId" step-name="download" />
 </template>
 
 <script setup>
+// import workflowService from "@/services/workflow";
+
 const props = defineProps({
   workflowId: {
     type: String,

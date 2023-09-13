@@ -1,11 +1,6 @@
 <template>
   <div class="holdbtn rounded">
-    <va-button
-      ref="longBtn"
-      v-if="!showConfirmAction"
-      :color="props.color"
-      preset="primary"
-    >
+    <va-button ref="longBtn" :color="props.color" preset="primary">
       <Icon :icon="props.icon" class="mr-3 text-xl" />
 
       <span>

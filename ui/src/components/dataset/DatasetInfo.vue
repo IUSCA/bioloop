@@ -28,7 +28,7 @@
         <tr>
           <td>Source Path</td>
           <td>
-            <span class="path">{{ props.dataset.origin_path }}</span>
+            <span>{{ props.dataset.origin_path }}</span>
           </td>
         </tr>
         <tr>
@@ -69,6 +69,8 @@ import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 
 const props = defineProps({ dataset: Object });
+
+console.log("in dataset info");
 </script>
 
 <style lang="scss" scoped>

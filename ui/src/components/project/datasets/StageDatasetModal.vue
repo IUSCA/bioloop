@@ -10,8 +10,8 @@
     <va-inner-loading :loading="loading">
       <div>
         <span>
-          Stage all files in {{ dataset.type }}/{{ dataset.name }} from the
-          archive?
+          Stage all files in {{ config.dataset.types[dataset.type]?.label }} /
+          {{ dataset.name }} from the archive?
         </span>
       </div>
     </va-inner-loading>

@@ -163,6 +163,16 @@ function filterByValues(obj, pred) {
     }, {});
 }
 
+function groupBy(key) {
+  return (data) => {
+    return data.reduce((acc, curr) => {
+      const groupKeyValue = curr[key];
+      acc[groupKeyValue] = (acc[groupKeyValue] || []).concat(curr);
+      return acc;
+    }, {});
+  };
+}
+
 export {
   formatBytes,
   difference,
@@ -181,4 +191,5 @@ export {
   arrayEquals,
   mapValues,
   filterByValues,
+  groupBy,
 };

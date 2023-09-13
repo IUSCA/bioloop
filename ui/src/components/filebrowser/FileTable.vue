@@ -10,8 +10,8 @@
     @row:click="onClick"
     virtual-scroller
     sticky-header
-    style="height: calc(100vh - 12rem)"
-    class="py-1 filetable"
+    style="height: calc(100vh - 13.75rem)"
+    class="filetable"
   >
     <template #cell(size)="{ rowData }">
       <span v-if="rowData.filetype !== 'directory'">

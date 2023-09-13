@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # take environment variables from .env.
 YEAR = datetime.datetime.now().year
-AUTH_TOKEN = os.environ['AUTH_TOKEN']
+APP_API_TOKEN = os.environ['APP_API_TOKEN']
 QUEUE_PASSWORD = os.environ['QUEUE_PASS']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
 ALIAS_SALT = os.environ['ALIAS_SALT']
@@ -20,7 +20,7 @@ config = {
                           '.vcf.gz.tbi', '.vcf', '.raw'],
     'api': {
         'base_url': 'http://localhost:3030',
-        'auth_token': AUTH_TOKEN,
+        'auth_token': APP_API_TOKEN,
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
     },

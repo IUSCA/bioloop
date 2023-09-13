@@ -1,37 +1,12 @@
 <template>
   <va-inner-loading :loading="data_loading">
     <!-- title -->
-    <div class="flex items-center mb-4">
+    <!-- <div class="flex items-center mb-4">
       <span class="text-3xl flex-none"> Project: {{ project.name }} </span>
-    </div>
+    </div> -->
 
     <!-- body -->
     <div class="flex flex-col gap-3">
-      <!-- Associated datasets -->
-      <div>
-        <va-card class="">
-          <va-card-title class="">
-            <div class="flex flex-nowrap items-center w-full">
-              <span class="text-lg"> Associated Datasets </span>
-
-              <AddEditButton
-                class="flex-none"
-                show-text
-                :edit="project.datasets?.length > 0"
-                @click="openDatasetsModal"
-                v-if="auth.canOperate"
-              />
-            </div>
-          </va-card-title>
-          <va-card-content>
-            <ProjectDatasetsTable
-              :datasets="project.datasets"
-              :project="project"
-            />
-          </va-card-content>
-        </va-card>
-      </div>
-
       <!-- General Info and Access Permissions -->
       <div class="grid gird-cols-1 md:grid-cols-2 gap-3">
         <!-- General Info -->
@@ -78,6 +53,31 @@
             </va-card-content>
           </va-card>
         </div>
+      </div>
+
+      <!-- Associated datasets -->
+      <div>
+        <va-card class="">
+          <va-card-title class="">
+            <div class="flex flex-nowrap items-center w-full">
+              <span class="text-lg"> Associated Datasets </span>
+
+              <AddEditButton
+                class="flex-none"
+                show-text
+                :edit="project.datasets?.length > 0"
+                @click="openDatasetsModal"
+                v-if="auth.canOperate"
+              />
+            </div>
+          </va-card-title>
+          <va-card-content>
+            <ProjectDatasetsTable
+              :datasets="project.datasets"
+              :project="project"
+            />
+          </va-card-content>
+        </va-card>
       </div>
 
       <!-- Maintenance Actions -->
@@ -163,21 +163,35 @@ import projectService from "@/services/projects";
 import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+import { useNavStore } from "@/stores/nav";
 
-const props = defineProps(["projetcId"]);
+const props = defineProps({ projectId: String });
 const auth = useAuthStore();
 const router = useRouter();
 const toast = useToastStore();
 const projectFormStore = useProjectFormStore();
+const nav = useNavStore();
 
 const project = ref({});
 const data_loading = ref(false);
+
+watch(project, () => {
+  nav.setNavItems([
+    {
+      label: "Projects",
+      to: "/projects",
+    },
+    {
+      label: project.value?.name,
+    },
+  ]);
+});
 
 function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: project.value?.id || props.projetcId,
+      id: project.value?.id || props.projectId,
       forSelf: !auth.canOperate,
     })
     .then((res) => {
