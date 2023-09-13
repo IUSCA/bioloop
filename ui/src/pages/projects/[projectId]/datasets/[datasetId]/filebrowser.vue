@@ -41,7 +41,7 @@ Promise.all([
         to: `/projects/${project.slug}`,
       },
       {
-        label: config.dataset.types[dataset.value.type].label,
+        label: config.dataset.types[dataset.value.type]?.label,
       },
       {
         label: dataset.value.name,

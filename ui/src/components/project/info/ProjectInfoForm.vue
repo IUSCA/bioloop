@@ -27,14 +27,14 @@
       </span>
     </div>
 
-    <va-input
+    <va-textarea
       class="flex-none"
       label="Description"
       v-model="description"
-      type="textarea"
       autosize
       :min-rows="3"
       :max-rows="10"
+      resize
     />
 
     <va-input class="flex-none" label="Funding" v-model="funding" />

@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center">
     <Icon
-      :icon="config.dataset.types[props.type].icon"
+      :icon="config.dataset.types[props.type]?.icon"
       class="text-2xl flex-none mr-2 va-text-secondary"
       v-if="props.showIcon"
     />

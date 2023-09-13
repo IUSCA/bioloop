@@ -167,7 +167,7 @@
               <div class="flex flex-col items-center gap-2">
                 <div><i-mdi-zip-box-outline class="text-3xl" /></div>
                 <span class="text-xl tracking-wide">
-                  {{ config.dataset.types[dataset.type].label }} /
+                  {{ config.dataset.types[dataset.type]?.label }} /
                   {{ dataset.name }}
                 </span>
                 <div class="flex items-center gap-5">

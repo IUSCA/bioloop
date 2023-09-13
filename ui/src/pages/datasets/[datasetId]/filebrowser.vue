@@ -25,8 +25,8 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
     dataset.value = res.data;
     nav.setNavItems([
       {
-        label: config.dataset.types[dataset.value.type].label,
-        to: `/${config.dataset.types[dataset.value.type].collection_path}`,
+        label: config.dataset.types[dataset.value.type]?.label,
+        to: `/${config.dataset.types[dataset.value.type]?.collection_path}`,
       },
       {
         label: dataset.value.name,
