@@ -27,6 +27,16 @@
     </div>
 
     <!-- table -->
+    <!-- 
+        virtual-scroller is not working because wrapped text changes the row height. 
+        scrolling is jerky and buggy when row heigh is not uniform.
+    -->
+    <!-- 
+        explicit table height is required for the scroll jump component,
+        34.5rem is chosen because it is the height of a vuestic modal in my screen excluding
+        the modal header and the filters
+    -->
+
     <va-data-table
       :items="rows"
       :columns="columns"
@@ -34,7 +44,6 @@
       :row-bind="getRowBind"
       :scroll-bottom-margin="5"
       @row:click="onClick"
-      virtual-scroller
       sticky-header
       sticky-footer
       style="height: 34.5rem"
@@ -46,20 +55,24 @@
       </template>
 
       <template #cell(message)="{ source }">
-        <span class="text-sm"> {{ source }} </span>
+        <!-- max width is needed to wrap long text -->
+        <pre
+          class="text-xs max-w-[830px]"
+          style="white-space: pre-wrap; word-wrap: break-word"
+          >{{ source }}</pre
+        >
       </template>
 
       <template #cell(timestamp)="{ source }">
-        <span class="spacing-wide">
+        <span class="spacing-wide text-sm">
           {{ datetime.absolute(source, false) }}
         </span>
       </template>
 
       <!-- footer -->
-      <template #footer>
+      <!-- <template #footer>
         <tr class="table-slots">
           <th colspan="12" class="font-normal text-sm">
-            <!-- live updates status -->
             <div
               v-if="live_updates"
               class="flex gap-1 items-center justify-end px-2"
@@ -70,21 +83,24 @@
                 live updates enabled
               </span>
             </div>
-
-            <!-- scroll to bottom and back to top -->
-            <div class="absolute right-6 -top-12">
-              <ScrollJump
-                :elem-ref="tableRef"
-                :items-in-view="ROWS_IN_VIEW"
-                :num-items="rows.length"
-                :total-items="logSize"
-                :key="tableRef"
-              />
-            </div>
           </th>
         </tr>
-      </template>
+      </template> -->
     </va-data-table>
+
+    <!-- anchor div to position the scroll jump button absolutely -->
+    <div>
+      <!-- scroll to bottom and back to top -->
+      <div class="absolute right-10 top-[37rem]">
+        <ScrollJump
+          :elem-ref="tableRef"
+          :items-in-view="ROWS_IN_VIEW"
+          :num-items="rows.length"
+          :total-items="logSize"
+          :key="tableRef"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -101,7 +117,7 @@ const { copy } = useClipboard();
 
 const props = defineProps({
   processId: {
-    type: String,
+    type: Number,
     required: true,
   },
   live: {
@@ -127,7 +143,7 @@ const columns = computed(() => {
   ];
   if (show_timestamps.value) {
     // add timestamp colum to the front of the cols array
-    cols.unshift({ key: "timestamp", width: "200px" });
+    cols.unshift({ key: "timestamp", width: "150px" });
   }
   return cols;
 });
@@ -195,6 +211,6 @@ fetchLogs();
 
 <style lang="scss" scoped>
 .log-table {
-  --va-data-table-cell-padding: 2px;
+  --va-data-table-cell-padding: 1px;
 }
 </style>
