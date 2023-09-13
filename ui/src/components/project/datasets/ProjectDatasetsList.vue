@@ -9,7 +9,7 @@
     >
       <va-list-item-section avatar>
         <Icon
-          :icon="config.dataset.types[dataset.type].icon"
+          :icon="config.dataset.types[dataset.type]?.icon"
           class="text-2xl"
         />
       </va-list-item-section>
@@ -20,7 +20,7 @@
         </va-list-item-label>
 
         <va-list-item-label caption>
-          {{ config.dataset.types[dataset.type].label }}
+          {{ config.dataset.types[dataset.type]?.label }}
         </va-list-item-label>
       </va-list-item-section>
 

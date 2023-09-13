@@ -11,7 +11,7 @@
     virtual-scroller
     sticky-header
     style="height: calc(100vh - 13.75rem)"
-    class="py-1 filetable"
+    class="filetable"
   >
     <template #cell(size)="{ rowData }">
       <span v-if="rowData.filetype !== 'directory'">

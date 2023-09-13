@@ -97,7 +97,7 @@ function isActive(path) {
   ) {
     return (
       path ===
-      `/${config.dataset.types[sidebarDatasetType.value].collection_path}`
+      `/${config.dataset.types[sidebarDatasetType.value]?.collection_path}`
     );
   }
   return route.path.startsWith(path);

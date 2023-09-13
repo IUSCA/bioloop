@@ -19,7 +19,7 @@
                   preset="primary"
                   @click="navigateToFileBrowser"
                   class="flex-none"
-                  color="#A020F0"
+                  :color="isDark ? '#9171f8' : '#A020F0'"
                 >
                   <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
                 </va-button>
@@ -167,7 +167,7 @@
               <div class="flex flex-col items-center gap-2">
                 <div><i-mdi-zip-box-outline class="text-3xl" /></div>
                 <span class="text-xl tracking-wide">
-                  {{ config.dataset.types[dataset.type].label }} /
+                  {{ config.dataset.types[dataset.type]?.label }} /
                   {{ dataset.name }}
                 </span>
                 <div class="flex items-center gap-5">
@@ -252,16 +252,14 @@
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
-        <div v-if="(dataset.workflows || []).length > 0">
+        <div v-if="(dataset.workflows || []).length > 0" class="space-y-2">
           <collapsible
             v-for="workflow in dataset.workflows"
             :key="workflow.id"
             v-model="workflow.collapse_model"
           >
             <template #header-content>
-              <div class="flex-[0_0_90%]">
-                <workflow-compact :workflow="workflow" />
-              </div>
+              <WorkflowCompact :workflow="workflow" />
             </template>
 
             <div>
@@ -302,6 +300,7 @@ import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
+const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 

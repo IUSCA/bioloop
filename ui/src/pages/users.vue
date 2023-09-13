@@ -162,7 +162,7 @@
 
           <div class="flex-[1_1_100%] flex items-center gap-3">
             <span
-              class="flex-none text-sm font-bold ml-3"
+              class="flex-none text-xs font-semibold"
               style="color: var(--va-primary)"
             >
               STATUS
@@ -175,9 +175,9 @@
             />
           </div>
 
-          <div class="flex-[1_1_100%] ml-3">
+          <div class="flex-[1_1_100%]">
             <span
-              class="block text-sm font-bold mb-3"
+              class="block text-xs font-semibold mb-3"
               style="color: var(--va-primary)"
             >
               ROLES
@@ -190,12 +190,12 @@
             />
           </div>
 
-          <va-input
+          <va-textarea
             v-model="editedUser.notes"
-            type="textarea"
             label="Notes"
             autosize
-            :min-rows="3"
+            :min-rows="5"
+            resize
           />
         </va-form>
       </va-inner-loading>

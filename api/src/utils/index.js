@@ -55,10 +55,19 @@ function log_axios_error(error) {
   }
 }
 
+function sanitize_timestamp(t) {
+  if (typeof (t) === 'string') {
+    const d = new Date(t);
+    // eslint-disable-next-line no-restricted-globals
+    if (!isNaN(d)) return d;
+  }
+}
+
 module.exports = {
   renameKey,
   setDifference,
   setUnion,
   setIntersection,
   log_axios_error,
+  sanitize_timestamp,
 };

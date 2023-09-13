@@ -108,9 +108,25 @@ Using
 }
 </style>
 ```
+## Notable Vuestic Classes
 
-```html
+CSS: `bioloop/ui/node_modules/vuestic-ui/dist/styles/index.css`
 
+```
+va-text-text-primary
+va-text-text-inverted
+va-text-{primary, secondary, warninig, success, danger, info}
+
+va-code-text
+va-code-snippet
+
+va-link
+va-link-secondary
+
+va-blockquote
+va-text-block
+va-text-truncate
+va-text-highlighted
 ```
 
 ## Configuration

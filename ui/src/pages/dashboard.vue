@@ -61,7 +61,12 @@
 import workflowService from "@/services/workflow";
 import DatasetService from "@/services/dataset";
 import { useToastStore } from "@/stores/toast";
+import { useNavStore } from "@/stores/nav";
+
 const toast = useToastStore();
+const nav = useNavStore();
+
+nav.setNavItems([], false);
 
 const workflows = ref([]);
 const raw_data_stats = ref({});

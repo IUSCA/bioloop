@@ -4,6 +4,7 @@ import hashlib
 import os
 from collections.abc import Iterable
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from enum import Enum, unique
 from itertools import islice
 from pathlib import Path
@@ -133,3 +134,7 @@ def filetype(p: Path) -> FileType:
     if p.is_dir():
         return FileType.DIRECTORY
     return FileType.OTHER
+
+
+def current_time_iso8601() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
