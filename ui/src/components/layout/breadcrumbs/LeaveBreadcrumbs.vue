@@ -1,15 +1,15 @@
 <template>
   <!-- min height prevents the vertical layout shift-->
-
-  <va-breadcrumbs class="text-lg breadcrumbs min-h-[1.75rem]">
+  <va-breadcrumbs class="text-lg breadcrumbs min-h-[1.75rem] space-x-2">
     <va-breadcrumbs-item
       v-for="(item, index) in nav.breadcrumbs"
       :key="`${item}-${index}`"
       :label="item.label"
       :to="item.to"
       :disabled="index === nav.breadcrumbs.length - 1"
+      class="flex items-center justify-center"
     >
-      <Icon :icon="item.icon" v-if="!!item.icon" />
+      <Icon :icon="item.icon" v-if="!!item.icon" class="text-xl" />
     </va-breadcrumbs-item>
   </va-breadcrumbs>
 </template>
@@ -17,16 +17,16 @@
 <script setup>
 import { useNavStore } from "@/stores/nav";
 
-const router = useRouter();
+// const router = useRouter();
 const nav = useNavStore();
 
-router.beforeEach((to) => {
-  if (to?.meta?.nav) {
-    nav.setNavItems(to.meta.nav);
-  } else {
-    nav.resetNavItems();
-  }
-});
+// router.beforeEach((to) => {
+//   if (to?.meta?.nav) {
+//     nav.setNavItems(to.meta.nav);
+//   } else {
+//     nav.resetNavItems();
+//   }
+// });
 </script>
 
 <style>

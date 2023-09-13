@@ -1,6 +1,11 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 
+const HOME = {
+  icon: "mdi:monitor-dashboard",
+  to: "/",
+};
+
 export const useNavStore = defineStore("nav", () => {
   // Array containing the breadcrumb nav items currently being rendered in the app.
   const breadcrumbs = ref([]);
@@ -8,10 +13,7 @@ export const useNavStore = defineStore("nav", () => {
 
   function setNavItems(items, withHome = true) {
     const isValid = (item) => item && (item.label || item.icon);
-    const HOME = {
-      icon: "mdi-home",
-      to: "/",
-    };
+
     breadcrumbs.value = (withHome ? [HOME] : []).concat(items.filter(isValid));
   }
 
