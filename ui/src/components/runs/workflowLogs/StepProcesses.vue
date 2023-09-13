@@ -80,16 +80,21 @@ const emit = defineEmits(["showLogs"]);
 // const process_groups = ref({});
 const processes = ref([]);
 
-workflowService
-  .getWorkflowProcesses({
-    workflow_id: props.workflowId,
-    step: props.stepName,
-  })
-  .then((res) => {
-    // process_groups.value = groupBy("task_id")(res.data || []);
-    processes.value = res.data || [];
-  })
-  .catch((err) => {
-    console.error(err);
-  });
+function fetch_processes() {
+  workflowService
+    .getWorkflowProcesses({
+      workflow_id: props.workflowId,
+      step: props.stepName,
+    })
+    .then((res) => {
+      // process_groups.value = groupBy("task_id")(res.data || []);
+      processes.value = res.data || [];
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+}
+fetch_processes();
+
+useIntervalFn(fetch_processes, 10000);
 </script>
