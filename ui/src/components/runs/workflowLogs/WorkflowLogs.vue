@@ -1,11 +1,11 @@
 <template>
   <div class="">
     <!-- filter and options -->
-    <div class="flex gap-3 mb-3 items-center">
+    <div class="flex flex-wrap gap-3 mb-3 items-center">
       <!-- search bar -->
       <va-input
         v-model="filterText"
-        class="w-[50%]"
+        class="w-full lg:w-[50%]"
         placeholder="Type / to begin search"
         outline
         clearable
@@ -136,7 +136,7 @@ const rows = computed(() => {
   return logs.value.filter(
     (log) =>
       log.message.toLowerCase().includes(filterText.value.toLowerCase()) ||
-      log.level.toLowerCase().includes(filterText.value.toLowerCase())
+      log.level.toLowerCase().includes(filterText.value.toLowerCase()),
   );
 });
 
@@ -187,7 +187,7 @@ watch(
   },
   {
     immediate: true,
-  }
+  },
 );
 
 fetchLogs();

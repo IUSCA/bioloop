@@ -53,19 +53,20 @@
         </template>
 
         <template #expandableRow="{ rowData }">
-          <div class="pl-5 pr-3 bg-slate-200 dark:bg-slate-800">
+          <div class="pr-3 pl-4 bg-slate-200 dark:bg-slate-800">
             <StepProcesses
               :workflow-id="workflow.id"
               :step-name="rowData?.step?.name"
-              class="py-2 text-sm"
+              class="text-sm"
               @show-logs="openLogsModal"
             />
           </div>
         </template>
       </va-data-table>
 
+      <va-divider />
       <div class="flex justify-end">
-        <div class="flex-initial">
+        <div class="flex-none pr-2">
           <div
             v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
             class="flex justify-start items-center gap-3"
@@ -156,7 +157,7 @@ function compute_step_duration(step) {
         ? new Date()
         : new Date(task.date_done);
       const duration = end_time - start_time;
-      return datetime.readableDuration(duration);
+      return datetime.formatDuration(duration);
     }
   }
   return "";

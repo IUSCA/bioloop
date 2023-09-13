@@ -1,11 +1,12 @@
 <template>
-  <va-list>
-    <va-list-item v-for="p in processes" :key="p.id" class="space-y-1">
+  <va-list class="space-y-2">
+    <va-list-item v-for="p in processes" :key="p.id">
+      <!-- args, pid, and hostname -->
       <va-list-item-section>
         <va-list-item-label>
-          <span class="va-text-code" style="color: var(--va-text-primary)">
-            $ {{ p.tags?.args?.join(" ") }}
-          </span>
+          <span class="va-text-code whitespace-break-spaces"
+            >$ {{ p.tags?.args?.join(" ") }}</span
+          >
         </va-list-item-label>
         <va-list-item-label caption>
           <!-- <span>Task ID: {{ p.task_id }} </span> -->
@@ -22,24 +23,30 @@
         </va-list-item-label>
       </va-list-item-section>
 
-      <va-list-item-section>
+      <!-- start time and task id -->
+      <va-list-item-section class="flex-none px-3">
         <va-list-item-label>
-          <span class="spacing-wider" style="color: var(--va-text-primary)">
-            {{ datetime.absolute(p.start_time) }}
-          </span>
+          <div>
+            <va-popover message="Started On" :hover-over-timeout="500">
+              <i-mdi-calendar
+                class="inline-block text-slate-700 dark:text-slate-300"
+              />
+            </va-popover>
+            <span class="pl-2 spacing-wider">
+              {{ datetime.absolute(p.start_time) }}
+            </span>
+          </div>
         </va-list-item-label>
-        <va-list-item-label caption>Start Time</va-list-item-label>
-      </va-list-item-section>
+        <va-list-item-label caption>
+          <span class="font-semibold"> Task ID: </span>
 
-      <va-list-item-section>
-        <va-list-item-label>
-          <span style="color: var(--va-text-primary)">
+          <span>
             {{ p.task_id }}
-          </span>
-        </va-list-item-label>
-        <va-list-item-label caption>Task ID</va-list-item-label>
+          </span></va-list-item-label
+        >
       </va-list-item-section>
 
+      <!-- logs icon and modal link -->
       <va-list-item-section icon>
         <div
           class="flex gap-1 va-link hover:underline"
