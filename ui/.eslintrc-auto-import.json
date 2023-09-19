@@ -292,6 +292,7 @@
     "useParentElement": true,
     "usePerformanceObserver": true,
     "watchDeep": true,
-    "watchImmediate": true
+    "watchImmediate": true,
+    "useDefaultChartColors": true
   }
 }

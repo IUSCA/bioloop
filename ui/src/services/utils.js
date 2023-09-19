@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import jwtDecode from "jwt-decode";
+import _ from "lodash";
 
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
@@ -173,6 +174,59 @@ function groupBy(key) {
   };
 }
 
+/**
+ * Given an array, groups the elements of the array based on the grouping function provided,
+ * aggregates values from the grouped elements by calling the aggregation function provided
+ * on the collection of grouped elements, and returns an array, every element of which contains
+ * the aggregated values produced from each grouping as well as the value used for producing
+ * said groupings. The order of grouped values is determined by the order they occur in the array
+ * provided.
+ *
+ * Example usage:
+ * groupByAndAggregate(
+ *   [1, 1, 2, 2, 2],
+ *   (e) => e,
+ *   "groupedBy",
+ *   (e) => e,
+ *   "aggregatedValue",
+ *   (groupedValues) => (
+ *     groupedValues
+ *       .reduce((accumulator, currentVal) => accumulator + currentVal)
+ *   ),
+ * );
+ * // => [{ "groupedBy": "1", "aggregatedValue": 2 }, { "groupedBy": "2", "aggregatedValue": 6 }]
+ * @param {[*]} arr                    The array whose elements are to be grouped and aggregated
+ * @param {Function} groupByFn         Callback used to group the elements of arr
+ * @param {string} groupedByKey        The key used for representing the values by which to group
+ *                                     the elements in arr
+ * @param {Function} keyGenerationFn   Callback used to format the values (in the returned array)
+ *                                     by which to group the elements in arr
+ * @param {string} aggregatedResultKey The key used for representing the aggregation result in the
+ *                                     returned array
+ * @param {Function} aggregationFn     Callback used for aggregating the results in each grouping
+ * @returns                            An array, every element of which contains the aggregated
+ *                                     values produced from each grouping as well as the value used
+ *                                     for producing said groupings.
+ */
+function groupByAndAggregate(
+  arr,
+  groupByFn,
+  groupedByKey,
+  keyGenerationFn,
+  aggregatedResultKey,
+  aggregationFn,
+) {
+  const grouped = _.groupBy(arr, groupByFn);
+  const ret = [];
+  Object.entries(grouped).forEach(([groupedKey, groupedValues]) => {
+    ret.push({
+      [groupedByKey]: keyGenerationFn(groupedKey),
+      [aggregatedResultKey]: aggregationFn(groupedValues),
+    });
+  });
+  return ret;
+}
+
 export {
   formatBytes,
   difference,
@@ -192,4 +246,5 @@ export {
   mapValues,
   filterByValues,
   groupBy,
+  groupByAndAggregate,
 };

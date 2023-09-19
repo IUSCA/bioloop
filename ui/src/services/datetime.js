@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import duration from "dayjs/plugin/duration";
+import { format, parse } from "date-fns";
 
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
@@ -92,4 +93,39 @@ function formatDuration(duration) {
   return ans;
 }
 
-export { date, absolute, fromNow, readableDuration, formatDuration };
+/**
+ * Given a ISO 8601 dateTime string (with Z - UTC timezone (ex: "2023-06-14T01:18:40.501Z")), returns
+ * a formatted date string. Given string is parsed by the parsing token provided, and the returned
+ * formatted date string is formatted by the formatting token provided. The time component of the
+ * provided dateTime string is ignored.
+ * @param {string} str
+ * @param {string} [parseToken="yyyy-MM-dd"]
+ * @param {string} [formatToken="P"]
+ * @returns Formatted date string
+ *
+ * Example usage: dateTimeToFormattedDate("2023-06-14T01:18:40.501Z")
+ * // => "06/14/2023"
+ */
+function dateTimeToFormattedDate(
+  str,
+  parseToken = "yyyy-MM-dd",
+  formatToken = "P", // https://date-fns.org/v2.30.0/docs/format
+) {
+  return format(
+    parse(
+      str.substring(0, 10), // extract date from dateTime string
+      parseToken,
+      new Date(),
+    ),
+    formatToken,
+  );
+}
+
+export {
+  date,
+  absolute,
+  fromNow,
+  readableDuration,
+  formatDuration,
+  dateTimeToFormattedDate,
+};

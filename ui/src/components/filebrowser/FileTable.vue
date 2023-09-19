@@ -34,7 +34,11 @@
         class="flex items-center gap-1"
         :class="{ 'cursor-pointer': showDownload }"
         v-else
-        @click="showDownload ? initiate_file_download(rowData) : () => {}"
+        @click="
+          showDownload
+            ? initiate_and_log_data_access(rowData, config.access_types.BROWSER)
+            : () => {}
+        "
       >
         <FileTypeIcon :filename="rowData.name" />
 
@@ -80,13 +84,17 @@
 </template>
 
 <script setup>
+import statisticsService from "@/services/statistics";
 import datasetService from "@/services/dataset";
 import { formatBytes, downloadFile, cmp } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { useToastStore } from "@/stores/toast";
+import config from "@/config";
+import { useAuthStore } from "@/stores/auth";
 
 const store = useFileBrowserStore();
 const toast = useToastStore();
+const auth = useAuthStore();
 
 const props = defineProps({
   datasetId: {
@@ -161,13 +169,24 @@ function onClick(event) {
   }
 }
 
+function initiate_and_log_data_access(row, access_type) {
+  initiate_file_download(row).then(() => {
+    statisticsService.log_data_access({
+      access_type,
+      file_id: row.id,
+      dataset_id: null,
+      user_id: auth.user.id,
+    });
+  });
+}
+
 function initiate_file_download(row) {
   // to download a file
   // get file url and token from the API to create a download url
   // and trigger file download through browser
 
   data_loading.value = true;
-  datasetService
+  return datasetService
     .get_file_download_data({
       dataset_id: props.datasetId,
       file_id: row.id,

@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 
 const asyncHandler = require('../middleware/asyncHandler');
+const { numericStringsToNumbers } = require('../utils');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -17,6 +18,52 @@ router.get('/latest', asyncHandler(async (req, res, next) => {
 
   res.json(latestEntries);
 }));
+
+router.get(
+  '/space-utilization-by-timestamp-and-measurement',
+  asyncHandler(async (req, res, next) => {
+    const metrics = await prisma.$queryRaw`
+      select
+        timestamp::DATE as date,
+        measurement,
+        sum(usage) as total_usage,
+        "limit"
+      from metric
+      group by
+        timestamp::DATE,
+        measurement,
+        "limit"
+      order by 
+        timestamp::DATE asc,
+        measurement asc
+  `;
+
+    // convert numeric strs to numbers
+    res.json(numericStringsToNumbers(
+      metrics,
+      ['total_usage', 'limit'],
+    ));
+  }),
+);
+
+router.get(
+  '/space-utilization-totals-by-measurement',
+  asyncHandler(async (req, res, next) => {
+    const metrics = await prisma.$queryRaw`
+      select
+        measurement,
+        sum(usage) as total_usage
+      from metric
+      group by
+        measurement
+      order by 
+        measurement asc
+  `;
+
+    // convert numeric strs to numbers
+    res.json(numericStringsToNumbers(metrics, ['total_usage']));
+  }),
+);
 
 router.post('/', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']

@@ -80,7 +80,11 @@
 
           <!-- Action icon -->
           <va-list-item-section class="flex-none">
-            <CopyButton :text="downloadPath" preset="secondary" />
+            <CopyButton
+              :text="downloadPath"
+              preset="secondary"
+              :callback-fn="log_data_access"
+            />
           </va-list-item-section>
         </va-list-item>
       </va-list>
@@ -97,8 +101,12 @@
 </template>
 
 <script setup>
+import statisticsService from "@/services/statistics";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 
 const props = defineProps({
   dataset: {
@@ -121,6 +129,15 @@ const downloadURL = computed(() => {
 const downloadPath = computed(() => {
   return `${config.paths.download}/${props.dataset.metadata?.stage_alias}`;
 });
+
+const log_data_access = () => {
+  statisticsService.log_data_access({
+    access_type: config.access_types.SLATE_SCRATCH,
+    file_id: null,
+    dataset_id: props.dataset.id,
+    user_id: auth.user.id,
+  });
+};
 
 const visible = ref(false);
 

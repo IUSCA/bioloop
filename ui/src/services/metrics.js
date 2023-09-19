@@ -11,6 +11,14 @@ class MetricsService {
       return res;
     });
   }
+
+  getSpaceUtilizationByTimeAndMeasurement() {
+    return api.get("/metrics/space-utilization-by-timestamp-and-measurement");
+  }
+
+  getTotalSpaceUtilizationByMeasurement() {
+    return api.get("/metrics/space-utilization-totals-by-measurement");
+  }
 }
 
 export default new MetricsService();
