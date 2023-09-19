@@ -51,6 +51,9 @@ async function main() {
       name: 'Deepak Duggirala',
       username: 'deduggi',
     }, {
+      name: 'Ray Perigo',
+      username: 'rperigo',
+    }, {
       name: 'svc_tasks',
       username: 'svc_tasks',
     },
