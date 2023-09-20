@@ -56,7 +56,8 @@ async function setPassword({ user_id, password, _prisma }) {
 }
 
 async function findActiveUserBy(key, value) {
-  const user = await prisma.user.findFirstOrThrow({
+  // do not throw error if no results are found, instead return null
+  const user = await prisma.user.findFirst({
     where: {
       is_deleted: false,
       [key]: value,
