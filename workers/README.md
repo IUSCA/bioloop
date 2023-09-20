@@ -166,3 +166,9 @@ colo23> python -m celery -A workers.celery_app worker --loglevel INFO -O fair --
 ```
 
 
+Dataset Name:
+- taken from the name of the directory ingested
+- used in watch.py to filter out registered datasets
+- used to compute the staging path `staging_dir / alias / dataset['name']`
+- used to compute the qc path `Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'`
+- used to compute the scratch tar path while download the tar file from SDA `Path(config['paths']['scratch']) / f"{dataset['name']}.tar"`

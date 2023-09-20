@@ -3,6 +3,7 @@ from datetime import datetime
 from urllib.parse import urljoin
 
 import requests
+from glom import glom, assign as glom_assign
 from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
@@ -25,7 +26,7 @@ class LogRetry(Retry):
                                     _stacktrace=_stacktrace)
         if retries:
             logger.warning(
-                f"Retrying {method} request to {url} (retry number {len(self.history)}). Error: ${error.args}")
+                f"Retrying {method} request to {url} (retry number {len(self.history)}). Error: {error.args}")
         return retries
 
 
@@ -108,11 +109,12 @@ def dataset_getter(dataset: dict):
 
     # convert date strings to date objects
     for date_key in date_keys:
-        date_str = dataset.get(date_key, '')
-        try:
-            dataset[date_key] = datetime.strptime(date_str, date_format)
-        except ValueError:
-            dataset[date_key] = None
+        date_str = glom(dataset, date_key, default=None)
+        if date_str is not None:
+            try:
+                glom_assign(dataset, date_key, datetime.strptime(date_str, date_format))
+            except ValueError:  # unable to parse date string
+                glom_assign(dataset, date_key, None)
     return dataset
 
 

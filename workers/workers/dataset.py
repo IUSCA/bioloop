@@ -3,6 +3,7 @@ from pathlib import Path
 
 from glom import glom
 
+from workers import api
 from workers.config import config
 
 
@@ -32,3 +33,11 @@ def compute_staging_path(dataset: dict) -> tuple[Path, str]:
     staging_dir = Path(config['paths'][dataset_type]['stage']).resolve()
     alias = glom(dataset, 'metadata.stage_alias', default=stage_alias(dataset))
     return staging_dir / alias / dataset['name'], alias
+
+
+def create_if_does_not_exist(body):
+    _results = api.get_all_datasets(dataset_type=body['type'], name=body['name'])
+    dataset = next(iter(_results), None)
+    if not dataset:
+        dataset = api.create_dataset(body)
+    return dataset
