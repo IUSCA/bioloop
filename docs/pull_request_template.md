@@ -1,9 +1,3 @@
----
-name: Pull Request Template
-about: Describe the changes introduced by this PR.
-
----
-
 **Description**
 
 Please provide a brief description of the changes made in this PR.
