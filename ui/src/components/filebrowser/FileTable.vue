@@ -106,7 +106,7 @@ const columns = computed(() => {
   if (store.isInSearchMode) {
     return [
       { key: "typeSortableName", label: "name" },
-      { key: "path", label: "Location" },
+      { key: "path", label: "Location", width: "300px" },
       { key: "size", width: "100px" },
       { key: "md5", width: "250px", label: "MD5 Checksum" },
     ];
@@ -125,7 +125,7 @@ const columns = computed(() => {
         sortingFn: (a, b) => a - b,
         width: "100px",
       },
-      { key: "filetype", label: "type", sortable: true },
+      { key: "filetype", label: "type", sortable: true, width: "100px" },
       { key: "md5", width: "250px", label: "MD5 Checksum" },
     ];
   }

@@ -195,16 +195,18 @@ const row_items = computed(() => {
 // but the order of columns would not be preserved
 const columns = [
   { key: "name", sortable: true },
+  ...(auth.canOperate ? [{ key: "users", sortable: true, width: "30%" }] : []),
   {
     key: "datasets",
     sortable: true,
-    width: 40,
+    width: "80px",
+    thAlign: "center",
+    tdAlign: "center",
   },
-  ...(auth.canOperate ? [{ key: "users", sortable: true }] : []),
   // ...(auth.canOperate ? [{ key: "contacts", sortable: true }] : []),
-  { key: "created_at", sortable: true },
-  { key: "updated_at", sortable: true },
-  ...(auth.canOperate ? [{ key: "actions", width: 80 }] : []),
+  { key: "created_at", sortable: true, width: "100px" },
+  { key: "updated_at", sortable: true, width: "100px" },
+  ...(auth.canOperate ? [{ key: "actions", width: "80px" }] : []),
 ];
 
 function customFilteringFn(searchText, { name, users, datasets }) {
