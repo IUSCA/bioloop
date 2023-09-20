@@ -26,7 +26,7 @@ router.get(
   '/stats',
   isPermittedTo('read'),
   validate([
-    query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
+    query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']
@@ -128,7 +128,7 @@ router.get(
   validate([
     query('deleted').toBoolean().optional(),
     query('processed').toBoolean().optional(),
-    query('type').isIn(['RAW_DATA', 'DATA_PRODUCT']).optional(),
+    query('type').isIn(config.dataset_types).optional(),
     query('name').optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
   ]),
