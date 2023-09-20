@@ -2,7 +2,7 @@
   <div class="grid grid-cols-1 gap-5">
     <div class="banner flex items-end">
       <h1 class="heading_text p-[20px] text-center text-gray-800">
-        Diagnostic Genomics Laboratory
+        Bioloop
       </h1>
     </div>
     <!-- <div class="flex justify-center mt-10">
@@ -16,20 +16,15 @@
       <va-card>
         <va-card-content>
           <div class="p-3">
-            <span class="text-lg">
-              The Diagnostic Genomics Laboratory at Indiana University School of
-              Medicine is a newly established genomics laboratory under the
-              auspices of the Genetic Testing Laboratories in the Department of
-              Medical and Molecular Genetics Division of Diagnostic Genomics.
-              The Diagnostic Genomics Laboratory provides competitive clinical
-              somatic (cancer) and germline genomics testing services to IU
-              Health and state of Indiana. Enabled by state-of-the-art next
-              generation sequencing (NGS) technology and advanced bioinformatic
-              infrastructure, the lab currently offers a disease-targeted NGS
-              panel testing (somatic/cancer) for plasma cell myeloma (also known
-              as multiple myeloma), and will soon be offering clinical genome
-              and clinical exome diagnostic testing.
-            </span>
+            <div class="text-lg">
+              This instance of <a href="https://github.com/IUSCA/bioloop/issues">Bioloop</a> is being run by:  
+          </div>
+            <div class="text-lg">
+              For questions or support, please contact the primary operator:  
+          </div>
+          <div class="text-lg">
+              Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.
+            </div>
           </div>
         </va-card-content>
       </va-card>

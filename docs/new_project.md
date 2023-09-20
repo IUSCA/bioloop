@@ -27,6 +27,8 @@ Replace the name "bioloop" with the new project name (<app_name>) in these files
 - workers/workers/config/production.py and workers/workers/scripts/start_worker.sh: Change "app_id" and "base_url"
 - workers/ecosystem.config.js (line 7): change celery hostname and queues values
 - README.md and workers/README.md: replace the references to bioloop with <app_name>
+- Update content in `ui/src/pages/about.vue` 
+- Create custom logo.svg
 
 ## Steps to setup API and run natively on development machine (not using docker)
 
