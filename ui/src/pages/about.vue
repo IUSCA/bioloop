@@ -17,7 +17,7 @@
         <va-card-content>
           <div class="p-3">
             <div class="text-lg">
-              This instance of <a href="https://github.com/IUSCA/bioloop/issues">Bioloop</a> is being run by:  
+              This instance of <a href="https://github.com/IUSCA/bioloop">Bioloop</a> is being run by:  
           </div>
             <div class="text-lg">
               For questions or support, please contact the primary operator:  
