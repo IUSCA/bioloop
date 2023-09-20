@@ -6,7 +6,7 @@ Docker standardizes the server environment and makes it easier to get a local de
 
 Requires `docker`. Docker desktop should work too. 
 
-Shared volumes are used in `docker-compose.yml` to ensure container `node_modules` are not confused with host level `node_modules`. This approach also keeps `node_modules` folders out of the local directory to make it easier to `find` and `grep`.
+For development purposes, shared volumes are used in `docker-compose.yml` to ensure container `node_modules` are not confused with host level `node_modules`. This approach also keeps `node_modules` folders out of the local directory to make it easier to `find` and `grep`.
 
 To make adjustments to the way the application runs, edit and review [docker-compose.yml](docker-compose.yml).
 
