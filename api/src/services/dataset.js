@@ -103,55 +103,6 @@ async function soft_delete(dataset, user_id) {
   });
 }
 
-async function hard_delete(id) {
-  const deleteFiles = prisma.dataset_file.deleteMany({
-    where: {
-      dataset_id: id,
-    },
-  });
-  const deleteWorkflows = prisma.workflow.deleteMany({
-    where: {
-      dataset_id: id,
-    },
-  });
-  const deleteAudit = prisma.dataset_audit.deleteMany({
-    where: {
-      dataset_id: id,
-    },
-  });
-  const deleteStates = prisma.dataset_state.deleteMany({
-    where: {
-      dataset_id: id,
-    },
-  });
-  const deleteAssociations = prisma.dataset_hierarchy.deleteMany({
-    where: {
-      OR: [
-        {
-          source_id: id,
-        },
-        {
-          derived_id: id,
-        },
-      ],
-    },
-  });
-  const deleteDataset = prisma.dataset.delete({
-    where: {
-      id,
-    },
-  });
-
-  await prisma.$transaction([
-    deleteFiles,
-    deleteWorkflows,
-    deleteAudit,
-    deleteStates,
-    deleteAssociations,
-    deleteDataset,
-  ]);
-}
-
 async function get_dataset({
   id = null,
   files = false,
@@ -511,7 +462,6 @@ async function add_files({ dataset_id, data }) {
 
 module.exports = {
   soft_delete,
-  hard_delete,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
   get_dataset,
