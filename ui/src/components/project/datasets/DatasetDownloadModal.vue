@@ -118,7 +118,7 @@ defineExpose({
 });
 
 const downloadURL = computed(() => {
-  return `${window.location.origin}/datasets/filebrowser/${props.dataset?.id}`;
+  return `${window.location.origin}/datasets/${props.dataset?.id}/filebrowser`;
 });
 
 const downloadPath = computed(() => {
