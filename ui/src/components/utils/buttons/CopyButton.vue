@@ -7,7 +7,11 @@
     >
       <va-button @click="copy(props.text)" :preset="props.preset">
         <i-mdi-check-bold style="color: var(--va-success)" v-if="copied" />
-        <i-mdi-content-copy v-else style="color: var(--va-primary)" />
+        <i-mdi-content-copy
+          v-else
+          style="color: var(--va-primary)"
+          class="hover:brightness-200"
+        />
       </va-button>
     </va-popover>
   </div>

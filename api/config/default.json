@@ -100,5 +100,6 @@
         }
       ]
     }
-  }
+  },
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"]
 }

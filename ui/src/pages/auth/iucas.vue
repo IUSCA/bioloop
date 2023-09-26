@@ -7,7 +7,7 @@
             class="text-xl flex flex-col items-center gap-5"
             v-if="notAuthorized"
           >
-            <i-mdi-alert class="text-amber-600 text-5xl"></i-mdi-alert>
+            <i-mdi-alert class="text-amber-600 text-5xl" />
             <span>
               It appears that you do not currently have permission to access
               this application. If you require access, please send a message to
@@ -20,9 +20,7 @@
             class="text-xl text-gray-700 flex flex-col items-center gap-5"
             v-if="authFailure"
           >
-            <i-mdi-alert-octagon
-              class="text-red-600 text-5xl"
-            ></i-mdi-alert-octagon>
+            <i-mdi-alert-octagon class="text-red-600 text-5xl" />
             <span class="va-text-text-primary"
               >Authentication Failed. Something went wrong.</span
             >

@@ -2,13 +2,14 @@
 <p align="center">Data Portal and Pipeline Application</p>
 
 ## Getting started
+- [Create a new project from this template](docs/new_project.md)
+
 - [API](api/README.md)
 - [UI](ui/README.md)
 - [Workers](workers/README.md)
 
 - [Docker](README-docker.md)
 
-- [Create a new project from this template](docs/new_project.md)
 
 ## Architecture
 <img src="docs/architecture.png" >

@@ -211,6 +211,7 @@ const columns = ref([
     label: "registered on",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
+    width: "100px",
   },
   {
     key: "archive_path",
@@ -219,6 +220,7 @@ const columns = ref([
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
+    width: "100px",
   },
   {
     key: "is_staged",
@@ -227,13 +229,14 @@ const columns = ref([
     thAlign: "center",
     tdAlign: "center",
     sortable: true,
-    width: 40,
+    width: "80px",
   },
   {
     key: "updated_at",
     label: "last updated",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
+    width: "120px",
   },
   // { key: "status", sortable: false },
   {
@@ -241,21 +244,23 @@ const columns = ref([
     label: "data files",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
+    width: "80px",
   },
   {
     key: "du_size",
     label: "size",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
-    width: 80,
+    width: "100px",
     sortingFn: (a, b) => a - b,
   },
   {
     key: "workflows",
     thAlign: "center",
     tdAlign: "center",
+    width: "80px",
   },
-  { key: "actions", width: 80 },
+  { key: "actions", width: "100px" },
 ]);
 
 // initial sorting order

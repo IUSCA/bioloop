@@ -75,11 +75,12 @@ class Poller:
 
 
 class Register:
-    def __init__(self, dataset_type):
+    def __init__(self, dataset_type, default_wf_name='integrated'):
         self.dataset_type = dataset_type
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
         self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
+        self.default_wf_name = default_wf_name
 
     def get_registered_dataset_names(self):
         datasets = api.get_all_datasets(dataset_type=self.dataset_type)
@@ -89,7 +90,7 @@ class Register:
         if event != 'add':
             return
 
-        candidates = [
+        candidates: list[Path] = [
             p for p in new_dirs
             if all([
                 p.name not in self.completed,
@@ -99,22 +100,25 @@ class Register:
         ]
 
         for candidate in candidates:
-            logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
-            dataset = {
-                'name': candidate.name,
-                'type': self.dataset_type,
-                'origin_path': str(candidate.resolve()),
-            }
-            created_dataset = api.create_dataset(dataset)
-            self.run_workflows(created_dataset)
+            self.register_candidate(candidate)
             self.completed.add(candidate.name)
+
+    def register_candidate(self, candidate: Path):
+        logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
+        dataset = {
+            'name': candidate.name,
+            'type': self.dataset_type,
+            'origin_path': str(candidate.resolve()),
+        }
+        created_dataset = api.create_dataset(dataset)
+        self.run_workflows(created_dataset)
 
     def run_workflows(self, dataset):
         dataset_id = dataset['id']
-        wf_body = wf_utils.get_wf_body(wf_name='integrated')
+        wf_body = wf_utils.get_wf_body(wf_name=self.default_wf_name)
         wf = Workflow(celery_app=celery_app, **wf_body)
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
-        wf.start()
+        wf.start(dataset_id)
 
 
 class RegisterDataProduct(Register):

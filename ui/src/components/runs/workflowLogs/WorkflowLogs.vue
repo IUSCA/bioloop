@@ -17,13 +17,7 @@
       </va-input>
 
       <!-- checkboxes -->
-      <va-checkbox
-        v-model="highlight_errors"
-        class=""
-        label="Highlight Errors"
-      />
       <va-checkbox v-model="show_timestamps" class="" label="Timestamps" />
-      <va-checkbox v-model="live_updates" class="" label="Live Updates" />
     </div>
 
     <!-- table -->
@@ -68,24 +62,6 @@
           {{ datetime.absolute(source, false) }}
         </span>
       </template>
-
-      <!-- footer -->
-      <!-- <template #footer>
-        <tr class="table-slots">
-          <th colspan="12" class="font-normal text-sm">
-            <div
-              v-if="live_updates"
-              class="flex gap-1 items-center justify-end px-2"
-            >
-              <i-mdi:record class="text-red-600 text-sm flex-none" />
-              <i-mdi-refresh class="flex-none" />
-              <span class="flex-none va-text-secondary">
-                live updates enabled
-              </span>
-            </div>
-          </th>
-        </tr>
-      </template> -->
     </va-data-table>
 
     <!-- anchor div to position the scroll jump button absolutely -->
@@ -129,9 +105,7 @@ const props = defineProps({
 const ROWS_IN_VIEW = 19;
 
 const logs = ref([]);
-const highlight_errors = ref(true);
 const show_timestamps = ref(false);
-const live_updates = ref(props.live);
 const tableRef = ref(null);
 const filterText = ref("");
 
@@ -180,7 +154,7 @@ function onClick(event) {
 
 function getRowBind(row) {
   const rowClasees = [];
-  if (highlight_errors.value && row.level === "stderr") {
+  if (row.level === "stderr") {
     rowClasees.push(["text-red-600"]);
   }
   return { class: rowClasees };
@@ -193,7 +167,7 @@ const { pause, resume } = useIntervalFn(() => {
 
 // start or stop timer by reacting to live_updates value
 watch(
-  live_updates,
+  () => props.live,
   (value) => {
     if (value) {
       resume();

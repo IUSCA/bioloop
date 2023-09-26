@@ -65,8 +65,8 @@ model dataset_file {
 model dataset_file_hierarchy {
   parent_id Int
   child_id  Int
-  parent    dataset_file? @relation(name: "parent", fields: [parent_id], references: [id])
-  child     dataset_file? @relation(name: "child", fields: [child_id], references: [id])
+  parent    dataset_file? @relation(name: "parent", fields: [parent_id], references: [id], onDelete: Cascade)
+  child     dataset_file? @relation(name: "child", fields: [child_id], references: [id], onDelete: Cascade)
 
   @@id([parent_id, child_id])
 }

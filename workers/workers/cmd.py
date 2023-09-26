@@ -23,7 +23,7 @@ class SubprocessError(Exception):
     pass
 
 
-def execute(cmd: list[str], cwd: str = None) -> tuple[str, str]:
+def execute(cmd: list[str], **kwargs) -> tuple[str, str]:
     """
     returns stdout, stderr (strings)
     if the return code is not zero, SubprocessError is raised with a dict of
@@ -34,7 +34,9 @@ def execute(cmd: list[str], cwd: str = None) -> tuple[str, str]:
         'args': []
     }
     """
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    kwargs.pop('capture_output', None)
+    kwargs.pop('text', None)
+    p = subprocess.run(cmd, capture_output=True, text=True, **kwargs)
     if p.returncode != 0:
         msg = {
             'return_code': p.returncode,
