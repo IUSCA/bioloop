@@ -8,7 +8,7 @@
     <div class="">
       <!-- sm:w-full -->
       <span class="va-text-secondary">
-        There are multiple methods available to access the project data. Please
+        There are multiple methods available to access the dataset. Please
         select the option that best fits your needs. Use care when downloading
         datasets outside of the IU network; large datasets can consume a
         significant portion of a home ISP's monthly data cap. Transfers within
@@ -104,9 +104,6 @@ const props = defineProps({
   dataset: {
     type: Object,
     default: () => ({}),
-  },
-  projectId: {
-    type: String,
   },
 });
 // const emit = defineEmits(["update"]);
