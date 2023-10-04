@@ -188,9 +188,7 @@ const configureChartData = (data) => {
   // counts per day, aggregate that day's data across both access types.
   const aggregatedByAccessType = groupByAndAggregate(
     data,
-    (e) => e.date,
     "date",
-    (dateStr) => dateStr,
     "count",
     (groupedValues) => {
       return groupedValues.length > 1
@@ -199,6 +197,7 @@ const configureChartData = (data) => {
           )
         : groupedValues[0].count;
     },
+    (e) => e.date,
   );
 
   chartData.value = configureChartDataByDataset([

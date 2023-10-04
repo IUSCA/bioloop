@@ -70,13 +70,12 @@ router.get(
 
     const ret = groupByAndAggregate(
       data_access_counts,
-      (count) => count.date.toISOString(),
       'date',
-      (dateStr) => dateStr,
       'count',
       (groupedValues) => (groupedValues.length > 1
         ? groupedValues.reduce((accumulator, currentVal) => accumulator.count + currentVal.count)
         : groupedValues[0].count),
+      (count) => count.date.toISOString(),
     );
 
     res.json(numericStringsToNumbers(ret, ['count']));

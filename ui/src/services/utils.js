@@ -185,9 +185,7 @@ function groupBy(key) {
  * Example usage:
  * groupByAndAggregate(
  *   [1, 1, 2, 2, 2],
- *   (e) => e,
  *   "groupedBy",
- *   (e) => e,
  *   "aggregatedValue",
  *   (groupedValues) => (
  *     groupedValues
@@ -195,26 +193,31 @@ function groupBy(key) {
  *   ),
  * );
  * // => [{ "groupedBy": "1", "aggregatedValue": 2 }, { "groupedBy": "2", "aggregatedValue": 6 }]
- * @param {[*]} arr                    The array whose elements are to be grouped and aggregated
- * @param {Function} groupByFn         Callback used to group the elements of arr
- * @param {string} groupedByKey        The key used for representing the values by which to group
- *                                     the elements in arr
- * @param {Function} keyGenerationFn   Callback used to format the values (in the returned array)
- *                                     by which to group the elements in arr
- * @param {string} aggregatedResultKey The key used for representing the aggregation result in the
- *                                     returned array
- * @param {Function} aggregationFn     Callback used for aggregating the results in each grouping
- * @returns                            An array, every element of which contains the aggregated
- *                                     values produced from each grouping as well as the value used
- *                                     for producing said groupings.
+ *
+ * @param {[*]} arr                               The array whose elements are to be grouped and
+ *                                                aggregated
+ * @param {string} groupedByKey                   The key used for representing the values (in the
+ *                                                returned array) by which elements in arr will be
+ *                                                grouped
+ * @param {string} aggregatedResultKey            The key used for representing the aggregation
+ *                                                results (in the returned array) per grouping
+ * @param {Function} aggregationFn                Callback used for aggregating the results in each
+ *                                                grouping
+ * @returns                                       An array, every element of which contains the
+ *                                                aggregated values produced from each grouping as
+ *                                                well as the values used for producing said
+ *                                                groupings.
+ * @param {Function} [groupByFn=(e) => e]         Callback used to group the elements of arr
+ * @param {Function} [keyGenerationFn=(e) => e]   Callback used to format the values (in the
+ *                                                returned array) by which groupings are produced
  */
 function groupByAndAggregate(
   arr,
-  groupByFn,
   groupedByKey,
-  keyGenerationFn,
   aggregatedResultKey,
   aggregationFn,
+  groupByFn = (e) => e,
+  keyGenerationFn = (e) => e,
 ) {
   const grouped = _.groupBy(arr, groupByFn);
   const ret = [];
