@@ -208,7 +208,7 @@ function groupBy(key) {
  *                                                well as the values used for producing said
  *                                                groupings.
  * @param {Function} [groupByFn=(e) => e]         Callback used to group the elements of arr
- * @param {Function} [keyGenerationFn=(e) => e]   Callback used to format the values (in the
+ * @param {Function} [groupedByValFormatFn=(e) => e]    Callback used to format the values (in the
  *                                                returned array) by which groupings are produced
  */
 function groupByAndAggregate(
@@ -217,13 +217,13 @@ function groupByAndAggregate(
   aggregatedResultKey,
   aggregationFn,
   groupByFn = (e) => e,
-  keyGenerationFn = (e) => e,
+  groupedByValFormatFn = (e) => e,
 ) {
   const grouped = _.groupBy(arr, groupByFn);
   const ret = [];
   Object.entries(grouped).forEach(([groupedKey, groupedValues]) => {
     ret.push({
-      [groupedByKey]: keyGenerationFn(groupedKey),
+      [groupedByKey]: groupedByValFormatFn(groupedKey),
       [aggregatedResultKey]: aggregationFn(groupedValues),
     });
   });
