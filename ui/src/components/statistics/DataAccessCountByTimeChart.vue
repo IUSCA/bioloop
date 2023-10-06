@@ -30,8 +30,8 @@
 
 <script setup>
 import dayjs from "dayjs";
-import "chartjs-adapter-date-fns";
-import { enUS } from "date-fns/locale";
+import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
+import "dayjs/locale/en";
 import StatisticsService from "@/services/statistics";
 import { groupByAndAggregate } from "@/services/utils";
 import { getDefaultChartColors } from "@/services/charts";
@@ -94,7 +94,7 @@ const getChartOptions = ({ colors }) => ({
   },
   adapters: {
     date: {
-      locale: enUS,
+      locale: dayjs().locale("en"),
     },
   },
   plugins: {
