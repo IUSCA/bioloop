@@ -3,7 +3,7 @@
     v-model="visible"
     title="Stage Dataset"
     okText="Stage"
-    @ok="initiateAndLogStageAttempt"
+    @ok="handleOk"
     @close="hide"
     no-outside-dismiss
   >
@@ -20,7 +20,6 @@
 
 <script setup>
 import DatasetService from "@/services/dataset";
-import StatisticsService from "@/services/statistics";
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
@@ -52,24 +51,14 @@ function show() {
   visible.value = true;
 }
 
-function initiateStageAttempt() {
+function handleOk() {
   loading.value = true;
-  return DatasetService.stage_dataset(props.dataset.id)
+  DatasetService.stage_dataset(props.dataset.id, auth.user.id)
     .then(() => {
       emit("update", props.dataset.id);
     })
     .finally(() => {
       hide();
     });
-}
-
-function initiateAndLogStageAttempt() {
-  initiateStageAttempt().then(() => {
-    // log stage attempt
-    StatisticsService.log_stage_request({
-      dataset_id: props.dataset.id,
-      user_id: auth.user.id,
-    });
-  });
 }
 </script>

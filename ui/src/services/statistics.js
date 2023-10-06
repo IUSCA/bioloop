@@ -5,31 +5,14 @@ const toast = useToastStore();
 
 class StatisticsService {
   log_data_access({ access_type, file_id, dataset_id, user_id }) {
-    api
-      .post("/statistics/data-access-log", null, {
-        params: {
-          access_type,
-          file_id,
-          dataset_id,
-          user_id,
-        },
-      })
-      .catch((err) => {
-        console.log("Unable to log data access", err);
-      });
-  }
-
-  log_stage_request({ dataset_id, user_id }) {
-    api
-      .post("/statistics/stage-request-log", null, {
-        params: {
-          dataset_id,
-          user_id,
-        },
-      })
-      .catch((err) => {
-        console.log("Unable to log stage attempt", err);
-      });
+    return api.post("/statistics/data-access-log", null, {
+      params: {
+        access_type,
+        file_id,
+        dataset_id,
+        user_id,
+      },
+    });
   }
 
   /**
@@ -70,7 +53,7 @@ class StatisticsService {
 
   getMostAccessedData(limit, include_datasets) {
     return api
-      .get(`/statistics/most-accessed-files`, {
+      .get(`/statistics/most-accessed-data`, {
         params: {
           limit,
           include_datasets,

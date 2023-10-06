@@ -3,7 +3,9 @@ const { PrismaClient } = require('@prisma/client');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { numericStringsToNumbers } = require('../utils');
+const { accessControl } = require('../middleware/auth');
 
+const isPermittedTo = accessControl('metrics');
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -21,6 +23,7 @@ router.get('/latest', asyncHandler(async (req, res, next) => {
 
 router.get(
   '/space-utilization-by-timestamp-and-measurement',
+  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const metrics = await prisma.$queryRaw`
       select
@@ -48,6 +51,7 @@ router.get(
 
 router.get(
   '/space-utilization-totals-by-measurement',
+  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const metrics = await prisma.$queryRaw`
       select

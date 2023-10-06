@@ -4,10 +4,12 @@ const { PrismaClient } = require('@prisma/client');
 
 const { query } = require('express-validator');
 const { parseISO } = require('date-fns');
+const { accessControl } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { groupByAndAggregate, numericStringsToNumbers } = require('../utils');
 
+const isPermittedTo = accessControl('statistics');
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -15,6 +17,7 @@ const prisma = new PrismaClient();
 // have been accessed.
 router.get(
   '/data-access-timestamp-range',
+  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const dates = await prisma.$queryRaw`
     SELECT 
@@ -33,6 +36,7 @@ router.get(
 // access) as well.
 router.get(
   '/data-access-count-by-date',
+  isPermittedTo('read'),
   validate([
     query('start_date').isISO8601(),
     query('end_date').isISO8601(),
@@ -84,6 +88,7 @@ router.get(
 
 router.get(
   '/data-access-count-by-access-method',
+  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const data_access_counts = await prisma.$queryRaw`
       SELECT
@@ -101,7 +106,8 @@ router.get(
 // true, access records for datasets (i.e. attempts to access the data directly from Slate-
 // Scratch) will be included in the results.
 router.get(
-  '/most-accessed-files',
+  '/most-accessed-data',
+  isPermittedTo('read'),
   validate([
     query('limit').isInt().toInt().optional(),
     query('include_datasets').isBoolean().toBoolean().optional(),
@@ -155,7 +161,7 @@ router.get(
       LIMIT ${req.query.limit}
     `;
 
-    const most_frequent_accesses = most_accessed_files
+    const most_accessed_data = most_accessed_files
       .concat(most_accessed_datasets)
       .sort((d1, d2) => {
         if (d1.count === d2.count) return 0;
@@ -163,7 +169,7 @@ router.get(
       })
       .slice(0, req.query.limit);
 
-    res.json(numericStringsToNumbers(most_frequent_accesses, ['count']));
+    res.json(numericStringsToNumbers(most_accessed_data, ['count']));
   }),
 );
 
@@ -171,6 +177,7 @@ router.get(
 // given range specified through start_date and end_date.
 router.get(
   '/stage-request-count-by-date',
+  isPermittedTo('read'),
   validate([
     query('start_date').isISO8601(),
     query('end_date').isISO8601(),
@@ -201,6 +208,7 @@ router.get(
 // the limit query param
 router.get(
   '/most-staged-datasets',
+  isPermittedTo('read'),
   validate([
     query('limit').isInt().toInt().optional(),
   ]),
@@ -229,6 +237,7 @@ router.get(
 // has been attempted on any datasets
 router.get(
   '/stage-request-timestamp-range',
+  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const dates = await prisma.$queryRaw`
     SELECT 
@@ -242,8 +251,11 @@ router.get(
 );
 
 // Returns the count of registered users grouped by date
-router.get('/user-count', asyncHandler(async (req, res, next) => {
-  const user_counts_by_date = await prisma.$queryRaw`
+router.get(
+  '/user-count',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const user_counts_by_date = await prisma.$queryRaw`
     select
       u.created_at::DATE,
       count(*)
@@ -253,12 +265,14 @@ router.get('/user-count', asyncHandler(async (req, res, next) => {
     order by 
       u.created_at::DATE asc
   `;
-  res.json(numericStringsToNumbers(user_counts_by_date, ['count']));
-}));
+    res.json(numericStringsToNumbers(user_counts_by_date, ['count']));
+  }),
+);
 
-// Returns users occupying maximum bandwidth, limited by the limit param
+// Returns users consuming maximum bandwidth, limited by the limit param
 router.get(
   '/users-by-bandwidth',
+  isPermittedTo('read'),
   validate([
     query('limit').isInt().toInt(),
   ]),
@@ -287,6 +301,7 @@ router.get(
 // Persists a data access record to the data_access_log table
 router.post(
   '/data-access-log',
+  isPermittedTo('create'),
   validate([
     query('access_type').notEmpty().escape(),
     query('file_id').isInt().toInt().optional(),
@@ -307,22 +322,4 @@ router.post(
   }),
 );
 
-// Persists a staging attempt to the stage_request_log table
-router.post(
-  '/stage-request-log',
-  validate([
-    query('dataset_id').isInt().toInt().optional(),
-    query('user_id').isInt().toInt(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    await prisma.stage_request_log.create({
-      data: {
-        dataset_id: req.query.dataset_id,
-        user_id: req.query.user_id,
-      },
-    });
-
-    res.send('Staging attempt logged successfully!');
-  }),
-);
 module.exports = router;

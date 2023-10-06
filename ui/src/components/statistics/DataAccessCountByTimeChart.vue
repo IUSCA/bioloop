@@ -29,13 +29,13 @@
 </template>
 
 <script setup>
-import { subMonths, parse } from "date-fns";
+import dayjs from "dayjs";
 import "chartjs-adapter-date-fns";
 import { enUS } from "date-fns/locale";
 import StatisticsService from "@/services/statistics";
 import { groupByAndAggregate } from "@/services/utils";
 import { getDefaultChartColors } from "@/services/charts";
-import { dateTimeToFormattedDate } from "@/services/datetime";
+import { date } from "@/services/datetime";
 import config from "@/config";
 import _ from "lodash";
 
@@ -47,8 +47,6 @@ const defaultChartColors = computed(() => {
 
 // Date range will be shifted backwards or forwards by this many months, when user clicks the appropriate button
 const MONTH_DIFFERENCE = 3;
-
-const DATE_FORMAT = "yyyy-MM-dd";
 
 const endDate = ref();
 const startDate = ref();
@@ -105,14 +103,8 @@ const getChartOptions = ({ colors }) => ({
       titleColor: colors.TOOLTIP.FONT,
       bodyColor: colors.TOOLTIP.FONT,
       callbacks: {
-        // Chart.js uses date-fns for attempting dateTime-to-formatted-date conversion, which
-        // parses the date string as localized date, which can potentially result in date
-        // discrepancies. This is avoided by taking control of the date format through the
-        // 'title' callback
         title: (arr) => {
-          return dateTimeToFormattedDate(
-            arr[0].dataset.data[arr[0].dataIndex].x,
-          );
+          return date(arr[0].dataset.data[arr[0].dataIndex].x);
         },
         label: (context) => context.dataset.data[context.dataIndex].y,
       },
@@ -243,23 +235,16 @@ onMounted(() => {
   // retrieve the range of dates for which to retrieve download logs
   StatisticsService.getDataAccessTimestampRange()
     .then((res) => {
-      // https://date-fns.org/v2.30.0/docs/parse
-      const minDownloadDate = parse(
-        res.data[0].min_timestamp.substring(0, 10), // ignore time
-        DATE_FORMAT,
-        new Date(),
-      );
-      const maxDownloadDate = parse(
-        res.data[0].max_timestamp.substring(0, 10), // ignore time
-        DATE_FORMAT,
-        new Date(),
-      );
+      const minDownloadDate = new Date(Date.parse(res.data[0].min_timestamp));
+      const maxDownloadDate = new Date(Date.parse(res.data[0].max_timestamp));
 
       endDate.value = maxDownloadDate;
       endDateMax.value = maxDownloadDate;
 
       startDateMin.value = minDownloadDate;
-      startDate.value = subMonths(endDate.value, MONTH_DIFFERENCE);
+      startDate.value = dayjs(endDate.value)
+        .subtract(MONTH_DIFFERENCE, "month")
+        .toDate();
       if (startDate.value.getTime() < startDateMin.value.getTime()) {
         startDate.value = startDateMin.value;
       }

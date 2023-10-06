@@ -26,7 +26,7 @@ import { enUS } from "date-fns/locale";
 import MetricsService from "@/services/metrics";
 import { formatBytes } from "@/services/utils";
 import { getDefaultChartColors } from "@/services/charts";
-import { dateTimeToFormattedDate } from "@/services/datetime";
+import { date } from "@/services/datetime";
 import config from "@/config";
 import _ from "lodash";
 
@@ -99,14 +99,8 @@ const getChartOptions = ({ colors }) => ({
       titleColor: colors.TOOLTIP.FONT,
       bodyColor: colors.TOOLTIP.FONT,
       callbacks: {
-        // Chart.js uses date-fns for attempting dateTime-to-formatted-date conversion, which
-        // parses the date string as localized date, which can potentially result in date
-        // discrepancies. This is avoided by taking control of the date format through the
-        // 'title' callback
         title: (arr) => {
-          return dateTimeToFormattedDate(
-            arr[0].dataset.data[arr[0].dataIndex].x,
-          );
+          return date(arr[0].dataset.data[arr[0].dataIndex].x);
         },
         label: (context) =>
           formatBytes(context.dataset.data[context.dataIndex].y),
