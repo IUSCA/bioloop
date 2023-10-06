@@ -32,7 +32,7 @@ watch(
     if (oldVal !== 0 && newVal > oldVal) {
       newItems.value = true;
     }
-  }
+  },
 );
 
 watch(isNearBottom, () => {
