@@ -3,9 +3,7 @@ const { subYears, eachDayOfInterval } = require('date-fns');
 const _ = require('lodash/fp');
 const data = require('./data');
 
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-});
+const prisma = new PrismaClient();
 
 // generates records to be seeded into the stage_request_log table, across the given number of years
 async function generate_stage_request_logs(num_years) {

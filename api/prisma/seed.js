@@ -38,10 +38,9 @@ function create_metrics_per_hour(num_hours) {
   const metrics_data = [];
   let metricsTimestamp = new Date();
   _.range(0, num_hours).forEach((hour_count) => {
-    const hour_metrics = data.metrics.map((m, i) => ({
+    const hour_metrics = data.metrics.map((m) => ({
       ...m,
       timestamp: metricsTimestamp,
-      subject: i.toString(),
       usage: m.usage + Math.ceil(Math.random(0, hour_count) * 100),
     }));
     metrics_data.push(...hour_metrics);
