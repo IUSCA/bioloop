@@ -1,11 +1,9 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import duration from "dayjs/plugin/duration";
-// import utc from "dayjs/plugin/utc";
 
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
-// dayjs.extend(utc);
 
 function date(value) {
   /**
@@ -18,25 +16,6 @@ function date(value) {
   if (value == null) return null;
   return dayjs(value).format("MMM D YYYY");
 }
-
-// function utcDate(value) {
-//   /**
-//    * This function is intended to convert an ISO 8601 datetime string
-//    * (with Z - UTC timezone) ex: "2023-06-14T01:18:40.501Z"
-//    * to a date string of format MMM D YYYY in the UTC time zone ex: "Jun 14 2023"
-//    *
-//    * Note: This function is only supposed to be used in special cases where there is a need to
-//    * ignore the time component of UTC dateTime. For example, grouping events by the date. In such
-//    * cases, your database may return UTC dateTime with a time of midnight, which when converted
-//    * to EST will shift the day backwards by one. To avoid such discrepancies, this function may
-//    * be used. However, for any use cases where the time component is relevant, date() or absolute()
-//    * should be used instead.
-//    *
-//    * date("2023-06-14T01:18:40.501Z") -> "Jun 14 2023"
-//    */
-//   if (value == null) return null;
-//   return dayjs.utc(value).format("MMM D YYYY");
-// }
 
 function absolute(value, timezoneOffset = true) {
   /**

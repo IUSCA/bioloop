@@ -18,7 +18,7 @@
       class="w-32"
       v-model="start_date"
       label="From"
-      :format="(date) => format(date, 'P')"
+      :format="(startDate) => date(startDate.toISOString())"
       icon=""
       :is-open="false"
       :is-content-hoverable="false"
@@ -30,7 +30,7 @@
       v-model="end_date"
       class="w-32"
       label="To"
-      :format="(date) => format(date, 'P')"
+      :format="(endDate) => date(endDate.toISOString())"
       icon=""
       :is-open="false"
       :is-content-hoverable="false"
@@ -55,7 +55,8 @@
 </template>
 
 <script setup>
-import { addMonths, format, subMonths } from "date-fns";
+import dayjs from "dayjs";
+import { date } from "@/services/datetime";
 
 const emit = defineEmits(["dateRangeChanged"]);
 
@@ -71,6 +72,8 @@ const props = defineProps({
   },
   enableJumpToRangeExtremes: { type: Boolean, default: () => false },
 });
+
+const SHIFT_BY_UNIT = "month";
 
 const start_date = ref(props.startDate);
 const end_date = ref(props.endDate);
@@ -91,22 +94,24 @@ watch([start_date, end_date], () => {
 
 const changeDateRange = (forward, shiftBy) => {
   end_date.value = forward
-    ? !isAtEndDateExtreme.value && addMonths(end_date.value, shiftBy)
-    : subMonths(end_date.value, shiftBy);
+    ? !isAtEndDateExtreme.value &&
+      dayjs(end_date.value).add(shiftBy, SHIFT_BY_UNIT).toDate()
+    : dayjs(end_date.value).subtract(shiftBy, SHIFT_BY_UNIT).toDate();
 
   start_date.value = forward
-    ? addMonths(start_date.value, shiftBy)
-    : !isAtStartDateExtreme.value && subMonths(start_date.value, shiftBy);
+    ? dayjs(start_date.value).add(shiftBy, SHIFT_BY_UNIT).toDate()
+    : !isAtStartDateExtreme.value &&
+      dayjs(start_date.value).subtract(shiftBy, SHIFT_BY_UNIT).toDate();
 };
 
 const jumpToStartDateExtreme = (newDate) => {
   start_date.value = newDate;
-  end_date.value = addMonths(start_date.value, 3);
+  end_date.value = dayjs(start_date.value).add(3, SHIFT_BY_UNIT).toDate();
 };
 
 const jumpToEndDateExtreme = (newDate) => {
   end_date.value = newDate;
-  start_date.value = subMonths(end_date.value, 3);
+  start_date.value = dayjs(end_date.value).subtract(3, SHIFT_BY_UNIT).toDate();
 };
 
 watch([start_date, end_date], () => {
