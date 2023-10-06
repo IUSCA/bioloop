@@ -1,13 +1,16 @@
 // const { date_minus_months } = require('../utils');
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-
+const utc = require('dayjs/plugin/utc');
+const dayjs = require('dayjs');
 const { query } = require('express-validator');
-const { parseISO } = require('date-fns');
+
 const { accessControl } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { groupByAndAggregate, numericStringsToNumbers } = require('../utils');
+
+dayjs.extend(utc);
 
 const isPermittedTo = accessControl('statistics');
 const router = express.Router();
@@ -43,8 +46,8 @@ router.get(
     query('by_access_type').isBoolean().toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const start_date = parseISO(req.query.start_date);
-    const end_date = parseISO(req.query.end_date);
+    const start_date = dayjs(req.query.start_date).utc().toDate();
+    const end_date = dayjs(req.query.end_date).utc().toDate();
     const { by_access_type } = req.query;
 
     // Retrieve records by including access_type in the GROUP BY clause first, and filter records
@@ -183,8 +186,8 @@ router.get(
     query('end_date').isISO8601(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const start_date = parseISO(req.query.start_date);
-    const end_date = parseISO(req.query.end_date);
+    const start_date = dayjs(req.query.start_date).utc().toDate();
+    const end_date = dayjs(req.query.end_date).utc().toDate();
 
     const stage_request_counts = await prisma.$queryRaw`
       SELECT

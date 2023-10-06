@@ -1,12 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-const { subHours, subMonths, eachDayOfInterval } = require('date-fns');
+const dayjs = require('dayjs');
 const { normalize_name } = require('../src/services/project');
 const data = require('./data');
 const { random_files } = require('./random_paths');
 const { generate_data_access_logs } = require('./data_access_logs');
 const { generate_staged_logs } = require('./staged_logs');
 const { generate_stage_request_logs } = require('./stage_request_logs');
+const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 
 const prisma = new PrismaClient();
@@ -44,7 +45,7 @@ function create_metrics_per_hour(num_hours) {
       usage: m.usage + Math.ceil(Math.random(0, hour_count) * 100),
     }));
     metrics_data.push(...hour_metrics);
-    metricsTimestamp = subHours(metricsTimestamp, 1);
+    metricsTimestamp = dayjs(metricsTimestamp).subtract(1, 'hour').toDate();
   });
   return metrics_data;
 }
@@ -52,14 +53,14 @@ function create_metrics_per_hour(num_hours) {
 // Given an array of entities, inserts a random date per entity, which is helpful for creating
 // variability in the dates that get inserted into persistent storage
 function insert_random_dates(arr) {
-  const min_date = subMonths(
+  const min_date = dayjs(
     new Date(),
-    arr.length,
+  ).subtract(arr.length, 'month').toDate();
+
+  const arr_date_range = generate_date_range(
+    min_date,
+    new Date(),
   );
-  const arr_date_range = eachDayOfInterval({
-    start: min_date,
-    end: new Date(),
-  });
   const ret = arr.map((e) => ({
     ...e,
     date: arr_date_range[Math.floor(Math.random() * arr_date_range.length)],

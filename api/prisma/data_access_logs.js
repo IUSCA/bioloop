@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
-const { subYears, eachDayOfInterval } = require('date-fns');
 const _ = require('lodash/fp');
+const dayjs = require('dayjs');
+const { generate_date_range } = require('../src/services/datetime');
 
 const prisma = new PrismaClient();
 
@@ -14,10 +15,10 @@ async function generate_data_access_logs(num_years) {
   const users = await prisma.user.findMany();
 
   const end_date = new Date();
-  const start_date = subYears(end_date, num_years);
+  const start_date = dayjs(end_date).subtract(num_years, 'year').toDate();
 
   const data_access_logs = [];
-  eachDayOfInterval({ start: start_date, end: end_date }).forEach(async (date) => {
+  generate_date_range(start_date, end_date).forEach(async (date) => {
     // choose a random value (b/w 0 and 100) for number of files downloaded on any given day
     const num_downloaded_files = Math.floor(Math.random() * 100);
 
