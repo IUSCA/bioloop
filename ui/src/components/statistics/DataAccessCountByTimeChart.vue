@@ -38,8 +38,10 @@ import { getDefaultChartColors } from "@/services/charts";
 import { date } from "@/services/datetime";
 import config from "@/config";
 import _ from "lodash";
+import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
+const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
@@ -204,11 +206,12 @@ const configureChartData = (data) => {
 };
 
 const retrieveAndConfigureChartData = (startDate, endDate) => {
-  StatisticsService.getDataAccessCountGroupedByDate(
-    startDate,
-    endDate,
-    true,
-  ).then((res) => configureChartData(res.data));
+  StatisticsService.getDataAccessCountGroupedByDate(startDate, endDate, true)
+    .then((res) => configureChartData(res.data))
+    .catch((err) => {
+      console.log("Unable to retrieve data access counts by date", err);
+      toast.error("Unable to retrieve data access counts by date");
+    });
 };
 
 watch(isDark, (newIsDark) => {
@@ -249,10 +252,14 @@ onMounted(() => {
         startDate.value = startDateMin.value;
       }
 
-      isDateRangeLoaded.value = true;
-    })
-    .then(() => {
       retrieveAndConfigureChartData(startDate.value, endDate.value);
+    })
+    .catch((err) => {
+      console.log("Unable to retrieve data access timestamp range", err);
+      toast.error("Unable to retrieve data access timestamp range");
+    })
+    .finally(() => {
+      isDateRangeLoaded.value = true;
     });
 });
 </script>

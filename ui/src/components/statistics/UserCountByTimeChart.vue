@@ -10,8 +10,10 @@ import StatisticsService from "@/services/statistics";
 import { getDefaultChartColors } from "@/services/charts";
 import { date } from "@/services/datetime";
 import _ from "lodash";
+import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
+const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
@@ -104,6 +106,10 @@ const configureChartStatistics = (user_count_logs) => {
 const retrieveAndConfigureChartData = () => {
   StatisticsService.getUserCountGroupedByDate()
     .then((res) => res.data)
+    .catch((err) => {
+      console.log("Unable to retrieve user count", err);
+      toast.error("Unable to retrieve user count");
+    })
     .then((data) => {
       chartData.value = configureChartStatistics(data);
       chartData.value.datasets[0].label = "Number of Users, grouped by date";

@@ -23,8 +23,10 @@ import StatisticsService from "@/services/statistics";
 import { formatBytes } from "@/services/utils";
 import { getDefaultChartColors } from "@/services/charts";
 import _ from "lodash";
+import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
+const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
@@ -128,9 +130,14 @@ const formatChartStatistics = (user_bandwidth_stats) => {
 const retrieveAndConfigureChartData = () => {
   StatisticsService.getUsersByBandwidthConsumption(
     numberOfEntriesRetrieved.value,
-  ).then((res) => {
-    chartData.value = formatChartStatistics(res.data);
-  });
+  )
+    .then((res) => {
+      chartData.value = formatChartStatistics(res.data);
+    })
+    .catch((err) => {
+      console.log("Unable to retrieve user count", err);
+      toast.error("Unable to retrieve user count");
+    });
 };
 
 watch(isDark, (newIsDark) => {

@@ -12,12 +12,12 @@ class MetricsService {
     });
   }
 
-  getSpaceUtilizationByTimeAndMeasurement() {
-    return api.get("/metrics/space-utilization-by-timestamp-and-measurement");
-  }
-
-  getTotalSpaceUtilizationByMeasurement() {
-    return api.get("/metrics/space-utilization-totals-by-measurement");
+  getSpaceUtilizationByTimeAndMeasurement(measurement) {
+    return api.get("/metrics/space-utilization-by-timestamp", {
+      params: {
+        measurement,
+      },
+    });
   }
 }
 

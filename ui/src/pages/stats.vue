@@ -21,7 +21,22 @@
         <DataAccessCountByAccessMethodChart></DataAccessCountByAccessMethodChart>
       </div>
       <div class="flex-1">
-        <SpaceUtilizationChart></SpaceUtilizationChart>
+        <MetricCountByTimeChart
+          :measurement="config.metric_measurements.SDA"
+        ></MetricCountByTimeChart>
+        <div></div>
+      </div>
+    </div>
+    <div class="flex flex-row gap-20 flex-wrap">
+      <div class="flex-1">
+        <!-- <MetricCountByTimeChart
+          :measurement="config.metric_measurements.SLATE_SCRATCH"
+        ></MetricCountByTimeChart> -->
+      </div>
+      <div class="flex-1">
+        <!-- <MetricCountByTimeChart
+          :measurement="config.metric_measurements.SLATE_SCRATCH_FILES"
+        ></MetricCountByTimeChart> -->
         <div></div>
       </div>
     </div>
@@ -39,6 +54,7 @@
 
 <script setup>
 import { useNavStore } from "@/stores/nav";
+import config from "@/config";
 import _ from "lodash";
 
 const nav = useNavStore();

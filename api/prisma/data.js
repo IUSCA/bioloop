@@ -215,7 +215,7 @@ const metrics = [{
   usage: 100400,
   limit: 6000000,
 }, {
-  measurement: 'SDA',
+  measurement: 'sda',
   subject: 'host1',
   usage: 300400,
   limit: 50000000,

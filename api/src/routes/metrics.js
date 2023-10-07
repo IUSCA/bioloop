@@ -1,9 +1,11 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 
+const { query } = require('express-validator');
 const asyncHandler = require('../middleware/asyncHandler');
 const { numericStringsToNumbers } = require('../utils');
 const { accessControl } = require('../middleware/auth');
+const { validate } = require('../middleware/validators');
 
 const isPermittedTo = accessControl('metrics');
 const router = express.Router();
@@ -22,50 +24,28 @@ router.get('/latest', asyncHandler(async (req, res, next) => {
 }));
 
 router.get(
-  '/space-utilization-by-timestamp-and-measurement',
+  '/space-utilization-by-timestamp',
+  validate([
+    query('measurement').notEmpty().escape(),
+  ]),
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const metrics = await prisma.$queryRaw`
       select
-        timestamp::DATE as date,
-        measurement,
-        sum(usage) as total_usage,
-        "limit"
-      from metric
-      group by
-        timestamp::DATE,
-        measurement,
-        "limit"
-      order by 
-        timestamp::DATE asc,
-        measurement asc
+        usage, "limit", timestamp
+      from
+        metric
+      where
+        measurement=${req.query.measurement}
+      group by timestamp, usage, "limit"
+      order by timestamp desc
   `;
 
     // convert numeric strs to numbers
     res.json(numericStringsToNumbers(
       metrics,
-      ['total_usage', 'limit'],
+      ['usage', 'limit'],
     ));
-  }),
-);
-
-router.get(
-  '/space-utilization-totals-by-measurement',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const metrics = await prisma.$queryRaw`
-      select
-        measurement,
-        sum(usage) as total_usage
-      from metric
-      group by
-        measurement
-      order by 
-        measurement asc
-  `;
-
-    // convert numeric strs to numbers
-    res.json(numericStringsToNumbers(metrics, ['total_usage']));
   }),
 );
 

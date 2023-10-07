@@ -23,8 +23,10 @@ import StatisticsService from "@/services/statistics";
 import { getDefaultChartColors } from "@/services/charts";
 import config from "@/config";
 import _ from "lodash";
+import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
+const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
@@ -153,12 +155,14 @@ const configureChartData = (most_downloaded_stats) => {
 };
 
 const retrieveAndConfigureChartData = () => {
-  StatisticsService.getMostAccessedData(
-    numberOfEntriesRetrieved.value,
-    true,
-  ).then((res) => {
-    chartData.value = configureChartData(res.data);
-  });
+  StatisticsService.getMostAccessedData(numberOfEntriesRetrieved.value, true)
+    .then((res) => {
+      chartData.value = configureChartData(res.data);
+    })
+    .catch((err) => {
+      console.log("Unable to retrieve most accessed files", err);
+      toast.error("Unable to retrieve most accessed files");
+    });
 };
 
 watch(isDark, (newIsDark) => {

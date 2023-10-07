@@ -19,8 +19,10 @@ import StatisticsService from "@/services/statistics";
 import { getDefaultChartColors } from "@/services/charts";
 import config from "@/config";
 import _ from "lodash";
+import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
+const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
@@ -125,8 +127,13 @@ watch(isDark, (newIsDark) => {
 });
 
 onMounted(() => {
-  StatisticsService.getDataAccessCountGroupedByAccessMethod().then((res) => {
-    chartData.value = configureChartData(res.data);
-  });
+  StatisticsService.getDataAccessCountGroupedByAccessMethod()
+    .then((res) => {
+      chartData.value = configureChartData(res.data);
+    })
+    .catch((err) => {
+      console.log("Unable to retrieve data access counts by type", err);
+      toast.error("Unable to retrieve data access counts by type");
+    });
 });
 </script>

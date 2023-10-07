@@ -1,16 +1,12 @@
 import api from "./api";
-import { useToastStore } from "@/stores/toast";
-
-const toast = useToastStore();
 
 class StatisticsService {
-  log_data_access({ access_type, file_id, dataset_id, user_id }) {
+  log_data_access({ access_type, file_id, dataset_id }) {
     return api.post("/statistics/data-access-log", null, {
       params: {
         access_type,
         file_id,
         dataset_id,
-        user_id,
       },
     });
   }
@@ -24,18 +20,13 @@ class StatisticsService {
    * @returns Promise which resolves with the array of data access logs retrieved
    */
   getDataAccessCountGroupedByDate(start_date, end_date, by_access_type) {
-    return api
-      .get("/statistics/data-access-count-by-date", {
-        params: {
-          start_date,
-          end_date,
-          by_access_type,
-        },
-      })
-      .catch((err) => {
-        console.log("Unable to retrieve data access counts by date", err);
-        toast.error("Unable to retrieve data access counts by date");
-      });
+    return api.get("/statistics/data-access-count-by-date", {
+      params: {
+        start_date,
+        end_date,
+        by_access_type,
+      },
+    });
   }
 
   /**
@@ -43,33 +34,20 @@ class StatisticsService {
    * access)
    */
   getDataAccessCountGroupedByAccessMethod() {
-    return api
-      .get("/statistics/data-access-count-by-access-method")
-      .catch((err) => {
-        console.log("Unable to retrieve data access counts by type", err);
-        toast.error("Unable to retrieve data access counts by type");
-      });
+    return api.get("/statistics/data-access-count-by-access-method");
   }
 
   getMostAccessedData(limit, include_datasets) {
-    return api
-      .get(`/statistics/most-accessed-data`, {
-        params: {
-          limit,
-          include_datasets,
-        },
-      })
-      .catch((err) => {
-        console.log("Unable to retrieve most accessed files", err);
-        toast.error("Unable to retrieve most accessed files");
-      });
+    return api.get(`/statistics/most-accessed-data`, {
+      params: {
+        limit,
+        include_datasets,
+      },
+    });
   }
 
   getDataAccessTimestampRange() {
-    return api.get(`/statistics/data-access-timestamp-range`).catch((err) => {
-      console.log("Unable to retrieve data access timestamp range", err);
-      toast.error("Unable to retrieve data access timestamp range");
-    });
+    return api.get(`/statistics/data-access-timestamp-range`);
   }
 
   /**
@@ -79,57 +57,36 @@ class StatisticsService {
    * @returns Promise which resolves with the array of stage request logs retrieved
    */
   getStageRequestCountGroupedByDate(start_date, end_date) {
-    return api
-      .get("/statistics/stage-request-count-by-date", {
-        params: {
-          start_date,
-          end_date,
-        },
-      })
-      .catch((err) => {
-        console.log("Unable to retrieve stage request counts by date", err);
-        toast.error("Unable to retrieve stage request counts by date");
-      });
+    return api.get("/statistics/stage-request-count-by-date", {
+      params: {
+        start_date,
+        end_date,
+      },
+    });
   }
 
   getMostStagedDatasets(limit) {
-    return api
-      .get(`/statistics/most-staged-datasets`, {
-        params: {
-          limit,
-        },
-      })
-      .catch((err) => {
-        console.log("Unable to retrieve most staged datasets", err);
-        toast.error("Unable to retrieve most staged datasets");
-      });
+    return api.get(`/statistics/most-staged-datasets`, {
+      params: {
+        limit,
+      },
+    });
   }
 
   getStageRequestTimestampRange() {
-    return api.get(`/statistics/stage-request-timestamp-range`).catch((err) => {
-      console.log("Unable to retrieve stage request timestamp range", err);
-      toast.error("Unable to retrieve stage request timestamp range");
-    });
+    return api.get(`/statistics/stage-request-timestamp-range`);
   }
 
   getUserCountGroupedByDate() {
-    return api.get("/statistics/user-count").catch((err) => {
-      console.log("Unable to retrieve user count", err);
-      toast.error("Unable to retrieve user count");
-    });
+    return api.get("/statistics/user-count");
   }
 
   getUsersByBandwidthConsumption(limit) {
-    return api
-      .get("/statistics/users-by-bandwidth", {
-        params: {
-          limit,
-        },
-      })
-      .catch((err) => {
-        console.log("Unable to retrieve user count", err);
-        toast.error("Unable to retrieve user count");
-      });
+    return api.get("/statistics/users-by-bandwidth", {
+      params: {
+        limit,
+      },
+    });
   }
 }
 

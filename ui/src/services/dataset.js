@@ -34,11 +34,9 @@ class DatasetService {
     });
   }
 
-  stage_dataset(id, user_id) {
+  stage_dataset(id) {
     return api
-      .post(`/datasets/${id}/workflow/stage`, null, {
-        params: { user_id },
-      })
+      .post(`/datasets/${id}/workflow/stage`)
       .then(() => {
         toast.success("A workflow has started to stage the dataset");
       })
@@ -96,12 +94,8 @@ class DatasetService {
     });
   }
 
-  get_file_download_data({ dataset_id, file_id, user_id }) {
-    return api.get(`/datasets/${dataset_id}/files/${file_id}/download`, {
-      params: {
-        user_id,
-      },
-    });
+  get_file_download_data({ dataset_id, file_id }) {
+    return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
   }
 
   search_files({

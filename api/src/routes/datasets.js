@@ -431,7 +431,6 @@ router.post(
   validate([
     param('id').isInt().toInt(),
     param('wf').isIn(['stage', 'integrated']),
-    query('user_id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -445,7 +444,7 @@ router.post(
         await prisma.stage_request_log.create({
           data: {
             dataset_id: req.params.id,
-            user_id: req.query.user_id,
+            user_id: req.user.id,
           },
         });
       } catch (e) {
@@ -558,7 +557,6 @@ router.get(
   validate([
     param('id').isInt().toInt(),
     param('file_id').isInt().toInt(),
-    query('user_id').isInt().toInt(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -573,7 +571,7 @@ router.get(
           access_type: 'BROWSER',
           file_id: req.params.file_id,
           dataset_id: req.params.id,
-          user_id: req.query.user_id,
+          user_id: req.user.id,
         },
       });
     } catch (e) {

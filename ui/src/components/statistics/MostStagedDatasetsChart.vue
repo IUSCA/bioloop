@@ -22,8 +22,10 @@
 import StatisticsService from "@/services/statistics";
 import { getDefaultChartColors } from "@/services/charts";
 import _ from "lodash";
+import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
+const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
@@ -116,11 +118,14 @@ const configureChartData = (most_staged_stats) => {
 };
 
 const retrieveAndConfigureChartData = () => {
-  StatisticsService.getMostStagedDatasets(numberOfEntriesRetrieved.value).then(
-    (res) => {
+  StatisticsService.getMostStagedDatasets(numberOfEntriesRetrieved.value)
+    .then((res) => {
       chartData.value = configureChartData(res.data);
-    },
-  );
+    })
+    .catch((err) => {
+      console.log("Unable to retrieve most staged datasets", err);
+      toast.error("Unable to retrieve most staged datasets");
+    });
 };
 
 watch(isDark, (newIsDark) => {

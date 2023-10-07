@@ -21,7 +21,6 @@
 <script setup>
 import DatasetService from "@/services/dataset";
 import config from "@/config";
-import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   dataset: {
@@ -37,8 +36,6 @@ defineExpose({
   hide,
 });
 
-const auth = useAuthStore();
-
 const loading = ref(false);
 const visible = ref(false);
 
@@ -53,7 +50,7 @@ function show() {
 
 function handleOk() {
   loading.value = true;
-  DatasetService.stage_dataset(props.dataset.id, auth.user.id)
+  DatasetService.stage_dataset(props.dataset.id)
     .then(() => {
       emit("update", props.dataset.id);
     })

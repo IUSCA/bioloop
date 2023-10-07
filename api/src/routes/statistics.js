@@ -1,7 +1,6 @@
 // const { date_minus_months } = require('../utils');
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const utc = require('dayjs/plugin/utc');
 const dayjs = require('dayjs');
 const { query } = require('express-validator');
 
@@ -9,8 +8,6 @@ const { accessControl } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { groupByAndAggregate, numericStringsToNumbers } = require('../utils');
-
-dayjs.extend(utc);
 
 const isPermittedTo = accessControl('statistics');
 const router = express.Router();
@@ -46,8 +43,8 @@ router.get(
     query('by_access_type').isBoolean().toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const start_date = dayjs(req.query.start_date).utc().toDate();
-    const end_date = dayjs(req.query.end_date).utc().toDate();
+    const start_date = dayjs(req.query.start_date).toDate();
+    const end_date = dayjs(req.query.end_date).toDate();
     const { by_access_type } = req.query;
 
     // Retrieve records by including access_type in the GROUP BY clause first, and filter records
@@ -186,8 +183,8 @@ router.get(
     query('end_date').isISO8601(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const start_date = dayjs(req.query.start_date).utc().toDate();
-    const end_date = dayjs(req.query.end_date).utc().toDate();
+    const start_date = dayjs(req.query.start_date).toDate();
+    const end_date = dayjs(req.query.end_date).toDate();
 
     const stage_request_counts = await prisma.$queryRaw`
       SELECT
@@ -309,7 +306,6 @@ router.post(
     query('access_type').notEmpty().escape(),
     query('file_id').isInt().toInt().optional(),
     query('dataset_id').isInt().toInt().optional(),
-    query('user_id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     await prisma.data_access_log.create({
@@ -317,7 +313,7 @@ router.post(
         access_type: req.query.access_type,
         file_id: req.query.file_id,
         dataset_id: req.query.dataset_id,
-        user_id: req.query.user_id,
+        user_id: req.user.id,
       },
     });
 

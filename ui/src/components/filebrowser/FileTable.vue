@@ -84,11 +84,9 @@ import datasetService from "@/services/dataset";
 import { formatBytes, downloadFile, cmp } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { useToastStore } from "@/stores/toast";
-import { useAuthStore } from "@/stores/auth";
 
 const store = useFileBrowserStore();
 const toast = useToastStore();
-const auth = useAuthStore();
 
 const props = defineProps({
   datasetId: {
@@ -173,7 +171,6 @@ function initiate_file_download(row) {
     .get_file_download_data({
       dataset_id: props.datasetId,
       file_id: row.id,
-      user_id: auth.user.id,
     })
     .then((res) => {
       const url = new URL(res.data.url);

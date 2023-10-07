@@ -36,8 +36,10 @@ import StatisticsService from "@/services/statistics";
 import { getDefaultChartColors } from "@/services/charts";
 import { date } from "@/services/datetime";
 import _ from "lodash";
+import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
+const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
@@ -141,18 +143,16 @@ const configureChartStatistics = (datasets) => {
 const retrieveAndConfigureChartData = (startDate, endDate) => {
   StatisticsService.getStageRequestCountGroupedByDate(startDate, endDate)
     .then((res) => {
-      return res.data.map((e) => ({
-        ...e,
-        count: e.count,
-      }));
-    })
-    .then((data) => {
-      chartData.value = configureChartStatistics([data]);
+      chartData.value = configureChartStatistics([res.data]);
       chartData.value.datasets[0].label = "Number of all Stage Requests";
 
       const chartColors = getDatasetColorsByTheme(isDark.value);
       chartData.value.datasets[0].backgroundColor = chartColors.backgroundColor;
       chartData.value.datasets[0].borderColor = chartColors.borderColor;
+    })
+    .catch((err) => {
+      console.log("Unable to retrieve stage request counts by date", err);
+      toast.error("Unable to retrieve stage request counts by date");
     });
 };
 
@@ -183,10 +183,14 @@ onMounted(() => {
         startDate.value = startDateMin.value;
       }
 
-      isDateRangeLoaded.value = true;
-    })
-    .then(() => {
       retrieveAndConfigureChartData(startDate.value, endDate.value);
+    })
+    .catch((err) => {
+      console.log("Unable to retrieve stage request timestamp range", err);
+      toast.error("Unable to retrieve stage request timestamp range");
+    })
+    .finally(() => {
+      isDateRangeLoaded.value = true;
     });
 });
 </script>
