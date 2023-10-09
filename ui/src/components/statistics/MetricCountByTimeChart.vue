@@ -68,13 +68,13 @@ const totals = computed(() => {
   let metricTitle, metricCount;
   switch (props.measurement) {
     case config.metric_measurements.SDA:
-      metricTitle = "Current SDA Usage";
+      metricTitle = "Current SDA Space Usage";
       metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(
         _limit.value,
       )}`;
       break;
     case config.metric_measurements.SLATE_SCRATCH:
-      metricTitle = "Current Slate-Scratch Usage";
+      metricTitle = "Current Slate-Scratch Space Usage";
       metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(
         _limit.value,
       )}`;
@@ -152,7 +152,7 @@ const chartTitleCallBack = () => {
     case config.metric_measurements.SLATE_SCRATCH:
       return "Slate-Scratch Space Utilization";
     case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return "Slate-Scratch File Quote Utilization";
+      return "Slate-Scratch File Quota Utilization";
     default:
       console.log("Provided measurement value did not match expected values");
   }
