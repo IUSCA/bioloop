@@ -18,7 +18,6 @@ const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
 
 const isPermittedTo = accessControl('datasets');
-const isPermittedToStatistics = accessControl('statistics');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -427,7 +426,6 @@ router.delete(
 router.post(
   '/:id/workflow/:wf',
   isPermittedTo('update'),
-  isPermittedToStatistics('create'),
   validate([
     param('id').isInt().toInt(),
     param('wf').isIn(['stage', 'integrated']),
@@ -553,7 +551,6 @@ router.get(
 
 router.get(
   '/:id/files/:file_id/download',
-  isPermittedToStatistics('create'),
   validate([
     param('id').isInt().toInt(),
     param('file_id').isInt().toInt(),

@@ -34,6 +34,7 @@ const grantsObject = {
       'read:any': ['*'],
     },
     metrics: {
+      'create:any': ['*'],
       'read:any': ['*'],
     },
     auth: {
@@ -52,9 +53,6 @@ const grantsObject = {
     },
     project_dataset_files: {
       'read:own': ['*'],
-    },
-    statistics: {
-      'create:any': ['*'],
     },
   },
 
@@ -87,7 +85,6 @@ const grantsObject = {
       'read:any': ['*'],
     },
     statistics: {
-      'create:any': ['*'],
       'read:any': ['*'],
     },
     metrics: {

@@ -25,10 +25,10 @@ router.get('/latest', asyncHandler(async (req, res, next) => {
 
 router.get(
   '/space-utilization-by-timestamp',
+  isPermittedTo('read'),
   validate([
     query('measurement').notEmpty().escape(),
   ]),
-  isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const measurement = decodeURI(he.decode(req.query.measurement));
 
@@ -51,13 +51,17 @@ router.get(
   }),
 );
 
-router.post('/', asyncHandler(async (req, res, next) => {
+router.post(
+  '/',
+  isPermittedTo('create'),
+  asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']
   // #swagger.summary = 'Insert new measurements'
-  const result = await prisma.metric.createMany({
-    data: req.body,
-  });
-  res.json(result);
-}));
+    const result = await prisma.metric.createMany({
+      data: req.body,
+    });
+    res.json(result);
+  }),
+);
 
 module.exports = router;
