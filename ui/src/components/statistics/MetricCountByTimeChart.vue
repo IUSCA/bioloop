@@ -14,7 +14,7 @@
     <div class="flex flex-row justify-center">
       <div class="max-w-max">
         <va-chip outline>
-          {{ totals.metricTitle }}: {{ totals.metricCount }}
+          {{ currentUsage.metricTitle }}: {{ currentUsage.metricCount }}
         </va-chip>
       </div>
     </div>
@@ -61,10 +61,11 @@ const chartOptions = computed(() => {
   });
 });
 
-const _being_used = ref();
-const _limit = ref();
+const _being_used = ref(); // (unformatted) latest measure for given metric
+const _limit = ref(); // (unformatted) limit (max possible value) for given metric
 
-const totals = computed(() => {
+// Contains the formatted latest measure for given metric, and the title used to display said metric
+const currentUsage = computed(() => {
   let metricTitle, metricCount;
   switch (props.measurement) {
     case config.metric_measurements.SDA:
