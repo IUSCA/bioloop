@@ -161,6 +161,11 @@ const operator_items = ref([
     title: "User Management",
     path: "/users",
   },
+  {
+    icon: "mdi-format-list-bulleted",
+    title: "Stats/Tracking",
+    path: "/stats",
+  },
   // {
   //   icon: "mdi-account-multiple",
   //   title: "Group Management",
@@ -170,11 +175,6 @@ const operator_items = ref([
   //   icon: 'mdi-delete-empty-outline',
   //   title: 'Data Cleanup',
   //   path: '/clean',
-  // },
-  // {
-  //   icon: "mdi-format-list-bulleted",
-  //   title: "Stats/Tracking",
-  //   path: "/stats",
   // },
 ]);
 

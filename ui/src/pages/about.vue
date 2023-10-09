@@ -1,9 +1,7 @@
 <template>
   <div class="grid grid-cols-1 gap-5">
     <div class="banner flex items-end">
-      <h1 class="heading_text p-[20px] text-center text-gray-800">
-        Bioloop
-      </h1>
+      <h1 class="heading_text p-[20px] text-center text-gray-800">Bioloop</h1>
     </div>
     <!-- <div class="flex justify-center mt-10">
       <div class="max-w-xl drop-shadow-xl rounded-xl">
@@ -17,13 +15,19 @@
         <va-card-content>
           <div class="p-3">
             <div class="text-lg">
-              This instance of <a href="https://github.com/IUSCA/bioloop">Bioloop</a> is being run by:  
-          </div>
+              This instance of
+              <a href="https://github.com/IUSCA/bioloop">Bioloop</a> is being
+              run by:
+            </div>
             <div class="text-lg">
-              For questions or support, please contact the primary operator:  
-          </div>
-          <div class="text-lg">
-              Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.
+              For questions or support, please contact the primary operator:
+            </div>
+            <div class="text-lg">
+              Bioloop is a web-based portal to simplify the management of
+              large-scale datasets shared among research teams in scientific
+              domains. This platform optimizes data handling by effectively
+              utilizing both cold and hot storage solutions, like tape and disk
+              storage, to reduce overall storage costs.
             </div>
           </div>
         </va-card-content>

@@ -18,6 +18,7 @@ const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
 
 const isPermittedTo = accessControl('datasets');
+
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -434,6 +435,21 @@ router.post(
     // #swagger.summary = Create and start a workflow and associate it.
     // Allowed names are stage, integrated
 
+    // Log the staging attempt first.
+    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    if (req.params.wf === 'stage') {
+      try {
+        await prisma.stage_request_log.create({
+          data: {
+            dataset_id: req.params.id,
+            user_id: req.user.id,
+          },
+        });
+      } catch (e) {
+      // console.log()
+      }
+    }
+
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
       workflows: true,
@@ -543,6 +559,21 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
+
+    // Log the data access attempt first.
+    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    try {
+      await prisma.data_access_log.create({
+        data: {
+          access_type: 'BROWSER',
+          file_id: req.params.file_id,
+          dataset_id: req.params.id,
+          user_id: req.user.id,
+        },
+      });
+    } catch (e) {
+      // console.log();
+    }
 
     const file = await prisma.dataset_file.findFirstOrThrow({
       where: {

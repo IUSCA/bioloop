@@ -80,7 +80,11 @@
 
           <!-- Action icon -->
           <va-list-item-section class="flex-none">
-            <CopyButton :text="downloadPath" preset="secondary" />
+            <CopyButton
+              :text="downloadPath"
+              preset="secondary"
+              @text-copied="log_data_access"
+            />
           </va-list-item-section>
         </va-list-item>
       </va-list>
@@ -97,8 +101,10 @@
 </template>
 
 <script setup>
+import statisticsService from "@/services/statistics";
 import config from "@/config";
 import { formatBytes } from "@/services/utils";
+import { useToastStore } from "@/stores/toast";
 
 const props = defineProps({
   dataset: {
@@ -114,6 +120,8 @@ defineExpose({
   hide,
 });
 
+const toast = useToastStore();
+
 const downloadURL = computed(() => {
   return `${window.location.origin}/datasets/${props.dataset?.id}/filebrowser`;
 });
@@ -121,6 +129,19 @@ const downloadURL = computed(() => {
 const downloadPath = computed(() => {
   return `${config.paths.download}/${props.dataset.metadata?.stage_alias}`;
 });
+
+const log_data_access = () => {
+  statisticsService
+    .log_data_access({
+      access_type: config.access_types.SLATE_SCRATCH,
+      file_id: null,
+      dataset_id: props.dataset.id,
+    })
+    .catch((e) => {
+      console.log("Unable to log data access attempt", e);
+      toast.error("Unable to log data access attempt");
+    });
+};
 
 const visible = ref(false);
 

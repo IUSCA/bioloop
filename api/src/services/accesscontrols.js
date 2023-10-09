@@ -29,6 +29,14 @@ const grantsObject = {
     project_dataset_files: {
       'read:any': ['*'],
     },
+    statistics: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+    },
+    metrics: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+    },
     auth: {
       'create:any': ['*'],
     },
@@ -74,6 +82,12 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     project_dataset_files: {
+      'read:any': ['*'],
+    },
+    statistics: {
+      'read:any': ['*'],
+    },
+    metrics: {
       'read:any': ['*'],
     },
   },
