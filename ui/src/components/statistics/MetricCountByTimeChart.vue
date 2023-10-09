@@ -68,19 +68,19 @@ const totals = computed(() => {
   let metricTitle, metricCount;
   switch (props.measurement) {
     case config.metric_measurements.SDA:
-      metricTitle = "SDA Usage";
+      metricTitle = "Current SDA Usage";
       metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(
         _limit.value,
       )}`;
       break;
     case config.metric_measurements.SLATE_SCRATCH:
-      metricTitle = "Slate-Scratch Usage";
+      metricTitle = "Current Slate-Scratch Usage";
       metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(
         _limit.value,
       )}`;
       break;
     case config.metric_measurements.SLATE_SCRATCH_FILES:
-      metricTitle = "Slate-Scratch File Quota Usage";
+      metricTitle = "Current Slate-Scratch File Quota Usage";
       metricCount = `${_being_used.value} / ${_limit.value}`;
       break;
     default:
