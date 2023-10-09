@@ -235,16 +235,16 @@ watch(isDark, (newIsDark) => {
 });
 
 onMounted(() => {
-  // retrieve the range of dates for which to retrieve download logs
+  // retrieve the range of dates for which to retrieve data access logs
   StatisticsService.getDataAccessTimestampRange()
     .then((res) => {
-      const minDownloadDate = new Date(Date.parse(res.data[0].min_timestamp));
-      const maxDownloadDate = new Date(Date.parse(res.data[0].max_timestamp));
+      const minDataAccessDate = new Date(Date.parse(res.data[0].min_timestamp));
+      const maxDataAccessDate = new Date(Date.parse(res.data[0].max_timestamp));
 
-      endDate.value = maxDownloadDate;
-      endDateMax.value = maxDownloadDate;
+      endDate.value = maxDataAccessDate;
+      endDateMax.value = maxDataAccessDate;
 
-      startDateMin.value = minDownloadDate;
+      startDateMin.value = minDataAccessDate;
       startDate.value = dayjs(endDate.value)
         .subtract(MONTH_DIFFERENCE, "month")
         .toDate();

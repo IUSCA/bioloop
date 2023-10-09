@@ -100,7 +100,6 @@ const configureChartData = (data) => {
     labels: data.map((e) => e.access_type),
     datasets: [
       {
-        label: "Download Count",
         data: data.map((e) => e.count),
         backgroundColor: data.map((e) =>
           e.access_type === config.access_types.BROWSER

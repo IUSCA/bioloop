@@ -166,16 +166,20 @@ watch(isDark, (newIsDark) => {
 });
 
 onMounted(() => {
-  // retrieve the range of dates for which to retrieve download logs
+  // retrieve the range of dates for which to retrieve staging request logs
   StatisticsService.getStageRequestTimestampRange()
     .then((res) => {
-      const minDownloadDate = new Date(Date.parse(res.data[0].min_timestamp));
-      const maxDownloadDate = new Date(Date.parse(res.data[0].max_timestamp));
+      const minStageRequestDate = new Date(
+        Date.parse(res.data[0].min_timestamp),
+      );
+      const maxStageRequestDate = new Date(
+        Date.parse(res.data[0].max_timestamp),
+      );
 
-      endDate.value = maxDownloadDate;
-      endDateMax.value = maxDownloadDate;
+      endDate.value = maxStageRequestDate;
+      endDateMax.value = maxStageRequestDate;
 
-      startDateMin.value = minDownloadDate;
+      startDateMin.value = minStageRequestDate;
       startDate.value = dayjs(endDate.value)
         .subtract(MONTH_DIFFERENCE, "month")
         .toDate();

@@ -76,12 +76,12 @@ const getChartOptions = ({ colors }) => ({
           const accessType = context.dataset.accessTypes[context.dataIndex];
           const path = context.dataset.paths[context.dataIndex];
           const isDirectDownload = accessType === config.access_types.BROWSER;
-          const downloadedEntityType = isDirectDownload ? "FILE" : "DATASET";
+          const accessedEntityType = isDirectDownload ? "FILE" : "DATASET";
           const datasetName = context.dataset.datasetNames[context.dataIndex];
 
           const ret = [
             `Access Method: ${accessType}`,
-            `Type: ${downloadedEntityType}`,
+            `Type: ${accessedEntityType}`,
           ];
           if (path) {
             ret.push(`Path: ${path}`);
@@ -120,10 +120,10 @@ const getDatasetColorsByTheme = (isDark) => {
   };
 };
 
-const configureChartData = (most_downloaded_stats) => {
+const configureChartData = (most_accessed_stats) => {
   const label_delimit_count = 15;
 
-  const labels = most_downloaded_stats.map((stat) => {
+  const labels = most_accessed_stats.map((stat) => {
     return stat.name.length <= label_delimit_count
       ? stat.name
       : `${stat.name.slice(0, label_delimit_count - 3)}...`;
@@ -134,12 +134,12 @@ const configureChartData = (most_downloaded_stats) => {
   const datasets = [
     {
       label: "Number of Times File/Dataset was Accessed",
-      data: most_downloaded_stats.map((stat) => stat.count),
-      names: most_downloaded_stats.map((stat) => stat.count),
-      accessTypes: most_downloaded_stats.map((stat) => stat.access_type),
-      paths: most_downloaded_stats.map((stat) => stat.path),
-      datasetNames: most_downloaded_stats.map((stat) => stat.dataset_name),
-      backgroundColor: most_downloaded_stats.map((stat) =>
+      data: most_accessed_stats.map((stat) => stat.count),
+      names: most_accessed_stats.map((stat) => stat.count),
+      accessTypes: most_accessed_stats.map((stat) => stat.access_type),
+      paths: most_accessed_stats.map((stat) => stat.path),
+      datasetNames: most_accessed_stats.map((stat) => stat.dataset_name),
+      backgroundColor: most_accessed_stats.map((stat) =>
         stat.access_type === config.access_types.BROWSER
           ? datasetColors.FILE.backgroundColor
           : datasetColors.DATASET.backgroundColor,

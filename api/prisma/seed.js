@@ -258,7 +258,7 @@ async function main() {
     data: create_metrics_per_hour(72), // 72 hours = 3 days
   });
 
-  // create download logs for the last 1 year
+  // create data access logs for the last 1 year
   const data_access_logs = await generate_data_access_logs(1);
   // delete pre-existing records
   await prisma.data_access_log.deleteMany();
