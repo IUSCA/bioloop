@@ -198,35 +198,29 @@ const getDatasetLabel = () => {
 };
 
 const getDatasetColorsByTheme = (isDark) => {
-  switch (props.measurement) {
-    case config.metric_measurements.SDA:
-      return {
-        backgroundColor: isDark
-          ? "rgba(94, 40, 55, 1)"
-          : "rgba(249, 205, 214, 1)",
-        borderColor: isDark ? "rgba(94, 40, 55, 1)" : "rgba(249, 205, 214, 1)",
-      };
-    case config.metric_measurements.SLATE_SCRATCH:
-      return {
-        backgroundColor: isDark
-          ? "rgba(71, 50, 123, 1)"
-          : // : "rgba(157, 205, 241, 1)",
-            "rgba(203, 189, 232, 1)",
-        borderColor: isDark
-          ? "rgba(71, 50, 123, 1)"
-          : //  : "rgba(157, 205, 241, 1)",
-            "rgba(203, 189, 232, 1)",
-      };
-    case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return {
-        backgroundColor: isDark
-          ? "rgba(26, 78, 114, 1)"
-          : "rgba(157, 205, 241, 1)",
-        borderColor: isDark ? "rgba(26, 78, 114, 1)" : "rgba(157, 205, 241, 1)",
-      };
-    default:
-      console.log("Provided measurement value did not match expected values");
-  }
+  const DATA_POINT_COLORS = {
+    [config.metric_measurements.SDA]: {
+      light: "rgba(249, 205, 214, 1)",
+      dark: "rgba(94, 40, 55, 1)",
+    },
+    [config.metric_measurements.SLATE_SCRATCH]: {
+      light: "rgba(203, 189, 232, 1)",
+      dark: "rgba(71, 50, 123, 1)",
+    },
+    [config.metric_measurements.SLATE_SCRATCH_FILES]: {
+      light: "rgba(157, 205, 241, 1)",
+      dark: "rgba(26, 78, 114, 1)",
+    },
+  };
+
+  return {
+    backgroundColor: isDark
+      ? DATA_POINT_COLORS[props.measurement].dark
+      : DATA_POINT_COLORS[props.measurement].light,
+    borderColor: isDark
+      ? DATA_POINT_COLORS[props.measurement].dark
+      : DATA_POINT_COLORS[props.measurement].light,
+  };
 };
 
 const configureChartStatistics = (datasets) => {
