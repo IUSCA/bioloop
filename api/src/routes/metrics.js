@@ -1,6 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-
+const he = require('he');
 const { query } = require('express-validator');
 const asyncHandler = require('../middleware/asyncHandler');
 const { numericStringsToNumbers } = require('../utils');
@@ -30,13 +30,15 @@ router.get(
   ]),
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
+    const measurement = decodeURI(he.decode(req.query.measurement));
+
     const metrics = await prisma.$queryRaw`
       select
         usage, "limit", timestamp
       from
         metric
       where
-        measurement=${req.query.measurement}
+        measurement=${measurement}
       group by timestamp, usage, "limit"
       order by timestamp desc
   `;

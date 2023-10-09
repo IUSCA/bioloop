@@ -1,3 +1,8 @@
+<!-- 
+  This component serves as a time-based chart for 3 different metrics that are tracked in Bioloop
+  hourly - SDA space utilization, Slate-Scratch space utilization, and Slate-Scratch file quota 
+  utilization. The metric whose chart is to be rendered is controlled through a prop.
+-->
 <template>
   <div class="flex flex-col gap-5">
     <div>
@@ -11,10 +16,6 @@
         <va-chip outline>
           {{ totals.metricTitle }}: {{ totals.metricCount }}
         </va-chip>
-        <!-- &nbsp;&nbsp;
-        <va-chip outline>
-          Total Slate-Scratch Usage: {{ formatBytes(totalScratchSpaceUsage) }}
-        </va-chip> -->
       </div>
     </div>
   </div>
@@ -33,7 +34,16 @@ import _ from "lodash";
 import { useToastStore } from "@/stores/toast";
 
 const props = defineProps({
-  measurement: String,
+  measurement: {
+    type: String,
+    required: true,
+    validator: (val) =>
+      [
+        config.metric_measurements.SDA,
+        config.metric_measurements.SLATE_SCRATCH,
+        config.metric_measurements.SLATE_SCRATCH_FILES,
+      ].includes(val),
+  },
 });
 
 const isDark = useDark();
@@ -82,24 +92,6 @@ const totals = computed(() => {
   };
 });
 
-// const totalSpaceUsage = ref({});
-
-// const totalSDASpaceUsage = computed(() => {
-//   if (totalSpaceUsage.value?.length > 0) {
-//     return totalSpaceUsage.value.find(
-//       (e) => e.measurement === config.metric_measurements.SDA,
-//     )?.total_usage;
-//   }
-// });
-
-// const totalScratchSpaceUsage = computed(() => {
-//   if (totalSpaceUsage.value?.length > 0) {
-//     return totalSpaceUsage.value.find(
-//       (e) => e.measurement === config.metric_measurements.SLATE_SCRATCH,
-//     )?.total_usage;
-//   }
-// });
-
 const getChartOptions = ({ colors }) => ({
   color: colors.FONT,
   scales: {
@@ -144,7 +136,7 @@ const getChartOptions = ({ colors }) => ({
     },
     title: {
       display: true,
-      text: "Device Space Utilization",
+      text: chartTitleCallBack,
       color: colors.FONT,
       font: {
         size: 18,
@@ -152,6 +144,19 @@ const getChartOptions = ({ colors }) => ({
     },
   },
 });
+
+const chartTitleCallBack = () => {
+  switch (props.measurement) {
+    case config.metric_measurements.SDA:
+      return "SDA Space Utilization";
+    case config.metric_measurements.SLATE_SCRATCH:
+      return "Slate-Scratch Space Utilization";
+    case config.metric_measurements.SLATE_SCRATCH_FILES:
+      return "Slate-Scratch File Quote Utilization";
+    default:
+      console.log("Provided measurement value did not match expected values");
+  }
+};
 
 const yAxisTicksCallback = (val) => {
   // https://www.chartjs.org/docs/latest/axes/labelling.html#creating-custom-tick-formats
@@ -182,9 +187,9 @@ const toolTipLabelCallback = (context) => {
 const getDatasetLabel = () => {
   switch (props.measurement) {
     case config.metric_measurements.SDA:
-      return "SDA Space Utilization";
+      return "SDA Space Utilized";
     case config.metric_measurements.SLATE_SCRATCH:
-      return "Slate-Scratch Space Utilization";
+      return "Slate-Scratch Space Utilized";
     case config.metric_measurements.SLATE_SCRATCH_FILES:
       return "Slate-Scratch File Count";
     default:
@@ -205,15 +210,19 @@ const getDatasetColorsByTheme = (isDark) => {
       return {
         backgroundColor: isDark
           ? "rgba(71, 50, 123, 1)"
-          : "rgba(157, 205, 241, 1)",
-        borderColor: isDark ? "rgba(71, 50, 123, 1)" : "rgba(157, 205, 241, 1)",
+          : // : "rgba(157, 205, 241, 1)",
+            "rgba(203, 189, 232, 1)",
+        borderColor: isDark
+          ? "rgba(71, 50, 123, 1)"
+          : //  : "rgba(157, 205, 241, 1)",
+            "rgba(203, 189, 232, 1)",
       };
     case config.metric_measurements.SLATE_SCRATCH_FILES:
       return {
         backgroundColor: isDark
           ? "rgba(26, 78, 114, 1)"
-          : "rgba(203, 189, 232, 1)",
-        borderColor: isDark ? "rgba(26, 78, 114, 1)" : "rgba(203, 189, 232, 1)",
+          : "rgba(157, 205, 241, 1)",
+        borderColor: isDark ? "rgba(26, 78, 114, 1)" : "rgba(157, 205, 241, 1)",
       };
     default:
       console.log("Provided measurement value did not match expected values");
@@ -225,23 +234,6 @@ const configureChartStatistics = (datasets) => {
 
   let ret = {
     datasets: datasets.map((dataset) => {
-      // const is_SDA_metrics = _.every(
-      //   dataset,
-      //   (e) =>
-      //     e.measurement && e.measurement === config.metric_measurements.SDA,
-      // );
-      // const is_Scratch_metrics = _.every(
-      //   dataset,
-      //   (e) =>
-      //     e.measurement &&
-      //     e.measurement === config.metric_measurements.SLATE_SCRATCH,
-      // );
-      // const colors = is_SDA_metrics
-      //   ? chartColors.SDA
-      //   : is_Scratch_metrics
-      //   ? chartColors.SLATE_SCRATCH
-      //   : chartColors.SLATE_SCRATCH_FILES;
-
       return {
         data: dataset.map((log) => ({
           x: log.timestamp,
@@ -277,12 +269,6 @@ const retrieveAndConfigureChartData = () => {
     });
 };
 
-// const retrieveTotalSpaceConsumption = () => {
-//   MetricsService.getTotalSpaceUtilizationByMeasurement().then((res) => {
-//     totalSpaceUsage.value = res.data;
-//   });
-// };
-
 watch(isDark, (newIsDark) => {
   const colors = getDatasetColorsByTheme(newIsDark);
   let updatedChartData = _.cloneDeep(chartData.value);
@@ -295,6 +281,5 @@ watch(isDark, (newIsDark) => {
 
 onMounted(() => {
   retrieveAndConfigureChartData();
-  // retrieveTotalSpaceConsumption();
 });
 </script>

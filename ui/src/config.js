@@ -43,7 +43,7 @@ const exports = {
     BROWSER: "BROWSER",
   },
   metric_measurements: {
-    SDA: "SDA",
+    SDA: "sda",
     SLATE_SCRATCH: "/N/scratch",
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
