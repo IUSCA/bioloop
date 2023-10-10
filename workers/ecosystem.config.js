@@ -39,20 +39,6 @@ module.exports = {
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
-    },
-    {
-      name: "purge_staged_datasets",
-      script: "python",
-      args: "-u -m workers.scripts.purge_staged_datasets",
-      watch: false,
-      interpreter: "",
-      log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "../logs/workers/purge_staged_datasets.err",
-      out_file: "../logs/workers/purge_staged_datasets.log",
-      cron_restart: "00 07 * * *",
-      autorestart: false,
-      exp_backoff_restart_delay: 100,
-      max_restarts: 3,
     }
   ]
 }
