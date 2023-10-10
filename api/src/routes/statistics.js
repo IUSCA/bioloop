@@ -30,10 +30,14 @@ router.get(
   }),
 );
 
-// Retrieves the count of data access records grouped by date. Results are retrieved across the
-// given range specified through start_date and end_date. If optional param by_access_type
-// is true, results will be grouped by type of data access (browser download vs Slate-Scratch
-// access) as well.
+/**
+ * Retrieves the count of data access records grouped by date. Results are retrieved across the
+ * given range specified through start_date and end_date. If optional param by_access_type
+ * is true, results will be grouped by type of data access (browser download vs Slate-Scratch
+ * access) as well.
+ *
+ * Returned results are sorted by timestamp (ascending)
+ */
 router.get(
   '/data-access-count-by-date',
   isPermittedTo('read'),
@@ -102,10 +106,14 @@ router.get(
   }),
 );
 
-// Retrieves the most frequently accessed files (and optionally, datasets). The number of
-// entities retrieved is limited by the limit query param. If include_datasets is provided and is
-// true, access records for datasets (i.e. attempts to access the data directly from Slate-
-// Scratch) will be included in the results.
+/**
+ * Retrieves the most frequently accessed files (and optionally, datasets). The number of
+ * entities retrieved is limited by the limit query param. If include_datasets is provided and is
+ * true, access records for datasets (i.e. attempts to access the data directly from Slate-
+ * Scratch) will be included in the results.
+ *
+ * Returned results are sorted by count (descending).
+ */
 router.get(
   '/most-accessed-data',
   isPermittedTo('read'),
@@ -174,8 +182,12 @@ router.get(
   }),
 );
 
-// Retrieves the count of staging request records grouped by date. Results are retrieved across the
-// given range specified through start_date and end_date.
+/**
+ * Retrieves the count of staging request records grouped by date. Results are retrieved across the
+ * given range specified through start_date and end_date.
+ *
+ * Returned results are sorted by timestamp (descending).
+ */
 router.get(
   '/stage-request-count-by-date',
   isPermittedTo('read'),
@@ -205,8 +217,12 @@ router.get(
   }),
 );
 
-// Retrieves the most frequently staged datasets. The number of datasets retrieved is limited by
-// the limit query param
+/**
+ * Retrieves the most frequently staged datasets. The number of datasets retrieved is limited by
+ * the limit query param
+ *
+ * Returned results are sorted by count (descending).
+ */
 router.get(
   '/most-staged-datasets',
   isPermittedTo('read'),
@@ -251,7 +267,10 @@ router.get(
   }),
 );
 
-// Returns the count of registered users grouped by date
+/**
+ * Returns the count of registered users grouped by date. Returned results are sorted by date
+ * (ascending).
+ */
 router.get(
   '/user-count',
   isPermittedTo('read'),
@@ -270,7 +289,10 @@ router.get(
   }),
 );
 
-// Returns users consuming maximum bandwidth, limited by the limit param
+/**
+ * Returns users consuming maximum bandwidth, limited by the limit param. Returned results are
+ * sorted by bandwidth consumed (descending).
+*/
 router.get(
   '/users-by-bandwidth',
   isPermittedTo('read'),
@@ -283,11 +305,12 @@ router.get(
         l.user_id,
         u.username,
         u.name,
-        sum(f.size) as bandwidth
+        sum(f.size) + sum(d.size) as bandwidth
       from
-        "user" u 
-        inner join data_access_log l on l.user_id = u.id 
-        inner join dataset_file f on l.file_id = f.id
+        data_access_log l 
+        left join dataset_file f on l.file_id = f.id
+        left join dataset d on l.dataset_id = d.id
+        inner join "user" u on l.user_id = u.id
       group by
         l.user_id,
         u.username,
