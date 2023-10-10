@@ -55,7 +55,7 @@
         </va-list-item>
 
         <!-- Direct Download -->
-        <va-list-item v-if="props.dataset.is_staged">
+        <va-list-item>
           <!-- icon -->
           <va-list-item-section avatar>
             <i-mdi:monitor-arrow-down class="text-2xl" />
