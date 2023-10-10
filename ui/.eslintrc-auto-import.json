@@ -292,6 +292,11 @@
     "useParentElement": true,
     "usePerformanceObserver": true,
     "watchDeep": true,
-    "watchImmediate": true
+    "watchImmediate": true,
+    "ExtractDefaultPropTypes": true,
+    "ExtractPropTypes": true,
+    "ExtractPublicPropTypes": true,
+    "injectLocal": true,
+    "provideLocal": true
   }
 }
