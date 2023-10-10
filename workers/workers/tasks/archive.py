@@ -59,14 +59,15 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         # file successfully uploaded to SDA, delete the local copy
         scratch_tar_path.unlink()
 
-    return sda_tar_path
+    return sda_tar_path, scratch_tar_path
 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    sda_tar_path = archive(celery_task, dataset)
+    sda_tar_path, scratch_tar_path = archive(celery_task, dataset)
     update_data = {
-        'archive_path': sda_tar_path
+        'archive_path': sda_tar_path,
+        'staged_size_compressed': scratch_tar_path.stat().st_size
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='ARCHIVED')
