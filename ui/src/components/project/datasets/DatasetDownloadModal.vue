@@ -27,7 +27,7 @@
           <!-- Name and caption -->
           <va-list-item-section>
             <va-list-item-label>
-              <span class="text-lg">Direct Download</span>
+              <span class="text-lg">Direct Download (individual files)</span>
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of all files will use
@@ -51,6 +51,38 @@
                 class="self-end"
               />
             </a>
+          </va-list-item-section>
+        </va-list-item>
+
+        <!-- Direct Download -->
+        <va-list-item v-if="props.dataset.is_staged">
+          <!-- icon -->
+          <va-list-item-section avatar>
+            <i-mdi:monitor-arrow-down class="text-2xl" />
+          </va-list-item-section>
+
+          <!-- .tar file download -->
+          <va-list-item-section>
+            <va-list-item-label>
+              <span class="text-lg">Direct Download (compressed dataset)</span>
+              <span class="px-1"> - </span>
+              <span class="">
+                Transfer of compressed dataset will use
+                {{ formatBytes(dataset.staged_size_compressed) }} of bandwidth
+              </span>
+            </va-list-item-label>
+          </va-list-item-section>
+
+          <!-- Action icon -->
+          <va-list-item-section class="flex-none">
+            <va-button
+              preset="secondary"
+              icon="download"
+              color="primary"
+              round
+              class="self-end"
+              @click="initiate_dataset_download"
+            />
           </va-list-item-section>
         </va-list-item>
 
@@ -102,8 +134,9 @@
 
 <script setup>
 import statisticsService from "@/services/statistics";
+import datasetService from "@/services/dataset";
 import config from "@/config";
-import { formatBytes } from "@/services/utils";
+import { formatBytes, downloadFile } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 
 const props = defineProps({
@@ -140,6 +173,25 @@ const log_data_access = () => {
     .catch((e) => {
       console.log("Unable to log data access attempt", e);
       toast.error("Unable to log data access attempt");
+    });
+};
+
+const initiate_dataset_download = () => {
+  datasetService
+    .get_dataset_download_data({
+      dataset_id: props.dataset.id,
+    })
+    .then((res) => {
+      const url = new URL(res.data.url);
+      url.searchParams.set("token", res.data.bearer_token);
+      downloadFile({
+        url: url.toString(),
+        filename: props.dataset.name,
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("Unable to initiate dataset download");
     });
 };
 
