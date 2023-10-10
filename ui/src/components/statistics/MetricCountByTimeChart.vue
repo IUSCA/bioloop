@@ -254,7 +254,8 @@ const retrieveAndConfigureChartData = () => {
       chartData.value = configureChartStatistics([res.data]);
       chartData.value.datasets[0].label = getDatasetLabel();
 
-      // sort by most recent value of 'usage', to get the most recent metric measurement
+      // Get most recent metric measurement (which is the first element, given that retrieved
+      // metrics are ordered (descending) by timestamps).
       _being_used.value = res.data.length > 0 ? res.data[0].usage : 0;
       _limit.value = res.data.length > 0 ? res.data[0].limit : 0;
     })
@@ -272,7 +273,7 @@ const retrieveAndConfigureChartData = () => {
 watch(isDark, (newIsDark) => {
   const colors = getDatasetColorsByTheme(newIsDark);
   let updatedChartData = _.cloneDeep(chartData.value);
-  // update colors for Slate-Scratch metrics
+  // update colors for metrics based on theme
   updatedChartData.datasets[0].backgroundColor = colors.backgroundColor;
   updatedChartData.datasets[0].borderColor = colors.borderColor;
 
