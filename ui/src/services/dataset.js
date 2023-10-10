@@ -126,6 +126,10 @@ class DatasetService {
     });
   }
 
+  get_dataset_download_data({ dataset_id }) {
+    return api.get(`/datasets/${dataset_id}/download`);
+  }
+
   get_file_download_data({ dataset_id, file_id }) {
     return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
   }
