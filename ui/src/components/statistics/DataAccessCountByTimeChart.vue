@@ -81,6 +81,7 @@ const getChartOptions = ({ colors }) => ({
       },
     },
     y: {
+      min: 0,
       ticks: {
         color: colors.FONT,
         callback: (val) => {
@@ -238,8 +239,14 @@ onMounted(() => {
   // retrieve the range of dates for which to retrieve data access logs
   StatisticsService.getDataAccessTimestampRange()
     .then((res) => {
-      const minDataAccessDate = new Date(Date.parse(res.data[0].min_timestamp));
-      const maxDataAccessDate = new Date(Date.parse(res.data[0].max_timestamp));
+      const minDataAccessDate =
+        res.data.length > 0
+          ? new Date(Date.parse(res.data[0].min_timestamp))
+          : new Date();
+      const maxDataAccessDate =
+        res.data.length > 0
+          ? new Date(Date.parse(res.data[0].max_timestamp))
+          : new Date();
 
       endDate.value = maxDataAccessDate;
       endDateMax.value = maxDataAccessDate;

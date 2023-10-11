@@ -52,6 +52,13 @@ const getChartOptions = ({ colors }) => ({
     x: {
       ticks: {
         color: colors.FONT,
+        callback: (val) => {
+          // If the range of data-point values provided to chart.js is small enough (say starting
+          // value is 1, and ending value is 2), chart.js's default behavior is to try and
+          // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
+          // the axis's ticks. To avoid this, round values down
+          return val % 1 !== 0 ? Math.floor(val) : val;
+        },
       },
       grid: {
         color: colors.GRID,
