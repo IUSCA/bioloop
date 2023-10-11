@@ -9,6 +9,7 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.config import config
+from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -44,7 +45,9 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    scratch_tar_path = Path(f'{config["paths"]["scratch"]}/{dataset["name"]}.tar')
+    staging_dir = compute_staging_path(dataset)[0]
+    scratch_tar_path = Path(f'{str(staging_dir.parent)}/{dataset["name"]}.tar') # staging_dir.parent = the alias sub-directory
+
     make_tarfile(celery_task=celery_task,
                  tar_path=scratch_tar_path,
                  source_dir=dataset['origin_path'],

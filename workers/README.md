@@ -171,4 +171,4 @@ Dataset Name:
 - used in watch.py to filter out registered datasets
 - used to compute the staging path `staging_dir / alias / dataset['name']`
 - used to compute the qc path `Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'`
-- used to compute the scratch tar path while download the tar file from SDA `Path(config['paths']['scratch']) / f"{dataset['name']}.tar"`
+- used to compute the scratch tar path while downloading the tar file from SDA `Path(f'{str(compute_staging_path(dataset)[0].parent)}/{dataset["name"]}.tar')`
