@@ -178,7 +178,7 @@ const log_data_access = () => {
 
 const initiate_dataset_download = () => {
   datasetService
-    .get_dataset_download_data({
+    .get_file_download_data({
       dataset_id: props.dataset.id,
     })
     .then((res) => {

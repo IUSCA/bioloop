@@ -600,14 +600,17 @@ router.get(
 );
 
 router.get(
-  '/:id/download',
+  '/download/:id',
   validate([
     param('id').isInt().toInt(),
+    query('file_id').isInt().toInt().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
+
+    const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
     // Catch errors to ensure that logging does not get in the way of the rest of the method.
@@ -615,12 +618,23 @@ router.get(
       await prisma.data_access_log.create({
         data: {
           access_type: 'BROWSER',
-          dataset_id: req.params.id,
+          file_id: isFileDownload ? req.query.file_id : undefined,
+          dataset_id: !isFileDownload ? req.params.id : undefined,
           user_id: req.user.id,
         },
       });
     } catch (e) {
       // console.log();
+    }
+
+    let file;
+    if (isFileDownload) {
+      file = await prisma.dataset_file.findFirstOrThrow({
+        where: {
+          id: req.query.file_id,
+          dataset_id: req.params.id,
+        },
+      });
     }
 
     const dataset = await prisma.dataset.findFirstOrThrow({
@@ -630,61 +644,9 @@ router.get(
     });
 
     if (dataset.metadata.stage_alias) {
-      const download_file_path = `${dataset.metadata.stage_alias}/${dataset.name}.tar`;
-      const download_token = await authService.get_download_token(download_file_path);
-
-      const url = new URL(download_file_path, config.get('download_server.base_url'));
-      res.json({
-        url: url.href,
-        bearer_token: download_token.accessToken,
-      });
-    } else {
-      next(createError.NotFound('Dataset is not prepared for download'));
-    }
-  }),
-);
-
-router.get(
-  '/:id/files/:file_id/download',
-  validate([
-    param('id').isInt().toInt(),
-    param('file_id').isInt().toInt(),
-  ]),
-  dataset_access_check,
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = Get file download URL and token
-
-    // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
-    try {
-      await prisma.data_access_log.create({
-        data: {
-          access_type: 'BROWSER',
-          file_id: req.params.file_id,
-          dataset_id: req.params.id,
-          user_id: req.user.id,
-        },
-      });
-    } catch (e) {
-      // console.log();
-    }
-
-    const file = await prisma.dataset_file.findFirstOrThrow({
-      where: {
-        id: req.params.file_id,
-        dataset_id: req.params.id,
-      },
-    });
-
-    const dataset = await prisma.dataset.findFirstOrThrow({
-      where: {
-        id: req.params.id,
-      },
-    });
-
-    if (dataset.metadata.stage_alias) {
-      const download_file_path = `${dataset.metadata.stage_alias}/${file.path}`;
+      const download_file_path = isFileDownload
+        ? `${dataset.metadata.stage_alias}/${file.path}`
+        : `${dataset.metadata.stage_alias}/${dataset.name}.tar`;
       const download_token = await authService.get_download_token(download_file_path);
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
