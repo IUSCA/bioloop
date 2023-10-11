@@ -92,7 +92,8 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const data_access_counts = await prisma.$queryRaw`
       SELECT
-        access_type as access_type, count(*)
+        access_type as access_type,
+        count(*)
       FROM
         data_access_log
       GROUP BY access_type
