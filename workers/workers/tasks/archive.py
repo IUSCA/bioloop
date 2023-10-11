@@ -70,7 +70,7 @@ def archive_dataset(celery_task, dataset_id, **kwargs):
     sda_tar_path, scratch_tar_path = archive(celery_task, dataset)
     update_data = {
         'archive_path': sda_tar_path,
-        'staged_size_compressed': scratch_tar_path.stat().st_size
+        'bundle_size': scratch_tar_path.stat().st_size
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='ARCHIVED')

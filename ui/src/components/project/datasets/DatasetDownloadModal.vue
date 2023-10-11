@@ -68,7 +68,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of compressed dataset will use
-                {{ formatBytes(dataset.staged_size_compressed) }} of bandwidth
+                {{ formatBytes(dataset.bundle_size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>
