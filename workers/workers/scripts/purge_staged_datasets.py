@@ -1,5 +1,6 @@
 import logging
 import shutil
+from pathlib import Path
 
 import workers.api as api
 from workers.config import config
@@ -26,8 +27,12 @@ def main():
     for dataset in datasets[:MAX_PURGES]:
         try:
             staged_dataset_path, alias = compute_staging_path(dataset)
+            scratch_tar_path = Path(f'{str(staged_dataset_path.parent)}/{dataset["name"]}.tar') # staged_dataset_path.parent = the alias sub-directory
+
             if staged_dataset_path.exists():
                 shutil.rmtree(staged_dataset_path)
+            if scratch_tar_path.exists():
+                scratch_tar_path.unlink()
 
             api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
             api.add_state_to_dataset(dataset_id=dataset['id'], state='PURGED')
