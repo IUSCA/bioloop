@@ -260,7 +260,7 @@ router.get(
       u.created_at::DATE,
       count(*)
     from
-      public.user u
+      "user" u
     group by u.created_at::DATE
     order by 
       u.created_at::DATE asc
@@ -284,7 +284,7 @@ router.get(
         u.name,
         sum(f.size) as bandwidth
       from
-        public.user u 
+        "user" u 
         inner join data_access_log l on l.user_id = u.id 
         inner join dataset_file f on l.file_id = f.id
       group by
