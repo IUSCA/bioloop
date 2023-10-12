@@ -138,7 +138,6 @@ const retrieveAndConfigureChartData = () => {
 watch(isDark, (newIsDark) => {
   const colors = getDatasetColorsByTheme(newIsDark);
   let updatedChartData = _.cloneDeep(chartData.value);
-  // update colors for aggregated access counts
   updatedChartData.datasets[0].backgroundColor = colors.backgroundColor;
 
   chartData.value = updatedChartData;
