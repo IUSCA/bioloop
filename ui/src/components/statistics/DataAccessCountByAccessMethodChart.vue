@@ -40,6 +40,7 @@ const totalAccessCount = computed(() => {
   if (chartData.value.datasets) {
     return chartData.value.datasets[0].data.reduce(
       (accumulator, currentValue) => accumulator + currentValue,
+      0,
     );
   }
 });

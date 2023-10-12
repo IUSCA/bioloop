@@ -51,7 +51,16 @@ const getChartOptions = ({ colors }) => ({
     x: {
       ticks: {
         color: colors.FONT,
-        callback: (val) => formatBytes(val),
+        callback: (val) => {
+          // If the range of data-point values provided to chart.js is small enough (say starting
+          // value is 1, and ending value is 2), chart.js's default behavior is to try and
+          // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
+          // the axis's ticks. Since number of bytes should be an integer, we round the value
+          // down to nearest integer.
+          return val % 1 !== 0
+            ? formatBytes(Math.floor(val))
+            : formatBytes(val);
+        },
       },
       grid: {
         color: colors.GRID,
@@ -97,15 +106,6 @@ const getDatasetColorsByTheme = (isDark) => {
   };
 };
 
-// // update chart colors when theme or chart data changes
-// watch([isDark, chartData], ([updatedIsDark]) => {
-//   const defaultChartColors = getDefaultChartColors(updatedIsDark);
-
-//   chartOptions.value = getChartOptions({
-//     colors: defaultChartColors,
-//   });
-// });
-
 const formatChartStatistics = (user_bandwidth_stats) => {
   const labels = user_bandwidth_stats.map((stat) => stat.name);
   const chartColors = getDatasetColorsByTheme(isDark.value);
@@ -120,10 +120,6 @@ const formatChartStatistics = (user_bandwidth_stats) => {
     },
   ];
 
-  // const labels = [["x,0", "1", "2"], "y", "z"];
-  // const datasets = [
-  //   { label: "test", data: [3, 4, 5], path: ["/3/", "/4", "5"] },
-  // ];
   return { labels, datasets };
 };
 
@@ -143,7 +139,6 @@ const retrieveAndConfigureChartData = () => {
 watch(isDark, (newIsDark) => {
   const colors = getDatasetColorsByTheme(newIsDark);
   let updatedChartData = _.cloneDeep(chartData.value);
-  // update colors for aggregated access counts
   updatedChartData.datasets[0].backgroundColor = colors.backgroundColor;
 
   chartData.value = updatedChartData;

@@ -161,12 +161,17 @@ const chartTitleCallBack = () => {
 
 const yAxisTicksCallback = (val) => {
   // https://www.chartjs.org/docs/latest/axes/labelling.html#creating-custom-tick-formats
+
+  // If the range of data-point values provided to chart.js is small enough (say starting
+  // value is 1, and ending value is 2), chart.js's default behavior is to try and
+  // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
+  // the axis's ticks. To avoid this, round values down
   switch (props.measurement) {
     case config.metric_measurements.SDA:
     case config.metric_measurements.SLATE_SCRATCH:
-      return formatBytes(val);
+      return val % 1 !== 0 ? formatBytes(Math.floor(val)) : formatBytes(val);
     case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return val;
+      return val % 1 !== 0 ? Math.floor(val) : val;
     default:
       console.log("Provided measurement value did not match expected values");
   }
@@ -250,8 +255,8 @@ const retrieveAndConfigureChartData = () => {
       chartData.value.datasets[0].label = getDatasetLabel();
 
       // sort by most recent value of 'usage', to get the most recent metric measurement
-      _being_used.value = res.data[0].usage;
-      _limit.value = res.data[0].limit;
+      _being_used.value = res.data.length > 0 ? res.data[0].usage : 0;
+      _limit.value = res.data.length > 0 ? res.data[0].limit : 0;
     })
     .catch((err) => {
       console.log(
