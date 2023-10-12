@@ -393,29 +393,19 @@ router.delete(
   isPermittedTo('delete'),
   validate([
     param('id').isInt().toInt(),
-    query('soft_delete').toBoolean().default(true),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = For soft delete, starts a delete archive workflow and
-    // marks the dataset as deleted on success. Dataset is hard deleted only when there are no
-    // workflow association
+    // #swagger.summary = starts a delete archive workflow and
+    // marks the dataset as deleted on success.
     const _dataset = await datasetService.get_dataset({
       id: req.params.id,
       workflows: true,
     });
 
     if (_dataset) {
-      if (req.query.soft_delete) {
-        await datasetService.soft_delete(_dataset, req.user?.id);
-        res.send();
-      } else if ((_dataset.workflows?.length || 0) === 0) {
-        // no workflows - safe to delete
-        await datasetService.hard_delete(_dataset.id);
-        res.send();
-      } else {
-        next(createError.Conflict('Unable to delete as one or more workflows are associated with this bacth'));
-      }
+      await datasetService.soft_delete(_dataset, req.user?.id);
+      res.send();
     } else {
       next(createError(404));
     }

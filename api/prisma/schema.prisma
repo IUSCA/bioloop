@@ -32,15 +32,15 @@ model dataset {
   projects         project_dataset[]
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
-  @@unique([name, type])
+  @@unique([name, type, is_deleted])
 }
 
 model dataset_hierarchy {
   source_id       Int
   derived_id      Int
   assigned_at     DateTime @default(now()) @db.Timestamp(6)
-  source_dataset  dataset  @relation(name: "source_datasets", fields: [source_id], references: [id])
-  derived_dataset dataset  @relation(name: "derived_datasets", fields: [derived_id], references: [id])
+  source_dataset  dataset  @relation(name: "source_datasets", fields: [source_id], references: [id], onDelete: Cascade)
+  derived_dataset dataset  @relation(name: "derived_datasets", fields: [derived_id], references: [id], onDelete: Cascade)
 
   @@id([source_id, derived_id])
 }
@@ -55,7 +55,7 @@ model dataset_file {
   metadata       Json?
   status         String?
   dataset_id     Int
-  dataset        dataset                  @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
+  dataset        dataset                  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   parents        dataset_file_hierarchy[] @relation("child")
   children       dataset_file_hierarchy[] @relation("parent")
   accesses       data_access_log[]
@@ -79,9 +79,9 @@ model dataset_audit {
   old_data   Json?
   new_data   Json?
   user_id    Int?
-  user       user?    @relation(fields: [user_id], references: [id])
-  dataset_id Int
-  dataset    dataset? @relation(fields: [dataset_id], references: [id])
+  user       user?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  dataset_id Int?
+  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 }
 
 model dataset_state {
@@ -89,7 +89,7 @@ model dataset_state {
   timestamp  DateTime @default(now()) @db.Timestamp(6)
   metadata   Json?
   dataset_id Int
-  dataset    dataset? @relation(fields: [dataset_id], references: [id])
+  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 
   @@id([timestamp, dataset_id, state])
 }
@@ -142,7 +142,7 @@ model user_password {
   created_at DateTime @default(now()) @db.Timestamp(6)
   updated_at DateTime @default(now()) @updatedAt @db.Timestamp(6)
   user_id    Int      @unique
-  user       user     @relation(fields: [user_id], references: [id])
+  user       user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model user_login {
@@ -150,14 +150,14 @@ model user_login {
   last_login DateTime @default(now()) @db.Timestamp(6)
   method     String
   user_id    Int      @unique
-  user       user     @relation(fields: [user_id], references: [id])
+  user       user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model user_settings {
   id       Int  @id @default(autoincrement())
   user_id  Int  @unique
   settings Json
-  users    user @relation(fields: [user_id], references: [id], onDelete: NoAction)
+  users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model contact {
@@ -166,7 +166,7 @@ model contact {
   value       String
   description String?
   user_id     Int?
-  user        user?             @relation(fields: [user_id], references: [id], onDelete: NoAction)
+  user        user?             @relation(fields: [user_id], references: [id], onDelete: Cascade)
   projects    project_contact[]
 
   @@unique([type, value])
@@ -182,8 +182,8 @@ model role {
 model user_role {
   user_id     Int
   role_id     Int
-  roles       role     @relation(fields: [role_id], references: [id])
-  users       user     @relation(fields: [user_id], references: [id])
+  roles       role     @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  users       user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   assigned_at DateTime @default(now())
 
   @@id([user_id, role_id])
@@ -192,7 +192,7 @@ model user_role {
 model workflow {
   id         String   @id
   dataset_id Int?
-  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: NoAction)
+  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 }
 
 model metric {
