@@ -15,6 +15,16 @@
         @update:model-value="handle_filters"
       />
       <va-checkbox
+        v-model="checkboxes.archived"
+        label="Archived"
+        @update:model-value="handle_filters"
+      />
+      <va-checkbox
+        v-model="checkboxes.staged"
+        label="Staged"
+        @update:model-value="handle_filters"
+      />
+      <va-checkbox
         v-model="checkboxes.processed"
         label="Processed"
         @update:model-value="handle_filters"
@@ -36,6 +46,8 @@ const emit = defineEmits(["update"]);
 const checkboxes = ref({
   deleted: false,
   saved: false,
+  archived: false,
+  staged: false,
   unprocessed: false,
   processed: false,
 });
@@ -53,6 +65,8 @@ function handle_filters() {
   const query = {
     deleted: lxor(opts.deleted, opts.saved) ? opts.deleted : null,
     processed: lxor(opts.unprocessed, opts.processed) ? opts.processed : null,
+    staged: opts.staged ? opts.staged : null,
+    archived: opts.archived ? opts.archived : null,
   };
   emit("update", query);
 }

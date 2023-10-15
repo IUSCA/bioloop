@@ -5,6 +5,8 @@
 *nginx.crt
 *nginx.key
 
+.idea
+
 ui/node_modules
 ui/dist
 ui/dist-ssr

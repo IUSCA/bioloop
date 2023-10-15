@@ -106,6 +106,49 @@ const assoc_body_schema = {
     toInt: true,
   },
 };
+
+const buildQueryObject = ({
+  deleted, processed, archived, staged, type, name, days_since_last_staged,
+}) => {
+  const query_obj = _.omitBy(_.isUndefined)({
+    is_deleted: deleted,
+    archive_path: archived ? { not: null } : {},
+    is_staged: staged,
+    type,
+    name: {
+      contains: name,
+      mode: 'insensitive', // case-insensitive search
+    },
+  });
+
+  // processed=true: datasets with one or more workflows associated
+  // processed=false: datasets with no workflows associated
+  // processed=undefined/null: no query based on workflow association
+  if (!_.isNil(processed)) {
+    query_obj.workflows = { [processed ? 'some' : 'none']: {} };
+  }
+
+  // staged datasets where there is no STAGED state in last x days
+  if (_.isNumber(days_since_last_staged)) {
+    const xDaysAgo = new Date();
+    xDaysAgo.setDate(xDaysAgo.getDate() - days_since_last_staged);
+
+    query_obj.is_staged = true;
+    query_obj.NOT = {
+      states: {
+        some: {
+          state: 'STAGED',
+          timestamp: {
+            gte: xDaysAgo,
+          },
+        },
+      },
+    };
+  }
+
+  return query_obj;
+};
+
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -122,6 +165,37 @@ router.post(
   }),
 );
 
+// Get dataset count by criteria (used for paginating dataset lists)
+router.get(
+  '/count',
+  isPermittedTo('read'),
+  validate([
+    query('deleted').toBoolean().optional(),
+    query('processed').toBoolean().optional(),
+    query('type').isIn(config.dataset_types).optional(),
+    query('name').notEmpty().escape().optional(),
+    query('days_since_last_staged').isInt().toInt().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const query_obj = buildQueryObject({
+      deleted: req.query.deleted,
+      type: req.query.type,
+      name: req.query.name,
+      days_since_last_staged: req.query.days_since_last_staged,
+      processed: req.query.processed,
+    });
+
+    const count = await prisma.dataset.aggregate({
+      where: query_obj,
+      _count: {
+        _all: true,
+      },
+    });
+
+    res.json({ count: count._count._all });
+  }),
+);
+
 // get all - worker + UI
 router.get(
   '/',
@@ -129,45 +203,47 @@ router.get(
   validate([
     query('deleted').toBoolean().optional(),
     query('processed').toBoolean().optional(),
+    query('archived').toBoolean().optional(),
+    query('staged').toBoolean().optional(),
     query('type').isIn(config.dataset_types).optional(),
-    query('name').optional(),
+    query('name').notEmpty().escape().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
+    query('limit').isInt().toInt().optional(),
+    query('offset').isInt().toInt().optional(),
+    query('sortBy').isObject().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    const query_obj = _.omitBy(_.isUndefined)({
-      is_deleted: req.query.deleted,
+
+    const sortBy = req.query.sortBy || {};
+    const metadata_fields = ['num_genome_files'];
+
+    const sort_by_fields = _.pickBy((sortOrder, field) => !metadata_fields.includes(field))(sortBy);
+    const metadata_sort_by_field = _.pickBy(
+      (sortOrder, field) => metadata_fields.includes(field),
+    )(sortBy);
+    const num_genome_file_sort_order = !_.isEmpty(metadata_sort_by_field)
+      ? Object.values(metadata_sort_by_field)[0]
+      : undefined;
+
+    const query_obj = buildQueryObject({
+      deleted: req.query.deleted,
+      processed: req.query.processed,
+      archived: req.query.archived,
+      staged: req.query.staged,
       type: req.query.type,
       name: req.query.name,
+      days_since_last_staged: req.query.days_since_last_staged,
     });
 
-    // processed=true: datasets with one or more workflows associated
-    // processed=false: datasets with no workflows associated
-    // processed=undefined/null: no query based on workflow association
-    if (!_.isNil(req.query.processed)) {
-      query_obj.workflows = { [req.query.processed ? 'some' : 'none']: {} };
-    }
-
-    // staged datasets where there is no STAGED state in last x days
-    if (_.isNumber(req.query.days_since_last_staged)) {
-      const xDaysAgo = new Date();
-      xDaysAgo.setDate(xDaysAgo.getDate() - req.query.days_since_last_staged);
-
-      query_obj.is_staged = true;
-      query_obj.NOT = {
-        states: {
-          some: {
-            state: 'STAGED',
-            timestamp: {
-              gte: xDaysAgo,
-            },
-          },
-        },
-      };
-    }
-
     const datasets = await prisma.dataset.findMany({
+      skip: req.query.offset,
+      take: req.query.limit,
       where: query_obj,
+      orderBy: Object.entries(sort_by_fields).length > 0
+        ? Object.entries(sort_by_fields)
+          .map(([field, sortDirection]) => ({ [field]: sortDirection }))
+        : [],
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...datasetService.INCLUDE_STATES,
@@ -175,6 +251,22 @@ router.get(
         derived_datasets: true,
       },
     });
+
+    if (num_genome_file_sort_order) {
+      datasets.sort((d1, d2) => {
+        if (d1.metadata?.num_genome_files === d2.metadata?.num_genome_files) {
+          return 0;
+        }
+        if (num_genome_file_sort_order === 'asc') {
+          return d1.metadata?.num_genome_files < d2.metadata?.num_genome_files ? -1 : 1;
+        }
+        // when sorting in descending, fields without a value should be placed after the ones with
+        // a value
+        return (d1.metadata?.num_genome_files === undefined
+            || d1.metadata?.num_genome_files < d2.metadata?.num_genome_files)
+          ? 1 : -1;
+      });
+    }
 
     res.json(datasets);
   }),

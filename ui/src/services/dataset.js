@@ -5,12 +5,44 @@ import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 
 class DatasetService {
-  getAll({ deleted = null, processed = null, type = null } = {}) {
+  getAll({
+    deleted = null,
+    processed = null,
+    archived = null,
+    staged = null,
+    type = null,
+    name = null,
+    limit = null,
+    offset = null,
+    sortBy = null,
+  } = {}) {
     return api.get("/datasets", {
       params: {
         deleted,
         processed,
+        archived,
+        staged,
         type,
+        name,
+        limit,
+        offset,
+        sortBy,
+      },
+    });
+  }
+
+  getCount({
+    deleted = null,
+    processed = null,
+    type = null,
+    name = null,
+  } = {}) {
+    return api.get("/datasets/count", {
+      params: {
+        deleted,
+        processed,
+        type,
+        name,
       },
     });
   }
@@ -33,6 +65,14 @@ class DatasetService {
       },
     });
   }
+
+  // search({ name }) {
+  //   return api.get("/datasets/search", {
+  //     params: {
+  //       query: name,
+  //     },
+  //   });
+  // }
 
   stage_dataset(id) {
     return api
