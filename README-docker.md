@@ -40,12 +40,18 @@ cd api/keys
 > Note: when running under Windows, it may be necessary to run the openssl commands via Cygwin
 
 
-## Seed the database
+## Setup Migration and Seed Database
 
-Add any usernames you need to work with in `api/prisma/seed.js` then seed the db
+Run the initial migration:
 
 ```
 docker compose exec api bash
+npx prisma migrate dev
+```
+
+Add any usernames you need to work with in `api/prisma/data.js` then seed the db:
+
+```
 npx prisma db seed
 ```
 
@@ -78,6 +84,16 @@ To see what is going on in a specific container:
 docker compose logs -f api
 ```
 
+
+## Linting
+
+To use linting with the docker setup you must have the dev dependencies of the api and ui installed locally as well as the VSCode extention ESLint (dbaeumer.vscode-eslint).  You will need to run the install command for both api and ui:
+
+```
+npm install --save-dev
+```
+
+You can also install Dev Containers (ms-vscode-remote.remote-containers) to remote into both the api and ui containers separately.  You'd have to have two instances of vscode running, but if you don't want to install dependencies locally this is the best way to run with automatic linting.  
 
 ## Testing
 
