@@ -170,14 +170,12 @@ onMounted(() => {
   // retrieve the range of dates for which to retrieve staging request logs
   StatisticsService.getStageRequestTimestampRange()
     .then((res) => {
-      const minStageRequestDate =
-        res.data.length > 0
-          ? new Date(Date.parse(res.data[0].min_timestamp))
-          : new Date();
-      const maxStageRequestDate =
-        res.data.length > 0
-          ? new Date(Date.parse(res.data[0].max_timestamp))
-          : new Date();
+      const minStageRequestDate = res.data[0].min_timestamp
+        ? new Date(Date.parse(res.data[0].min_timestamp))
+        : new Date();
+      const maxStageRequestDate = res.data[0].max_timestamp
+        ? new Date(Date.parse(res.data[0].max_timestamp))
+        : new Date();
 
       endDate.value = maxStageRequestDate;
       endDateMax.value = maxStageRequestDate;
