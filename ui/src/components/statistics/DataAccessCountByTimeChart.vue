@@ -239,14 +239,12 @@ onMounted(() => {
   // retrieve the range of dates for which to retrieve data access logs
   StatisticsService.getDataAccessTimestampRange()
     .then((res) => {
-      const minDataAccessDate =
-        res.data.length > 0
-          ? new Date(Date.parse(res.data[0].min_timestamp))
-          : new Date();
-      const maxDataAccessDate =
-        res.data.length > 0
-          ? new Date(Date.parse(res.data[0].max_timestamp))
-          : new Date();
+      const minDataAccessDate = res.data[0].min_timestamp
+        ? new Date(Date.parse(res.data[0].min_timestamp))
+        : new Date();
+      const maxDataAccessDate = res.data[0].max_timestamp
+        ? new Date(Date.parse(res.data[0].max_timestamp))
+        : new Date();
 
       endDate.value = maxDataAccessDate;
       endDateMax.value = maxDataAccessDate;
