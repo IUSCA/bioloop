@@ -18,6 +18,7 @@ const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
 
 const isPermittedTo = accessControl('datasets');
+
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -392,29 +393,19 @@ router.delete(
   isPermittedTo('delete'),
   validate([
     param('id').isInt().toInt(),
-    query('soft_delete').toBoolean().default(true),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = For soft delete, starts a delete archive workflow and
-    // marks the dataset as deleted on success. Dataset is hard deleted only when there are no
-    // workflow association
+    // #swagger.summary = starts a delete archive workflow and
+    // marks the dataset as deleted on success.
     const _dataset = await datasetService.get_dataset({
       id: req.params.id,
       workflows: true,
     });
 
     if (_dataset) {
-      if (req.query.soft_delete) {
-        await datasetService.soft_delete(_dataset, req.user?.id);
-        res.send();
-      } else if ((_dataset.workflows?.length || 0) === 0) {
-        // no workflows - safe to delete
-        await datasetService.hard_delete(_dataset.id);
-        res.send();
-      } else {
-        next(createError.Conflict('Unable to delete as one or more workflows are associated with this bacth'));
-      }
+      await datasetService.soft_delete(_dataset, req.user?.id);
+      res.send();
     } else {
       next(createError(404));
     }
@@ -433,6 +424,21 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
     // Allowed names are stage, integrated
+
+    // Log the staging attempt first.
+    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    if (req.params.wf === 'stage') {
+      try {
+        await prisma.stage_request_log.create({
+          data: {
+            dataset_id: req.params.id,
+            user_id: req.user.id,
+          },
+        });
+      } catch (e) {
+      // console.log()
+      }
+    }
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -543,6 +549,21 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
+
+    // Log the data access attempt first.
+    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    try {
+      await prisma.data_access_log.create({
+        data: {
+          access_type: 'BROWSER',
+          file_id: req.params.file_id,
+          dataset_id: req.params.id,
+          user_id: req.user.id,
+        },
+      });
+    } catch (e) {
+      // console.log();
+    }
 
     const file = await prisma.dataset_file.findFirstOrThrow({
       where: {

@@ -12,7 +12,7 @@ cd <project>
 
 Add bioloop as remote
 ```bash
-git remote add origin git@github.com:IUSCA/bioloop.git
+git remote add bioloop git@github.com:IUSCA/bioloop.git
 
 # to merge updates from bioloop
 # git fetch bioloop

@@ -236,7 +236,7 @@ const columns = ref([
     label: "last updated",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
-    width: "120px",
+    width: "150px",
   },
   // { key: "status", sortable: false },
   {

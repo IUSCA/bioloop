@@ -20,6 +20,7 @@
 
 <script setup>
 import DatasetService from "@/services/dataset";
+import config from "@/config";
 
 const props = defineProps({
   dataset: {

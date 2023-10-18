@@ -11,6 +11,14 @@ class MetricsService {
       return res;
     });
   }
+
+  getSpaceUtilizationByTimeAndMeasurement(measurement) {
+    return api.get("/metrics/space-utilization-by-timestamp", {
+      params: {
+        measurement,
+      },
+    });
+  }
 }
 
 export default new MetricsService();

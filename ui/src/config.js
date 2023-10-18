@@ -38,6 +38,15 @@ const exports = {
       },
     },
   },
+  access_types: {
+    SLATE_SCRATCH: "SLATE_SCRATCH",
+    BROWSER: "BROWSER",
+  },
+  metric_measurements: {
+    SDA: "sda",
+    SLATE_SCRATCH: "/N/scratch",
+    SLATE_SCRATCH_FILES: "/N/scratch files",
+  },
 };
 
 export default exports;

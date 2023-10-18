@@ -5,7 +5,16 @@
       :hover-over-timeout="1000"
       class="flex-none"
     >
-      <va-button @click="copy(props.text)" :preset="props.preset">
+      <va-button
+        @click="
+          () => {
+            copy(props.text);
+            // Emit an event to allow parent to react to the copy-text action
+            $emit('textCopied');
+          }
+        "
+        :preset="props.preset"
+      >
         <i-mdi-check-bold style="color: var(--va-success)" v-if="copied" />
         <i-mdi-content-copy
           v-else

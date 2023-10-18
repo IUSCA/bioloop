@@ -4,12 +4,6 @@
   "express": {
     "host": "0.0.0.0"
   },
-  "postgres": {
-    "hostname": "commons3.sca.iu.edu",
-    "user": "cpa",
-    "db": "cpa",
-    "schema": "cpa"
-  },
   "workflow_server": {
     "base_url": "https://core-dev1.sca.iu.edu/rhythm"
   },

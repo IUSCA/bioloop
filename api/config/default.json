@@ -8,14 +8,6 @@
   "logger": {
     "level": "debug"
   },
-  "postgres": {
-    "hostname": "localhost",
-    "port": "5432",
-    "user": "appuser",
-    "password": "",
-    "db": "app",
-    "schema": "public"
-  },
   "workflow_server": {
     "base_url": "http://127.0.0.1:5000",
     "auth_token": ""

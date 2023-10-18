@@ -1,7 +1,4 @@
 {
-  "express": {
-    "port": "PORT"
-  },
   "postgres": {
     "password": "DATABASE_PASSWORD"
   },

@@ -205,7 +205,7 @@ const columns = [
   },
   // ...(auth.canOperate ? [{ key: "contacts", sortable: true }] : []),
   { key: "created_at", sortable: true, width: "100px" },
-  { key: "updated_at", sortable: true, width: "100px" },
+  { key: "updated_at", sortable: true, width: "150px" },
   ...(auth.canOperate ? [{ key: "actions", width: "80px" }] : []),
 ];
 
