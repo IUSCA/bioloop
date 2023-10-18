@@ -303,25 +303,43 @@ router.get(
       const field_comparison_fns = metadata_field_comparison_fns[sortField]
         || default_field_comparison_fns;
 
-      datasets.sort((d1, d2) => {
-        if ((d1.metadata && d2.metadata)) {
-          if (field_comparison_fns.equals(d1.metadata[sortField], d2.metadata[sortField])) {
-            return 0;
-          }
-          if (sortOrder === 'asc') {
-            return (field_comparison_fns.isLessThan(d1.metadata[sortField], d2.metadata[sortField])
-              ? -1 : 1);
-          }
-          return (field_comparison_fns.isGreaterThan(d1.metadata[sortField], d2.metadata[sortField])
-            ? -1 : 1);
-        }
+      datasets.sort((e1, e2) => {
+        const e1_field_val = e1.metadata ? e1.metadata[sortField] : undefined;
+        const e2_field_val = e2.metadata ? e2.metadata[sortField] : undefined;
 
-        if (!(d1.metadata || d2.metadata)) {
+        // If neither elements have metadata
+        if (!(e1.metadata || e2.metadata)) {
           return 0;
         }
 
-        // Sort such that null values are placed last
-        return (!d1.metadata && d2.metadata) ? 1 : -1;
+        // if both elements have metadata
+        if ((e1.metadata && e2.metadata)) {
+          // if field's value is equal for both element's metadata
+          if (field_comparison_fns.equals(e1_field_val, e2_field_val)) {
+            return 0;
+          }
+
+          // if either element's metadata does not have a value for the field, place it after the
+          // one which has a value for said field, irrespective of sort direction.
+          if (e1_field_val === undefined && e2_field_val !== undefined) {
+            return 1;
+          }
+          if (e1_field_val !== undefined && e2_field_val === undefined) {
+            return -1;
+          }
+
+          // if sort order is ascending
+          if (sortOrder === 'asc') {
+            return (field_comparison_fns.isLessThan(e1_field_val, e2_field_val)
+              ? -1 : 1);
+          }
+          // if sort order is descending
+          return (field_comparison_fns.isGreaterThan(e1_field_val, e2_field_val)
+            ? -1 : 1);
+        }
+
+        // if only one of the elements has metadata, place it after the one without metadata
+        return (!e1.metadata && e2.metadata) ? 1 : -1;
       });
     });
     res.json(datasets);
