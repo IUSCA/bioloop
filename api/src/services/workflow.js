@@ -9,7 +9,7 @@ const wfApi = axios.create({
 function getAll({
   last_task_run = false,
   prev_task_runs = false,
-  only_active = false,
+  status = null,
   app_id = null,
   skip = null,
   limit = null,
@@ -19,7 +19,7 @@ function getAll({
     params: {
       last_task_run,
       prev_task_runs,
-      only_active,
+      status,
       app_id,
       skip,
       limit,
@@ -58,6 +58,14 @@ function create(wf) {
   return wfApi.post('/workflows', wf);
 }
 
+function getCountsByStatus({ app_id }) {
+  return wfApi.get('/workflows/counts_by_status', {
+    params: {
+      app_id,
+    },
+  });
+}
+
 module.exports = {
   getAll,
   getOne,
@@ -66,4 +74,5 @@ module.exports = {
   deleteOne,
   resume,
   create,
+  getCountsByStatus,
 };

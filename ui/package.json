@@ -20,6 +20,7 @@
     "@vueuse/components": "^10.4.1",
     "@vueuse/core": "^10.4.1",
     "@vueuse/integrations": "^10.4.1",
+    "@vueuse/router": "^10.5.0",
     "axios": "^1.5.0",
     "chart.js": "^4.4.0",
     "chartjs-adapter-dayjs-4": "^1.0.4",
@@ -31,7 +32,7 @@
     "pinia": "^2.1.6",
     "vue": "^3.3.4",
     "vue-chartjs": "^5.2.0",
-    "vue-router": "^4.2.4",
+    "vue-router": "^4.2.5",
     "vuestic-ui": "^1.8.0"
   },
   "devDependencies": {

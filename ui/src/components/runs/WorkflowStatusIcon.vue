@@ -6,7 +6,7 @@
     />
 
     <i-mdi-clock
-      v-else-if="['PROGRESS', 'STARTED'].includes(props.status)"
+      v-else-if="props.status == 'STARTED'"
       style="color: var(--va-warning)"
     />
 
@@ -17,7 +17,7 @@
 
     <i-mdi-close-circle
       v-else-if="props.status == 'REVOKED'"
-      style="color: var(--va-danger)"
+      style="color: rgb(102, 102, 102)"
     />
 
     <i-mdi-clock-time-twelve-outline

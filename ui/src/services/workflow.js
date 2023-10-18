@@ -6,15 +6,19 @@ class WorkflowService {
   getAll({
     last_task_run = false,
     prev_task_runs = false,
-    only_active = false,
     workflow_ids = null,
+    status = null,
+    skip = 0,
+    limit = 10,
   } = {}) {
     return api.get("/workflows", {
       params: {
         last_task_run,
         prev_task_runs,
-        only_active,
+        status,
         workflow_id: workflow_ids,
+        skip,
+        limit,
       },
       paramsSerializer: {
         // to create workflow_id=123&workflow_id=456
@@ -50,7 +54,10 @@ class WorkflowService {
   }
 
   is_step_pending(step_name, workflows) {
-    const active_wfs = workflows.filter((wf) => !this.is_workflow_done(wf));
+    console.log(workflows);
+    const active_wfs = (workflows || []).filter(
+      (wf) => !this.is_workflow_done(wf),
+    );
     const pending_steps = active_wfs
       .flatMap((wf) => wf.steps)
       .filter((step) => step.name.toLowerCase() === step_name.toLowerCase())
@@ -83,6 +90,10 @@ class WorkflowService {
         level,
       },
     });
+  }
+
+  getCountsByStatus() {
+    return api.get("/workflows/counts_by_status");
   }
 }
 

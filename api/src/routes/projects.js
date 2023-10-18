@@ -102,7 +102,7 @@ router.get(
           workflow_ids: dataset.workflows.map((x) => x.id),
         }).then((wf_res) => ({
           assigned_at,
-          dataset: Object.assign(dataset, { workflows: wf_res.data }),
+          dataset: Object.assign(dataset, { workflows: wf_res.data.results }),
         })).catch((error) => {
           log_axios_error(error);
           return {
@@ -186,7 +186,7 @@ router.get(
           workflow_ids: dataset.workflows.map((x) => x.id),
         }).then((wf_res) => ({
           assigned_at,
-          dataset: Object.assign(dataset, { workflows: wf_res.data }),
+          dataset: Object.assign(dataset, { workflows: wf_res.data.results }),
         })).catch((error) => {
           log_axios_error(error);
           return {

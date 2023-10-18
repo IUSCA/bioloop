@@ -163,7 +163,7 @@ async function get_dataset({
         prev_task_runs,
         workflow_ids: dataset.workflows.map((x) => x.id),
       });
-      dataset.workflows = wf_res.data;
+      dataset.workflows = wf_res.data.results;
     } catch (error) {
       log_axios_error(error);
       dataset.workflows = [];

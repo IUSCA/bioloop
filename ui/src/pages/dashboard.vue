@@ -74,9 +74,10 @@ const raw_data_stats = ref({});
 const data_products_stats = ref({});
 
 workflowService
-  .getAll({ last_task_run: true, only_active: true })
+  .getAll({ last_task_run: true, status: "ACTIVE" })
   .then((res) => {
-    workflows.value = res.data;
+    workflows.value = res.data.results;
+    console.log("workflows", workflows.value);
   })
   .catch((err) => {
     console.error(err);
