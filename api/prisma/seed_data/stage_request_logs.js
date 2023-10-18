@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
 
-const { generate_date_range } = require('../src/services/datetime');
+const { generate_date_range } = require('../../src/services/datetime');
 const data = require('./data');
 
 const prisma = new PrismaClient();

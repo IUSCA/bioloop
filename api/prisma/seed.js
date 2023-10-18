@@ -2,11 +2,11 @@ const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
 const { normalize_name } = require('../src/services/project');
-const data = require('./data');
-const { random_files } = require('./random_paths');
-const { generate_data_access_logs } = require('./data_access_logs');
-const { generate_staged_logs } = require('./staged_logs');
-const { generate_stage_request_logs } = require('./stage_request_logs');
+const data = require('./seed_data/data');
+const { random_files } = require('./seed_data/random_paths');
+const { generate_data_access_logs } = require('./seed_data/data_access_logs');
+const { generate_staged_logs } = require('./seed_data/staged_logs');
+const { generate_stage_request_logs } = require('./seed_data/stage_request_logs');
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 

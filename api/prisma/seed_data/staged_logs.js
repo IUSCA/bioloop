@@ -1,6 +1,6 @@
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
-const { generate_date_range } = require('../src/services/datetime');
+const { generate_date_range } = require('../../src/services/datetime');
 const data = require('./data');
 
 // generates records to be seeded into the dataset_state table, across the given number of years
