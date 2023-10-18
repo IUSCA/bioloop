@@ -200,6 +200,41 @@ router.get(
   }),
 );
 
+const default_field_comparison_fns = {
+  equals: (e1, e2) => (e1 === e2),
+  isLessThan: (e1, e2) => (e1 < e2),
+  isGreaterThan: (e1, e2) => (e1 > e2),
+};
+
+/**
+ * Comparison functions used for sorting entities by fields present in JSON columns. These
+ * functions are provided to Array.prototype.sort() to determine sorting order between a given
+ * pair of entities based on the JSON field's value. Any given field can use a default set of
+ * comparison functions, or define its own custom comparison functions.
+ *
+ * To use default comparison functions for a field, an entry can be added for the field, like so:
+ *
+ * const metadata_field_comparison_fns = {
+ *   ...,
+ *   [field_name]: default_field_comparison_fns,
+ * };
+ *
+ * Custom comparison functions can also be defined for a field, like so:
+ *
+ * const metadata_field_comparison_fns = {
+ *   ...,
+ *   [field_name]: {
+ *     equals: (e1, e2) => (e1 === e2),      // replace with custom implementation
+ *     isLessThan: (e1, e2) => (e1 < e2),    // replace with custom implementation
+ *     isGreaterThan: (e1, e2) => (e1 > e2), // replace with custom implementation
+ *   },
+ * }
+ *
+ */
+const metadata_field_comparison_fns = {
+  num_genome_files: default_field_comparison_fns,
+};
+
 // get all - worker + UI
 router.get(
   '/',
@@ -220,13 +255,12 @@ router.get(
     // #swagger.tags = ['datasets']
 
     const sortBy = req.query.sortBy || {};
-    const metadata_fields = ['num_genome_files'];
 
     const sort_by_fields = _.pickBy(
-      (sortOrder, field) => !metadata_fields.includes(field),
+      (sortOrder, field) => !Object.keys(metadata_field_comparison_fns).includes(field),
     )(sortBy);
     const metadata_sort_by_fields = _.pickBy(
-      (sortOrder, field) => metadata_fields.includes(field),
+      (sortOrder, field) => Object.keys(metadata_field_comparison_fns).includes(field),
     )(sortBy);
     // console.log('metadata_sort_by_fields');
     // console.log(metadata_sort_by_fields);
@@ -260,20 +294,26 @@ router.get(
       },
     });
 
+    // Perform sorting by metadata fields, if said fields are included in request
     Object.entries(metadata_sort_by_fields).forEach(([sortField, sortOrder]) => {
       // console.log('sortField');
       // console.log(sortField);
       // console.log(sortOrder);
 
+      const field_comparison_fns = metadata_field_comparison_fns[sortField]
+        || default_field_comparison_fns;
+
       datasets.sort((d1, d2) => {
         if ((d1.metadata && d2.metadata)) {
-          if (d1.metadata[sortField] === d2.metadata[sortField]) {
+          if (field_comparison_fns.equals(d1.metadata[sortField], d2.metadata[sortField])) {
             return 0;
           }
           if (sortOrder === 'asc') {
-            return (d1.metadata[sortField] < d2.metadata[sortField] ? -1 : 1);
+            return (field_comparison_fns.isLessThan(d1.metadata[sortField], d2.metadata[sortField])
+              ? -1 : 1);
           }
-          return (d1.metadata[sortField] < d2.metadata[sortField]) ? 1 : -1;
+          return (field_comparison_fns.isGreaterThan(d1.metadata[sortField], d2.metadata[sortField])
+            ? -1 : 1);
         }
 
         if (!(d1.metadata || d2.metadata)) {
