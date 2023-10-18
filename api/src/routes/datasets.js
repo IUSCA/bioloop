@@ -22,6 +22,80 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const default_metadata_field_comparison_fns = {
+  equals: (e1, e2) => (e1 === e2),
+  isLessThan: (e1, e2) => (e1 < e2),
+  isGreaterThan: (e1, e2) => (e1 > e2),
+};
+
+/**
+ * Comparison functions used for sorting entities by fields present in JSON columns. These
+ * functions are provided to Array.prototype.sort() to determine sorting order between a given
+ * pair of entities based on the JSON field's value. Any given field can use a default set of
+ * comparison functions, or define its own custom comparison functions.
+ *
+ * To use default comparison functions for a field, an entry can be added for the field, like so:
+ *
+ * const metadata_field_comparison_fns = {
+ *   ...,
+ *   [field_name]: default_metadata_field_comparison_fns,
+ * };
+ *
+ * Custom comparison functions can also be defined for a field, like so:
+ *
+ * const metadata_field_comparison_fns = {
+ *   ...,
+ *   [field_name]: {
+ *     equals: (e1, e2) => (e1 === e2),      // replace with custom implementation
+ *     isLessThan: (e1, e2) => (e1 < e2),    // replace with custom implementation
+ *     isGreaterThan: (e1, e2) => (e1 > e2), // replace with custom implementation
+ *   },
+ * }
+ *
+ */
+const metadata_field_comparison_fns = {
+  num_genome_files: default_metadata_field_comparison_fns,
+};
+
+const sort_datasets_by_metadata_fields = (dataset1, dataset2, field, sortOrder, comparison_fns) => {
+  const field_val_1 = dataset1.metadata ? dataset1.metadata[field] : undefined;
+  const field_val_2 = dataset2.metadata ? dataset2.metadata[field] : undefined;
+
+  // If neither elements have metadata
+  if (!(dataset1.metadata || dataset2.metadata)) {
+    return 0;
+  }
+
+  // if both elements have metadata
+  if ((dataset1.metadata && dataset2.metadata)) {
+    // if field's value is equal for both element's metadata
+    if (comparison_fns.equals(field_val_1, field_val_2)) {
+      return 0;
+    }
+
+    // if either element's metadata does not have a value for the field, place it after the
+    // one which has a value for said field, irrespective of sort direction.
+    if (field_val_1 === undefined && field_val_2 !== undefined) {
+      return 1;
+    }
+    if (field_val_1 !== undefined && field_val_2 === undefined) {
+      return -1;
+    }
+
+    // if sort order is ascending
+    if (sortOrder === 'asc') {
+      return (comparison_fns.isLessThan(field_val_1, field_val_2)
+        ? -1 : 1);
+    }
+    // if sort order is descending
+    return (comparison_fns.isGreaterThan(field_val_1, field_val_2)
+      ? -1 : 1);
+  }
+
+  // if only one of the elements has metadata, place it after the one without metadata
+  return (!dataset1.metadata && dataset2.metadata) ? 1 : -1;
+};
+
 // stats - UI
 router.get(
   '/stats',
@@ -200,41 +274,6 @@ router.get(
   }),
 );
 
-const default_metadata_field_comparison_fns = {
-  equals: (e1, e2) => (e1 === e2),
-  isLessThan: (e1, e2) => (e1 < e2),
-  isGreaterThan: (e1, e2) => (e1 > e2),
-};
-
-/**
- * Comparison functions used for sorting entities by fields present in JSON columns. These
- * functions are provided to Array.prototype.sort() to determine sorting order between a given
- * pair of entities based on the JSON field's value. Any given field can use a default set of
- * comparison functions, or define its own custom comparison functions.
- *
- * To use default comparison functions for a field, an entry can be added for the field, like so:
- *
- * const metadata_field_comparison_fns = {
- *   ...,
- *   [field_name]: default_metadata_field_comparison_fns,
- * };
- *
- * Custom comparison functions can also be defined for a field, like so:
- *
- * const metadata_field_comparison_fns = {
- *   ...,
- *   [field_name]: {
- *     equals: (e1, e2) => (e1 === e2),      // replace with custom implementation
- *     isLessThan: (e1, e2) => (e1 < e2),    // replace with custom implementation
- *     isGreaterThan: (e1, e2) => (e1 > e2), // replace with custom implementation
- *   },
- * }
- *
- */
-const metadata_field_comparison_fns = {
-  num_genome_files: default_metadata_field_comparison_fns,
-};
-
 // get all - worker + UI
 router.get(
   '/',
@@ -303,43 +342,9 @@ router.get(
       const field_comparison_fns = metadata_field_comparison_fns[sortField]
         || default_metadata_field_comparison_fns;
 
+      // eslint-disable-next-line arrow-body-style
       datasets.sort((e1, e2) => {
-        const e1_field_val = e1.metadata ? e1.metadata[sortField] : undefined;
-        const e2_field_val = e2.metadata ? e2.metadata[sortField] : undefined;
-
-        // If neither elements have metadata
-        if (!(e1.metadata || e2.metadata)) {
-          return 0;
-        }
-
-        // if both elements have metadata
-        if ((e1.metadata && e2.metadata)) {
-          // if field's value is equal for both element's metadata
-          if (field_comparison_fns.equals(e1_field_val, e2_field_val)) {
-            return 0;
-          }
-
-          // if either element's metadata does not have a value for the field, place it after the
-          // one which has a value for said field, irrespective of sort direction.
-          if (e1_field_val === undefined && e2_field_val !== undefined) {
-            return 1;
-          }
-          if (e1_field_val !== undefined && e2_field_val === undefined) {
-            return -1;
-          }
-
-          // if sort order is ascending
-          if (sortOrder === 'asc') {
-            return (field_comparison_fns.isLessThan(e1_field_val, e2_field_val)
-              ? -1 : 1);
-          }
-          // if sort order is descending
-          return (field_comparison_fns.isGreaterThan(e1_field_val, e2_field_val)
-            ? -1 : 1);
-        }
-
-        // if only one of the elements has metadata, place it after the one without metadata
-        return (!e1.metadata && e2.metadata) ? 1 : -1;
+        return sort_datasets_by_metadata_fields(e1, e2, sortField, sortOrder, field_comparison_fns);
       });
     });
 
