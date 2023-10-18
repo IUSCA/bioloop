@@ -200,7 +200,7 @@ router.get(
   }),
 );
 
-const default_field_comparison_fns = {
+const default_metadata_field_comparison_fns = {
   equals: (e1, e2) => (e1 === e2),
   isLessThan: (e1, e2) => (e1 < e2),
   isGreaterThan: (e1, e2) => (e1 > e2),
@@ -216,7 +216,7 @@ const default_field_comparison_fns = {
  *
  * const metadata_field_comparison_fns = {
  *   ...,
- *   [field_name]: default_field_comparison_fns,
+ *   [field_name]: default_metadata_field_comparison_fns,
  * };
  *
  * Custom comparison functions can also be defined for a field, like so:
@@ -232,7 +232,7 @@ const default_field_comparison_fns = {
  *
  */
 const metadata_field_comparison_fns = {
-  num_genome_files: default_field_comparison_fns,
+  num_genome_files: default_metadata_field_comparison_fns,
 };
 
 // get all - worker + UI
@@ -301,7 +301,7 @@ router.get(
       // console.log(sortOrder);
 
       const field_comparison_fns = metadata_field_comparison_fns[sortField]
-        || default_field_comparison_fns;
+        || default_metadata_field_comparison_fns;
 
       datasets.sort((e1, e2) => {
         const e1_field_val = e1.metadata ? e1.metadata[sortField] : undefined;
@@ -342,6 +342,7 @@ router.get(
         return (!e1.metadata && e2.metadata) ? 1 : -1;
       });
     });
+
     res.json(datasets);
   }),
 );
