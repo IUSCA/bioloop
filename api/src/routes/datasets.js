@@ -172,6 +172,8 @@ router.get(
   validate([
     query('deleted').toBoolean().optional(),
     query('processed').toBoolean().optional(),
+    query('archived').toBoolean().optional(),
+    query('staged').toBoolean().optional(),
     query('type').isIn(config.dataset_types).optional(),
     query('name').notEmpty().escape().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
@@ -179,10 +181,12 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const query_obj = buildQueryObject({
       deleted: req.query.deleted,
+      processed: req.query.processed,
+      archived: req.query.archived,
+      staged: req.query.staged,
       type: req.query.type,
       name: req.query.name,
       days_since_last_staged: req.query.days_since_last_staged,
-      processed: req.query.processed,
     });
 
     const count = await prisma.dataset.aggregate({

@@ -34,6 +34,8 @@ class DatasetService {
   getCount({
     deleted = null,
     processed = null,
+    archived = null,
+    staged = null,
     type = null,
     name = null,
   } = {}) {
@@ -41,6 +43,8 @@ class DatasetService {
       params: {
         deleted,
         processed,
+        archived,
+        staged,
         type,
         name,
       },
