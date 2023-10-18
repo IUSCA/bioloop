@@ -274,7 +274,8 @@ router.get(
   }),
 );
 
-// get all - worker + UI
+// Get all datasets. Results can optionally be filtered and sorted by the criteria specified.
+// Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -301,11 +302,6 @@ router.get(
     const metadata_sort_by_fields = _.pickBy(
       (sortOrder, field) => Object.keys(metadata_field_comparison_fns).includes(field),
     )(sortBy);
-    // console.log('metadata_sort_by_fields');
-    // console.log(metadata_sort_by_fields);
-    // const num_genome_file_sort_order = !_.isEmpty(metadata_sort_by_fields)
-    //   ? Object.values(metadata_sort_by_fields)[0]
-    //   : undefined;
 
     const query_obj = buildQueryObject({
       deleted: req.query.deleted,
@@ -333,12 +329,8 @@ router.get(
       },
     });
 
-    // Perform sorting by metadata fields, if said fields are included in request
+    // Perform sorting by metadata fields, if said fields are included in request.
     Object.entries(metadata_sort_by_fields).forEach(([sortField, sortOrder]) => {
-      // console.log('sortField');
-      // console.log(sortField);
-      // console.log(sortOrder);
-
       const field_comparison_fns = metadata_field_comparison_fns[sortField]
         || default_metadata_field_comparison_fns;
 
