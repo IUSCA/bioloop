@@ -39,7 +39,7 @@
         }
       "
     >
-      <template #bodyAppend>
+      <template v-if="total_page_count > 1" #bodyAppend>
         <tr>
           <td>
             <div class="flex mt-4">
