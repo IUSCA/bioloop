@@ -228,8 +228,8 @@ router.get(
     const metadata_sort_by_fields = _.pickBy(
       (sortOrder, field) => metadata_fields.includes(field),
     )(sortBy);
-    console.log('metadata_sort_by_fields');
-    console.log(metadata_sort_by_fields);
+    // console.log('metadata_sort_by_fields');
+    // console.log(metadata_sort_by_fields);
     // const num_genome_file_sort_order = !_.isEmpty(metadata_sort_by_fields)
     //   ? Object.values(metadata_sort_by_fields)[0]
     //   : undefined;
@@ -261,48 +261,27 @@ router.get(
     });
 
     Object.entries(metadata_sort_by_fields).forEach(([sortField, sortOrder]) => {
-      console.log('sortField');
-      console.log(sortField);
-      console.log(sortOrder);
+      // console.log('sortField');
+      // console.log(sortField);
+      // console.log(sortOrder);
 
       datasets.sort((d1, d2) => {
-        try {
-          if ((!d1.metadata && !d2.metadata) || (d1.metadata && d2.metadata && d1.metadata[sortField] === d2.metadata[sortField])) {
-            console.log('past first if');
+        if ((d1.metadata && d2.metadata)) {
+          if (d1.metadata[sortField] === d2.metadata[sortField]) {
             return 0;
           }
-
-          // if (!d1.metadata && d2.metadata) {
-          //   return 1;
-          // }
-          // if (d1.metadata && !d2.metadata) {
-          //   return -1;
-          // }
-
-          return (!d1.metadata && d2.metadata) ? 1 : -1;
-
           if (sortOrder === 'asc') {
-            console.log('past second if');
-            return d1.metadata[sortField] < d2.metadata[sortField] ? -1 : 1;
+            return (d1.metadata[sortField] < d2.metadata[sortField] ? -1 : 1);
           }
-          // when sorting in descending, fields without a value should be placed after the ones with
-          // a value
-          // TODO - make optional
-          console.log('at finsla return');
-          return (
-            // d1.metadata[sortField] === undefined
-            // ||
-            d1.metadata[sortField] < d2.metadata[sortField]
-          ) ? 1 : -1;
-        } catch (e) {
-          console.log('ERROR');
-          console.log(e);
-          console.log(d1.name);
-          console.log(d1.metadata);
-          console.log(d2.name);
-          console.log(d2.metadata);
+          return (d1.metadata[sortField] < d2.metadata[sortField]) ? 1 : -1;
         }
-        return 0;
+
+        if (!(d1.metadata || d2.metadata)) {
+          return 0;
+        }
+
+        // Sort such that null values are placed last
+        return (!d1.metadata && d2.metadata) ? 1 : -1;
       });
     });
     res.json(datasets);
