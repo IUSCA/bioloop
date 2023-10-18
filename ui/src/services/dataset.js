@@ -70,14 +70,6 @@ class DatasetService {
     });
   }
 
-  // search({ name }) {
-  //   return api.get("/datasets/search", {
-  //     params: {
-  //       query: name,
-  //     },
-  //   });
-  // }
-
   stage_dataset(id) {
     return api
       .post(`/datasets/${id}/workflow/stage`)

@@ -1,5 +1,4 @@
 <template>
-  <!--  <va-button @click="testEvent">Test</va-button>-->
   <div>
     <!-- search bar and filter -->
     <div class="flex mb-3 gap-3">
