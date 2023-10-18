@@ -21,3 +21,4 @@ echo APP_GID=$APP_GID >> .env
 
 sudo docker compose -f "docker-compose-prod.yml" build api
 sudo docker compose -f "docker-compose-prod.yml" up -d
+sudo docker compose -f "docker-compose-prod.yml" restart api
