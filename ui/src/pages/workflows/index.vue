@@ -15,10 +15,12 @@
       <!-- status filters -->
       <div class="text-lg font-semibold hidden md:block">Status</div>
       <!-- reset page when user selects a new filter -->
+
       <va-tabs
         v-model="query_params.status"
         :vertical="!breakpoint_sm"
         @update:model-value="query_params.page = 1"
+        class="md:min-h-[164px]"
       >
         <template #tabs>
           <va-tab
@@ -37,7 +39,12 @@
 
       <!-- group filters -->
       <div class="text-lg font-semibold hidden md:block">Status Group</div>
-      <va-tabs v-model="query_params.status" :vertical="!breakpoint_sm">
+
+      <va-tabs
+        v-model="query_params.status"
+        :vertical="!breakpoint_sm"
+        class="md:min-h-[100px]"
+      >
         <template #tabs>
           <va-tab
             v-for="status in Object.keys(group_counts)"
@@ -161,11 +168,12 @@ const workflows = ref([]);
 const workflows_total_count = ref(0);
 const status_counts = ref({});
 
-const query_params = ref();
+const query_params = ref(default_query_params());
 useQueryPersistence({
   refObject: query_params,
   defaultValue: default_query_params(),
   key: "wq",
+  history_push: false,
 });
 
 const group_counts = computed(() => {
@@ -186,7 +194,6 @@ const total_pages = computed(() => {
 });
 
 // fetch data when query params change
-// update URL query params
 watch(
   [() => query_params.value.status, () => query_params.value.page],
   () => {
@@ -278,6 +285,7 @@ meta:
   requiresRoles: ["operator", "admin"]
 </route>
 
+<!-- making this style scoped does not seem to apply this style to the select component -->
 <style>
 .auto-refresh-select fieldset.va-input-wrapper__size-keeper {
   width: 100%;

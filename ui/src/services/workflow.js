@@ -54,7 +54,6 @@ class WorkflowService {
   }
 
   is_step_pending(step_name, workflows) {
-    console.log(workflows);
     const active_wfs = (workflows || []).filter(
       (wf) => !this.is_workflow_done(wf),
     );
