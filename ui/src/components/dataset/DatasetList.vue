@@ -38,25 +38,6 @@
         }
       "
     >
-      <template v-if="total_page_count > 1" #bodyAppend>
-        <tr>
-          <td>
-            <div class="flex mt-4">
-              <va-pagination
-                v-model="currentPageIndex"
-                :pages="total_page_count"
-                :visible-pages="
-                  total_page_count < VISIBLE_PAGES_THRESHOLD
-                    ? total_page_count
-                    : VISIBLE_PAGES_THRESHOLD
-                "
-              >
-              </va-pagination>
-            </div>
-          </td>
-        </tr>
-      </template>
-
       <template #cell(name)="{ rowData }">
         <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
           rowData.name
@@ -135,6 +116,17 @@
         </div>
       </template>
     </va-data-table>
+
+    <div class="flex justify-center mt-4" v-if="total_page_count > 1">
+      <div class="flex-none">
+        <va-pagination
+          v-model="currentPageIndex"
+          :pages="total_page_count"
+          :visible-pages="Math.min(total_page_count, VISIBLE_PAGES_THRESHOLD)"
+        >
+        </va-pagination>
+      </div>
+    </div>
 
     <!-- launch modal -->
     <va-modal
@@ -378,14 +370,13 @@ const datasets_retrieval_query = computed(() => {
 function fetch_datasets(query = {}, updatePageCount = true) {
   data_loading.value = true;
 
-  if (updatePageCount) {
-    // update page-count for pagination
-    configure_num_pages();
-  }
-
   return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
     .then((res) => {
       datasets.value = res.data.datasets;
+      if (updatePageCount) {
+        // update page-count for pagination
+        total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
+      }
     })
     .catch((err) => {
       console.error(err);
@@ -426,13 +417,6 @@ function delete_dataset(id) {
     .finally(() => {
       data_loading.value = false;
     });
-}
-
-// Configures number of paginated-pages
-function configure_num_pages() {
-  DatasetService.getAll({ ...datasets_filter_query.value }).then((res) => {
-    total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
-  });
 }
 
 const updateFiltersGroupQuery = (newVal) => {
