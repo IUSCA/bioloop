@@ -188,7 +188,7 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('deleted').toBoolean().optional(),
+    query('deleted').toBoolean().default(false),
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
@@ -456,8 +456,8 @@ router.delete(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = starts a delete archive workflow and
-    // marks the dataset as deleted on success.
+    // #swagger.summary = starts a delete archive workflow which will
+    // mark the dataset as deleted on success.
     const _dataset = await datasetService.get_dataset({
       id: req.params.id,
       workflows: true,

@@ -95,10 +95,17 @@
               <i-mdi-rocket-launch />
             </va-button>
           </va-popover>
+
+          <!-- Delete button -->
+          <!-- Only show when the dataset has no workflows, is not archived, and has no workflows -->
           <va-popover
             message="Delete entry"
             placement="left"
-            v-if="(rowData?.workflows?.length || 0) == 0 && !rowData.is_deleted"
+            v-if="
+              (rowData?.workflows?.length || 0) == 0 &&
+              !rowData.is_deleted &&
+              !rowData.is_archived
+            "
           >
             <va-button
               size="small"
