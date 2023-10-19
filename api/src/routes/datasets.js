@@ -214,10 +214,11 @@ router.get(
       days_since_last_staged: req.query.days_since_last_staged,
     });
 
-    const datasets = await prisma.dataset.findMany({
+    const filterQuery = { where: query_obj };
+    const datasetRetrievalQuery = {
       skip: req.query.offset,
       take: req.query.limit,
-      where: query_obj,
+      ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
@@ -225,10 +226,15 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
       },
-    });
+    };
+
+    const [datasets, count] = await prisma.$transaction([
+      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
+      prisma.dataset.count({ ...filterQuery }),
+    ]);
 
     res.json({
-      metadata: { count: datasets.length },
+      metadata: { count },
       datasets,
     });
   }),
