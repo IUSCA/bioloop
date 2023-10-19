@@ -284,9 +284,6 @@ const columns = ref([
   {
     key: "num_genome_files",
     label: "data files",
-    sortable: true,
-    sortingOptions: ["desc", "asc", null],
-    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "80px",
   },
   {
