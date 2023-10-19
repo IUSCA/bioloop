@@ -260,7 +260,6 @@ const columns = ref([
     label: "archived",
     thAlign: "center",
     tdAlign: "center",
-    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "100px",
   },
   {
@@ -269,7 +268,6 @@ const columns = ref([
     label: "staged",
     thAlign: "center",
     tdAlign: "center",
-    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "80px",
   },
   {
@@ -277,8 +275,8 @@ const columns = ref([
     label: "last updated",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
-    width: "150px",
     sortingFn: () => {}, // overrides va-data-table's default sorting behavior
+    width: "150px",
   },
   // { key: "status", sortable: false },
   {
