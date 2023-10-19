@@ -149,6 +149,22 @@ const buildQueryObject = ({
   return query_obj;
 };
 
+const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
+  const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
+
+  if (!field || !sortOrder) {
+    return {};
+  }
+  if (nullable_order_by_fields.includes(field)) {
+    return {
+      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
+    };
+  }
+  return {
+    [field]: sortOrder,
+  };
+};
+
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -202,10 +218,7 @@ router.get(
       skip: req.query.offset,
       take: req.query.limit,
       where: query_obj,
-      orderBy: Object.entries(sortBy).length > 0
-        ? Object.entries(sortBy)
-          .map(([field, sortDirection]) => ({ [field]: sortDirection }))
-        : [],
+      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...datasetService.INCLUDE_STATES,

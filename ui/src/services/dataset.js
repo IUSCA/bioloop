@@ -17,8 +17,8 @@ class DatasetService {
    * @param name      Field to filter datasets by `name`
    * @param limit     The number of datasets to be retrieved
    * @param offset    Database offset starting at which results will be retrieved
-   * @param sortBy    Object containing properties to sort datasets by, whose keys are the names
-   *                  of said properties, and values are one of 'asc' or 'desc'
+   * @param sortBy    Object containing property to sort datasets by, whose key is the name
+   *                  of said property, and value is one of 'asc' or 'desc'
    * @returns         Object containing matching datasets, and count of matching datasets
    */
   getAll({
