@@ -381,12 +381,13 @@ function fetch_datasets(query = {}, updatePageCount = true) {
   data_loading.value = true;
 
   if (updatePageCount) {
+    // update page-count for pagination
     configure_num_pages();
   }
 
   return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
     .then((res) => {
-      datasets.value = res.data;
+      datasets.value = res.data.datasets;
     })
     .catch((err) => {
       console.error(err);
@@ -431,8 +432,8 @@ function delete_dataset(id) {
 
 // Configures number of paginated-pages
 function configure_num_pages() {
-  DatasetService.getCount(datasets_filter_query.value).then((res) => {
-    total_page_count.value = Math.ceil(res.data.count / PAGE_SIZE);
+  DatasetService.getAll({ ...datasets_filter_query.value }).then((res) => {
+    total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
   });
 }
 

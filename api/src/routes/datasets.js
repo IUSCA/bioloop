@@ -165,42 +165,8 @@ router.post(
   }),
 );
 
-// Get dataset count by criteria (used for paginating dataset lists)
-router.get(
-  '/count',
-  isPermittedTo('read'),
-  validate([
-    query('deleted').toBoolean().optional(),
-    query('processed').toBoolean().optional(),
-    query('archived').toBoolean().optional(),
-    query('staged').toBoolean().optional(),
-    query('type').isIn(config.dataset_types).optional(),
-    query('name').notEmpty().escape().optional(),
-    query('days_since_last_staged').isInt().toInt().optional(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const query_obj = buildQueryObject({
-      deleted: req.query.deleted,
-      processed: req.query.processed,
-      archived: req.query.archived,
-      staged: req.query.staged,
-      type: req.query.type,
-      name: req.query.name,
-      days_since_last_staged: req.query.days_since_last_staged,
-    });
-
-    const count = await prisma.dataset.aggregate({
-      where: query_obj,
-      _count: {
-        _all: true,
-      },
-    });
-
-    res.json({ count: count._count._all });
-  }),
-);
-
-// Get all datasets. Results can optionally be filtered and sorted by the criteria specified.
+// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
+// the criteria specified.
 // Used by workers + UI.
 router.get(
   '/',
@@ -248,7 +214,10 @@ router.get(
       },
     });
 
-    res.json(datasets);
+    res.json({
+      metadata: { count: datasets.length },
+      datasets,
+    });
   }),
 );
 
