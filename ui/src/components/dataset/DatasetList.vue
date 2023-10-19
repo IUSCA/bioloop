@@ -20,7 +20,7 @@
 
       <!-- filter -->
       <div class="flex-none flex items-center justify-center">
-        <filters-group @update="fetch_all"></filters-group>
+        <filters-group @update="updateFiltersGroupQuery"></filters-group>
       </div>
     </div>
 
@@ -28,10 +28,15 @@
     <va-data-table
       :items="datasets"
       :columns="columns"
-      v-model:sort-by="sortBy"
-      v-model:sorting-order="sortingOrder"
+      v-model:sort-by="defaultSortField"
+      v-model:sorting-order="defaultSortOrder"
       :loading="data_loading"
-      :filter="filterInput"
+      @sorted="
+        (attrs) => {
+          defaultSortField = attrs.sortBy;
+          defaultSortOrder = attrs.sortingOrder;
+        }
+      "
     >
       <template #cell(name)="{ rowData }">
         <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
@@ -112,6 +117,17 @@
       </template>
     </va-data-table>
 
+    <div class="flex justify-center mt-4" v-if="total_page_count > 1">
+      <div class="flex-none">
+        <va-pagination
+          v-model="currentPageIndex"
+          :pages="total_page_count"
+          :visible-pages="Math.min(total_page_count, VISIBLE_PAGES_THRESHOLD)"
+        >
+        </va-pagination>
+      </div>
+    </div>
+
     <!-- launch modal -->
     <va-modal
       :title="`Archive ${props.label} ${launch_modal.selected?.name}`"
@@ -182,6 +198,7 @@ import * as datetime from "@/services/datetime";
 import config from "@/config";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { useToastStore } from "@/stores/toast";
+import _ from "lodash";
 
 const toast = useToastStore();
 useSearchKeyShortcut();
@@ -203,14 +220,30 @@ const delete_modal = ref({
   selected: null,
 });
 
+/**
+ * Results are fetched in batches for efficient pagination, but the sorting criteria specified
+ * needs to query all of persistent storage (as opposed to the current batch of retrieved results).
+ * Hence, va-data-table's default sorting behavior (which would normally only sort the current
+ * batch of results) is overridden (by providing each column with a `sortingFn` prop that does
+ * nothing), and instead, network calls are made to run the sorting criteria across all of
+ * persistent storage. The field to sort the results by and the sort order are captured in
+ * va-data-table's 'sorted' event, and added to the sorting criteria maintained in the
+ * `datasets_sort_query` reactive variable.
+ */
 const columns = ref([
   // { key: "id", sortable: true, sortingOptions: ["desc", "asc", null] },
-  { key: "name", sortable: true, sortingOptions: ["desc", "asc", null] },
+  {
+    key: "name",
+    sortable: true,
+    sortingOptions: ["desc", "asc", null],
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
+  },
   {
     key: "created_at",
     label: "registered on",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "100px",
   },
   {
@@ -219,7 +252,6 @@ const columns = ref([
     label: "archived",
     thAlign: "center",
     tdAlign: "center",
-    sortable: true,
     width: "100px",
   },
   {
@@ -228,7 +260,6 @@ const columns = ref([
     label: "staged",
     thAlign: "center",
     tdAlign: "center",
-    sortable: true,
     width: "80px",
   },
   {
@@ -236,14 +267,13 @@ const columns = ref([
     label: "last updated",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "150px",
   },
   // { key: "status", sortable: false },
   {
     key: "num_genome_files",
     label: "data files",
-    sortable: true,
-    sortingOptions: ["desc", "asc", null],
     width: "80px",
   },
   {
@@ -251,8 +281,8 @@ const columns = ref([
     label: "size",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "100px",
-    sortingFn: (a, b) => a - b,
   },
   {
     key: "workflows",
@@ -262,10 +292,6 @@ const columns = ref([
   },
   { key: "actions", width: "100px" },
 ]);
-
-// initial sorting order
-const sortBy = ref("updated_at");
-const sortingOrder = ref("desc");
 
 // function getRowBind(row) {
 //   // const active_wf = row.workflows?.filter(
@@ -281,11 +307,76 @@ const sortingOrder = ref("desc");
 //   }
 // }
 
-function fetch_all(query = {}) {
+const defaultSortField = ref("updated_at");
+const defaultSortOrder = ref("desc");
+
+const PAGE_SIZE = 20;
+const VISIBLE_PAGES_THRESHOLD = 5; // Maximum number of visible pages shown at a time
+
+const currentPageIndex = ref(1);
+const total_page_count = ref(0);
+
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+const offset = computed(() => (currentPageIndex.value - 1) * PAGE_SIZE);
+// used for LIMIT clause in the SQL used to retrieve the next paginated batch of results
+const resultLimit = ref(PAGE_SIZE);
+
+// Criterion based on search input
+const search_query = computed(() => {
+  return filterInput.value?.length > 0 && { name: filterInput.value };
+});
+
+// Criteria for group of true/false fields that results can be filtered by
+const filters_group_query = ref({});
+
+// Aggregation of all filtering criteria. Used for retrieving results, and configuring number of
+// pages for pagination.
+const datasets_filter_query = computed(() => {
+  return {
+    type: props.dtype,
+    ...filters_group_query.value,
+    ...(!!search_query.value && { ...search_query.value }),
+  };
+});
+
+// Criterion for sorting. Initial sorting order is based on the `updated_at` field. The sorting
+// criterion can be updated, which will trigger a call to retrieve the updated search results.
+// Note - va-data-table supports sorting by one column at a time, so this object should always have
+// a single key-value pair.
+let datasets_sort_query = computed(() => {
+  return { [defaultSortField.value]: defaultSortOrder.value };
+});
+
+// Criteria used to limit the number of results retrieved, and to define the offset starting at
+// which the next batch of results will be retrieved.
+const datasets_batching_query = computed(() => {
+  return { offset: offset.value, limit: resultLimit.value };
+});
+
+// Aggregate of all other criteria. Used for retrieving results according to the criteria
+// specified.
+const datasets_retrieval_query = computed(() => {
+  return {
+    ...datasets_filter_query.value,
+    ...datasets_batching_query.value,
+    sortBy: datasets_sort_query.value,
+  };
+});
+
+/**
+ * Fetches updated list of datasets, based on the query provided, and updates the pagination
+ * page-count. Page-count update can be opted out of by providing `false` to updatePageCount.
+ */
+function fetch_datasets(query = {}, updatePageCount = true) {
   data_loading.value = true;
-  return DatasetService.getAll({ type: props.dtype, ...query })
+
+  return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
     .then((res) => {
-      datasets.value = res.data;
+      datasets.value = res.data.datasets;
+      if (updatePageCount) {
+        // update page-count for pagination
+        total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
+      }
     })
     .catch((err) => {
       console.error(err);
@@ -295,14 +386,13 @@ function fetch_all(query = {}) {
       data_loading.value = false;
     });
 }
-fetch_all();
 
 function launch_wf(id) {
   data_loading.value = true;
   DatasetService.archive_dataset(id)
     .then(() => {
       toast.success(`Launched a workflow to archive the dataset: ${id}`);
-      fetch_all();
+      fetch_datasets();
     })
     .catch((err) => {
       console.error(err);
@@ -318,7 +408,7 @@ function delete_dataset(id) {
   DatasetService.delete_dataset({ id, soft_delete: false })
     .then(() => {
       toast.success(`Deleted dataset: ${id}`);
-      fetch_all();
+      fetch_datasets();
     })
     .catch((err) => {
       console.error(err);
@@ -328,4 +418,25 @@ function delete_dataset(id) {
       data_loading.value = false;
     });
 }
+
+const updateFiltersGroupQuery = (newVal) => {
+  filters_group_query.value = newVal;
+};
+
+onMounted(() => {
+  // fetch results to be shown on page load
+  fetch_datasets();
+});
+
+watch([datasets_sort_query, datasets_filter_query], () => {
+  // when sorting or filtering criteria changes, show results starting from the first page
+  currentPageIndex.value = 1;
+});
+
+watch(datasets_retrieval_query, (newQuery, oldQuery) => {
+  // Retrieve updated results whenever retrieval criteria changes
+  if (!_.isEqual(newQuery, oldQuery)) {
+    fetch_datasets();
+  }
+});
 </script>

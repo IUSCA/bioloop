@@ -136,7 +136,7 @@ def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, 
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
-        datasets = r.json()
+        datasets = r.json()['datasets']
         return [dataset_getter(dataset) for dataset in datasets]
 
 
