@@ -1,7 +1,7 @@
 <template>
   <div v-if="failed_task_run">
     <div
-      class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+      class="bg-red-100 border dark:bg-red-900 text-red-700 dark:text-red-100 px-4 py-3 rounded relative"
       role="alert"
     >
       <strong class="font-bold">{{ failed_task_run.result.exc_type }}</strong>
@@ -17,14 +17,16 @@
       <!-- toggle traceback button -->
       <button
         @click="showTraceback = !showTraceback"
-        class="absolute top-0 bottom-0 right-0 px-4 py-3 focus:outline-none"
+        class="absolute top-0 bottom-0 right-0 px-4 py-3 focus:outline-none text-red-700 dark:text-red-100"
       >
         {{ showTraceback ? "Hide" : "Show" }} Traceback
       </button>
     </div>
 
-    <div v-if="showTraceback" class="mt-3">
-      <div class="bg-gray-100 border border-gray-300 px-4 py-2 rounded text-xs">
+    <div v-if="showTraceback" class="mt-2">
+      <div
+        class="bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 px-4 py-2 rounded text-xs max-h-[300px] overflow-scroll"
+      >
         <pre class="whitespace-pre-wrap">{{ failed_task_run.traceback }}</pre>
       </div>
     </div>

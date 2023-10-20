@@ -75,8 +75,6 @@
         </template>
       </va-data-table>
 
-      <va-divider />
-
       <!-- Error message -->
       <div>
         <WorkflowError :workflow="workflow" />
