@@ -35,7 +35,7 @@ module.exports = {
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/workers/metrics.err",
       out_file: "../logs/workers/metrics.log",
-      cron_restart: "0 * * * *",
+      cron_restart: "00 21 * * *",
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
