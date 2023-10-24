@@ -15,7 +15,7 @@
   >
     <template #cell(size)="{ rowData }">
       <span v-if="rowData.filetype !== 'directory'">
-        {{ rowData.size != null ? formatBytes(rowData.size) : "" }}
+        {{ rowData.size != null ? formatBytes(parseInt(rowData.size)) : "" }}
       </span>
     </template>
 
