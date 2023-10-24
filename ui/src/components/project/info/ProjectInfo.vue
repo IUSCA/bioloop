@@ -35,7 +35,7 @@
           </td>
         </tr>
         <tr>
-          <td>Space Utilized</td>
+          <td>Storage Allocation</td>
           <td>
             <span class="spacing-wider">
               {{ formatBytes(project_space_occupied) }}
@@ -75,22 +75,12 @@ import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 const props = defineProps({ project: Object });
 
-const project_space_occupied = ref(0);
-
-watch(
-  () => props.project,
-  () => {
-    if (!props.project) {
-      return 0;
-    }
-    project_space_occupied.value = props.project.datasets.reduce(
-      (accumulator, currentValue) => accumulator + currentValue.dataset.size,
-      0,
-    );
-  },
-);
-
-console.log(props.project);
+const project_space_occupied = computed(() => {
+  return (props.project?.datasets || []).reduce(
+    (acc, curr) => acc + (parseInt(curr?.dataset?.size) || 0),
+    0,
+  );
+});
 </script>
 
 <style lang="scss" scoped>
