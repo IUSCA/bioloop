@@ -27,7 +27,7 @@
           <!-- Name and caption -->
           <va-list-item-section>
             <va-list-item-label>
-              <span class="text-lg">Direct Download (individual files)</span>
+              <span class="text-lg">Direct Download (Individual Files)</span>
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of all files will use
@@ -58,17 +58,16 @@
         <va-list-item>
           <!-- icon -->
           <va-list-item-section avatar>
-            <i-mdi:monitor-arrow-down class="text-2xl" />
+            <i-mdi:folder-zip-outline class="text-2xl" />
           </va-list-item-section>
 
           <!-- .tar file download -->
           <va-list-item-section>
             <va-list-item-label>
-              <span class="text-lg">Direct Download (compressed dataset)</span>
+              <span class="text-lg">Direct Download (Archive)</span>
               <span class="px-1"> - </span>
               <span class="">
-                Transfer of compressed dataset will use
-                {{ formatBytes(dataset.bundle_size) }} of bandwidth
+                {{ formatBytes(dataset.bundle_size) }}
               </span>
             </va-list-item-label>
           </va-list-item-section>

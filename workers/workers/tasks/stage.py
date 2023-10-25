@@ -11,7 +11,6 @@ from sca_rhythm import WorkflowTask
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
-from workers.config import config
 from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
@@ -63,9 +62,10 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> str:
     returns: stage_path
     """
     staging_dir, alias = compute_staging_path(dataset)
-    
+
     sda_tar_path = dataset['archive_path']
-    scratch_tar_path = Path(f'{str(staging_dir.parent)}/{dataset["name"]}.tar') # staging_dir.parent = the alias sub-directory
+    # staging_dir.parent = the alias sub-directory
+    scratch_tar_path = Path(f'{str(staging_dir.parent)}/{dataset["name"]}.tar')
     wf_utils.download_file_from_sda(sda_file_path=sda_tar_path,
                                     local_file_path=scratch_tar_path,
                                     celery_task=celery_task)

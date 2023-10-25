@@ -9,7 +9,6 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.config import config
-from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -45,8 +44,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    staging_dir = compute_staging_path(dataset)[0]
-    scratch_tar_path = Path(f'{str(staging_dir.parent)}/{dataset["name"]}.tar') # staging_dir.parent = the alias sub-directory
+    scratch_tar_path = Path(f'{config["paths"]["scratch"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
                  tar_path=scratch_tar_path,
@@ -58,19 +56,21 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     wf_utils.upload_file_to_sda(local_file_path=scratch_tar_path,
                                 sda_file_path=sda_tar_path,
                                 celery_task=celery_task)
+
+    bundle_size = scratch_tar_path.stat().st_size
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
         scratch_tar_path.unlink()
 
-    return sda_tar_path, scratch_tar_path
+    return sda_tar_path, bundle_size
 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    sda_tar_path, scratch_tar_path = archive(celery_task, dataset)
+    sda_tar_path, bundle_size = archive(celery_task, dataset)
     update_data = {
         'archive_path': sda_tar_path,
-        'bundle_size': scratch_tar_path.stat().st_size
+        'bundle_size': bundle_size
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='ARCHIVED')

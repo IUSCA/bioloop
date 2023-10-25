@@ -44,7 +44,8 @@ def grant_access_to_parent_chain(leaf: Path, root: Path):
 def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     staged_path, alias = compute_staging_path(dataset)
-    scratch_tar_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar') # staged_path.parent = the alias sub-directory
+    # staged_path.parent = the alias sub-directory
+    scratch_tar_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
 
     if not staged_path.exists():
         # TODO: more robust validation?
