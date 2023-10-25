@@ -38,44 +38,24 @@
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
-          "name": "await stability",
-          "task": "await_stability",
-          "queue": "archive.xenium.sca.iu.edu.q"
-        },
-        {
           "name": "inspect",
-          "task": "inspect_dataset",
-          "queue": "archive.xenium.sca.iu.edu.q"
-        },
-        {
-          "name": "parse_analysis_data",
-          "task": "parse_analysis_data",
-          "queue": "archive.xenium.sca.iu.edu.q"
+          "task": "inspect_dataset"
         },
         {
           "name": "archive",
-          "task": "archive_dataset",
-          "queue": "archive.xenium.sca.iu.edu.q"
+          "task": "archive_dataset"
         },
         {
           "name": "stage",
-          "task": "stage_dataset",
-          "queue": "fetch.xenium.sca.iu.edu.q"
+          "task": "stage_dataset"
         },
         {
           "name": "validate",
-          "task": "validate_dataset",
-          "queue": "fetch.xenium.sca.iu.edu.q"
+          "task": "validate_dataset"
         },
         {
-          "name": "setup_download",
-          "task": "setup_dataset_download",
-          "queue": "fetch.xenium.sca.iu.edu.q"
-        },
-        {
-          "name": "upload_static_content",
-          "task": "upload_static_content",
-          "queue": "fetch.xenium.sca.iu.edu.q"
+          "name": "generate_qc",
+          "task": "generate_qc"
         }
       ]
     },
@@ -83,23 +63,15 @@
       "steps": [
         {
           "name": "stage",
-          "task": "stage_dataset",
-          "queue": "fetch.xenium.sca.iu.edu.q"
+          "task": "stage_dataset"
         },
         {
           "name": "validate",
-          "task": "validate_dataset",
-          "queue": "fetch.xenium.sca.iu.edu.q"
+          "task": "validate_dataset"
         },
         {
-          "name": "setup_download",
-          "task": "setup_dataset_download",
-          "queue": "fetch.xenium.sca.iu.edu.q"
-        },
-        {
-          "name": "upload_static_content",
-          "task": "upload_static_content",
-          "queue": "fetch.xenium.sca.iu.edu.q"
+          "name": "generate_qc",
+          "task": "generate_qc"
         }
       ]
     },
@@ -112,8 +84,5 @@
       ]
     }
   },
-  "dataset_types": [
-    "RAW_DATA",
-    "DATA_PRODUCT"
-  ]
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"]
 }
