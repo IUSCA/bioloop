@@ -127,7 +127,9 @@ class DatasetService {
   }
 
   get_file_download_data({ dataset_id, file_id }) {
-    return api.get(`/datasets/${dataset_id}/files/${file_id}/download`);
+    return api.get(`/datasets/download/${dataset_id}`, {
+      params: { file_id },
+    });
   }
 
   search_files({
