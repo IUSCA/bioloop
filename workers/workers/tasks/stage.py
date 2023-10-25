@@ -65,7 +65,9 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> str:
 
     sda_tar_path = dataset['archive_path']
     # staging_dir.parent = the alias sub-directory
-    scratch_tar_path = Path(f'{str(staging_dir.parent)}/{dataset["name"]}.tar')
+    alias_dir = staging_dir.parent
+    alias_dir.mkdir(parents=True, exist_ok=True)
+    scratch_tar_path = Path(f'{str(alias_dir)}/{dataset["name"]}.tar')
     wf_utils.download_file_from_sda(sda_file_path=sda_tar_path,
                                     local_file_path=scratch_tar_path,
                                     celery_task=celery_task)
