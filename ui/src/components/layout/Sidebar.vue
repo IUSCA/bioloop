@@ -1,5 +1,10 @@
 <template>
-  <va-sidebar :minimized="props.isSidebarCollapsed" class="pt-2">
+  <va-sidebar
+    :minimized="props.isSidebarCollapsed"
+    class="pt-2"
+    width="13rem"
+    minimizedWidth="0"
+  >
     <va-sidebar-item
       v-for="(item, i) in user_items"
       :key="i"
@@ -165,6 +170,11 @@ const operator_items = ref([
     icon: "mdi-format-list-bulleted",
     title: "Stats/Tracking",
     path: "/stats",
+  },
+  {
+    icon: "mdi:map-marker-path",
+    title: "Workflows",
+    path: "/workflows",
   },
   // {
   //   icon: "mdi-account-multiple",

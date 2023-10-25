@@ -62,8 +62,18 @@ def get_hash(sda_path: str, missing_ok: bool = False) -> str | None:
 
 
 def delete(path: str) -> None:
-    command = ['hsi', '-P', f'rm {path}']
-    cmd.execute(command)
+    if exists(path):
+        command = ['hsi', '-P', f'rm {path}']
+        cmd.execute(command)
+
+
+def exists(path: str) -> bool:
+    command = ['hsi', '-P', f'ls {path}']
+    try:
+        cmd.execute(command)
+        return True
+    except cmd.SubprocessError:
+        return False
 
 
 def ensure_directory(dir_path: str) -> None:

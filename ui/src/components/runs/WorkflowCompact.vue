@@ -1,32 +1,40 @@
 <template>
   <div class="grid grid-cols-6 lg:grid-cols-12 gap-1 lg:gap-3 items-center p-1">
     <!-- Status -->
-    <div class="col-span-1 row-span-2 lg:row-span-1">
+    <!-- <div class="col-span-1 row-span-2 lg:row-span-1">
       <WorkflowStatusIcon :status="workflow.status" class="text-xl" />
-    </div>
+    </div> -->
 
     <!-- name and id -->
     <div
-      class="col-span-2 lg:col-span-6 row-span-2 lg:row-span-1 flex flex-col"
+      class="col-span-2 lg:col-span-6 flex flex-nowrap items-center gap-3 lg:gap-5"
     >
-      <span class="text-lg font-semibold capitalize">
-        {{ workflow.name }}
-      </span>
-      <div>
-        <span class="text-sm"> {{ workflow.id }} </span>
+      <div class="flex-none md:mx-2">
+        <WorkflowStatusIcon :status="workflow.status" class="text-xl" />
       </div>
-      <div v-if="props.show_dataset && dataset_id">
-        <span class="text-sm">
-          Dataset:
-          <router-link :to="`/datasets/${dataset_id}`" class="va-link"
-            >#{{ dataset_id }}</router-link
-          >
+      <div class="flex flex-col">
+        <span class="text-lg font-semibold capitalize">
+          {{ workflow.name }}
+
+          <!-- hide id in screen sizes medium and below -->
+          <span class="text-xs pl-2 hidden lg:inline va-text-secondary">
+            {{ workflow.id }}
+          </span>
         </span>
+
+        <div v-if="props.show_dataset && dataset_id">
+          <span class="text-sm">
+            Dataset:
+            <router-link :to="`/datasets/${dataset_id}`" class="va-link"
+              >#{{ dataset_id }}</router-link
+            >
+          </span>
+        </div>
       </div>
     </div>
 
     <!-- progress circle -->
-    <div class="col-span-1 row-span-2 lg:row-span-1">
+    <div class="col-span-1">
       <div v-show="workflow.steps_done != workflow.total_steps">
         <va-progress-circle
           :thickness="0.1"
@@ -52,16 +60,19 @@
           class="text-xl inline-block text-slate-700 dark:text-slate-300"
         />
       </va-popover>
-      <span class="pl-2 lg:spacing-wider text-sm lg:text-base">
+      <span class="hidden md:inline pl-2 lg:spacing-wider text-sm lg:text-base">
         {{ datetime.absolute(workflow.created_at) }}
+      </span>
+      <span class="md:hidden pl-2 lg:spacing-wider text-sm lg:text-base">
+        {{ datetime.date(workflow.created_at) }}
       </span>
     </div>
 
     <!-- Elapsed time and last updated -->
-    <div class="col-span-1">
+    <div class="col-span-1 lg:col-span-2">
       <va-popover message="Duration" placement="top" :hover-over-timeout="500">
         <i-mdi-timer
-          class="text-xl inline-block text-slate-700 dark:text-slate-300"
+          class="hidden sm:inline-block text-xl text-slate-700 dark:text-slate-300"
         />
       </va-popover>
       <span class="pl-2"> {{ elapsed_time }} </span>

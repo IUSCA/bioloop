@@ -94,15 +94,15 @@ function sanitize_timestamp(t) {
  *                                                     results (in the returned array) per grouping
  * @param {Function} aggregationFn                     Callback used for aggregating the results in
  *                                                     each grouping
- * @returns                                            An array, every element of which contains the
- *                                                     aggregated values produced from each grouping
- *                                                     as well as the values used for producing said
- *                                                     groupings.
  * @param {Function} [groupByFn = (e) => e]            Optional callback used to group the elements
  *                                                     of arr
  * @param {Function} [groupedByValFormatFn = (e) => e] Optional callback used to format the values
  *                                                     (in the returned array) by which groupings
  *                                                     are produced
+ * @returns                                            An array, every element of which contains the
+ *                                                     aggregated values produced from each grouping
+ *                                                     as well as the values used for producing said
+ *                                                     groupings.
  */
 function groupByAndAggregate(
   arr,

@@ -13,6 +13,7 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     sda_path = dataset['archive_path']
     sda.delete(sda_path)
     update_data = {
+        'archive_path': None,
         'is_deleted': True
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)

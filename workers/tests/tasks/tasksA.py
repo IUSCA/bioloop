@@ -35,7 +35,7 @@ def task2(celery_task, dataset_id, **kwargs):
     # 1/0
 
     i = 0
-    while i < 15:
+    while i < 120:
         i = i + 1
         logger.info(i)
         time.sleep(1)

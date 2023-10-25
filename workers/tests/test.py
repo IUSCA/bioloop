@@ -8,7 +8,7 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 # print('\n'.join(app.tasks.keys()))
 
-APP_ID = 'tests'
+APP_ID = 'bioloop-dev.sca.iu.edu'
 
 steps = [
     {
@@ -17,15 +17,15 @@ steps = [
         'queue': f'{APP_ID}.q'
     },
     {
-        'name': 'task4',
-        'task': 'task4',
+        'name': 'task2',
+        'task': 'task2',
         'queue': f'{APP_ID}.q'
     },
 ]
 
 dataset_id = 2
 wf = Workflow(app, steps=steps, name='test_wf', app_id=APP_ID)
-api.add_workflow_to_dataset(dataset_id, wf.workflow['_id'])
+# api.add_workflow_to_dataset(dataset_id, wf.workflow['_id'])
 wf.start(dataset_id)
 print('workflow_id', wf.workflow['_id'])
 

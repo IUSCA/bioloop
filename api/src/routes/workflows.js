@@ -23,7 +23,7 @@ router.get(
       const api_res = await wf_service.getAll({
         last_task_run: req.query.last_task_run,
         prev_task_runs: req.query.prev_task_runs,
-        only_active: req.query.only_active,
+        status: req.query.status,
         app_id: config.app_id,
         skip: req.query.skip,
         limit: req.query.limit,
@@ -32,6 +32,15 @@ router.get(
       res.json(api_res.data);
     },
   ),
+);
+
+router.get(
+  '/counts_by_status',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const counts = await wf_service.getCountsByStatus({ app_id: config.app_id });
+    res.json(counts.data);
+  }),
 );
 
 function sanitize_timestamp(t) {
@@ -283,5 +292,4 @@ router.delete(
     },
   ),
 );
-
 module.exports = router;

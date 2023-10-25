@@ -12,14 +12,14 @@ const props = defineProps({
 function status_to_color(status) {
   if (status == "PENDING") {
     return "primary";
-  } else if (["PROGRESS", "STARTED"].includes(status)) {
+  } else if (status == "STARTED") {
     return "warning";
   } else if (status == "SUCCESS") {
     return "success";
   } else if (status == "FAILURE") {
     return "danger";
   } else if (status == "REVOKED") {
-    return "danger";
+    return "rgb(102, 102, 102)";
   } else {
     return "";
   }

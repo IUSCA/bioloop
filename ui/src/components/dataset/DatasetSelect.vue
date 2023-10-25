@@ -28,6 +28,6 @@ import { formatBytes } from "@/services/utils";
 const datasets = ref([]);
 
 datasetService.getAll().then((res) => {
-  datasets.value = res.data;
+  datasets.value = res.data.datasets;
 });
 </script>

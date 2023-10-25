@@ -297,6 +297,7 @@
     "ExtractPropTypes": true,
     "ExtractPublicPropTypes": true,
     "injectLocal": true,
-    "provideLocal": true
+    "provideLocal": true,
+    "useQueryPersistence": true
   }
 }
