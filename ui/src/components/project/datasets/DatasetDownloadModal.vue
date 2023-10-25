@@ -64,10 +64,10 @@
           <!-- .tar file download -->
           <va-list-item-section>
             <va-list-item-label>
-              <span class="text-lg">Direct Download (Archive)</span>
+              <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
               <span class="">
-                {{ formatBytes(dataset.bundle_size) }}
+                Size: {{ formatBytes(dataset.bundle_size) }}
               </span>
             </va-list-item-label>
           </va-list-item-section>
