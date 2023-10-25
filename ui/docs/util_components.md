@@ -120,3 +120,33 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 - icons - Array of 2 elements (off icon, on icon)
 - labels - Array of 2 element (off lable, on label)
   - default: `['disbaled', 'enabled']`
+
+
+## useQueryPersistence Composable
+
+This composition function helps you manage query parameters in the URL and keep them in sync with a reactive object in your component.
+
+Usage:
+1. Create a ref to hold the query parameters
+2. Call this function on the ref.
+
+```javascript
+import useQueryPersistence from "@/composables/useQueryPersistence";
+
+const default_query_params = () => ({
+  status: null,
+  page: 1,
+  auto_refresh: 10,
+});
+
+const query_params = ref(default_query_params());
+
+useQueryPersistence({
+  refObject: query_params,
+  defaultValue: default_query_params(),
+  key: "wq",
+  history_push: false,
+});
+```
+
+It will update the URL query parameters by watching the refObject and it will update the refObject when URL query parameters change.

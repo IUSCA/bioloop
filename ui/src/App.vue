@@ -7,7 +7,7 @@
     By default, for these navigations, the component is not unmounted, only the props change 
     and the setup code is not run again.
   -->
-  <RouterView :key="$route.fullPath" />
+  <RouterView :key="$route.path" />
 </template>
 
 <script setup>

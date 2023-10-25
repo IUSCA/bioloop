@@ -4,6 +4,8 @@
       <div class="mb-2" v-if="!workflowService.is_workflow_done(workflow)">
         <va-progress-bar indeterminate size="0.3rem" />
       </div>
+
+      <!-- Steps Table -->
       <va-data-table :items="row_items" :columns="columns">
         <template #cell(step)="{ source }">
           <div class="flex gap-3 justify-start items-center">
@@ -11,6 +13,14 @@
               {{ source.name }}
             </span>
 
+            <!-- retries -->
+            <span v-if="source.retries" class="">
+              <i-mdi-refresh class="text-sm inline mt-[-3px]" />{{
+                source.retries
+              }}
+            </span>
+
+            <!-- progress name -->
             <span
               v-if="!source?.progress?.name"
               class="text-slate-500 flex-initial text-sm"
@@ -27,6 +37,7 @@
               {{ source?.progress?.percent_done }}%
             </va-progress-circle>
 
+            <!-- time remaining -->
             <span
               v-if="source?.progress?.time_remaining"
               class="text-slate-500 flex-initial text-sm"
@@ -64,7 +75,14 @@
         </template>
       </va-data-table>
 
+      <!-- Error message -->
+      <div>
+        <WorkflowError :workflow="workflow" />
+      </div>
+
       <va-divider />
+
+      <!-- Actions -->
       <div class="flex justify-end">
         <div class="flex-none pr-2">
           <div
@@ -148,14 +166,10 @@ watch(
 function compute_step_duration(step) {
   if (step.last_task_run) {
     const task = step.last_task_run;
-    if (
-      task.date_start &&
-      (["PROGRESS", "STARTED"].includes(task.status) || task.date_done)
-    ) {
+    if (task.date_start && ("STARTED" === task.status || task.date_done)) {
       const start_time = new Date(task.date_start);
-      const end_time = ["PROGRESS", "STARTED"].includes(task.status)
-        ? new Date()
-        : new Date(task.date_done);
+      const end_time =
+        "STARTED" === task.status ? new Date() : new Date(task.date_done);
       const duration = end_time - start_time;
       return datetime.formatDuration(duration);
     }
@@ -164,10 +178,7 @@ function compute_step_duration(step) {
 }
 
 function get_progress_obj(step) {
-  if (
-    ["PROGRESS", "STARTED"].includes(step?.status) &&
-    step?.last_task_run?.result
-  ) {
+  if ("STARTED" === step?.status && step?.last_task_run?.result) {
     const progress = step.last_task_run.result;
     const percent_done = progress.fraction_done
       ? Math.round(progress.fraction_done * 100)
@@ -190,6 +201,7 @@ const row_items = computed(() => {
       step: {
         name: s.name,
         progress: get_progress_obj(s),
+        retries: s.last_task_run?.retries,
       },
       start_date: s?.last_task_run?.date_start
         ? datetime.absolute(s.last_task_run.date_start)
