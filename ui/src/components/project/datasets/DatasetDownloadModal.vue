@@ -165,7 +165,7 @@ const downloadPath = computed(() => {
 const log_data_access = () => {
   statisticsService
     .log_data_access({
-      access_type: config.access_types.SLATE_SCRATCH,
+      access_type: config.download_types.SLATE_SCRATCH,
       file_id: null,
       dataset_id: props.dataset.id,
     })

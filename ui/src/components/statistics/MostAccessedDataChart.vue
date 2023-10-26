@@ -82,7 +82,7 @@ const getChartOptions = ({ colors }) => ({
         afterLabel: (context) => {
           const accessType = context.dataset.accessTypes[context.dataIndex];
           const path = context.dataset.paths[context.dataIndex];
-          const isDirectDownload = accessType === config.access_types.BROWSER;
+          const isDirectDownload = accessType === config.download_types.BROWSER;
           const accessedEntityType = isDirectDownload ? "FILE" : "DATASET";
           const datasetName = context.dataset.datasetNames[context.dataIndex];
 
@@ -147,7 +147,7 @@ const configureChartData = (most_accessed_stats) => {
       paths: most_accessed_stats.map((stat) => stat.path),
       datasetNames: most_accessed_stats.map((stat) => stat.dataset_name),
       backgroundColor: most_accessed_stats.map((stat) =>
-        stat.access_type === config.access_types.BROWSER
+        stat.access_type === config.download_types.BROWSER
           ? datasetColors.FILE.backgroundColor
           : datasetColors.DATASET.backgroundColor,
       ),
@@ -173,7 +173,7 @@ watch(isDark, (newIsDark) => {
 
   let updatedChartData = _.cloneDeep(chartData.value);
   const updatedColors = updatedChartData.datasets[0].accessTypes.map((type) => {
-    return type === config.access_types.BROWSER
+    return type === config.download_types.BROWSER
       ? colors.FILE.backgroundColor
       : colors.DATASET.backgroundColor;
   });

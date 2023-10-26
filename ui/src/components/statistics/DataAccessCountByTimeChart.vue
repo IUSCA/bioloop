@@ -157,7 +157,7 @@ const configureChartDataByDataset = (datasets) => {
       const isAggregatedCounts = _.every(dataset, (e) => !e.access_type);
       const isBrowserAccessCounts = _.every(
         dataset,
-        (e) => e.access_type && e.access_type === config.access_types.BROWSER,
+        (e) => e.access_type && e.access_type === config.download_types.BROWSER,
       );
 
       const colors = isAggregatedCounts
@@ -197,8 +197,8 @@ const configureChartData = (data) => {
 
   chartData.value = configureChartDataByDataset([
     aggregatedByAccessType,
-    data.filter((e) => e.access_type === config.access_types.BROWSER),
-    data.filter((e) => e.access_type === config.access_types.SLATE_SCRATCH),
+    data.filter((e) => e.access_type === config.download_types.BROWSER),
+    data.filter((e) => e.access_type === config.download_types.SLATE_SCRATCH),
   ]);
 
   chartData.value.datasets[0].label = "Total Number of Data Accesses";

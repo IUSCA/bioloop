@@ -38,7 +38,7 @@ const exports = {
       },
     },
   },
-  access_types: {
+  download_types: {
     SLATE_SCRATCH: "SLATE_SCRATCH",
     BROWSER: "BROWSER",
   },
