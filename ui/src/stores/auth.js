@@ -52,6 +52,21 @@ export const useAuthStore = defineStore("auth", () => {
       });
   }
 
+  function googleLogin({ code, state }) {
+    return authService
+      .googleVerify({ code, state })
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+        return res.data;
+      })
+      .catch((error) => {
+        console.error("Google Login failed", error);
+        status.value = error;
+        onLogout();
+        return Promise.reject();
+      });
+  }
+
   function logout() {
     onLogout();
   }
@@ -137,6 +152,7 @@ export const useAuthStore = defineStore("auth", () => {
     canAdmin,
     setTheme,
     getTheme,
+    googleLogin,
   };
 });
 

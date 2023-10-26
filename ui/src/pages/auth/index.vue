@@ -19,14 +19,42 @@
           </div>
           <div class="flex justify-between px-8 mb-2">
             <va-button
-              class="py-2"
+              class="py-1"
+              preset="primary"
               @click="
                 $router.push({ path: '/auth/iucas', query: $route.query })
               "
             >
-              <span class="text-lg font-medium"
-                >Continue with Indiana University</span
-              >
+              <div class="flex justify-between items-center gap-3 w-full">
+                <img
+                  src="@/assets/Indiana_Hoosiers_logo.svg"
+                  class="h-6"
+                  loading="lazy"
+                  alt="IU logo"
+                />
+                <span class="dark:text-slate-100">
+                  Login with Indiana University
+                </span>
+              </div>
+            </va-button>
+          </div>
+          <div class="flex justify-between px-8 mb-2">
+            <va-button
+              class="py-1"
+              preset="primary"
+              @click="
+                $router.push({ path: '/auth/google', query: $route.query })
+              "
+            >
+              <div class="flex justify-center items-center gap-3 w-full">
+                <img
+                  class="w-6 h-6"
+                  src="@/assets/google-color.svg"
+                  loading="lazy"
+                  alt="google logo"
+                />
+                <span class="dark:text-slate-100"> Login with Google </span>
+              </div>
             </va-button>
           </div>
         </va-card-content>

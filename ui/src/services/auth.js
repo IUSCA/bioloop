@@ -22,6 +22,22 @@ class AuthService {
   refreshToken = () => api.post("/auth/refresh_token");
 
   spoof = (username) => api.post(`/auth/spoof/${username}`);
+
+  getGoogleUrl() {
+    return api.get("/auth/google/url", {
+      params: {
+        redirect_uri: config.googleReturn,
+      },
+    });
+  }
+
+  googleVerify({ code, state }) {
+    return api.post("/auth/google/verify", {
+      redirect_uri: config.googleReturn,
+      code,
+      state,
+    });
+  }
 }
 
 export default new AuthService();

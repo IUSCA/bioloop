@@ -276,6 +276,12 @@ model worker_process {
   logs        log[]
 }
 
+model auth_state {
+  state String @id
+  provider String
+  created_at DateTime @default(now()) @db.Timestamp(6)
+}
+
 enum access_type {
   BROWSER
   SLATE_SCRATCH
