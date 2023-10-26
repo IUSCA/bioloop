@@ -95,7 +95,7 @@ class Register:
             if all([
                 p.name not in self.completed,
                 p.name not in set(self.rejects),
-                cmd.total_size(p) >= config['registration']['minimum_dataset_size']
+                # cmd.total_size(p) >= config['registration']['minimum_dataset_size']
             ])
         ]
 
