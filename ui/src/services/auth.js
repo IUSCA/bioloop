@@ -38,6 +38,21 @@ class AuthService {
       state,
     });
   }
+
+  getCiUrl() {
+    return api.get("/auth/cilogon/url", {
+      params: {
+        redirect_uri: config.cilogonReturn,
+      },
+    });
+  }
+
+  ciVerify({ code }) {
+    return api.post("/auth/cilogon/verify", {
+      redirect_uri: config.cilogonReturn,
+      code,
+    });
+  }
 }
 
 export default new AuthService();

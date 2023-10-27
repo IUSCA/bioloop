@@ -27,6 +27,13 @@
       "scope": "openid email",
       "client_id": "",
       "client_secret": ""
+    },
+    "cilogon": {
+      "authorization_endpoint": "https://cilogon.org/authorize",
+      "token_endpoint": "https://cilogon.org/oauth2/token",
+      "scope": "openid+email",
+      "client_id": "",
+      "client_secret": ""
     }
   },
   "oauth": {

@@ -1,8 +1,8 @@
 <template>
   <AuthStatus
-    :get-url="authService.getGoogleUrl"
-    :verify="auth.googleLogin"
-    :param-names="['code', 'state']"
+    :get-url="authService.getCiUrl"
+    :verify="auth.ciLogin"
+    :param-names="['code']"
   />
 </template>
 
@@ -16,6 +16,6 @@ const auth = useAuthStore();
 <route lang="yaml">
 meta:
   layout: auth
-  title: Google Auth
+  title: CI Logon Auth
   requiresAuth: false
 </route>

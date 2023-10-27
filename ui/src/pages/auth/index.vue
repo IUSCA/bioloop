@@ -57,6 +57,23 @@
               </div>
             </va-button>
           </div>
+          <div class="flex justify-between px-8 mb-3">
+            <va-button
+              class="py-1"
+              preset="primary"
+              @click="$router.push({ path: '/auth/cil', query: $route.query })"
+            >
+              <div class="flex justify-center items-center gap-3 w-full">
+                <img
+                  class="w-7 h-7"
+                  src="@/assets/CILogon-icon.png"
+                  loading="lazy"
+                  alt="CILogon logo"
+                />
+                <span class="dark:text-slate-100"> Login with CILogon </span>
+              </div>
+            </va-button>
+          </div>
         </va-card-content>
       </va-card>
     </div>

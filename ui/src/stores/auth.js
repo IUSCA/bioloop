@@ -67,6 +67,21 @@ export const useAuthStore = defineStore("auth", () => {
       });
   }
 
+  function ciLogin({ code }) {
+    return authService
+      .ciVerify({ code })
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+        return res.data;
+      })
+      .catch((error) => {
+        console.error("CI Login failed", error);
+        status.value = error;
+        onLogout();
+        return Promise.reject();
+      });
+  }
+
   function logout() {
     onLogout();
   }
@@ -153,6 +168,7 @@ export const useAuthStore = defineStore("auth", () => {
     setTheme,
     getTheme,
     googleLogin,
+    ciLogin,
   };
 });
 
