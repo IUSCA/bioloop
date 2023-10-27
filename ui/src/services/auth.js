@@ -9,10 +9,10 @@ class AuthService {
     });
   }
 
-  getCasUrl(service) {
+  getCasUrl() {
     return api.get("/auth/cas/url", {
       params: {
-        service: service,
+        service: config.casReturn,
       },
     });
   }

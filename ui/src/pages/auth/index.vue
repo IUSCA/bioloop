@@ -17,7 +17,7 @@
           <div class="mt-2 mb-8">
             <va-divider />
           </div>
-          <div class="flex justify-between px-8 mb-2">
+          <div class="flex justify-between px-8 mb-3">
             <va-button
               class="py-1"
               preset="primary"
@@ -38,7 +38,7 @@
               </div>
             </va-button>
           </div>
-          <div class="flex justify-between px-8 mb-2">
+          <div class="flex justify-between px-8 mb-3">
             <va-button
               class="py-1"
               preset="primary"

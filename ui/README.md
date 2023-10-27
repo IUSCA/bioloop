@@ -151,6 +151,10 @@ Add the name and value of the environment variable to the `.env` file. This file
 
 Users are authenticated using IU CAS. [More on auth module](docs/auth_explained.md).
 
+Authentication with google OpenID Connect is implemented following this guide https://developers.google.com/identity/openid-connect/openid-connect
+
+
+### Authentication controls on router
 By default any page will require user authentication
 
 ```html

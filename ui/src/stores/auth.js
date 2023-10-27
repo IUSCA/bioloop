@@ -37,7 +37,7 @@ export const useAuthStore = defineStore("auth", () => {
     token.value = "";
   }
 
-  function casLogin(ticket) {
+  function casLogin({ ticket }) {
     return authService
       .casVerify(ticket)
       .then((res) => {
