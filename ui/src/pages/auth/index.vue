@@ -9,18 +9,19 @@
               <AppTitle />
             </div>
           </div>
-          <div class="text-center mt-8">
+          <!-- <div class="text-center mt-8">
             <span class="text-xl tracking-wide font-medium">
               Log In / Sign Up
             </span>
-          </div>
+          </div> -->
           <div class="mt-2 mb-8">
             <va-divider />
           </div>
           <div class="flex justify-between px-8 mb-3">
             <va-button
               class="py-1"
-              preset="primary"
+              preset="secondary"
+              border-color="secondary"
               @click="
                 $router.push({ path: '/auth/iucas', query: $route.query })
               "
@@ -41,7 +42,8 @@
           <div class="flex justify-between px-8 mb-3">
             <va-button
               class="py-1"
-              preset="primary"
+              preset="secondary"
+              border-color="secondary"
               @click="
                 $router.push({ path: '/auth/google', query: $route.query })
               "
@@ -60,7 +62,8 @@
           <div class="flex justify-between px-8 mb-3">
             <va-button
               class="py-1"
-              preset="primary"
+              preset="secondary"
+              border-color="secondary"
               @click="$router.push({ path: '/auth/cil', query: $route.query })"
             >
               <div class="flex justify-center items-center gap-3 w-full">
