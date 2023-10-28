@@ -2,7 +2,7 @@
   <AuthStatus
     :get-url="authService.getCiUrl"
     :verify="auth.ciLogin"
-    :param-names="['code']"
+    :param-names="['code', 'state']"
   />
 </template>
 
