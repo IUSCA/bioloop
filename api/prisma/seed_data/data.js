@@ -314,6 +314,20 @@ const project_contact_assoc = [
   },
 ];
 
+const data_product_file_type = [{
+  name: 'FASTQ',
+  extension: 'fastq',
+}, {
+  name: 'BAM',
+  extension: 'bam',
+}, {
+  name: 'BIGWIG',
+  extension: 'bw',
+}, {
+  name: 'IMAGE_HE',
+  extension: '.tif',
+}];
+
 module.exports = {
   roles,
   admins,
@@ -323,6 +337,7 @@ module.exports = {
   dataset_heirarchical_association,
   metrics,
   dataset_audit_data,
+  data_product_file_type,
   contacts,
   projects,
   project_user_assoc,

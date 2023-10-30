@@ -22,6 +22,18 @@
       <div class="flex-none flex items-center justify-center">
         <filters-group @update="updateFiltersGroupQuery"></filters-group>
       </div>
+
+      <!-- create button -->
+      <div class="flex-none" v-if="props.dtype === 'DATA_PRODUCT'">
+        <va-button
+          icon="add"
+          class="px-1"
+          color="success"
+          @click="router.push('/dataproducts/new')"
+        >
+          Create Data Product
+        </va-button>
+      </div>
     </div>
 
     <!-- table -->
@@ -208,6 +220,7 @@ import { useToastStore } from "@/stores/toast";
 import _ from "lodash";
 
 const toast = useToastStore();
+const router = useRouter();
 useSearchKeyShortcut();
 
 const props = defineProps({

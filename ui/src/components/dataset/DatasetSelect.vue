@@ -27,7 +27,11 @@ import { formatBytes } from "@/services/utils";
 
 const datasets = ref([]);
 
-datasetService.getAll().then((res) => {
+const props = defineProps({
+  dtype: { type: String },
+});
+
+datasetService.getAll({ type: props.dtype }).then((res) => {
   datasets.value = res.data.datasets;
 });
 </script>

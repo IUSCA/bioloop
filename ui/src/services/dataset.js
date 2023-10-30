@@ -66,6 +66,10 @@ class DatasetService {
     });
   }
 
+  getDataProductFileTypes() {
+    return api.get("/datasets/data_product_file_types");
+  }
+
   stage_dataset(id) {
     return api
       .post(`/datasets/${id}/workflow/stage`)
