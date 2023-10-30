@@ -11,7 +11,6 @@ from sca_rhythm import WorkflowTask
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
-from workers.config import config
 from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
@@ -62,17 +61,20 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> str:
     input: dataset['name'], dataset['archive_path'] should exist
     returns: stage_path
     """
+    staging_dir, alias = compute_staging_path(dataset)
 
     sda_tar_path = dataset['archive_path']
-    scratch_tar_path = Path(config['paths']['scratch']) / f"{dataset['name']}.tar"
+    # staging_dir.parent = the alias sub-directory
+    alias_dir = staging_dir.parent
+    alias_dir.mkdir(parents=True, exist_ok=True)
+    scratch_tar_path = Path(f'{str(alias_dir)}/{dataset["name"]}.tar')
     wf_utils.download_file_from_sda(sda_file_path=sda_tar_path,
                                     local_file_path=scratch_tar_path,
                                     celery_task=celery_task)
 
     # extract the tar file to stage directory
-    target_dir, alias = compute_staging_path(dataset)
-    logger.info(f'extracting tar {scratch_tar_path} to {target_dir}')
-    extract_tarfile(tar_path=scratch_tar_path, target_dir=target_dir, override_arcname=True)
+    logger.info(f'extracting tar {scratch_tar_path} to {staging_dir}')
+    extract_tarfile(tar_path=scratch_tar_path, target_dir=staging_dir, override_arcname=True)
 
     # delete the local tar copy after extraction
     # scratch_tar_path.unlink()

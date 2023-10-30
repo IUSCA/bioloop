@@ -8,7 +8,15 @@
         <div class="">
           <va-card>
             <va-card-title>
-              <span class="text-xl">Info</span>
+              <!-- <span class="text-xl">Info</span> -->
+              <div class="flex flex-nowrap items-center w-full">
+                <span class="text-lg"> Info </span>
+                <AddEditButton
+                  class="flex-none"
+                  edit
+                  @click="openModalToEditDataset"
+                />
+              </div>
             </va-card-title>
             <va-card-content>
               <DatasetInfo :dataset="dataset"></DatasetInfo>
@@ -25,13 +33,13 @@
                 </va-button>
 
                 <!-- edit description -->
-                <va-button
+                <!-- <va-button
                   preset="primary"
                   @click="openModalToEditDataset"
                   class="flex-none"
                 >
                   <i-mdi-pencil-outline class="pr-2 text-xl" /> Edit Description
-                </va-button>
+                </va-button> -->
               </div>
             </va-card-content>
           </va-card>

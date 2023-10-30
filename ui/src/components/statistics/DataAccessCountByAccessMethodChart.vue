@@ -103,7 +103,7 @@ const configureChartData = (data) => {
       {
         data: data.map((e) => e.count),
         backgroundColor: data.map((e) =>
-          e.access_type === config.access_types.BROWSER
+          e.access_type === config.download_types.BROWSER
             ? chartColors.FILE.backgroundColor
             : chartColors.DATASET.backgroundColor,
         ),
@@ -117,7 +117,7 @@ watch(isDark, (newIsDark) => {
   let updatedChartData = _.cloneDeep(chartData.value);
 
   const updatedColors = updatedChartData.labels.map((label) => {
-    return label === config.access_types.BROWSER
+    return label === config.download_types.BROWSER
       ? colors.FILE.backgroundColor
       : colors.DATASET.backgroundColor;
   });

@@ -295,6 +295,7 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -346,6 +347,8 @@ router.patch(
     body('du_size').optional().notEmpty().bail()
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
+      .customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -600,15 +603,17 @@ router.get(
 );
 
 router.get(
-  '/:id/files/:file_id/download',
+  '/download/:id',
   validate([
     param('id').isInt().toInt(),
-    param('file_id').isInt().toInt(),
+    query('file_id').isInt().toInt().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
+
+    const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
     // Catch errors to ensure that logging does not get in the way of the rest of the method.
@@ -616,8 +621,8 @@ router.get(
       await prisma.data_access_log.create({
         data: {
           access_type: 'BROWSER',
-          file_id: req.params.file_id,
-          dataset_id: req.params.id,
+          file_id: isFileDownload ? req.query.file_id : undefined,
+          dataset_id: !isFileDownload ? req.params.id : undefined,
           user_id: req.user.id,
         },
       });
@@ -625,12 +630,15 @@ router.get(
       // console.log();
     }
 
-    const file = await prisma.dataset_file.findFirstOrThrow({
-      where: {
-        id: req.params.file_id,
-        dataset_id: req.params.id,
-      },
-    });
+    let file;
+    if (isFileDownload) {
+      file = await prisma.dataset_file.findFirstOrThrow({
+        where: {
+          id: req.query.file_id,
+          dataset_id: req.params.id,
+        },
+      });
+    }
 
     const dataset = await prisma.dataset.findFirstOrThrow({
       where: {
@@ -639,7 +647,9 @@ router.get(
     });
 
     if (dataset.metadata.stage_alias) {
-      const download_file_path = `${dataset.metadata.stage_alias}/${file.path}`;
+      const download_file_path = isFileDownload
+        ? `${dataset.metadata.stage_alias}/${file.path}`
+        : `${dataset.metadata.stage_alias}/${dataset.name}.tar`;
       const download_token = await authService.get_download_token(download_file_path);
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));

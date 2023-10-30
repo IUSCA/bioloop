@@ -17,7 +17,9 @@
           {{ workflow.name }}
 
           <!-- hide id in screen sizes medium and below -->
-          <span class="text-xs pl-2 hidden lg:inline va-text-secondary">
+          <span
+            class="text-xs pl-2 hidden lg:inline va-text-secondary normal-case"
+          >
             {{ workflow.id }}
           </span>
         </span>

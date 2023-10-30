@@ -44,19 +44,26 @@ def grant_access_to_parent_chain(leaf: Path, root: Path):
 def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     staged_path, alias = compute_staging_path(dataset)
+    # staged_path.parent = the alias sub-directory
+    scratch_tar_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
 
     if not staged_path.exists():
         # TODO: more robust validation?
         raise ValidationFailed(f'Staged path does not exist {staged_path}')
 
     download_path = Path(config['paths']['download_dir']).resolve() / alias
+    tar_download_path = download_path / f"{dataset['name']}.tar"
 
     # remove if exists and create a symlink in download dir pointing to the staged path
     rm(download_path)
     download_path.symlink_to(staged_path, target_is_directory=True)
+    # do the same for tar file
+    rm(tar_download_path)
+    tar_download_path.symlink_to(scratch_tar_path)
 
     # enable others to read and cd into stage directory
     grant_read_permissions_to_others(staged_path)
+    grant_read_permissions_to_others(tar_download_path)
 
     # enable others to navigate to leaf by granting execute permission on parent directories
     grant_access_to_parent_chain(staged_path, root=Path(config['paths']['root']))

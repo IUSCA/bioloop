@@ -10,7 +10,7 @@
           v-for="(message, index) in failed_task_run.result.exc_message"
           :key="index"
         >
-          {{ message[0] }}: {{ message[1] }}
+          {{ message }}
         </li>
       </ul>
 

@@ -82,7 +82,7 @@ const getChartOptions = ({ colors }) => ({
         afterLabel: (context) => {
           const accessType = context.dataset.accessTypes[context.dataIndex];
           const path = context.dataset.paths[context.dataIndex];
-          const isDirectDownload = accessType === config.access_types.BROWSER;
+          const isDirectDownload = accessType === config.download_types.BROWSER;
           const accessedEntityType = isDirectDownload ? "FILE" : "DATASET";
           const datasetName = context.dataset.datasetNames[context.dataIndex];
 
@@ -116,13 +116,13 @@ const getDatasetColorsByTheme = (isDark) => {
   return {
     FILE: {
       backgroundColor: isDark
-        ? "rgba(118, 98, 45, 1)"
-        : "rgba(252, 222, 155, 1)",
+        ? "rgba(83, 63, 33, 1)"
+        : "rgba(211, 183, 144, 1)",
     },
     DATASET: {
       backgroundColor: isDark
-        ? "rgba(35, 92, 95, 1)"
-        : "rgba(198, 231, 231, 1)",
+        ? "rgba(57, 68, 30, 1)"
+        : "rgba(200, 214, 163, 1)",
     },
   };
 };
@@ -147,17 +147,13 @@ const configureChartData = (most_accessed_stats) => {
       paths: most_accessed_stats.map((stat) => stat.path),
       datasetNames: most_accessed_stats.map((stat) => stat.dataset_name),
       backgroundColor: most_accessed_stats.map((stat) =>
-        stat.access_type === config.access_types.BROWSER
+        stat.access_type === config.download_types.BROWSER
           ? datasetColors.FILE.backgroundColor
           : datasetColors.DATASET.backgroundColor,
       ),
     },
   ];
 
-  // const labels = [["x,0", "1", "2"], "y", "z"];
-  // const datasets = [
-  //   { label: "test", data: [3, 4, 5], path: ["/3/", "/4", "5"] },
-  // ];
   return { labels, datasets };
 };
 
@@ -177,7 +173,7 @@ watch(isDark, (newIsDark) => {
 
   let updatedChartData = _.cloneDeep(chartData.value);
   const updatedColors = updatedChartData.datasets[0].accessTypes.map((type) => {
-    return type === config.access_types.BROWSER
+    return type === config.download_types.BROWSER
       ? colors.FILE.backgroundColor
       : colors.DATASET.backgroundColor;
   });
