@@ -35,6 +35,7 @@
         <!-- File Type -->
         <template #step-content-0>
           <AutoComplete
+            name="file_type"
             v-model="new_file_type"
             :data="file_type_list"
             filter-by="name"
@@ -45,22 +46,26 @@
             :get-option-value="(option) => option.name"
             :show-add-new-button="true"
             add-new-button-text="Create new File Type"
-            @select="reset_file_type_selected"
             @clear="reset_file_type_selected"
             @input="reset_file_type_selected"
             @change="reset_file_type_selected"
+            @select="
+              (newVal) => {
+                // persistValueToStore('file_type', newVal);
+                reset_file_type_selected();
+              }
+            "
             :rules="[
               (value) => (value && value.length > 0) || 'File Type is required',
             ]"
           ></AutoComplete>
 
-          <va-input
-            name="some_input"
-            v-model="some_input"
-            :rules="[
-              (value) => (value && value.length > 0) || 'Input is required',
-            ]"
-          ></va-input>
+          <!--          <va-input-->
+          <!--            name="some_input"-->
+          <!--            :rules="[-->
+          <!--              (value) => (value && value.length > 0) || 'Input is required',-->
+          <!--            ]"-->
+          <!--          ></va-input>-->
         </template>
 
         <!-- Data Product path info -->
@@ -113,7 +118,6 @@
             <va-button class="flex-none" preset="primary" @click="prevStep()">
               Previous
             </va-button>
-            <!-- Todo - removed some stuff here -->
             <va-button
               class="flex-none"
               @click="
@@ -121,7 +125,6 @@
                   (is_last_step ? handleCreate() : nextStep())
               "
               :color="is_last_step ? 'success' : 'primary'"
-              :disabled="!isValid_new_data_product_form({ hideErrors: true })"
             >
               {{ is_last_step ? "Create Data Product" : "Next" }}
             </va-button>
@@ -182,22 +185,21 @@
 
 <script setup>
 import { useForm } from "vuestic-ui";
-import { useProjectFormStore } from "@/stores/projects/projectForm";
-import projectService from "@/services/projects";
-import config from "@/config";
+import { useDataProductUploadFormStore } from "@/stores/dataProductUploadForm";
 import datasetService from "@/services/dataset";
 
-// const emit = defineEmits(["update"]);
+const dataProductUploadFormStore = useDataProductUploadFormStore();
 
-// const projectFormStore = useProjectFormStore();
 const {
   isValid: isValid_newFileTypeForm,
   validate: validate_newFileTypeForm,
   reset: reset_newFileTypeForm,
 } = useForm("create_new_file_type_form");
-const { validate: validate_uploadDataProductForm } = useForm(
-  "uploadDataProductForm",
-);
+const {
+  validate: validate_uploadDataProductForm,
+  errorMessages: errorMessages_uploadDataProductForm,
+  // errorMessagesNamed: errorMessagesNamed_uploadDataProductForm,
+} = useForm("uploadDataProductForm");
 
 const new_file_type_form_wide_errors = computed(() => {
   let form_errors = [];
@@ -274,6 +276,11 @@ const on_modal_ok = () => {
   // test_prop.value = "test_prop";
 };
 
+// const persistValueToStore = (field, val) => {
+//   // debugger;
+//   dataProductUploadFormStore.set(field, val);
+// };
+
 const reset_file_type_selected = () => {
   new_file_type.value = undefined;
 };
@@ -305,15 +312,35 @@ const is_last_step = computed(() => {
   return step.value === steps.length - 1;
 });
 
-function isValid_new_data_product_form({ hideErrors = false } = {}) {
+function isValid_new_data_product_form() {
   validate_uploadDataProductForm();
+  hideErrorMessages_uploadDataProductForm.value = false;
+  return errorMessages_uploadDataProductForm.value.length === 0;
   // const errorMessages = errorMessages_uploadDataProductForm.value || [];
+  // const checks = [
+  // {
+  // errorMessagesNamed_uploadDataProductForm.value.fileType
+  //   },
+  // ];
   //
-  // // hideErrorMessages_uploadDataProductForm.value = hideErrors;
   //
   // return errorMessages.slice(0, step.value + 1).every((x) => x);
 
-  return true;
+  // errorMessagesNamed_uploadDataProductForm;
+
+  // if (validate) {
+  // dataProductUploadFormStore.validate();
+  // }
+
+  // const errors = dataProductUploadFormStore.errors;
+
+  // If validation has not run, assume form is valid, so that controls are not disabled on page
+  // load
+  // return dataProductUploadFormStore.hasValidationRun
+  //   ? errors.slice(0, step.value + 1).every((x) => x)
+  //   : true;
+
+  // return dataProductUploadFormStore.isValid;
 }
 
 function handleCreate() {

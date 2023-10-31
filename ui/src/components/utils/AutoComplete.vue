@@ -17,6 +17,7 @@
         <!--        <va-input placeholder="test prop" v-model="test_prop_ref"></va-input>-->
 
         <va-input
+          :name="props.name"
           outline
           clearable
           type="text"
@@ -81,6 +82,7 @@ import { OnClickOutside } from "@vueuse/components";
 const props = defineProps({
   // testProp: { type: String },
   modelValue: { type: String },
+  name: { type: String },
   placeholder: {
     type: String,
     default: "Type here",
@@ -169,7 +171,6 @@ const emit = defineEmits([
   "clear",
   "input",
   "change",
-  "update",
 ]);
 
 const emit_event = (event) => {
@@ -288,7 +289,6 @@ const updateSelection = (item) => {
 };
 
 function handleSelect(item) {
-  // debugger;
   updateSelection(item);
   closeResults();
   emit("select", item);
