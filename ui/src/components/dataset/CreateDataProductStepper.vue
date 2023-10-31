@@ -1,6 +1,10 @@
 <template>
   <va-inner-loading :loading="loading" class="h-full">
-    <va-form class="h-full">
+    <va-form
+      class="h-full"
+      ref="uploadDataProductForm"
+      :hide-errors="hideErrorMessages_uploadDataProductForm"
+    >
       <va-stepper
         v-model="step"
         :steps="steps"
@@ -31,7 +35,7 @@
         <!-- File Type -->
         <template #step-content-0>
           <AutoComplete
-            v-model="new_file_type_selected"
+            v-model="new_file_type"
             :data="file_type_list"
             filter-by="name"
             placeholder="Search File Types"
@@ -45,10 +49,14 @@
             @clear="reset_file_type_selected"
             @input="reset_file_type_selected"
             @change="reset_file_type_selected"
+            :rules="[
+              (value) => (value && value.length > 0) || 'File Type is required',
+            ]"
           ></AutoComplete>
 
           <va-input
             name="some_input"
+            v-model="some_input"
             :rules="[
               (value) => (value && value.length > 0) || 'Input is required',
             ]"
@@ -109,13 +117,13 @@
             <va-button
               class="flex-none"
               @click="
-                isValid_new_data_product_form({ validate: true }) &&
+                isValid_new_data_product_form() &&
                   (is_last_step ? handleCreate() : nextStep())
               "
               :color="is_last_step ? 'success' : 'primary'"
-              :disabled="!isValid_new_data_product_form()"
+              :disabled="!isValid_new_data_product_form({ hideErrors: true })"
             >
-              {{ is_last_step ? "Create Project" : "Next" }}
+              {{ is_last_step ? "Create Data Product" : "Next" }}
             </va-button>
           </div>
         </template>
@@ -179,10 +187,17 @@ import projectService from "@/services/projects";
 import config from "@/config";
 import datasetService from "@/services/dataset";
 
-const emit = defineEmits(["update"]);
+// const emit = defineEmits(["update"]);
 
-const projectFormStore = useProjectFormStore();
-const { isValid, validate, reset } = useForm("create_new_file_type_form");
+// const projectFormStore = useProjectFormStore();
+const {
+  isValid: isValid_newFileTypeForm,
+  validate: validate_newFileTypeForm,
+  reset: reset_newFileTypeForm,
+} = useForm("create_new_file_type_form");
+const { validate: validate_uploadDataProductForm } = useForm(
+  "uploadDataProductForm",
+);
 
 const new_file_type_form_wide_errors = computed(() => {
   let form_errors = [];
@@ -200,12 +215,14 @@ const new_file_type_form_wide_errors = computed(() => {
   return form_errors;
 });
 
+// const some_input = ref("");
 // const test_prop = ref("");
 // const model_value_prop = ref("");
+const hideErrorMessages_uploadDataProductForm = ref(true);
 const show_new_file_type_form_wide_errors = ref(false);
 const new_file_type_name = ref("");
 const new_file_type_extension = ref("");
-const new_file_type_selected = ref();
+const new_file_type = ref();
 const file_type_list = ref([]);
 const raw_data_list = ref([]);
 const raw_data_selected = ref();
@@ -234,7 +251,7 @@ const reset_modal_form_state = () => {
   // hide form-wide errors
   show_new_file_type_form_wide_errors.value = false;
   // reset form inputs' values and validation results
-  reset();
+  reset_newFileTypeForm();
 };
 
 const before_modal_cancel = (hide) => {
@@ -244,12 +261,12 @@ const before_modal_cancel = (hide) => {
 
 const on_modal_ok = () => {
   // set value passed as v-model to AutoComplete
-  new_file_type_selected.value = {
+  new_file_type.value = {
     name: new_file_type_name.value,
     extension: new_file_type_extension.value,
   };
   // add new file type to File Type AutoComplete's options
-  file_type_list.value.push(new_file_type_selected.value);
+  file_type_list.value.push(new_file_type.value);
   // reset modal form
   reset_modal_form_state();
 
@@ -258,17 +275,19 @@ const on_modal_ok = () => {
 };
 
 const reset_file_type_selected = () => {
-  debugger;
-  new_file_type_selected.value = undefined;
+  new_file_type.value = undefined;
 };
 
 const before_modal_ok = (hide) => {
   // force validation to run, which would otherwise only run when a field is focused
-  validate();
+  validate_newFileTypeForm();
   // if there are form-level errors, show them
   show_new_file_type_form_wide_errors.value = true;
   // hide modal only if there are no field-level or form-level errors
-  if (isValid.value && new_file_type_form_wide_errors.value.length === 0) {
+  if (
+    isValid_newFileTypeForm.value &&
+    new_file_type_form_wide_errors.value.length === 0
+  ) {
     hide();
   }
 };
@@ -286,37 +305,37 @@ const is_last_step = computed(() => {
   return step.value === steps.length - 1;
 });
 
-function isValid_new_data_product_form() {
-  // const checks = [
-  //   file_type_selected.value !== undefined,
-  //   raw_data_selected.value !== undefined,
-  //   data_product_path.value !== undefined,
-  // ];
-  // return checks.slice(0, step.value + 1).every((x) => x);
+function isValid_new_data_product_form({ hideErrors = false } = {}) {
+  validate_uploadDataProductForm();
+  // const errorMessages = errorMessages_uploadDataProductForm.value || [];
+  //
+  // // hideErrorMessages_uploadDataProductForm.value = hideErrors;
+  //
+  // return errorMessages.slice(0, step.value + 1).every((x) => x);
 
   return true;
 }
 
 function handleCreate() {
-  projectFormStore.form.validate();
-  if (projectFormStore.form.isValid) {
-    loading.value = true;
-
-    const user_ids = projectFormStore.user_ids;
-    const project_data = projectFormStore.project_info;
-    const dataset_ids = projectFormStore.dataset_ids;
-
-    projectService
-      .createProject({
-        project_data,
-        user_ids,
-        dataset_ids,
-      })
-      .finally(() => {
-        loading.value = false;
-        emit("update");
-      });
-  }
+  // projectFormStore.form.validate();
+  // if (projectFormStore.form.isValid) {
+  //   loading.value = true;
+  //
+  //   const user_ids = projectFormStore.user_ids;
+  //   const project_data = projectFormStore.project_info;
+  //   const dataset_ids = projectFormStore.dataset_ids;
+  //
+  //   projectService
+  //     .createProject({
+  //       project_data,
+  //       user_ids,
+  //       dataset_ids,
+  //     })
+  //     .finally(() => {
+  //       loading.value = false;
+  //       emit("update");
+  //     });
+  // }
 }
 </script>
 

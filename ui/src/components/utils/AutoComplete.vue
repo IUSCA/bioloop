@@ -27,6 +27,7 @@
           @clear="emit_event('clear')"
           @input="emit_event('input')"
           @blur="handle_blur"
+          :rules="props.rules"
         />
       </va-form>
 
@@ -99,6 +100,9 @@ const props = defineProps({
   displayBy: {
     type: String,
     default: "name",
+  },
+  rules: {
+    type: Array,
   },
   showSelectedOption: {
     type: Boolean,
