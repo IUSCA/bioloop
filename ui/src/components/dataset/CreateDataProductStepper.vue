@@ -235,7 +235,7 @@ const step = ref(0);
 const loading = ref(false);
 const steps = [
   { label: "File Type", icon: "material-symbols:category" },
-  { label: "Path to File", icon: "material-symbols:folder" },
+  { label: "Select File", icon: "material-symbols:folder" },
   { label: "Source Raw Data", icon: "mdi:dna" },
   { label: "Create", icon: "material-symbols:add-task" },
 ];
