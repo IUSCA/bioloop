@@ -17,6 +17,8 @@
           <div class="mt-2 mb-8">
             <va-divider />
           </div>
+
+          <!-- IU CAS -->
           <div class="flex justify-between px-8 mb-3">
             <va-button
               class="py-1"
@@ -39,7 +41,12 @@
               </div>
             </va-button>
           </div>
-          <div class="flex justify-between px-8 mb-3">
+
+          <!-- Google -->
+          <div
+            class="flex justify-between px-8 mb-3"
+            v-if="config.auth_enabled.google"
+          >
             <va-button
               class="py-1"
               preset="secondary"
@@ -59,7 +66,12 @@
               </div>
             </va-button>
           </div>
-          <div class="flex justify-between px-8 mb-3">
+
+          <!-- CI Logon -->
+          <div
+            class="flex justify-between px-8 mb-3"
+            v-if="config.auth_enabled.cilogon"
+          >
             <va-button
               class="py-1"
               preset="secondary"
@@ -83,7 +95,9 @@
   </div>
 </template>
 
-<script setup></script>
+<script setup>
+import config from "@/config";
+</script>
 
 <route lang="yaml">
 meta:

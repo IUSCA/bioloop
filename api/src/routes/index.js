@@ -5,7 +5,7 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 
 router.get('/health', (req, res) => { res.send('OK'); });
-router.use('/auth', require('./auth'));
+router.use('/auth', require('./auth/index'));
 router.use('/reports', require('./reports'));
 
 // From this point on, all routes require authentication.

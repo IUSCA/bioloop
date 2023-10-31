@@ -51,6 +51,10 @@ const exports = {
     SLATE_SCRATCH: "/N/scratch",
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
+  auth_enabled: {
+    google: true,
+    cilogon: true,
+  },
 };
 
 export default exports;

@@ -22,6 +22,7 @@
       "sign_algorithm": "RS256"
     },
     "google": {
+      "enabled": true,
       "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
       "token_endpoint": "https://oauth2.googleapis.com/token",
       "scope": "openid email",
@@ -29,6 +30,7 @@
       "client_secret": ""
     },
     "cilogon": {
+      "enabled": true,
       "authorization_endpoint": "https://cilogon.org/authorize",
       "token_endpoint": "https://cilogon.org/oauth2/token",
       "scope": "openid+email",
