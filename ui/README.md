@@ -153,6 +153,7 @@ Users are authenticated using IU CAS. [More on auth module](docs/auth_explained.
 
 Authentication with google OpenID Connect is implemented following this guide https://developers.google.com/identity/openid-connect/openid-connect
 
+Authentication with CILogon OpenID Connect is implemented following this guide https://www.cilogon.org/oidc
 
 ### Authentication controls on router
 By default any page will require user authentication
