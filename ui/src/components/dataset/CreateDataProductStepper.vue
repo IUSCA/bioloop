@@ -34,31 +34,38 @@
 
         <!-- File Type -->
         <template #step-content-0>
+          <!--            v-model="file_type_selected__v_model"-->
           <AutoComplete
             name="file_type"
-            v-model="new_file_type"
             :data="file_type_list"
             filter-by="name"
             placeholder="Search File Types"
             @create-new-element="show_create_file_type_modal"
+            :selected-option="file_type_selected"
             :show-selected-option="true"
-            :format-selected-option="(option) => option.name"
+            :format-selected-option="get_file_type_option_value"
             :get-option-value="(option) => option.name"
             :show-add-new-button="true"
             add-new-button-text="Create new File Type"
-            @clear="reset_file_type_selected"
-            @input="reset_file_type_selected"
-            @change="reset_file_type_selected"
-            @select="
-              (newVal) => {
-                // persistValueToStore('file_type', newVal);
+            @select="update_file_type_selected"
+            @clear="
+              () => {
                 reset_file_type_selected();
+                // isValid_new_data_product_form();
               }
             "
-            :rules="[
-              (value) => (value && value.length > 0) || 'File Type is required',
-            ]"
+            :rules="file_type_rules"
           ></AutoComplete>
+          <!--                        @update:model-value="update_file_type_selected__v_model"-->
+
+          <!--                      @input="reset_file_type_selected"-->
+          <!--            @change="reset_file_type_selected"-->
+          <!--            @select="-->
+          <!--              (newVal) => {-->
+          <!--                // persistValueToStore('file_type', newVal);-->
+          <!--                reset_file_type_selected();-->
+          <!--              }-->
+          <!--            "-->
 
           <!--          <va-input-->
           <!--            name="some_input"-->
@@ -188,7 +195,12 @@ import { useForm } from "vuestic-ui";
 import { useDataProductUploadFormStore } from "@/stores/dataProductUploadForm";
 import datasetService from "@/services/dataset";
 
-const dataProductUploadFormStore = useDataProductUploadFormStore();
+const file_type_rules = [
+  (value) => {
+    // debugger;
+    return (value && value.length > 0) || "File Type is required";
+  },
+];
 
 const {
   isValid: isValid_newFileTypeForm,
@@ -217,6 +229,8 @@ const new_file_type_form_wide_errors = computed(() => {
   return form_errors;
 });
 
+const get_file_type_option_value = (option) => option.name;
+
 // const some_input = ref("");
 // const test_prop = ref("");
 // const model_value_prop = ref("");
@@ -224,7 +238,10 @@ const hideErrorMessages_uploadDataProductForm = ref(true);
 const show_new_file_type_form_wide_errors = ref(false);
 const new_file_type_name = ref("");
 const new_file_type_extension = ref("");
-const new_file_type = ref();
+const file_type_selected = ref();
+// const file_type_selected__v_model = computed(() => {
+//   return get_file_type_option_value(file_type_selected);
+// });
 const file_type_list = ref([]);
 const raw_data_list = ref([]);
 const raw_data_selected = ref();
@@ -262,13 +279,14 @@ const before_modal_cancel = (hide) => {
 };
 
 const on_modal_ok = () => {
+  debugger;
   // set value passed as v-model to AutoComplete
-  new_file_type.value = {
+  file_type_selected.value = {
     name: new_file_type_name.value,
     extension: new_file_type_extension.value,
   };
   // add new file type to File Type AutoComplete's options
-  file_type_list.value.push(new_file_type.value);
+  file_type_list.value.push(file_type_selected.value);
   // reset modal form
   reset_modal_form_state();
 
@@ -282,8 +300,18 @@ const on_modal_ok = () => {
 // };
 
 const reset_file_type_selected = () => {
-  new_file_type.value = undefined;
+  file_type_selected.value = undefined;
 };
+
+const update_file_type_selected = (val) => {
+  debugger;
+  file_type_selected.value = val;
+};
+
+// const update_file_type_selected__v_model = (val) => {
+//   debugger;
+//   file_type_selected__v_model.value = val;
+// };
 
 const before_modal_ok = (hide) => {
   // force validation to run, which would otherwise only run when a field is focused
@@ -313,6 +341,7 @@ const is_last_step = computed(() => {
 });
 
 function isValid_new_data_product_form() {
+  // debugger;
   validate_uploadDataProductForm();
   hideErrorMessages_uploadDataProductForm.value = false;
   return errorMessages_uploadDataProductForm.value.length === 0;
