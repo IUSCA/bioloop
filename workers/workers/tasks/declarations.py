@@ -49,6 +49,15 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         raise exc.RetryableException(e)
 
 
+@app.task(base=WorkflowTask, bind=True, name='create_dataset_files',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def create_dataset_files(celery_task, files_path, **kwargs):
+    from workers.tasks.create_files import create_dataset_files as task_body
+    return task_body(celery_task, files_path, **kwargs)
+
+
 @app.task(base=WorkflowTask, bind=True, name='generate_qc',
           autoretry_for=(Exception,),
           max_retries=3,

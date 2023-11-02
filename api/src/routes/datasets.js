@@ -11,6 +11,8 @@ const _ = require('lodash/fp');
 const config = require('config');
 
 // const logger = require('../services/logger');
+const path = require('path');
+const fs = require('fs');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
@@ -108,15 +110,19 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, processed, archived, staged, type, name, days_since_last_staged,
+  deleted, processed, archived, staged, type, name, match_name_exact, days_since_last_staged,
 }) => {
+  const name_query_obj = match_name_exact
+    ? { equals: name }
+    : { contains: name };
+
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     archive_path: archived ? { not: null } : {},
     is_staged: staged,
     type,
     name: {
-      contains: name,
+      ...name_query_obj,
       mode: 'insensitive', // case-insensitive search
     },
   });
@@ -194,6 +200,7 @@ router.get(
     query('staged').toBoolean().optional(),
     query('type').isIn(config.dataset_types).optional(),
     query('name').notEmpty().escape().optional(),
+    query('match_name_exact').toBoolean().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
@@ -211,6 +218,7 @@ router.get(
       staged: req.query.staged,
       type: req.query.type,
       name: req.query.name,
+      match_name_exact: req.query.match_name_exact,
       days_since_last_staged: req.query.days_since_last_staged,
     });
 
@@ -242,12 +250,21 @@ router.get(
 
 // Data Products - UI
 router.get(
-  '/data_product_file_types',
+  '/data-product-file-types',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const data_product_file_types = await prisma.data_product_file_type.findMany();
     res.json(data_product_file_types);
     // res.json([]);
+  }),
+);
+
+router.get(
+  '/data-product-uploads',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res) => {
+    const uploads = await prisma.data_product_upload.findMany();
+    res.json(uploads);
   }),
 );
 
@@ -624,7 +641,7 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    // Catch errors to ensure that logging does not get in the way of a token being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -698,5 +715,66 @@ router.get(
     res.json(files);
   }),
 );
+
+const DATA_PRODUCT_UPLOAD_PATH = '/tmp/dataProductUploads';
+const getDataProductUploadPath = (req) => path.join(
+  DATA_PRODUCT_UPLOAD_PATH,
+  req.body.dataProduct,
+  req.body.hash,
+);
+const getDataProductFileChunkName = (req) => `${req.body.hash}-${req.body.index}`;
+
+const uploadFileStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const tempStorage = path.join(getDataProductUploadPath(req), 'temp');
+    await fsPromises.mkdir(tempStorage, {
+      recursive: true,
+    });
+    cb(null, tempStorage);
+  },
+  filename: (req, file, cb) => {
+    cb(null, getDataProductFileChunkName(req));
+  },
+});
+
+router.post(
+  '/file-chunk',
+  // isPermittedTo('uploadFileChunk'),
+  multer({ storage: uploadFileStorage }).single('file'),
+  asyncHandler(async (req, res, next) => {
+    try {
+      const {
+        name, total, index, size, hash,
+      } = req.body;
+
+      // eslint-disable-next-line no-console
+      console.log('Processing file piece...', name, total, index, size, hash);
+
+      // Create a folder based on the file hash and move the uploaded chunk under the current hash
+      // folder.
+      const chunksPath = path.join(getDataProductUploadPath(req), 'chunks');
+      if (!fs.existsSync(chunksPath)) mkdirsSync(chunksPath);
+      fs.renameSync(req.file.path, `${chunksPath}/${getDataProductFileChunkName(req)}`);
+
+      // if (name === 'failed_file') { throw new Error('this is error'); }
+
+      res.json({ status: 'success' });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({ status: 'error' });
+    }
+  }),
+);
+
+const mkdirsSync = (dirname) => {
+  if (fs.existsSync(dirname)) {
+    return true;
+  }
+  if (mkdirsSync(path.dirname(dirname))) {
+    fs.mkdirSync(dirname);
+    return true;
+  }
+};
 
 module.exports = router;
