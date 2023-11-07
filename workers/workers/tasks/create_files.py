@@ -15,29 +15,33 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
-def create_dataset_files(celery_task, files_details, **kwargs):
+def create_dataset_files(celery_task, files_attrs, **kwargs):
     # TODO - file_details should be sent through the HTTP request
     #  that initiates the file merge
-    # files_details: [{
-    #   data_product: '',
-    #   file: {
-        #   file_name: '',
-        #   file_hash: '',
-        #   file_destination: '',
-        #   num_chunks: '',
-        # }
-    # }]
+    # files_attrs = {
+    #     'data_product': 'test',
+    #     'files': [{
+    #         'file_name': 'file_1.pdf',
+    #         'file_hash': '31904f92c817767de2bb7e9241f0f7fc',
+    #         'num_chunks': 3
+    #     }, {
+    #         'file_name': 'file_2.pdf',
+    #         'file_hash': '50ddf82278203f3813749b90c77aee24',
+    #         'num_chunks': 1
+    #     }]
+    # }
 
     # TODO - move path to config
     data_products_upload_dir = Path('/tmp/dataProductUploads')
-    data_product = files_details['data_product']
+    data_product = files_attrs['data_product']
+    files_details = files_attrs['files']
 
     for f in files_details:
-        source_path = data_products_upload_dir / data_product / f.file_name
-        merged_file_path = Path(f.file_destination)
-        num_chunks_expected = f.num_chunks
-        file_name = f.file_name
-        file_hash = f.file_hash
+        source_path = data_products_upload_dir / data_product / f['file_hash']
+        file_name = f['file_name']
+        merged_file_path = source_path / file_name
+        num_chunks_expected = f['num_chunks']
+        file_hash = f['file_hash']
         chunks_path = source_path / 'chunks'
 
         print(f'Processing file {file_name}')
@@ -57,6 +61,3 @@ def create_dataset_files(celery_task, files_details, **kwargs):
             print(f'Successfully appended chunk {chunk_file.name} to {merged_file_path}')
             print(f'Deleting chunk {chunk_file}')
             chunk_file.unlink()
-
-
-
