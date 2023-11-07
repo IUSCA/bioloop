@@ -1,3 +1,171 @@
+<template>
+  <va-form ref="data_product_upload_form" class="h-full">
+    <va-stepper
+      v-model="step"
+      :steps="steps"
+      controlsHidden
+      class="h-full create-data-product-stepper"
+    >
+      <!-- Step icons and labels -->
+      <template
+        v-for="(step, i) in steps"
+        :key="step.label"
+        #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
+      >
+        <div
+          class="step-button p-1 sm:p-3 cursor-pointer"
+          :class="{
+            'step-button--active': isActive,
+            'step-button--completed': isCompleted,
+          }"
+          @click="isValid_new_data_product_form() && setStep(i)"
+        >
+          <div class="flex flex-col items-center">
+            <Icon :icon="step.icon" />
+            <span class="hidden sm:block"> {{ step.label }} </span>
+          </div>
+        </div>
+      </template>
+
+      <template #step-content-0>
+        <va-input
+          label="Data Product Name"
+          placeholder="Name"
+          v-model="dataProductName"
+          class="w-full"
+          :rules="[
+            (value) => {
+              return (value && value.length > 0) || 'Name is required';
+            },
+            (value) => {
+              return (
+                (value && value.length > 2) ||
+                'Name must be 3 or more characters'
+              );
+            },
+            validateNotExists,
+          ]"
+        />
+      </template>
+
+      <template #step-content-1>
+        <DataProductFileTypeSelect class="w-full" />
+      </template>
+
+      <template #step-content-2>
+        <AutoCompleteSelect
+          class="w-full"
+          label="Source Raw Data"
+          placeholder="Raw Data"
+          :options="raw_data_list"
+          :text-by="(option) => option.name"
+          :autocomplete="true"
+          :rules="[
+            (value) => {
+              return (
+                (value && value.name.length > 0) ||
+                'Source Raw Data is required'
+              );
+            },
+          ]"
+        />
+      </template>
+
+      <template #step-content-3>
+        <div class="flex-none">
+          <va-file-upload
+            class="w-full"
+            label="File"
+            dropzone
+            @file-added="setFiles"
+            :disabled="areControlsDisabled"
+          />
+
+          <va-data-table
+            v-if="dataProductFiles.length > 0"
+            :items="dataProductFiles"
+            :columns="columns"
+          >
+            <template #cell(progress)="{ value }">
+              <va-progress-circle :model-value="value" size="small">
+                {{ value && value + "%" }}
+              </va-progress-circle>
+            </template>
+
+            <template #cell(processingStatus)="{ value }">
+              <span class="flex justify-center">
+                <va-popover
+                  v-if="value === FILE_STATUS.PROCESSED"
+                  message="Succeeded"
+                >
+                  <va-icon name="check_circle_outline" color="success" />
+                </va-popover>
+                <va-popover
+                  v-if="value === FILE_STATUS.PROCESSING"
+                  message="Pending"
+                >
+                  <va-icon name="pending" color="info" />
+                </va-popover>
+                <va-popover
+                  v-if="value === FILE_STATUS.FAILED"
+                  message="Failed"
+                >
+                  <va-icon name="error_outline" color="danger" />
+                </va-popover>
+              </span>
+            </template>
+
+            <template #cell(actions)="{ rowIndex }">
+              <div class="flex gap-1">
+                <va-button
+                  preset="plain"
+                  icon="delete"
+                  color="danger"
+                  @click="removeFile(rowIndex)"
+                  :disabled="areControlsDisabled"
+                />
+                <va-popover message="Retry upload">
+                  <va-button
+                    preset="plain"
+                    icon="refresh"
+                    color="info"
+                    @click="uploadFile(dataProductFiles[rowIndex])"
+                    :disabled="
+                      dataProductFiles[rowIndex].processingStatus !==
+                      FILE_STATUS.FAILED
+                    "
+                  />
+                </va-popover>
+              </div>
+            </template>
+          </va-data-table>
+        </div>
+      </template>
+
+      <!-- custom controls -->
+      <template #controls="{ nextStep, prevStep }">
+        <div class="flex items-center justify-around w-full">
+          <va-button class="flex-none" preset="primary" @click="prevStep()">
+            Previous
+          </va-button>
+          <va-button
+            class="flex-none"
+            @click="
+              isValid_new_data_product_form() &&
+                (is_last_step ? handleSubmit() : nextStep())
+            "
+            :color="is_last_step ? 'success' : 'primary'"
+          >
+            {{ is_last_step ? "Create Data Product" : "Next" }}
+          </va-button>
+        </div>
+      </template>
+    </va-stepper>
+
+    <!--    <va-button type="submit">Upload</va-button>-->
+  </va-form>
+</template>
+
 <script setup>
 import SparkMD5 from "spark-md5";
 import _ from "lodash";
@@ -161,6 +329,10 @@ const uploadFile = async (fileDetails) => {
   console.log(statusLog);
 };
 
+const handleSubmit = async () => {
+  await uploadFiles();
+};
+
 const uploadFiles = async () => {
   status.value = STATUS.IN_PROGRESS;
 
@@ -257,174 +429,6 @@ const validateNotExists = (value) => {
   });
 };
 </script>
-
-<template>
-  <va-form ref="data_product_upload_form" class="h-full">
-    <va-stepper
-      v-model="step"
-      :steps="steps"
-      controlsHidden
-      class="h-full create-data-product-stepper"
-    >
-      <!-- Step icons and labels -->
-      <template
-        v-for="(step, i) in steps"
-        :key="step.label"
-        #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
-      >
-        <div
-          class="step-button p-1 sm:p-3 cursor-pointer"
-          :class="{
-            'step-button--active': isActive,
-            'step-button--completed': isCompleted,
-          }"
-          @click="isValid_new_data_product_form() && setStep(i)"
-        >
-          <div class="flex flex-col items-center">
-            <Icon :icon="step.icon" />
-            <span class="hidden sm:block"> {{ step.label }} </span>
-          </div>
-        </div>
-      </template>
-
-      <template #step-content-0>
-        <va-input
-          label="Data Product Name"
-          placeholder="Name"
-          v-model="dataProductName"
-          class="w-full"
-          :rules="[
-            (value) => {
-              return (value && value.length > 0) || 'Name is required';
-            },
-            (value) => {
-              return (
-                (value && value.length > 2) ||
-                'Name must be 3 or more characters'
-              );
-            },
-            validateNotExists,
-          ]"
-        />
-      </template>
-
-      <template #step-content-1>
-        <DataProductFileTypeSelect class="w-full" />
-      </template>
-
-      <template #step-content-2>
-        <AutoCompleteSelect
-          class="w-full"
-          label="Source Raw Data"
-          placeholder="Raw Data"
-          :options="raw_data_list"
-          :text-by="(option) => option.name"
-          :autocomplete="true"
-          :rules="[
-            (value) => {
-              return (
-                (value && value.name.length > 0) ||
-                'Source Raw Data is required'
-              );
-            },
-          ]"
-        />
-      </template>
-
-      <template #step-content-3>
-        <div class="flex-none">
-          <va-file-upload
-            class="w-full"
-            label="File"
-            dropzone
-            @file-added="setFiles"
-            :disabled="areControlsDisabled"
-          />
-
-          <va-data-table
-            v-if="dataProductFiles.length > 0"
-            :items="dataProductFiles"
-            :columns="columns"
-          >
-            <template #cell(progress)="{ value }">
-              <va-progress-circle :model-value="value" size="small">
-                {{ value && value + "%" }}
-              </va-progress-circle>
-            </template>
-
-            <template #cell(processingStatus)="{ value }">
-              <span class="flex justify-center">
-                <va-popover
-                  v-if="value === FILE_STATUS.PROCESSED"
-                  message="Succeeded"
-                >
-                  <va-icon name="check_circle_outline" color="success" />
-                </va-popover>
-                <va-popover
-                  v-if="value === FILE_STATUS.PROCESSING"
-                  message="Pending"
-                >
-                  <va-icon name="pending" color="info" />
-                </va-popover>
-                <va-popover
-                  v-if="value === FILE_STATUS.FAILED"
-                  message="Failed"
-                >
-                  <va-icon name="error_outline" color="danger" />
-                </va-popover>
-              </span>
-            </template>
-
-            <template #cell(actions)="{ rowIndex }">
-              <div class="flex gap-1">
-                <va-button
-                  preset="plain"
-                  icon="delete"
-                  color="danger"
-                  @click="removeFile(rowIndex)"
-                  :disabled="areControlsDisabled"
-                />
-                <va-popover message="Retry upload">
-                  <va-button
-                    preset="plain"
-                    icon="refresh"
-                    color="info"
-                    @click="uploadFile(dataProductFiles[rowIndex])"
-                    :disabled="
-                      dataProductFiles[rowIndex].processingStatus !==
-                      FILE_STATUS.FAILED
-                    "
-                  />
-                </va-popover>
-              </div>
-            </template>
-          </va-data-table>
-        </div>
-      </template>
-
-      <!-- custom controls -->
-      <template #controls="{ nextStep, prevStep }">
-        <div class="flex items-center justify-around w-full">
-          <va-button class="flex-none" preset="primary" @click="prevStep()">
-            Previous
-          </va-button>
-          <va-button
-            class="flex-none"
-            @click="
-              isValid_new_data_product_form() &&
-                (is_last_step ? uploadFiles() : nextStep())
-            "
-            :color="is_last_step ? 'success' : 'primary'"
-          >
-            {{ is_last_step ? "Create Data Product" : "Next" }}
-          </va-button>
-        </div>
-      </template>
-    </va-stepper>
-
-    <!--    <va-button type="submit">Upload</va-button>-->
-  </va-form>
-</template>
 
 <style lang="scss">
 .create-data-product-stepper {
