@@ -55,7 +55,7 @@
           class="w-full"
           @new-file-type-created="
             (newFileType) => {
-              fileTypeList.value.push(newFileType);
+              fileTypeList.push(newFileType);
             }
           "
         />
