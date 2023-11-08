@@ -71,7 +71,7 @@
           v-model="rawDataSelected"
           v-model:search="rawDataSelected_search"
           autocomplete
-          class="w-full"
+          class="w-full raw_data_select"
           label="Source Raw Data"
           placeholder="Raw Data"
           :options="raw_data_list"
@@ -497,6 +497,11 @@ onBeforeRouteLeave(() => {
     td:first-child {
       min-width: 135px;
     }
+  }
+
+  .raw_data_select .va-select-content__autocomplete {
+    padding-top: 7.5px;
+    padding-bottom: 7.5px;
   }
 }
 </style>
