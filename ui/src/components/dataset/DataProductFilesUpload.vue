@@ -62,13 +62,15 @@
       </template>
 
       <template #step-content-2>
-        <AutoCompleteSelect
+        <va-select
+          v-model="rawDataSelected"
+          v-model:search="rawDataSelected_search"
+          autocomplete
           class="w-full"
           label="Source Raw Data"
           placeholder="Raw Data"
           :options="raw_data_list"
           :text-by="(option) => option.name"
-          :autocomplete="true"
           :rules="[
             (value) => {
               return (
@@ -214,10 +216,11 @@ const steps = [
   { label: "Select File", icon: "material-symbols:folder" },
 ];
 
+const dataProductName = ref("");
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
-
-const dataProductName = ref("");
+const rawDataSelected = ref();
+const rawDataSelected_search = ref("");
 const status = ref();
 const inProgress = computed(() => status.value === STATUS.IN_PROGRESS);
 const areControlsDisabled = computed(
