@@ -61,7 +61,10 @@
           ]"
         ></va-input>
 
-        <div v-if="show_new_file_type_form_wide_errors">
+        <div
+          v-if="show_new_file_type_form_wide_errors"
+          class="duplicate_file_type_alert"
+        >
           <va-alert
             v-for="(error, i) in new_file_type_form_wide_errors"
             :key="i"
@@ -165,3 +168,9 @@ const emitModelValueUpdate = (val) => {
   emit("update:modelValue", val);
 };
 </script>
+
+<style lang="scss">
+.duplicate_file_type_alert {
+  max-width: 250px;
+}
+</style>
