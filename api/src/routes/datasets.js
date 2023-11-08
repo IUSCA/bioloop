@@ -250,11 +250,11 @@ router.get(
 
 // Data Products - UI
 router.get(
-  '/data-product-file-types',
+  '/data-file-types',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
-    const data_product_file_types = await prisma.data_product_file_type.findMany();
-    res.json(data_product_file_types);
+    const data_file_types = await prisma.data_file_type.findMany();
+    res.json(data_file_types);
     // res.json([]);
   }),
 );

@@ -70,8 +70,8 @@ class DatasetService {
     });
   }
 
-  getDataProductFileTypes() {
-    return api.get("/datasets/data-product-file-types");
+  getDataFileTypes() {
+    return api.get("/datasets/data-file-types");
   }
 
   getDataProductUploads() {

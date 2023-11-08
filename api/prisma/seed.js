@@ -240,9 +240,9 @@ async function main() {
     })),
   );
 
-  // create data_product_file_type
-  await prisma.data_product_file_type.deleteMany();
-  await prisma.data_product_file_type.createMany({ data: data.data_product_file_type });
+  // create data_file_type
+  await prisma.data_file_type.deleteMany();
+  await prisma.data_file_type.createMany({ data: data.data_file_types });
 
   // upsert dataset_files
   await put_dataset_files({ dataset_id: 1, num_files: 100, max_depth: 1 });

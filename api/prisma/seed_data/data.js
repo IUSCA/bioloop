@@ -314,7 +314,7 @@ const project_contact_assoc = [
   },
 ];
 
-const data_product_file_type = [{
+const data_file_types = [{
   name: 'FASTQ',
   extension: 'fastq',
 }, {
@@ -337,7 +337,7 @@ module.exports = {
   dataset_heirarchical_association,
   metrics,
   dataset_audit_data,
-  data_product_file_type,
+  data_file_types,
   contacts,
   projects,
   project_user_assoc,
