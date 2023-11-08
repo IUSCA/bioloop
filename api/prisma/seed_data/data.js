@@ -194,6 +194,11 @@ const datasets = [
     type: 'RAW_DATA',
     origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230417',
   },
+  {
+    id: 11,
+    name: 'Uploaded_data_product_4',
+    type: 'DATA_PRODUCT',
+  },
 ];
 
 const dataset_heirarchical_association = [{
@@ -315,17 +320,47 @@ const project_contact_assoc = [
 ];
 
 const data_file_types = [{
+  id: 1,
   name: 'FASTQ',
   extension: 'fastq',
 }, {
+  id: 2,
   name: 'BAM',
   extension: 'bam',
 }, {
+  id: 3,
   name: 'BIGWIG',
   extension: 'bw',
 }, {
+  id: 4,
   name: 'IMAGE_HE',
   extension: '.tif',
+}];
+
+const data_product_uploads = [{
+  data_file_type_id: 1,
+  status: 'PROCESSING',
+  dataset_id: undefined,
+  dataset_name: 'Uploaded_data_product_1',
+  source_dataset_id: 1,
+}, {
+  data_file_type_id: 2,
+  status: 'PROCESSING',
+  dataset_id: undefined,
+  dataset_name: 'Uploaded_data_product_2',
+  source_dataset_id: 2,
+}, {
+  data_file_type_id: 2,
+  status: 'FAILED',
+  dataset_id: undefined,
+  dataset_name: 'Uploaded_data_product_3',
+  source_dataset_id: 2,
+}, {
+  data_file_type_id: 3,
+  status: 'COMPLETE',
+  dataset_id: 11,
+  dataset_name: 'Uploaded_data_product_4',
+  source_dataset_id: 2,
 }];
 
 module.exports = {
@@ -338,6 +373,7 @@ module.exports = {
   metrics,
   dataset_audit_data,
   data_file_types,
+  data_product_uploads,
   contacts,
   projects,
   project_user_assoc,

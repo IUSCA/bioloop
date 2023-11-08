@@ -422,7 +422,7 @@ const validateNotExists = (value) => {
 };
 
 onMounted(() => {
-  datasetService.getDataProductFileTypes().then((res) => {
+  datasetService.getDataFileTypes().then((res) => {
     // debugger;
     fileTypeList.value = res.data;
   });

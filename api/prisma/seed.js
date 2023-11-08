@@ -285,6 +285,26 @@ async function main() {
   await prisma.stage_request_log.createMany({
     data: stage_request_logs,
   });
+
+  // create data upload entries
+  const data_uploads = data.data_product_uploads;
+  const operators = await prisma.user.findMany({
+    where: {
+      user_role: {
+        some: {
+          role_id: 2,
+        },
+      },
+    },
+  });
+  const uploads = data_uploads.map((e) => {
+    const operator = operators[Math.floor(Math.random() * operators.length)];
+    return { ...e, user_id: operator.id };
+    // user: { create: operators[Math.floor(Math.random() * operators.length)] },
+  });
+  await prisma.data_upload.createMany({
+    data: uploads,
+  });
 }
 
 main()

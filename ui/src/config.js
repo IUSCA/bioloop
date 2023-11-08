@@ -47,6 +47,11 @@ const exports = {
     SLATE_SCRATCH: "/N/scratch",
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
+  upload_status: {
+    PROCESSING: "PROCESSING",
+    COMPLETE: "COMPLETE",
+    FAILED: "FAILED",
+  },
 };
 
 export default exports;

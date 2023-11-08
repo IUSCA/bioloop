@@ -263,7 +263,12 @@ router.get(
   '/data-product-uploads',
   isPermittedTo('read'),
   asyncHandler(async (req, res) => {
-    const uploads = await prisma.data_product_upload.findMany();
+    const uploads = await prisma.data_upload.findMany({
+      include: {
+        source_dataset: true,
+        user: true,
+      },
+    });
     res.json(uploads);
   }),
 );

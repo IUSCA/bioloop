@@ -36,18 +36,18 @@ model dataset {
   accesses            data_access_log[]
   stage_requests      stage_request_log[]
   data_upload         data_upload?
-  derived_data_upload data_upload?        @relation("source_dataset")
+  derived_data_uploads data_upload[]        @relation("source_dataset")
 
   @@unique([name, type, is_deleted])
 }
 
 model data_upload {
   id                Int            @id @default(autoincrement())
-  status            String
+  status            upload_status
   dataset_id        Int?           @unique
   dataset           dataset?       @relation(fields: [dataset_id], references: [id])
   dataset_name      String
-  source_dataset_id Int            @unique
+  source_dataset_id Int
   source_dataset    dataset        @relation("source_dataset", fields: [source_dataset_id], references: [id])
   file_type         data_file_type @relation(fields: [data_file_type_id], references: [id])
   data_file_type_id Int
@@ -311,4 +311,10 @@ model worker_process {
 enum access_type {
   BROWSER
   SLATE_SCRATCH
+}
+
+enum upload_status {
+  PROCESSING
+  COMPLETE
+  FAILED
 }

@@ -1,10 +1,13 @@
+-- CreateEnum
+CREATE TYPE "upload_status" AS ENUM ('PROCESSING', 'COMPLETE', 'FAILED');
+
 -- AlterTable
 ALTER TABLE "dataset" ADD COLUMN     "data_file_type_id" INTEGER;
 
 -- CreateTable
 CREATE TABLE "data_upload" (
     "id" SERIAL NOT NULL,
-    "status" TEXT NOT NULL,
+    "status" "upload_status" NOT NULL,
     "dataset_id" INTEGER,
     "dataset_name" TEXT NOT NULL,
     "source_dataset_id" INTEGER NOT NULL,
@@ -26,9 +29,6 @@ CREATE TABLE "data_file_type" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "data_upload_dataset_id_key" ON "data_upload"("dataset_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "data_upload_source_dataset_id_key" ON "data_upload"("source_dataset_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "data_file_type_name_extension_key" ON "data_file_type"("name", "extension");
