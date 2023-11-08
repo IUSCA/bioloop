@@ -2,7 +2,7 @@
   <div class="w-full flex justify-center">
     <va-card class="md:max-w-2xl md:h-[calc(85vh)]">
       <va-card-content class="h-full">
-        <DataProductFilesUpload />
+        <CreateDataProductStepper />
       </va-card-content>
     </va-card>
   </div>
