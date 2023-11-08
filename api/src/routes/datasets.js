@@ -728,10 +728,11 @@ const getDataProductUploadPath = (req) => path.join(
   req.body.hash,
 );
 const getDataProductFileChunkName = (req) => `${req.body.hash}-${req.body.index}`;
+const getTempStorage = (req) => path.join(getDataProductUploadPath(req), 'temp');
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const tempStorage = path.join(getDataProductUploadPath(req), 'temp');
+    const tempStorage = getTempStorage(req);
     await fsPromises.mkdir(tempStorage, {
       recursive: true,
     });
