@@ -49,7 +49,11 @@
       </template>
 
       <template #step-content-1>
-        <DataProductFileTypeSelect class="w-full" />
+        <!--        <DataProductFileTypeSelect class="w-full" v-model="fileTypeVModel" />-->
+        <DataProductNewFileType
+          v-model="fileTypeSelected"
+          :file-type-list="fileTypeList"
+        />
       </template>
 
       <template #step-content-2>
@@ -172,7 +176,6 @@ import _ from "lodash";
 import datasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import { useForm } from "vuestic-ui";
-import DataProductFileTypeSelect from "@/components/dataset/DataProductFileTypeSelect.vue";
 
 const STATUS = {
   IN_PROGRESS: "IN_PROGRESS",
@@ -207,6 +210,9 @@ const steps = [
   { label: "Source Raw Data", icon: "mdi:dna" },
   { label: "Select File", icon: "material-symbols:folder" },
 ];
+
+const fileTypeSelected = ref();
+const fileTypeList = ref([]);
 
 const dataProductName = ref("");
 const status = ref();
@@ -428,6 +434,19 @@ const validateNotExists = (value) => {
     }
   });
 };
+
+watch(fileTypeSelected, () => {
+  // debugger;
+  console.log(fileTypeSelected.value);
+  fileTypeList.value.push(fileTypeSelected.value);
+});
+
+onMounted(() => {
+  datasetService.getDataProductFileTypes().then((res) => {
+    // debugger;
+    fileTypeList.value = res.data;
+  });
+});
 </script>
 
 <style lang="scss">
