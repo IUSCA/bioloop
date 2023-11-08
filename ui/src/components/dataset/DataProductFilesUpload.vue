@@ -49,10 +49,15 @@
       </template>
 
       <template #step-content-1>
-        <!--        <DataProductFileTypeSelect class="w-full" v-model="fileTypeVModel" />-->
-        <DataProductNewFileType
+        <DataProductFileTypeSelect
           v-model="fileTypeSelected"
           :file-type-list="fileTypeList"
+          class="w-full"
+          @new-file-type-created="
+            (newFileType) => {
+              fileTypeList.value.push(newFileType);
+            }
+          "
         />
       </template>
 
@@ -165,8 +170,6 @@
         </div>
       </template>
     </va-stepper>
-
-    <!--    <va-button type="submit">Upload</va-button>-->
   </va-form>
 </template>
 
@@ -379,31 +382,6 @@ const removeFile = (index) => {
   dataProductFiles.value.splice(index, 1);
 };
 
-onMounted(() => {
-  // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
-  window.addEventListener("beforeunload", (e) => {
-    if (inProgress.value) {
-      // show warning before user leaves page
-      e.returnValue = true;
-    }
-  });
-});
-
-onMounted(() => {
-  datasetService.getAll({ type: "DATA_PRODUCT" }).then((res) => {
-    raw_data_list.value = res.data.datasets;
-  });
-});
-
-// show warning before user moves to a different route
-onBeforeRouteLeave(() => {
-  const answer = window.confirm(
-    "Leaving this page before all files have been processed/uploaded will" +
-      " cancel the upload. Do you wish to continue?",
-  );
-  if (!answer) return false;
-});
-
 function isValid_new_data_product_form() {
   // debugger;
   validate_data_product_upload_form();
@@ -435,17 +413,36 @@ const validateNotExists = (value) => {
   });
 };
 
-watch(fileTypeSelected, () => {
-  // debugger;
-  console.log(fileTypeSelected.value);
-  fileTypeList.value.push(fileTypeSelected.value);
-});
-
 onMounted(() => {
   datasetService.getDataProductFileTypes().then((res) => {
     // debugger;
     fileTypeList.value = res.data;
   });
+});
+
+onMounted(() => {
+  // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
+  window.addEventListener("beforeunload", (e) => {
+    if (inProgress.value) {
+      // show warning before user leaves page
+      e.returnValue = true;
+    }
+  });
+});
+
+onMounted(() => {
+  datasetService.getAll({ type: "DATA_PRODUCT" }).then((res) => {
+    raw_data_list.value = res.data.datasets;
+  });
+});
+
+// show warning before user moves to a different route
+onBeforeRouteLeave(() => {
+  const answer = window.confirm(
+    "Leaving this page before all files have been processed/uploaded will" +
+      " cancel the upload. Do you wish to continue?",
+  );
+  if (!answer) return false;
 });
 </script>
 
