@@ -107,6 +107,7 @@ const show_new_file_type_form_wide_errors = ref(false);
 const new_file_type_name = ref("");
 const new_file_type_extension = ref("");
 
+// errors pertaining to the entire form, and not specific fields
 const new_file_type_form_wide_errors = computed(() => {
   let form_errors = [];
   const is_duplicate_file_type =

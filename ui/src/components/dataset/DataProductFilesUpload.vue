@@ -55,6 +55,11 @@
           class="w-full"
           @new-file-type-created="
             (newFileType) => {
+              // if a new File Type has already been created, remove it
+              const currentNewFileType = fileTypeList.find((e) => !e.id);
+              if (currentNewFileType) {
+                fileTypeList.pop();
+              }
               fileTypeList.push(newFileType);
             }
           "
