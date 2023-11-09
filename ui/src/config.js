@@ -13,10 +13,6 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    stage: {
-      RAW_DATA: "/path/to/staged/raw_data",
-      DATA_PRODUCT: "/path/to/staged/data_products",
-    },
     download: "/N/scratch/bioloop/production/download",
   },
   file_browser: {
