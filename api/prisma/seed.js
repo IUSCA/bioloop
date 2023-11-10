@@ -143,6 +143,10 @@ async function main() {
 
   await Promise.all(operator_promises);
 
+  // create dataset_file_type
+  await prisma.dataset_file_type.deleteMany();
+  await prisma.dataset_file_type.createMany({ data: data.dataset_file_types });
+
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
@@ -240,10 +244,6 @@ async function main() {
     })),
   );
 
-  // create data_file_type
-  await prisma.data_file_type.deleteMany();
-  await prisma.data_file_type.createMany({ data: data.data_file_types });
-
   // upsert dataset_files
   await put_dataset_files({ dataset_id: 1, num_files: 100, max_depth: 1 });
   await put_dataset_files({ dataset_id: 2, num_files: 100, max_depth: 3 });
@@ -287,7 +287,7 @@ async function main() {
   });
 
   // create data upload entries
-  const data_uploads = data.data_product_uploads;
+  const dataset_uploads = data.data_product_uploads;
   const operators = await prisma.user.findMany({
     where: {
       user_role: {
@@ -297,12 +297,11 @@ async function main() {
       },
     },
   });
-  const uploads = data_uploads.map((e) => {
+  const uploads = dataset_uploads.map((e) => {
     const operator = operators[Math.floor(Math.random() * operators.length)];
     return { ...e, user_id: operator.id };
-    // user: { create: operators[Math.floor(Math.random() * operators.length)] },
   });
-  await prisma.data_upload.createMany({
+  await prisma.dataset_upload.createMany({
     data: uploads,
   });
 }

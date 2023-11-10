@@ -84,5 +84,10 @@
       ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"]
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT", "UPLOAD"],
+  "upload_status": {
+    "PROCESSING": "PROCESSING",
+    "COMPLETE": "COMPLETE",
+    "FAILED": "FAILED"
+  }
 }

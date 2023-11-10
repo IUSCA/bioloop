@@ -253,7 +253,7 @@ router.get(
   '/data-file-types',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
-    const data_file_types = await prisma.data_file_type.findMany();
+    const data_file_types = await prisma.dataset_file_type.findMany();
     res.json(data_file_types);
     // res.json([]);
   }),
@@ -773,6 +773,51 @@ router.post(
   }),
 );
 
+// Post a Dataset's upload log and the Dataset itself to the database
+router.post(
+  '/upload-log',
+  validate([
+    body('dataset_name').notEmpty().escape().isLength({ min: 3 }),
+    body('file_type').isObject(),
+    body('source_dataset_id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // console.log('REQUEST BODY');
+    // console.log(req.body);
+
+    const { file_type } = req.body;
+    const file_type_query = file_type.id ? { connect: { id: file_type.id } } : {
+      create: {
+        name: req.body.file_type.name,
+        extension: req.body.file_type.extension,
+      },
+    };
+
+    await prisma.dataset.create({
+      data: {
+        source_datasets: {
+          create: [{
+            source_id: req.body.source_dataset_id,
+          }],
+        },
+        name: req.body.dataset_name,
+        type: 'UPLOAD',
+        file_type: {
+          ...file_type_query,
+        },
+        dataset_upload: {
+          create:
+            {
+              status: config.upload_status.PROCESSING,
+              user_id: req.user.id,
+            },
+        },
+      },
+    });
+
+    res.json('success');
+  }),
+);
 const mkdirsSync = (dirname) => {
   if (fs.existsSync(dirname)) {
     return true;

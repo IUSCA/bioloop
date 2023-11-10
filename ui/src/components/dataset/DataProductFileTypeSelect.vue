@@ -46,7 +46,7 @@
           @input="show_new_file_type_form_wide_errors = false"
           :rules="[
             (value) => (value && value.length > 0) || 'Name is required',
-            (value) => (value && value.length > 3) || 'Name is too short',
+            (value) => (value && value.length > 2) || 'Name is too short',
           ]"
         ></va-input>
         <va-input
@@ -57,7 +57,7 @@
           @input="show_new_file_type_form_wide_errors = false"
           :rules="[
             (value) => (value && value.length > 0) || 'Extension is required',
-            (value) => (value && value.length > 3) || 'Extension is too short',
+            (value) => (value && value.length > 2) || 'Extension is too short',
           ]"
         ></va-input>
 

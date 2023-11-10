@@ -68,6 +68,7 @@
 
       <template #step-content-2>
         <va-select
+          name="raw_data"
           v-model="rawDataSelected"
           v-model:search="rawDataSelected_search"
           autocomplete
@@ -347,7 +348,18 @@ const uploadFile = async (fileDetails) => {
 };
 
 const handleSubmit = async () => {
-  await uploadFiles();
+  const formData = {};
+  formData.dataset_name = dataProductName.value;
+  formData.source_dataset_id = rawDataSelected.value.id;
+  formData.file_type = fileTypeSelected.value;
+
+  await initiateDataProductUpload(formData);
+};
+
+const initiateDataProductUpload = async (data) => {
+  datasetService.initiateDataProductUpload(data).then(async () => {
+    await uploadFiles();
+  });
 };
 
 const uploadFiles = async () => {
@@ -396,7 +408,7 @@ function isValid_new_data_product_form() {
   return isValid_data_product_upload_form.value;
 }
 
-const validateNotExists = (value) => {
+const validateNotExists = async (value) => {
   return new Promise((resolve) => {
     // Vuestic claims that it should not run async validation if synchronous validation fails,
     // but it seems to be triggering async validation nonetheless when `value` is empty. Hence
@@ -407,15 +419,26 @@ const validateNotExists = (value) => {
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
         .then((res) => {
-          const dataProducts = res.data.datasets;
-          const matchingDataProductFound = dataProducts.some(
-            (e) => e.name === value,
-          );
-          resolve(
-            matchingDataProductFound
-              ? "Data Product with provided name already exists"
-              : true,
-          );
+          return res.data.datasets;
+        })
+        .then((matchingDataProducts) => {
+          datasetService
+            .getAll({ type: "UPLOAD", name: value, match_name_exact: true })
+            .then((res) => {
+              const matchingUploadingDataProducts = res.data.datasets;
+              const dataProducts = matchingDataProducts.concat(
+                matchingUploadingDataProducts,
+              );
+
+              const matchingDataProductFound = dataProducts.some(
+                (e) => e.name === value,
+              );
+              resolve(
+                matchingDataProductFound
+                  ? "Data Product with provided name already exists"
+                  : true,
+              );
+            });
         });
     }
   });
@@ -439,7 +462,7 @@ onMounted(() => {
 });
 
 onMounted(() => {
-  datasetService.getAll({ type: "DATA_PRODUCT" }).then((res) => {
+  datasetService.getAll({ type: "RAW_DATA" }).then((res) => {
     raw_data_list.value = res.data.datasets;
   });
 });

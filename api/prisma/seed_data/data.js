@@ -198,6 +198,7 @@ const datasets = [
     id: 11,
     name: 'Uploaded_data_product_4',
     type: 'DATA_PRODUCT',
+    dataset_file_type_id: 1,
   },
 ];
 
@@ -319,7 +320,7 @@ const project_contact_assoc = [
   },
 ];
 
-const data_file_types = [{
+const dataset_file_types = [{
   id: 1,
   name: 'FASTQ',
   extension: 'fastq',
@@ -338,29 +339,17 @@ const data_file_types = [{
 }];
 
 const data_product_uploads = [{
-  data_file_type_id: 1,
   status: 'PROCESSING',
   dataset_id: undefined,
-  dataset_name: 'Uploaded_data_product_1',
-  source_dataset_id: 1,
 }, {
-  data_file_type_id: 2,
   status: 'PROCESSING',
   dataset_id: undefined,
-  dataset_name: 'Uploaded_data_product_2',
-  source_dataset_id: 2,
 }, {
-  data_file_type_id: 2,
   status: 'FAILED',
   dataset_id: undefined,
-  dataset_name: 'Uploaded_data_product_3',
-  source_dataset_id: 2,
 }, {
-  data_file_type_id: 3,
   status: 'COMPLETE',
   dataset_id: 11,
-  dataset_name: 'Uploaded_data_product_4',
-  source_dataset_id: 2,
 }];
 
 module.exports = {
@@ -372,7 +361,7 @@ module.exports = {
   dataset_heirarchical_association,
   metrics,
   dataset_audit_data,
-  data_file_types,
+  dataset_file_types,
   data_product_uploads,
   contacts,
   projects,

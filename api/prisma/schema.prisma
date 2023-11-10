@@ -8,60 +8,53 @@ datasource db {
 }
 
 model dataset {
-  id                  Int                 @id @default(autoincrement())
-  name                String
-  type                String
-  file_type           data_file_type?     @relation(fields: [data_file_type_id], references: [id])
-  data_file_type_id   Int?
-  num_directories     Int?
-  num_files           Int?
-  du_size             BigInt?
-  size                BigInt?
-  bundle_size         BigInt?
-  description         String?
-  created_at          DateTime            @default(now()) @db.Timestamp(6)
-  updated_at          DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  origin_path         String?
-  archive_path        String?
-  is_deleted          Boolean             @default(false)
-  is_staged           Boolean             @default(false)
-  metadata            Json?
-  workflows           workflow[]
-  files               dataset_file[]
-  audit_logs          dataset_audit[]
-  states              dataset_state[]
-  derived_datasets    dataset_hierarchy[] @relation("source_datasets")
-  source_datasets     dataset_hierarchy[] @relation("derived_datasets")
-  projects            project_dataset[]
-  accesses            data_access_log[]
-  stage_requests      stage_request_log[]
-  data_upload         data_upload?
-  derived_data_uploads data_upload[]        @relation("source_dataset")
+  id                   Int                 @id @default(autoincrement())
+  name                 String
+  type                 String
+  file_type            dataset_file_type?  @relation(fields: [dataset_file_type_id], references: [id])
+  dataset_file_type_id Int?
+  num_directories      Int?
+  num_files            Int?
+  du_size              BigInt?
+  size                 BigInt?
+  bundle_size          BigInt?
+  description          String?
+  created_at           DateTime            @default(now()) @db.Timestamp(6)
+  updated_at           DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  origin_path          String?
+  archive_path         String?
+  is_deleted           Boolean             @default(false)
+  is_staged            Boolean             @default(false)
+  metadata             Json?
+  workflows            workflow[]
+  files                dataset_file[]
+  audit_logs           dataset_audit[]
+  states               dataset_state[]
+  derived_datasets     dataset_hierarchy[] @relation("source_datasets")
+  source_datasets      dataset_hierarchy[] @relation("derived_datasets")
+  projects             project_dataset[]
+  accesses             data_access_log[]
+  stage_requests       stage_request_log[]
+  dataset_upload       dataset_upload?
 
   @@unique([name, type, is_deleted])
 }
 
-model data_upload {
-  id                Int            @id @default(autoincrement())
-  status            upload_status
-  dataset_id        Int?           @unique
-  dataset           dataset?       @relation(fields: [dataset_id], references: [id])
-  dataset_name      String
-  source_dataset_id Int
-  source_dataset    dataset        @relation("source_dataset", fields: [source_dataset_id], references: [id])
-  file_type         data_file_type @relation(fields: [data_file_type_id], references: [id])
-  data_file_type_id Int
-  created_date      DateTime       @default(now()) @db.Timestamp(6)
-  user_id           Int
-  user              user           @relation(fields: [user_id], references: [id])
+model dataset_upload {
+  id           Int           @id @default(autoincrement())
+  status       upload_status
+  dataset_id   Int?          @unique
+  dataset      dataset?      @relation(fields: [dataset_id], references: [id])
+  created_date DateTime      @default(now()) @db.Timestamp(6)
+  user_id      Int
+  user         user          @relation(fields: [user_id], references: [id])
 }
 
-model data_file_type {
-  id           Int           @id @default(autoincrement())
-  name         String
-  extension    String
-  datasets     dataset[]
-  data_uploads data_upload[]
+model dataset_file_type {
+  id        Int       @id @default(autoincrement())
+  name      String
+  extension String
+  datasets  dataset[]
 
   @@unique([name, extension])
 }
@@ -148,25 +141,25 @@ model stage_request_log {
 }
 
 model user {
-  id             Int                 @id @default(autoincrement())
-  username       String              @unique @db.VarChar(100)
-  name           String?             @db.VarChar(100)
-  email          String              @unique @db.VarChar(100)
-  cas_id         String?             @unique @db.VarChar(100)
-  notes          String?
-  created_at     DateTime            @default(now()) @db.Timestamp(6)
-  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  is_deleted     Boolean             @default(false)
-  user_role      user_role[]
-  settings       user_settings?
-  contacts       contact[]
-  dataset_audit  dataset_audit[]
-  projects       project_user[]
-  password       user_password?
-  login          user_login?
-  accesses       data_access_log[]
-  stage_requests stage_request_log[]
-  data_uploads   data_upload[]
+  id              Int                 @id @default(autoincrement())
+  username        String              @unique @db.VarChar(100)
+  name            String?             @db.VarChar(100)
+  email           String              @unique @db.VarChar(100)
+  cas_id          String?             @unique @db.VarChar(100)
+  notes           String?
+  created_at      DateTime            @default(now()) @db.Timestamp(6)
+  updated_at      DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  is_deleted      Boolean             @default(false)
+  user_role       user_role[]
+  settings        user_settings?
+  contacts        contact[]
+  dataset_audit   dataset_audit[]
+  projects        project_user[]
+  password        user_password?
+  login           user_login?
+  accesses        data_access_log[]
+  stage_requests  stage_request_log[]
+  dataset_uploads dataset_upload[]
 }
 
 model user_password {

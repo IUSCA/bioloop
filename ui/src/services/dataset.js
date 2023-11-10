@@ -82,6 +82,21 @@ class DatasetService {
     return api.post("/datasets/file-chunk", data);
   }
 
+  /**
+   * Logs Data Product upload, and creates entries for Data Product and its relations in the database
+   * @param dataset_name
+   * @param source_dataset_id
+   * @param file_type
+   * @returns {Promise<axios.AxiosResponse<any>>}
+   */
+  initiateDataProductUpload({ dataset_name, source_dataset_id, file_type }) {
+    return api.post("/datasets/upload-log", {
+      dataset_name,
+      source_dataset_id,
+      file_type,
+    });
+  }
+
   stage_dataset(id) {
     return api
       .post(`/datasets/${id}/workflow/stage`)
