@@ -172,9 +172,9 @@ const datasets = [
   },
   {
     id: 7,
-    name: 'PCM230203',
+    name: 'PCM230123',
     type: 'DATA_PRODUCT',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230203',
+    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230123',
   },
   {
     id: 8,
@@ -196,9 +196,21 @@ const datasets = [
   },
   {
     id: 11,
-    name: 'Uploaded_data_product_4',
+    name: 'Uploaded data product 1',
     type: 'DATA_PRODUCT',
     dataset_file_type_id: 1,
+  },
+  {
+    id: 12,
+    name: 'Uploaded data product 2',
+    type: 'DATA_PRODUCT',
+    dataset_file_type_id: 2,
+  },
+  {
+    id: 13,
+    name: 'Uploaded data product 3',
+    type: 'DATA_PRODUCT',
+    dataset_file_type_id: 3,
   },
 ];
 
@@ -208,6 +220,15 @@ const dataset_heirarchical_association = [{
 }, {
   source_id: 2,
   derived_id: 8,
+}, {
+  source_id: 9,
+  derived_id: 11,
+}, {
+  source_id: 10,
+  derived_id: 12,
+}, {
+  source_id: 10,
+  derived_id: 13,
 }];
 
 const metrics = [{
@@ -340,16 +361,16 @@ const dataset_file_types = [{
 
 const data_product_uploads = [{
   status: 'PROCESSING',
-  dataset_id: undefined,
-}, {
-  status: 'PROCESSING',
-  dataset_id: undefined,
+  dataset_id: 11,
+  user_id: 60,
 }, {
   status: 'FAILED',
-  dataset_id: undefined,
+  dataset_id: 12,
+  user_id: 61,
 }, {
   status: 'COMPLETE',
-  dataset_id: 11,
+  dataset_id: 13,
+  user_id: 61,
 }];
 
 module.exports = {

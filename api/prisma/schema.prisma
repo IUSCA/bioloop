@@ -45,9 +45,21 @@ model dataset_upload {
   status       upload_status
   dataset_id   Int?          @unique
   dataset      dataset?      @relation(fields: [dataset_id], references: [id])
+  files        file_upload[]
   created_date DateTime      @default(now()) @db.Timestamp(6)
   user_id      Int
   user         user          @relation(fields: [user_id], references: [id])
+}
+
+model file_upload {
+  id                Int             @id @default(autoincrement())
+  name              String
+  hash              String
+  num_chunks        Int?
+  status            String
+  path              String
+  dataset_upload    dataset_upload? @relation(fields: [dataset_upload_id], references: [id])
+  dataset_upload_id Int?
 }
 
 model dataset_file_type {
@@ -307,6 +319,8 @@ enum access_type {
 }
 
 enum upload_status {
+  UPLOADING
+  UPLOAD_FAILED
   PROCESSING
   COMPLETE
   FAILED

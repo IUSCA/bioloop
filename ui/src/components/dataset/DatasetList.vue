@@ -60,6 +60,12 @@
         <span>{{ datetime.date(value) }}</span>
       </template>
 
+      <template #cell(file_type_name)="{ value }">
+        <va-chip v-if="value" outline size="small">
+          {{ value }}
+        </va-chip>
+      </template>
+
       <template #cell(archived)="{ source }">
         <span v-if="source" class="flex justify-center">
           <i-mdi-check-circle-outline class="text-green-700" />
@@ -267,6 +273,12 @@ const columns = ref([
     width: "100px",
   },
   {
+    key: "file_type_name",
+    label: "File Type",
+    thAlign: "center",
+    tdAlign: "center",
+  },
+  {
     key: "archive_path",
     name: "archived",
     label: "archived",
@@ -392,7 +404,10 @@ function fetch_datasets(query = {}, updatePageCount = true) {
 
   return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
     .then((res) => {
-      datasets.value = res.data.datasets;
+      datasets.value = res.data.datasets.map((d) => ({
+        ...d,
+        file_type_name: d.file_type?.name,
+      }));
       if (updatePageCount) {
         // update page-count for pagination
         total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);

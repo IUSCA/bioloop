@@ -43,6 +43,9 @@
                 'Name must be 3 or more characters'
               );
             },
+            (value) => {
+              return value.indexOf(' ') === -1 || 'Name cannot contain spaces';
+            },
             validateNotExists,
           ]"
         />
@@ -94,12 +97,26 @@
             class="w-full"
             label="File"
             dropzone
-            @file-added="setFiles"
-            :disabled="areControlsDisabled"
+            @file-added="
+              (files) => {
+                setFiles(files);
+                setFileUploadAlertVisibility(false);
+              }
+            "
+            :disabled="isFormSubmitted"
           />
 
+          <va-alert
+            class="mt-4"
+            v-if="isFileUploadAlertVisible"
+            color="danger"
+            border="left"
+            dense
+            >At least one file must be selected to create a Data Product
+          </va-alert>
+
           <va-data-table
-            v-if="dataProductFiles.length > 0"
+            v-if="!(isFileUploadAlertVisible || noFilesSelected)"
             :items="dataProductFiles"
             :columns="columns"
           >
@@ -109,24 +126,18 @@
               </va-progress-circle>
             </template>
 
-            <template #cell(processingStatus)="{ value }">
+            <template #cell(uploadStatus)="{ value }">
               <span class="flex justify-center">
                 <va-popover
-                  v-if="value === FILE_STATUS.PROCESSED"
+                  v-if="value === STATUS.UPLOADED"
                   message="Succeeded"
                 >
                   <va-icon name="check_circle_outline" color="success" />
                 </va-popover>
-                <va-popover
-                  v-if="value === FILE_STATUS.PROCESSING"
-                  message="Pending"
-                >
+                <va-popover v-if="value === STATUS.UPLOADING" message="Pending">
                   <va-icon name="pending" color="info" />
                 </va-popover>
-                <va-popover
-                  v-if="value === FILE_STATUS.FAILED"
-                  message="Failed"
-                >
+                <va-popover v-if="value === STATUS.FAILED" message="Failed">
                   <va-icon name="error_outline" color="danger" />
                 </va-popover>
               </span>
@@ -139,41 +150,118 @@
                   icon="delete"
                   color="danger"
                   @click="removeFile(rowIndex)"
-                  :disabled="areControlsDisabled"
+                  :disabled="isFormSubmitted"
                 />
-                <va-popover message="Retry upload">
-                  <va-button
-                    preset="plain"
-                    icon="refresh"
-                    color="info"
-                    @click="uploadFile(dataProductFiles[rowIndex])"
-                    :disabled="
-                      dataProductFiles[rowIndex].processingStatus !==
-                      FILE_STATUS.FAILED
-                    "
-                  />
-                </va-popover>
               </div>
             </template>
           </va-data-table>
         </div>
+
+        <va-alert
+          v-if="submissionError"
+          class="mt-5"
+          color="danger"
+          border="left"
+          dense
+          >{{ submissionError }}
+        </va-alert>
+
+        <!-- Submitted values -->
+        <va-card v-if="submittedDataset" class="mt-5">
+          <va-card-title>
+            <div class="flex flex-nowrap items-center w-full">
+              <span class="text-lg">Details</span>
+            </div>
+          </va-card-title>
+          <va-card-content>
+            <div class="va-table-responsive">
+              <table class="va-table">
+                <tbody>
+                  <tr>
+                    <td>Status</td>
+                    <td>
+                      <va-chip size="small" :color="submissionStatusColor">
+                        {{ submissionStatus }}
+                      </va-chip>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Data Product Name</td>
+                    <td>{{ submittedDataset.name }}</td>
+                  </tr>
+                  <tr>
+                    <td>File Type</td>
+                    <td>
+                      <va-chip outline small class="mr-2">{{
+                        submittedDataset.file_type.name
+                      }}</va-chip>
+                      <va-chip outline small>{{
+                        submittedDataset.file_type.extension
+                      }}</va-chip>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Source Raw Data</td>
+                    <td>
+                      <span>
+                        <router-link
+                          :to="`/datasets/${rawDataSelected.id}`"
+                          target="_blank"
+                        >
+                          {{ rawDataSelected.name }}
+                        </router-link>
+                        <!--                        <a-->
+                        <!--                          :href="`/datasets/${submittedDataset.source_datasets[0].source_dataset.id}`"-->
+                        <!--                          target="_blank"-->
+                        <!--                        >-->
+                        <!--                          {{-->
+                        <!--                            submittedDataset.source_datasets[0].source_dataset-->
+                        <!--                              .name-->
+                        <!--                          }}-->
+                        <!--                        </a>-->
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </va-card-content>
+        </va-card>
       </template>
 
       <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
         <div class="flex items-center justify-around w-full">
-          <va-button class="flex-none" preset="primary" @click="prevStep()">
+          <va-button
+            class="flex-none"
+            preset="primary"
+            @click="
+              () => {
+                setFileUploadAlertVisibility(false);
+                prevStep();
+              }
+            "
+            :disabled="step === 0 || isFormSubmitted"
+          >
             Previous
           </va-button>
           <va-button
             class="flex-none"
-            @click="
-              isValid_new_data_product_form() &&
-                (is_last_step ? handleSubmit() : nextStep())
-            "
+            @click="isValid_new_data_product_form() && onNextClick(nextStep)"
             :color="is_last_step ? 'success' : 'primary'"
+            :disabled="
+              is_last_step &&
+              (form_status === STATUS.UPLOADING ||
+                form_status === STATUS.UPLOADED)
+            "
           >
-            {{ is_last_step ? "Create Data Product" : "Next" }}
+            {{
+              is_last_step
+                ? someUploadsFailed
+                  ? "Retry Uploading Failed Files"
+                  : "Upload Files"
+                : "Next"
+            }}
           </va-button>
         </div>
       </template>
@@ -187,15 +275,12 @@ import _ from "lodash";
 import datasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import { useForm } from "vuestic-ui";
+import config from "@/config";
 
 const STATUS = {
-  IN_PROGRESS: "IN_PROGRESS",
-  COMPLETE: "COMPLETE",
-};
-const FILE_STATUS = {
-  PROCESSING: "Processing",
-  PROCESSED: "Processed",
-  FAILED: "Processing Failed",
+  UPLOADING: "Uploading",
+  UPLOADED: "Uploaded",
+  FAILED: "Upload Failed",
 };
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -207,7 +292,7 @@ const columns = [
   { key: "name" },
   { key: "formattedSize", label: "Size" },
   {
-    key: "processingStatus",
+    key: "uploadStatus",
     label: "Status",
     thAlign: "center",
     tdAlign: "center",
@@ -227,17 +312,40 @@ const fileTypeSelected = ref();
 const fileTypeList = ref([]);
 const rawDataSelected = ref();
 const rawDataSelected_search = ref("");
-const status = ref();
-const inProgress = computed(() => status.value === STATUS.IN_PROGRESS);
-const areControlsDisabled = computed(
-  () => status.value === STATUS.IN_PROGRESS || status.value === STATUS.COMPLETE,
-);
+const submittedDataset = ref();
+const form_status = ref();
+const submissionStatus = ref();
+const submissionError = ref(""); // For handling network errors before upload begins
+const inProgress = computed(() => form_status.value === STATUS.UPLOADING);
 const dataProductFiles = ref([]);
-const raw_data_list = ref([]);
+const failedFiles = computed(() => {
+  return dataProductFiles.value.filter((e) => e.uploadStatus === STATUS.FAILED);
+});
+const someUploadsFailed = ref(false);
+const submissionStatusColor = computed(() => {
+  if (
+    submissionStatus.value === config.upload_status.PROCESSING ||
+    submissionStatus.value === config.upload_status.UPLOADING
+  ) {
+    return "primary";
+  }
+  if (submissionStatus.value === config.upload_status.COMPLETE) {
+    return "success";
+  }
+  if (submissionStatus.value === config.upload_status.UPLOAD_FAILED) {
+    return "warning";
+  }
+});
 
+const raw_data_list = ref([]);
 const step = ref(0);
 const is_last_step = computed(() => {
   return step.value === steps.length - 1;
+});
+
+const isFileUploadAlertVisible = ref(false);
+const noFilesSelected = computed(() => {
+  return dataProductFiles.value.length === 0;
 });
 
 const {
@@ -247,22 +355,28 @@ const {
 
 const hashFile = (file) => {
   return new Promise((resolve) => {
-    let currentChunk = 0;
+    let chunkIndex = 0;
     const chunks = Math.ceil(file.size / CHUNK_SIZE);
     const buffer = new SparkMD5.ArrayBuffer();
     const fileReader = new FileReader();
+    const chunkChecksums = [];
 
     function loadNext() {
-      const start = currentChunk * CHUNK_SIZE;
+      const start = chunkIndex * CHUNK_SIZE;
       const end =
         start + CHUNK_SIZE >= file.size ? file.size : start + CHUNK_SIZE;
       fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
     }
 
     fileReader.onload = (e) => {
-      buffer.append(e.target.result); // Append to array buffer
-      currentChunk += 1;
-      if (currentChunk < chunks) {
+      const result = e.target.result;
+      const chunkHash = SparkMD5.ArrayBuffer.hash(result);
+      chunkChecksums.push(chunkHash);
+
+      buffer.append(result); // Append to array buffer
+
+      chunkIndex += 1;
+      if (chunkIndex < chunks) {
         loadNext();
       } else {
         const result = buffer.end();
@@ -272,7 +386,10 @@ const hashFile = (file) => {
         sparkMd5.append(result);
         sparkMd5.append(file.name);
         const hexHash = sparkMd5.end();
-        resolve(hexHash);
+        resolve({
+          fileChecksum: hexHash,
+          chunkChecksums,
+        });
       }
     };
 
@@ -286,30 +403,55 @@ const hashFile = (file) => {
   });
 };
 
+const evaluateChecksums = () => {
+  const promises = [];
+
+  try {
+    for (let i = 0; i < dataProductFiles.value.length; i++) {
+      let fileDetails = dataProductFiles.value[i];
+      const file = fileDetails.file;
+
+      promises.push(
+        hashFile(file).then(({ fileChecksum, chunkChecksums }) => {
+          fileDetails.fileChecksum = fileChecksum;
+          fileDetails.chunkChecksums = chunkChecksums;
+          fileDetails.numChunks = Math.ceil(file.size / CHUNK_SIZE); // total number of fragments
+          return true;
+        }),
+      );
+    }
+  } catch (e) {
+    console.log("Error occurred during checksum evaluation", e);
+  }
+
+  return Promise.all(promises);
+};
+
 const uploadFile = async (fileDetails) => {
-  fileDetails.processingStatus = FILE_STATUS.PROCESSING;
+  fileDetails.uploadStatus = STATUS.UPLOADING;
 
   let file = fileDetails.file;
   console.log(`Beginning upload of file ${file.name}`);
 
-  const blockCount = Math.ceil(file.size / CHUNK_SIZE); // total number of fragments
-  const hash = await hashFile(file);
+  const blockCount = fileDetails.numChunks;
 
   for (let i = 0; i < blockCount; i++) {
     const start = i * CHUNK_SIZE;
     const end = Math.min(file.size, start + CHUNK_SIZE);
 
+    const fileData = blobSlice.call(file, start, end);
     // Building form data
     const form = new FormData();
     // If the request's body needs to be accessed before the request's file, the body's fields
     // should be set before the `file` field.
-    form.append("hash", hash);
-    form.append("name", file.name);
+    form.append("file_checksum", fileDetails.fileChecksum);
+    form.append("name", fileDetails.name);
     form.append("total", blockCount);
     form.append("index", i);
     form.append("size", file.size);
-    form.append("dataProduct", dataProductName.value);
-    form.append("file", blobSlice.call(file, start, end));
+    form.append("data_product_name", dataProductName.value);
+    form.append("chunk_checksum", fileDetails.chunkChecksums[i]);
+    form.append("file", fileData);
 
     fileDetails.progress = Math.trunc(((i + 1) / blockCount) * 100);
 
@@ -329,52 +471,166 @@ const uploadFile = async (fileDetails) => {
       console.log(
         `Exceeded retry threshold while trying to upload chunk ${i} for file ${file.name}.`,
       );
-      fileDetails.processingStatus = FILE_STATUS.FAILED;
+      fileDetails.uploadStatus = STATUS.FAILED;
       delete fileDetails.progress;
 
       break;
     }
   }
 
-  if (fileDetails.processingStatus !== FILE_STATUS.FAILED) {
-    fileDetails.processingStatus = FILE_STATUS.PROCESSED;
+  if (fileDetails.uploadStatus !== STATUS.FAILED) {
+    fileDetails.uploadStatus = STATUS.UPLOADED;
   }
 
   const statusLog =
-    fileDetails.processingStatus === FILE_STATUS.FAILED
+    fileDetails.uploadStatus === STATUS.FAILED
       ? `Upload of file ${file.name} failed`
       : `Upload of file ${file.name} was successful`;
   console.log(statusLog);
 };
 
-const handleSubmit = async () => {
-  const formData = {};
-  formData.dataset_name = dataProductName.value;
-  formData.source_dataset_id = rawDataSelected.value.id;
-  formData.file_type = fileTypeSelected.value;
-
-  await initiateDataProductUpload(formData);
+const onNextClick = (nextStep) => {
+  if (is_last_step.value) {
+    if (noFilesSelected.value) {
+      setFileUploadAlertVisibility(true);
+    } else {
+      if (isValid_new_data_product_form()) {
+        handleSubmit();
+      }
+    }
+  } else {
+    setFileUploadAlertVisibility(false);
+    nextStep();
+  }
 };
 
-const initiateDataProductUpload = async (data) => {
-  datasetService.initiateDataProductUpload(data).then(async () => {
-    await uploadFiles();
-  });
+const setFileUploadAlertVisibility = (val) => {
+  isFileUploadAlertVisible.value = val;
 };
 
-const uploadFiles = async () => {
-  status.value = STATUS.IN_PROGRESS;
+const formData = computed(() => {
+  return {
+    data_product_name: dataProductName.value,
+    source_dataset_id: rawDataSelected.value.id,
+    file_type: fileTypeSelected.value,
+  };
+});
 
-  for (let f = 0; f < dataProductFiles.value.length; f++) {
-    let fileDetails = dataProductFiles.value[f];
+const isFormSubmitted = ref(false);
+
+const handleSubmit = () => {
+  isFormSubmitted.value = true;
+  // Clear any errors that may have occurred before the actual upload begins
+  if (submissionError.value) {
+    submissionError.value = "";
+  }
+
+  initiateUpload()
+    .catch(() => {
+      // Mark any files that don't have an UPLOADED status as FAILED
+      dataProductFiles.value.forEach((f) => {
+        if (f.uploadStatus !== STATUS.UPLOADED) {
+          f.uploadStatus = STATUS.FAILED;
+        }
+      });
+
+      submissionError.value =
+        "An error was encountered. Please try submitting again.";
+      // Set submission state to pristine, since no submission has taken place yet
+      isFormSubmitted.value = false;
+    })
+    .finally(() => {
+      const someUploadsFailed = failedFiles.value.length > 0;
+      if (!someUploadsFailed) {
+        initiateUploadedChunksMerge();
+      }
+
+      // If a log has been created for this Data Product upload
+      if (submittedDataset.value) {
+        datasetService
+          .updateDataProductUploadLog({
+            upload_id: submittedDataset.value.dataset_upload.id,
+            status: someUploadsFailed
+              ? config.upload_status.UPLOAD_FAILED
+              : config.upload_status.PROCESSING,
+          })
+          .then((res) => {
+            submissionStatus.value = res.data.status;
+          });
+      }
+    });
+};
+
+// Log (or update) upload status
+const createOrUpdateUploadLog = (data) => {
+  return failedFiles.value.length === 0
+    ? datasetService.logDataProductUpload(data).then((res) => {
+        submittedDataset.value = res.data;
+        return submittedDataset.value.dataset_upload.status;
+      })
+    : datasetService
+        .updateDataProductUploadLog({
+          upload_id: submittedDataset.value.dataset_upload.id,
+          status: config.upload_status.UPLOADING,
+        })
+        .then((res) => {
+          return res.data.status;
+        });
+};
+
+const initiateUpload = () => {
+  // debugger;
+  return evaluateChecksums()
+    .then(() => {
+      return {
+        ...formData.value,
+        files_metadata: dataProductFiles.value.map((e) => {
+          return {
+            file_name: e.name,
+            file_checksum: e.fileChecksum,
+            num_chunks: e.numChunks,
+          };
+        }),
+      };
+    })
+    .then((data) => {
+      return createOrUpdateUploadLog(data);
+    })
+    .then(async (status) => {
+      submissionStatus.value = status;
+
+      await uploadFiles(
+        failedFiles.value.length > 0
+          ? failedFiles.value
+          : dataProductFiles.value,
+      );
+      someUploadsFailed.value = failedFiles.value.length > 0;
+      if (someUploadsFailed.value) {
+        form_status.value = STATUS.FAILED;
+      }
+      return someUploadsFailed.value;
+    });
+};
+
+const initiateUploadedChunksMerge = () => {
+  datasetService.createDatasetFiles(submittedDataset.value.dataset_upload.id);
+};
+
+const uploadFiles = async (files) => {
+  form_status.value = STATUS.UPLOADING;
+
+  for (let f = 0; f < files.length; f++) {
+    let fileDetails = files[f];
     await uploadFile(fileDetails);
 
-    if (f < dataProductFiles.value.length - 1) {
+    if (f < files.length - 1) {
       console.log(`Proceeding to next file`);
     }
   }
 
-  status.value = STATUS.COMPLETE;
+  if (form_status.value !== STATUS.FAILED) {
+    form_status.value = STATUS.UPLOADED;
+  }
 };
 
 const uploadChunk = async (data) => {
@@ -389,6 +645,7 @@ const uploadChunk = async (data) => {
 const setFiles = (files) => {
   _.range(0, files.length).forEach((i) => {
     const file = files.item(i);
+    // debugger;
     dataProductFiles.value.push({
       file: file,
       name: file.name,
@@ -419,26 +676,13 @@ const validateNotExists = async (value) => {
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
         .then((res) => {
-          return res.data.datasets;
-        })
-        .then((matchingDataProducts) => {
-          datasetService
-            .getAll({ type: "UPLOAD", name: value, match_name_exact: true })
-            .then((res) => {
-              const matchingUploadingDataProducts = res.data.datasets;
-              const dataProducts = matchingDataProducts.concat(
-                matchingUploadingDataProducts,
-              );
-
-              const matchingDataProductFound = dataProducts.some(
-                (e) => e.name === value,
-              );
-              resolve(
-                matchingDataProductFound
-                  ? "Data Product with provided name already exists"
-                  : true,
-              );
-            });
+          const matchingDataProducts = res.data.datasets;
+          const matchingDataProductFound = matchingDataProducts.length !== 0;
+          resolve(
+            matchingDataProductFound
+              ? "Data Product with provided name already exists"
+              : true,
+          );
         });
     }
   });
@@ -446,7 +690,6 @@ const validateNotExists = async (value) => {
 
 onMounted(() => {
   datasetService.getDataFileTypes().then((res) => {
-    // debugger;
     fileTypeList.value = res.data;
   });
 });
@@ -507,19 +750,6 @@ onBeforeRouteLeave(() => {
     flex: 1;
     min-height: auto;
     overflow-y: scroll;
-  }
-
-  .va-table td {
-    padding: 0.25rem;
-  }
-
-  div.va-table-responsive {
-    overflow: auto;
-
-    // first column min width
-    td:first-child {
-      min-width: 135px;
-    }
   }
 
   .raw_data_select .va-select-content__autocomplete {

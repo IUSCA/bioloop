@@ -9,7 +9,7 @@
     "level": "debug"
   },
   "workflow_server": {
-    "base_url": "http://127.0.0.1:5000",
+    "base_url": "http://host.docker.internal:5000",
     "auth_token": ""
   },
   "auth": {
@@ -82,12 +82,35 @@
           "task": "delete_dataset"
         }
       ]
+    },
+    "merge_files": {
+      "steps": [
+        {
+          "name": "merge_test",
+          "task": "create_dataset_files"
+        }
+      ]
+    },
+    "create_files": {
+      "steps": [
+        {
+          "name": "merge_file_chunks",
+          "task": "create_dataset_files"
+        }
+      ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT", "UPLOAD"],
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "DONE_STATUSES": {
+    "REVOKED": "REVOKED",
+    "FAILURE": "FAILURE",
+    "SUCCESS": "SUCCESS"
+  },
   "upload_status": {
+    "UPLOADING": "UPLOADING",
     "PROCESSING": "PROCESSING",
     "COMPLETE": "COMPLETE",
     "FAILED": "FAILED"
-  }
+  },
+  "upload_path": "/opt/sca/uploads"
 }

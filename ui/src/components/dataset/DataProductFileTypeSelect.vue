@@ -70,6 +70,8 @@
             :key="i"
             class="w-full"
             color="danger"
+            dense
+            border="left"
             >{{ error }}
           </va-alert>
         </div>

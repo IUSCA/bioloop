@@ -150,6 +150,13 @@ def get_dataset(dataset_id: str, files: bool = False):
         return dataset_getter(r.json())
 
 
+def get_upload_log(dataset_upload_id: str):
+    with APIServerSession() as s:
+        r = s.get(f'datasets/{dataset_upload_id}')
+        r.raise_for_status()
+        return r.json()
+
+
 def create_dataset(dataset):
     with APIServerSession() as s:
         r = s.post('datasets', json=dataset_setter(dataset))
@@ -220,6 +227,18 @@ def register_process(worker_process: dict):
 def post_worker_logs(process_id: str, logs: list[dict]):
     with APIServerSession(enable_retry=False) as s:
         r = s.post(f'workflows/processes/{process_id}/logs', json=logs)
+        r.raise_for_status()
+
+
+def post_file_upload_details(file_log_id, file_upload_details):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/file-upload-log/{file_log_id}', json=file_upload_details)
+        r.raise_for_status()
+
+
+def post_upload_log(upload_log_id, body):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/upload-log/{upload_log_id}', json=body)
         r.raise_for_status()
 
 

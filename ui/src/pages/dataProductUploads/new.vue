@@ -23,3 +23,9 @@ nav.setNavItems([
   },
 ]);
 </script>
+
+<route lang="yaml">
+meta:
+  title: Data Product Uploads
+  requiresRoles: ["operator", "admin"]
+</route>

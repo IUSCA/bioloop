@@ -58,6 +58,7 @@ class DatasetService {
     last_task_run = false,
     prev_task_runs = false,
     only_active = false,
+    fetch_uploading_data_products = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -66,6 +67,7 @@ class DatasetService {
         last_task_run,
         prev_task_runs,
         only_active,
+        fetch_uploading_data_products,
       },
     });
   }
@@ -82,18 +84,25 @@ class DatasetService {
     return api.post("/datasets/file-chunk", data);
   }
 
-  /**
-   * Logs Data Product upload, and creates entries for Data Product and its relations in the database
-   * @param dataset_name
-   * @param source_dataset_id
-   * @param file_type
-   * @returns {Promise<axios.AxiosResponse<any>>}
-   */
-  initiateDataProductUpload({ dataset_name, source_dataset_id, file_type }) {
-    return api.post("/datasets/upload-log", {
-      dataset_name,
-      source_dataset_id,
-      file_type,
+  logDataProductUpload(data) {
+    return api.post("/datasets/upload-log", data);
+  }
+
+  updateDataProductUploadLog({ upload_id, status }) {
+    return api.patch(`/datasets/upload-log/${upload_id}`, {
+      status,
+    });
+  }
+
+  updateFileUploadLog({ file_log_id, status }) {
+    return api.patch(`/datasets/file-upload-log/${file_log_id}`, {
+      status,
+    });
+  }
+
+  createDatasetFiles(dataset_upload_id) {
+    return api.post(`/datasets/create-files`, {
+      dataset_upload_id,
     });
   }
 
@@ -101,10 +110,11 @@ class DatasetService {
     return api
       .post(`/datasets/${id}/workflow/stage`)
       .then(() => {
+        console.log("SUCCESS!!!");
         toast.success("A workflow has started to stage the dataset");
       })
       .catch((err) => {
-        console.error("unable to stage the dataset", err);
+        console.log("unable to stage the dataset", err);
         toast.error("Unable to stage the dataset");
         return Promise.reject(err);
       });

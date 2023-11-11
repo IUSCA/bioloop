@@ -48,6 +48,8 @@ const exports = {
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
   upload_status: {
+    UPLOADING: "UPLOADING",
+    UPLOAD_FAILED: "UPLOAD_FAILED",
     PROCESSING: "PROCESSING",
     COMPLETE: "COMPLETE",
     FAILED: "FAILED",

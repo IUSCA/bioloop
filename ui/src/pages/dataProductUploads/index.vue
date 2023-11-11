@@ -1,4 +1,6 @@
 <template>
+  <!--  <va-button />-->
+
   <!-- search bar and filter -->
   <div class="flex mb-3 gap-3">
     <!-- search bar -->
@@ -30,38 +32,65 @@
         color="success"
         @click="router.push('/dataProductUploads/new')"
       >
-        Create Data Product
+        Upload Data Product
       </va-button>
     </div>
   </div>
 
   <!-- table -->
-  <va-data-table :items="pastUploads" :columns="columns">
+  <va-data-table :items="uploads" :columns="columns">
     <template #cell(status)="{ value }">
-      <va-chip outline :color="getStatusChipColor(value)">
+      <va-chip size="small" :color="getStatusChipColor(value)">
         {{ value }}
       </va-chip>
     </template>
 
-    <template #cell(dataset_id)="{ rowData }">
-      <span v-if="!rowData.dataset_id" class="va-text-secondary">
-        {{ rowData.dataset_name }}
+    <template #cell(data_product_name)="{ rowData }">
+      <span
+        v-if="rowData.status !== config.upload_status.COMPLETE"
+        class="va-text-secondary"
+      >
+        {{ rowData.data_product_name }}
       </span>
-      <router-link v-else :to="`/datasets/${rowData.id}`" class="va-link">{{
-        rowData.dataset_name
-      }}</router-link>
-    </template>
-
-    <template #cell(source_dataset_id)="{ rowData }">
       <router-link
-        :to="`/datasets/${rowData.source_dataset_id}`"
+        v-else
+        :to="`/datasets/${rowData.dataset_id}`"
         class="va-link"
-        >{{ rowData.source_dataset.name }}</router-link
+        >{{ rowData.data_product_name }}</router-link
       >
     </template>
 
-    <template #cell(user_id)="{ rowData }">
-      <span>{{ rowData.user.name }}</span>
+    <template #cell(source_dataset_name)="{ rowData }">
+      <router-link
+        :to="`/datasets/${rowData.source_dataset_id}`"
+        class="va-link"
+        >{{ rowData.source_dataset_name }}</router-link
+      >
+    </template>
+
+    <template #cell(file_type_name)="{ value }">
+      <va-chip outline size="small">
+        {{ value }}
+      </va-chip>
+    </template>
+
+    <template #cell(user_name)="{ value }">
+      <span>{{ value }}</span>
+    </template>
+
+    <template #cell(actions)="{ rowData }">
+      <div class="flex gap-1">
+        <va-popover message="Retry">
+          <va-button
+            :disabled="rowData.status !== config.upload_status.FAILED"
+            preset="plain"
+            icon="refresh"
+            color="info"
+            @click="retryFailedFilesCreation(rowData)"
+          />
+        </va-popover>
+      </div>
+      <!--      <span>{{ value }}</span>-->
     </template>
   </va-data-table>
 </template>
@@ -76,22 +105,44 @@ const router = useRouter();
 
 nav.setNavItems([{ label: "Data Product Uploads" }]);
 
+const retryFailedFilesCreation = (uploadLog) => {
+  datasetService.createDatasetFiles(uploadLog.id);
+};
+
 const filterInput = ref("");
 const pastUploads = ref([]);
 
-const columns = [
-  {
-    key: "status",
-  },
-  { key: "dataset_id", label: "Dataset" },
-  { key: "source_dataset_id", label: "Source Dataset" },
-  { key: "user_id", label: "Uploaded By" },
-];
+const uploads = computed(() => {
+  return pastUploads.value.map((e) => {
+    const source_dataset = e.dataset.source_datasets[0];
+    return {
+      ...e,
+      data_product_name: e.dataset.name,
+      source_dataset_name: source_dataset.source_dataset.name,
+      source_dataset_id: source_dataset.source_dataset.id,
+      file_type_name: e.dataset.file_type.name,
+      user_name: e.user.name,
+    };
+  });
+});
 
+const columns = [
+  { key: "status", sortable: true },
+  { key: "data_product_name", label: "Data Product", sortable: true },
+  { key: "source_dataset_name", label: "Source Dataset", sortable: true },
+  { key: "file_type_name", label: "File Type", sortable: true },
+  { key: "user_name", label: "Uploaded By", sortable: true },
+  { key: "actions", width: "80px" },
+];
 const getStatusChipColor = (value) => {
-  console.log(value);
   let color;
   switch (value) {
+    case config.upload_status.UPLOADING:
+      color = "primary";
+      break;
+    case config.upload_status.UPLOAD_FAILED:
+      color = "warning";
+      break;
     case config.upload_status.PROCESSING:
       color = "primary";
       break;
@@ -109,7 +160,14 @@ const getStatusChipColor = (value) => {
 
 onMounted(() => {
   datasetService.getDataProductUploads().then((res) => {
+    // debugger;
     pastUploads.value = res.data;
   });
 });
 </script>
+
+<route lang="yaml">
+meta:
+  title: Data Product Uploads
+  requiresRoles: ["operator", "admin"]
+</route>

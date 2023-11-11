@@ -147,6 +147,7 @@ async function main() {
   await prisma.dataset_file_type.deleteMany();
   await prisma.dataset_file_type.createMany({ data: data.dataset_file_types });
 
+  // create datasets
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
@@ -301,6 +302,7 @@ async function main() {
     const operator = operators[Math.floor(Math.random() * operators.length)];
     return { ...e, user_id: operator.id };
   });
+  await prisma.dataset_upload.deleteMany();
   await prisma.dataset_upload.createMany({
     data: uploads,
   });

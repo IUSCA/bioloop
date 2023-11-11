@@ -34,6 +34,7 @@ config = {
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
+            'upload_dir': '/path/to/uploaded/data_products'
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
@@ -90,6 +91,14 @@ config = {
                 {
                     'name': 'generate_qc',
                     'task': 'generate_qc'
+                }
+            ]
+        },
+        'create_files': {
+            'steps': [
+                {
+                    'name': 'merge_file_chunks',
+                    'task': 'create_dataset_files'
                 }
             ]
         }

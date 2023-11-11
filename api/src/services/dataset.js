@@ -47,8 +47,6 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
-const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
-
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
 
@@ -67,13 +65,18 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name) {
   const wf_body = get_wf_body(wf_name);
 
+  // console.log('WF_BODY');
+  // console.log(wf_body);
   // check if a workflow with the same name is not already running / pending on this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
-    .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
+    .filter((_wf) => !Object.values(config.DONE_STATUSES).includes(_wf.status));
 
+  // console.log('active_wfs_with_same_name');
+  // console.log(active_wfs_with_same_name);
   assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
 
+  // console.log('creating POST request');
   // create the workflow
   const wf = (await wfService.create({
     ...wf_body,
@@ -129,6 +132,7 @@ async function get_dataset({
   last_task_run = false,
   prev_task_runs = false,
   only_active = false,
+  fetch_uploading_data_products = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -150,7 +154,22 @@ async function get_dataset({
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
       source_datasets: true,
-      derived_datasets: true,
+      derived_datasets: fetch_uploading_data_products ? true : {
+        where: {
+          derived_dataset: {
+            OR: [
+              {
+                dataset_upload: null,
+              },
+              {
+                dataset_upload: {
+                  status: config.upload_status.COMPLETE,
+                },
+              },
+            ],
+          },
+        },
+      },
     },
   });
 
