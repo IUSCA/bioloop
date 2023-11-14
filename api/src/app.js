@@ -4,7 +4,6 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const requestLogger = require('morgan');
 const compression = require('compression');
-const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const config = require('config');
 
@@ -35,9 +34,6 @@ app.use(cookieParser());
 
 // compress all responses
 app.use(compression());
-
-// enable CORS - cross origin resource sharing
-app.use(cors());
 
 if (!['production', 'test'].includes(config.get('mode'))) {
   // mount swagger ui

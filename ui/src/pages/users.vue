@@ -73,6 +73,10 @@
       >
     </template>
 
+    <template #cell(login_method)="{ rowData }">
+      <Maybe :data="rowData?.login?.method" />
+    </template>
+
     <!-- actions -->
     <template #cell(actions)="{ rowData }">
       <div class="flex gap-3">
@@ -265,13 +269,21 @@ const columns = ref([
     key: "created_at",
     sortable: true,
     label: "created on",
+    width: "100px",
   },
-  { key: "is_deleted", sortable: true, label: "status" },
+  { key: "is_deleted", sortable: true, label: "status", width: "60px" },
   {
     key: "login",
     sortable: true,
     label: "Last Login",
+    width: "150px",
     sortingFn: (a, b) => cmp(a?.last_login, b?.last_login),
+  },
+  {
+    key: "login_method",
+    sortable: true,
+    label: "Auth",
+    width: "75px",
   },
   { key: "actions", width: 30 },
 ]);

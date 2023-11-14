@@ -11,5 +11,15 @@
       "client_id": "OAUTH_DOWNLOAD_CLIENT_ID",
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
     }
+  },
+  "auth": {
+    "google": {
+      "client_id": "GOOGLE_OAUTH_CLIENT_ID",
+      "client_secret": "GOOGLE_OAUTH_CLIENT_SECRET"
+    },
+    "cilogon": {
+      "client_id": "CILOGON_OAUTH_CLIENT_ID",
+      "client_secret": "CILOGON_OAUTH_CLIENT_SECRET"
+    }
   }
 }

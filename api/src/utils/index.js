@@ -198,6 +198,11 @@ function numericStringsToNumbers(arr, numericStringFields = []) {
   })(arr);
 }
 
+function decodeJWT(token) {
+  const payload = token.split('.')[1];
+  return JSON.parse(Buffer.from(payload, 'base64').toString());
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -207,4 +212,5 @@ module.exports = {
   sanitize_timestamp,
   groupByAndAggregate,
   numericStringsToNumbers,
+  decodeJWT,
 };

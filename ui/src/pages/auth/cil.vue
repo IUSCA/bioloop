@@ -1,8 +1,8 @@
 <template>
   <AuthStatus
-    :get-url="authService.getCasUrl"
-    :verify="auth.casLogin"
-    :param-names="['ticket']"
+    :get-url="authService.getCiUrl"
+    :verify="auth.ciLogin"
+    :param-names="['code', 'state']"
   />
 </template>
 
@@ -16,6 +16,6 @@ const auth = useAuthStore();
 <route lang="yaml">
 meta:
   layout: auth
-  title: IU CAS Auth
+  title: CI Logon Auth
   requiresAuth: false
 </route>
