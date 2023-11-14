@@ -65,7 +65,7 @@ def generate_qc(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     dataset_type = dataset['type']
     dataset_qc_dir = Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'
-    staged_path = dataset['staged_path']
+    staged_path = Path(dataset['staged_path'])
 
     report_id = create_report(
         celery_task=celery_task,
