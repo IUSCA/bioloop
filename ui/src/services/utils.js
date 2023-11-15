@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 
 function formatBytes(bytes, decimals = 2) {

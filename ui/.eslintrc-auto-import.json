@@ -298,6 +298,7 @@
     "ExtractPublicPropTypes": true,
     "injectLocal": true,
     "provideLocal": true,
-    "useQueryPersistence": true
+    "useQueryPersistence": true,
+    "useClipboardItems": true
   }
 }
