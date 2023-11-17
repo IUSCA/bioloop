@@ -561,23 +561,6 @@ const handleSubmit = () => {
     });
 };
 
-// Log (or update) upload status
-const createOrUpdateUploadLog = (data) => {
-  return failedFiles.value.length === 0
-    ? datasetService.logDataProductUpload(data).then((res) => {
-        submittedDataset.value = res.data;
-        return submittedDataset.value.dataset_upload.status;
-      })
-    : datasetService
-        .updateDataProductUploadLog({
-          upload_id: submittedDataset.value.dataset_upload.id,
-          status: config.upload_status.UPLOADING,
-        })
-        .then((res) => {
-          return res.data.status;
-        });
-};
-
 const initiateUpload = () => {
   // debugger;
   return evaluateChecksums()
@@ -610,6 +593,23 @@ const initiateUpload = () => {
       }
       return someUploadsFailed.value;
     });
+};
+
+// Log (or update) upload status
+const createOrUpdateUploadLog = (data) => {
+  return failedFiles.value.length === 0
+    ? datasetService.logDataProductUpload(data).then((res) => {
+        submittedDataset.value = res.data;
+        return submittedDataset.value.dataset_upload.status;
+      })
+    : datasetService
+        .updateDataProductUploadLog({
+          upload_id: submittedDataset.value.dataset_upload.id,
+          status: config.upload_status.UPLOADING,
+        })
+        .then((res) => {
+          return res.data.status;
+        });
 };
 
 const initiateUploadedChunksMerge = () => {
@@ -665,7 +665,7 @@ function isValid_new_data_product_form() {
   return isValid_data_product_upload_form.value;
 }
 
-const validateNotExists = async (value) => {
+const validateNotExists = (value) => {
   return new Promise((resolve) => {
     // Vuestic claims that it should not run async validation if synchronous validation fails,
     // but it seems to be triggering async validation nonetheless when `value` is empty. Hence
