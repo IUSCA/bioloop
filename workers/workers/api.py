@@ -152,7 +152,7 @@ def get_dataset(dataset_id: str, files: bool = False):
 
 def get_upload_log(dataset_upload_id: str):
     with APIServerSession() as s:
-        r = s.get(f'datasets/{dataset_upload_id}')
+        r = s.get(f'datasets/upload-log/{dataset_upload_id}')
         r.raise_for_status()
         return r.json()
 

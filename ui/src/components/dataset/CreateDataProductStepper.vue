@@ -96,6 +96,8 @@
           <va-file-upload
             class="w-full"
             label="File"
+            upload-button-text="Select Files"
+            drop-zone-text="Drop files here"
             dropzone
             @file-added="
               (files) => {

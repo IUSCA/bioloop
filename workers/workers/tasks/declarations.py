@@ -51,7 +51,7 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
 
 @app.task(base=WorkflowTask, bind=True, name='create_dataset_files',
           autoretry_for=(Exception,),
-          max_retries=3,
+          max_retries=0,
           default_retry_delay=5)
 def create_dataset_files(celery_task, files_attrs, **kwargs):
     from workers.tasks.create_files import create_dataset_files as task_body

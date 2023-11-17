@@ -749,7 +749,7 @@ const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.
   'chunked_files',
   file_checksum,
 );
-const getDataProductFileChunkName = (req) => `${req.body.hash}-${req.body.index}`;
+const getDataProductFileChunkName = (req) => `${req.body.file_checksum}-${req.body.index}`;
 const getTempStorage = (req) => path.join(getDataProductFileUploadPath(
   req.body.data_product_name,
   req.body.file_checksum,
