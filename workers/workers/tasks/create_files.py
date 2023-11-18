@@ -35,8 +35,8 @@ def merge_file_chunks(file_name, file_hash, chunks_path, merged_file_path, num_c
         print(f'Processing chunk {chunk_file}')
         print(f'Attempting to append chunk {chunk_file.name} to {merged_file_path}')
 
-        if i == 1 and (file_hash == 'c3468e30cd1da55b92e2235d92ebfc91' or file_hash == '31904f92c817767de2bb7e9241f0f7fc'):
-            raise Exception(f"some exception that occurred during merging chunk {i} of {merged_file_path.name}")
+        # if i == 1 and (file_hash == 'c3468e30cd1da55b92e2235d92ebfc91' or file_hash == '31904f92c817767de2bb7e9241f0f7fc'):
+        #     raise Exception(f"some exception that occurred during merging chunk {i} of {merged_file_path.name}")
 
         with open(chunk_file, 'rb') as chunk:
             with open(merged_file_path, 'ab') as destination:
@@ -69,9 +69,10 @@ def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
     data_product = dataset_upload_log['dataset']
     data_product_path = Path(data_product['origin_path'])
 
-    files_attrs = dataset_upload_log['files']
+    files = dataset_upload_log['files']
+    pending_files = [file for file in files if file['status'] != status['COMPLETE']]
 
-    for f in files_attrs:
+    for f in pending_files:
         source_path = Path(f['path'])
         file_name = f['name']
         num_chunks_expected = f['num_chunks']
@@ -83,25 +84,25 @@ def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
         # f46a9653a09ffddbdfd120b2e
 
         try:
-            f['merge_status'] = merge_file_chunks(file_name, file_hash, chunks_path, merged_file_path, num_chunks_expected)
+            f['status'] = merge_file_chunks(file_name, file_hash, chunks_path, merged_file_path, num_chunks_expected)
         except Exception as e:
             print("Encountered exception:")
             print(e)
-            f['merge_status'] = status['FAILED']
+            f['status'] = status['FAILED']
             print(f"Deleting file {merged_file_path}")
             merged_file_path.unlink(True)
 
-        print(f"Finished processing file {file_name}. Processing Status: {f['merge_status']}")
+        print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
 
         file_upload_details = {
-            'status': f['merge_status']
+            'status': f['status']
         }
         api.post_file_upload_details(file_log_id, file_upload_details)
 
-        if f['merge_status'] == status['COMPLETE']:
+        if f['status'] == status['COMPLETE']:
             shutil.rmtree(source_path)
 
-    failed_files = [file for file in files_attrs if file['merge_status'] == status['FAILED']]
+    failed_files = [file for file in pending_files if file['status'] == status['FAILED']]
     has_errors = len(failed_files) > 0
 
     if not has_errors:
@@ -113,6 +114,7 @@ def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
             print(e)
             has_errors = True
         else:
+            print("Beginning 'integrated' workflow")
             integrated_wf_body = wf_utils.get_wf_body(wf_name='integrated')
             int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
             api.add_workflow_to_dataset(dataset_id=data_product_id, workflow_id=int_wf.workflow['_id'])
