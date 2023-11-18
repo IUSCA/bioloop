@@ -14,6 +14,15 @@
       },
     ]"
   >
+    <template #content="{ value }">
+      <va-chip class="mr-2" key="name" size="small">
+        {{ value[0].name }}
+      </va-chip>
+      <va-chip class="mr-2" key="extension" size="small">
+        {{ value[0].extension }}
+      </va-chip>
+    </template>
+
     <template #append>
       <va-popover message="Create New File Type">
         <va-button
