@@ -57,7 +57,8 @@ model file_upload {
   hash              String
   num_chunks        Int?
   status            String
-  path              String
+  chunks_path       String
+  destination_path  String
   dataset_upload    dataset_upload? @relation(fields: [dataset_upload_id], references: [id])
   dataset_upload_id Int?
 }

@@ -157,6 +157,13 @@ def get_upload_log(dataset_upload_id: str):
         return r.json()
 
 
+def filter_upload_logs(status):
+    with APIServerSession() as s:
+        r = s.get(f'datasets/upload-logs?status={status}')
+        r.raise_for_status()
+        return r.json()
+
+
 def create_dataset(dataset):
     with APIServerSession() as s:
         r = s.post('datasets', json=dataset_setter(dataset))

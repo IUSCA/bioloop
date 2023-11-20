@@ -8,3 +8,10 @@ class ValidationFailed(Exception):
 
 class InspectionFailed(Exception):
     pass
+
+
+class DatasetNotFound(Exception):
+    pass
+
+class UploadLogNotFound(Exception):
+    pass

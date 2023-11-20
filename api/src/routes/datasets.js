@@ -24,8 +24,9 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-// const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
+// const prisma = new PrismaClient();
+
 // stats - UI
 router.get(
   '/stats',
@@ -305,6 +306,22 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
   }
   next();
 });
+
+router.get(
+  '/upload-logs',
+  validate([
+    query('status').notEmpty().escape(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const upload_logs = await prisma.dataset_upload.findMany({
+      where: { status: req.query.status },
+      include: {
+        files: true,
+      },
+    });
+    res.json(upload_logs);
+  }),
+);
 
 // get by id - worker + UI
 router.get(
@@ -739,32 +756,45 @@ router.get(
 
 const DATA_PRODUCTS_UPLOAD_PATH = path.join(config.upload_path, 'dataProductUploads');
 
+// console.log('data_product_name');
+// console.log(data_product_name);
 const getDataProductUploadPath = (data_product_name) => path.join(
   DATA_PRODUCTS_UPLOAD_PATH,
   data_product_name,
 );
 
+// console.log('file_checksum');
+// console.log(file_checksum);
 const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.join(
   getDataProductUploadPath(data_product_name),
   'chunked_files',
   file_checksum,
 );
-const getDataProductFileChunkName = (req) => `${req.body.file_checksum}-${req.body.index}`;
-const getTempStorage = (req) => path.join(getDataProductFileUploadPath(
-  req.body.data_product_name,
-  req.body.file_checksum,
+const getDataProductFileChunkName = (file_checksum, index) => `${file_checksum}-${index}`;
+
+const getTempStorage = (data_product_name, file_checksum) => path.join(getDataProductFileUploadPath(
+  data_product_name,
+  file_checksum,
 ), 'temp');
+
+const getChunkStorage = (data_product_name, file_checksum) => path.join(
+  getDataProductFileUploadPath(
+    data_product_name,
+    file_checksum,
+  ),
+  'chunks',
+);
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const tempStorage = getTempStorage(req);
+    const tempStorage = getTempStorage(req.body.data_product_name, req.body.file_checksum);
     await fsPromises.mkdir(tempStorage, {
       recursive: true,
     });
     cb(null, tempStorage);
   },
   filename: (req, file, cb) => {
-    cb(null, getDataProductFileChunkName(req));
+    cb(null, getDataProductFileChunkName(req.body.file_checksum, req.body.index));
   },
 });
 
@@ -806,9 +836,9 @@ router.post(
 
       // Create a folder based on the file hash and move the uploaded chunk under the current hash
       // folder.
-      const chunksPath = path.join(getDataProductFileUploadPath(data_product_name, file_checksum), 'chunks');
+      const chunksPath = getChunkStorage(data_product_name, file_checksum);
       if (!fs.existsSync(chunksPath)) mkdirsSync(chunksPath);
-      fs.renameSync(receivedFilePath, `${chunksPath}/${getDataProductFileChunkName(req)}`);
+      fs.renameSync(receivedFilePath, `${chunksPath}/${getDataProductFileChunkName(file_checksum, index)}`);
 
       // if (name === 'failed_file') { throw new Error('this is error'); }
 
@@ -870,7 +900,11 @@ router.post(
                   name: e.file_name,
                   hash: e.file_checksum,
                   num_chunks: e.num_chunks,
-                  path: getDataProductFileUploadPath(data_product_name, e.file_checksum),
+                  chunks_path: getChunkStorage(data_product_name, e.file_checksum),
+                  destination_path: path.join(
+                    getDataProductUploadPath(data_product_name),
+                    e.file_name,
+                  ),
                   status: 'PROCESSING',
                 })),
               },
@@ -903,6 +937,10 @@ router.get(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // if (true) {
+    //   throw new Error('getting upload log error');
+    // }
+
     const upload_log = await prisma.dataset_upload.findFirstOrThrow({
       where: { id: req.params.id },
       include: {
@@ -914,24 +952,60 @@ router.get(
   }),
 );
 
+// Filter upload logs
+// router.get(
+//   '/test',
+//   // validate([
+//   //   query('status').notEmpty().escape(),
+//   // ]),
+//   asyncHandler(async (req, res, next) => {
+//     // const upload_logs = await prisma.dataset_upload.findMany({
+//     //   // where: { status: req.query.status },
+//     //   // include: {
+//     //   //   files: true,
+//     //   // },
+//     // });
+//     // res.json(upload_logs);
+//     res.json('Hi');
+//   }),
+// );
+
 // Patch an upload log
 router.patch(
   '/upload-log/:id',
   validate([
     param('id').isInt().toInt(),
     body('status').notEmpty().escape(),
+    body('completed_files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // if (true) {
     //   throw new Error('error');
     // }
+    const { status, completed_files } = req.body;
+
+    const files_status_update_query = (completed_files || []).length > 0 && {
+      files: {
+        updateMany: {
+          where: {
+            id: {
+              in: completed_files,
+            },
+          },
+          data: {
+            status: 'COMPLETE',
+          },
+        },
+      },
+    };
 
     const upload = await prisma.dataset_upload.update({
-      data: {
-        status: req.body.status,
-      },
       where: {
         id: req.params.id,
+      },
+      data: {
+        status,
+        ...files_status_update_query,
       },
     });
     res.json(upload);

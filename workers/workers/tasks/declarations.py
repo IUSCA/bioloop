@@ -55,7 +55,11 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
           default_retry_delay=5)
 def create_dataset_files(celery_task, files_attrs, **kwargs):
     from workers.tasks.create_files import create_dataset_files as task_body
-    return task_body(celery_task, files_attrs, **kwargs)
+    try:
+        return task_body(celery_task, files_attrs, **kwargs)
+    except exc.DatasetNotFound:
+        raise
+
 
 
 @app.task(base=WorkflowTask, bind=True, name='generate_qc',
