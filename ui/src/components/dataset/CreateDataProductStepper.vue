@@ -381,15 +381,8 @@ const hashFile = (file) => {
       if (chunkIndex < chunks) {
         loadNext();
       } else {
-        const result = buffer.end();
-        // Add file's name to the generated hash, in case two files have the same content but
-        // different names
-        const sparkMd5 = new SparkMD5();
-        sparkMd5.append(result);
-        sparkMd5.append(file.name);
-        const hexHash = sparkMd5.end();
         resolve({
-          fileChecksum: hexHash,
+          fileChecksum: buffer.end(),
           chunkChecksums,
         });
       }
