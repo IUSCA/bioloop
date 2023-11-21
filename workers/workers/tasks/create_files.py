@@ -1,9 +1,11 @@
+import time
 import shutil
 from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 from celery import current_app
 from sca_rhythm import WorkflowTask, Workflow
+from datetime import datetime
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
@@ -61,6 +63,12 @@ def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
     print("dataset_upload_id")
     print(dataset_upload_id)
 
+    time.sleep(5)
+
+    api.post_upload_log(dataset_upload_id, {
+        'increment_last_updated': True
+    })
+
     dataset_upload_log = api.get_upload_log(dataset_upload_id)
     print('dataset_upload_log')
     print(dataset_upload_log)
@@ -82,49 +90,43 @@ def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
         chunks_path = Path(f['chunks_path'])
         destination_path = Path(f['destination_path'])
 
-        try:
-            f['status'] = merge_file_chunks(file_name, file_hash, chunks_path, destination_path, num_chunks_expected)
-        except Exception as e:
-            print("Encountered exception:")
-            print(e)
-            f['status'] = status['FAILED']
-            print(f"Deleting file {destination_path}")
-            if destination_path.exists():
-                destination_path.unlink()
+        if f['status'] != status['COMPLETE']:
+            try:
+                f['status'] = merge_file_chunks(file_name, file_hash, chunks_path, destination_path, num_chunks_expected)
+                print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
+                file_upload_details = {
+                    'status': f['status']
+                }
+                api.post_file_upload_details(file_log_id, file_upload_details)
+            except Exception as e:
+                f['status'] = status['FAILED']
+                print(f"Encountered exception processing file {file_name}. Processing Status: {f['status']}")
+                print(e)
+                if destination_path.exists():
+                    print(f"Deleting file {destination_path}")
+                    destination_path.unlink()
 
-        print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
-
-        file_upload_details = {
-            'status': f['status']
-        }
-        api.post_file_upload_details(file_log_id, file_upload_details)
-
-        # todo - is this reached when exception is thrown in the post_file_upload call?
-        if f['status'] == status['COMPLETE']:
-            shutil.rmtree(chunks_path)
-            shutil.rmtree(chunks_path.parent)
+            if f['status'] == status['COMPLETE']:
+                shutil.rmtree(chunks_path)
+                shutil.rmtree(chunks_path.parent)
 
     failed_files = [file for file in pending_files if file['status'] == status['FAILED']]
     has_errors = len(failed_files) > 0
 
-    if not has_errors:
-        # delete chunked_files subdirectory
-        try:
-            shutil.rmtree(dataset_path / 'chunked_files')
-        except Exception as e:
-            print(f"Encountered exception deleting subdirectory {dataset_path / 'chunked_files'}")
-            print(e)
-            has_errors = True
-        else:
-            print("Beginning 'integrated' workflow")
-            integrated_wf_body = wf_utils.get_wf_body(wf_name='integrated')
-            int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
-            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
-            int_wf.start(dataset_id)
-
+    # delete subdirectory containing all chunked files
+    shutil.rmtree(dataset_path / 'chunked_files')
+    # Update status of upload log
     api.post_upload_log(dataset_upload_id, {
         'status': status['FAILED'] if has_errors else status['COMPLETE']
     })
+
+    if not has_errors:
+        print("Beginning 'integrated' workflow")
+        integrated_wf_body = wf_utils.get_wf_body(wf_name='integrated')
+        int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
+        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
+        int_wf.start(dataset_id)
+
 
 
 

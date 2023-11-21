@@ -46,7 +46,7 @@ model dataset_upload {
   dataset_id   Int?          @unique
   dataset      dataset?      @relation(fields: [dataset_id], references: [id])
   files        file_upload[]
-  created_date DateTime      @default(now()) @db.Timestamp(6)
+  last_updated DateTime      @default(now()) @db.Timestamp(6)
   user_id      Int
   user         user          @relation(fields: [user_id], references: [id])
 }
@@ -55,7 +55,7 @@ model file_upload {
   id                Int             @id @default(autoincrement())
   name              String
   hash              String
-  num_chunks        Int?
+  num_chunks        Int
   status            String
   chunks_path       String
   destination_path  String

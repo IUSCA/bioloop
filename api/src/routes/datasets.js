@@ -975,37 +975,32 @@ router.patch(
   '/upload-log/:id',
   validate([
     param('id').isInt().toInt(),
-    body('status').notEmpty().escape(),
-    body('completed_files').isArray().optional(),
+    body('status').notEmpty().escape().optional(),
+    body('increment_last_updated').isBoolean().toBoolean().optional()
+      .default(true),
   ]),
   asyncHandler(async (req, res, next) => {
     // if (true) {
     //   throw new Error('error');
     // }
-    const { status, completed_files } = req.body;
+    const { status, increment_last_updated } = req.body;
+    // console.log('increment_last_updated');
+    // console.log(increment_last_updated);
 
-    const files_status_update_query = (completed_files || []).length > 0 && {
-      files: {
-        updateMany: {
-          where: {
-            id: {
-              in: completed_files,
-            },
-          },
-          data: {
-            status: 'COMPLETE',
-          },
-        },
-      },
-    };
+    const update_query = _.omitBy(_.isUndefined)({
+      status,
+      last_updated: increment_last_updated ? new Date() : undefined,
+    });
 
     const upload = await prisma.dataset_upload.update({
       where: {
         id: req.params.id,
       },
       data: {
-        status,
-        ...files_status_update_query,
+        ...update_query,
+      },
+      include: {
+        dataset: true,
       },
     });
     res.json(upload);
