@@ -317,6 +317,7 @@ router.get(
       where: { status: req.query.status },
       include: {
         files: true,
+        dataset: true,
       },
     });
     res.json(upload_logs);
@@ -987,10 +988,31 @@ router.patch(
     // console.log('increment_last_updated');
     // console.log(increment_last_updated);
 
-    const update_query = _.omitBy(_.isUndefined)({
+    const existing_upload = await prisma.dataset_upload.findFirstOrThrow({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        dataset: true,
+      },
+    });
+    if (existing_upload.status === config.upload_status.FAILED) {
+      res.json(existing_upload);
+      return;
+    }
+
+    let update_query = _.omitBy(_.isUndefined)({
       status,
       last_updated: increment_last_updated ? new Date() : undefined,
     });
+    if (status === config.upload_status.FAILED) {
+      update_query = {
+        ...update_query,
+        dataset: {
+          delete: true,
+        },
+      };
+    }
 
     const upload = await prisma.dataset_upload.update({
       where: {
