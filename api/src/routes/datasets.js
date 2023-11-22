@@ -24,8 +24,8 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
-// const prisma = new PrismaClient();
+// const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
+const prisma = new PrismaClient();
 
 // stats - UI
 router.get(
@@ -977,16 +977,15 @@ router.patch(
   validate([
     param('id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
-    body('increment_last_updated').isBoolean().toBoolean().optional()
-      .default(true),
+    body('increment_processing_count').isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // if (true) {
     //   throw new Error('error');
     // }
-    const { status, increment_last_updated } = req.body;
-    // console.log('increment_last_updated');
-    // console.log(increment_last_updated);
+    const { status, increment_processing_count } = req.body;
+    // console.log('increment_processing_count');
+    // console.log(increment_processing_count);
 
     const existing_upload = await prisma.dataset_upload.findFirstOrThrow({
       where: {
@@ -1001,18 +1000,34 @@ router.patch(
       return;
     }
 
-    let update_query = _.omitBy(_.isUndefined)({
+    const update_query = _.omitBy(_.isUndefined)({
       status,
-      last_updated: increment_last_updated ? new Date() : undefined,
-    });
-    if (status === config.upload_status.FAILED) {
-      update_query = {
-        ...update_query,
+      last_updated: new Date(),
+      // processing_attempt_count: {
+      //   increment: increment_processing_count ? 1 : undefined,
+      // },
+      ...(increment_processing_count && {
+        processing_attempt_count:
+          {
+            increment: 1,
+          },
+      }),
+      ...(status === config.upload_status.FAILED && {
         dataset: {
           delete: true,
         },
-      };
-    }
+      }),
+    });
+
+    // console.log(update_query);
+    // if (status === config.upload_status.FAILED) {
+    //   update_query = {
+    //     ...update_query,
+    //     dataset: {
+    //       delete: true,
+    //     },
+    //   };
+    // }
 
     const upload = await prisma.dataset_upload.update({
       where: {

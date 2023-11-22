@@ -17,8 +17,9 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 status = {
-    'FAILED': 'FAILED',
-    'COMPLETE': 'COMPLETE'
+    'PROCESSING': 'PROCESSING',
+    'COMPLETE': 'COMPLETE',
+    'FAILED': 'FAILED'
 }
 
 # c3468e30cd1da55b92e2235d92ebfc91 - failed_file
@@ -37,8 +38,8 @@ def merge_file_chunks(file_name, file_hash, chunks_path, destination_path, num_c
         print(f'Processing chunk {chunk_file}')
         print(f'Attempting to append chunk {chunk_file.name} to {destination_path}')
 
-        # if i == 1 and (file_hash == 'c3468e30cd1da55b92e2235d92ebfc91' or file_hash == '31904f92c817767de2bb7e9241f0f7fc'):
-        #     raise Exception(f"some exception that occurred during merging chunk {i} of {merged_file_path.name}")
+        # if i == 1 and (file_hash == 'b92f25d60b04b0ce4cc3f6e58de48845'):
+        #     raise Exception(f"some exception that occurred during merging chunk {i} of {destination_path.name}")
 
         with open(chunk_file, 'rb') as chunk:
             with open(destination_path, 'ab') as destination:
@@ -47,31 +48,23 @@ def merge_file_chunks(file_name, file_hash, chunks_path, destination_path, num_c
     print(f"Successfully merged all chunks of file {file_name} to {destination_path}")
     return status['COMPLETE']
 
-# attrs = {
-#     'dataset_upload_id': 'test',
-#     'data_product_id': 1,
-#     'data_product_name': 'name',
-#     'file_attrs': [{
-#         'file_name': 'file_1.pdf',
-#         'file_hash': '31904f92c817767de2bb7e9241f0f7fc',
-#         'num_chunks': 3
-#         'file_log_id': 1,
-#     }]
-# }
+
 def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
     print("CREATE_FILES WORKER CALLED")
     print("dataset_upload_id")
     print(dataset_upload_id)
 
-    time.sleep(5)
-
-    api.post_upload_log(dataset_upload_id, {
-        'increment_last_updated': True
-    })
-
     dataset_upload_log = api.get_upload_log(dataset_upload_id)
     print('dataset_upload_log')
     print(dataset_upload_log)
+
+    time.sleep(5)
+
+    api.update_upload_log(dataset_upload_id, {
+        'status': status['PROCESSING'],
+        'increment_processing_count': True
+    })
+
 
     dataset_id = dataset_upload_log['dataset_id']
     dataset = dataset_upload_log['dataset']
@@ -93,34 +86,35 @@ def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
         if f['status'] != status['COMPLETE']:
             try:
                 f['status'] = merge_file_chunks(file_name, file_hash, chunks_path, destination_path, num_chunks_expected)
+            except Exception as e:
+                f['status'] = status['FAILED']
+                print(e)
+            finally:
                 print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
                 file_upload_details = {
                     'status': f['status']
                 }
                 api.post_file_upload_details(file_log_id, file_upload_details)
-            except Exception as e:
-                f['status'] = status['FAILED']
-                print(f"Encountered exception processing file {file_name}. Processing Status: {f['status']}")
-                print(e)
                 if destination_path.exists():
                     print(f"Deleting file {destination_path}")
                     destination_path.unlink()
-
-            if f['status'] == status['COMPLETE']:
-                shutil.rmtree(chunks_path)
-                shutil.rmtree(chunks_path.parent)
+                if f['status'] == status['COMPLETE']:
+                    shutil.rmtree(chunks_path)
+                    shutil.rmtree(chunks_path.parent)
 
     failed_files = [file for file in pending_files if file['status'] == status['FAILED']]
     has_errors = len(failed_files) > 0
 
-    # delete subdirectory containing all chunked files
-    shutil.rmtree(dataset_path / 'chunked_files')
-    # Update status of upload log
-    api.post_upload_log(dataset_upload_id, {
-        'status': status['FAILED'] if has_errors else status['COMPLETE']
-    })
-
     if not has_errors:
+        # Update status of upload log
+        api.update_upload_log(dataset_upload_id, {
+            'status': status['COMPLETE'],
+            'increment_processing_count': False
+        })
+
+        # delete subdirectory containing all chunked files
+        shutil.rmtree(dataset_path / 'chunked_files')
+
         print("Beginning 'integrated' workflow")
         integrated_wf_body = wf_utils.get_wf_body(wf_name='integrated')
         int_wf = Workflow(celery_app=current_app, **integrated_wf_body)

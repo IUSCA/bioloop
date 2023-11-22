@@ -50,6 +50,7 @@ const exports = {
   upload_status: {
     UPLOADING: "UPLOADING",
     UPLOAD_FAILED: "UPLOAD_FAILED",
+    UPLOADED: "UPLOADED",
     PROCESSING: "PROCESSING",
     COMPLETE: "COMPLETE",
     FAILED: "FAILED",

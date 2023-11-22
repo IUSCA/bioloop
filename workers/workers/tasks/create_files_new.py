@@ -91,7 +91,7 @@ def create_dataset_files(celery_task, dataset_upload_id, **kwargs):
         merge_dataset_file_chunks(dataset_upload_log['files'])
 
 
-        api.post_upload_log(dataset_upload_id, {
+        api.update_upload_log(dataset_upload_id, {
             'status': status['COMPLETE'] if files_processed else status['FAILED']
         })
 

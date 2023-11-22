@@ -47,6 +47,7 @@ model dataset_upload {
   dataset      dataset?      @relation(fields: [dataset_id], references: [id])
   files        file_upload[]
   last_updated DateTime      @default(now()) @db.Timestamp(6)
+  processing_attempt_count  Int           @default(0)
   user_id      Int
   user         user          @relation(fields: [user_id], references: [id])
 }
@@ -322,6 +323,7 @@ enum access_type {
 enum upload_status {
   UPLOADING
   UPLOAD_FAILED
+  UPLOADED
   PROCESSING
   COMPLETE
   FAILED

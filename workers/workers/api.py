@@ -243,9 +243,15 @@ def post_file_upload_details(file_log_id, file_upload_details):
         r.raise_for_status()
 
 
-def post_upload_log(upload_log_id, body):
+def update_upload_log(upload_log_id, body):
     with APIServerSession() as s:
         r = s.patch(f'datasets/upload-log/{upload_log_id}', json=body)
+        r.raise_for_status()
+
+
+def initiate_upload_processing(upload_log_id):
+    with APIServerSession() as s:
+        r = s.post(f'datasets/create-files/{upload_log_id}')
         r.raise_for_status()
 
 

@@ -543,12 +543,15 @@ const handleSubmit = () => {
       // If a log has been created for this Data Product upload
       if (submittedDataset.value) {
         datasetService
-          .updateDataProductUploadLog({
-            upload_id: submittedDataset.value.dataset_upload.id,
-            status: someUploadsFailed
-              ? config.upload_status.UPLOAD_FAILED
-              : config.upload_status.PROCESSING,
-          })
+          .updateDataProductUploadLog(
+            submittedDataset.value.dataset_upload.id,
+            {
+              status: someUploadsFailed
+                ? config.upload_status.UPLOAD_FAILED
+                : config.upload_status.UPLOADED,
+              increment_processing_count: false,
+            },
+          )
           .then((res) => {
             submissionStatus.value = res.data.status;
           });
@@ -598,9 +601,9 @@ const createOrUpdateUploadLog = (data) => {
         return submittedDataset.value.dataset_upload.status;
       })
     : datasetService
-        .updateDataProductUploadLog({
-          upload_id: submittedDataset.value.dataset_upload.id,
+        .updateDataProductUploadLog(submittedDataset.value.dataset_upload.id, {
           status: config.upload_status.UPLOADING,
+          increment_processing_count: false,
         })
         .then((res) => {
           return res.data.status;

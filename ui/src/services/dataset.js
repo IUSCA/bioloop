@@ -88,16 +88,12 @@ class DatasetService {
     return api.post("/datasets/upload-log", data);
   }
 
-  updateDataProductUploadLog({ upload_id, status }) {
-    return api.patch(`/datasets/upload-log/${upload_id}`, {
-      status,
-    });
+  updateDataProductUploadLog(upload_id, data) {
+    return api.patch(`/datasets/upload-log/${upload_id}`, data);
   }
 
-  updateFileUploadLog({ file_log_id, status }) {
-    return api.patch(`/datasets/file-upload-log/${file_log_id}`, {
-      status,
-    });
+  updateFileUploadLog(file_log_id, data) {
+    return api.patch(`/datasets/file-upload-log/${file_log_id}`, data);
   }
 
   createDatasetFiles(dataset_upload_id) {
