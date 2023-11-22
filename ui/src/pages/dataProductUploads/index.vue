@@ -1,6 +1,4 @@
 <template>
-  <!--  <va-button />-->
-
   <!-- search bar and filter -->
   <div class="flex mb-3 gap-3">
     <!-- search bar -->
@@ -90,7 +88,6 @@
           />
         </va-popover>
       </div>
-      <!--      <span>{{ value }}</span>-->
     </template>
   </va-data-table>
 </template>
@@ -106,7 +103,7 @@ const router = useRouter();
 nav.setNavItems([{ label: "Data Product Uploads" }]);
 
 const retryFailedFilesCreation = (uploadLog) => {
-  datasetService.createDatasetFiles(uploadLog.id);
+  datasetService.processUploadedChunks(uploadLog.id);
 };
 
 const filterInput = ref("");
@@ -114,12 +111,12 @@ const pastUploads = ref([]);
 
 const uploads = computed(() => {
   return pastUploads.value.map((e) => {
-    const source_dataset = e.dataset.source_datasets[0];
+    const sourceDataset = e.dataset.source_datasets[0];
     return {
       ...e,
       data_product_name: e.dataset.name,
-      source_dataset_name: source_dataset.source_dataset.name,
-      source_dataset_id: source_dataset.source_dataset.id,
+      source_dataset_name: sourceDataset.source_dataset.name,
+      source_dataset_id: sourceDataset.source_dataset.id,
       file_type_name: e.dataset.file_type.name,
       user_name: e.user.name,
     };
@@ -159,7 +156,7 @@ const getStatusChipColor = (value) => {
 };
 
 onMounted(() => {
-  datasetService.getDataProductUploads().then((res) => {
+  datasetService.getUploadLogs().then((res) => {
     // debugger;
     pastUploads.value = res.data;
   });

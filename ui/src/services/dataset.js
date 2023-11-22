@@ -72,23 +72,23 @@ class DatasetService {
     });
   }
 
-  getDataFileTypes() {
-    return api.get("/datasets/data-file-types");
+  getDatasetFileTypes() {
+    return api.get("/datasets/dataset-file-types");
   }
 
-  getDataProductUploads() {
-    return api.get("/datasets/data-product-uploads");
+  getUploadLogs() {
+    return api.get("/datasets/upload-logs");
   }
 
   uploadFileChunk(data) {
     return api.post("/datasets/file-chunk", data);
   }
 
-  logDataProductUpload(data) {
+  logUpload(data) {
     return api.post("/datasets/upload-log", data);
   }
 
-  updateDataProductUploadLog(upload_id, data) {
+  updateUploadLog(upload_id, data) {
     return api.patch(`/datasets/upload-log/${upload_id}`, data);
   }
 
@@ -96,9 +96,9 @@ class DatasetService {
     return api.patch(`/datasets/file-upload-log/${file_log_id}`, data);
   }
 
-  createDatasetFiles(dataset_upload_id) {
-    return api.post(`/datasets/create-files`, {
-      dataset_upload_id,
+  processUploadedChunks(upload_log_id) {
+    return api.post(`/datasets/process-uploaded-chunks`, {
+      upload_log_id,
     });
   }
 
@@ -106,11 +106,10 @@ class DatasetService {
     return api
       .post(`/datasets/${id}/workflow/stage`)
       .then(() => {
-        console.log("SUCCESS!!!");
         toast.success("A workflow has started to stage the dataset");
       })
       .catch((err) => {
-        console.log("unable to stage the dataset", err);
+        console.error("unable to stage the dataset", err);
         toast.error("Unable to stage the dataset");
         return Promise.reject(err);
       });

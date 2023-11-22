@@ -159,10 +159,10 @@ async function get_dataset({
           derived_dataset: {
             OR: [
               {
-                dataset_upload: null,
+                upload_log: null,
               },
               {
-                dataset_upload: {
+                upload_log: {
                   status: config.upload_status.COMPLETE,
                 },
               },

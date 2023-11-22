@@ -24,7 +24,6 @@ import { useProjectFormStore } from "@/stores/projects/projectForm";
 const projectFormStore = useProjectFormStore();
 
 function handleSelect(ds) {
-  // debugger;
   projectFormStore.addDataset(ds);
 }
 

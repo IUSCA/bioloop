@@ -150,16 +150,16 @@ def get_dataset(dataset_id: str, files: bool = False):
         return dataset_getter(r.json())
 
 
-def get_upload_log(dataset_upload_id: str):
+def get_upload_log(upload_log_id: str):
     with APIServerSession() as s:
-        r = s.get(f'datasets/upload-log/{dataset_upload_id}')
+        r = s.get(f'datasets/upload-log/{upload_log_id}')
         r.raise_for_status()
         return r.json()
 
 
-def filter_upload_logs(status):
+def get_upload_logs():
     with APIServerSession() as s:
-        r = s.get(f'datasets/upload-logs?status={status}')
+        r = s.get(f'datasets/upload-logs')
         r.raise_for_status()
         return r.json()
 
@@ -237,21 +237,15 @@ def post_worker_logs(process_id: str, logs: list[dict]):
         r.raise_for_status()
 
 
-def post_file_upload_details(file_log_id, file_upload_details):
+def update_file_upload_log(file_upload_log_id, log):
     with APIServerSession() as s:
-        r = s.patch(f'datasets/file-upload-log/{file_log_id}', json=file_upload_details)
+        r = s.patch(f'datasets/file-upload-log/{file_upload_log_id}', json=log)
         r.raise_for_status()
 
 
-def update_upload_log(upload_log_id, body):
+def update_upload_log(upload_log_id, log):
     with APIServerSession() as s:
-        r = s.patch(f'datasets/upload-log/{upload_log_id}', json=body)
-        r.raise_for_status()
-
-
-def initiate_upload_processing(upload_log_id):
-    with APIServerSession() as s:
-        r = s.post(f'datasets/create-files/{upload_log_id}')
+        r = s.patch(f'datasets/upload-log/{upload_log_id}', json=log)
         r.raise_for_status()
 
 

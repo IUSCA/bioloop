@@ -33,8 +33,7 @@ config = {
         },
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
-            'stage': '/path/to/staged/data_products',
-            'upload_dir': '/path/to/uploaded/data_products'
+            'stage': '/path/to/staged/data_products'
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
@@ -60,6 +59,15 @@ config = {
             'max_purges': 10
         },
         'alias_salt': ALIAS_SALT
+    },
+    'upload_status': {
+        'UPLOADING': 'UPLOADING',
+        'UPLOAD_FAILED': 'UPLOAD_FAILED',
+        'UPLOADED': 'UPLOADED',
+        'PROCESSING': 'PROCESSING',
+        'COMPLETE': 'COMPLETE',
+        'VALIDATION_FAILED': 'VALIDATION_FAILED',
+        'FAILED': 'FAILED'
     },
     'workflow_registry': {
         'integrated': {
@@ -94,11 +102,11 @@ config = {
                 }
             ]
         },
-        'create_files': {
+        'process_uploads': {
             'steps': [
                 {
-                    'name': 'merge_file_chunks',
-                    'task': 'create_dataset_files'
+                    'name': 'chunks_to_files',
+                    'task': 'chunks_to_files'
                 }
             ]
         }

@@ -198,19 +198,19 @@ const datasets = [
     id: 11,
     name: 'Uploaded data product 1',
     type: 'DATA_PRODUCT',
-    dataset_file_type_id: 1,
+    file_type_id: 1,
   },
   {
     id: 12,
     name: 'Uploaded data product 2',
     type: 'DATA_PRODUCT',
-    dataset_file_type_id: 2,
+    file_type_id: 2,
   },
   {
     id: 13,
     name: 'Uploaded data product 3',
     type: 'DATA_PRODUCT',
-    dataset_file_type_id: 3,
+    file_type_id: 3,
   },
 ];
 
@@ -359,7 +359,7 @@ const dataset_file_types = [{
   extension: '.tif',
 }];
 
-const data_product_uploads = [{
+const data_product_upload_logs = [{
   status: 'PROCESSING',
   dataset_id: 11,
   user_id: 60,
@@ -373,25 +373,25 @@ const data_product_uploads = [{
   user_id: 61,
 }];
 
-const file_uploads = [{
+const file_upload_logs = [{
   name: 'processing_file_1',
-  hash: '31904f92c817767de2bb7e9241f0f7fc',
+  md5: '31904f92c817767de2bb7e9241f0f7fc',
   num_chunks: 2,
   status: 'PROCESSING',
   chunks_path: '/path/to/chunks',
   destination_path: '/path/to/destination',
 }, {
   name: 'failed_file_1',
-  hash: 'c3468e30cd1da55b92e2235d92ebfc91',
+  md5: 'c3468e30cd1da55b92e2235d92ebfc91',
   num_chunks: 2,
-  status: 'FAILED',
+  status: 'VALIDATION_FAILED',
   chunks_path: '/path/to/chunks',
   destination_path: '/path/to/destination',
 }, {
   name: 'completed_file_1',
-  hash: '50ddf82278203f3813749b90c77aee24',
+  md5: '50ddf82278203f3813749b90c77aee24',
   num_chunks: 2,
-  status: 'PROCESSING',
+  status: 'COMPLETED',
   chunks_path: '/path/to/chunks',
   destination_path: '/path/to/destination',
 }];
@@ -406,8 +406,8 @@ module.exports = {
   metrics,
   dataset_audit_data,
   dataset_file_types,
-  data_product_uploads,
-  file_uploads,
+  data_product_upload_logs,
+  file_upload_logs,
   contacts,
   projects,
   project_user_assoc,

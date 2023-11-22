@@ -2,7 +2,7 @@
   <va-select
     :class="props.class"
     :model-value="props.modelValue"
-    @update:model-value="emitModelValueUpdate"
+    @update:model-value="(newVal) => $emit('update:modelValue', newVal)"
     label="File Type"
     placeholder="Select File Type"
     :options="props.fileTypeList"
@@ -37,22 +37,22 @@
     </template>
   </va-select>
 
-  <va-form ref="create_new_file_type_form">
+  <va-form ref="createNewFileTypeForm">
     <va-modal
-      v-model="is_modal_visible"
+      v-model="isModalVisible"
       ok-text="Create"
       no-dismiss
-      :before-cancel="before_modal_cancel"
-      :before-ok="before_modal_ok"
-      @ok="on_modal_ok"
+      :before-cancel="beforeModalCancel"
+      :before-ok="beforeModalOk"
+      @ok="onModalOk"
     >
       <div class="flex flex-col gap-6">
         <va-input
           name="new_file_type_name"
-          v-model="new_file_type_name"
+          v-model="newFileTypeName"
           label="File Type Name"
           placeholder="Name"
-          @input="show_new_file_type_form_wide_errors = false"
+          @input="showNewFileTypeFormWideErrors = false"
           :rules="[
             (value) => (value && value.length > 0) || 'Name is required',
             (value) => (value && value.length > 2) || 'Name is too short',
@@ -60,10 +60,10 @@
         ></va-input>
         <va-input
           name="new_file_type_extension"
-          v-model="new_file_type_extension"
+          v-model="newFileTypeExtension"
           label="File Type Extension"
           placeholder="Extension"
-          @input="show_new_file_type_form_wide_errors = false"
+          @input="showNewFileTypeFormWideErrors = false"
           :rules="[
             (value) => (value && value.length > 0) || 'Extension is required',
             (value) => (value && value.length > 2) || 'Extension is too short',
@@ -71,11 +71,11 @@
         ></va-input>
 
         <div
-          v-if="show_new_file_type_form_wide_errors"
+          v-if="showNewFileTypeFormWideErrors"
           class="duplicate_file_type_alert"
         >
           <va-alert
-            v-for="(error, i) in new_file_type_form_wide_errors"
+            v-for="(error, i) in newFileTypeFormWideErrors"
             :key="i"
             class="w-full"
             color="danger"
@@ -107,78 +107,71 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "newFileTypeCreated"]);
 
-const {
-  isValid: isValid_newFileTypeForm,
-  validate: validate_newFileTypeForm,
-  reset: reset_newFileTypeForm,
-} = useForm("create_new_file_type_form");
+const { isValid, validate, reset } = useForm("createNewFileTypeForm");
 
-const is_modal_visible = ref(false);
-const show_new_file_type_form_wide_errors = ref(false);
-const new_file_type_name = ref("");
-const new_file_type_extension = ref("");
+const isModalVisible = ref(false);
+const showNewFileTypeFormWideErrors = ref(false);
+const newFileTypeName = ref("");
+const newFileTypeExtension = ref("");
 
 // errors pertaining to the entire form, and not specific fields
-const new_file_type_form_wide_errors = computed(() => {
-  let form_errors = [];
-  const is_duplicate_file_type =
+const newFileTypeFormWideErrors = computed(() => {
+  let formErrors = [];
+  const isDuplicateFileType =
     props.fileTypeList.find(
       (e) =>
-        e.name === new_file_type_name.value &&
-        e.extension === new_file_type_extension.value,
+        e.name === newFileTypeName.value &&
+        e.extension === newFileTypeExtension.value,
     ) !== undefined;
-  if (is_duplicate_file_type) {
-    form_errors.push(
-      `File Type with name '${new_file_type_name.value}', extension '${new_file_type_extension.value}' already exists`,
+  if (isDuplicateFileType) {
+    formErrors.push(
+      `File Type with name '${newFileTypeName.value}', extension '${newFileTypeExtension.value}' already exists`,
     );
   }
-  return form_errors;
+  return formErrors;
 });
 
-const before_modal_cancel = (hide) => {
-  reset_modal_form_state();
+const beforeModalCancel = (hide) => {
+  resetModalFormState();
   hide();
 };
 
-const before_modal_ok = (hide) => {
+const beforeModalOk = (hide) => {
   // force validation to run, which would otherwise only run when a field is interacted with
-  validate_newFileTypeForm();
+  validate();
   // if there are form-wide errors, show them
-  show_new_file_type_form_wide_errors.value = true;
+  showNewFileTypeFormWideErrors.value = true;
   // hide modal only if there are no field-level or form-wide errors
-  if (
-    isValid_newFileTypeForm.value &&
-    new_file_type_form_wide_errors.value.length === 0
-  ) {
+  if (isValid.value && newFileTypeFormWideErrors.value.length === 0) {
     hide();
   }
 };
 
-const on_modal_ok = () => {
+const onModalOk = () => {
   const newFileType = {
-    name: new_file_type_name.value,
-    extension: new_file_type_extension.value,
+    name: newFileTypeName.value,
+    extension: newFileTypeExtension.value,
   };
-  emitModelValueUpdate(newFileType);
+  emit("update:modelValue", newFileType);
   emit("newFileTypeCreated", newFileType);
   // reset modal form
-  reset_modal_form_state();
+  resetModalFormState();
 };
 
-const reset_modal_form_state = () => {
+const resetModalFormState = () => {
   // hide form-wide errors
-  show_new_file_type_form_wide_errors.value = false;
+  showNewFileTypeFormWideErrors.value = false;
   // reset form inputs' values and validation results
-  reset_newFileTypeForm();
+  reset();
 };
 
 const setModalVisibility = (visibility) => {
-  is_modal_visible.value = visibility;
+  isModalVisible.value = visibility;
 };
 
-const emitModelValueUpdate = (val) => {
-  emit("update:modelValue", val);
-};
+// const emitModelValueUpdate = (val) => {
+//   emit("update:modelValue", val);
+// };
 </script>
 
 <style lang="scss">

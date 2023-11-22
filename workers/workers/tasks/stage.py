@@ -83,8 +83,6 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> str:
 
 
 def stage_dataset(celery_task, dataset_id, **kwargs):
-    print('STAGE WORKER CALLED')
-
     dataset = api.get_dataset(dataset_id=dataset_id)
     alias = stage(celery_task, dataset)
 

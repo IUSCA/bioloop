@@ -83,19 +83,11 @@
         }
       ]
     },
-    "merge_files": {
+    "process_uploads": {
       "steps": [
         {
-          "name": "merge_test",
-          "task": "create_dataset_files"
-        }
-      ]
-    },
-    "create_files": {
-      "steps": [
-        {
-          "name": "merge_file_chunks",
-          "task": "create_dataset_files"
+          "name": "chunks_to_files",
+          "task": "chunks_to_files"
         }
       ]
     }
@@ -108,9 +100,12 @@
   },
   "upload_status": {
     "UPLOADING": "UPLOADING",
+    "UPLOAD_FAILED": "UPLOAD_FAILED",
+    "UPLOADED": "UPLOADED",
     "PROCESSING": "PROCESSING",
     "COMPLETE": "COMPLETE",
-    "FAILED": "FAILED"
+    "FAILED": "FAILED",
+    "VALIDATION_FAILED": "VALIDATION_FAILED"
   },
   "upload_path": "/opt/sca/uploads"
 }

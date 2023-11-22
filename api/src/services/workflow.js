@@ -55,8 +55,6 @@ function resume(id) {
 }
 
 function create(wf) {
-  // console.log('WF');
-  // console.log(wf);
   return wfApi.post('/workflows', wf);
 }
 

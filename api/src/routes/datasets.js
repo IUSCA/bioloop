@@ -115,19 +115,16 @@ const assoc_body_schema = {
 const buildQueryObject = ({
   deleted, processed, archived, staged, type, name, match_name_exact, days_since_last_staged,
 }) => {
-  const name_query_obj = match_name_exact
-    ? { equals: name }
-    : { contains: name };
-
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     archive_path: archived ? { not: null } : {},
     is_staged: staged,
     type,
     name: {
-      ...name_query_obj,
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     },
+
   });
 
   // processed=true: datasets with one or more workflows associated
@@ -254,38 +251,37 @@ router.get(
 
 // Data Products - UI
 router.get(
-  '/data-file-types',
+  '/dataset-file-types',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
-    const data_file_types = await prisma.dataset_file_type.findMany();
-    res.json(data_file_types);
-    // res.json([]);
+    const dataset_file_types = await prisma.dataset_file_type.findMany();
+    res.json(dataset_file_types);
   }),
 );
 
-router.get(
-  '/data-product-uploads',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res) => {
-    const uploads = await prisma.dataset_upload.findMany({
-      include: {
-        dataset: {
-          include: {
-            source_datasets: {
-              include: {
-                source_dataset: true,
-              },
-            },
-            file_type: true,
-          },
-        },
-        user: true,
-        files: true,
-      },
-    });
-    res.json(uploads);
-  }),
-);
+// router.get(
+//   '/upload-logs',
+//   isPermittedTo('read'),
+//   asyncHandler(async (req, res) => {
+//     const uploads = await prisma.upload_log.findMany({
+//       include: {
+//         dataset: {
+//           include: {
+//             source_datasets: {
+//               include: {
+//                 source_dataset: true,
+//               },
+//             },
+//             file_type: true,
+//           },
+//         },
+//         user: true,
+//         files: true,
+//       },
+//     });
+//     res.json(uploads);
+//   }),
+// );
 
 const dataset_access_check = asyncHandler(async (req, res, next) => {
   // assumes req.params.id is the dataset id user is requesting
@@ -310,14 +306,30 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
 router.get(
   '/upload-logs',
   validate([
-    query('status').notEmpty().escape(),
+    query('status').notEmpty().escape().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const upload_logs = await prisma.dataset_upload.findMany({
-      where: { status: req.query.status },
+    const { status } = req.query;
+
+    const query_obj = _.omitBy(_.isUndefined)({
+      status,
+    });
+
+    const upload_logs = await prisma.upload_log.findMany({
+      where: query_obj,
       include: {
         files: true,
-        dataset: true,
+        user: true,
+        dataset: {
+          include: {
+            source_datasets: {
+              include: {
+                source_dataset: true,
+              },
+            },
+            file_type: true,
+          },
+        },
       },
     });
     res.json(upload_logs);
@@ -397,7 +409,6 @@ router.post(
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...datasetService.INCLUDE_STATES,
-
       },
     });
     res.json(dataset);
@@ -764,8 +775,6 @@ const getDataProductUploadPath = (data_product_name) => path.join(
   data_product_name,
 );
 
-// console.log('file_checksum');
-// console.log(file_checksum);
 const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.join(
   getDataProductUploadPath(data_product_name),
   'chunked_files',
@@ -788,14 +797,14 @@ const getChunkStorage = (data_product_name, file_checksum) => path.join(
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const tempStorage = getTempStorage(req.body.data_product_name, req.body.file_checksum);
+    const tempStorage = getTempStorage(req.body.data_product_name, req.body.checksum);
     await fsPromises.mkdir(tempStorage, {
       recursive: true,
     });
     cb(null, tempStorage);
   },
   filename: (req, file, cb) => {
-    cb(null, getDataProductFileChunkName(req.body.file_checksum, req.body.index));
+    cb(null, getDataProductFileChunkName(req.body.checksum, req.body.index));
   },
 });
 
@@ -816,14 +825,18 @@ router.post(
   asyncHandler(async (req, res, next) => {
     try {
       const {
-        name, data_product_name, total, index, size, file_checksum, chunk_checksum,
+        name, data_product_name, total, index, size, checksum, chunk_checksum,
       } = req.body;
 
       // eslint-disable-next-line no-console
-      console.log('Processing file piece...', data_product_name, name, total, index, size, file_checksum, chunk_checksum);
+      console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
-      // if (name === 'failed_file.pdf' && index === '1') {
-      //   throw new Error('will fail for failed_file');
+      // if (name === '150MB_file.zip' && index === '35') {
+      //   throw new Error('will fail for this file');
+      // }
+
+      // if (name === 'failed_file.pdf') {
+      //   throw new Error('will fail for this file');
       // }
 
       const receivedFilePath = req.file.path;
@@ -837,9 +850,9 @@ router.post(
 
       // Create a folder based on the file hash and move the uploaded chunk under the current hash
       // folder.
-      const chunksPath = getChunkStorage(data_product_name, file_checksum);
+      const chunksPath = getChunkStorage(data_product_name, checksum);
       if (!fs.existsSync(chunksPath)) mkdirsSync(chunksPath);
-      fs.renameSync(receivedFilePath, `${chunksPath}/${getDataProductFileChunkName(file_checksum, index)}`);
+      fs.renameSync(receivedFilePath, `${chunksPath}/${getDataProductFileChunkName(checksum, index)}`);
 
       // if (name === 'failed_file') { throw new Error('this is error'); }
 
@@ -851,6 +864,20 @@ router.post(
     }
   }),
 );
+
+const UPLOAD_LOG_INCLUDE_RELATIONS = {
+  files: true,
+  dataset: {
+    include: {
+      source_datasets: {
+        include: {
+          source_dataset: true,
+        },
+      },
+      file_type: true,
+    },
+  },
+};
 
 // Post a Dataset's upload log and the Dataset to the database
 router.post(
@@ -865,69 +892,56 @@ router.post(
     // console.log('REQUEST BODY');
     // console.log(req.body);
 
+    // if (true) { throw new Error('error!'); }
+
     const {
       data_product_name, source_dataset_id, file_type, files_metadata,
     } = req.body;
 
-    const file_type_query = file_type.id
-      ? { connect: { id: file_type.id } }
-      : {
-        create: {
-          name: file_type.name,
-          extension: file_type.extension,
-        },
-      };
-
-    const dataset = await prisma.dataset.create({
+    const upload_log = await prisma.upload_log.create({
       data: {
-        source_datasets: {
-          create: [{
-            source_id: source_dataset_id,
-          }],
+        status: config.upload_status.UPLOADING,
+        user: {
+          connect: {
+            id: req.user.id,
+          },
         },
-        name: data_product_name,
-        origin_path: getDataProductUploadPath(data_product_name),
-        type: config.dataset_types[1],
-        file_type: {
-          ...file_type_query,
+        files: {
+          create: files_metadata.map((file) => ({
+            name: file.name,
+            md5: file.checksum,
+            num_chunks: file.num_chunks,
+            chunks_path: getChunkStorage(data_product_name, file.checksum),
+            destination_path: path.join(
+              getDataProductUploadPath(data_product_name),
+              file.name,
+            ),
+            status: config.upload_status.UPLOADING,
+          })),
         },
-        dataset_upload: {
-          create:
-            {
-              status: config.upload_status.UPLOADING,
-              user_id: req.user.id,
-              files: {
-                create: files_metadata.map((e) => ({
-                  name: e.file_name,
-                  hash: e.file_checksum,
-                  num_chunks: e.num_chunks,
-                  chunks_path: getChunkStorage(data_product_name, e.file_checksum),
-                  destination_path: path.join(
-                    getDataProductUploadPath(data_product_name),
-                    e.file_name,
-                  ),
-                  status: 'PROCESSING',
-                })),
-              },
+        dataset: {
+          create: {
+            source_datasets: {
+              create: [{
+                source_id: source_dataset_id,
+              }],
             },
-        },
-      },
-      include: {
-        dataset_upload: {
-          include: {
-            files: true,
+            name: data_product_name,
+            origin_path: getDataProductUploadPath(data_product_name),
+            type: config.dataset_types[1],
+            file_type: file_type.id === undefined ? {
+              create: {
+                name: file_type.name,
+                extension: file_type.extension,
+              },
+            } : { connect: { id: file_type.id } },
           },
         },
-        source_datasets: {
-          include: {
-            source_dataset: true,
-          },
-        },
-        file_type: true,
       },
+      include: UPLOAD_LOG_INCLUDE_RELATIONS,
     });
 
-    res.json(dataset);
+    res.json(upload_log);
   }),
 );
 
@@ -938,62 +952,37 @@ router.get(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // if (true) {
-    //   throw new Error('getting upload log error');
-    // }
-
-    const upload_log = await prisma.dataset_upload.findFirstOrThrow({
+    const upload_log = await prisma.upload_log.findFirstOrThrow({
       where: { id: req.params.id },
-      include: {
-        dataset: true,
-        files: true,
-      },
+      include: UPLOAD_LOG_INCLUDE_RELATIONS,
     });
     res.json(upload_log);
   }),
 );
 
-// Filter upload logs
-// router.get(
-//   '/test',
-//   // validate([
-//   //   query('status').notEmpty().escape(),
-//   // ]),
-//   asyncHandler(async (req, res, next) => {
-//     // const upload_logs = await prisma.dataset_upload.findMany({
-//     //   // where: { status: req.query.status },
-//     //   // include: {
-//     //   //   files: true,
-//     //   // },
-//     // });
-//     // res.json(upload_logs);
-//     res.json('Hi');
-//   }),
-// );
-
-// Patch an upload log
+// Patch an upload log and it's files' details - UI, workers
 router.patch(
   '/upload-log/:id',
   validate([
     param('id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
     body('increment_processing_count').isBoolean().toBoolean(),
+    body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // if (true) {
-    //   throw new Error('error');
-    // }
-    const { status, increment_processing_count } = req.body;
+    const { status, files, increment_processing_count } = req.body;
     // console.log('increment_processing_count');
     // console.log(increment_processing_count);
 
-    const existing_upload = await prisma.dataset_upload.findFirstOrThrow({
+    // if (true) {
+    //   throw new Error('patch error');
+    // }
+
+    const existing_upload = await prisma.upload_log.findFirstOrThrow({
       where: {
         id: req.params.id,
       },
-      include: {
-        dataset: true,
-      },
+      include: UPLOAD_LOG_INCLUDE_RELATIONS,
     });
     if (existing_upload.status === config.upload_status.FAILED) {
       res.json(existing_upload);
@@ -1003,9 +992,6 @@ router.patch(
     const update_query = _.omitBy(_.isUndefined)({
       status,
       last_updated: new Date(),
-      // processing_attempt_count: {
-      //   increment: increment_processing_count ? 1 : undefined,
-      // },
       ...(increment_processing_count && {
         processing_attempt_count:
           {
@@ -1019,26 +1005,25 @@ router.patch(
       }),
     });
 
-    // console.log(update_query);
-    // if (status === config.upload_status.FAILED) {
-    //   update_query = {
-    //     ...update_query,
-    //     dataset: {
-    //       delete: true,
-    //     },
-    //   };
-    // }
+    const updates = [];
+    updates.push(prisma.upload_log.update({
+      where: { id: req.params.id },
+      data: update_query,
+    }));
+    (files || []).forEach((f) => {
+      updates.push(prisma.file_upload_log.update({
+        where: { id: f.id },
+        data: f.data,
+      }));
+    });
 
-    const upload = await prisma.dataset_upload.update({
+    await prisma.$transaction(updates);
+
+    const upload = await prisma.upload_log.findUniqueOrThrow({
       where: {
         id: req.params.id,
       },
-      data: {
-        ...update_query,
-      },
-      include: {
-        dataset: true,
-      },
+      include: UPLOAD_LOG_INCLUDE_RELATIONS,
     });
     res.json(upload);
   }),
@@ -1046,12 +1031,12 @@ router.patch(
 
 // Initiate the creation of Data Product's files - worker
 router.post(
-  '/create-files',
+  '/process-uploaded-chunks',
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
-    const WORKFLOW_NAME = 'create_files';
+    const WORKFLOW_NAME = 'process_uploads';
 
-    const { dataset_upload_id } = req.body;
+    const { upload_log_id } = req.body;
 
     // create a deep copy of the config object because it is immutable
     const wf_body = { ...config.workflow_registry[WORKFLOW_NAME] };
@@ -1062,26 +1047,31 @@ router.post(
       ...step,
       queue: step.queue || `${config.app_id}.q`,
     }));
-    wf_body.args = [dataset_upload_id];
+    wf_body.args = [upload_log_id];
 
     await wfService.create(wf_body);
     res.json('success');
   }),
 );
 
-// Log the creation status of Data Product's files - worker
+// Log the processing status of Data Product's files - worker
 router.patch(
   '/file-upload-log/:id',
   validate([
     param('id').isInt().toInt(),
+    body('status').notEmpty().escape(),
   ]),
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     const { status } = req.body;
 
+    // if (req.params.id === 15) {
+    //   throw new Error('patch error');
+    // }
+
     // console.log(`got status ${status} for id ${req.params.id}`);
 
-    const file_upload = await prisma.file_upload.update({
+    const file_upload_log = await prisma.file_upload_log.update({
       where: {
         id: req.params.id,
       },
@@ -1090,7 +1080,7 @@ router.patch(
       },
     });
 
-    res.json(file_upload);
+    res.json(file_upload_log);
   }),
 );
 

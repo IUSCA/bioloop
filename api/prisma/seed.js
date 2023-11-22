@@ -288,7 +288,7 @@ async function main() {
   });
 
   // create data upload entries
-  const dataset_uploads = data.data_product_uploads;
+  const dataset_uploads = data.data_product_upload_logs;
   const operators = await prisma.user.findMany({
     where: {
       user_role: {
@@ -302,8 +302,8 @@ async function main() {
     const operator = operators[Math.floor(Math.random() * operators.length)];
     return { ...e, user_id: operator.id };
   });
-  await prisma.dataset_upload.deleteMany();
-  await prisma.dataset_upload.createMany({
+  await prisma.upload_log.deleteMany();
+  await prisma.upload_log.createMany({
     data: uploads,
   });
 }
