@@ -18,7 +18,7 @@
             'step-button--active': isActive,
             'step-button--completed': isCompleted,
           }"
-          @click="isValid && setStep(i)"
+          @click="isFormValid() && setStep(i)"
         >
           <div class="flex flex-col items-center">
             <Icon :icon="step.icon" />
@@ -106,7 +106,7 @@
                 isFileUploadAlertVisible = false;
               }
             "
-            :disabled="uploadAttempted"
+            :disabled="submitAttempted"
           />
 
           <va-alert
@@ -162,7 +162,7 @@
                   icon="delete"
                   color="danger"
                   @click="removeFile(rowIndex)"
-                  :disabled="uploadAttempted"
+                  :disabled="submitAttempted"
                 />
               </div>
             </template>
@@ -179,7 +179,7 @@
         </va-alert>
 
         <!-- Submitted values -->
-        <va-card v-if="uploadAttempted" class="mt-5">
+        <va-card v-if="submitAttempted" class="mt-5">
           <va-card-title>
             <div class="flex flex-nowrap items-center w-full">
               <span class="text-lg">Details</span>
@@ -245,13 +245,13 @@
                 prevStep();
               }
             "
-            :disabled="step === 0 || uploadAttempted"
+            :disabled="step === 0 || submitAttempted"
           >
             Previous
           </va-button>
           <va-button
             class="flex-none"
-            @click="isValid && onNextClick(nextStep)"
+            @click="isFormValid() && onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="!isSubmitEnabled"
           >
@@ -321,10 +321,7 @@ const statusChipColor = ref();
 const submissionAlert = ref(); // For handling network errors before upload begins
 const submissionAlertColor = ref();
 const isSubmissionAlertVisible = ref(false);
-const inProgress = computed(
-  () => submissionStatus.value === config.upload_status.UPLOADING,
-);
-const uploadAttempted = ref(false);
+const submitAttempted = ref(false);
 const dataProductFiles = ref([]);
 const filesNotUploaded = computed(() => {
   return dataProductFiles.value.filter(
@@ -345,7 +342,12 @@ const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
 
-const { isValid } = useForm("dataProductUploadForm");
+const { isValid, validate } = useForm("dataProductUploadForm");
+
+const isFormValid = () => {
+  validate();
+  return isValid.value;
+};
 
 // Returns the file's and individual chunks' checksums
 const evaluateFileChecksums = (file) => {
@@ -555,13 +557,13 @@ const uploadFile = async (fileDetails) => {
 };
 
 const onSubmit = () => {
-  return new Promise((resolve, reject) => {
-    submissionStatus.value = SUBMISSION_STATES.PROCESSING;
-    submissionAlert.value = null;
-    isSubmissionAlertVisible.value = false;
-    statusChipColor.value = "primary";
-    uploadAttempted.value = true;
+  submissionStatus.value = SUBMISSION_STATES.PROCESSING;
+  statusChipColor.value = "primary";
+  submissionAlert.value = null;
+  isSubmissionAlertVisible.value = false;
+  submitAttempted.value = true;
 
+  return new Promise((resolve, reject) => {
     preUpload()
       .then(async () => {
         submissionStatus.value = SUBMISSION_STATES.UPLOADING;
@@ -761,7 +763,7 @@ onMounted(() => {
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
   window.addEventListener("beforeunload", (e) => {
-    if (inProgress.value) {
+    if (submitAttempted.value) {
       // show warning before user leaves page
       e.returnValue = true;
     }
@@ -770,11 +772,12 @@ onMounted(() => {
 
 // show warning before user moves to a different route
 onBeforeRouteLeave(() => {
-  const answer = window.confirm(
-    "Leaving this page before all files have been processed/uploaded will" +
-      " cancel the upload. Do you wish to continue?",
-  );
-  if (!answer) return false;
+  return submitAttempted.value
+    ? window.confirm(
+        "Leaving this page before all files have been processed/uploaded will" +
+          " cancel the upload. Do you wish to continue?",
+      )
+    : true;
 });
 </script>
 
