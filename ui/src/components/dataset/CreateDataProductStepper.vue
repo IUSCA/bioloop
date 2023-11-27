@@ -18,7 +18,7 @@
             'step-button--active': isActive,
             'step-button--completed': isCompleted,
           }"
-          @click="isValid_new_data_product_form() && setStep(i)"
+          @click="isValid && setStep(i)"
         >
           <div class="flex flex-col items-center">
             <Icon :icon="step.icon" />
@@ -251,7 +251,7 @@
           </va-button>
           <va-button
             class="flex-none"
-            @click="isValid_new_data_product_form() && onNextClick(nextStep)"
+            @click="isValid && onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="!isSubmitEnabled"
           >
@@ -345,7 +345,7 @@ const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
 
-const { isValid, validate } = useForm("dataProductUploadForm");
+const { isValid } = useForm("dataProductUploadForm");
 
 // Returns the file's and individual chunks' checksums
 const evaluateFileChecksums = (file) => {
@@ -634,7 +634,7 @@ const onNextClick = (nextStep) => {
     if (noFilesSelected.value) {
       isFileUploadAlertVisible.value = true;
     } else {
-      if (isValid_new_data_product_form()) {
+      if (isValid.value) {
         handleSubmit();
       }
     }
@@ -727,12 +727,6 @@ const setFiles = (files) => {
 const removeFile = (index) => {
   dataProductFiles.value.splice(index, 1);
 };
-
-function isValid_new_data_product_form() {
-  // debugger;
-  validate();
-  return isValid.value;
-}
 
 const validateNotExists = (value) => {
   return new Promise((resolve) => {
