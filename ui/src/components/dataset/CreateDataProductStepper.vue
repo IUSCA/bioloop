@@ -570,9 +570,6 @@ const onSubmit = () => {
 
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
-          submissionStatus.value = SUBMISSION_STATES.UPLOADED;
-          statusChipColor.value = "success";
-          submissionAlertColor.value = "success";
           resolve();
         } else {
           submissionStatus.value = SUBMISSION_STATES.UPLOAD_FAILED;
@@ -763,7 +760,10 @@ onMounted(() => {
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
   window.addEventListener("beforeunload", (e) => {
-    if (submitAttempted.value) {
+    if (
+      submitAttempted.value &&
+      submissionStatus.value !== SUBMISSION_STATES.UPLOADED
+    ) {
       // show warning before user leaves page
       e.returnValue = true;
     }
@@ -772,7 +772,8 @@ onMounted(() => {
 
 // show warning before user moves to a different route
 onBeforeRouteLeave(() => {
-  return submitAttempted.value
+  return submitAttempted.value &&
+    submissionStatus.value !== SUBMISSION_STATES.UPLOADED
     ? window.confirm(
         "Leaving this page before all files have been processed/uploaded will" +
           " cancel the upload. Do you wish to continue?",
