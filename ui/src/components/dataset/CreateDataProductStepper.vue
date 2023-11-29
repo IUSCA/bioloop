@@ -336,11 +336,11 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
-
 const isFileUploadAlertVisible = ref(false);
 const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
+const uploadCancelled = ref(false);
 
 const { isValid, validate } = useForm("dataProductUploadForm");
 
@@ -448,6 +448,10 @@ const evaluateChecksums = (filesToUpload) => {
 // Uploads a chunk. Retries to upload chunk upto 5 times in case of network errors.
 const uploadChunk = async (chunkData) => {
   const upload = async () => {
+    if (uploadCancelled.value) {
+      return false;
+    }
+
     let chunkUploaded = false;
     console.log(
       `Attempting to upload chunk ${chunkData.get(
@@ -469,12 +473,14 @@ const uploadChunk = async (chunkData) => {
   };
 
   let retry_count = 0;
-  let uploaded = await upload();
-  while (!uploaded) {
-    console.log("Retrying");
-    retry_count += 1;
+  let uploaded = false;
+  while (!uploaded && !uploadCancelled.value) {
+    uploaded = await upload();
+    if (!uploaded) {
+      retry_count += 1;
+    }
     if (retry_count <= RETRY_COUNT_THRESHOLD) {
-      uploaded = await upload();
+      console.log("Retrying");
     } else {
       console.log("Exceeded retry threshold");
       break;
@@ -533,16 +539,20 @@ const uploadFile = async (fileDetails) => {
     console.log(`Upload of file ${fileDetails.name} failed`);
   }
 
+  fileDetails.uploadStatus = uploaded
+    ? config.upload_status.UPLOADED
+    : config.upload_status.UPLOAD_FAILED;
+
   let updated = false;
-  try {
-    await datasetService.updateFileUploadLog(fileLogId, {
-      status: uploaded
-        ? config.upload_status.UPLOADED
-        : config.upload_status.UPLOAD_FAILED,
-    });
-    updated = true;
-  } catch (e) {
-    console.log(e);
+  if (uploaded) {
+    try {
+      await datasetService.updateFileUploadLog(fileLogId, {
+        status: config.upload_status.UPLOADED,
+      });
+      updated = true;
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   const successful = uploaded && updated;
@@ -550,9 +560,6 @@ const uploadFile = async (fileDetails) => {
     delete fileDetails.progress;
   }
 
-  fileDetails.uploadStatus = successful
-    ? config.upload_status.UPLOADED
-    : config.upload_status.UPLOAD_FAILED;
   return successful;
 };
 
@@ -593,38 +600,52 @@ const onSubmit = () => {
   });
 };
 
+const postSubmit = () => {
+  if (!someFilesPendingUpload.value) {
+    submissionStatus.value = SUBMISSION_STATES.UPLOADED;
+    statusChipColor.value = "success";
+    submissionAlertColor.value = "success";
+    submissionAlert.value =
+      "All files have been uploaded successfully. You may close this window.";
+    isSubmissionAlertVisible.value = true;
+  }
+
+  const failedFileUpdates = filesNotUploaded.value.map((file) => {
+    return {
+      id: uploadLog.value.files.find((log) => log.md5 === file.fileChecksum).id,
+      data: {
+        status: config.upload_status.UPLOAD_FAILED,
+      },
+    };
+  });
+
+  if (uploadLog.value) {
+    createOrUpdateUploadLog(uploadLog.value.id, {
+      status: someFilesPendingUpload.value
+        ? config.upload_status.UPLOAD_FAILED
+        : config.upload_status.UPLOADED,
+      increment_processing_count: false,
+      files: failedFileUpdates,
+    })
+      .then((res) => {
+        uploadLog.value = res.data;
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+};
+
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return datasetService.processUploadedChunks(uploadLog.value.id);
+      return datasetService.processUploadedChunks(uploadLog.value.dataset_id);
     })
     .catch((err) => {
       console.log(err);
     })
     .finally(() => {
-      if (!someFilesPendingUpload.value) {
-        submissionStatus.value = SUBMISSION_STATES.UPLOADED;
-        statusChipColor.value = "success";
-        submissionAlertColor.value = "success";
-        submissionAlert.value =
-          "All files have been uploaded successfully. You may close this window.";
-        isSubmissionAlertVisible.value = true;
-      }
-
-      if (uploadLog.value) {
-        createOrUpdateUploadLog(uploadLog.value.id, {
-          status: someFilesPendingUpload.value
-            ? config.upload_status.UPLOAD_FAILED
-            : config.upload_status.UPLOADED,
-          increment_processing_count: false,
-        })
-          .then((res) => {
-            uploadLog.value = res.data;
-          })
-          .catch((err) => {
-            console.log(err);
-          });
-      }
+      postSubmit();
     });
 };
 
@@ -779,6 +800,11 @@ onBeforeRouteLeave(() => {
           " cancel the upload. Do you wish to continue?",
       )
     : true;
+});
+
+onBeforeUnmount(() => {
+  // Cancels pending uploads and prompts cleanup activities before page unload
+  uploadCancelled.value = true;
 });
 </script>
 

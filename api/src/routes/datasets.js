@@ -14,7 +14,6 @@ const config = require('config');
 // const logger = require('../services/logger');
 const path = require('path');
 const fs = require('fs');
-const wfService = require('../services/workflow');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
@@ -259,30 +258,6 @@ router.get(
   }),
 );
 
-// router.get(
-//   '/upload-logs',
-//   isPermittedTo('read'),
-//   asyncHandler(async (req, res) => {
-//     const uploads = await prisma.upload_log.findMany({
-//       include: {
-//         dataset: {
-//           include: {
-//             source_datasets: {
-//               include: {
-//                 source_dataset: true,
-//               },
-//             },
-//             file_type: true,
-//           },
-//         },
-//         user: true,
-//         files: true,
-//       },
-//     });
-//     res.json(uploads);
-//   }),
-// );
-
 const dataset_access_check = asyncHandler(async (req, res, next) => {
   // assumes req.params.id is the dataset id user is requesting
   // access check
@@ -306,32 +281,24 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
 router.get(
   '/upload-logs',
   validate([
-    query('status').notEmpty().escape().optional(),
+    query('status').isIn(Object.values(config.upload_status)).optional(),
+    query('dataset_name').notEmpty().escape().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const { status } = req.query;
+    const { status, dataset_name } = req.query;
 
     const query_obj = _.omitBy(_.isUndefined)({
       status,
+      dataset: {
+        name: { contains: dataset_name },
+      },
     });
 
     const upload_logs = await prisma.upload_log.findMany({
       where: query_obj,
-      include: {
-        files: true,
-        user: true,
-        dataset: {
-          include: {
-            source_datasets: {
-              include: {
-                source_dataset: true,
-              },
-            },
-            file_type: true,
-          },
-        },
-      },
+      include: UPLOAD_LOG_INCLUDE_RELATIONS,
     });
+
     res.json(upload_logs);
   }),
 );
@@ -347,7 +314,7 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
     query('fetch_uploading_data_products').toBoolean().default(false),
-
+    query('upload_log').toBoolean().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -362,6 +329,7 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       fetch_uploading_data_products: req.query.fetch_uploading_data_products,
+      upload_log: req.query.upload_log,
     });
     res.json(dataset);
   }),
@@ -564,7 +532,6 @@ router.post(
     // Allowed names are stage, integrated
 
     // Log the staging attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
     if (req.params.wf === 'stage') {
       try {
         await prisma.stage_request_log.create({
@@ -782,11 +749,6 @@ const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.
 );
 const getDataProductFileChunkName = (file_checksum, index) => `${file_checksum}-${index}`;
 
-const getTempStorage = (data_product_name, file_checksum) => path.join(getDataProductFileUploadPath(
-  data_product_name,
-  file_checksum,
-), 'temp');
-
 const getChunkStorage = (data_product_name, file_checksum) => path.join(
   getDataProductFileUploadPath(
     data_product_name,
@@ -797,76 +759,53 @@ const getChunkStorage = (data_product_name, file_checksum) => path.join(
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const tempStorage = getTempStorage(req.body.data_product_name, req.body.checksum);
-    await fsPromises.mkdir(tempStorage, {
+    const chunkStorage = getChunkStorage(req.body.data_product_name, req.body.checksum);
+    await fsPromises.mkdir(chunkStorage, {
       recursive: true,
     });
-    cb(null, tempStorage);
+    cb(null, chunkStorage);
   },
   filename: (req, file, cb) => {
     cb(null, getDataProductFileChunkName(req.body.checksum, req.body.index));
   },
 });
 
-const mkdirsSync = (dirname) => {
-  if (fs.existsSync(dirname)) {
-    return true;
-  }
-  if (mkdirsSync(path.dirname(dirname))) {
-    fs.mkdirSync(dirname);
-    return true;
-  }
-};
-
 router.post(
   '/file-chunk',
   // isPermittedTo('uploadFileChunk'),
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
-    try {
-      const {
-        name, data_product_name, total, index, size, checksum, chunk_checksum,
-      } = req.body;
+    const {
+      name, data_product_name, total, index, size, checksum, chunk_checksum,
+    } = req.body;
 
-      // eslint-disable-next-line no-console
-      console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
+    // eslint-disable-next-line no-console
+    console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
-      // if (name === '150MB_file.zip' && index === '35') {
-      //   throw new Error('will fail for this file');
-      // }
+    // if (name === '150MB_file.zip' && index === '35') {
+    //   throw new Error('will fail for this file');
+    // }
 
-      // if (name === 'failed_file.pdf') {
-      //   throw new Error('will fail for this file');
-      // }
+    // if (name === 'failed_file.pdf') {
+    //   throw new Error('will fail for this file');
+    // }
 
-      const receivedFilePath = req.file.path;
-      const chunkData = fs.readFileSync(receivedFilePath);
-      const evaluated_checksum = SparkMD5.ArrayBuffer.hash(chunkData);
+    const receivedFilePath = req.file.path;
+    const chunkData = fs.readFileSync(receivedFilePath);
+    const evaluated_checksum = SparkMD5.ArrayBuffer.hash(chunkData);
 
-      if (evaluated_checksum !== chunk_checksum) {
-        throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
+    if (evaluated_checksum !== chunk_checksum) {
+      throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
             + `checksum was ${evaluated_checksum}`);
-      }
-
-      // Create a folder based on the file hash and move the uploaded chunk under the current hash
-      // folder.
-      const chunksPath = getChunkStorage(data_product_name, checksum);
-      if (!fs.existsSync(chunksPath)) mkdirsSync(chunksPath);
-      fs.renameSync(receivedFilePath, `${chunksPath}/${getDataProductFileChunkName(checksum, index)}`);
-
-      // if (name === 'failed_file') { throw new Error('this is error'); }
-
-      res.json({ status: 'success' });
-    } catch (error) {
-      console.error(error);
-
-      res.status(500).json({ status: 'error' });
     }
+
+    res.json({ status: 'success' });
   }),
 );
 
 const UPLOAD_LOG_INCLUDE_RELATIONS = {
   files: true,
+  user: true,
   dataset: {
     include: {
       source_datasets: {
@@ -966,7 +905,8 @@ router.patch(
   validate([
     param('id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
-    body('increment_processing_count').isBoolean().toBoolean(),
+    body('increment_processing_count').isBoolean().toBoolean().optional()
+      .default(false),
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -1031,25 +971,23 @@ router.patch(
 
 // Initiate the creation of Data Product's files - worker
 router.post(
-  '/process-uploaded-chunks',
+  '/:id/process-uploaded-chunks',
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     const WORKFLOW_NAME = 'process_uploads';
 
-    const { upload_log_id } = req.body;
+    const { dataset_id } = req.params;
 
-    // create a deep copy of the config object because it is immutable
-    const wf_body = { ...config.workflow_registry[WORKFLOW_NAME] };
+    const dataset = await prisma.dataset.findFirst({
+      where: {
+        id: dataset_id,
+        include: {
+          workflows: true,
+        },
+      },
+    });
 
-    wf_body.name = WORKFLOW_NAME;
-    wf_body.app_id = config.app_id;
-    wf_body.steps = wf_body.steps.map((step) => ({
-      ...step,
-      queue: step.queue || `${config.app_id}.q`,
-    }));
-    wf_body.args = [upload_log_id];
-
-    await wfService.create(wf_body);
+    await datasetService.create_workflow(dataset, WORKFLOW_NAME);
     res.json('success');
   }),
 );

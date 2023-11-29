@@ -133,6 +133,7 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   fetch_uploading_data_products = false,
+  upload_log = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -170,6 +171,7 @@ async function get_dataset({
           },
         },
       },
+      upload_log,
     },
   });
 

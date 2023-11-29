@@ -76,8 +76,13 @@ class DatasetService {
     return api.get("/datasets/dataset-file-types");
   }
 
-  getUploadLogs() {
-    return api.get("/datasets/upload-logs");
+  getUploadLogs({ status = null, dataset_name = null } = {}) {
+    return api.get(`/datasets/upload-logs`, {
+      params: {
+        status,
+        dataset_name,
+      },
+    });
   }
 
   uploadFileChunk(data) {
@@ -96,10 +101,8 @@ class DatasetService {
     return api.patch(`/datasets/file-upload-log/${file_log_id}`, data);
   }
 
-  processUploadedChunks(upload_log_id) {
-    return api.post(`/datasets/process-uploaded-chunks`, {
-      upload_log_id,
-    });
+  processUploadedChunks(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/process-uploaded-chunks`);
   }
 
   stage_dataset(id) {

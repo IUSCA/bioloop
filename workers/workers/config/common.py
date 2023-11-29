@@ -69,6 +69,11 @@ config = {
         'VALIDATION_FAILED': 'VALIDATION_FAILED',
         'FAILED': 'FAILED'
     },
+    'DONE_STATUSES': {
+        'REVOKED': 'REVOKED',
+        'FAILURE': 'FAILURE',
+        'SUCCESS': 'SUCCESS'
+    },
     'workflow_registry': {
         'integrated': {
             'steps': [

@@ -140,10 +140,12 @@ def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, 
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False):
+def get_dataset(dataset_id: str, files: bool = False, workflows: bool = False, upload_log: bool = False):
     with APIServerSession() as s:
         payload = {
-            'files': files
+            'files': files,
+            'workflows': workflows,
+            'upload_log': upload_log
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
         r.raise_for_status()

@@ -17,11 +17,6 @@
       </va-input>
     </div>
 
-    <!-- filter -->
-    <!--    <div class="flex-none flex items-center justify-center">-->
-    <!--      <filters-group @update="updateFiltersGroupQuery"></filters-group>-->
-    <!--    </div>-->
-
     <!-- create button -->
     <div class="flex-none">
       <va-button
@@ -76,18 +71,30 @@
       <span>{{ value }}</span>
     </template>
 
-    <template #cell(actions)="{ rowData }">
-      <div class="flex gap-1">
-        <va-popover message="Retry">
-          <va-button
-            :disabled="rowData.status !== config.upload_status.FAILED"
-            preset="plain"
-            icon="refresh"
-            color="info"
-            @click="retryFailedFilesCreation(rowData)"
-          />
-        </va-popover>
-      </div>
+    <template #cell(actions)="{ row, isExpanded }">
+      <VaButton
+        :icon="isExpanded ? 'va-arrow-up' : 'va-arrow-down'"
+        preset="secondary"
+        class="w-full"
+        @click="row.toggleRowDetails()"
+      >
+        {{ isExpanded ? "Hide" : "More info" }}
+      </VaButton>
+    </template>
+
+    <template #expandableRow="{ rowData }">
+      <va-card>
+        <va-card-title>Files</va-card-title>
+        <va-card-content>
+          <va-data-table :items="rowData.files" :columns="fileColumns">
+            <template #cell(status)="{ value }">
+              <va-chip size="small" :color="getStatusChipColor(value)">
+                {{ value }}
+              </va-chip>
+            </template>
+          </va-data-table>
+        </va-card-content>
+      </va-card>
     </template>
   </va-data-table>
 </template>
@@ -96,15 +103,13 @@
 import config from "@/config";
 import datasetService from "@/services/dataset";
 import { useNavStore } from "@/stores/nav";
+import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 
 const nav = useNavStore();
 const router = useRouter();
 
 nav.setNavItems([{ label: "Data Product Uploads" }]);
-
-const retryFailedFilesCreation = (uploadLog) => {
-  datasetService.processUploadedChunks(uploadLog.id);
-};
+useSearchKeyShortcut();
 
 const filterInput = ref("");
 const pastUploads = ref([]);
@@ -129,8 +134,14 @@ const columns = [
   { key: "source_dataset_name", label: "Source Dataset", sortable: true },
   { key: "file_type_name", label: "File Type", sortable: true },
   { key: "user_name", label: "Uploaded By", sortable: true },
-  { key: "actions", width: "80px" },
+  { key: "actions", width: "120px" },
 ];
+
+const fileColumns = [
+  { key: "name", sortable: true, width: "50%" },
+  { key: "status", sortable: true, width: "50%" },
+];
+
 const getStatusChipColor = (value) => {
   let color;
   switch (value) {
@@ -140,11 +151,17 @@ const getStatusChipColor = (value) => {
     case config.upload_status.UPLOAD_FAILED:
       color = "warning";
       break;
+    case config.upload_status.UPLOADED:
+      color = "success";
+      break;
     case config.upload_status.PROCESSING:
       color = "primary";
       break;
     case config.upload_status.COMPLETE:
       color = "success";
+      break;
+    case config.upload_status.VALIDATION_FAILED:
+      color = "danger";
       break;
     case config.upload_status.FAILED:
       color = "danger";
@@ -157,7 +174,15 @@ const getStatusChipColor = (value) => {
 
 onMounted(() => {
   datasetService.getUploadLogs().then((res) => {
-    // debugger;
+    pastUploads.value = res.data;
+  });
+});
+
+watch(filterInput, () => {
+  const filters = filterInput.value && {
+    dataset_name: filterInput.value,
+  };
+  datasetService.getUploadLogs(filters).then((res) => {
     pastUploads.value = res.data;
   });
 });
