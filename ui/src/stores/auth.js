@@ -1,6 +1,6 @@
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import authService from "@/services/auth";
 import config from "@/config";
 

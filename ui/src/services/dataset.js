@@ -138,20 +138,6 @@ class DatasetService {
     });
   }
 
-  // is_staged(states) {
-  //   return (
-  //     (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
-  //       .length > 0
-  //   );
-  // }
-
-  get_staged_path(dataset) {
-    if (dataset?.metadata?.stage_alias) {
-      const dataset_type = dataset.type;
-      return `${config.paths.stage[dataset_type]}/${dataset.metadata.stage_alias}/${dataset.name}`;
-    }
-  }
-
   update({ id, updated_data }) {
     return api.patch(`/datasets/${id}`, updated_data);
   }

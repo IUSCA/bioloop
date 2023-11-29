@@ -4,11 +4,11 @@ import stat
 from pathlib import Path
 
 from celery import Celery
+from glom import glom
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
-from workers.dataset import compute_staging_path
 from workers.exceptions import ValidationFailed
 
 app = Celery("tasks")
@@ -43,9 +43,9 @@ def grant_access_to_parent_chain(leaf: Path, root: Path):
 
 def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    staged_path, alias = compute_staging_path(dataset)
+    staged_path, alias = Path(dataset['staged_path']), glom(dataset, 'metadata.stage_alias')
     # staged_path.parent = the alias sub-directory
-    scratch_tar_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
+    bundle_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
 
     if not staged_path.exists():
         # TODO: more robust validation?
@@ -59,7 +59,7 @@ def setup_download(celery_task, dataset_id, **kwargs):
     download_path.symlink_to(staged_path, target_is_directory=True)
     # do the same for tar file
     rm(tar_download_path)
-    tar_download_path.symlink_to(scratch_tar_path)
+    tar_download_path.symlink_to(bundle_path)
 
     # enable others to read and cd into stage directory
     grant_read_permissions_to_others(staged_path)

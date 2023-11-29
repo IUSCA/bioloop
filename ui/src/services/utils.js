@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 
 function formatBytes(bytes, decimals = 2) {
+  bytes = parseInt(bytes);
   if (bytes === 0) return "0 Bytes";
   if (!bytes) return "";
 

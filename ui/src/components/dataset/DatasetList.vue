@@ -161,13 +161,7 @@
         <p>
           By clicking the "Archive" button, a workflow will be initiated to
           archive the {{ props.label.toLowerCase() }} to the SDA (Secure Data
-          Archive). Additionally, it will stage the contents to
-          <span class="path bg-slate-200 dark:bg-slate-800">
-            {{ config.paths.stage[props.dtype] }}/{{
-              launch_modal.selected?.name
-            }}
-          </span>
-          and generate QC (Quality Control) files and report.
+          Archive).
         </p>
         <p>
           Please be aware that the time it takes to complete this process
@@ -208,7 +202,6 @@
 import DatasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
-import config from "@/config";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { useToastStore } from "@/stores/toast";
 import _ from "lodash";

@@ -72,7 +72,7 @@
               </va-card-title>
               <va-card-content>
                 <div class="">
-                  <CopyText :text="DatasetService.get_staged_path(dataset)" />
+                  <CopyText :text="dataset.staged_path" />
                 </div>
               </va-card-content>
             </va-card>
