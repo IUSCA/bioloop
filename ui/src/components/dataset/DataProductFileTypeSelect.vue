@@ -52,7 +52,7 @@
           v-model="newFileTypeName"
           label="File Type Name"
           placeholder="Name"
-          @input="showNewFileTypeFormWideErrors = false"
+          @input="showFormWideErrors = false"
           :rules="[
             (value) => (value && value.length > 0) || 'Name is required',
             (value) => (value && value.length > 2) || 'Name is too short',
@@ -63,25 +63,23 @@
           v-model="newFileTypeExtension"
           label="File Type Extension"
           placeholder="Extension"
-          @input="showNewFileTypeFormWideErrors = false"
+          @input="showFormWideErrors = false"
           :rules="[
             (value) => (value && value.length > 0) || 'Extension is required',
             (value) => (value && value.length > 2) || 'Extension is too short',
           ]"
         ></va-input>
 
-        <div
-          v-if="showNewFileTypeFormWideErrors"
-          class="duplicate_file_type_alert"
-        >
+        <div v-if="showFormWideErrors" class="duplicate_file_type_alert">
           <va-alert
-            v-for="(error, i) in newFileTypeFormWideErrors"
+            v-for="(error, i) in formWideErrors"
             :key="i"
             class="w-full"
             color="danger"
             dense
             border="left"
-            >{{ error }}
+          >
+            {{ error }}
           </va-alert>
         </div>
       </div>
@@ -110,12 +108,12 @@ const emit = defineEmits(["update:modelValue", "newFileTypeCreated"]);
 const { isValid, validate, reset } = useForm("createNewFileTypeForm");
 
 const isModalVisible = ref(false);
-const showNewFileTypeFormWideErrors = ref(false);
+const showFormWideErrors = ref(false);
 const newFileTypeName = ref("");
 const newFileTypeExtension = ref("");
 
 // errors pertaining to the entire form, and not specific fields
-const newFileTypeFormWideErrors = computed(() => {
+const formWideErrors = computed(() => {
   let formErrors = [];
   const isDuplicateFileType =
     props.fileTypeList.find(
@@ -140,9 +138,9 @@ const beforeModalOk = (hide) => {
   // force validation to run, which would otherwise only run when a field is interacted with
   validate();
   // if there are form-wide errors, show them
-  showNewFileTypeFormWideErrors.value = true;
+  showFormWideErrors.value = true;
   // hide modal only if there are no field-level or form-wide errors
-  if (isValid.value && newFileTypeFormWideErrors.value.length === 0) {
+  if (isValid.value && formWideErrors.value.length === 0) {
     hide();
   }
 };
@@ -154,13 +152,13 @@ const onModalOk = () => {
   };
   emit("update:modelValue", newFileType);
   emit("newFileTypeCreated", newFileType);
-  // reset modal form
+  // reset form
   resetModalFormState();
 };
 
 const resetModalFormState = () => {
   // hide form-wide errors
-  showNewFileTypeFormWideErrors.value = false;
+  showFormWideErrors.value = false;
   // reset form inputs' values and validation results
   reset();
 };
@@ -168,10 +166,6 @@ const resetModalFormState = () => {
 const setModalVisibility = (visibility) => {
   isModalVisible.value = visibility;
 };
-
-// const emitModelValueUpdate = (val) => {
-//   emit("update:modelValue", val);
-// };
 </script>
 
 <style lang="scss">

@@ -23,7 +23,6 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-// const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
 const prisma = new PrismaClient();
 
 // stats - UI
@@ -738,8 +737,6 @@ router.get(
 
 const DATA_PRODUCTS_UPLOAD_PATH = path.join(config.upload_path, 'dataProductUploads');
 
-// console.log('data_product_name');
-// console.log(data_product_name);
 const getDataProductUploadPath = (data_product_name) => path.join(
   DATA_PRODUCTS_UPLOAD_PATH,
   data_product_name,
@@ -773,6 +770,7 @@ const uploadFileStorage = multer.diskStorage({
   },
 });
 
+// Post a single chunk for a file being uploaded - UI
 router.post(
   '/file-chunk',
   // isPermittedTo('uploadFileChunk'),
@@ -784,14 +782,6 @@ router.post(
 
     // eslint-disable-next-line no-console
     console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
-
-    // if (name === '150MB_file.zip' && index === '35') {
-    //   throw new Error('will fail for this file');
-    // }
-
-    // if (name === 'failed_file.pdf') {
-    //   throw new Error('will fail for this file');
-    // }
 
     const receivedFilePath = req.file.path;
     const chunkData = fs.readFileSync(receivedFilePath);
@@ -821,7 +811,7 @@ const UPLOAD_LOG_INCLUDE_RELATIONS = {
   },
 };
 
-// Post a Dataset's upload log and the Dataset to the database
+// Post a Dataset's upload log, files' info and the Dataset to the database - UI
 router.post(
   '/upload-log',
   validate([
@@ -831,11 +821,6 @@ router.post(
     body('files_metadata').isArray(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // console.log('REQUEST BODY');
-    // console.log(req.body);
-
-    // if (true) { throw new Error('error!'); }
-
     const {
       data_product_name, source_dataset_id, file_type, files_metadata,
     } = req.body;
@@ -887,7 +872,7 @@ router.post(
   }),
 );
 
-// Get an upload log
+// Get an upload log - UI, worker
 router.get(
   '/upload-log/:id',
   validate([
@@ -902,7 +887,7 @@ router.get(
   }),
 );
 
-// Patch an upload log and it's files' details - UI, workers
+// Update an upload log and it's files - UI, workers
 router.patch(
   '/upload-log/:id',
   validate([
@@ -914,13 +899,6 @@ router.patch(
   ]),
   asyncHandler(async (req, res, next) => {
     const { status, files, increment_processing_count } = req.body;
-    // console.log('increment_processing_count');
-    // console.log(increment_processing_count);
-
-    // if (true) {
-    //   throw new Error('patch error');
-    // }
-
     const existing_upload = await prisma.upload_log.findFirstOrThrow({
       where: {
         id: req.params.id,
@@ -995,7 +973,7 @@ router.post(
   }),
 );
 
-// Log the processing status of Data Product's files - worker
+// Update the attributes of an uploaded file - worker
 router.patch(
   '/file-upload-log/:id',
   validate([
@@ -1005,12 +983,6 @@ router.patch(
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     const { status } = req.body;
-
-    // if (req.params.id === 15) {
-    //   throw new Error('patch error');
-    // }
-
-    // console.log(`got status ${status} for id ${req.params.id}`);
 
     const file_upload_log = await prisma.file_upload_log.update({
       where: {

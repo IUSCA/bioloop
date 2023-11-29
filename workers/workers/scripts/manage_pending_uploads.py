@@ -1,14 +1,10 @@
 import logging
 import shutil
-from pathlib import Path
-import hashlib
 from datetime import datetime
-# from celery import current_app
 
 from workers.celery_app import app as celery_app
 from workers import api
 from workers.config import config
-import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from sca_rhythm import WorkflowTask, Workflow
 
@@ -18,32 +14,24 @@ logger = logging.getLogger(__name__)
 WORKFLOW_NAME = 'process_uploads'
 DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
-                 config['DONE_STATUSES']['SUCCESS']
-                 ]
+                 config['DONE_STATUSES']['SUCCESS']]
 
 def main():
-    # print("CALLING PENDING RESUME SCRIPT")
-
     uploads = api.get_upload_logs()
     pending_uploads = [
         upload for upload in uploads if (
-                upload['status'] != 'COMPLETE' and upload['status'] != 'FAILED'
+                upload['status'] != config['upload_status']['COMPLETE'] and
+                upload['status'] != config['upload_status']['FAILED']
         )]
 
-    print(f'pending_uploads : {len(pending_uploads)}')
     for upload in pending_uploads:
         last_updated_time = datetime.fromisoformat(upload['last_updated'][:-1])
         current_time = datetime.now()
-
-        dataset_id = upload['dataset_id']
         difference = (current_time - last_updated_time).total_seconds() / 3600
-        print(difference)
 
         if difference <= 24:
             # retry processing this upload
-            print(f"Retrying to process upload {upload['id']}")
-            print("Beginning 'process_uploads' workflow")
-
+            dataset_id = upload['dataset_id']
             dataset = api.get_dataset(dataset_id, workflows=True)
             duplicate_workflows = [
                 wf for wf in dataset['workflows']

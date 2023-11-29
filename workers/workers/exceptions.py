@@ -8,7 +8,3 @@ class ValidationFailed(Exception):
 
 class InspectionFailed(Exception):
     pass
-
-
-class UploadLogNotFound(Exception):
-    pass

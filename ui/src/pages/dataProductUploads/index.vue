@@ -1,5 +1,4 @@
 <template>
-  <!-- search bar and filter -->
   <div class="flex mb-3 gap-3">
     <!-- search bar -->
     <div class="flex-1">

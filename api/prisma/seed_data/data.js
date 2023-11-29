@@ -373,29 +373,6 @@ const data_product_upload_logs = [{
   user_id: 61,
 }];
 
-const file_upload_logs = [{
-  name: 'processing_file_1',
-  md5: '31904f92c817767de2bb7e9241f0f7fc',
-  num_chunks: 2,
-  status: 'PROCESSING',
-  chunks_path: '/path/to/chunks',
-  destination_path: '/path/to/destination',
-}, {
-  name: 'failed_file_1',
-  md5: 'c3468e30cd1da55b92e2235d92ebfc91',
-  num_chunks: 2,
-  status: 'VALIDATION_FAILED',
-  chunks_path: '/path/to/chunks',
-  destination_path: '/path/to/destination',
-}, {
-  name: 'completed_file_1',
-  md5: '50ddf82278203f3813749b90c77aee24',
-  num_chunks: 2,
-  status: 'COMPLETED',
-  chunks_path: '/path/to/chunks',
-  destination_path: '/path/to/destination',
-}];
-
 module.exports = {
   roles,
   admins,
@@ -407,7 +384,6 @@ module.exports = {
   dataset_audit_data,
   dataset_file_types,
   data_product_upload_logs,
-  file_upload_logs,
   contacts,
   projects,
   project_user_assoc,

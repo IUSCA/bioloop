@@ -47,6 +47,8 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
+
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
 
@@ -65,18 +67,13 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name) {
   const wf_body = get_wf_body(wf_name);
 
-  // console.log('WF_BODY');
-  // console.log(wf_body);
   // check if a workflow with the same name is not already running / pending on this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
-    .filter((_wf) => !Object.values(config.DONE_STATUSES).includes(_wf.status));
+    .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
 
-  // console.log('active_wfs_with_same_name');
-  // console.log(active_wfs_with_same_name);
   assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
 
-  // console.log('creating POST request');
   // create the workflow
   const wf = (await wfService.create({
     ...wf_body,

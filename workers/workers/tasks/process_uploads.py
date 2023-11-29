@@ -1,4 +1,3 @@
-import time
 import shutil
 from pathlib import Path
 from celery import Celery
@@ -17,6 +16,9 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
+DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
+                 config['DONE_STATUSES']['FAILURE'],
+                 config['DONE_STATUSES']['SUCCESS']]
 
 def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_chunks_expected):
     print(f'Processing file {file_name}')
@@ -36,11 +38,6 @@ def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_ch
         for i in range(num_chunk_found):
             chunk_file = chunks_path / f'{file_md5}-{i}'
             print(f'Processing chunk {chunk_file}')
-            print(f'Attempting to append chunk {chunk_file.name} to {destination_path}')
-
-            # if i == 1 and (file_md5 == 'b92f25d60b04b0ce4cc3f6e58de48845'):
-            #     raise Exception(f"some exception that occurred during merging chunk {i} of {destination_path.name}")
-
             with open(chunk_file, 'rb') as chunk:
                 with open(destination_path, 'ab') as destination:
                     destination.write(chunk.read())
@@ -49,27 +46,16 @@ def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_ch
         print(f'evaluated_checksum: {evaluated_checksum}')
         checksum_error = evaluated_checksum != file_md5
 
-    return config['upload_status']['VALIDATION_FAILED']\
+    return config['upload_status']['VALIDATION_FAILED'] \
         if checksum_error \
         else config['upload_status']['COMPLETE']
 
 
-
 def chunks_to_files(celery_task, dataset_id, **kwargs):
-    print("CREATE_FILES WORKER CALLED")
-    print(f'type(dataset_id): {type(dataset_id)}')
-
-    print("upload_log_id")
-    dataset = api.get_dataset(dataset_id=dataset_id, upload_log=True)
-    upload_log = dataset['upload_log']
-    upload_log_id = upload_log['id']
-    print(upload_log_id)
-    print(f'type(upload_log_id): {type(upload_log_id)}')
-
     try:
-        upload_log = api.get_upload_log(upload_log_id)
-        print('upload_log')
-        print(upload_log)
+        dataset = api.get_dataset(dataset_id=dataset_id, upload_log=True, workflows=True)
+        upload_log = dataset['upload_log']
+        upload_log_id = upload_log['id']
 
         file_log_updates = []
         for file_log in upload_log['files']:
@@ -87,10 +73,6 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     except Exception as e:
         raise exc.RetryableException(e)
 
-    # time.sleep(60)
-
-    dataset_id = upload_log['dataset_id']
-    dataset = upload_log['dataset']
     dataset_path = Path(dataset['origin_path'])
 
     files = upload_log['files']
@@ -101,8 +83,6 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         num_chunks_expected = f['num_chunks']
         file_md5 = f['md5']
         file_upload_log_id = f['id']
-        # / opt / sca / uploads / dataProductUploads / dp7 / chunked_files / 3456371
-        # f46a9653a09ffddbdfd120b2e / chunks
         chunks_path = Path(f['chunks_path'])
         destination_path = Path(f['destination_path'])
 
@@ -129,20 +109,29 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     failed_files = [file for file in pending_files if file['status'] != config['upload_status']['COMPLETE']]
     has_errors = len(failed_files) > 0
 
+    # Update status of upload log
+    try:
+        api.update_upload_log(upload_log_id, {
+            'status': config['upload_status']['PROCESSING_FAILED'] if has_errors else config['upload_status']['COMPLETE'],
+        })
+    except Exception as e:
+        raise exc.RetryableException(e)
+
     if not has_errors:
         # delete subdirectory containing all chunked files
         shutil.rmtree(dataset_path / 'chunked_files')
 
-        # Update status of upload log
-        try:
-            api.update_upload_log(upload_log_id, {
-                'status': config['upload_status']['COMPLETE'],
-            })
-        except Exception as e:
-            raise exc.RetryableException(e)
-
-        print("Beginning 'integrated' workflow")
-        integrated_wf_body = wf_utils.get_wf_body(wf_name='integrated')
-        int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
-        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
-        int_wf.start(dataset_id)
+        workflow_name = 'integrated'
+        duplicate_workflows = [
+            wf for wf in dataset['workflows']
+            if wf['name'] == workflow_name and
+               wf['status'] not in DONE_STATUSES
+        ]
+        if len(duplicate_workflows) == 0:
+            print("Beginning 'integrated' workflow")
+            integrated_wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
+            int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
+            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
+            int_wf.start(dataset_id)
+        else:
+            print(f'Found active workflow {workflow_name} for dataset {dataset_id}')

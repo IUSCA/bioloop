@@ -169,6 +169,7 @@
           </va-data-table>
         </div>
 
+        <!-- Alert for showing errors encountered during submission -->
         <va-alert
           v-if="isSubmissionAlertVisible"
           class="mt-5"
@@ -341,6 +342,20 @@ const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
 const uploadCancelled = ref(false);
+const formData = computed(() => {
+  return {
+    data_product_name: dataProductName.value,
+    source_dataset_id: rawDataSelected.value.id,
+    file_type: fileTypeSelected.value,
+  };
+});
+const isSubmitEnabled = computed(() => {
+  return (
+    submissionStatus.value === SUBMISSION_STATES.UNINITIATED ||
+    submissionStatus.value === SUBMISSION_STATES.PROCESSING_FAILED ||
+    submissionStatus.value === SUBMISSION_STATES.UPLOAD_FAILED
+  );
+});
 
 const { isValid, validate } = useForm("dataProductUploadForm");
 
@@ -352,7 +367,7 @@ const isFormValid = () => {
 // Returns the file's and individual chunks' checksums
 const evaluateFileChecksums = (file) => {
   return new Promise((resolve, reject) => {
-    console.warn(`evaluating checksums for file ${file.name}`);
+    console.log(`evaluating checksums for file ${file.name}`);
 
     const fileReader = new FileReader();
 
@@ -376,9 +391,6 @@ const evaluateFileChecksums = (file) => {
         buffer.append(result); // Append to array buffer
         chunkIndex += 1;
         if (chunkIndex < chunks) {
-          // if (file.name === "150MB_file.zip" && chunkIndex === 35) {
-          //   throw new Error("error 35!");
-          // }
           loadNext(chunkIndex);
         } else {
           console.log(`successfully evaluated checksums of file ${file.name}`);
@@ -396,7 +408,7 @@ const evaluateFileChecksums = (file) => {
 
       loadNext(chunkIndex);
     } catch (err) {
-      console.warn(`checksum evaluation failed for file ${file.name}`);
+      console.error(err);
       reject(err);
     }
   });
@@ -453,21 +465,11 @@ const uploadChunk = async (chunkData) => {
     }
 
     let chunkUploaded = false;
-    console.log(
-      `Attempting to upload chunk ${chunkData.get(
-        "index",
-      )} of file ${chunkData.get("name")}`,
-    );
     try {
       await datasetService.uploadFileChunk(chunkData);
       chunkUploaded = true;
-      console.log(
-        `Uploaded chunk ${chunkData.get("index")} of file ${chunkData.get(
-          "name",
-        )}`,
-      );
     } catch (e) {
-      console.log(`Encountered error`);
+      console.log(`Encountered error`, e);
     }
     return chunkUploaded;
   };
@@ -479,9 +481,7 @@ const uploadChunk = async (chunkData) => {
     if (!uploaded) {
       retry_count += 1;
     }
-    if (retry_count <= RETRY_COUNT_THRESHOLD) {
-      console.log("Retrying");
-    } else {
+    if (retry_count > RETRY_COUNT_THRESHOLD) {
       console.log("Exceeded retry threshold");
       break;
     }
@@ -659,26 +659,9 @@ const onNextClick = (nextStep) => {
       }
     }
   } else {
-    isFileUploadAlertVisible.value = false;
     nextStep();
   }
 };
-
-const formData = computed(() => {
-  return {
-    data_product_name: dataProductName.value,
-    source_dataset_id: rawDataSelected.value.id,
-    file_type: fileTypeSelected.value,
-  };
-});
-
-const isSubmitEnabled = computed(() => {
-  return (
-    submissionStatus.value === SUBMISSION_STATES.UNINITIATED ||
-    submissionStatus.value === SUBMISSION_STATES.PROCESSING_FAILED ||
-    submissionStatus.value === SUBMISSION_STATES.UPLOAD_FAILED
-  );
-});
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = () => {
@@ -734,7 +717,6 @@ const uploadFiles = async (files) => {
 const setFiles = (files) => {
   _.range(0, files.length).forEach((i) => {
     const file = files.item(i);
-    // debugger;
     dataProductFiles.value.push({
       file: file,
       name: file.name,
