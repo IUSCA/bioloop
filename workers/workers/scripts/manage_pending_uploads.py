@@ -1,6 +1,7 @@
 import logging
 import shutil
 from datetime import datetime
+from pathlib import Path
 
 from workers.celery_app import app as celery_app
 from workers import api
@@ -25,11 +26,14 @@ def main():
         )]
 
     for upload in pending_uploads:
+        print(f"Processing upload {upload['id']}")
+
         last_updated_time = datetime.fromisoformat(upload['last_updated'][:-1])
         current_time = datetime.now()
         difference = (current_time - last_updated_time).total_seconds() / 3600
 
         if difference <= 24:
+            print(f'Will retry processing upload {upload["id"]}')
             # retry processing this upload
             dataset_id = upload['dataset_id']
             dataset = api.get_dataset(dataset_id, workflows=True)
@@ -51,7 +55,9 @@ def main():
             print(
                 f"Upload id {upload['id']} has been in state PROCESSING for more than 24 hours, and will be cleaned up")
             try:
-                shutil.rmtree(upload['dataset']['origin_path'], ignore_errors=True)
+                origin_path = Path(upload['dataset']['origin_path'])
+                if origin_path.exists():
+                    shutil.rmtree(origin_path)
                 file_updates = [
                     {
                         'id': file['id'],
