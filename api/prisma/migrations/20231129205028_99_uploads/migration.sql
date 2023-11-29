@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "upload_status" AS ENUM ('UPLOADING', 'UPLOAD_FAILED', 'UPLOADED', 'PROCESSING', 'COMPLETE', 'FAILED');
+CREATE TYPE "upload_status" AS ENUM ('UPLOADING', 'UPLOAD_FAILED', 'UPLOADED', 'PROCESSING', 'COMPLETE', 'VALIDATION_FAILED', 'FAILED');
 
 -- AlterTable
 ALTER TABLE "dataset" ADD COLUMN     "file_type_id" INTEGER;
@@ -22,7 +22,7 @@ CREATE TABLE "file_upload_log" (
     "name" TEXT NOT NULL,
     "md5" TEXT NOT NULL,
     "num_chunks" INTEGER NOT NULL,
-    "status" TEXT NOT NULL,
+    "status" "upload_status" NOT NULL,
     "chunks_path" TEXT NOT NULL,
     "destination_path" TEXT NOT NULL,
     "upload_log_id" INTEGER,
