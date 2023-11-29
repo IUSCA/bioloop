@@ -283,6 +283,7 @@ router.get(
     query('status').isIn(Object.values(config.upload_status)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
   ]),
+  isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     const { status, dataset_name } = req.query;
 
@@ -773,7 +774,7 @@ const uploadFileStorage = multer.diskStorage({
 // Post a single chunk for a file being uploaded - UI
 router.post(
   '/file-chunk',
-  // isPermittedTo('uploadFileChunk'),
+  isPermittedTo('update'),
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
@@ -814,6 +815,7 @@ const UPLOAD_LOG_INCLUDE_RELATIONS = {
 // Post a Dataset's upload log, files' info and the Dataset to the database - UI
 router.post(
   '/upload-log',
+  isPermittedTo('update'),
   validate([
     body('data_product_name').notEmpty().escape().isLength({ min: 3 }),
     body('file_type').isObject(),
@@ -875,6 +877,7 @@ router.post(
 // Get an upload log - UI, worker
 router.get(
   '/upload-log/:id',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
   ]),
@@ -890,6 +893,7 @@ router.get(
 // Update an upload log and it's files - UI, workers
 router.patch(
   '/upload-log/:id',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
@@ -950,7 +954,7 @@ router.patch(
   }),
 );
 
-// Initiate the creation of Data Product's files - worker
+// Initiate the processing of uploaded files - worker
 router.post(
   '/:id/process-uploaded-chunks',
   isPermittedTo('update'),
@@ -976,6 +980,7 @@ router.post(
 // Update the attributes of an uploaded file - worker
 router.patch(
   '/file-upload-log/:id',
+  isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
     body('status').notEmpty().escape(),
