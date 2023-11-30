@@ -20,12 +20,13 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
                  config['DONE_STATUSES']['SUCCESS']]
 
+
 def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_chunks_expected):
     print(f'Processing file {file_name}')
     checksum_error = False
 
     if destination_path.exists():
-        print(f"Destination path {destination_path} exits and will be deleted")
+        print(f"Destination path {destination_path} exists and will be deleted")
         destination_path.unlink()
 
     num_chunk_found = len([p for p in chunks_path.iterdir()])
@@ -91,6 +92,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
                 f['status'] = merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_chunks_expected)
             except Exception as e:
                 f['status'] = config['upload_status']['FAILED']
+                print('Caught exception')
                 print(e)
             finally:
                 print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
@@ -112,7 +114,8 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     # Update status of upload log
     try:
         api.update_upload_log(upload_log_id, {
-            'status': config['upload_status']['PROCESSING_FAILED'] if has_errors else config['upload_status']['COMPLETE'],
+            'status': config['upload_status']['PROCESSING_FAILED'] if has_errors else config['upload_status'][
+                'COMPLETE'],
         })
     except Exception as e:
         raise exc.RetryableException(e)
