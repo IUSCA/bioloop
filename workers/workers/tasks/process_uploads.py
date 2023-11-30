@@ -111,18 +111,10 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     failed_files = [file for file in pending_files if file['status'] != config['upload_status']['COMPLETE']]
     has_errors = len(failed_files) > 0
 
-    # Update status of upload log
-    try:
-        api.update_upload_log(upload_log_id, {
-            'status': config['upload_status']['PROCESSING_FAILED'] if has_errors else config['upload_status'][
-                'COMPLETE'],
-        })
-    except Exception as e:
-        raise exc.RetryableException(e)
-
     if not has_errors:
         # delete subdirectory containing all chunked files
-        shutil.rmtree(dataset_path / 'chunked_files')
+        if Path(dataset_path / 'chunked_files').exists():
+            shutil.rmtree(dataset_path / 'chunked_files')
 
         workflow_name = 'integrated'
         duplicate_workflows = [
@@ -138,3 +130,12 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
             int_wf.start(dataset_id)
         else:
             print(f'Found active workflow {workflow_name} for dataset {dataset_id}')
+
+    # Update status of upload log
+    try:
+        api.update_upload_log(upload_log_id, {
+            'status': config['upload_status']['PROCESSING_FAILED'] if has_errors else config['upload_status'][
+                'COMPLETE'],
+        })
+    except Exception as e:
+        raise exc.RetryableException(e)
