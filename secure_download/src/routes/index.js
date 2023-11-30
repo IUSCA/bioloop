@@ -1,8 +1,14 @@
 const express = require('express');
 const createError = require('http-errors');
-const config = require('config');
+const fs = require('fs');
+const fsPromises = require('fs/promises');
+const path = require('path');
+const multer = require('multer');
+const SparkMD5 = require('spark-md5');
 
+const config = require('config');
 const { authenticate } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -45,5 +51,65 @@ router.get('*', (req, res, next) => {
     return next(createError.Forbidden('Invalid path'));
   }
 });
+
+const DATA_PRODUCTS_UPLOAD_PATH = path.join(config.upload_path, 'dataProductUploads');
+
+const getDataProductUploadPath = (data_product_name) => path.join(
+  DATA_PRODUCTS_UPLOAD_PATH,
+  data_product_name,
+);
+
+const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.join(
+  getDataProductUploadPath(data_product_name),
+  'chunked_files',
+  file_checksum,
+);
+
+const getDataProductFileChunkName = (file_checksum, index) => `${file_checksum}-${index}`;
+
+const getChunkStorage = (data_product_name, file_checksum) => path.join(
+  getDataProductFileUploadPath(
+    data_product_name,
+    file_checksum,
+  ),
+  'chunks',
+);
+
+const uploadFileStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const chunkStorage = getChunkStorage(req.body.data_product_name, req.body.checksum);
+    await fsPromises.mkdir(chunkStorage, {
+      recursive: true,
+    });
+    cb(null, chunkStorage);
+  },
+  filename: (req, file, cb) => {
+    cb(null, getDataProductFileChunkName(req.body.checksum, req.body.index));
+  },
+});
+
+router.post(
+  '/file-chunk',
+  multer({ storage: uploadFileStorage }).single('file'),
+  asyncHandler(async (req, res, next) => {
+    const {
+      name, data_product_name, total, index, size, checksum, chunk_checksum,
+    } = req.body;
+
+    // eslint-disable-next-line no-console
+    console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
+
+    const receivedFilePath = req.file.path;
+    const chunkData = fs.readFileSync(receivedFilePath);
+    const evaluated_checksum = SparkMD5.ArrayBuffer.hash(chunkData);
+
+    if (evaluated_checksum !== chunk_checksum) {
+      throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
+            + `checksum was ${evaluated_checksum}`);
+    }
+
+    res.json('success');
+  }),
+);
 
 module.exports = router;

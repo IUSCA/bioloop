@@ -8,12 +8,10 @@ const {
 } = require('express-validator');
 const multer = require('multer');
 const _ = require('lodash/fp');
-const SparkMD5 = require('spark-md5');
 
 const config = require('config');
 // const logger = require('../services/logger');
 const path = require('path');
-const fs = require('fs');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
@@ -736,64 +734,21 @@ router.get(
   }),
 );
 
-const DATA_PRODUCTS_UPLOAD_PATH = path.join(config.upload_path, 'dataProductUploads');
-
-const getDataProductUploadPath = (data_product_name) => path.join(
-  DATA_PRODUCTS_UPLOAD_PATH,
-  data_product_name,
-);
-
-const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.join(
-  getDataProductUploadPath(data_product_name),
-  'chunked_files',
-  file_checksum,
-);
-const getDataProductFileChunkName = (file_checksum, index) => `${file_checksum}-${index}`;
-
-const getChunkStorage = (data_product_name, file_checksum) => path.join(
-  getDataProductFileUploadPath(
-    data_product_name,
-    file_checksum,
-  ),
-  'chunks',
-);
-
-const uploadFileStorage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const chunkStorage = getChunkStorage(req.body.data_product_name, req.body.checksum);
-    await fsPromises.mkdir(chunkStorage, {
-      recursive: true,
-    });
-    cb(null, chunkStorage);
-  },
-  filename: (req, file, cb) => {
-    cb(null, getDataProductFileChunkName(req.body.checksum, req.body.index));
-  },
-});
-
-// Post a single chunk for a file being uploaded - UI
+// Post a file chunks
 router.post(
   '/file-chunk',
   isPermittedTo('update'),
-  multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
-    const {
-      name, data_product_name, total, index, size, checksum, chunk_checksum,
-    } = req.body;
-
-    // eslint-disable-next-line no-console
-    console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
-
-    const receivedFilePath = req.file.path;
-    const chunkData = fs.readFileSync(receivedFilePath);
-    const evaluated_checksum = SparkMD5.ArrayBuffer.hash(chunkData);
-
-    if (evaluated_checksum !== chunk_checksum) {
-      throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
-            + `checksum was ${evaluated_checksum}`);
-    }
-
-    res.json({ status: 'success' });
+    authService.fetchWrapper.fetch(`${config.get('download_server.base_url')}/file-chunk`, {
+      method: 'POST',
+      body: req.body,
+    }).then((response) => {
+      res.send(response.status);
+    }).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.log(e);
+      res.sendStatus(500);
+    });
   }),
 );
 
@@ -811,6 +766,27 @@ const UPLOAD_LOG_INCLUDE_RELATIONS = {
     },
   },
 };
+
+const DATA_PRODUCTS_UPLOAD_PATH = path.join(config.upload_path, 'dataProductUploads');
+
+const getDataProductUploadPath = (data_product_name) => path.join(
+  DATA_PRODUCTS_UPLOAD_PATH,
+  data_product_name,
+);
+
+const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.join(
+  getDataProductUploadPath(data_product_name),
+  'chunked_files',
+  file_checksum,
+);
+
+const getChunkStorage = (data_product_name, file_checksum) => path.join(
+  getDataProductFileUploadPath(
+    data_product_name,
+    file_checksum,
+  ),
+  'chunks',
+);
 
 // Post a Dataset's upload log, files' info and the Dataset to the database - UI
 router.post(

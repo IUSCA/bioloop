@@ -28,6 +28,11 @@
       "client_id": "",
       "client_secret": "",
       "scope_prefix": "download_file:"
+    },
+    "upload": {
+      "client_id": "",
+      "client_secret": "",
+      "scope_prefix": "upload"
     }
   },
   "download_server": {
@@ -107,5 +112,5 @@
     "FAILED": "FAILED",
     "VALIDATION_FAILED": "VALIDATION_FAILED"
   },
-  "upload_path": "/opt/sca/uploads"
+  "upload_path": "/opt/sca/data/uploads"
 }
