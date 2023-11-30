@@ -17,12 +17,13 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
                  config['DONE_STATUSES']['SUCCESS']]
 
+
 def main():
     uploads = api.get_upload_logs()
     pending_uploads = [
         upload for upload in uploads if (
-                upload['status'] != config['upload_status']['COMPLETE'] and
-                upload['status'] != config['upload_status']['FAILED']
+                upload['status'] == config['upload_status']['UPLOADED'] or
+                upload['status'] == config['upload_status']['PROCESSING']
         )]
 
     for upload in pending_uploads:
@@ -40,7 +41,7 @@ def main():
             duplicate_workflows = [
                 wf for wf in dataset['workflows']
                 if wf['name'] == WORKFLOW_NAME and
-                wf['status'] not in DONE_STATUSES
+                   wf['status'] not in DONE_STATUSES
             ]
             if len(duplicate_workflows) == 0:
                 print(f'Beginning workflow {WORKFLOW_NAME} for dataset {dataset_id}')
@@ -53,7 +54,7 @@ def main():
         else:
             # mark upload as failed and clean up resources
             print(
-                f"Upload id {upload['id']} has been in state PROCESSING for more than 24 hours, and will be cleaned up")
+                f"Upload id {upload['id']} has been in a pending state for more than 24 hours, and will be cleaned up")
             try:
                 origin_path = Path(upload['dataset']['origin_path'])
                 if origin_path.exists():
