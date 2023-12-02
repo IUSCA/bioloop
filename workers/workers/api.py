@@ -95,7 +95,7 @@ def int_to_str(d: dict, key: str):
     return d
 
 
-def dataset_getter(dataset: dict):
+def entity_getter(dataset: dict):
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
     date_keys = ['created_at', 'updated_at']
 
@@ -137,7 +137,7 @@ def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, 
         r = s.get('datasets', params=payload)
         r.raise_for_status()
         datasets = r.json()['datasets']
-        return [dataset_getter(dataset) for dataset in datasets]
+        return [entity_getter(dataset) for dataset in datasets]
 
 
 def get_dataset(dataset_id: str, files: bool = False):
@@ -147,7 +147,7 @@ def get_dataset(dataset_id: str, files: bool = False):
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
         r.raise_for_status()
-        return dataset_getter(r.json())
+        return entity_getter(r.json())
 
 
 def create_dataset(dataset):
@@ -208,6 +208,24 @@ def add_workflow_to_dataset(dataset_id, workflow_id):
             'workflow_id': workflow_id
         })
         r.raise_for_status()
+
+
+def get_bundle(name: str, checksum: str):
+    with APIServerSession() as s:
+        payload = {
+            'name': name,
+            'checksum': checksum
+        }
+        r = s.get(f'bundle', params=payload)
+        r.raise_for_status()
+        return entity_getter(r.json())
+
+
+def post_bundle(data: dict):
+    with APIServerSession(enable_retry=False) as s:
+        r = s.post('bundle', json=data)
+        r.raise_for_status()
+        return r.json()
 
 
 def register_process(worker_process: dict):

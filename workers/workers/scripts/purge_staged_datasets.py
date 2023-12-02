@@ -28,7 +28,8 @@ def main():
         try:
             # staged_dataset_path.parent = the alias sub-directory
             staged_path = Path(dataset['staged_path'])
-            bundle_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
+            # bundle_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
+            bundle_path = Path(f'{dataset["bundle"]["path"]}')
 
             if staged_path.exists():
                 shutil.rmtree(staged_path)

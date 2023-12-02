@@ -225,6 +225,7 @@ router.get(
         ...datasetService.INCLUDE_STATES,
         source_datasets: true,
         derived_datasets: true,
+        bundles: true,
       },
     };
 

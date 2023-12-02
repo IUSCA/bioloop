@@ -9,9 +9,12 @@ from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 
 import workers.api as api
+import workers.utils as utils
+from workers.config import config
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.dataset import compute_staging_path
+from workers import exceptions as exc
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -63,17 +66,27 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     """
     staging_dir, alias = compute_staging_path(dataset)
 
-    sda_tar_path = dataset['archive_path']
+    sda_bundle_path = dataset['archive_path']
     alias_dir = staging_dir.parent
     alias_dir.mkdir(parents=True, exist_ok=True)
-    bundle_path = Path(f'{str(alias_dir)}/{dataset["name"]}.tar')
-    wf_utils.download_file_from_sda(sda_file_path=sda_tar_path,
-                                    local_file_path=bundle_path,
+
+    bundle = dataset["bundle"]
+    bundle_md5 = bundle["md5"]
+    bundle_download_path = bundle["path"]
+    wf_utils.download_file_from_sda(sda_file_path=sda_bundle_path,
+                                    local_file_path=bundle_download_path,
                                     celery_task=celery_task)
 
+    # bundle_path = Path(f'{str(alias_dir)}/{dataset["name"]}.tar')
+    evaluated_checksum = utils.checksum(bundle_download_path)
+    if evaluated_checksum != bundle_md5:
+        err = f'Expected checksum of downloaded file to be {bundle_md5}, but evaluated checksum was {evaluated_checksum}'
+        logger.error(err)
+        raise exc.ValidationFailed(err)
+
     # extract the tar file to stage directory
-    logger.info(f'extracting tar {bundle_path} to {staging_dir}')
-    extract_tarfile(tar_path=bundle_path, target_dir=staging_dir, override_arcname=True)
+    logger.info(f'extracting tar {bundle_download_path} to {staging_dir}')
+    extract_tarfile(tar_path=bundle_download_path, target_dir=staging_dir, override_arcname=True)
 
     # delete the local tar copy after extraction
     # bundle_path.unlink()
