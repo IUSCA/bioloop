@@ -20,6 +20,7 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
+// const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
 const prisma = new PrismaClient();
 
 // stats - UI
@@ -108,17 +109,22 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, processed, archived, staged, type, name, days_since_last_staged,
+  project_id, deleted, processed, archived, staged, type, name, days_since_last_staged,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
-    archive_path: archived ? { not: null } : {},
+    archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
+    projects: project_id ? {
+      some: {
+        project_id,
+      },
+    } : undefined,
     type,
-    name: {
+    name: name ? {
       contains: name,
-      mode: 'insensitive', // case-insensitive search
-    },
+      mode: 'insensitive',
+    } : undefined,
   });
 
   // processed=true: datasets with one or more workflows associated
@@ -188,6 +194,7 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
+    query('project_id').escape().notEmpty().optional(),
     query('deleted').toBoolean().default(false),
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
@@ -205,6 +212,8 @@ router.get(
     const sortBy = req.query.sortBy || {};
 
     const query_obj = buildQueryObject({
+      // const datasetRetrievalQuery = datasetService.build_query_object({
+      project_id: req.query.project_id,
       deleted: req.query.deleted,
       processed: req.query.processed,
       archived: req.query.archived,
@@ -212,6 +221,7 @@ router.get(
       type: req.query.type,
       name: req.query.name,
       days_since_last_staged: req.query.days_since_last_staged,
+      sortBy: req.query.sortBy || {},
     });
 
     const filterQuery = { where: query_obj };

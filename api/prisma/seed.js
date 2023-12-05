@@ -143,6 +143,7 @@ async function main() {
 
   await Promise.all(operator_promises);
 
+  await prisma.dataset.deleteMany();
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
@@ -281,6 +282,31 @@ async function main() {
   await prisma.stage_request_log.createMany({
     data: stage_request_logs,
   });
+
+  const datasetType = 'RAW_DATA';
+  const boolOptions = [true, false];
+  const datasets = [];
+  const start_index = 20;
+  const end_index = 42;
+  for (let i = start_index; i < end_index; i += 1) {
+    datasets.push({
+      id: i,
+      name: `${datasetType.toLowerCase().replace('_', '')}-${i}`,
+      type: datasetType,
+      is_staged: boolOptions[Math.floor(Math.random() * boolOptions.length)],
+    });
+  }
+  await prisma.dataset.createMany({
+    data: datasets,
+  });
+  const project_id_query = [];
+  for (let i = start_index; i < end_index; i += 1) {
+    project_id_query.push({
+      project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+      dataset_id: i,
+    });
+  }
+  await prisma.project_dataset.createMany({ data: project_id_query });
 }
 
 main()

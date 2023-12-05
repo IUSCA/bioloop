@@ -1,9 +1,41 @@
 <template>
+  <!-- search bar and filter -->
+  <div class="flex mb-3 gap-3">
+    <!-- search bar -->
+    <div class="flex-1">
+      <va-input
+        v-model="filterInput"
+        class="w-full"
+        placeholder="Type / to search Datasets"
+        outline
+        clearable
+        input-class="search-input"
+      >
+        <template #prependInner>
+          <Icon icon="material-symbols:search" class="text-xl" />
+        </template>
+      </va-input>
+    </div>
+
+    <!-- filter -->
+    <div class="flex-none flex items-center justify-center">
+      <FiltersGroup @update="updateFiltersGroupQuery"></FiltersGroup>
+    </div>
+  </div>
+
   <va-data-table
     :items="rows"
     :columns="columns"
+    v-model:sort-by="defaultSortField"
+    v-model:sorting-order="defaultSortOrder"
     class="min-h-[100px]"
     :loading="loading"
+    @sorted="
+      (attrs) => {
+        defaultSortField = attrs.sortBy;
+        defaultSortOrder = attrs.sortingOrder;
+      }
+    "
   >
     <template #cell(name)="{ rowData }">
       <router-link
@@ -91,6 +123,17 @@
     </template>
   </va-data-table>
 
+  <div class="flex justify-center mt-4" v-if="total_page_count > 1">
+    <div class="flex-none">
+      <va-pagination
+        v-model="currentPageIndex"
+        :pages="total_page_count"
+        :visible-pages="Math.min(total_page_count, VISIBLE_PAGES_THRESHOLD)"
+      >
+      </va-pagination>
+    </div>
+  </div>
+
   <!-- Download Modal -->
   <DatasetDownloadModal
     ref="downloadModal"
@@ -108,13 +151,15 @@
 
 <script setup>
 import * as datetime from "@/services/datetime";
-import { formatBytes, cmp } from "@/services/utils";
+import { formatBytes } from "@/services/utils";
 import wfService from "@/services/workflow";
 import DatasetService from "@/services/dataset";
 import config from "@/config";
 import { HalfCircleSpinner } from "epic-spinners";
 import { useColors } from "vuestic-ui";
 import { useAuthStore } from "@/stores/auth";
+import _ from "lodash";
+import datasetService from "@/services/dataset";
 
 const { colors } = useColors();
 const auth = useAuthStore();
@@ -130,25 +175,117 @@ const props = defineProps({
 });
 
 const loading = ref(false);
+const projectDatasets = ref([]);
 const _datasets = ref({});
+const filterInput = ref("");
+
+// Criteria for group of true/false fields that results can be filtered by
+const filters_group_query = ref({});
+
+const defaultSortField = ref("updated_at");
+const defaultSortOrder = ref("desc");
+
+const PAGE_SIZE = 20;
+const VISIBLE_PAGES_THRESHOLD = 5; // Maximum number of visible pages shown at a time
+
+const currentPageIndex = ref(1);
+const total_page_count = ref(0);
+
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+const offset = computed(() => (currentPageIndex.value - 1) * PAGE_SIZE);
+// used for LIMIT clause in the SQL used to retrieve the next paginated batch of results
+const resultLimit = ref(PAGE_SIZE);
+
+// Criterion based on search input
+const search_query = computed(() => {
+  return filterInput.value?.length > 0 && { name: filterInput.value };
+});
+
+// Aggregation of all filtering criteria. Used for retrieving results, and configuring number of
+// pages for pagination.
+const datasets_filter_query = computed(() => {
+  return {
+    project_id: props.project.id,
+    ...filters_group_query.value,
+    ...(!!search_query.value && { ...search_query.value }),
+  };
+});
+
+// Criterion for sorting. Initial sorting order is based on the `updated_at` field. The sorting
+// criterion can be updated, which will trigger a call to retrieve the updated search results.
+// Note - va-data-table supports sorting by one column at a time, so this object should always have
+// a single key-value pair.
+let datasets_sort_query = computed(() => {
+  return { [defaultSortField.value]: defaultSortOrder.value };
+});
+
+// Criteria used to limit the number of results retrieved, and to define the offset starting at
+// which the next batch of results will be retrieved.
+const datasets_batching_query = computed(() => {
+  return { offset: offset.value, limit: resultLimit.value };
+});
+
+// Aggregate of all other criteria. Used for retrieving results according to the criteria
+// specified.
+const datasets_retrieval_query = computed(() => {
+  return {
+    ...datasets_filter_query.value,
+    ...datasets_batching_query.value,
+    sortBy: datasets_sort_query.value,
+  };
+});
+
+const updateFiltersGroupQuery = (newVal) => {
+  filters_group_query.value = newVal;
+};
+
+const fetch_project_datasets = () => {
+  datasetService.getAll(datasets_retrieval_query.value).then((res) => {
+    projectDatasets.value = res.data.datasets.map((obj) => {
+      return {
+        ...obj,
+        assigned_at: props.datasets.find((e) => e.dataset_id === obj["id"])
+          .assigned_at,
+      };
+    });
+
+    total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
+  });
+};
+
+watch([datasets_sort_query, datasets_filter_query], () => {
+  // when sorting or filtering criteria changes, show results starting from the first page
+  currentPageIndex.value = 1;
+});
+
+watch(datasets_retrieval_query, (newQuery, oldQuery) => {
+  // Retrieve updated results whenever retrieval criteria changes
+  if (!_.isEqual(newQuery, oldQuery)) {
+    fetch_project_datasets();
+  }
+});
+
+onMounted(() => {
+  fetch_project_datasets();
+});
 
 // populate _datasets from props
-watch(
-  () => props.datasets,
-  () => {
-    _datasets.value = props.datasets.reduce((acc, obj) => {
-      acc[obj.dataset.id] = obj.dataset;
-      return acc;
-    }, {});
-    // console.log("_datasets from props", _datasets.value);
-  },
-  {
-    immediate: true,
-  },
-);
+// watch(
+//   () => props.datasets,
+//   () => {
+//     _datasets.value = props.datasets.reduce((acc, obj) => {
+//       acc[obj.dataset.id] = obj.dataset;
+//       return acc;
+//     }, {});
+//     // console.log("_datasets from props", _datasets.value);
+//   },
+//   {
+//     immediate: true,
+//   },
+// );
 
 const rows = computed(() => {
-  return Object.values(_datasets.value).map((ds) => ({
+  return projectDatasets.value.map((ds) => ({
     ...ds,
     is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
   }));
@@ -197,30 +334,47 @@ watch(tracking, () => {
   }
 });
 
+/**
+ * Results are fetched in batches for efficient pagination, but the sorting criteria specified
+ * needs to query all of persistent storage (as opposed to the current batch of retrieved results).
+ * Hence, va-data-table's default sorting behavior (which would normally only sort the current
+ * batch of results) is overridden (by providing each column with a `sortingFn` prop that does
+ * nothing), and instead, network calls are made to run the sorting criteria across all of
+ * persistent storage. The field to sort the results by and the sort order are captured in
+ * va-data-table's 'sorted' event, and added to the sorting criteria maintained in the
+ * `datasets_sort_query` reactive variable.
+ */
 const columns = [
-  { key: "name", sortable: true, sortingOptions: ["desc", "asc", null] },
+  {
+    key: "name",
+    sortable: true,
+    sortingOptions: ["desc", "asc", null],
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
+  },
   { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
   { key: "download", width: "100px", thAlign: "center", tdAlign: "center" },
   // { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
-  { key: "type", sortable: true },
+  {
+    key: "type",
+    sortable: true,
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
+  },
   {
     key: "updated_at",
     label: "last updated",
     sortable: true,
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
   },
   {
     key: "metadata",
     label: "data files",
-    sortable: true,
-
-    sortingFn: (a, b) => cmp(a?.num_genome_files, b?.num_genome_files),
+    sortable: false,
   },
   {
     key: "du_size",
     label: "size",
     sortable: true,
-
-    sortingFn: (a, b) => a - b,
+    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
   },
 ];
 

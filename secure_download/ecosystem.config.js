@@ -1,5 +1,5 @@
 module.exports = [{
-  script: 'src/index.js',
+  script: 'src/project.js',
   name: 'secure_download_api',
   exec_mode: 'cluster',
   instances: 2,

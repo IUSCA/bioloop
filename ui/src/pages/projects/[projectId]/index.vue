@@ -65,7 +65,7 @@
               <AddEditButton
                 class="flex-none"
                 show-text
-                :edit="project.datasets?.length > 0"
+                :edit="projectDatasets?.length > 0"
                 @click="openDatasetsModal"
                 v-if="auth.canOperate"
               />
@@ -160,6 +160,7 @@
 
 <script setup>
 import projectService from "@/services/projects";
+// import datasetService from "@/services/dataset";
 import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
@@ -173,6 +174,10 @@ const projectFormStore = useProjectFormStore();
 const nav = useNavStore();
 
 const project = ref({});
+const projectId = computed(() => {
+  return project.value?.id || toRef(() => props.projectId).value;
+});
+const projectDatasets = ref([]);
 const data_loading = ref(false);
 
 watch(project, () => {
@@ -191,7 +196,7 @@ function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: project.value?.id || props.projectId,
+      id: projectId.value,
       forSelf: !auth.canOperate,
     })
     .then((res) => {
@@ -206,18 +211,13 @@ function fetch_project() {
     });
 }
 
-fetch_project();
+onMounted(() => {
+  fetch_project();
+});
 
 const users = computed(() => {
   return (project.value.users || []).map((obj) => ({
     ...obj.user,
-    assigned_at: obj.assigned_at,
-  }));
-});
-
-const datasets = computed(() => {
-  return (project.value.datasets || []).map((obj) => ({
-    ...obj.dataset,
     assigned_at: obj.assigned_at,
   }));
 });
@@ -267,7 +267,7 @@ function openUsersModal() {
 const datasetsModal = ref(null);
 
 function openDatasetsModal() {
-  projectFormStore.setDatasets(datasets.value);
+  projectFormStore.setDatasets(projectDatasets.value);
   datasetsModal.value.show();
 }
 

@@ -1,5 +1,5 @@
 module.exports = [{
-  script: 'src/index.js',
+  script: 'src/project.js',
   name: 'api',
   exec_mode: 'cluster',
   instances: 2,
