@@ -55,26 +55,22 @@ def main():
             # mark upload as failed and clean up resources
             print(
                 f"Upload id {upload['id']} has been in a pending state for more than 24 hours, and will be cleaned up")
-            try:
-                origin_path = Path(upload['dataset']['origin_path'])
-                if origin_path.exists():
-                    shutil.rmtree(origin_path)
-                file_updates = [
-                    {
-                        'id': file['id'],
-                        'data': {
-                            'status': config['upload_status']['FAILED']
-                        }
+            origin_path = Path(upload['dataset']['origin_path'])
+            if origin_path.exists():
+                shutil.rmtree(origin_path)
+            file_updates = [
+                {
+                    'id': file['id'],
+                    'data': {
+                        'status': config['upload_status']['FAILED']
                     }
-                    for file in upload['files']
-                ]
-                api.update_upload_log(upload['id'], {
-                    'status': config['upload_status']['FAILED'],
-                    'files': file_updates
-                })
-            except Exception as e:
-                print(f"Encountered exception processing upload log with id {upload['id']}")
-                print(e)
+                }
+                for file in upload['files']
+            ]
+            api.update_upload_log(upload['id'], {
+                'status': config['upload_status']['FAILED'],
+                'files': file_updates
+            })
 
 
 if __name__ == "__main__":
