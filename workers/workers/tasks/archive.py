@@ -66,7 +66,7 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    sda_tar_path, bundle_size = archive(celery_task, dataset)
+    sda_tar_path, bundle_size = archive(celery_task, dataset, delete_local_file=True)
     update_data = {
         'archive_path': sda_tar_path,
         'bundle_size': bundle_size
