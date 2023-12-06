@@ -33,7 +33,6 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
         },
       },
       assigned_at: true,
-      // dataset_id: true,
     },
   },
   contacts: {
