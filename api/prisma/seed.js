@@ -144,6 +144,7 @@ async function main() {
   await Promise.all(operator_promises);
 
   await prisma.dataset.deleteMany();
+
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {

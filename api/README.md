@@ -50,7 +50,7 @@ Run `pnpm install` and `pnpm start` to start the API server.
 - Prisma + Postgres ORM
 
 Developer Exprience
-- Auto reload:  `nodemon project.js`
+- Auto reload:  `nodemon index.js`
 - [Linting](#linting)
     - auto highligt linting errors
     - format on save
@@ -89,9 +89,9 @@ Assumptions:
 
 ## Project Structure
 files in `src/`
-- `project.js` - import app and start
+- `index.js` - import app and start
 - `app.js` - create and configure express application
-- `routes/project.js` - main router
+- `routes/index.js` - main router
 - `routes/*.js` - modular routes
 - `middleware/*.js` - express middleware functions
 - `services/*.js` - common code specific to this project seperated by usage in router
@@ -99,7 +99,7 @@ files in `src/`
 - `config/*.json` - hierarchical configuration
 - `prisma/schema.prisma` - Data definitions
 - `prisma/seed.js` - code to initialize tables with some data
-- `utils/project.js` - non-specific common code
+- `utils/index.js` - non-specific common code
 
 ## Error Handling
 Source: [Express Error Handling](https://expressjs.com/en/guide/error-handling.html)

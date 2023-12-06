@@ -20,7 +20,6 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-// const prisma = new PrismaClient({ log: ['query', 'info', 'warn', 'error'] });
 const prisma = new PrismaClient();
 
 // stats - UI
@@ -123,7 +122,7 @@ const buildQueryObject = ({
     type,
     name: name ? {
       contains: name,
-      mode: 'insensitive',
+      mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
 
@@ -212,7 +211,6 @@ router.get(
     const sortBy = req.query.sortBy || {};
 
     const query_obj = buildQueryObject({
-      // const datasetRetrievalQuery = datasetService.build_query_object({
       project_id: req.query.project_id,
       deleted: req.query.deleted,
       processed: req.query.processed,

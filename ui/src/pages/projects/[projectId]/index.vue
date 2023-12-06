@@ -65,17 +65,14 @@
               <AddEditButton
                 class="flex-none"
                 show-text
-                :edit="projectDatasets?.length > 0"
+                :edit="project.datasets?.length > 0"
                 @click="openDatasetsModal"
                 v-if="auth.canOperate"
               />
             </div>
           </va-card-title>
           <va-card-content>
-            <ProjectDatasetsTable
-              :datasets="project.datasets"
-              :project="project"
-            />
+            <ProjectDatasetsTable :project="project" />
           </va-card-content>
         </va-card>
       </div>
@@ -160,7 +157,6 @@
 
 <script setup>
 import projectService from "@/services/projects";
-// import datasetService from "@/services/dataset";
 import { useToastStore } from "@/stores/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
@@ -177,7 +173,6 @@ const project = ref({});
 const projectId = computed(() => {
   return project.value?.id || toRef(() => props.projectId).value;
 });
-const projectDatasets = ref([]);
 const data_loading = ref(false);
 
 watch(project, () => {
@@ -218,6 +213,13 @@ onMounted(() => {
 const users = computed(() => {
   return (project.value.users || []).map((obj) => ({
     ...obj.user,
+    assigned_at: obj.assigned_at,
+  }));
+});
+
+const datasets = computed(() => {
+  return (project.value.datasets || []).map((obj) => ({
+    ...obj.dataset,
     assigned_at: obj.assigned_at,
   }));
 });
@@ -267,7 +269,7 @@ function openUsersModal() {
 const datasetsModal = ref(null);
 
 function openDatasetsModal() {
-  projectFormStore.setDatasets(projectDatasets.value);
+  projectFormStore.setDatasets(datasets.value);
   datasetsModal.value.show();
 }
 

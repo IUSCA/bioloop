@@ -33,7 +33,7 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
         },
       },
       assigned_at: true,
-      dataset_id: true,
+      // dataset_id: true,
     },
   },
   contacts: {
@@ -44,32 +44,6 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
   },
 };
 
-// const projects_relations_query = () => {
-//   const dataset_query_object = datasetService.build_query_object();
-//
-//   return {
-//     users: {
-//       select: {
-//         user: true,
-//         assigned_at: true,
-//       },
-//     },
-//     datasets: {
-//       where: {
-//         dataset: dataset_query_object,
-//       },
-//       include: {
-//         dataset: true,
-//       },
-//     },
-//     contacts: {
-//       select: {
-//         contact: true,
-//         assigned_at: true,
-//       },
-//     },
-//   };
-// };
 // router.get(
 //   '/:username/:id/slug',
 //   asyncHandler(async (req, res, next) => {
@@ -92,9 +66,7 @@ router.get(
     const projects = await prisma.project.findMany({
       where: {},
       include: INCLUDE_USERS_DATASETS_CONTACTS,
-      // include: projects_relations_query(),
     });
-
     res.json(projects);
   }),
 );
@@ -106,7 +78,6 @@ router.get(
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project irrespective of user association.
     // #swagger.description = admin and operator roles are allowed and user role is forbidden
-
     const project = await prisma.project.findFirstOrThrow({
       where: {
         OR: [
@@ -117,36 +88,33 @@ router.get(
             slug: req.params.id,
           },
         ],
-      },
+      }, // filter by username
       include: INCLUDE_USERS_DATASETS_CONTACTS,
-      // include: projects_relations_query(),
     });
 
-    // await datasetService.get_datasets({ project_id: req.params.id });
-
     // include workflow objects with dataset
-    // const wfPromises = project.datasets.map(async (ds) => {
-    //   const { dataset, assigned_at } = ds;
-    //   if (dataset.workflows.length > 0) {
-    //     return wfService.getAll({
-    //       only_active: true,
-    //       last_task_run: false,
-    //       prev_task_runs: false,
-    //       workflow_ids: dataset.workflows.map((x) => x.id),
-    //     }).then((wf_res) => ({
-    //       assigned_at,
-    //       dataset: Object.assign(dataset, { workflows: wf_res.data.results }),
-    //     })).catch((error) => {
-    //       log_axios_error(error);
-    //       return {
-    //         assigned_at,
-    //         dataset: Object.assign(dataset, { workflows: [] }),
-    //       };
-    //     });
-    //   }
-    //   return ds;
-    // });
-    // project.datasets = await Promise.all(wfPromises);
+    const wfPromises = project.datasets.map(async (ds) => {
+      const { dataset, assigned_at } = ds;
+      if (dataset.workflows.length > 0) {
+        return wfService.getAll({
+          only_active: true,
+          last_task_run: false,
+          prev_task_runs: false,
+          workflow_ids: dataset.workflows.map((x) => x.id),
+        }).then((wf_res) => ({
+          assigned_at,
+          dataset: Object.assign(dataset, { workflows: wf_res.data.results }),
+        })).catch((error) => {
+          log_axios_error(error);
+          return {
+            assigned_at,
+            dataset: Object.assign(dataset, { workflows: [] }),
+          };
+        });
+      }
+      return ds;
+    });
+    project.datasets = await Promise.all(wfPromises);
 
     res.json(project);
   }),
@@ -172,7 +140,6 @@ router.get(
         },
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
-      // include: projects_relations_query(),
     });
     // don't know why projects.map(req.permission.filter) wouldn't work
     res.json(projects.map((p) => req.permission.filter(p)));
@@ -206,7 +173,6 @@ router.get(
           },
         },
       },
-      // include: projects_relations_query(),
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
 
@@ -275,7 +241,6 @@ router.post(
 
     const project = await prisma.project.create({
       data,
-      // include: projects_relations_query(),
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
     res.json(project);
@@ -300,7 +265,6 @@ router.post(
       where: {
         id: req.params.src,
       },
-      // include: projects_relations_query(),
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
 
@@ -311,7 +275,6 @@ router.post(
           in: req.body.target_project_ids,
         },
       },
-      // include: projects_relations_query(),
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
 
@@ -372,8 +335,6 @@ router.put(
         id: req.params.id,
       },
       include: INCLUDE_USERS_DATASETS_CONTACTS,
-
-      // include: projects_relations_query(),
     });
 
     const cur_user_ids = project.users.map((obj) => obj.user.id);
@@ -520,7 +481,6 @@ router.patch(
       where: {
         id: req.params.id,
       },
-      // include: projects_relations_query(),
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
 
@@ -539,7 +499,6 @@ router.patch(
         id: req.params.id,
       },
       data,
-      // include: projects_relations_query(),
       include: INCLUDE_USERS_DATASETS_CONTACTS,
     });
     res.json(updatedProject);

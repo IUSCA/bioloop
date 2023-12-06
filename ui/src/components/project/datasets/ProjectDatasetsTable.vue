@@ -185,7 +185,7 @@ const filters_group_query = ref({});
 const defaultSortField = ref("updated_at");
 const defaultSortOrder = ref("desc");
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 const VISIBLE_PAGES_THRESHOLD = 5; // Maximum number of visible pages shown at a time
 
 const currentPageIndex = ref(1);
@@ -241,14 +241,7 @@ const updateFiltersGroupQuery = (newVal) => {
 
 const fetch_project_datasets = () => {
   datasetService.getAll(datasets_retrieval_query.value).then((res) => {
-    projectDatasets.value = res.data.datasets.map((obj) => {
-      return {
-        ...obj,
-        assigned_at: props.datasets.find((e) => e.dataset_id === obj["id"])
-          .assigned_at,
-      };
-    });
-
+    projectDatasets.value = res.data.datasets;
     total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
   });
 };
@@ -268,21 +261,6 @@ watch(datasets_retrieval_query, (newQuery, oldQuery) => {
 onMounted(() => {
   fetch_project_datasets();
 });
-
-// populate _datasets from props
-// watch(
-//   () => props.datasets,
-//   () => {
-//     _datasets.value = props.datasets.reduce((acc, obj) => {
-//       acc[obj.dataset.id] = obj.dataset;
-//       return acc;
-//     }, {});
-//     // console.log("_datasets from props", _datasets.value);
-//   },
-//   {
-//     immediate: true,
-//   },
-// );
 
 const rows = computed(() => {
   return projectDatasets.value.map((ds) => ({

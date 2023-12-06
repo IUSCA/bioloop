@@ -26,7 +26,7 @@ ENV PATH="/home/scauser/.local/bin/:${PATH}"
 RUN npm install pm2 -g
 # RUN npm install -g pnpm
 ENTRYPOINT npm ci && npx prisma generate client && exec pm2-runtime ecosystem.config.js
-# ENTRYPOINT pnpm fetch && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/project.js
+# ENTRYPOINT pnpm fetch && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
 
 # Entrypoint will be run in the shell mode - https://docs.docker.com/engine/reference/builder/#shell-form-entrypoint-example
 # any CMD or docker run command line arguments or commad in docker-compose are ignored
@@ -39,20 +39,20 @@ ENTRYPOINT npm ci && npx prisma generate client && exec pm2-runtime ecosystem.co
 #   Having multiple repositories leading to increased disk usage. To address this, I employ pnpm to minimize disk usage, but unfortunately, there is no way to convert pnpm-lock.yaml to package-lock.json.
 
 # install packages directly from package.json using npm - build is not deterministic
-# ENTRYPOINT npm install && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM project.js
+# ENTRYPOINT npm install && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM index.js
 
 # install packages directly from package-lock.json using npm. Make sure that the lock is up to date.
-# ENTRYPOINT npm ci && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM project.js
+# ENTRYPOINT npm ci && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM index.js
 
 
 # npx prisma db push
 # Pushes the schema to the database and generates the prisma client.
 
 
-# exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM project.js
-# exec - replaces the current process with the spawned process - 
+# exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM index.js
+# exec - replaces the current process with the spawned process -
 #      - This means /opt/sca/app/node_modules/.bin/nodemon will get the PID 1, and
 #      - will be able to receive UNIX signals (SIGTERM) and perform gracious shutdown of the server.
-#      - nodemon internally sends SIGTERM to the express server (project.js) which then waits for the existing connections to close before stopping the server.
+#      - nodemon internally sends SIGTERM to the express server (index.js) which then waits for the existing connections to close before stopping the server.
 #
 # Both `npm run` and `npm exec` / `npx` do not pass UNIX signals. Therefore, nodemon should be called directly using the full path /opt/sca/app/node_modules/.bin/nodemon
