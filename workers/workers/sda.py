@@ -50,7 +50,7 @@ def get(sda_file: str, local_file: str, verify_checksum=True, creds: dict = None
     command = ['hsi', '-P', f'{get_cmd} "{local_file}" : "{sda_file}"']
 
     if creds != None:
-      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'{get_cmd}',  f'"{local_file}"',  ':',  f'"{sda_file}"']
+      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'{get_cmd}',  f'{local_file}',  ':',  f'"{sda_file}"']
 
     return cmd.execute(command)
 
