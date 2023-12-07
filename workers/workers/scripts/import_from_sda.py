@@ -60,7 +60,11 @@ def copy_files(src_dir, dest_dir):
             dest_file_path = os.path.join(dest_dir, file)
 
             sda.get(file_path, dest_file_path, verify_checksum=False, creds=creds)
-            copied_files.append(file)
+
+            if directory not in copied_files:
+                copied_files[directory] = []
+                copied_files[directory].append(file)
+      
             total_size += file_size
 
 def parse_output(input_string):
