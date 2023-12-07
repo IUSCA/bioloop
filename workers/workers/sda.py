@@ -27,7 +27,7 @@ def get_size(sda_path: str):
     return int(stdout.strip().split()[0])
 
 
-def get(sda_file: str, local_file: str, verify_checksum=True):
+def get(sda_file: str, local_file: str, verify_checksum=True, creds: dict = None):
     """
     Transfer a file from SDA to local disk.
 
@@ -42,7 +42,11 @@ def get(sda_file: str, local_file: str, verify_checksum=True):
     network transfer speed, and speed of the local filesystem.
     """
     get_cmd = 'get -c on' if verify_checksum else 'get'
-    command = ['hsi', '-P', f'{get_cmd} {local_file} : {sda_file}']
+
+    if creds == None:
+      command = ['hsi', '-P', f'{get_cmd} {local_file} : {sda_file}']  
+    else:
+      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'{get_cmd} {local_file} : {sda_file}']
     return cmd.execute(command)
 
 
@@ -79,3 +83,8 @@ def exists(path: str) -> bool:
 def ensure_directory(dir_path: str) -> None:
     command = ['hsi', '-P', f'mkdir -p {dir_path}']
     cmd.execute(command)
+
+def list_directory_recursively(dir_path: str) -> list[str]:
+    command = ['hsi', '-P', f'ls -R {dir_path}']
+    stdout, stderr = cmd.execute(command)
+    return stdout.strip().split('\n')
