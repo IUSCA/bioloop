@@ -46,9 +46,9 @@ def copy_files(src_dir, dest_dir):
     
     
     # Download files from SDA
-    for directory in directory_list:
+    for directory, files in directory_list.items():
         print("DIRECTORY", directory)
-        for file in directory:
+        for file in files:
             print("FILE", file)
             file_path = os.path.join(directory, file)
 
