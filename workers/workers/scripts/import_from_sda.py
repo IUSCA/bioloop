@@ -68,10 +68,19 @@ def parse_output(input_string):
 
     for line in lines:
         if line.endswith(':'):
+            # Remove directory only list
+            if current_directory is not None and directory_structure[current_directory] == []:
+                del directory_structure[current_directory]
+
+            # Add new directory
             current_directory = line[:-1]
             directory_structure[current_directory] = []
-        elif line.strip() and current_directory is not None:
-            directory_structure[current_directory].append(line.strip())
+
+        elif line.strip() and current_directory is not None:  
+            # Split each line by whitespace and add to directory list if file and not directory
+            for file in line.split():
+              if not file.endswith('/'):
+                directory_structure[current_directory].append(file)
 
     return directory_structure
 
