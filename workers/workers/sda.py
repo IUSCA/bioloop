@@ -95,6 +95,7 @@ def list_directory_recursively(dir_path: str, creds: dict = None) -> list[str]:
 
     stdout, stderr = cmd.execute(command)
 
-    print(stderr)
-
-    return stdout.strip().split('\n')
+    print("ERRORS", stderr)
+    print("OUTPUT", stdout)
+    
+    return stdout
