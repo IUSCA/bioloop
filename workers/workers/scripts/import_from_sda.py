@@ -47,6 +47,9 @@ def copy_files(src_dir, dest_dir):
     
     # Download files from SDA
     for directory, files in directory_list.items():
+        curr_dest_dir = os.path.join(dest_dir, directory)
+
+        os.makedirs(curr_dest_dir, exist_ok=True)
         print("DIRECTORY", directory)
         print("FILES", files)
         for file in files:
@@ -57,7 +60,7 @@ def copy_files(src_dir, dest_dir):
             if total_size + file_size > size_limit:
                 break
             
-            dest_file_path = os.path.join(dest_dir, file)
+            dest_file_path = os.path.join(curr_dest_dir, file)
 
             sda.get(file_path, dest_file_path, creds=creds)
 
