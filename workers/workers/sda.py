@@ -21,8 +21,12 @@ def put(local_file: str, sda_file: str, verify_checksum: bool = True):
     return cmd.execute(command)
 
 
-def get_size(sda_path: str):
+def get_size(sda_path: str, creds: dict = None):
     command = ['hsi', '-P', f'ls -s1 "{sda_path}"']
+
+    if creds != None:
+      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', 'ls', '-s1', f'"{sda_path}"']
+
     stdout, stderr = cmd.execute(command)
     return int(stdout.strip().split()[0])
 
@@ -43,10 +47,11 @@ def get(sda_file: str, local_file: str, verify_checksum=True, creds: dict = None
     """
     get_cmd = 'get -c on' if verify_checksum else 'get'
 
-    if creds == None:
-      command = ['hsi', '-P', f'{get_cmd} "{local_file}" : "{sda_file}"']  
-    else:
+    command = ['hsi', '-P', f'{get_cmd} "{local_file}" : "{sda_file}"']
+
+    if creds != None:
       command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'{get_cmd} "{local_file}" : "{sda_file}"']
+
     return cmd.execute(command)
 
 
@@ -88,9 +93,9 @@ def list_directory_recursively(dir_path: str, creds: dict = None) -> list[str]:
 
     print(dir_path)
 
-    if creds == None:
-      command = ['hsi', '-P', f'ls -R {dir_path}']  
-    else:
+    command = ['hsi', '-P', f'ls -R {dir_path}']  
+
+    if creds != None:
       command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', 'ls',  '-R',  f'"{dir_path}"']
 
     stdout, stderr = cmd.execute(command)
