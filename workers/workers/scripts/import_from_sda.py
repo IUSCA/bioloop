@@ -46,13 +46,14 @@ def copy_files(src_dir, dest_dir):
     
     
     # Download files from SDA
-    for files in directory_list:
-        for file in files:
-            file_size = sda.get_size(file)
+    for directory in directory_list:
+        for file in directory:
+            file_path = os.path.join(directory, file)
+            file_size = sda.get_size(file_path)
             if total_size + file_size > size_limit:
                 break
             
-            sda.get(file, dest_dir, creds=creds)
+            sda.get(file_path, dest_dir, creds=creds)
             copied_files.append(file)
             total_size += file_size
 
