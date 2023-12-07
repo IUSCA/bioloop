@@ -93,4 +93,7 @@ def list_directory_recursively(dir_path: str, creds: dict = None) -> list[str]:
       command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'ls -R \"{dir_path}\"']
 
     stdout, stderr = cmd.execute(command)
+
+    print(stderr)
+
     return stdout.strip().split('\n')
