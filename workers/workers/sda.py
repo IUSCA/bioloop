@@ -84,7 +84,13 @@ def ensure_directory(dir_path: str) -> None:
     command = ['hsi', '-P', f'mkdir -p {dir_path}']
     cmd.execute(command)
 
-def list_directory_recursively(dir_path: str) -> list[str]:
+def list_directory_recursively(dir_path: str, creds: dict = None) -> list[str]:
     command = ['hsi', '-P', f'ls -R {dir_path}']
+
+    if creds == None:
+      command = ['hsi', '-P', f'ls -R {dir_path}']  
+    else:
+      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'ls -R {dir_path}']
+
     stdout, stderr = cmd.execute(command)
     return stdout.strip().split('\n')
