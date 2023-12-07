@@ -8,7 +8,7 @@ from workers.config import config
 # Config variables
 src_dir = config['import_from_sda']['src_dir']
 dest= config['import_from_sda']['dest_dir']
-size_limit = config['import_from_sda']['size_limit']
+size_limit = int(config['import_from_sda']['size_limit'])
 creds = config['import_from_sda']['creds']
 
 # Global variables
