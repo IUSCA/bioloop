@@ -59,7 +59,7 @@ def copy_files(src_dir, dest_dir):
             
             dest_file_path = os.path.join(dest_dir, file)
 
-            sda.get(file_path, dest_file_path, verify_checksum=False, creds=creds)
+            sda.get(file_path, dest_file_path, creds=creds)
 
             if directory not in copied_files:
                 copied_files[directory] = []
