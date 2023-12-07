@@ -57,7 +57,7 @@ def copy_files(src_dir, dest_dir):
             if total_size + file_size > size_limit:
                 break
             
-            sda.get(file_path, dest_dir, creds=creds)
+            sda.get(file_path, dest_dir, verify_checksum=False, creds=creds)
             copied_files.append(file)
             total_size += file_size
 
