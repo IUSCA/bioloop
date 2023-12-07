@@ -37,6 +37,7 @@ def copy_files(src_dir, dest_dir):
     if directory_list == {}:
       directory_list = sda.list_directory_recursively(src_dir, creds=creds)
       directory_list = parse_output(directory_list)
+      print("DIRECTORY_LIST", directory_list)
 
     # Break out of loop if all files have been copied
     if copied_files == directory_list:
