@@ -10,6 +10,14 @@ QUEUE_PASSWORD = os.environ['QUEUE_PASS']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
 ALIAS_SALT = os.environ['ALIAS_SALT']
 
+IMPORT_SRC_DIR = os.environ['IMPORT_SRC_DIR']
+IMPORT_DEST_DIR = os.environ['IMPORT_DEST_DIR']
+IMPORT_SIZE_LIMIT = os.environ['IMPORT_SIZE_LIMIT']
+IMPORT_USER = os.environ['IMPORT_USER']
+IMPORT_KEYTAB = os.environ['IMPORT_KEYTAB']
+
+
+
 ONE_HOUR = 60 * 60
 ONE_GIGABYTE = 1024 * 1024 * 1024
 FIVE_MINUTES = 5 * 60
@@ -113,5 +121,11 @@ config = {
             'username': 'root',
             'password': MONGO_PASSWORD
         }
+    },
+    'import_from_sda': {
+        'src_dir': IMPORT_SRC_DIR,
+        'dest_dir': IMPORT_DEST_DIR,
+        'size_limit': IMPORT_SIZE_LIMIT,
+        'creds': { "username": IMPORT_USER, "keytab": IMPORT_KEYTAB }
     }
 }

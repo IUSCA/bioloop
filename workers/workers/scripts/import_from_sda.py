@@ -3,12 +3,13 @@ import zipfile
 
 import workers.sda as sda
 import workers.api as api
+from workers.config import config
 
 # Config variables
-src_dir = "/path/to/src/dir"
-dest="/path/to/dest/dir"
-size_limit = 1000000000000
-creds = { "username": "protcore", "keytab": "" }
+src_dir = config['import_from_sda']['src_dir']
+dest= config['import_from_sda']['dest_dir']
+size_limit = config['import_from_sda']['size_limit']
+creds = config['import_from_sda']['creds']
 
 # Global variables
 total_size = 0
