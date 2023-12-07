@@ -91,7 +91,7 @@ def list_directory_recursively(dir_path: str, creds: dict = None) -> list[str]:
     if creds == None:
       command = ['hsi', '-P', f'ls -R {dir_path}']  
     else:
-      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', 'ls',  '-R',  f'{dir_path}']
+      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', 'ls',  '-R',  f'"{dir_path}"']
 
     stdout, stderr = cmd.execute(command)
 
