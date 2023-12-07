@@ -22,7 +22,7 @@ def put(local_file: str, sda_file: str, verify_checksum: bool = True):
 
 
 def get_size(sda_path: str):
-    command = ['hsi', '-P', f'ls -s1 {sda_path}']
+    command = ['hsi', '-P', f'ls -s1 "{sda_path}"']
     stdout, stderr = cmd.execute(command)
     return int(stdout.strip().split()[0])
 
@@ -44,9 +44,9 @@ def get(sda_file: str, local_file: str, verify_checksum=True, creds: dict = None
     get_cmd = 'get -c on' if verify_checksum else 'get'
 
     if creds == None:
-      command = ['hsi', '-P', f'{get_cmd} {local_file} : {sda_file}']  
+      command = ['hsi', '-P', f'{get_cmd} "{local_file}" : "{sda_file}"']  
     else:
-      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'{get_cmd} {local_file} : {sda_file}']
+      command = ['hsi', '-A', 'keytab', '-k', f'{creds["keytab"]}', '-l', f'{creds["username"]}', '-P', f'{get_cmd} "{local_file}" : "{sda_file}"']
     return cmd.execute(command)
 
 
