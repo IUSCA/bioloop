@@ -61,24 +61,20 @@ def copy_files(src_dir, dest_dir):
             copied_files.append(file)
             total_size += file_size
 
+def parse_output(input_string):
+    directory_structure = {}
+    lines = input_string.split('\n')
+    current_directory = None
 
-
-def parse_output(output):
-    lines = output.split('\n')
-    dir = {}
-    current_dir = None
-
-    for i in range(len(lines)):
-        line = lines[i]
+    for line in lines:
         if line.endswith(':'):
-            # Check if this directory is the deepest level
-            if i + 1 < len(lines) and not lines[i + 1].endswith(':'):
-                current_dir = line[:-1]
-                dir[current_dir] = []
-        elif current_dir is not None:
-            dir[current_dir].append(line.strip())
+            current_directory = line[:-1]
+            directory_structure[current_directory] = []
+        elif line.strip() and current_directory is not None:
+            directory_structure[current_directory].append(line.strip())
 
-    return dir
+    return directory_structure
+
 
 def process_files(dest_dir):
     for root, _dirs, files in os.walk(dest_dir):
