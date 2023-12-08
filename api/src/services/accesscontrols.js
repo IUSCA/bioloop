@@ -37,11 +37,11 @@ const grantsObject = {
       'create:any': ['*'],
       'read:any': ['*'],
     },
-    bundles: {
-      'read:any': ['*'],
+    auth: {
       'create:any': ['*'],
     },
-    auth: {
+    bundle: {
+      'read:any': ['*'],
       'create:any': ['*'],
     },
   },
