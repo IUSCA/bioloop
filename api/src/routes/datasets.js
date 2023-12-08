@@ -193,7 +193,7 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('project_id').escape().notEmpty().optional(),
+    query('project_id').isUUID(4).optional(),
     query('deleted').toBoolean().default(false),
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
