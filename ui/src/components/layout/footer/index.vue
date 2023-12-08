@@ -62,7 +62,7 @@ const ui = useUIStore();
 
 .divider-secondary {
   border-top-width: var(--va-divider-line-width);
-  border-top-color: #3d4c58;
+  border-top-color: var(--va-background-border);
   border-style: solid;
   margin-top: var(--va-divider-margin);
   margin-bottom: 1rem;
