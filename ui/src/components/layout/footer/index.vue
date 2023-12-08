@@ -27,7 +27,7 @@
 
       <div>
         <FooterMobile v-if="ui.isMobileView" />
-        <FooterPrimary v-else />
+        <FooterDesktop v-else />
       </div>
     </div>
   </footer>
@@ -36,6 +36,7 @@
 <script setup>
 import config from "@/config";
 import { useUIStore } from "@/stores/ui";
+import FooterDesktop from "@/components/layout/footer/FooterDesktop.vue";
 
 const ui = useUIStore();
 </script>
