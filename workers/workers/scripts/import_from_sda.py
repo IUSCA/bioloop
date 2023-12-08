@@ -1,5 +1,6 @@
 import os
 import zipfile
+import time
 
 import workers.sda as sda
 import workers.api as api
@@ -11,27 +12,22 @@ dest= config['import_from_sda']['dest_dir']
 size_limit = int(config['import_from_sda']['size_limit'])
 creds = config['import_from_sda']['creds']
 
-# Global variables
-total_size = 0
-
-# List of files to copy
-directory_list = {}
-
-# List of files that have been copied
-copied_files = {}
-
-# Flag to indicate if all files have been copied
-still_copying = True
 
 
-def copy_files(src_dir, dest_dir): 
-    global total_size
-    global directory_list
-    global copied_files
-    global still_copying
+
+def main():
+  # Settings
+  total_size = 0
+  directory_list = {}
+  copied_files = {}
+  still_copying = True
+
+  while still_copying:
 
     # Don't copy new files if total size of copied files exceeds size limit
     if total_size > size_limit:
+        print("Total size of copied files exceeds size limit. Sleeping for 5 minutes.")
+        time.sleep(300)
         return
     
     if directory_list == {}:
@@ -47,7 +43,8 @@ def copy_files(src_dir, dest_dir):
     
     # Download files from SDA
     for directory, files in directory_list.items():
-        curr_dest_dir = os.path.join(dest_dir, directory)
+        
+        curr_dest_dir = os.path.join(dest, os.path.basename(directory))
 
         os.makedirs(curr_dest_dir, exist_ok=True)
         print("DIRECTORY", directory)
@@ -68,6 +65,7 @@ def copy_files(src_dir, dest_dir):
                 copied_files[directory] = []
                 copied_files[directory].append(file)
       
+            process_files(curr_dest_dir)
             total_size += file_size
 
 def parse_output(input_string):
@@ -104,10 +102,7 @@ def process_files(dest_dir):
                 # Delete zip file
                 os.remove(os.path.join(root, file))
 
-def main():
-  while still_copying:
-    copy_files(src_dir, dest)
-    process_files(dest)
+
 
 if __name__ == "__main__":
     main()
