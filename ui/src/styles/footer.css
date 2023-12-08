@@ -1,0 +1,9 @@
+.footer-link {
+  color: #7d110c;
+  font-family: inherit;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}

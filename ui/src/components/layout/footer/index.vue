@@ -13,7 +13,9 @@
         <div class="max-w-max py-2.5">
           <p class="max-w-max">
             {{ config.appTitle }} is a service of the Indiana University
-            <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>
+            <a href="https://sca.iu.edu" class="footer-link"
+              >Scalable Compute Archive (IU SCA)</a
+            >
             group.
           </p>
         </div>
@@ -26,7 +28,9 @@
       </div>
 
       <FooterMobile v-if="ui.isMobileView" />
-      <FooterLarge v-else />
+      <div v-else class="large-container">
+        <FooterLarge />
+      </div>
     </div>
   </footer>
 </template>
@@ -62,19 +66,5 @@ const ui = useUIStore();
   border-style: solid;
   margin-top: var(--va-divider-margin);
   margin-bottom: 1rem;
-}
-
-#footer-v1 p {
-  /* 11px (11/16) */
-}
-
-#footer-v1 a {
-  color: #7d110c;
-  font-family: inherit;
-  text-decoration: none;
-}
-
-#footer-v1 a:hover {
-  text-decoration: underline;
 }
 </style>

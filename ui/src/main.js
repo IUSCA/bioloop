@@ -20,6 +20,7 @@ import {
 
 import "./styles/main.css";
 import "./styles/overrides.css";
+import "./styles/footer.css";
 // import "material-design-icons-iconfont/dist/material-design-icons.min.css";
 
 import App from "./App.vue";
