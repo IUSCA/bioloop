@@ -77,8 +77,4 @@ const ui = useUIStore();
 #footer-v1 a:hover {
   text-decoration: underline;
 }
-
-.icon_container__mobile {
-  max-width: 24px;
-}
 </style>
