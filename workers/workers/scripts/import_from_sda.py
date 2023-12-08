@@ -1,4 +1,5 @@
 import os
+import sys
 import zipfile
 import time
 
@@ -13,77 +14,85 @@ size_limit = int(config['import_from_sda']['size_limit'])
 creds = config['import_from_sda']['creds']
 
 
-
-
 def main():
-  # Settings
-  total_size = 0
-  directory_list = {}
-  copied_files = {}
-  still_copying = True
+  try:
 
-  while still_copying:
+    # Settings
+    total_size = 0
+    directory_list = {}
+    copied_files = {}
+    still_copying = True
 
-    # Don't copy new files if total size of copied files exceeds size limit
-    if total_size > size_limit:
-        print("Total size of copied files exceeds size limit. Sleeping for 5 minutes...")
-        time.sleep(300)
-        return
-    
-    if directory_list == {}:
-      directory_list = sda.list_directory_recursively(src_dir, creds=creds)
-      directory_list = parse_output(directory_list)
-      print("DIRECTORY_LIST", directory_list)
+    while still_copying:
 
-    # Break out of loop if all files have been copied
-    if copied_files == directory_list:
-        still_copying = False
-        return
-    
-    
-    # Download files from SDA
-    for directory, files in directory_list.items():
-        
-        # Create landing directory
-        curr_dest_dir = os.path.join(dest, os.path.basename(directory))
-        os.makedirs(curr_dest_dir, exist_ok=True)
-        print("Created landing directory... ", curr_dest_dir)
-
-        
-        # DEBUG PRINTS
-        print("DIRECTORY", directory)
-        print("FILES", files)
-
-        for file in files:
-            # DEBUG PRINTS
-            print("FILE", file)
-
-            # Create full file path
-            file_path = os.path.join(directory, file)
-
-            # Pause if total size of copied files exceeds size limit
-            file_size = sda.get_size(file_path, creds=creds)
-            if total_size + file_size > size_limit:
-                print("Total size of copied files exceeds size limit. Sleeping for 5 minutes...")
-                time.sleep(300)
-                return
-            
-            # Create full destination file path
-            dest_file_path = os.path.join(curr_dest_dir, file)
-
-            # Download file
-            sda.get(file_path, dest_file_path, creds=creds)
-
-            # Add file to copied_files
-            if directory not in copied_files:
-                copied_files[directory] = []
-                copied_files[directory].append(file)
+      # Don't copy new files if total size of copied files exceeds size limit
+      if total_size > size_limit:
+          print("Total size of copied files exceeds size limit. Sleeping for 5 minutes...")
+          time.sleep(300)
+          return
       
-            # Unzip compressed files
-            process_files(curr_dest_dir)
+      # Get directory list if empty
+      if directory_list == {}:
+        directory_list = sda.list_directory_recursively(src_dir, creds=creds)
+        directory_list = parse_output(directory_list)
 
-            # Update total size
-            total_size += file_size
+        # DEBUG PRINTS
+        print("DIRECTORY_LIST", directory_list)
+
+      # Break out of loop if all files have been copied
+      if copied_files == directory_list:
+          still_copying = False
+          return
+      
+      
+      # Download files from SDA
+      for directory, files in directory_list.items():
+          
+          # Create landing directory
+          curr_dest_dir = os.path.join(dest, os.path.basename(directory))
+          os.makedirs(curr_dest_dir, exist_ok=True)
+          print("Created landing directory... ", curr_dest_dir)
+
+          
+          # DEBUG PRINTS
+          print("DIRECTORY", directory)
+          print("FILES", files)
+
+          for file in files:
+              # DEBUG PRINTS
+              print("FILE", file)
+
+              # Create full file path
+              file_path = os.path.join(directory, file)
+
+              # Pause if total size of copied files exceeds size limit
+              file_size = sda.get_size(file_path, creds=creds)
+              if total_size + file_size > size_limit:
+                  print("Total size of copied files exceeds size limit. Sleeping for 5 minutes...")
+                  time.sleep(300)
+                  return
+              
+              # Create full destination file path
+              dest_file_path = os.path.join(curr_dest_dir, file)
+
+              # Download file
+              sda.get(file_path, dest_file_path, creds=creds)
+
+              # Add file to copied_files
+              if directory not in copied_files:
+                  copied_files[directory] = []
+                  copied_files[directory].append(file)
+        
+              # Unzip compressed files
+              process_files(curr_dest_dir)
+
+              # Update total size
+              total_size += file_size
+
+  # Handle keyboard interrupt
+  except KeyboardInterrupt:
+    print("\nInterrupted by user. Exiting...")
+    sys.exit(0)
 
 def parse_output(input_string):
     directory_structure = {}
@@ -110,7 +119,7 @@ def parse_output(input_string):
 
 
 def process_files(dest_dir):
-    for root, _dirs, files in os.walk(dest_dir):
+    for root, dirs, files in os.walk(dest_dir):
         for file in files:
             if file.endswith('.zip') or not '.' in file:
                 # Unzip file
