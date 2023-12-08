@@ -52,18 +52,18 @@ def setup_download(celery_task, dataset_id, **kwargs):
         raise ValidationFailed(f'Staged path does not exist {staged_path}')
 
     download_path = Path(config['paths']['download_dir']).resolve() / alias
-    tar_download_path = download_path / f"{dataset['name']}.tar"
+    bundle_download_path = download_path / bundle_path.name
 
     # remove if exists and create a symlink in download dir pointing to the staged path
     rm(download_path)
     download_path.symlink_to(staged_path, target_is_directory=True)
-    # do the same for tar file
-    rm(tar_download_path)
-    tar_download_path.symlink_to(bundle_path)
+    # do the same for bundle file
+    rm(bundle_download_path)
+    bundle_download_path.symlink_to(bundle_path)
 
     # enable others to read and cd into stage directory
     grant_read_permissions_to_others(staged_path)
-    grant_read_permissions_to_others(tar_download_path)
+    grant_read_permissions_to_others(bundle_download_path)
 
     # enable others to navigate to leaf by granting execute permission on parent directories
     grant_access_to_parent_chain(staged_path, root=Path(config['paths']['root']))
