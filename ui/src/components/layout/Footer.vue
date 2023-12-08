@@ -4,13 +4,13 @@
     role="contentinfo"
     itemScope="itemscope"
     itemType="http://schema.org/CollegeOrUniversity"
-    class="text-sm"
+    class="text-sm mb-10"
   >
     <va-divider />
 
-    <div class="flex flex-col text-center text-base">
-      <div class="max-w-max flex flex-col content mb-3">
-        <div class="max-w-max py-2.5 border-red">
+    <div class="flex flex-col text-center">
+      <div class="max-w-max flex flex-col content mb-1">
+        <div class="max-w-max py-2.5">
           <p class="max-w-max">
             Bioloop is a service of the Indiana University
             <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>
@@ -26,7 +26,7 @@
       </div>
 
       <div class="flex flex-col">
-        <div class="flex justify-center mb-5">
+        <div class="flex justify-center mb-4">
           <div class="icon_container__mobile">
             <a href="https://www.iu.edu">
               <svg
