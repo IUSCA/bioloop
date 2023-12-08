@@ -67,7 +67,7 @@ def main():
               # Pause if total size of copied files exceeds size limit
               file_size = sda.get_size(file_path, creds=creds)
               if total_size + file_size > size_limit:
-                  print("Total size of copied files exceeds size limit. Sleeping for 5 minutes...")
+                  print(f"Total size of current file: {file_size} exceeds size limit: {size_limit}. Sleeping for 5 minutes...")
                   time.sleep(300)
                   return
               
