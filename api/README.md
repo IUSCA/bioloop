@@ -355,6 +355,7 @@ Code to check if the requester to is authorized to `GET /users/dduck`. This rout
 
 ```javascript
 const { authenticate } = require('../middleware/auth');
+const ac = require('../services/accesscontrols');
 
 router.get('/:username',
   authenticate,

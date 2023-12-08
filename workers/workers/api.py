@@ -216,14 +216,14 @@ def get_bundle(name: str, checksum: str):
             'name': name,
             'checksum': checksum
         }
-        r = s.get(f'bundle', params=payload)
+        r = s.get(f'bundles', params=payload)
         r.raise_for_status()
         return entity_getter(r.json())
 
 
 def post_bundle(data: dict):
     with APIServerSession(enable_retry=False) as s:
-        r = s.post('bundle', json=data)
+        r = s.post('bundles', json=data)
         r.raise_for_status()
         return r.json()
 
