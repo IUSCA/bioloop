@@ -26,7 +26,7 @@
       </div>
 
       <div class="flex flex-col">
-        <div class="flex justify-center">
+        <div class="flex justify-center mb-5">
           <div class="icon_container__mobile">
             <a href="https://www.iu.edu">
               <svg
@@ -144,7 +144,7 @@
   border-top-color: #3d4c58;
   border-style: solid;
   margin-top: var(--va-divider-margin);
-  margin-bottom: var(--va-divider-margin);
+  margin-bottom: 1rem;
 }
 
 #footer-v1 p {
