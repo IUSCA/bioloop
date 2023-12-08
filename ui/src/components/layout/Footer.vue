@@ -9,9 +9,9 @@
     <va-divider />
 
     <div class="flex flex-col text-center text-base">
-      <div class="flex flex-col content">
-        <div>
-          <p>
+      <div class="max-w-max flex flex-col content mb-3">
+        <div class="max-w-max py-2.5 border-red">
+          <p class="max-w-max">
             Bioloop is a service of the Indiana University
             <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>
             group.
@@ -136,7 +136,6 @@
 
 .content {
   margin: auto;
-  width: 52%;
 }
 
 .divider-secondary {
