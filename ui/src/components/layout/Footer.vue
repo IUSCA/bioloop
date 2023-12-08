@@ -1,7 +1,3 @@
-<!--<script>-->
-<!--import config from "@/config";-->
-<!--</script>-->
-
 <template>
   <footer
     id="footer-v1"
@@ -13,12 +9,20 @@
     <va-divider />
 
     <div class="flex flex-col text-center text-base">
-      <div>
-        <p>
-          Bioloop is a service of the Indiana University
-          <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>
-          group.
-        </p>
+      <div class="flex flex-col content">
+        <div>
+          <p>
+            Bioloop is a service of the Indiana University
+            <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>
+            group.
+          </p>
+        </div>
+        <div
+          class="divider-secondary"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-hidden="true"
+        />
       </div>
 
       <div class="flex flex-col">
@@ -114,7 +118,9 @@
   </footer>
 </template>
 
-<style scoped>
+<script></script>
+
+<style lang="scss" scoped>
 #footer-v1 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -126,6 +132,19 @@
   font-family: "BentonSansRegular", Arial, Helvetica, sans-serif;
   padding-left: 12.8px;
   padding-right: 12.8px;
+}
+
+.content {
+  margin: auto;
+  width: 52%;
+}
+
+.divider-secondary {
+  border-top-width: var(--va-divider-line-width);
+  border-top-color: #3d4c58;
+  border-style: solid;
+  margin-top: var(--va-divider-margin);
+  margin-bottom: var(--va-divider-margin);
 }
 
 #footer-v1 p {
