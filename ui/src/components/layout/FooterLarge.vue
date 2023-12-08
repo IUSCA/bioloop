@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-row">
-    <div class="flex align-center justify-end mr-2.5">
+    <div class="flex justify-end mr-2.5">
       <a class="max-w-max" href="https://www.iu.edu">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -16,7 +16,7 @@
       </a>
     </div>
 
-    <div class="flex align-center max-w-max mx-2.5">
+    <div class="max-w-max mx-2.5">
       <a
         id="accessibility-link"
         href="https://accessibility.iu.edu/assistance"
@@ -26,13 +26,13 @@
       </a>
     </div>
 
-    <div class="flex align-center max-w-max mx-2.5">
+    <div class="max-w-max mx-2.5">
       <a id="privacy-policy-link" href="https://www.iu.edu/privacy">
         Privacy Notice
       </a>
     </div>
 
-    <div class="flex align-center max-w-max ml-2.5">
+    <div class="max-w-max ml-2.5">
       <span>
         <a href="https://www.iu.edu/copyright/index.html">Copyright </a>
         ©{{ new Date().getFullYear() }} The Trustees of
