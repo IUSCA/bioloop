@@ -9,7 +9,7 @@
     <va-divider />
 
     <div class="flex flex-col text-center">
-      <div class="max-w-max flex flex-col content mb-1">
+      <div class="max-w-max flex flex-col content mb-4">
         <div class="max-w-max py-2.5">
           <p class="max-w-max">
             {{ config.appTitle }} is a service of the Indiana University
@@ -28,9 +28,7 @@
       </div>
 
       <FooterMobile v-if="ui.isMobileView" />
-      <div v-else class="large-container">
-        <FooterLarge />
-      </div>
+      <FooterPrimary v-else />
     </div>
   </footer>
 </template>
