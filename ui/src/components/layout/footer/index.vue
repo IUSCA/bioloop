@@ -4,7 +4,7 @@
     role="contentinfo"
     itemScope="itemscope"
     itemType="http://schema.org/CollegeOrUniversity"
-    class="text-sm mb-10"
+    class="text-sm va-text-secondary mb-10"
   >
     <!-- Primary divider -->
     <va-divider />
@@ -25,8 +25,10 @@
         <va-divider />
       </div>
 
-      <FooterMobile v-if="ui.isMobileView" />
-      <FooterPrimary v-else />
+      <div>
+        <FooterMobile v-if="ui.isMobileView" />
+        <FooterPrimary v-else />
+      </div>
     </div>
   </footer>
 </template>
