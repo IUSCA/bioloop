@@ -75,6 +75,7 @@ def main():
               dest_file_path = os.path.join(curr_dest_dir, file)
 
               # Download file
+              print("Downloading file... ", file_path)
               sda.get(file_path, dest_file_path, creds=creds)
 
               # Add file to copied_files
