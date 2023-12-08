@@ -4,7 +4,6 @@ import zipfile
 import time
 
 import workers.sda as sda
-import workers.api as api
 from workers.config import config
 
 # Config variables
@@ -27,7 +26,7 @@ def main():
 
       # Don't copy new files if total size of copied files exceeds size limit
       if total_size > size_limit:
-          print("Total size of copied files exceeds size limit. Sleeping for 5 minutes...")
+          print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 5 minutes...")
           time.sleep(300)
           return
       
