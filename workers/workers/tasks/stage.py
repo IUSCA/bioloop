@@ -77,7 +77,6 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
                                     local_file_path=bundle_download_path,
                                     celery_task=celery_task)
 
-    # bundle_path = Path(f'{str(alias_dir)}/{dataset["name"]}.tar')
     evaluated_checksum = utils.checksum(bundle_download_path)
     if evaluated_checksum != bundle_md5:
         err = f'Expected checksum of downloaded file to be {bundle_md5}, but evaluated checksum was {evaluated_checksum}'
