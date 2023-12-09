@@ -4,7 +4,7 @@
     role="contentinfo"
     itemScope="itemscope"
     itemType="http://schema.org/CollegeOrUniversity"
-    class="text-sm va-text-secondary mb-10"
+    class="text-sm mb-10"
   >
     <!-- Primary divider -->
     <va-divider />
@@ -49,7 +49,6 @@ const ui = useUIStore();
 }
 
 #footer-v1 {
-  /* Force a default size for ems */
   font-family: "BentonSansRegular", Arial, Helvetica, sans-serif;
   padding-left: 12.8px;
   padding-right: 12.8px;

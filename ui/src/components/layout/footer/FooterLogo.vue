@@ -1,5 +1,5 @@
 <template>
-  <a class="max-w-max footer-link" href="https://www.iu.edu">
+  <a class="max-w-max logo" href="https://www.iu.edu">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
