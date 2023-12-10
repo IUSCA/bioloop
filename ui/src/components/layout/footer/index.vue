@@ -9,11 +9,9 @@
     <!-- Primary divider -->
     <va-divider />
 
-    <div class="flex flex-col mt-3.5">
-      <div>
-        <FooterMobile v-if="ui.isMobileView" />
-        <FooterDesktop v-else />
-      </div>
+    <div class="mt-3.5">
+      <FooterMobile v-if="ui.isMobileView" />
+      <FooterDesktop v-else />
     </div>
   </footer>
 </template>
