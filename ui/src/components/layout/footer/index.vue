@@ -4,14 +4,14 @@
     role="contentinfo"
     itemScope="itemscope"
     itemType="http://schema.org/CollegeOrUniversity"
-    class="text-sm mb-10"
+    class="text-sm mb-3"
   >
     <!-- Primary divider -->
     <va-divider />
 
     <div class="flex flex-col text-center">
-      <div class="max-w-max flex flex-col m-auto mb-5">
-        <div class="max-w-max py-0">
+      <div class="max-w-max flex flex-col m-auto">
+        <div class="max-w-max">
           <p class="max-w-max">
             {{ config.appTitle }} is a service of the Indiana University
             <a href="https://sca.iu.edu" class="footer-link"
