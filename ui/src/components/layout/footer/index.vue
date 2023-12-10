@@ -4,27 +4,12 @@
     role="contentinfo"
     itemScope="itemscope"
     itemType="http://schema.org/CollegeOrUniversity"
-    class="text-sm mb-3"
+    class="text-sm pb-3.5"
   >
     <!-- Primary divider -->
     <va-divider />
 
-    <div class="flex flex-col text-center">
-      <div class="max-w-max flex flex-col m-auto">
-        <div class="max-w-max">
-          <p class="max-w-max">
-            {{ config.appTitle }} is a service of the Indiana University
-            <a href="https://sca.iu.edu" class="footer-link"
-              >Scalable Compute Archive (IU SCA)</a
-            >
-            group.
-          </p>
-        </div>
-
-        <!-- Secondary divider -->
-        <va-divider />
-      </div>
-
+    <div class="flex flex-col text-center mt-3.5">
       <div>
         <FooterMobile v-if="ui.isMobileView" />
         <FooterDesktop v-else />
@@ -34,7 +19,6 @@
 </template>
 
 <script setup>
-import config from "@/config";
 import { useUIStore } from "@/stores/ui";
 import FooterDesktop from "@/components/layout/footer/FooterDesktop.vue";
 
