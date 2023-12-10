@@ -9,7 +9,7 @@
     <!-- Primary divider -->
     <va-divider />
 
-    <div class="flex flex-col text-center mt-3.5">
+    <div class="flex flex-col mt-3.5">
       <div>
         <FooterMobile v-if="ui.isMobileView" />
         <FooterDesktop v-else />

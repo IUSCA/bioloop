@@ -1,6 +1,6 @@
 <template>
   <div class="flex justify-center">
-    <div class="flex max-w-max flex-row">
+    <div class="flex flex-row max-w-max">
       <div class="max-w-max mr-2.5">
         <FooterLogo />
       </div>
