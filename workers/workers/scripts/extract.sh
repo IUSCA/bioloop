@@ -14,6 +14,7 @@ case "$(file --brief --mime-type "$1")" in
     tar -xf "$1" -C "$1"
     ;;
   "application/x-gzip"*)
+    mv "$1" "$1.gz"
     gunzip -d "$1" 
     if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
       tar --no-same-permissions -xf - -C "$1"
