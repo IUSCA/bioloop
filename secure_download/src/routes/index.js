@@ -52,39 +52,31 @@ router.get('*', (req, res, next) => {
   }
 });
 
-const DATA_PRODUCTS_UPLOAD_PATH = path.join(config.upload_path, 'dataProductUploads');
+const UPLOAD_PATH = path.join(config.upload_path, 'datasets');
 
-const getDataProductUploadPath = (data_product_name) => path.join(
-  DATA_PRODUCTS_UPLOAD_PATH,
-  data_product_name,
+const getUploadPath = (datasetName) => path.join(
+  UPLOAD_PATH,
+  datasetName,
 );
 
-const getDataProductFileUploadPath = (data_product_name, file_checksum) => path.join(
-  getDataProductUploadPath(data_product_name),
+const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
+  getUploadPath(datasetName),
   'chunked_files',
-  file_checksum,
+  fileChecksum,
 );
 
-const getDataProductFileChunkName = (file_checksum, index) => `${file_checksum}-${index}`;
-
-const getChunkStorage = (data_product_name, file_checksum) => path.join(
-  getDataProductFileUploadPath(
-    data_product_name,
-    file_checksum,
-  ),
-  'chunks',
-);
+const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const chunkStorage = getChunkStorage(req.body.data_product_name, req.body.checksum);
+    const chunkStorage = getFileChunksStorageDir(req.body.data_product_name, req.body.checksum);
     await fsPromises.mkdir(chunkStorage, {
       recursive: true,
     });
     cb(null, chunkStorage);
   },
   filename: (req, file, cb) => {
-    cb(null, getDataProductFileChunkName(req.body.checksum, req.body.index));
+    cb(null, getFileChunkName(req.body.checksum, req.body.index));
   },
 });
 
