@@ -17,14 +17,14 @@ case "$(file --brief --mime-type "$1")" in
   "application/x-gzip"*)
     cat "$1 | gzip -d | tar -xf - -C "
     gunzip -d "$1" 
-    if [ $(file --brief --mime-type "$1") === "application/x-tar" ]; then
+    if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
       tar --no-same-permissions -xf - -C "$1"
     fi
     
     ;;
   "application/x-bzip2"*)
     bunzip2 -c "$1" | tar --no-same-permissions -xf - -C "$1"
-    if [ $(file --brief --mime-type "$1") === "application/x-tar" ]; then
+    if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
       tar --no-same-permissions -xf - -C "$1"
     fi
     ;;
