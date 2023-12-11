@@ -41,5 +41,3 @@ case "$(file --brief --mime-type "$1")" in
     exit 1
     ;;
 esac
-
-echo "Extracted archive: $1"
