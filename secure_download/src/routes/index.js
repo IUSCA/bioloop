@@ -4,7 +4,6 @@ const fs = require('fs');
 const fsPromises = require('fs/promises');
 const path = require('path');
 const multer = require('multer');
-const SparkMD5 = require('spark-md5');
 
 const config = require('config');
 const { createHash } = require('node:crypto');
@@ -101,15 +100,20 @@ router.post(
     console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
     const receivedFilePath = req.file.path;
-    const chunkData = fs.readFileSync(receivedFilePath);
-    const evaluated_checksum = createHash('md5').update(chunkData).digest('hex');
+    fs.readFile(receivedFilePath, (err, data) => {
+      if (err) {
+        throw err;
+      }
 
-    if (evaluated_checksum !== chunk_checksum) {
-      throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
+      const evaluated_checksum = createHash('md5').update(data).digest('hex');
+
+      if (evaluated_checksum !== chunk_checksum) {
+        throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
             + `checksum was ${evaluated_checksum}`);
-    }
+      }
 
-    res.json('success');
+      res.json('success');
+    });
   }),
 );
 
