@@ -11,24 +11,30 @@ fi
 # Identify archive type
 case "$(file --brief --mime-type "$1")" in
   "application/x-tar"*)
+    echo "Extracting tar archive: $1"
     tar -xf "$1" -C "$1"
     ;;
   "application/x-gzip"*)
+    echo "Extracting gzip archive: $1"
     mv "$1" "$1.gz"
     gunzip -d "$1" 
     if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
+      echo "Extracting tar archive: $1"
       tar --no-same-permissions -xf "$1"
     fi
     
     ;;
   "application/x-bzip2"*)
+    echo "Extracting bzip2 archive: $1"
     bunzip2 -d "$1"
     if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
+      echo "Extracting tar archive: $1"
       tar --no-same-permissions -xf "$1"
     fi
     ;;
   "application/zip"*)
-    unzip "$1" -d "$1"
+    echo "Extracting zip archive: $1"
+    unzip -d "$1"
     ;;
   *)
     echo "Does not need unzipping: $1"
