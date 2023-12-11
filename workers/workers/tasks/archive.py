@@ -66,7 +66,8 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'name': bundle_name,
         'path': f'{config["paths"][dataset["type"]]["bundle"]}/{bundle_name}',
         'size': bundle_size,
-        'md5': bundle_checksum
+        'md5': bundle_checksum,
+        'dataset_id': dataset['id']
     }
 
     if delete_local_file:

@@ -23,7 +23,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const { name, checksum } = req.query;
 
-    const filterBy = _.omitBy(_.isUndefined({ name, md5: checksum }));
+    const filterBy = _.omitBy(_.isUndefined)({ name, md5: checksum });
     const bundles = await prisma.bundle.findMany({
       where: filterBy,
     });
@@ -42,3 +42,5 @@ router.post(
     res.json(bundle);
   }),
 );
+
+module.exports = router;
