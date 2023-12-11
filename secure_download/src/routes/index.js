@@ -111,7 +111,7 @@ router.post(
         return;
       }
 
-      res.json('success');
+      res.sendStatus(200);
     });
   }),
 );
