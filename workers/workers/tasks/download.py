@@ -45,7 +45,7 @@ def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     staged_path, alias = Path(dataset['staged_path']), glom(dataset, 'metadata.stage_alias')
     # staged_path.parent = the alias subdirectory
-    bundle_path = dataset['bundle']['path']
+    bundle_path = Path(dataset['bundle']['path'])
 
     if not staged_path.exists():
         # TODO: more robust validation?
