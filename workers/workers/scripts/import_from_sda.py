@@ -123,6 +123,7 @@ def parse_output(input_string):
 
 
 def unzip_file(file_path):
+    print("Unzipping file... ", file_path)
     command = [f'{script_dir}extract.sh', file_path]
 
     stdout, stderr = cmd.execute(command)
@@ -132,6 +133,7 @@ def unzip_file(file_path):
     print("STDERR", stderr)
 
 
+    print("Flatten directory... ", file_path)
     copy_folders_with_files(file_path, dest)
 
 
