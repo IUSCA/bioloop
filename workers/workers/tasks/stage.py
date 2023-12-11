@@ -72,7 +72,7 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 
     bundle = dataset["bundle"]
     bundle_md5 = bundle["md5"]
-    bundle_download_path = bundle["path"]
+    bundle_download_path = Path(bundle["path"])
     wf_utils.download_file_from_sda(sda_file_path=sda_bundle_path,
                                     local_file_path=bundle_download_path,
                                     celery_task=celery_task)
