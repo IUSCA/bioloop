@@ -1,3 +1,12 @@
+/*
+  Warnings:
+
+  - You are about to drop the column `bundle_size` on the `dataset` table. All the data in the column will be lost.
+
+*/
+-- AlterTable
+ALTER TABLE "dataset" DROP COLUMN "bundle_size";
+
 -- CreateTable
 CREATE TABLE "bundle" (
     "id" SERIAL NOT NULL,
