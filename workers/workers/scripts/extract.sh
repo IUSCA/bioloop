@@ -11,11 +11,9 @@ fi
 # Identify archive type
 case "$(file --brief --mime-type "$1")" in
   "application/x-tar"*)
-    cat "$1 | tar -xf - -C "
     tar -xf "$1" -C "$1"
     ;;
   "application/x-gzip"*)
-    cat "$1 | gzip -d | tar -xf - -C "
     gunzip -d "$1" 
     if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
       tar --no-same-permissions -xf - -C "$1"
