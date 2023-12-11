@@ -6,22 +6,21 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-# Get file name without extension
-file_name="${1%.*}"
+
 
 # Identify archive type
 case "$(file --brief --mime-type "$1")" in
   "application/x-tar"*)
-    tar -xf "$1" -C "$file_name"
+    tar -xf "$1" -C "$1"
     ;;
   "application/x-gzip"*)
-    gunzip -c "$1" | tar --no-same-permissions -xf - -C "$file_name"
+    gunzip -c "$1" | tar --no-same-permissions -xf - -C "$1"
     ;;
   "application/x-bzip2"*)
-    bunzip2 -c "$1" | tar --no-same-permissions -xf - -C "$file_name"
+    bunzip2 -c "$1" | tar --no-same-permissions -xf - -C "$1"
     ;;
   "application/zip"*)
-    unzip "$1" -d "$file_name"
+    unzip "$1" -d "$1"
     ;;
   *)
     echo "Does not need unzipping: $1"

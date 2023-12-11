@@ -144,8 +144,7 @@ def copy_folders_with_files(src_dir, dest_dir):
             # copy the directory to the destination path
             shutil.copytree(root, dest_path)
 
-# usage
-copy_folders_with_files('/path/to/source', '/path/to/destination')
+
 
 
 
