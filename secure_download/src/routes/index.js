@@ -106,10 +106,9 @@ router.post(
       }
 
       const evaluated_checksum = createHash('md5').update(data).digest('hex');
-
       if (evaluated_checksum !== chunk_checksum) {
-        throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
-            + `checksum was ${evaluated_checksum}`);
+        res.sendStatus(409).json('Expected checksum for chunk did not equal evaluated checksum');
+        return;
       }
 
       res.json('success');
