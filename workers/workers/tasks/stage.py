@@ -79,9 +79,8 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 
     evaluated_checksum = utils.checksum(bundle_download_path)
     if evaluated_checksum != bundle_md5:
-        err = f'Expected checksum of downloaded file to be {bundle_md5}, but evaluated checksum was {evaluated_checksum}'
-        logger.error(err)
-        raise exc.ValidationFailed(err)
+        raise exc.ValidationFailed(f'Expected checksum of downloaded file to be {bundle_md5},'
+                                   f' but evaluated checksum was {evaluated_checksum}')
 
     # extract the tar file to stage directory
     logger.info(f'extracting tar {bundle_download_path} to {staging_dir}')
