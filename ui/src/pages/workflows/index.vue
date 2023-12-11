@@ -123,22 +123,33 @@
       </div>
 
       <!-- pagination -->
-      <va-pagination
-        v-if="total_pages > 1"
-        v-model="query_params.page"
-        class="my-3 justify-center"
-        :pages="total_pages"
-        :visible-pages="5"
-      />
+      <div
+        class="flex justify-center items-center my-3 gap-5"
+        v-if="total_page_count > 1"
+      >
+        <div class="flex-none">
+          <va-pagination
+            v-model="query_params.page"
+            :pages="total_page_count"
+            :visible-pages="5"
+          />
+        </div>
+        <div class="flex-none">
+          <span>
+            Showing {{ skip + 1 }}-{{ skip + workflows.length }} of
+            {{ total_results }}
+          </span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import useQueryPersistence from "@/composables/useQueryPersistence";
 import workflowService from "@/services/workflow";
 import { useNavStore } from "@/stores/nav";
 import { useBreakpoint } from "vuestic-ui";
-import useQueryPersistence from "@/composables/useQueryPersistence";
 
 const nav = useNavStore();
 const breakpoint = useBreakpoint();
@@ -165,7 +176,7 @@ const auto_refresh_options = [
 ];
 
 const workflows = ref([]);
-const workflows_total_count = ref(0);
+const total_results = ref(0);
 const status_counts = ref({});
 
 const query_params = ref(default_query_params());
@@ -189,8 +200,12 @@ const breakpoint_sm = computed(() => {
   return breakpoint.width < 768;
 });
 
-const total_pages = computed(() => {
-  return Math.ceil(workflows_total_count.value / PAGE_SIZE);
+const total_page_count = computed(() => {
+  return Math.ceil(total_results.value / PAGE_SIZE);
+});
+
+const skip = computed(() => {
+  return PAGE_SIZE * (query_params.value.page - 1);
 });
 
 // fetch data when query params change
@@ -239,7 +254,7 @@ function getWorkflows() {
     .getAll({
       last_task_run: true,
       status: query_params.value.status,
-      skip,
+      skip: skip.value,
       limit: PAGE_SIZE,
     })
     .then((res) => {
@@ -250,7 +265,7 @@ function getWorkflows() {
           collapse: workflows.value[i]?.collapse || false,
         };
       });
-      workflows_total_count.value =
+      total_results.value =
         res.data?.metadata?.total || workflows.value?.length || 0;
     })
     .catch((err) => {
