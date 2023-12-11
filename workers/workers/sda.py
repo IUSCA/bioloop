@@ -91,7 +91,7 @@ def ensure_directory(dir_path: str) -> None:
 
 def list_directory_recursively(dir_path: str, creds: dict = None) -> list[str]:
 
-    print(dir_path)
+    # print(dir_path)
 
     command = ['hsi', '-P', f'ls -R {dir_path}']  
 
@@ -100,7 +100,7 @@ def list_directory_recursively(dir_path: str, creds: dict = None) -> list[str]:
 
     stdout, stderr = cmd.execute(command)
 
-    print("ERRORS", stderr)
-    print("OUTPUT", stdout)
+    # print("ERRORS", stderr)
+    # print("OUTPUT", stdout)
     
     return stdout

@@ -1,22 +1,25 @@
 import os
+import shutil
 import sys
-import zipfile
 import time
 
 import workers.sda as sda
 from workers.config import config
+import workers.cmd as cmd
+
 
 # Config variables
 src_dir = config['import_from_sda']['src_dir']
 dest= config['import_from_sda']['dest_dir']
 size_limit = int(config['import_from_sda']['size_limit'])
 creds = config['import_from_sda']['creds']
+script_dir = config['import_from_sda']['script_dir']
 
 
 def main():
   try:
 
-    # Settings
+    # Starting vars
     total_size = 0
     directory_list = {}
     copied_files = {}
@@ -84,7 +87,7 @@ def main():
                   copied_files[directory].append(file)
         
               # Unzip compressed files
-              process_files(curr_dest_dir)
+              unzip_file(dest_file_path)
 
               # Update total size
               total_size += file_size
@@ -94,6 +97,7 @@ def main():
     print("\nInterrupted by user. Exiting...")
     sys.exit(0)
 
+# Parse output from sda.list_directory_recursively
 def parse_output(input_string):
     directory_structure = {}
     lines = input_string.split('\n')
@@ -118,15 +122,30 @@ def parse_output(input_string):
     return directory_structure
 
 
-def process_files(dest_dir):
-    for root, dirs, files in os.walk(dest_dir):
-        for file in files:
-            if file.endswith('.zip') or not '.' in file:
-                # Unzip file
-                with zipfile.ZipFile(os.path.join(root, file), 'r') as zip_ref:
-                    zip_ref.extractall(dest_dir)
-                # Delete zip file
-                os.remove(os.path.join(root, file))
+def unzip_file(file_path):
+    command = [f'{script_dir}/extract.sh', file_path]
+
+    stdout, stderr = cmd.execute(command)
+
+    # DEBUG PRINTS
+    print("STDOUT", stdout)
+    print("STDERR", stderr)
+
+
+    copy_folders_with_files(file_path, dest)
+
+
+
+def copy_folders_with_files(src_dir, dest_dir):
+    for root, dirs, files in os.walk(src_dir):
+        if files:  # if the directory contains any files
+            # construct the destination path
+            dest_path = os.path.join(dest_dir, os.path.relpath(root, src_dir))
+            # copy the directory to the destination path
+            shutil.copytree(root, dest_path)
+
+# usage
+copy_folders_with_files('/path/to/source', '/path/to/destination')
 
 
 

@@ -15,6 +15,7 @@ IMPORT_DEST_DIR = os.environ['IMPORT_DEST_DIR']
 IMPORT_SIZE_LIMIT = os.environ['IMPORT_SIZE_LIMIT']
 IMPORT_USER = os.environ['IMPORT_USER']
 IMPORT_KEYTAB = os.environ['IMPORT_KEYTAB']
+SCRIPT_DIR = os.environ['SCRIPT_DIR']
 
 
 
@@ -126,6 +127,7 @@ config = {
         'src_dir': IMPORT_SRC_DIR,
         'dest_dir': IMPORT_DEST_DIR,
         'size_limit': IMPORT_SIZE_LIMIT,
-        'creds': { "username": IMPORT_USER, "keytab": IMPORT_KEYTAB }
+        'creds': { "username": IMPORT_USER, "keytab": IMPORT_KEYTAB },
+        'script_dir': SCRIPT_DIR
     }
 }
