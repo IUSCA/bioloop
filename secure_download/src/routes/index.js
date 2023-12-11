@@ -7,6 +7,7 @@ const multer = require('multer');
 const SparkMD5 = require('spark-md5');
 
 const config = require('config');
+const { createHash } = require('node:crypto');
 const { authenticate } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -101,7 +102,7 @@ router.post(
 
     const receivedFilePath = req.file.path;
     const chunkData = fs.readFileSync(receivedFilePath);
-    const evaluated_checksum = SparkMD5.ArrayBuffer.hash(chunkData);
+    const evaluated_checksum = createHash('md5').update(chunkData).digest('hex');
 
     if (evaluated_checksum !== chunk_checksum) {
       throw new Error(`Expected checksum ${chunk_checksum} for chunk ${index}, but evaluated `
