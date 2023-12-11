@@ -15,10 +15,10 @@ case "$(file --brief --mime-type "$1")" in
     tar -xf "$1" -C "$file_name"
     ;;
   "application/x-gzip"*)
-    gunzip -c "$1" | tar -xf - -C "$file_name"
+    gunzip -c "$1" | tar --no-same-permissions -xf - -C "$file_name"
     ;;
   "application/x-bzip2"*)
-    bunzip2 -c "$1" | tar -xf - -C "$file_name"
+    bunzip2 -c "$1" | tar --no-same-permissions -xf - -C "$file_name"
     ;;
   "application/zip"*)
     unzip "$1" -d "$file_name"
