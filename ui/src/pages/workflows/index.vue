@@ -249,7 +249,6 @@ watch(
 );
 
 function getWorkflows() {
-  const skip = PAGE_SIZE * (query_params.value.page - 1);
   return workflowService
     .getAll({
       last_task_run: true,
