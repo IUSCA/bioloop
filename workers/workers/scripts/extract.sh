@@ -12,7 +12,7 @@ fi
 case "$(file --brief --mime-type "$1")" in
   "application/x-tar"*)
     echo "Extracting tar archive: $1"
-    tar -xf "$1" -C "$1"
+    tar -xf "$1" --no-same-permissions
     ;;
   "application/x-gzip"*)
     echo "Extracting gzip archive: $1"
