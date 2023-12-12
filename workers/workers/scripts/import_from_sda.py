@@ -140,9 +140,15 @@ def unzip_file(file_path):
 # Copy to root of destination directory
 def copy_folders_with_files(src_dir):
     for root, dirs, files in os.walk(src_dir):
-        if files:  # if the directory contains any files
+        # if the directory contains any files
+        if files:  
             # construct the destination path
             dest_path = os.path.join(dest, os.path.relpath(root, src_dir))
+
+            # DEBUG PRINTS
+            print("DEST_PATH", dest_path)
+            print("ROOT", root)
+            
             # copy the directory to the destination path
             shutil.copytree(root, dest_path)
 
