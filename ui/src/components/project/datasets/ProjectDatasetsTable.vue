@@ -19,7 +19,10 @@
 
     <!-- filter -->
     <div class="flex-none flex items-center justify-center">
-      <FiltersGroup @update="updateFiltersGroupQuery"></FiltersGroup>
+      <DatasetFiltersGroup
+        :filters="['staged']"
+        @update="updateFiltersGroupQuery"
+      />
     </div>
   </div>
 
