@@ -140,6 +140,7 @@ router.get(
     query('staged').toBoolean().optional(),
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
+    query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -150,6 +151,10 @@ router.get(
         some: {
           project_id: req.params.id,
         },
+      } : undefined,
+      name: req.query.name ? {
+        contains: req.query.name,
+        mode: 'insensitive', // case-insensitive search
       } : undefined,
       is_staged: req.query.staged,
     });
