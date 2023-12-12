@@ -123,7 +123,7 @@ def parse_output(input_string):
 
 
 def unzip_file(file_path):
-    print("Unzipping file... ", file_path)
+    print("Extracting file... ", file_path)
     command = [f'{script_dir}extract.sh', file_path]
 
     stdout, stderr = cmd.execute(command)
