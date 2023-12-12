@@ -134,7 +134,7 @@ def unzip_file(file_path):
 
 
     print("Flatten directory... ", file_path)
-    copy_folders_with_files(file_path, dest)
+    copy_folders_with_files(file_path)
 
 
 # Copy to root of destination directory
