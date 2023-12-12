@@ -7,7 +7,6 @@ const toast = useToastStore();
 class DatasetService {
   /**
    *
-   * @param project_id
    * @param deleted   Boolean field to filter datasets by `is_deleted` field
    * @param processed Field to filter datasets by number of associated workflows. Can be one of
    *                  'some' or 'none'
@@ -23,7 +22,6 @@ class DatasetService {
    * @returns         Object containing matching datasets, and count of matching datasets
    */
   getAll({
-    project_id = null,
     deleted = null,
     processed = null,
     archived = null,
@@ -36,7 +34,6 @@ class DatasetService {
   } = {}) {
     return api.get("/datasets", {
       params: {
-        project_id,
         deleted,
         processed,
         archived,
