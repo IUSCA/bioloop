@@ -22,15 +22,17 @@
               <DatasetInfo :dataset="dataset"></DatasetInfo>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
+
+                <!-- Download Modal -->
+                <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
-                  :disabled="!dataset.num_files"
+                  class="shadow flex-none"
                   preset="primary"
-                  @click="navigateToFileBrowser"
-                  class="flex-none"
-                  :color="isDark ? '#9171f8' : '#A020F0'"
-                >
-                  <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
-                </va-button>
+                  color="info"
+                  icon="cloud_download"
+                  @click="openModalToDownloadDataset"
+                  :disabled="!dataset.num_files"
+                />
 
                 <!-- edit description -->
                 <!-- <va-button
@@ -306,9 +308,6 @@ import config from "@/config";
 import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
-const router = useRouter();
-const route = useRoute();
-const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
@@ -319,6 +318,7 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
+const downloadModal = ref(null);
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
@@ -446,13 +446,17 @@ function openModalToEditDataset() {
   editModal.value.show();
 }
 
-function navigateToFileBrowser() {
-  if (props.appendFileBrowserUrl) {
-    router.push(route.path + "/filebrowser");
-  } else {
-    router.push(`/datasets/${props.datasetId}/filebrowser`);
-  }
+function openModalToDownloadDataset() {
+  downloadModal.value.show();
 }
+
+// function navigateToFileBrowser() {
+//   if (props.appendFileBrowserUrl) {
+//     router.push(route.path + "/filebrowser");
+//   } else {
+//     router.push(`/datasets/${props.datasetId}/filebrowser`);
+//   }
+// }
 </script>
 
 <route lang="yaml">
