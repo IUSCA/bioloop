@@ -11,6 +11,7 @@ const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
+const datasetService = require('../services/dataset');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -131,6 +132,78 @@ router.get(
     res.json(project);
   }),
 );
+
+router.get(
+  '/:id/datasets',
+  isPermittedTo('read'),
+  validate([
+    query('staged').toBoolean().optional(),
+    query('limit').isInt().toInt().optional(),
+    query('offset').isInt().toInt().optional(),
+    query('sortBy').isObject().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const sortBy = req.query.sortBy || {};
+
+    const query_obj = _.omitBy(_.isUndefined)({
+      projects: req.params.id ? {
+        some: {
+          project_id: req.params.id,
+        },
+      } : undefined,
+      is_staged: req.query.staged,
+    });
+
+    const filterQuery = { where: query_obj };
+    const datasetRetrievalQuery = {
+      skip: req.query.offset,
+      take: req.query.limit,
+      ...filterQuery,
+      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
+      include: {
+        ...datasetService.INCLUDE_WORKFLOWS,
+        projects: { include: { project: true } },
+      },
+    };
+
+    const [datasets, count] = await prisma.$transaction([
+      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
+      prisma.dataset.count({ ...filterQuery }),
+    ]);
+
+    const project_datasets = datasets.map((d) => {
+      const project = d.projects.find((e) => e.project_id === req.params.id);
+      return {
+        project_id: req.params.id,
+        dataset_id: d.id,
+        dataset: d,
+        project,
+        assigned_at: project.assigned_at,
+      };
+    });
+
+    res.json({
+      metadata: { count },
+      datasets: project_datasets,
+    });
+  }),
+);
+
+const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
+  const nullable_order_by_fields = ['du_size', 'size'];
+
+  if (!field || !sortOrder) {
+    return {};
+  }
+  if (nullable_order_by_fields.includes(field)) {
+    return {
+      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
+    };
+  }
+  return {
+    [field]: sortOrder,
+  };
+};
 
 router.get(
   '/:username/all',

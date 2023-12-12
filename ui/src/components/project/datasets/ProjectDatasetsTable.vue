@@ -162,21 +162,18 @@ import { HalfCircleSpinner } from "epic-spinners";
 import { useColors } from "vuestic-ui";
 import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
-import datasetService from "@/services/dataset";
+import projectService from "@/services/projects";
 
 const { colors } = useColors();
 const auth = useAuthStore();
 
 const props = defineProps({
-  datasets: {
-    type: Array,
-    default: () => [],
-  },
   project: {
     type: Object,
   },
 });
 
+const projectIdRef = toRef(() => props.project.id);
 const loading = ref(false);
 const projectDatasets = ref([]);
 const _datasets = ref({});
@@ -208,7 +205,6 @@ const search_query = computed(() => {
 // pages for pagination.
 const datasets_filter_query = computed(() => {
   return {
-    project_id: props.project.id,
     ...filters_group_query.value,
     ...(!!search_query.value && { ...search_query.value }),
   };
@@ -243,10 +239,16 @@ const updateFiltersGroupQuery = (newVal) => {
 };
 
 const fetch_project_datasets = () => {
-  datasetService.getAll(datasets_retrieval_query.value).then((res) => {
-    projectDatasets.value = res.data.datasets;
-    total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
-  });
+  if (!props.project.id) return [];
+  projectService
+    .getDatasets({
+      id: props.project.id,
+      params: datasets_retrieval_query.value,
+    })
+    .then((res) => {
+      projectDatasets.value = res.data.datasets.map((d) => d.dataset);
+      total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
+    });
 };
 
 // _datasets is a mapping of dataset_ids to dataset objects. While polling one or more datasets,
@@ -274,10 +276,6 @@ watch(datasets_retrieval_query, (newQuery, oldQuery) => {
   if (!_.isEqual(newQuery, oldQuery)) {
     fetch_project_datasets();
   }
-});
-
-onMounted(() => {
-  fetch_project_datasets();
 });
 
 const rows = computed(() => {
@@ -318,6 +316,11 @@ const poll = useIntervalFn(
     immediate: false,
   },
 );
+
+// Once a project id has been obtained, fetch the associated datasets
+watch(projectIdRef, () => {
+  fetch_project_datasets();
+});
 
 watch(tracking, () => {
   // console.log("watch tracking", tracking.value.length);

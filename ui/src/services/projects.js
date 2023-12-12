@@ -82,6 +82,12 @@ class projectService {
       });
   }
 
+  getDatasets({ id, params }) {
+    return api.get(`/projects/${id}/datasets`, {
+      params,
+    });
+  }
+
   setDatasets({ id, dataset_ids }) {
     return api
       .put(`/projects/${id}/datasets`, {
