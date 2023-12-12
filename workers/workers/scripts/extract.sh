@@ -40,6 +40,5 @@ case "$(file --brief --mime-type "$1")" in
     ;;
   *)
     echo "Does not need unzipping: $1"
-    exit 1
     ;;
 esac

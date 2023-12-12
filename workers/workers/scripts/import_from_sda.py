@@ -21,7 +21,7 @@ def main():
 
     # Starting vars
     total_size = 0
-    directory_list = {}
+    directory_list = None
     copied_files = {}
     still_copying = True
 
@@ -34,7 +34,7 @@ def main():
           continue
       
       # Get directory list if empty
-      if directory_list == {}:
+      if directory_list == None:
         directory_list = sda.list_directory_recursively(src_dir, creds=creds)
         directory_list = parse_output(directory_list)
 
@@ -42,7 +42,7 @@ def main():
       print("DIRECTORY_LIST", directory_list)
 
       # Break out of loop if all files have been copied
-      if copied_files == directory_list:
+      if directory_list == {}:
           still_copying = False
           return
       
@@ -72,7 +72,7 @@ def main():
               if total_size + file_size > size_limit:
                   print(f"Total size of current file: {file_size} exceeds size limit: {size_limit}. Sleeping for 10...")
                   time.sleep(10)
-                  continue
+                  return
               
               # Create full destination file path
               dest_file_path = os.path.join(curr_dest_dir, file)
@@ -85,6 +85,9 @@ def main():
               if directory not in copied_files:
                   copied_files[directory] = []
                   copied_files[directory].append(file)
+
+              # Remove file from directory_list
+              directory_list[directory].remove(file)
         
               # Unzip compressed files
               unzip_file(dest_file_path)
@@ -132,7 +135,7 @@ def unzip_file(file_path):
     print("STDOUT", stdout)
     print("STDERR", stderr)
 
-
+ 
     print("Flatten directory... ", file_path)
     copy_folders_with_files(file_path)
 
@@ -142,13 +145,14 @@ def copy_folders_with_files(src_dir):
     for root, dirs, files in os.walk(src_dir):
         # if the directory contains any files
         if files:  
+            
             # construct the destination path
             dest_path = os.path.join(dest, os.path.relpath(root, src_dir))
 
             # DEBUG PRINTS
             print("DEST_PATH", dest_path)
             print("ROOT", root)
-            
+
             # copy the directory to the destination path
             shutil.copytree(root, dest_path)
 
