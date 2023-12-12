@@ -193,6 +193,9 @@ function fetch_project() {
     .getById({
       id: projectId.value,
       forSelf: !auth.canOperate,
+      query: {
+        include_datasets: false,
+      },
     })
     .then((res) => {
       project.value = res.data;

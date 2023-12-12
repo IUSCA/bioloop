@@ -17,11 +17,11 @@ class projectService {
     });
   }
 
-  getById({ id, forSelf }) {
+  getById({ id, forSelf, query }) {
     const username = auth.user.username;
     return forSelf
-      ? api.get(`/projects/${username}/${id}`)
-      : api.get(`/projects/${id}`);
+      ? api.get(`/projects/${username}/${id}`, { params: query })
+      : api.get(`/projects/${id}`, { params: query });
   }
 
   createProject({ project_data, dataset_ids, user_ids }) {
