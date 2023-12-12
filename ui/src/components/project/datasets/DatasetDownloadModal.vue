@@ -67,7 +67,7 @@
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
               <span class="">
-                Size: {{ formatBytes(dataset.bundle_size) }}
+                Size: {{ formatBytes(dataset.bundle.size) }}
               </span>
             </va-list-item-label>
           </va-list-item-section>

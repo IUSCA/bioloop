@@ -30,6 +30,7 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
               id: true,
             },
           },
+          bundle: true,
         },
       },
       assigned_at: true,
