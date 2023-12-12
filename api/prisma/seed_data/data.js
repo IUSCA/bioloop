@@ -314,6 +314,14 @@ const project_contact_assoc = [
   },
 ];
 
+const bundles = [{
+  name: 'dataset_8_bundle',
+  path: '/path/to/bundle',
+  md5: 'md5',
+  size: 432445,
+  dataset_id: 3,
+}];
+
 module.exports = {
   roles,
   admins,
@@ -328,4 +336,5 @@ module.exports = {
   project_user_assoc,
   project_dataset_assoc,
   project_contact_assoc,
+  bundles,
 };

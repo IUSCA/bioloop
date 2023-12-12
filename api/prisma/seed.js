@@ -160,6 +160,11 @@ async function main() {
   });
   await Promise.all(datasetPromises);
 
+  // create bundle data
+  await prisma.bundle.createMany({
+    data: data.bundles,
+  });
+
   // upsert raw data - data product associations
   await Promise.all(
     data.dataset_heirarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
