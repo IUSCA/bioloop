@@ -108,17 +108,12 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  project_id, deleted, processed, archived, staged, type, name, days_since_last_staged,
+  deleted, processed, archived, staged, type, name, days_since_last_staged,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
-    projects: project_id ? {
-      some: {
-        project_id,
-      },
-    } : undefined,
     type,
     name: name ? {
       contains: name,
@@ -193,7 +188,6 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('project_id').isUUID(4).optional(),
     query('deleted').toBoolean().default(false),
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
@@ -211,7 +205,6 @@ router.get(
     const sortBy = req.query.sortBy || {};
 
     const query_obj = buildQueryObject({
-      project_id: req.query.project_id,
       deleted: req.query.deleted,
       processed: req.query.processed,
       archived: req.query.archived,

@@ -82,8 +82,6 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('include_datasets').toBoolean().optional().default(true),
-    query('include_users').toBoolean().optional().default(true),
-    query('include_contacts').toBoolean().optional().default(true),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -240,8 +238,6 @@ router.get(
   '/:username/:id',
   validate([
     query('include_datasets').toBoolean().optional().default(true),
-    query('include_users').toBoolean().optional().default(true),
-    query('include_contacts').toBoolean().optional().default(true),
   ]),
   isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {

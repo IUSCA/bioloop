@@ -55,6 +55,15 @@ const filtersConfig = [
   },
 ];
 
+const checkboxFilters = computed(() => {
+  if (props.filters.length === 0) {
+    return filtersConfig;
+  }
+  return filtersConfig.filter((e) => {
+    return props.filters.includes(e.field);
+  });
+});
+
 const checkboxes = ref({
   deleted: false,
   saved: false,
@@ -70,15 +79,6 @@ const activeCountText = computed(() => {
     0,
   );
   return activeCount > 0 ? ` (${activeCount})` : "";
-});
-
-const checkboxFilters = computed(() => {
-  if (props.filters.length === 0) {
-    return filtersConfig;
-  }
-  return filtersConfig.filter((e) => {
-    return props.filters.includes(e.field);
-  });
 });
 
 function handle_filters() {
