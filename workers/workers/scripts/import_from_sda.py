@@ -154,7 +154,7 @@ def copy_folders_with_files(src_dir):
             print("ROOT", root)
 
             # copy the directory to the destination path
-            shutil.copytree(root, dest_path)
+            shutil.move(root, dest_path)
 
 
 
