@@ -246,6 +246,21 @@ const fetch_project_datasets = () => {
   });
 };
 
+// _datasets is a mapping of dataset_ids to dataset objects. While polling one or more datasets,
+// this object is updated with latest dataset values.
+watch(
+  projectDatasets,
+  () => {
+    _datasets.value = projectDatasets.value.reduce((acc, obj) => {
+      acc[obj.id] = obj;
+      return acc;
+    }, {});
+  },
+  {
+    immediate: true,
+  },
+);
+
 watch([datasets_sort_query, datasets_filter_query], () => {
   // when sorting or filtering criteria changes, show results starting from the first page
   currentPageIndex.value = 1;
@@ -263,7 +278,7 @@ onMounted(() => {
 });
 
 const rows = computed(() => {
-  return projectDatasets.value.map((ds) => ({
+  return Object.values(_datasets.value).map((ds) => ({
     ...ds,
     is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
   }));
