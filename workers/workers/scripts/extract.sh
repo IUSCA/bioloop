@@ -39,6 +39,6 @@ case "$(file --brief --mime-type "$1")" in
     unzip -d "$1"
     ;;
   *)
-    echo "Does not need unzipping: $1"
+    echo "NOT SUPPORTED"
     ;;
 esac

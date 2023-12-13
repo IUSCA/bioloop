@@ -141,6 +141,8 @@ def unzip_file(file_path):
     print("STDOUT", stdout)
     print("STDERR", stderr)
 
+    if stdout == "NOT SUPPORTED":
+      return
  
     print("Flatten directory... ", os.path.dirname(file_path))
     move_folders_with_files(os.path.dirname(file_path))
