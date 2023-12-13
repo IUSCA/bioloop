@@ -12,15 +12,14 @@ def main():
         # if the directory contains any files
         if files:
 
-            # construct the destination path
-            dest_path = os.path.join(dest, os.path.relpath(root, src_dir))
+
 
             # DEBUG PRINTS
-            print("DEST_PATH", dest_path)
+            print("DEST_PATH", dest)
             print("ROOT", root)
 
             # Move the directory to the destination path
-            shutil.move(root, dest_path)
+            shutil.move(root, dest)
 
   # Handle keyboard interrupt
   except KeyboardInterrupt:
