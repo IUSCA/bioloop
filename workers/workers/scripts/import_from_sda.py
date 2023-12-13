@@ -15,6 +15,8 @@ size_limit = int(config['import_from_sda']['size_limit'])
 creds = config['import_from_sda']['creds']
 script_dir = config['import_from_sda']['script_dir']
 
+# Custom exception
+class ContinueException(Exception): pass
 
 def main():
   try:
@@ -26,80 +28,82 @@ def main():
     still_copying = True
 
     while still_copying:
-
-      # Don't copy new files if total size of copied files exceeds size limit
-      if total_size > size_limit:
-          print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 5 min ...")
-          time.sleep(300)
-          continue
-      
-      # Get directory list if empty
-      if directory_list == None:
-        directory_list = sda.list_directory_recursively(src_dir, creds=creds)
-        directory_list = parse_output(directory_list)
-
-      # DEBUG PRINTS
-      print("DIRECTORY_LIST", directory_list)
-
-      # Break out of loop if all files have been copied
-      if directory_list == {}:
-          still_copying = False
-          return
-      
-      
-      # Download files from SDA
-      for directory, files in directory_list.items():
-          
-          # Create landing directory
-          curr_dest_dir = os.path.join(dest, os.path.basename(directory))
-          os.makedirs(curr_dest_dir, exist_ok=True)
-          print("Created landing directory... ", curr_dest_dir)
-
-          
-          # DEBUG PRINTS
-          print("DIRECTORY", directory)
-          print("FILES", files)
-
-          for file in files:
-              # Recreate landing directory if it was deleted by unzipping process
-              if not os.path.exists(curr_dest_dir):
-                curr_dest_dir = os.path.join(dest, os.path.basename(directory))
-                os.makedirs(curr_dest_dir, exist_ok=True)
-                print("Re-created landing directory... ", curr_dest_dir)
-
-              # DEBUG PRINTS
-              print("FILE", file)
-
-              # Create full file path
-              file_path = os.path.join(directory, file)
-
-              # Pause if total size of copied files exceeds size limit
-              file_size = sda.get_size(file_path, creds=creds)
-              if total_size + file_size > size_limit:
-                  print(f"Total size of current file: {file_size} exceeds size limit: {size_limit}. Sleeping for 10...")
-                  time.sleep(300)
-                  break
-              
-              # Create full destination file path
-              dest_file_path = os.path.join(curr_dest_dir, file)
-
-              # Download file
-              print("Downloading file... ", file_path)
-              sda.get(file_path, dest_file_path, creds=creds)
-
-              # Add file to copied_files
-              if directory not in copied_files:
-                  copied_files[directory] = []
-                  copied_files[directory].append(file)
-
-              # Remove file from directory_list
-              directory_list[directory].remove(file)
+      try:
+        # Don't copy new files if total size of copied files exceeds size limit
+        if total_size > size_limit:
+            print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 5 min ...")
+            time.sleep(300)
+            continue
         
-              # Unzip compressed files
-              unzip_file(dest_file_path)
+        # Get directory list if empty
+        if directory_list == None:
+          directory_list = sda.list_directory_recursively(src_dir, creds=creds)
+          directory_list = parse_output(directory_list)
 
-              # Update total size
-              total_size += file_size
+        # DEBUG PRINTS
+        print("DIRECTORY_LIST", directory_list)
+
+        # Break out of loop if all files have been copied
+        if directory_list == {}:
+            still_copying = False
+            return
+        
+        
+        # Download files from SDA
+        for directory, files in directory_list.items():
+            
+            # Create landing directory
+            curr_dest_dir = os.path.join(dest, os.path.basename(directory))
+            os.makedirs(curr_dest_dir, exist_ok=True)
+            print("Created landing directory... ", curr_dest_dir)
+
+            
+            # DEBUG PRINTS
+            print("DIRECTORY", directory)
+            print("FILES", files)
+
+            for file in files:
+                # Recreate landing directory if it was deleted by unzipping process
+                if not os.path.exists(curr_dest_dir):
+                  curr_dest_dir = os.path.join(dest, os.path.basename(directory))
+                  os.makedirs(curr_dest_dir, exist_ok=True)
+                  print("Re-created landing directory... ", curr_dest_dir)
+
+                # DEBUG PRINTS
+                print("FILE", file)
+
+                # Create full file path
+                file_path = os.path.join(directory, file)
+
+                # Pause if total size of copied files exceeds size limit
+                file_size = sda.get_size(file_path, creds=creds)
+                if total_size + file_size > size_limit:
+                    print(f"Total size of current file: {file_size} exceeds size limit: {size_limit}. Sleeping for 10...")
+                    time.sleep(300)
+                    raise ContinueException
+                
+                # Create full destination file path
+                dest_file_path = os.path.join(curr_dest_dir, file)
+
+                # Download file
+                print("Downloading file... ", file_path)
+                sda.get(file_path, dest_file_path, creds=creds)
+
+                # Add file to copied_files
+                if directory not in copied_files:
+                    copied_files[directory] = []
+                    copied_files[directory].append(file)
+
+                # Remove file from directory_list
+                directory_list[directory].remove(file)
+          
+                # Unzip compressed files
+                unzip_file(dest_file_path)
+
+                # Update total size
+                total_size += file_size
+      except ContinueException:
+        continue
 
   # Handle keyboard interrupt
   except KeyboardInterrupt:
@@ -131,6 +135,7 @@ def parse_output(input_string):
     return directory_structure
 
 
+
 def unzip_file(file_path):
     print("Extracting file... ", file_path)
     command = [f'{script_dir}extract.sh', file_path]
@@ -141,7 +146,7 @@ def unzip_file(file_path):
     print("STDOUT", stdout)
     print("STDERR", stderr)
 
-    if stdout == "NOT SUPPORTED":
+    if "NOT SUPPORTED" in stdout:
       return
  
     print("Flatten directory... ", os.path.dirname(file_path))
