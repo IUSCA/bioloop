@@ -37,7 +37,7 @@ router.get(
     if (req.query.type) {
       result = await prisma.$queryRaw`
         select count(*)     as "count",
-        sum(du_size) as total_size,
+        sum(du_size) as total_size
         from dataset
         where is_deleted = false and type = ${req.query.type};
       `;
@@ -56,7 +56,7 @@ router.get(
       result = await prisma.$queryRaw`
         select 
           count(*) as "count", 
-          sum(du_size) as total_size, 
+          sum(du_size) as total_size
         from dataset 
         where is_deleted = false;
       `;
