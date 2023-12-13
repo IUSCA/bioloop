@@ -158,7 +158,7 @@
       <!-- pagination -->
       <div
         class="flex flex-wrap justify-between items-center my-3 gap-5 ml-3"
-        v-if="query_params.failure_mode == null"
+        v-if="query_params.failure_mode == null && workflows.length > 0"
       >
         <div class="flex-none">
           <span>
