@@ -33,6 +33,7 @@ def main():
         print("DIRECTORY_LIST", directory_list)
 
         # Don't copy new files if total size of copied files exceeds size limit
+        total_size = get_directory_size(dest)
         if total_size > size_limit:
             print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 5 min ...")
             time.sleep(300)
@@ -80,6 +81,7 @@ def main():
 
                 # Pause if total size of copied files exceeds size limit
                 file_size = sda.get_size(file_path, creds=creds)
+                total_size = get_directory_size(dest)
                 if total_size + file_size > size_limit:
                     print(f"Total size of current file: {file_size} exceeds size limit: {size_limit}. Sleeping for 10...")
                     time.sleep(300)
@@ -173,7 +175,14 @@ def move_folders_with_files(src_dir):
     shutil.rmtree(src_dir)
 
 
-
+# Get size of directory
+def get_directory_size(directory):
+    total = 0
+    for path, dirs, files in os.walk(directory):
+        for f in files:
+            fp = os.path.join(path, f)
+            total += os.path.getsize(fp)
+    return total
 
 
 if __name__ == "__main__":
