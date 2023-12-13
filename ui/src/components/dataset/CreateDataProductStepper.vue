@@ -103,23 +103,14 @@
             @file-added="
               (files) => {
                 setFiles(files);
-                isNoFilesSelectedAlertVisible = false;
+                isSubmissionAlertVisible = false;
               }
             "
             :disabled="submitAttempted"
           />
 
-          <va-alert
-            class="mt-4"
-            v-if="isNoFilesSelectedAlertVisible"
-            color="danger"
-            border="left"
-            dense
-            >At least one file must be selected to create a Data Product
-          </va-alert>
-
           <va-data-table
-            v-if="!(isNoFilesSelectedAlertVisible || noFilesSelected)"
+            v-if="!(isSubmissionAlertVisible || noFilesSelected)"
             :items="dataProductFiles"
             :columns="columns"
           >
@@ -242,7 +233,6 @@
             @click="
               () => {
                 isSubmissionAlertVisible = false;
-                isNoFilesSelectedAlertVisible = false;
                 prevStep();
               }
             "
@@ -337,7 +327,6 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
-const isNoFilesSelectedAlertVisible = ref(false);
 const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
@@ -652,7 +641,10 @@ const handleSubmit = () => {
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
     if (noFilesSelected.value) {
-      isNoFilesSelectedAlertVisible.value = true;
+      isSubmissionAlertVisible.value = true;
+      submissionAlert.value =
+        "At least one file must be selected to create a Data Product";
+      submissionAlertColor.value = "warning";
     } else {
       if (isValid.value) {
         handleSubmit();
