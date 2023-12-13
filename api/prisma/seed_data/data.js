@@ -359,7 +359,7 @@ const dataset_file_types = [{
   extension: '.tif',
 }];
 
-const data_product_upload_logs = [{
+const dataset_upload_logs = [{
   status: 'PROCESSING',
   dataset_id: 11,
   user_id: 60,
@@ -383,7 +383,7 @@ module.exports = {
   metrics,
   dataset_audit_data,
   dataset_file_types,
-  data_product_upload_logs,
+  dataset_upload_logs,
   contacts,
   projects,
   project_user_assoc,

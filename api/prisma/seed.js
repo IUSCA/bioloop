@@ -288,7 +288,7 @@ async function main() {
   });
 
   // create data upload entries
-  const dataset_uploads = data.data_product_upload_logs;
+  const dataset_uploads = data.dataset_upload_logs;
   const operators = await prisma.user.findMany({
     where: {
       user_role: {
