@@ -80,6 +80,11 @@ const uploadFileStorage = multer.diskStorage({
   },
 });
 
+/**
+ * Accepts a multipart/form-data request, validates the checksum of the bytes received, and upon
+ * successful validation, writes the received bytes to the filesystem. Path of the file is
+ * constructed from metadata fields present in the request body.
+ */
 router.post(
   '/file-chunk',
   multer({ storage: uploadFileStorage }).single('file'),
@@ -87,6 +92,10 @@ router.post(
     const {
       name, data_product_name, total, index, size, checksum, chunk_checksum,
     } = req.body;
+
+    if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
+      res.sendStatus(400);
+    }
 
     // eslint-disable-next-line no-console
     console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
