@@ -61,6 +61,12 @@ def main():
           print("FILES", files)
 
           for file in files:
+              # Recreate landing directory if it was deleted by unzipping process
+              if not os.path.exists(curr_dest_dir):
+                curr_dest_dir = os.path.join(dest, os.path.basename(directory))
+                os.makedirs(curr_dest_dir, exist_ok=True)
+                print("Re-created landing directory... ", curr_dest_dir)
+
               # DEBUG PRINTS
               print("FILE", file)
 
