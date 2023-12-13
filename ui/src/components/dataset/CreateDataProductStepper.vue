@@ -103,7 +103,7 @@
             @file-added="
               (files) => {
                 setFiles(files);
-                isFileUploadAlertVisible = false;
+                isNoFilesSelectedAlertVisible = false;
               }
             "
             :disabled="submitAttempted"
@@ -111,7 +111,7 @@
 
           <va-alert
             class="mt-4"
-            v-if="isFileUploadAlertVisible"
+            v-if="isNoFilesSelectedAlertVisible"
             color="danger"
             border="left"
             dense
@@ -119,7 +119,7 @@
           </va-alert>
 
           <va-data-table
-            v-if="!(isFileUploadAlertVisible || noFilesSelected)"
+            v-if="!(isNoFilesSelectedAlertVisible || noFilesSelected)"
             :items="dataProductFiles"
             :columns="columns"
           >
@@ -242,7 +242,7 @@
             @click="
               () => {
                 isSubmissionAlertVisible = false;
-                isFileUploadAlertVisible = false;
+                isNoFilesSelectedAlertVisible = false;
                 prevStep();
               }
             "
@@ -337,7 +337,7 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
-const isFileUploadAlertVisible = ref(false);
+const isNoFilesSelectedAlertVisible = ref(false);
 const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
@@ -652,7 +652,7 @@ const handleSubmit = () => {
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
     if (noFilesSelected.value) {
-      isFileUploadAlertVisible.value = true;
+      isNoFilesSelectedAlertVisible.value = true;
     } else {
       if (isValid.value) {
         handleSubmit();
