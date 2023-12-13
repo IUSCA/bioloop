@@ -44,7 +44,9 @@ For each upload, information is logged to the following relational tables (Postg
 
 3. Chunks are uploaded sequentially. If a chunk upload fails, the client-side retries the upload upto 5 times before failing.
 
-4. The client first sends an HTTP request to upload a chunk to our main API server, which is then forwarded to another HTTP endpoint in the secure_download NGINX server, which writes the received chunk to the filesystem, after validating its checksum (this is the first stage of checksum validation).
+4. The client first sends an HTTP request to upload a chunk to our main API server, which is then forwarded to another HTTP endpoint in the secure_upload NGINX server, which writes the received chunk to the filesystem, after validating its checksum (this is the first stage of checksum validation).
+
+5. After all files' chunks are uploaded successfully, the client-side makes a request to the Rhythm API to trigger the `process_uploads` worker.
 
 ### 4.3 Directory structure
 The following directories on the Colo node are used for uploads:
@@ -55,9 +57,9 @@ Chunks are written to the `.../chunked_files/[file_md5]` subdirectory. Each chun
 
 ### 4.4 Access Control
 
-To verify that a user is authorized to initiate an upload, we perform role-based checking when the Express API receives a request to upload a chunk. This validation cannot be performed on the secure_download NGINX server, since we only maintain access-control data on the API server.
+To verify that a user is authorized to initiate an upload, we perform role-based checking when the Express API receives a request to upload a chunk. This validation cannot be performed on the secure_upload NGINX server, since we only maintain access-control data on the API server.
 
-To be able to reach the oauth-secured secure_download API, the client-side gets a token using the Signet service, and attaches it to the Authorization header before sending the request to secure_download.
+To be able to reach the oauth-secured secure_upload API, the client-side gets a token using the Signet service, and attaches it to the Authorization header before sending the request to secure_upload.
 
 ### 4.5 Status
 

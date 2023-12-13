@@ -1,0 +1,14 @@
+sequenceDiagram
+    rect rgb(191, 223, 255)
+    UIClient->>APIServer: get upload token
+    APIServer->>Postgres: check if user is authorized to upload
+    Postgres->>APIServer: persisted metadata about the upload
+    APIServer->>SignetOAuth: request token with client-credentials flow + upload scope
+    SignetOAuth->>APIServer: receive requested token
+    APIServer->>SecureUploadAPI: forward request with token in Authorization header
+    APIServer->>RhythmAPIServer: (after all file chunks are uploaded)
+    RhythmAPIServer->>Worker: trigger worker to initiate processing of the upload
+    Worker->>APIServer: update upload status
+    end
+
+[![](https://mermaid.live/view#pako:eNp1U02PmzAQ_Ssjn7YqjRLyRTisFLWXPbRdNVpVqnJxYAArYFN7vGk2yn_vgEOUdFUOgP3mvZl5Hp9EZnIUqXD426PO8IuSpZXNVgM_FjMCW-4eJqtJBHE85dd8_iGAL0-fa4WaPj0-rp-fNmhf0aZQIoFvayNzILNHHWKvARz8bByVFl0KWYXZHlQB3qEF5UB6qoxVb9iRLzJBYCDdJ2vROuWIwxskmUuSIHfGE1CFd_Tb_BtVaqTva86VcofctqNQKxwUVZCFrjKLOX-VrB0UtTnAx6Evl5kWg-6N1n1l7ByqVxz08b9ubDDzFl96Zd5PoTD2IG1-rayvKZSnNKwvDklSRkOFMkf7XvRHdaSquSnnQRbEFsu6hkLVyM57vWe_7WAT5pdT_YfKYj-N3XcaZFVZssihX3cHpLRifwihtSZD55QuwRTvzA8C9_74Nu-Ig6MkybsQjZppIhIN2kaqnEfz1AFbwbINbkXKvzkW0te0FVGAhuHt0FOQ4c3KHDYX4JtvdjwrHU7W94d33uozp-GRM5ujzkTaAZEIhV1uwbCJuSJjv4ab0l-YSLRS_zLmGsJLkZ7EH5GuVqPJfDGOk-VsOZ8ni0gcRToZJ6PpajLjb7xcTBfL-ByJt54_HiXLOFnNkvF8miw6_PwXBc00dQ)
