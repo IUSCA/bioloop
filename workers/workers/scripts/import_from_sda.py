@@ -29,6 +29,9 @@ def main():
 
     while still_copying:
       try:
+        # DEBUG PRINTS
+        print("DIRECTORY_LIST", directory_list)
+
         # Don't copy new files if total size of copied files exceeds size limit
         if total_size > size_limit:
             print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 5 min ...")
