@@ -144,17 +144,17 @@ def unzip_file(file_path):
 def move_folders_with_files(src_dir):
     for root, dirs, files in os.walk(src_dir):
         # if the directory contains any files
-        if files:  
+        if files:
             
-            # construct the destination path
-            dest_path = os.path.join(dest, os.path.relpath(root, src_dir))
-
             # DEBUG PRINTS
-            print("DEST_PATH", dest_path)
+            print("DEST_PATH", dest)
             print("ROOT", root)
 
             # Move the directory to the destination path
-            shutil.move(root, dest_path)
+            shutil.move(root, dest)
+
+    # Delete the source directory
+    shutil.rmtree(src_dir)
 
 
 

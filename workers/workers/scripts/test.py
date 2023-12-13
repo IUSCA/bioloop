@@ -11,15 +11,16 @@ def main():
     for root, dirs, files in os.walk(src_dir):
         # if the directory contains any files
         if files:
-
-
-
+            
             # DEBUG PRINTS
             print("DEST_PATH", dest)
             print("ROOT", root)
 
             # Move the directory to the destination path
             shutil.move(root, dest)
+
+    # Delete the source directory
+    shutil.rmtree(src_dir)
 
   # Handle keyboard interrupt
   except KeyboardInterrupt:
