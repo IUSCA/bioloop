@@ -35,17 +35,16 @@ For each upload, information is logged to the following relational tables (Postg
 
 ### 4.2 Steps
 
-Before an upload begins, the following things happen sequentially:
+1. Before an upload begins, the following things happen sequentially:
+   - Checksum evaluation - MD5 checksums are evaluated for each file, as well as for each chunk per file. 
+   - Any metadata associated with the upload - like related entities, names/checksums/paths of files being uploaded, etc. - are logged into persistent storage.
+      1. Since this step involves writing to multiple tables, this information is logged in a single transaction.
 
-1. Checksum evaluation - MD5 checksums are evaluated for each file, as well as for each chunk per file. 
-2. Any metadata associated with the upload - like related entities, names/checksums/paths of files being uploaded, etc. - are logged into persistent storage.
-   1. Since this step involves writing to multiple tables, this information is logged in a single transaction.
+2. The actual upload only begins once the above steps are successful.
 
-The actual upload only begins once these two steps are successful.
+3. Chunks are uploaded sequentially. If a chunk upload fails, the client-side retries the upload upto 5 times before failing.
 
-Chunks are uploaded sequentially. If a chunk upload fails, the client-side retries the upload upto 5 times before failing.
-
-The client first sends an HTTP request to upload a chunk to our main API server, which is then forwarded to another HTTP endpoint in the secure_download NGINX server, which writes the received chunk to the filesystem, after validating its checksum (this is the first stage of checksum validation).
+4. The client first sends an HTTP request to upload a chunk to our main API server, which is then forwarded to another HTTP endpoint in the secure_download NGINX server, which writes the received chunk to the filesystem, after validating its checksum (this is the first stage of checksum validation).
 
 ### 4.3 Directory structure
 The following directories on the Colo node are used for uploads:
