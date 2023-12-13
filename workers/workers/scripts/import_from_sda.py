@@ -29,8 +29,8 @@ def main():
 
       # Don't copy new files if total size of copied files exceeds size limit
       if total_size > size_limit:
-          print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 10 ...")
-          time.sleep(10)
+          print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 5 min ...")
+          time.sleep(300)
           continue
       
       # Get directory list if empty
@@ -71,8 +71,8 @@ def main():
               file_size = sda.get_size(file_path, creds=creds)
               if total_size + file_size > size_limit:
                   print(f"Total size of current file: {file_size} exceeds size limit: {size_limit}. Sleeping for 10...")
-                  time.sleep(10)
-                  return
+                  time.sleep(300)
+                  break
               
               # Create full destination file path
               dest_file_path = os.path.join(curr_dest_dir, file)
