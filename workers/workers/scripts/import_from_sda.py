@@ -101,6 +101,10 @@ def main():
 
                 # Remove file from directory_list
                 directory_list[directory].remove(file)
+
+                # Remove directory from directory_list if empty
+                if directory_list[directory] == []:
+                    del directory_list[directory]
           
                 # Unzip compressed files
                 unzip_file(dest_file_path)
