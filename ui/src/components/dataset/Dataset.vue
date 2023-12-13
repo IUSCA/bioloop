@@ -183,10 +183,6 @@
                     <i-mdi-harddisk class="text-xl" />
                     <span> {{ formatBytes(dataset.du_size) }} </span>
                   </div>
-                  <div class="flex items-center gap-1">
-                    <i-mdi-file-multiple class="text-xl" />
-                    <span> {{ dataset.metadata?.num_genome_files }} </span>
-                  </div>
                 </div>
               </div>
 
@@ -300,10 +296,10 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
-import workflowService from "@/services/workflow";
 import config from "@/config";
+import DatasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
+import workflowService from "@/services/workflow";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 const router = useRouter();

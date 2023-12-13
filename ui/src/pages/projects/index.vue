@@ -128,11 +128,11 @@
 </template>
 
 <script setup>
+import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
 import { useAuthStore } from "@/stores/auth";
-import { useProjectFormStore } from "@/stores/projects/projectForm";
-import * as datetime from "@/services/datetime";
 import { useNavStore } from "@/stores/nav";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
@@ -243,8 +243,8 @@ const editModal = ref(null);
 const selectedId = ref(null);
 
 function openModalToEditProject(rowData) {
-  const { name, description, browser_enabled, funding } = rowData;
-  projectFormStore.$patch({ name, description, browser_enabled, funding });
+  const { name, description, funding } = rowData;
+  projectFormStore.$patch({ name, description, funding });
   selectedId.value = rowData.id;
   editModal.value.show();
 }

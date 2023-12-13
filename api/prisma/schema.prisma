@@ -214,7 +214,6 @@ model project {
   slug            String            @unique
   name            String
   description     String?
-  browser_enabled Boolean           @default(false)
   funding         String?
   metadata        Json?
   created_at      DateTime          @default(now()) @db.Timestamp(6)

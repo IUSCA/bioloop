@@ -38,13 +38,6 @@ router.get(
       result = await prisma.$queryRaw`
         select count(*)     as "count",
         sum(du_size) as total_size,
-        SUM(
-                CASE
-                    WHEN metadata -> 'num_genome_files' IS NOT NULL
-                        THEN (metadata ->> 'num_genome_files')::int
-                    ELSE 0
-                    END
-            )        AS total_num_genome_files
         from dataset
         where is_deleted = false and type = ${req.query.type};
       `;
@@ -64,13 +57,6 @@ router.get(
         select 
           count(*) as "count", 
           sum(du_size) as total_size, 
-          SUM(
-                CASE
-                    WHEN metadata -> 'num_genome_files' IS NOT NULL
-                        THEN (metadata ->> 'num_genome_files')::int
-                    ELSE 0
-                    END
-            )        AS total_num_genome_files
         from dataset 
         where is_deleted = false;
       `;

@@ -68,15 +68,6 @@
                     <td>Funding</td>
                     <td>{{ projectFormStore.project_info.funding }}</td>
                   </tr>
-
-                  <tr>
-                    <td>Genome Browser</td>
-                    <td>
-                      <BinaryStatusChip
-                        :status="projectFormStore.project_info.browser_enabled"
-                      />
-                    </td>
-                  </tr>
                 </tbody>
               </table>
             </div>
@@ -120,8 +111,8 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const emit = defineEmits(["update"]);
 

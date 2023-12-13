@@ -208,7 +208,6 @@ router.post(
   isPermittedTo('create'),
   validate([
     body('name').isLength({ min: 5 }),
-    body('browser_enabled').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -217,7 +216,7 @@ router.post(
     */
     const { user_ids, dataset_ids, ...projectData } = req.body;
     const data = _.flow([
-      _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
+      _.pick(['name', 'description', 'funding', 'metadata']),
       _.omitBy(_.isNil),
     ])(projectData);
     data.slug = await projectService.generate_slug({ name: data.name });
@@ -462,7 +461,6 @@ router.patch(
   isPermittedTo('update'),
   validate([
     body('name').optional().isLength({ min: 5 }),
-    body('browser_enabled').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -471,7 +469,7 @@ router.patch(
     */
 
     const data = _.flow([
-      _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
+      _.pick(['name', 'description', 'funding', 'metadata']),
       _.omitBy(_.isNil),
     ])(req.body);
 

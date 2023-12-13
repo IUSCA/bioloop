@@ -6,10 +6,6 @@
       </router-link>
     </template>
 
-    <template #cell(num_genome_files)="{ rowData }">
-      <Maybe :data="rowData?.metadata?.num_genome_files" />
-    </template>
-
     <template #cell(du_size)="{ source }">
       <span>{{ source != null ? formatBytes(source) : "" }}</span>
     </template>
@@ -21,9 +17,9 @@
 </template>
 
 <script setup>
-import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
+import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 const toast = useToastStore();
 
@@ -43,12 +39,6 @@ const columns = ref([
   {
     key: "updated_at",
     label: "last updated",
-    sortable: true,
-    sortingOptions: ["desc", "asc", null],
-  },
-  {
-    key: "num_genome_files",
-    label: "data files",
     sortable: true,
     sortingOptions: ["desc", "asc", null],
   },

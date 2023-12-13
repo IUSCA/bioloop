@@ -78,7 +78,7 @@ Show data if it is neither null or undefined, else show default (provided it is 
 
 ```html
 <template>
-  <Maybe :data="rowData?.metadata?.num_genome_files" />
+  <Maybe :data="rowData?.metadata?.num_files" />
 </template
 ```
 

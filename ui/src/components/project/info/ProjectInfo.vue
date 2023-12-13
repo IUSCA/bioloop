@@ -43,12 +43,6 @@
           </td>
         </tr>
         <tr>
-          <td>Genome Browser</td>
-          <td>
-            <BinaryStatusChip :status="props.project.browser_enabled" />
-          </td>
-        </tr>
-        <tr>
           <td>Description</td>
           <td>
             <!-- 

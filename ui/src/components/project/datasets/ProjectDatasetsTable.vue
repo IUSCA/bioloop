@@ -78,10 +78,6 @@
       </div>
     </template> -->
 
-    <template #cell(metadata)="{ rowData }">
-      <maybe :data="rowData?.metadata?.num_genome_files" />
-    </template>
-
     <template #cell(du_size)="{ source }">
       <span>{{ source != null ? formatBytes(source) : "" }}</span>
     </template>
@@ -107,14 +103,14 @@
 </template>
 
 <script setup>
-import * as datetime from "@/services/datetime";
-import { formatBytes, cmp } from "@/services/utils";
-import wfService from "@/services/workflow";
-import DatasetService from "@/services/dataset";
 import config from "@/config";
+import DatasetService from "@/services/dataset";
+import * as datetime from "@/services/datetime";
+import { formatBytes } from "@/services/utils";
+import wfService from "@/services/workflow";
+import { useAuthStore } from "@/stores/auth";
 import { HalfCircleSpinner } from "epic-spinners";
 import { useColors } from "vuestic-ui";
-import { useAuthStore } from "@/stores/auth";
 
 const { colors } = useColors();
 const auth = useAuthStore();
@@ -207,13 +203,6 @@ const columns = [
     key: "updated_at",
     label: "last updated",
     sortable: true,
-  },
-  {
-    key: "metadata",
-    label: "data files",
-    sortable: true,
-
-    sortingFn: (a, b) => cmp(a?.num_genome_files, b?.num_genome_files),
   },
   {
     key: "du_size",

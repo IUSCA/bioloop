@@ -11,11 +11,6 @@
         ]"
       />
 
-      <!-- <span class="flex-none va-text-secondary pl-2 text-sm mt-[-0.5rem] mb-2">
-      URL Alias:
-      <span v-if="name && isValid"> /projects/{{ slug }} </span>
-    </span> -->
-
       <span
         class="text-sm va-text-secondary flex items-center gap-2 px-1 mt-2"
         v-if="props.showSlugWarning"
@@ -38,22 +33,13 @@
     />
 
     <va-input class="flex-none" label="Funding" v-model="funding" />
-
-    <va-checkbox
-      v-model="browser_enabled"
-      class="flex-none"
-      label="Enable Genome Browser"
-    />
-
-    <!-- <dataset-select class="flex-none" v-model:selected="project.datasets" /> -->
   </va-form>
 </template>
 
 <script setup>
-import { useForm } from "vuestic-ui";
-// import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { storeToRefs } from "pinia";
+import { useForm } from "vuestic-ui";
 
 const props = defineProps({
   showSlugWarning: {
@@ -63,8 +49,7 @@ const props = defineProps({
 });
 
 const projectFormStore = useProjectFormStore();
-const { name, description, browser_enabled, funding } =
-  storeToRefs(projectFormStore);
+const { name, description, funding } = storeToRefs(projectFormStore);
 // const slug = ref("");
 
 // const { isValid } = useForm("formRef");

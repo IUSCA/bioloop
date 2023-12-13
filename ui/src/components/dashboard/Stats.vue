@@ -5,9 +5,7 @@
         <span class="text-xl"> {{ props.title }} </span>
       </va-card-title>
       <va-card-content>
-        <div
-          class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-3 gap-y-5"
-        >
+        <div class="grid grid-cols-3 gap-3 gap-y-5">
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.count != undefined"
@@ -42,24 +40,6 @@
               height="32px"
             />
             <p class="va-text-center no-wrap">Total Size</p>
-          </div>
-
-          <div class="flex flex-col items-center justify-end">
-            <h2
-              v-if="props.data?.total_num_genome_files != undefined"
-              class="va-h3 ma-0 va-text-center"
-              :style="{ color: colors.success }"
-            >
-              {{ number_formatter.format(props.data.total_num_genome_files) }}
-            </h2>
-            <VaSkeleton
-              v-else
-              variant="rounded"
-              inline
-              width="64px"
-              height="32px"
-            />
-            <p class="va-text-center">Data Files</p>
           </div>
 
           <div class="flex flex-col items-center justify-end">

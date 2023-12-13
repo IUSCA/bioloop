@@ -43,10 +43,7 @@
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
-        <tr>
-          <td>Genome Files</td>
-          <td>{{ props.dataset.metadata?.num_genome_files }}</td>
-        </tr>
+
         <tr>
           <td>Directories</td>
           <td>{{ props.dataset.num_directories }}</td>
@@ -65,8 +62,8 @@
 </template>
 
 <script setup>
-import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
+import { formatBytes } from "@/services/utils";
 
 const props = defineProps({ dataset: Object });
 

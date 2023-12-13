@@ -5,7 +5,6 @@ export const useProjectFormStore = defineStore("projectForm", {
     name: "",
     description: "",
     user_dict: {},
-    browser_enabled: false,
     funding: "",
     dataset_dict: {},
     form: {
@@ -23,7 +22,6 @@ export const useProjectFormStore = defineStore("projectForm", {
       return {
         name: state.name,
         description: state.description,
-        browser_enabled: state.browser_enabled,
         funding: state.funding,
       };
     },

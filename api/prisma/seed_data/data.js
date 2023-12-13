@@ -79,7 +79,6 @@ const _datasets = [
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     metadata: {
-      num_genome_files: 60,
       report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
       stage_alias: 'ea497ac769f2236b6cd9ae70f288a008',
     },
@@ -97,7 +96,6 @@ const _datasets = [
     archive_path: 'archive/2023/PCM230327PL.tar',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
     metadata: {
-      num_genome_files: 12,
       report_id: '9b0b3fba-ccfd-4918-a5ff-ac93fa1a19ae',
     },
   },
@@ -114,7 +112,6 @@ const _datasets = [
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
     metadata: {
-      num_genome_files: 0,
       report_id: null,
     },
     is_deleted: true,
@@ -133,7 +130,6 @@ const _datasets = [
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
     metadata: {
-      num_genome_files: 68,
       report_id: 'fa7d41f5-3813-43f6-9a72-5440ed6eac2b',
     },
   },
@@ -150,7 +146,6 @@ const _datasets = [
     origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
     metadata: {
-      num_genome_files: 636,
     },
     workflows: ['63339ae0-9643-4d8b-aa3a-303434f6bdcd'],
   },
@@ -166,7 +161,6 @@ const _datasets = [
     origin_path: '/N/project/DG_Multiple_Myeloma/share/PCM221205',
     archive_path: 'archive/2023/PCM221205.tar',
     metadata: {
-      num_genome_files: 93,
     },
     workflows: ['02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68'],
   },

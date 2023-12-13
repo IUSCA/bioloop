@@ -60,10 +60,6 @@
         </span>
       </template>
 
-      <template #cell(num_genome_files)="{ rowData }">
-        <Maybe :data="rowData?.metadata?.num_genome_files" />
-      </template>
-
       <template #cell(updated_at)="{ value }">
         <span>{{ datetime.fromNow(value) }}</span>
       </template>
@@ -202,10 +198,10 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
-import { formatBytes } from "@/services/utils";
-import * as datetime from "@/services/datetime";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
+import DatasetService from "@/services/dataset";
+import * as datetime from "@/services/datetime";
+import { formatBytes } from "@/services/utils";
 import { useToastStore } from "@/stores/toast";
 import _ from "lodash";
 
@@ -289,11 +285,6 @@ const columns = [
     width: "150px",
   },
   // { key: "status", sortable: false },
-  {
-    key: "num_genome_files",
-    label: "data files",
-    width: "80px",
-  },
   {
     key: "du_size",
     label: "size",
