@@ -145,23 +145,17 @@ const getStatusChipColor = (value) => {
   let color;
   switch (value) {
     case config.upload_status.UPLOADING:
+    case config.upload_status.UPLOADED:
+    case config.upload_status.PROCESSING:
       color = "primary";
       break;
     case config.upload_status.UPLOAD_FAILED:
       color = "warning";
       break;
-    case config.upload_status.UPLOADED:
-      color = "success";
-      break;
-    case config.upload_status.PROCESSING:
-      color = "primary";
-      break;
     case config.upload_status.COMPLETE:
       color = "success";
       break;
-    case config.upload_status.VALIDATION_FAILED:
-      color = "danger";
-      break;
+    case config.upload_status.PROCESSING_FAILED:
     case config.upload_status.FAILED:
       color = "danger";
       break;

@@ -555,7 +555,7 @@ const uploadFile = async (fileDetails) => {
 const onSubmit = () => {
   submissionStatus.value = SUBMISSION_STATES.PROCESSING;
   statusChipColor.value = "primary";
-  submissionAlert.value = null;
+  submissionAlert.value = null; // reset any alerts from previous submissions
   isSubmissionAlertVisible.value = false;
   submitAttempted.value = true;
 
@@ -592,7 +592,7 @@ const onSubmit = () => {
 const postSubmit = () => {
   if (!someFilesPendingUpload.value) {
     submissionStatus.value = SUBMISSION_STATES.UPLOADED;
-    statusChipColor.value = "success";
+    statusChipColor.value = "primary";
     submissionAlertColor.value = "success";
     submissionAlert.value =
       "All files have been uploaded successfully. You may close this window.";
@@ -696,13 +696,11 @@ const uploadFiles = async (files) => {
   let uploaded = false;
   for (let f = 0; f < files.length; f++) {
     let fileDetails = files[f];
-
     uploaded = await uploadFile(fileDetails);
     if (!uploaded) {
       break;
     }
   }
-
   return uploaded;
 };
 

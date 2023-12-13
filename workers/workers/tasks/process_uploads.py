@@ -47,7 +47,7 @@ def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_ch
         print(f'evaluated_checksum: {evaluated_checksum}')
         checksum_error = evaluated_checksum != file_md5
 
-    return config['upload_status']['VALIDATION_FAILED'] \
+    return config['upload_status']['PROCESSING_FAILED'] \
         if checksum_error \
         else config['upload_status']['COMPLETE']
 
@@ -91,7 +91,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
             try:
                 f['status'] = merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_chunks_expected)
             except Exception as e:
-                f['status'] = config['upload_status']['FAILED']
+                f['status'] = config['upload_status']['PROCESSING_FAILED']
                 print('Caught exception')
                 print(e)
             finally:
