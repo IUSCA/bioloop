@@ -37,7 +37,7 @@ def main():
         if total_size > size_limit:
             print(f"Total size of copied files: {total_size} exceeds size limit: {size_limit}. Sleeping for 5 min ...")
             time.sleep(300)
-            continue
+            raise ContinueException
         
         # Get directory list if empty
         if directory_list == None:
