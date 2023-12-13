@@ -12,7 +12,7 @@ fi
 case "$(file --brief --mime-type "$1")" in
   "application/x-tar"*)
     echo "Extracting tar archive: $1"
-    tar -xf "$1" --no-same-permissions
+    tar -xf "$1" --no-same-permissions -C $(dirname "$1") && rm "$1"
     ;;
   "application/x-gzip"*)
     echo "Extracting gzip archive: $1"
@@ -20,7 +20,7 @@ case "$(file --brief --mime-type "$1")" in
     gunzip -d "$1" 
     if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
       echo "Extracting tar archive: $1"
-      tar --no-same-permissions -xf "$1" -C $(dirname "$1")
+      tar --no-same-permissions -xf "$1" -C $(dirname "$1") && rm "$1"
       chmod -R 0700 $(dirname "$1")
     fi
     
@@ -30,7 +30,7 @@ case "$(file --brief --mime-type "$1")" in
     bunzip2 -d "$1"
     if [ $(file --brief --mime-type "$1") == "application/x-tar" ]; then
       echo "Extracting tar archive: $1"
-      tar --no-same-permissions -xf "$1" -C $(dirname "$1")
+      tar --no-same-permissions -xf "$1" -C $(dirname "$1") && rm "$1"
       chmod -R 0700 $(dirname "$1")
     fi
     ;;
