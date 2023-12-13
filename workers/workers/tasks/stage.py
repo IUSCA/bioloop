@@ -54,7 +54,7 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
             shutil.move(Path(tmp_dir) / archive_name, extraction_dir)
 
 
-def stage(celery_task: WorkflowTask, dataset: dict) -> str:
+def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     """
     gets the tar from SDA and extracts it
 
@@ -64,29 +64,29 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> str:
     staging_dir, alias = compute_staging_path(dataset)
 
     sda_tar_path = dataset['archive_path']
-    # staging_dir.parent = the alias sub-directory
     alias_dir = staging_dir.parent
     alias_dir.mkdir(parents=True, exist_ok=True)
-    scratch_tar_path = Path(f'{str(alias_dir)}/{dataset["name"]}.tar')
+    bundle_path = Path(f'{str(alias_dir)}/{dataset["name"]}.tar')
     wf_utils.download_file_from_sda(sda_file_path=sda_tar_path,
-                                    local_file_path=scratch_tar_path,
+                                    local_file_path=bundle_path,
                                     celery_task=celery_task)
 
     # extract the tar file to stage directory
-    logger.info(f'extracting tar {scratch_tar_path} to {staging_dir}')
-    extract_tarfile(tar_path=scratch_tar_path, target_dir=staging_dir, override_arcname=True)
+    logger.info(f'extracting tar {bundle_path} to {staging_dir}')
+    extract_tarfile(tar_path=bundle_path, target_dir=staging_dir, override_arcname=True)
 
     # delete the local tar copy after extraction
-    # scratch_tar_path.unlink()
+    # bundle_path.unlink()
 
-    return alias
+    return str(staging_dir), alias
 
 
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    alias = stage(celery_task, dataset)
+    staged_path, alias = stage(celery_task, dataset)
 
     update_data = {
+        'staged_path': staged_path,
         'metadata': {
             'stage_alias': alias
         }
