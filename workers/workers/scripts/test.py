@@ -6,7 +6,7 @@ import shutil
 # Copy to root of destination directory
 def main():
   try:
-    src_dir = "/N/scratch/scadev/Landing/Eclipse/2023_April_Eclipse_Billing"
+    src_dir = "/N/scratch/scadev/Landing/Eclipse"
     dest = '/N/scratch/scadev/Landing'
     for root, dirs, files in os.walk(src_dir):
         # if the directory contains any files

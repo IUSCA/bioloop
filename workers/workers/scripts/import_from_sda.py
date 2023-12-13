@@ -137,11 +137,11 @@ def unzip_file(file_path):
 
  
     print("Flatten directory... ", os.path.dirname(file_path))
-    copy_folders_with_files(os.path.dirname(file_path))
+    move_folders_with_files(os.path.dirname(file_path))
 
 
-# Copy to root of destination directory
-def copy_folders_with_files(src_dir):
+# Move to root of destination directory
+def move_folders_with_files(src_dir):
     for root, dirs, files in os.walk(src_dir):
         # if the directory contains any files
         if files:  
@@ -153,7 +153,7 @@ def copy_folders_with_files(src_dir):
             print("DEST_PATH", dest_path)
             print("ROOT", root)
 
-            # copy the directory to the destination path
+            # Move the directory to the destination path
             shutil.move(root, dest_path)
 
 
