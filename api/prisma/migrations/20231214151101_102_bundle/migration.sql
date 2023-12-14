@@ -13,7 +13,7 @@ CREATE TABLE "bundle" (
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "name" TEXT NOT NULL,
     "path" TEXT NOT NULL,
-    "size" INTEGER,
+    "size" BIGINT,
     "md5" TEXT NOT NULL,
     "dataset_id" INTEGER,
 
