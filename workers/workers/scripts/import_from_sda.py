@@ -175,8 +175,9 @@ def move_folders_with_files(src_dir):
             # Move the directory to the destination path
             shutil.move(root, dest)
 
-    # Delete the source directory
-    shutil.rmtree(src_dir)
+    # Delete the source directory if it is empty
+    if not os.listdir(src_dir):
+      shutil.rmtree(src_dir)
 
 
 # Get size of directory
