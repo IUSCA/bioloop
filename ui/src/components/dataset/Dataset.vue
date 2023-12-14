@@ -26,13 +26,14 @@
                 <!-- Download Modal -->
                 <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
-                  class="shadow flex-none"
+                  :disabled="!dataset.num_files"
+                  class="flex-none"
                   preset="primary"
                   color="info"
-                  icon="cloud_download"
                   @click="openModalToDownloadDataset"
-                  :disabled="!dataset.num_files"
-                />
+                >
+                  <i-mdi-folder-open class="pr-2 text-xl" /> Access Files
+                </va-button>
 
                 <!-- edit description -->
                 <!-- <va-button
@@ -449,14 +450,6 @@ function openModalToEditDataset() {
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
-
-// function navigateToFileBrowser() {
-//   if (props.appendFileBrowserUrl) {
-//     router.push(route.path + "/filebrowser");
-//   } else {
-//     router.push(`/datasets/${props.datasetId}/filebrowser`);
-//   }
-// }
 </script>
 
 <route lang="yaml">

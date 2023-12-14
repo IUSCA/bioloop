@@ -149,6 +149,7 @@ async function get_dataset({
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
+      bundle: true,
       source_datasets: true,
       derived_datasets: true,
     },

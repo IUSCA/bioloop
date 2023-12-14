@@ -161,6 +161,7 @@ async function main() {
   await Promise.all(datasetPromises);
 
   // create bundle data
+  await prisma.bundle.deleteMany();
   await prisma.bundle.createMany({
     data: data.bundles,
   });

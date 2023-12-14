@@ -315,11 +315,11 @@ const project_contact_assoc = [
 ];
 
 const bundles = [{
-  name: 'dataset_8_bundle',
+  name: 'PCM230203.tar',
   path: '/path/to/bundle',
   md5: 'md5',
-  size: 432445,
-  dataset_id: 3,
+  size: 160612394997,
+  dataset_id: 1,
 }];
 
 module.exports = {
