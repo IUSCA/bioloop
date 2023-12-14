@@ -48,13 +48,13 @@ def main():
         print("DIRECTORY_LIST", directory_list)
 
         # Break out of loop if all files have been copied
-        if directory_list == {}:
+        if not directory_list:
             still_copying = False
             return
         
         
         # Download files from SDA
-        for directory, files in directory_list.items():
+        for directory, files in list(directory_list.items()):
             
             # Create landing directory
             curr_dest_dir = os.path.join(dest, os.path.basename(directory))
