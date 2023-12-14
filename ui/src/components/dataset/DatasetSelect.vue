@@ -1,4 +1,12 @@
 <template>
+  <AutoCompleteDynamic
+    :data="datasets"
+    filter-by="name"
+    placeholder="Search datasets by name"
+    text-by="name"
+    track-by="id"
+  />
+
   <AutoComplete
     :data="datasets"
     filter-by="name"
@@ -24,6 +32,7 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
+import AutoCompleteDynamic from "@/components/utils/AutoCompleteDynamic.vue";
 
 const datasets = ref([]);
 
