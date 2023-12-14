@@ -64,7 +64,7 @@ const users = [
   },
 ];
 
-const datasets = [
+const _datasets = [
   {
     id: 1,
     name: 'PCM230203',
@@ -195,6 +195,16 @@ const datasets = [
     origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230417',
   },
 ];
+
+const additional_datasets = [11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25]
+  .map((id) => ({
+    id,
+    name: `PCM2304${id}_new`,
+    type: 'RAW_DATA',
+    origin_path: `/N/project/DG_Multiple_Myeloma/share/data_products/PCM2304${id}`,
+  }));
+
+const datasets = _datasets.concat(additional_datasets);
 
 const dataset_heirarchical_association = [{
   source_id: 1,
