@@ -8,16 +8,6 @@
   --va-checkbox-square-border: solid 0.0625rem var(--va-secondary);
 }
 
-div.va-select-content__autocomplete {
-  padding-top: 10px;
-  padding-bottom: 5px;
-}
-
-.autocomplete-select div.va-select-content__autocomplete {
-  padding-top: 7.5px;
-  padding-bottom: 7.5px;
-}
-
 div.inner-loading__overlay {
   z-index: 1;
   background-color: rgba(255,255,255,0.6);

@@ -13,10 +13,11 @@
     >
       <template #option="{ option, selectOption }">
         <div
-          class="dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 py-2"
+          class="va-select-option"
+          role="option"
           @click="selectOption(option)"
         >
-          <slot name="filtered" :item="option"> </slot>
+          <slot name="filtered" :item="option" />
         </div>
       </template>
     </va-select>
@@ -83,25 +84,6 @@ const updateSearch = (updatedSearchText) => {
   searchText.value = updatedSearchText;
 };
 
-// onMounted(() => {
-//   console.log(`onMounted: searchText: ${searchText.value}`);
-// });
-
-// watch(
-//   searchText,
-//   () => {
-//     console.log(`watch: searchText: ${searchText.value}`);
-//   },
-//   {
-//     onTrack(e) {
-//       console.log(e);
-//     },
-//     onTrigger(e) {
-//       console.log(e);
-//     },
-//   },
-// );
-
 const filteredData = computed(() => {
   if (!searchText.value) return props.data;
 
@@ -118,9 +100,8 @@ const filteredData = computed(() => {
 });
 </script>
 
-<style lang="scss">
-.autocomplete {
-  // todo - does not work
-  //--va-select-dropdown-background: #ff13;
+<style scoped>
+.va-select-option:hover {
+  background-color: rgba(52, 114, 240, 0.2);
 }
 </style>

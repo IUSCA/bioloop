@@ -10,7 +10,7 @@
     placeholder="Search projects by name"
   >
     <template #filtered="{ item }">
-      <div class="flex">
+      <div class="flex min-w-full">
         <div>
           <span> {{ item.name }} </span>
           <!-- <span class="va-text-secondary p-1"> &VerticalLine; </span> -->
