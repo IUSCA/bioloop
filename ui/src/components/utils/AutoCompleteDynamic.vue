@@ -13,7 +13,7 @@
     >
       <template #option="{ option, selectOption }">
         <div
-          class="cursor-pointer dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 py-2 rounded"
+          class="dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 py-2"
           @click="selectOption(option)"
         >
           <slot name="filtered" :item="option"> </slot>
