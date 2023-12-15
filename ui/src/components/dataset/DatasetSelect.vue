@@ -5,6 +5,7 @@
     filter-by="name"
     placeholder="Search datasets by name"
     @update-search="updateSearch"
+    :loading="loading"
   >
     <template #filtered="{ item }">
       <div class="flex min-w-full">
@@ -31,6 +32,7 @@ import _ from "lodash";
 const DEFAULT_RETRIEVAL_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 const isAsync = true;
 
+const loading = ref(false);
 const searchText = ref("");
 const datasets = ref([]);
 const retrievalQuery = computed(() => {
@@ -45,8 +47,10 @@ const updateSearch = (newText) => {
 };
 
 const retrieveDatasets = () => {
+  loading.value = true;
   datasetService.getAll(retrievalQuery.value).then((res) => {
     datasets.value = res.data.datasets;
+    loading.value = false;
   });
 };
 

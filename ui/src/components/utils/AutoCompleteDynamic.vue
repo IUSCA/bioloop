@@ -7,10 +7,13 @@
       clearable
       :placeholder="props.placeholder"
       autocomplete
-      :options="props.async ? props.data : filteredData"
+      :options="optionsContent"
       :track-by="props.trackBy"
       :text-by="props.textBy"
       @update-search="updateSearch"
+      :loading="props.loading"
+      :highlight-matched-text="false"
+      :no-options-text="statusText"
     >
       <template #option="{ option, selectOption }">
         <div
@@ -34,6 +37,10 @@ const props = defineProps({
   data: {
     type: Array,
     default: () => [],
+  },
+  loading: {
+    type: Boolean,
+    default: () => false,
   },
   placeholder: {
     type: String,
@@ -66,6 +73,25 @@ const emit = defineEmits(["select", "update-search"]);
 const selectedOption = ref({});
 const searchText = ref("");
 
+const _loading = toRef(() => props.loading);
+const optionsContent = computed(() => {
+  // Vuestic does not have a way of conditionally hiding the dropdown options (which might
+  // be desired while results are being retrieved). It also does not provide a <slot> for
+  // displaying status messages like 'Loading'. As a workaround, while results are being
+  // retrieved, this component sets the `options` prop provided to <va-select /> to [],
+  // which causes <va-select /> to render the `noOptionsText` prop instead of the results.
+  // Additionally, `noOptionsText` is set to 'Loading' during this time, and updated again
+  // later once results have been retrieved.
+  return props.async ? (_loading.value ? [] : props.data) : getFilteredData();
+});
+const statusText = computed(() => {
+  return _loading.value
+    ? "Loading..."
+    : optionsContent.value.length === 0
+      ? "Items not found"
+      : "";
+});
+
 const handleSelect = (item) => {
   emit("select", item);
   resetAutoComplete();
@@ -76,15 +102,11 @@ const resetAutoComplete = () => {
   searchText.value = "";
 };
 
-watch(searchText, () => {
-  emit("update-search", searchText.value);
-});
-
 const updateSearch = (updatedSearchText) => {
   searchText.value = updatedSearchText;
 };
 
-const filteredData = computed(() => {
+const getFilteredData = () => {
   if (!searchText.value) return props.data;
 
   const filterFn =
@@ -97,6 +119,10 @@ const filteredData = computed(() => {
         };
 
   return (props.data || []).filter(filterFn);
+};
+
+watch(searchText, () => {
+  emit("update-search", searchText.value);
 });
 </script>
 
