@@ -9,6 +9,7 @@
       autocomplete
       :options="props.async ? props.data : filteredData"
       :track-by="props.trackBy"
+      :text-by="props.textBy"
       @update-search="updateSearch"
     >
       <template #option="{ option, selectOption }">
@@ -40,6 +41,7 @@ const props = defineProps({
   },
   textBy: {
     type: [String, Function],
+    default: () => "name",
   },
   trackBy: {
     type: [String, Function],
@@ -75,9 +77,7 @@ const resetAutoComplete = () => {
 };
 
 watch(searchText, () => {
-  if (props.async) {
-    emit("update-search", searchText.value);
-  }
+  emit("update-search", searchText.value);
 });
 
 const updateSearch = (updatedSearchText) => {
