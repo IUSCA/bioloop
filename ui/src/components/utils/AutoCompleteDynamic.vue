@@ -3,7 +3,7 @@
     <va-select
       v-model="selectedOption"
       @update:model-value="handleSelect"
-      class="w-full autocomplete"
+      class="w-full autocomplete-select"
       clearable
       :placeholder="props.placeholder"
       autocomplete

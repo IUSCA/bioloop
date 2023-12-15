@@ -13,7 +13,7 @@ div.va-select-content__autocomplete {
   padding-bottom: 5px;
 }
 
-.dataset-select div.va-select-content__autocomplete {
+.autocomplete-select div.va-select-content__autocomplete {
   padding-top: 7.5px;
   padding-bottom: 7.5px;
 }

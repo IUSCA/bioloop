@@ -6,7 +6,6 @@
   <!--  />-->
 
   <AutoCompleteDynamic
-    class="dataset-select"
     :async="true"
     :data="datasets"
     filter-by="name"
@@ -30,7 +29,7 @@
   </AutoCompleteDynamic>
 
   <!--  <AutoCompleteDynamic-->
-  <!--    class="dataset-select"-->
+  <!--    class="autocomplete-select"-->
   <!--    :data="datasets"-->
   <!--    filter-by="name"-->
   <!--    placeholder="Search datasets by name"-->

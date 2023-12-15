@@ -1,6 +1,5 @@
 <template>
   <AutoCompleteDynamic
-    class="dataset-select"
     :data="users"
     filter-by="name"
     :filter-fn="filterFn"
