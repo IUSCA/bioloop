@@ -2,14 +2,15 @@
   <va-form>
     <va-select
       v-model="selectedOption"
+      @update:model-value="handleSelect"
       class="w-full autocomplete"
       clearable
       :placeholder="props.placeholder"
       autocomplete
-      :options="props.data"
+      :options="props.async ? props.data : filteredData"
       :text-by="props.textBy"
       :track-by="props.trackBy"
-      @updateSearch="updateSearch"
+      @update-search="updateSearch"
     >
       <template #option="{ option, selectOption }">
         <div
@@ -25,13 +26,17 @@
 
 <script setup>
 const props = defineProps({
-  placeholder: {
-    type: String,
-    default: "Type here",
+  async: {
+    type: Boolean,
+    default: () => false,
   },
   data: {
     type: Array,
     default: () => [],
+  },
+  placeholder: {
+    type: String,
+    default: "Type here",
   },
   textBy: {
     type: [String, Function],
@@ -39,30 +44,78 @@ const props = defineProps({
   trackBy: {
     type: [String, Function],
   },
-  // filterBy: {
-  //   type: String,
-  //   default: "value",
-  // },
-  // filterFn: {
-  //   type: Function,
-  //   default: null,
-  // },
-  // displayBy: {
-  //   type: String,
-  //   default: "name",
-  // },
+  filterBy: {
+    type: String,
+    default: "value",
+  },
+  filterFn: {
+    type: Function,
+    default: null,
+  },
+  displayBy: {
+    type: String,
+    default: "name",
+  },
 });
 
 const emit = defineEmits(["select", "update-search"]);
 
-const updateSearch = (updatedSearchText) => {
-  debugger;
-  console.log(`updatedSearchText`);
-  console.log(`${updatedSearchText}`);
-  emit("update-search", updatedSearchText);
+const selectedOption = ref({});
+const searchText = ref("");
+
+const handleSelect = (item) => {
+  emit("select", item);
+  resetAutoComplete();
 };
 
-const selectedOption = ref({});
+const resetAutoComplete = () => {
+  selectedOption.value = {};
+  searchText.value = "";
+};
+
+watch(searchText, () => {
+  if (props.async) {
+    emit("update-search", searchText.value);
+  }
+});
+
+const updateSearch = (updatedSearchText) => {
+  searchText.value = updatedSearchText;
+};
+
+onMounted(() => {
+  console.log(`onMounted: searchText: ${searchText.value}`);
+});
+
+watch(
+  searchText,
+  () => {
+    console.log(`watch: searchText: ${searchText.value}`);
+  },
+  {
+    onTrack(e) {
+      console.log(e);
+    },
+    onTrigger(e) {
+      console.log(e);
+    },
+  },
+);
+
+const filteredData = computed(() => {
+  if (searchText.value === "") return props.data;
+
+  const filterFn =
+    props.filterFn instanceof Function
+      ? props.filterFn(searchText.value)
+      : (item) => {
+          return (item[props.filterBy] || "")
+            .toLowerCase()
+            .includes(searchText.value.toLowerCase());
+        };
+
+  return (props.data || []).filter(filterFn);
+});
 </script>
 
 <style lang="scss">

@@ -1,6 +1,13 @@
 <template>
+  <!--  <AutoComplete-->
+  <!--    :data="datasets"-->
+  <!--    filter-by="name"-->
+  <!--    placeholder="Search datasets by name"-->
+  <!--  />-->
+
   <AutoCompleteDynamic
     class="dataset-select"
+    :async="true"
     :data="datasets"
     filter-by="name"
     placeholder="Search datasets by name"
@@ -24,26 +31,29 @@
     </template>
   </AutoCompleteDynamic>
 
-  <AutoComplete
-    :data="datasets"
-    filter-by="name"
-    placeholder="Search datasets by name"
-  >
-    <template #filtered="{ item }">
-      <div class="flex">
-        <div>
-          <span> {{ item.name }} </span>
-          <span class="va-text-secondary p-1"> &VerticalLine; </span>
-          <span class="va-text-secondary text-sm"> {{ item.type }} </span>
-        </div>
-        <div class="text-right">
-          <span class="text-sm">
-            {{ formatBytes(item.du_size) }}
-          </span>
-        </div>
-      </div>
-    </template>
-  </AutoComplete>
+  <!--  <AutoCompleteDynamic-->
+  <!--    class="dataset-select"-->
+  <!--    :data="datasets"-->
+  <!--    filter-by="name"-->
+  <!--    placeholder="Search datasets by name"-->
+  <!--    text-by="name"-->
+  <!--    track-by="id"-->
+  <!--  >-->
+  <!--    <template #filtered="{ item }">-->
+  <!--      <div class="flex">-->
+  <!--        <div>-->
+  <!--          <span> {{ item.name }} </span>-->
+  <!--          <span class="va-text-secondary p-1"> &VerticalLine; </span>-->
+  <!--          <span class="va-text-secondary text-sm"> {{ item.type }} </span>-->
+  <!--        </div>-->
+  <!--        <div class="text-right">-->
+  <!--          <span class="text-sm">-->
+  <!--            {{ formatBytes(item.du_size) }}-->
+  <!--          </span>-->
+  <!--        </div>-->
+  <!--      </div>-->
+  <!--    </template>-->
+  <!--  </AutoCompleteDynamic>-->
 </template>
 
 <script setup>
