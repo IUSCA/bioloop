@@ -11,8 +11,6 @@
     :data="datasets"
     filter-by="name"
     placeholder="Search datasets by name"
-    text-by="name"
-    track-by="id"
     @update-search="updateRetrievalQuery"
   >
     <template #filtered="{ item }">

@@ -1,6 +1,8 @@
 <template>
-  <AutoComplete
+  <AutoCompleteDynamic
+    class="dataset-select"
     :data="users"
+    filter-by="name"
     :filter-fn="filterFn"
     placeholder="Search users by name, username, or email"
   >
@@ -8,7 +10,18 @@
       <span> {{ item.name }} </span>
       <span class="va-text-secondary pl-3 text-sm"> {{ item.email }} </span>
     </template>
-  </AutoComplete>
+  </AutoCompleteDynamic>
+
+  <!--  <AutoComplete-->
+  <!--    :data="users"-->
+  <!--    :filter-fn="filterFn"-->
+  <!--    placeholder="Search users by name, username, or email"-->
+  <!--  >-->
+  <!--    <template #filtered="{ item }">-->
+  <!--      <span> {{ item.name }} </span>-->
+  <!--      <span class="va-text-secondary pl-3 text-sm"> {{ item.email }} </span>-->
+  <!--    </template>-->
+  <!--  </AutoComplete>-->
 </template>
 
 <script setup>

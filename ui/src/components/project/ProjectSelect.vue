@@ -1,5 +1,11 @@
 <template>
-  <AutoComplete
+  <!--  <AutoComplete-->
+  <!--    :data="projects"-->
+  <!--    filter-by="name"-->
+  <!--    placeholder="Search projects by name"-->
+  <!--  >-->
+  <AutoCompleteDynamic
+    class="dataset-select"
     :data="projects"
     filter-by="name"
     placeholder="Search projects by name"
@@ -24,7 +30,8 @@
         </div>
       </div>
     </template>
-  </AutoComplete>
+  </AutoCompleteDynamic>
+  <!--  </AutoComplete>-->
 </template>
 
 <script setup>

@@ -8,7 +8,6 @@
       :placeholder="props.placeholder"
       autocomplete
       :options="props.async ? props.data : filteredData"
-      :text-by="props.textBy"
       :track-by="props.trackBy"
       @update-search="updateSearch"
     >
@@ -43,6 +42,7 @@ const props = defineProps({
   },
   trackBy: {
     type: [String, Function],
+    default: () => "id",
   },
   filterBy: {
     type: String,
@@ -83,27 +83,27 @@ const updateSearch = (updatedSearchText) => {
   searchText.value = updatedSearchText;
 };
 
-onMounted(() => {
-  console.log(`onMounted: searchText: ${searchText.value}`);
-});
+// onMounted(() => {
+//   console.log(`onMounted: searchText: ${searchText.value}`);
+// });
 
-watch(
-  searchText,
-  () => {
-    console.log(`watch: searchText: ${searchText.value}`);
-  },
-  {
-    onTrack(e) {
-      console.log(e);
-    },
-    onTrigger(e) {
-      console.log(e);
-    },
-  },
-);
+// watch(
+//   searchText,
+//   () => {
+//     console.log(`watch: searchText: ${searchText.value}`);
+//   },
+//   {
+//     onTrack(e) {
+//       console.log(e);
+//     },
+//     onTrigger(e) {
+//       console.log(e);
+//     },
+//   },
+// );
 
 const filteredData = computed(() => {
-  if (searchText.value === "") return props.data;
+  if (!searchText.value) return props.data;
 
   const filterFn =
     props.filterFn instanceof Function
