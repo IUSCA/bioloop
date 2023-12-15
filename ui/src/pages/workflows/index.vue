@@ -156,34 +156,15 @@
       </div>
 
       <!-- pagination -->
-      <div
-        class="flex flex-wrap justify-between items-center my-3 gap-5 ml-3"
-        v-if="query_params.failure_mode == null && workflows.length > 0"
-      >
-        <div class="flex-none">
-          <span>
-            Showing {{ skip + 1 }}-{{ skip + workflows.length }} of
-            {{ total_results }}
-          </span>
-        </div>
-        <div class="flex-none">
-          <va-pagination
-            v-if="total_page_count > 1"
-            v-model="query_params.page"
-            :pages="total_page_count"
-            :visible-pages="5"
-          />
-        </div>
-        <div class="flex-none w-36">
-          <VaSelect
-            label="Results per page"
-            v-model="query_params.page_size"
-            :options="PAGE_SIZE_OPTIONS"
-            placeholder="Select an option"
-            :inner-label="true"
-          />
-        </div>
-      </div>
+      <Pagination
+        class="mt-5 px-1 lg:px-3"
+        v-if="query_params.failure_mode == null"
+        v-model:page="query_params.page"
+        v-model:page_size="query_params.page_size"
+        :total_results="total_results"
+        :curr_items="workflows.length"
+        :page_size_options="PAGE_SIZE_OPTIONS"
+      />
     </div>
   </div>
 </template>
@@ -243,10 +224,6 @@ const group_counts = computed(() => {
 
 const breakpoint_sm = computed(() => {
   return breakpoint.width < 768;
-});
-
-const total_page_count = computed(() => {
-  return Math.ceil(total_results.value / query_params.value.page_size);
 });
 
 const skip = computed(() => {
