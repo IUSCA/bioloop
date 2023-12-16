@@ -30,8 +30,7 @@
 <script setup>
 import config from "@/config";
 import DatasetService from "@/services/dataset";
-import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
+import toast from "@/services/toast";
 
 const props = defineProps(["data"]);
 const emit = defineEmits(["update"]);

@@ -160,15 +160,15 @@
 
 <script setup>
 import projectService from "@/services/projects";
-import { useToastStore } from "@/stores/toast";
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useNavStore } from "@/stores/nav";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps({ projectId: String });
 const auth = useAuthStore();
 const router = useRouter();
-const toast = useToastStore();
+
 const projectFormStore = useProjectFormStore();
 const nav = useNavStore();
 

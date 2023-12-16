@@ -202,14 +202,13 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
-import { formatBytes } from "@/services/utils";
-import * as datetime from "@/services/datetime";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
-import { useToastStore } from "@/stores/toast";
+import DatasetService from "@/services/dataset";
+import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
+import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
-const toast = useToastStore();
 useSearchKeyShortcut();
 
 const props = defineProps({

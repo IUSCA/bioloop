@@ -211,11 +211,10 @@ import * as datetime from "@/services/datetime";
 import UserService from "@/services/user";
 import { cmp } from "@/services/utils";
 
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
-import { useToastStore } from "@/stores/toast";
 
-const toast = useToastStore();
 const auth = useAuthStore();
 const nav = useNavStore();
 

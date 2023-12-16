@@ -302,10 +302,9 @@
 <script setup>
 import config from "@/config";
 import DatasetService from "@/services/dataset";
+import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import workflowService from "@/services/workflow";
-import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
@@ -365,7 +364,7 @@ function fetch_dataset(show_loading = false) {
       console.error(err);
       if (err?.response?.status == 404)
         toast.error("Could not find the dataset");
-      else toast.error("Something went wrong. Could not fetch datatset");
+      else toast.error("Could not fetch datatset");
     })
     .finally(() => {
       loading.value = false;
