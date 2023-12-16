@@ -29,14 +29,15 @@ import datasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
-const DEFAULT_RETRIEVAL_QUERY = { sortBy: { name: "asc" }, limit: 5 };
+const DEFAULT_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 
+const searches = ref([]);
+const datasets = ref([]);
 const loading = ref(false);
 const searchText = ref("");
-const datasets = ref([]);
-const retrievalQuery = computed(() => {
+const searchQuery = computed(() => {
   return {
-    ...DEFAULT_RETRIEVAL_QUERY,
+    ...DEFAULT_FILTER_QUERY,
     ...(searchText.value && { name: searchText.value }),
   };
 });
@@ -45,22 +46,39 @@ const updateSearch = (newText) => {
   searchText.value = newText;
 };
 
-const retrieveDatasets = () => {
+const searchDatasets = ({ query } = {}) => {
   loading.value = true;
-  datasetService.getAll(retrievalQuery.value).then((res) => {
-    datasets.value = res.data.datasets;
-    loading.value = false;
-  });
+  return datasetService.getAll(query || DEFAULT_FILTER_QUERY);
 };
 
-// If select is async, react to retrieval query changing
-watch(retrievalQuery, (value, oldValue) => {
+const setDatasets = (_datasets) => {
+  datasets.value = _datasets;
+  loading.value = false;
+};
+
+watch(searchQuery, (value, oldValue) => {
   if (!_.isEqual(value, oldValue)) {
-    retrieveDatasets();
+    searches.value.push(
+      searchDatasets({
+        query: searchQuery.value,
+      }),
+    );
   }
 });
 
+watch(
+  searches,
+  () => {
+    Promise.all(searches.value).then((responses) => {
+      setDatasets(responses[responses.length - 1].data.datasets);
+    });
+  },
+  { deep: true },
+);
+
 onMounted(() => {
-  retrieveDatasets();
+  searchDatasets({ isInitialFetch: true }).then((res) => {
+    setDatasets(res.data.datasets);
+  });
 });
 </script>
