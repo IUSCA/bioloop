@@ -6,6 +6,7 @@
     }`"
     no-outside-dismiss
     fixed-layout
+    size="small"
     ok-text="Edit"
     @ok="handleOk"
     @cancel="hide"
