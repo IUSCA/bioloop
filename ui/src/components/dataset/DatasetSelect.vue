@@ -80,8 +80,6 @@ watch(
 );
 
 onMounted(() => {
-  searchDatasets().then((res) => {
-    setSearchResults(res.data.datasets);
-  });
+  searches.value.push(searchDatasets());
 });
 </script>
