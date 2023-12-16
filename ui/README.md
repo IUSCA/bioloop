@@ -214,27 +214,29 @@ If you have a usecase to display in formats other than above in more than one co
 
 ## Navigational Breadcrumbs
 
-To set static nav links for a page `/page1/page2`,
+To set static nav links for a page `/page1/page2`, add nav attr to route meta config block
+
+```html
+<route lang="yaml">
+meta:
+  title: Users
+  requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Users" }]
+</route>
+```
+
+Nav breadcrumb are not reset after leaving a page. So if a page should not show nav breadcrumbs they have to be explicitly disabled.
 
 ```html
 <script setup>
 import { useNavStore } from "@/stores/nav";
 const nav = useNavStore();
-nav.setNavItems([
-  {
-    label: "Page Name 1",
-    to: "/page1"
-  },
-  {
-    label: "Page Name 2"
-  },
-]);
+nav.setNavItems([], false);
 </script>
 ```
 
 
 To set dynamic nav links for a page `/page-dyn-1/page-dyn-2`
-
 
 ```html
 <script setup>
