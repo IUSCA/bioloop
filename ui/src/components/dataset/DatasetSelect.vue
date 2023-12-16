@@ -46,7 +46,7 @@ const updateSearch = (newText) => {
   searchText.value = newText;
 };
 
-const searchDatasets = ({ query } = {}) => {
+const searchDatasets = (query) => {
   loading.value = true;
   return datasetService.getAll(query || DEFAULT_FILTER_QUERY);
 };
@@ -58,11 +58,7 @@ const setDatasets = (_datasets) => {
 
 watch(searchQuery, (value, oldValue) => {
   if (!_.isEqual(value, oldValue)) {
-    searches.value.push(
-      searchDatasets({
-        query: searchQuery.value,
-      }),
-    );
+    searches.value.push(searchDatasets(searchQuery.value));
   }
 });
 
@@ -77,7 +73,7 @@ watch(
 );
 
 onMounted(() => {
-  searchDatasets({ isInitialFetch: true }).then((res) => {
+  searchDatasets().then((res) => {
     setDatasets(res.data.datasets);
   });
 });
