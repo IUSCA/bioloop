@@ -1,6 +1,6 @@
 <template>
   <AutoCompleteDynamic
-    :async="isAsync"
+    :async="true"
     :data="datasets"
     filter-by="name"
     placeholder="Search datasets by name"
@@ -30,7 +30,6 @@ import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
 const DEFAULT_RETRIEVAL_QUERY = { sortBy: { name: "asc" }, limit: 5 };
-const isAsync = true;
 
 const loading = ref(false);
 const searchText = ref("");
@@ -56,7 +55,7 @@ const retrieveDatasets = () => {
 
 // If select is async, react to retrieval query changing
 watch(retrievalQuery, (value, oldValue) => {
-  if (isAsync && !_.isEqual(value, oldValue)) {
+  if (!_.isEqual(value, oldValue)) {
     retrieveDatasets();
   }
 });

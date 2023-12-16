@@ -1,31 +1,25 @@
 <template>
-  <va-form>
-    <va-select
-      v-model="selectedOption"
-      @update:model-value="handleSelect"
-      class="w-full autocomplete-select"
-      clearable
-      :placeholder="props.placeholder"
-      autocomplete
-      :options="optionsContent"
-      :track-by="props.trackBy"
-      :text-by="props.textBy"
-      @update-search="updateSearch"
-      :loading="props.loading"
-      :highlight-matched-text="false"
-      :no-options-text="statusText"
-    >
-      <template #option="{ option, selectOption }">
-        <div
-          class="va-select-option"
-          role="option"
-          @click="selectOption(option)"
-        >
-          <slot name="filtered" :item="option" />
-        </div>
-      </template>
-    </va-select>
-  </va-form>
+  <va-select
+    v-model="selectedOption"
+    @update:model-value="handleSelect"
+    class="w-full autocomplete-select"
+    clearable
+    :placeholder="props.placeholder"
+    autocomplete
+    :options="optionsContent"
+    :track-by="props.trackBy"
+    :text-by="props.textBy"
+    @update-search="updateSearch"
+    :loading="props.loading"
+    :highlight-matched-text="false"
+    :no-options-text="statusText"
+  >
+    <template #option="{ option, selectOption }">
+      <div class="va-select-option" role="option" @click="selectOption(option)">
+        <slot name="filtered" :item="option" />
+      </div>
+    </template>
+  </va-select>
 </template>
 
 <script setup>
