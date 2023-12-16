@@ -66,7 +66,13 @@ watch(
   searches,
   () => {
     Promise.all(searches.value).then((responses) => {
-      setSearchResults(responses[responses.length - 1].data.datasets);
+      // `responses` will not necessarily be the same length as `searches`, since some
+      // searches may not have resolved yet. These two having the same length implies
+      // that all searches have resolved.
+      if (searches.value.length === responses.length) {
+        const latestResponse = responses[responses.length - 1];
+        setSearchResults(latestResponse.data.datasets);
+      }
     });
   },
   { deep: true },
