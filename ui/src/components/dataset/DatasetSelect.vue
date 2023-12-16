@@ -51,7 +51,7 @@ const searchDatasets = (query) => {
   return datasetService.getAll(query || DEFAULT_FILTER_QUERY);
 };
 
-const setDatasets = (_datasets) => {
+const setSearchResults = (_datasets) => {
   datasets.value = _datasets;
   loading.value = false;
 };
@@ -66,7 +66,7 @@ watch(
   searches,
   () => {
     Promise.all(searches.value).then((responses) => {
-      setDatasets(responses[responses.length - 1].data.datasets);
+      setSearchResults(responses[responses.length - 1].data.datasets);
     });
   },
   { deep: true },
@@ -74,7 +74,7 @@ watch(
 
 onMounted(() => {
   searchDatasets().then((res) => {
-    setDatasets(res.data.datasets);
+    setSearchResults(res.data.datasets);
   });
 });
 </script>
