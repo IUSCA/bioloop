@@ -31,7 +31,7 @@ import _ from "lodash";
 
 const DEFAULT_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 
-const searches = ref([]);
+const searches = ref([]); // array of Promises, where each Promise represents a search operation
 const datasets = ref([]);
 const loading = ref(false);
 const searchText = ref("");
@@ -62,13 +62,14 @@ watch(searchQuery, (value, oldValue) => {
   }
 });
 
+// Watcher that triggers when a new search is run
 watch(
   searches,
   () => {
     Promise.all(searches.value).then((responses) => {
-      // `responses` will not necessarily be the same length as `searches`, since some
-      // searches may not have resolved yet. These two having the same length implies
-      // that all searches have resolved.
+      // At this point, `responses` will not necessarily be the same length as `searches`,
+      // since some searches may not have resolved yet. These two having the same length
+      // implies that all searches have resolved.
       if (searches.value.length === responses.length) {
         const latestResponse = responses[responses.length - 1];
         setSearchResults(latestResponse.data.datasets);
