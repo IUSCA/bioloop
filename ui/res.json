@@ -1,0 +1,120 @@
+{
+    "task1": [
+        {
+            "_id": "dd19f110-ade7-42cc-aab6-9ecc6357f42a",
+            "status": "STARTED",
+            "result": {
+                "name": "",
+                "fraction_done": 0.3002309468822171,
+                "done": 390,
+                "total": 1299,
+                "units": "items",
+                "time_remaining_sec": 916.6894609071983,
+                "wt_avg_rate": 0.9916117057791977,
+                "avg_rate": 0.9945697222085516
+            },
+            "traceback": null,
+            "children": [],
+            "date_done": null,
+            "name": "task1",
+            "args": [
+                2
+            ],
+            "kwargs": {
+                "workflow_id": "f7ee0958-b876-4adc-9d65-10a108a646ac",
+                "step": "task1",
+                "app_id": "bioloop-dev.sca.iu.edu"
+            },
+            "worker": "tests-celery@IN-OTA-QYY9J9Y4QJ",
+            "retries": 0,
+            "queue": "bioloop-dev.sca.iu.edu.q"
+        },
+        {
+            "_id": "0964c67d-01df-49af-9239-5e5893ac648f",
+            "status": "STARTED",
+            "result": {
+                "name": "",
+                "fraction_done": 0.06620477290223249,
+                "done": 86,
+                "total": 1299,
+                "units": "items",
+                "time_remaining_sec": 1223.1972610561195,
+                "wt_avg_rate": 0.9916634369771927,
+                "avg_rate": 1.0034100687020386
+            },
+            "traceback": null,
+            "children": [],
+            "date_done": null,
+            "name": "task1",
+            "args": [
+                2
+            ],
+            "kwargs": {
+                "workflow_id": "c3604f84-ae00-41b4-ad0c-4451db20ed4c",
+                "step": "task1",
+                "app_id": "bioloop-dev.sca.iu.edu"
+            },
+            "worker": "tests-celery@IN-OTA-QYY9J9Y4QJ",
+            "retries": 0,
+            "queue": "bioloop-dev.sca.iu.edu.q"
+        },
+        {
+            "_id": "dc95e971-9e71-42e8-bde9-6bbea73c3886",
+            "status": "STARTED",
+            "result": {
+                "name": "",
+                "fraction_done": 0.06620477290223249,
+                "done": 86,
+                "total": 1299,
+                "units": "items",
+                "time_remaining_sec": 1223.769008475985,
+                "wt_avg_rate": 0.9912001297619097,
+                "avg_rate": 1.0037828793164945
+            },
+            "traceback": null,
+            "children": [],
+            "date_done": null,
+            "name": "task1",
+            "args": [
+                3
+            ],
+            "kwargs": {
+                "workflow_id": "ce933570-efc3-45c3-a0da-2ee343d734ca",
+                "step": "task1",
+                "app_id": "bioloop-dev.sca.iu.edu"
+            },
+            "worker": "tests-celery@IN-OTA-QYY9J9Y4QJ",
+            "retries": 0,
+            "queue": "bioloop-dev.sca.iu.edu.q"
+        },
+        {
+            "_id": "7b531541-9981-4d77-aab1-4d1b0140a7f2",
+            "status": "STARTED",
+            "result": {
+                "name": "",
+                "fraction_done": 0.06620477290223249,
+                "done": 86,
+                "total": 1299,
+                "units": "items",
+                "time_remaining_sec": 1223.2548719644356,
+                "wt_avg_rate": 0.9916167331931676,
+                "avg_rate": 1.0038689527807987
+            },
+            "traceback": null,
+            "children": [],
+            "date_done": null,
+            "name": "task1",
+            "args": [
+                4
+            ],
+            "kwargs": {
+                "workflow_id": "2c644ea8-7ca3-4530-a27c-b2899ff04ccd",
+                "step": "task1",
+                "app_id": "bioloop-dev.sca.iu.edu"
+            },
+            "worker": "tests-celery@IN-OTA-QYY9J9Y4QJ",
+            "retries": 0,
+            "queue": "bioloop-dev.sca.iu.edu.q"
+        }
+    ]
+}
