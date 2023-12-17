@@ -1,5 +1,5 @@
 <template>
-  <AutoCompleteDynamic
+  <AutoComplete
     :async="true"
     :data="datasets"
     filter-by="name"
@@ -21,7 +21,7 @@
         </div>
       </div>
     </template>
-  </AutoCompleteDynamic>
+  </AutoComplete>
 </template>
 
 <script setup>

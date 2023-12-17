@@ -1,10 +1,5 @@
 <template>
-  <!--  <AutoComplete-->
-  <!--    :data="projects"-->
-  <!--    filter-by="name"-->
-  <!--    placeholder="Search projects by name"-->
-  <!--  >-->
-  <AutoCompleteDynamic
+  <AutoComplete
     :data="projects"
     filter-by="name"
     placeholder="Search projects by name"
@@ -29,8 +24,7 @@
         </div>
       </div>
     </template>
-  </AutoCompleteDynamic>
-  <!--  </AutoComplete>-->
+  </AutoComplete>
 </template>
 
 <script setup>
