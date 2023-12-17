@@ -29,15 +29,15 @@ import datasetService from "@/services/dataset";
 import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
-const DEFAULT_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
+const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 
 const searches = ref([]); // array of Promises, where each Promise represents a search operation
-const datasets = ref([]);
+const datasets = ref([]); // Options passed to the <select />
 const loading = ref(false);
 const searchText = ref("");
 const searchQuery = computed(() => {
   return {
-    ...DEFAULT_FILTER_QUERY,
+    ...BASE_FILTER_QUERY,
     ...(searchText.value && { name: searchText.value }),
   };
 });
@@ -46,19 +46,19 @@ const updateSearch = (newText) => {
   searchText.value = newText;
 };
 
-const searchDatasets = (query) => {
+const searchResults = (query) => {
   loading.value = true;
-  return datasetService.getAll(query || DEFAULT_FILTER_QUERY);
+  return datasetService.getAll(query || BASE_FILTER_QUERY);
 };
 
-const setSearchResults = (_datasets) => {
-  datasets.value = _datasets;
+const persistResultsToState = (results) => {
+  datasets.value = results;
   loading.value = false;
 };
 
 watch(searchQuery, (value, oldValue) => {
   if (!_.isEqual(value, oldValue)) {
-    searches.value.push(searchDatasets(searchQuery.value));
+    searches.value.push(searchResults(searchQuery.value));
   }
 });
 
@@ -66,13 +66,14 @@ watch(searchQuery, (value, oldValue) => {
 watch(
   searches,
   () => {
+    // Resolves with an array containing responses from all the searches that have been
+    // resolved upto that instant.
     Promise.all(searches.value).then((responses) => {
-      // At this point, `responses` will not necessarily be the same length as `searches`,
-      // since some searches may not have resolved yet. These two having the same length
-      // implies that all searches have resolved.
+      // `responses` and `searches` having the same length implies that all searches
+      // have been resolved.
       if (searches.value.length === responses.length) {
         const latestResponse = responses[responses.length - 1];
-        setSearchResults(latestResponse.data.datasets);
+        persistResultsToState(latestResponse.data.datasets);
       }
     });
   },
@@ -80,6 +81,6 @@ watch(
 );
 
 onMounted(() => {
-  searches.value.push(searchDatasets());
+  searches.value.push(searchResults());
 });
 </script>
