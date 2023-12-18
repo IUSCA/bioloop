@@ -1,7 +1,6 @@
 <template>
   <AutoComplete
     :data="users"
-    filter-by="name"
     :filter-fn="filterFn"
     placeholder="Search users by name, username, or email"
   >

@@ -55,43 +55,7 @@ userService.getAll().then((data) => {
 ```
 
 ### Formatting options
-- Options can be formatted via either the `text-by` prop or the `filtered` slot. 
-  - One of `text-by` or `filtered` must be provided to see options.
-  - When using both the `text-by` prop and the `filtered` slot, `text-by` takes precedence.
-
-Formatting via the `text-by` prop:
-
-```html
-<template>
-  
-  <!-- `text-by` can be a String -->
-  <AutoComplete
-    :data="users"
-    text-by="name"
-  />
-  
-  <!-- `text-by` can also be a Function -->
-  <AutoComplete
-    :data="users"
-    :text-by="(user) => user.name"
-  />
-  
-</template>
-
-<script setup>
-const users = [
-  {
-    id: 1,
-    name: "user-1",
-  },
-  {
-    id: 2,
-    name: "user-2",
-  },
-];
-</script>
-```
-Formatting via the `filtered` slot:
+Options can be formatted via the `filtered` slot.
 
 ```html
 <template>
@@ -160,7 +124,7 @@ watch(searchText, () => {
 - filter-fn: Function (text: String) => (item: Object) => Bool: When provided, used to filter the data based on entered text value, if `async` is `false`.
 - loading: Boolean - determines if component should display loading state
 - track-by: String | Function - acts same as Vuestic's `<va-select />`'s `track-by` prop
-- text-by: String | Function - acts same as Vuestic's `<va-select />`'s `text-by` prop.
+- text-by: String | Function - acts the same as Vuestic's `<va-select />`'s `text-by` prop.
 
 ### Events
 - select - emitted when one of the search results is clicked
@@ -168,6 +132,11 @@ watch(searchText, () => {
 
 ### Slots
 - `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is displayed as a selectable option of the AutoComplete.
+
+### Notes
+- AutoComplete only handles passing the selected value to an external component, not showing selected values.
+- Despite being configured to not show selected values, AutoComplete's `<va-select />` still uses the `textBy` prop to set its value internally upon selection.
+  - The `textBy` prop defaults to `name`, but may need to be provided differently, depending on your `data`. For customizing `textBy`, see [Vuestic's <va-select />](https://ui.vuestic.dev/ui-elements/select#props).
 
 ## Maybe
 
