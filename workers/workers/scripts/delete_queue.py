@@ -12,17 +12,18 @@ One of the fixes is to ensure that there are no messages in the queue and delete
 with correct properties when it starts again.
 """
 
-from workers.celery_app import app
+from workers.archive_celery_app import app
 
-queue_name = app.conf.get('task_default_queue')
+queues = ['cpa.sca.iu.edu.q', 'archive.cpa.sca.iu.edu.q', 'fetch.cpa.sca.iu.edu.q']
 
 with app.connection_for_read() as connection:
     # Create a channel
     channel = connection.channel()
 
-    try:
-        # Delete the queue
-        channel.queue_delete(queue=queue_name)
-        print(f"Queue '{queue_name}' deleted successfully.")
-    except Exception as e:
-        print(f"Error deleting queue '{queue_name}': {e}")
+    for q in queues:
+      try:
+          # Delete the queue
+          channel.queue_delete(queue=q)
+          print(f"Queue '{q}' deleted successfully.")
+      except Exception as e:
+          print(f"Error deleting queue '{q}': {e}")
