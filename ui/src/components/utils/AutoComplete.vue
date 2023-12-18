@@ -14,7 +14,7 @@
     :highlight-matched-text="false"
     :no-options-text="statusText"
   >
-    <template #option="{ option, selectOption }">
+    <template v-if="!props.textBy" #option="{ option, selectOption }">
       <div class="va-select-option" role="option" @click="selectOption(option)">
         <slot name="filtered" :item="option" />
       </div>
@@ -42,7 +42,6 @@ const props = defineProps({
   },
   textBy: {
     type: [String, Function],
-    default: () => "name",
   },
   trackBy: {
     type: [String, Function],
@@ -55,10 +54,6 @@ const props = defineProps({
   filterFn: {
     type: Function,
     default: null,
-  },
-  displayBy: {
-    type: String,
-    default: "name",
   },
 });
 

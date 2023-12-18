@@ -2,7 +2,6 @@
   <AutoComplete
     :async="true"
     :data="datasets"
-    filter-by="name"
     placeholder="Search datasets by name"
     @update-search="updateSearch"
     :loading="loading"

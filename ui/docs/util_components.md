@@ -6,12 +6,13 @@
 
 ```html
 <template>
-<AutoComplete
-  :data="datasets"
-  filter-by="name"
-  placeholder="Search datasets"
-  @select="handleDatasetSelect"
-/>
+  <AutoComplete
+    :data="datasets"
+    filter-by="name"
+    placeholder="Search datasets"
+    @select="handleDatasetSelect"
+    text-by="name"
+  />
 </template>
 
 <script setup>
@@ -22,25 +23,20 @@
 </script>
 ```
 
-### Advanced Usage
+### Fetching options
 ```html
 <template>
-<AutoComplete
-  :data="users"
-  :filter-fn="filterFn"
-  placeholder="Search users by name, username, or email"
-  @select="handleUserSelect"
->
-  <template #filtered="{ item }">
-    <span> {{ item.name }} </span>
-    <span class="va-text-secondary px-1 font-bold"> &centerdot; </span>
-    <span class="va-text-secondary text-sm"> {{ item.email }} </span>
-  </template>
-</AutoComplete>
+  <AutoComplete
+    :data="users"
+    :filter-fn="filterFn"
+    placeholder="Search users by name, username, or email"
+    @select="handleUserSelect"
+    text-by="name"
+  />
 </template>
 
 <script setup>
-  const users = ref([]);
+const users = ref([]);
 const selectedUser = ref();
 const filterFn = (text) => (user) => {
   const _text = text.toLowerCase();
@@ -58,19 +54,120 @@ userService.getAll().then((data) => {
 </script>
 ```
 
+### Formatting options
+- Options can be formatted via either the `text-by` prop or the `filtered` slot. 
+  - One of `text-by` or `filtered` must be provided to see options.
+  - When using both the `text-by` prop and the `filtered` slot, `text-by` takes precedence.
+
+Formatting via the `text-by` prop:
+
+```html
+<template>
+  
+  <!-- `text-by` can be a String -->
+  <AutoComplete
+    :data="users"
+    text-by="name"
+  />
+  
+  <!-- `text-by` can also be a Function -->
+  <AutoComplete
+    :data="users"
+    :text-by="(user) => user.name"
+  />
+  
+</template>
+
+<script setup>
+const users = [
+  {
+    id: 1,
+    name: "user-1",
+  },
+  {
+    id: 2,
+    name: "user-2",
+  },
+];
+</script>
+```
+Formatting via the `filtered` slot:
+
+```html
+<template>
+  <AutoComplete
+    :data="users"
+  >
+    <template #filtered="{ item }">
+      <span>
+        <b>
+          {{ item.name }}
+        </b>
+      </span>
+    </template>    
+  </AutoComplete>
+</template>
+
+<script setup>
+const users = [
+  {
+    id: 1,
+    name: "user-1",
+  },
+  {
+    id: 2,
+    name: "user-2",
+  },
+];
+</script>
+```
+
+### Async
+```html
+<template>
+  <AutoComplete
+    :async="true"
+    :data="datasets"
+    @update-search="updateSearch"
+    :loading="loading" 
+    :text-by="(dataset) => dataset.name"
+  >
+  </AutoComplete>
+</template>
+
+<script setup>
+const datasets = ref([])
+const loading = ref(false)
+const searchText = ref("")
+
+const updateSearch = (newText) => {
+  searchText.value = newText;
+};
+
+watch(searchText, () => {
+  loading.value = true;
+  // retrieve updated results based on new `searchText.value`
+  loading.value = false;
+})
+</script>
+```
+
 ### Props
+- async: Boolean - determines if component should exhibit async behavior (like loading state)
 - placeholder: String - placeholder for the input element
 - data: Array of Objects - data to search and display
-- filter-by: String - property of data object to use with case-insensitive search
-- display-by: String - property of data object to use to show search results
-- filter-fn: Function (text: String) => (item: Object) => Bool: When provided used to filter the data based on enetered text value
+- filter-by: String - property of data object to use with case-insensitive search, if `async` is `false`.
+- filter-fn: Function (text: String) => (item: Object) => Bool: When provided, used to filter the data based on entered text value, if `async` is `false`.
+- loading: Boolean - determines if component should display loading state
+- track-by: String | Function - acts same as Vuestic's `<va-select />`'s `track-by` prop
+- text-by: String | Function - acts same as Vuestic's `<va-select />`'s `text-by` prop.
 
 ### Events
 - select - emitted when one of the search results is clicked
+- update-search - emitted when the search term is updated
 
 ### Slots
-- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is in v-for and called for each search result.
-
+- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is displayed as a selectable option of the AutoComplete.
 
 ## Maybe
 
