@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Callable
 
 from sca_rhythm import Workflow
+from slugify import slugify
 
 import workers.api as api
 import workers.workflow_utils as wf_utils
-from workers import cmd
 from workers.celery_app import app as celery_app
 from workers.config import config
 
@@ -74,6 +74,13 @@ class Poller:
             time.sleep(1)
 
 
+def slugify_(name: str) -> str:
+    """
+    Replace all characters except alphanumerics and underscore with hyphen
+    """
+    return slugify(name, lowercase=False, regex_pattern=r'[^a-zA-Z0-9_]')
+
+
 class Register:
     def __init__(self, dataset_type, default_wf_name='integrated'):
         self.dataset_type = dataset_type
@@ -93,8 +100,8 @@ class Register:
         candidates: list[Path] = [
             p for p in new_dirs
             if all([
-                p.name not in self.completed,
-                p.name not in set(self.rejects),
+                slugify_(p.name) not in self.completed,
+                slugify_(p.name) not in set(self.rejects),
                 # cmd.total_size(p) >= config['registration']['minimum_dataset_size']
             ])
         ]
@@ -106,7 +113,7 @@ class Register:
     def register_candidate(self, candidate: Path):
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
         dataset = {
-            'name': candidate.name,
+            'name': slugify_(candidate.name),
             'type': self.dataset_type,
             'origin_path': str(candidate.resolve()),
         }
