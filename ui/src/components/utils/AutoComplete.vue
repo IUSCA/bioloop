@@ -6,7 +6,7 @@
     clearable
     :placeholder="props.placeholder"
     autocomplete
-    :options="optionsContent"
+    :options="options"
     :track-by="props.trackBy"
     :text-by="props.textBy"
     @update-search="updateSearch"
@@ -63,7 +63,7 @@ const selectedOption = ref({});
 const searchText = ref("");
 
 const _loading = toRef(() => props.loading);
-const optionsContent = computed(() => {
+const options = computed(() => {
   // Vuestic does not have a way of conditionally hiding the dropdown options (which might
   // be desired while results are being retrieved). It also does not provide a <slot> for
   // displaying status messages like 'Loading'. As a workaround, while results are being
@@ -76,7 +76,7 @@ const optionsContent = computed(() => {
 const statusText = computed(() => {
   return _loading.value
     ? "Loading..."
-    : optionsContent.value.length === 0
+    : options.value.length === 0
       ? "None matches found"
       : "";
 });
