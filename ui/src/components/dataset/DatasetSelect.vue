@@ -32,6 +32,8 @@ import _ from "lodash";
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 
 const searches = ref([]); // array of Promises, where each Promise represents a search operation
+const searchStack = ref([]); // stack that is pushed to when a search is started, and
+// popped from when a search resolves
 const datasets = ref([]); // Options passed to the <select />
 const loading = ref(false);
 const searchText = ref("");
@@ -46,41 +48,51 @@ const updateSearch = (newText) => {
   searchText.value = newText;
 };
 
-const searchResults = (query) => {
+const search = (query) => {
   loading.value = true;
-  return datasetService.getAll(query || BASE_FILTER_QUERY);
+  searchStack.value.push(null);
+
+  return new Promise((resolve) => {
+    let response;
+    datasetService
+      .getAll(query || BASE_FILTER_QUERY)
+      .then((res) => {
+        response = res;
+      })
+      .catch((e) => {
+        console.log(e);
+      })
+      .finally(() => {
+        searchStack.value.pop();
+        resolve(response); // always resolve. Enables recovery from network errors without
+        // page refresh
+      });
+  });
 };
 
-const persistResultsToState = (results) => {
-  datasets.value = results;
-  loading.value = false;
-};
-
+// Watcher that triggers when a new search is run
 watch(searchQuery, (value, oldValue) => {
   if (!_.isEqual(value, oldValue)) {
-    searches.value.push(searchResults(searchQuery.value));
+    searches.value.push(search(searchQuery.value));
   }
 });
 
-// Watcher that triggers when a new search is run
 watch(
-  searches,
+  searchStack,
   () => {
-    // Resolves with an array containing responses from all the searches that have been
-    // resolved upto that instant.
-    Promise.all(searches.value).then((responses) => {
-      // `responses` and `searches` having the same length implies that all searches
-      // have been resolved.
-      if (searches.value.length === responses.length) {
+    // If stack is empty, all searches have been resolved
+    if (searchStack.value.length === 0) {
+      Promise.all(searches.value).then((responses) => {
         const latestResponse = responses[responses.length - 1];
-        persistResultsToState(latestResponse.data.datasets);
-      }
-    });
+        datasets.value = latestResponse.data.datasets;
+        loading.value = false;
+      });
+    }
   },
   { deep: true },
 );
 
 onMounted(() => {
-  searches.value.push(searchResults());
+  searches.value.push(search());
 });
 </script>
