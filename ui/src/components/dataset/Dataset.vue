@@ -144,6 +144,7 @@
           <va-modal
             :model-value="stage_modal"
             message="Stage all files in this dataset from the SDA?"
+            size="small"
             @ok="stage_dataset"
             @cancel="stage_modal = !stage_modal"
           />
@@ -151,7 +152,6 @@
           <!-- delete archive modal -->
           <va-modal
             :model-value="delete_archive_modal.visible"
-            max-width="480px"
             blur
             hide-default-actions
           >
@@ -300,12 +300,11 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
-import workflowService from "@/services/workflow";
 import config from "@/config";
+import DatasetService from "@/services/dataset";
+import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
-import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
+import workflowService from "@/services/workflow";
 const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
@@ -365,7 +364,7 @@ function fetch_dataset(show_loading = false) {
       console.error(err);
       if (err?.response?.status == 404)
         toast.error("Could not find the dataset");
-      else toast.error("Something went wrong. Could not fetch datatset");
+      else toast.error("Could not fetch datatset");
     })
     .finally(() => {
       loading.value = false;

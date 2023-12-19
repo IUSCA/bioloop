@@ -3,6 +3,7 @@
     v-model="visible"
     title="Stage Dataset"
     okText="Stage"
+    size="small"
     @ok="handleOk"
     @close="hide"
     no-outside-dismiss
@@ -19,8 +20,8 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
 import config from "@/config";
+import DatasetService from "@/services/dataset";
 
 const props = defineProps({
   dataset: {

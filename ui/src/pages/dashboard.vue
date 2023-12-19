@@ -58,13 +58,11 @@
 </template>
 
 <script setup>
-import workflowService from "@/services/workflow";
 import DatasetService from "@/services/dataset";
-import { useToastStore } from "@/stores/toast";
+import toast from "@/services/toast";
+import workflowService from "@/services/workflow";
 import { useNavStore } from "@/stores/nav";
-import _ from "lodash";
 
-const toast = useToastStore();
 const nav = useNavStore();
 
 nav.setNavItems([], false);
@@ -78,12 +76,6 @@ workflowService
   .then((res) => {
     workflows.value = res.data.results;
     console.log("workflows", workflows.value);
-  })
-  .catch((err) => {
-    console.error(err);
-    if (err?.response?.status == 404)
-      toast.error("Could not find the active workflows");
-    else toast.error("Something went wrong. Unable to fetch active workflows");
   });
 
 function update() {
