@@ -195,11 +195,10 @@
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
-import { useToastStore } from "@/stores/toast";
 import _ from "lodash";
 
-const toast = useToastStore();
 useSearchKeyShortcut();
 
 const props = defineProps({

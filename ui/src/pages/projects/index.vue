@@ -128,22 +128,14 @@
 </template>
 
 <script setup>
+import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
-import * as datetime from "@/services/datetime";
-import { useNavStore } from "@/stores/nav";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
-const nav = useNavStore();
-
-nav.setNavItems([
-  {
-    label: "Projects",
-  },
-]);
 
 const projects = ref([]);
 const filterInput = ref("");
@@ -270,4 +262,5 @@ function openModalToDeleteProject(rowData) {
 <route lang="yaml">
 meta:
   title: Projects
+  nav: [{ label: "Projects" }]
 </route>

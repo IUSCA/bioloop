@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import time
 from pathlib import Path
 
@@ -16,7 +17,18 @@ app.config_from_object(celeryconfig)
 
 
 def dir_last_modified_time(dataset_path: Path) -> float:
-    paths = dataset_path.rglob('*')
+    """
+    Obtain the most recent modification time for a directory and all its contents in a recursive manner.
+    At times, when copying files, outdated modification times may be retained.
+    To address this, monitor the modification time of the root directory as well.
+
+    Args:
+    dataset_path (Path): Path object to the directory.
+
+    Returns:
+    float: The last modified time in epoch seconds.
+    """
+    paths = itertools.chain([dataset_path], dataset_path.rglob('*'))
     return max((p.lstat().st_mtime for p in paths), default=time.time())
 
 
