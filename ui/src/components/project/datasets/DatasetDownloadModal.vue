@@ -132,11 +132,11 @@
 </template>
 
 <script setup>
-import statisticsService from "@/services/statistics";
-import datasetService from "@/services/dataset";
 import config from "@/config";
-import { formatBytes, downloadFile } from "@/services/utils";
-import { useToastStore } from "@/stores/toast";
+import datasetService from "@/services/dataset";
+import statisticsService from "@/services/statistics";
+import toast from "@/services/toast";
+import { downloadFile, formatBytes } from "@/services/utils";
 
 const props = defineProps({
   dataset: {
@@ -151,8 +151,6 @@ defineExpose({
   show,
   hide,
 });
-
-const toast = useToastStore();
 
 const downloadURL = computed(() => {
   return `${window.location.origin}/datasets/${props.dataset?.id}/filebrowser`;

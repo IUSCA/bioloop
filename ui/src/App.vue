@@ -11,20 +11,16 @@
 </template>
 
 <script setup>
-import { useToast } from "vuestic-ui";
-import { useColors } from "vuestic-ui";
-import { useBreakpoint } from "vuestic-ui";
+import { useBreakpoint, useColors } from "vuestic-ui";
 
 import { useAuthStore } from "@/stores/auth";
-import { useToastStore } from "@/stores/toast";
+
 import { useUIStore } from "@/stores/ui";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
 const { applyPreset, colors } = useColors();
-const toast = useToastStore();
-toast.setup(useToast());
 
 const isDark = useDark();
 

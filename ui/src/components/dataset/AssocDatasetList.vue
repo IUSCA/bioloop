@@ -21,11 +21,10 @@
 </template>
 
 <script setup>
-import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
-import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
+import toast from "@/services/toast";
+import { formatBytes } from "@/services/utils";
 
 const props = defineProps({
   dataset_ids: {
