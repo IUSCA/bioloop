@@ -54,20 +54,12 @@
 </template>
 
 <script setup>
-import { useColors } from "vuestic-ui";
-import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
-import { useNavStore } from "@/stores/nav";
+import { useAuthStore } from "@/stores/auth";
+import { useColors } from "vuestic-ui";
 
 const auth = useAuthStore();
 const { colors } = useColors();
-const nav = useNavStore();
-
-nav.setNavItems([
-  {
-    label: "Profile",
-  },
-]);
 
 const palette = ["#154ec1", "#ef476f", "#ffd166", "#06d6a0", "#8338ec"];
 const profile = auth.user;
@@ -82,4 +74,5 @@ function persistTheme() {
 <route lang="yaml">
 meta:
   title: Profile
+  nav: [{ label: "Profile" }]
 </route>

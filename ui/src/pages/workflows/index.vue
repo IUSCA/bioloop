@@ -381,15 +381,16 @@ function compute_failure_modes(workflows) {
 }
 </script>
 
-<route lang="yaml">
-meta:
-  title: Workflows
-  requiresRoles: ["operator", "admin"]
-</route>
-
 <!-- making this style scoped does not seem to apply this style to the select component -->
 <style>
 .auto-refresh-select fieldset.va-input-wrapper__size-keeper {
   width: 100%;
 }
 </style>
+
+<route lang="yaml">
+meta:
+  title: Workflows
+  requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Workflows" }]
+</route>
