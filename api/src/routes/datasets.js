@@ -1,3 +1,5 @@
+// const fs = require('fs');
+// const { createHash } = require('node:crypto');
 const fsPromises = require('fs/promises');
 
 const express = require('express');
@@ -735,22 +737,22 @@ router.get(
 );
 
 // Post a file chunks
-router.post(
-  '/file-chunk',
-  isPermittedTo('update'),
-  asyncHandler(async (req, res, next) => {
-    authService.fetchWrapper.fetch(`${config.get('download_server.base_url')}/file-chunk`, {
-      method: 'POST',
-      body: req.body,
-    }).then((response) => {
-      res.send(response.status);
-    }).catch((e) => {
-      // eslint-disable-next-line no-console
-      console.log(e);
-      res.sendStatus(500);
-    });
-  }),
-);
+// router.post(
+//   '/file-chunk',
+//   isPermittedTo('update'),
+//   asyncHandler(async (req, res, next) => {
+//     authService.fetchWrapper.fetch(`${config.get('download_server.base_url')}/file-chunk`, {
+//       method: 'POST',
+//       body: req.body,
+//     }).then((response) => {
+//       res.send(response.status);
+//     }).catch((e) => {
+//       // eslint-disable-next-line no-console
+//       console.log(e);
+//       res.sendStatus(500);
+//     });
+//   }),
+// );
 
 const UPLOAD_PATH = path.join(config.upload_path, 'datasets');
 

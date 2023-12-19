@@ -7,6 +7,7 @@ import config from "@/config";
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
+  const uploadToken = ref(useLocalStorage("uploadToken", ""));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
@@ -95,6 +96,10 @@ export const useAuthStore = defineStore("auth", () => {
       });
   }
 
+  function setUploadToken(token) {
+    uploadToken.value = token;
+  }
+
   // Check for roles
   function hasRole(role) {
     return (
@@ -137,6 +142,7 @@ export const useAuthStore = defineStore("auth", () => {
     canAdmin,
     setTheme,
     getTheme,
+    setUploadToken,
   };
 });
 

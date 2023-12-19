@@ -85,10 +85,6 @@ class DatasetService {
     });
   }
 
-  uploadFileChunk(data) {
-    return api.post("/datasets/file-chunk", data);
-  }
-
   logUpload(data) {
     return api.post("/datasets/upload-log", data);
   }

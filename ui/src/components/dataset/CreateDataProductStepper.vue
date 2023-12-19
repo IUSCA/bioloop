@@ -264,9 +264,13 @@
 import SparkMD5 from "spark-md5";
 import _ from "lodash";
 import datasetService from "@/services/dataset";
+import uploadService from "@/services/uploads";
+import { useAuthStore } from "@/stores/auth";
 import { formatBytes } from "@/services/utils";
 import { useForm } from "vuestic-ui";
 import config from "@/config";
+
+const auth = useAuthStore();
 
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -455,7 +459,7 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
     try {
-      await datasetService.uploadFileChunk(chunkData);
+      await uploadService.uploadFileChunk(chunkData);
       chunkUploaded = true;
     } catch (e) {
       console.log(`Encountered error`, e);
@@ -656,33 +660,30 @@ const onNextClick = (nextStep) => {
 };
 
 // Evaluates selected file checksums, logs the upload
-const preUpload = () => {
-  return evaluateChecksums(filesNotUploaded.value).then(() => {
-    const data = uploadLog.value?.id
-      ? {
-          status: config.upload_status.UPLOADING,
-          increment_processing_count: false,
-        }
-      : {
-          ...formData.value,
-          files_metadata: dataProductFiles.value.map((e) => {
-            return {
-              name: e.name,
-              checksum: e.fileChecksum,
-              num_chunks: e.numChunks,
-            };
-          }),
-        };
+const preUpload = async () => {
+  const uploadToken = await uploadService.getToken().data;
+  auth.setUploadToken(uploadToken);
 
-    return createOrUpdateUploadLog(uploadLog.value?.id, data)
-      .then((res) => {
-        uploadLog.value = res.data;
-        return Promise.resolve();
-      })
-      .catch(() => {
-        return Promise.reject();
-      });
-  });
+  await evaluateChecksums(filesNotUploaded.value);
+
+  const logData = uploadLog.value?.id
+    ? {
+        status: config.upload_status.UPLOADING,
+        increment_processing_count: false,
+      }
+    : {
+        ...formData.value,
+        files_metadata: dataProductFiles.value.map((e) => {
+          return {
+            name: e.name,
+            checksum: e.fileChecksum,
+            num_chunks: e.numChunks,
+          };
+        }),
+      };
+
+  const res = await createOrUpdateUploadLog(uploadLog.value?.id, logData);
+  uploadLog.value = res.data;
 };
 
 // Log (or update) upload status

@@ -4,7 +4,7 @@ const path = require('path');
 const jsonwt = require('jsonwebtoken');
 const _ = require('lodash/fp');
 const config = require('config');
-const { OAuth2Client, OAuth2Fetch } = require('@badgateway/oauth2-client');
+const { OAuth2Client } = require('@badgateway/oauth2-client');
 
 const logger = require('./logger');
 const userService = require('./user');
@@ -70,14 +70,6 @@ function get_upload_token() {
   });
 }
 
-const fetchWrapper = new OAuth2Fetch({
-  client: oAuth2DownloadClient,
-  getNewToken: async () => {
-    const token = await get_upload_token();
-    return token;
-  },
-});
-
 module.exports = {
   onLogin,
   issueJWT,
@@ -85,5 +77,4 @@ module.exports = {
   get_user_profile,
   get_download_token,
   get_upload_token,
-  fetchWrapper,
 };
