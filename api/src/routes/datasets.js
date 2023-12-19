@@ -222,7 +222,6 @@ router.get(
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
-        ...datasetService.INCLUDE_STATES,
         source_datasets: true,
         derived_datasets: true,
       },
@@ -330,8 +329,6 @@ router.post(
       data,
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
-        ...datasetService.INCLUDE_STATES,
-
       },
     });
     res.json(dataset);
@@ -376,7 +373,6 @@ router.patch(
       data,
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
-        ...datasetService.INCLUDE_STATES,
         source_datasets: true,
         derived_datasets: true,
       },
