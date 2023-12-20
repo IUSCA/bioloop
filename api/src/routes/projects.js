@@ -104,7 +104,7 @@ router.get(
     });
 
     // include workflow objects with dataset
-    const wfPromises = project.datasets || [].map(async (ds) => {
+    const wfPromises = (project.datasets || []).map(async (ds) => {
       const { dataset, assigned_at } = ds;
       if (dataset.workflows.length > 0) {
         return wfService.getAll({

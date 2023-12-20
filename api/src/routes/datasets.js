@@ -212,7 +212,6 @@ router.get(
       type: req.query.type,
       name: req.query.name,
       days_since_last_staged: req.query.days_since_last_staged,
-      sortBy,
     });
 
     const filterQuery = { where: query_obj };
