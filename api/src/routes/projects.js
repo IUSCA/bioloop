@@ -140,16 +140,36 @@ router.get(
     query('offset').isInt().toInt().optional(),
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
+    query('username').notEmpty().escape().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     const sortBy = req.query.sortBy || {};
 
-    const query_obj = _.omitBy(_.isUndefined)({
-      projects: req.params.id ? {
-        some: {
-          project_id: req.params.id,
+    const userQuery = {
+      some: {
+        user: {
+          username: req.query.username || req.user.username,
         },
-      } : undefined,
+      },
+    };
+
+    const query_obj = _.omitBy(_.isUndefined)({
+      projects: {
+        some: {
+          project: {
+            OR: [
+              {
+                id: req.params.id,
+              },
+              {
+                slug: req.params.id,
+              },
+            ],
+            users: (req.user.roles.includes('admin')
+              || req.user.roles.includes('operator')) ? undefined : userQuery,
+          },
+        },
+      },
       name: req.query.name ? {
         contains: req.query.name,
         mode: 'insensitive', // case-insensitive search

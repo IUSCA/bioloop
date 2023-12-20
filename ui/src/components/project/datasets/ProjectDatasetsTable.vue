@@ -207,6 +207,7 @@ const datasets_filter_query = computed(() => {
   return {
     ...filters_group_query.value,
     ...(!!search_query.value && { ...search_query.value }),
+    username: auth.user.username,
   };
 });
 
