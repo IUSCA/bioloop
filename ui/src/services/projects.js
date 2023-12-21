@@ -83,7 +83,8 @@ class projectService {
   }
 
   getDatasets({ id, params }) {
-    return api.get(`/projects/${id}/datasets`, {
+    const username = auth.user.username;
+    return api.get(`/projects/${username}/${id}/datasets`, {
       params,
     });
   }

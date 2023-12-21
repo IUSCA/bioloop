@@ -2,7 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const {
-  query, body,
+  query, body, param,
 } = require('express-validator');
 
 const asyncHandler = require('../middleware/asyncHandler');
@@ -132,15 +132,15 @@ router.get(
 );
 
 router.get(
-  '/:id/datasets',
-  isPermittedTo('read'),
+  '/:username/:id/datasets',
+  isPermittedTo('read', { checkOwnerShip: true }),
   validate([
+    param('username').notEmpty().escape(),
     query('staged').toBoolean().optional(),
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
-    query('username').notEmpty().escape().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     const sortBy = req.query.sortBy || {};
@@ -148,7 +148,7 @@ router.get(
     const userQuery = {
       some: {
         user: {
-          username: req.query.username || req.user.username,
+          username: req.params.username,
         },
       },
     };
@@ -165,8 +165,7 @@ router.get(
                 slug: req.params.id,
               },
             ],
-            users: (req.user.roles.includes('admin')
-              || req.user.roles.includes('operator')) ? undefined : userQuery,
+            users: userQuery,
           },
         },
       },
