@@ -19,13 +19,12 @@
 </template>
 
 <script setup>
-import StatisticsService from "@/services/statistics";
 import { getDefaultChartColors } from "@/services/charts";
+import StatisticsService from "@/services/statistics";
+import toast from "@/services/toast";
 import _ from "lodash";
-import { useToastStore } from "@/stores/toast";
 
 const isDark = useDark();
-const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);

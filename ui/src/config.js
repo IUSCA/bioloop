@@ -43,6 +43,20 @@ const exports = {
     SLATE_SCRATCH: "/N/scratch",
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
+  dashboard: {
+    active_tasks: {
+      steps: [
+        "await stability",
+        "inspect",
+        "archive",
+        "stage",
+        "validate",
+        "setup download",
+        "delete source",
+      ],
+      refresh_interval_ms: 10000,
+    },
+  },
 };
 
 export default exports;

@@ -25,7 +25,7 @@
     </div>
 
     <!-- Workflows -->
-    <div>
+    <!-- <div>
       <span class="text-xl font-bold block my-1">ACTIVE WORKFLOWS</span>
       <div v-if="(workflows || []).length > 0">
         <collapsible
@@ -53,42 +53,36 @@
           There are no active workflows.
         </span>
       </div>
-    </div>
+    </div> -->
+
+    <Tasks />
   </div>
 </template>
 
 <script setup>
-import workflowService from "@/services/workflow";
 import DatasetService from "@/services/dataset";
-import { useToastStore } from "@/stores/toast";
+import toast from "@/services/toast";
+// import workflowService from "@/services/workflow";
 import { useNavStore } from "@/stores/nav";
-import _ from "lodash";
 
-const toast = useToastStore();
 const nav = useNavStore();
 
 nav.setNavItems([], false);
 
-const workflows = ref([]);
+// const workflows = ref([]);
 const raw_data_stats = ref({});
 const data_products_stats = ref({});
 
-workflowService
-  .getAll({ last_task_run: true, status: "ACTIVE" })
-  .then((res) => {
-    workflows.value = res.data.results;
-    console.log("workflows", workflows.value);
-  })
-  .catch((err) => {
-    console.error(err);
-    if (err?.response?.status == 404)
-      toast.error("Could not find the active workflows");
-    else toast.error("Something went wrong. Unable to fetch active workflows");
-  });
+// workflowService
+//   .getAll({ last_task_run: true, status: "ACTIVE" })
+//   .then((res) => {
+//     workflows.value = res.data.results;
+//     console.log("workflows", workflows.value);
+//   });
 
-function update() {
-  console.log("workflow updated");
-}
+// function update() {
+//   console.log("workflow updated");
+// }
 
 DatasetService.getStats({ type: "RAW_DATA" })
   .then((res) => {

@@ -81,12 +81,11 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
-import { formatBytes, downloadFile, cmp } from "@/services/utils";
+import toast from "@/services/toast";
+import { cmp, downloadFile, formatBytes } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
-import { useToastStore } from "@/stores/toast";
 
 const store = useFileBrowserStore();
-const toast = useToastStore();
 
 const props = defineProps({
   datasetId: {

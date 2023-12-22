@@ -1,3 +1,4 @@
+import fnmatch
 import logging
 import time
 from pathlib import Path
@@ -89,6 +90,9 @@ class Register:
         self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
         self.default_wf_name = default_wf_name
 
+    def is_a_reject(self, name):
+        return any([fnmatch.fnmatchcase(name, pat) for pat in self.rejects])
+
     def get_registered_dataset_names(self):
         datasets = api.get_all_datasets(dataset_type=self.dataset_type)
         return [b['name'] for b in datasets]
@@ -101,7 +105,7 @@ class Register:
             p for p in new_dirs
             if all([
                 slugify_(p.name) not in self.completed,
-                slugify_(p.name) not in set(self.rejects),
+                not self.is_a_reject(slugify_(p.name)),
                 # cmd.total_size(p) >= config['registration']['minimum_dataset_size']
             ])
         ]

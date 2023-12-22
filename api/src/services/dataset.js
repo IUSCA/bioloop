@@ -148,7 +148,6 @@ async function get_dataset({
       files: fileSelect,
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
-      ...INCLUDE_STATES,
       source_datasets: true,
       derived_datasets: true,
     },
