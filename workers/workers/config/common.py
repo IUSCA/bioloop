@@ -57,7 +57,7 @@ config = {
             'source_dir': '/opt/sca/proteome/data_products/',
             'rejects': ['.snapshots'],
         },
-        'recency_threshold_seconds': 10*60,
+        'recency_threshold_seconds': 60*60,
         'minimum_dataset_size': ONE_GIGABYTE,
         'wait_between_stability_checks_seconds': 60,
         'poll_interval_seconds': 10
@@ -107,6 +107,45 @@ config = {
                     'name': 'delete source directory',
                     'task': 'delete_source',
                     'queue': 'archive.cpa.sca.iu.edu.q'
+                }
+            ]
+        },
+        'legacy': {
+            'steps': [
+                {
+                    'name': 'await stability',
+                    'task': 'await_stability',
+                    'queue': 'legacy_archive.cpa.sca.iu.edu.q'
+                },
+                {
+                    'name': 'inspect',
+                    'task': 'inspect_dataset',
+                    'queue': 'legacy_archive.cpa.sca.iu.edu.q'
+                },
+                {
+                    'name': 'archive',
+                    'task': 'archive_dataset',
+                    'queue': 'legacy_archive.cpa.sca.iu.edu.q'
+                },
+                {
+                    'name': 'stage',
+                    'task': 'stage_dataset',
+                    'queue': 'fetch.cpa.sca.iu.edu.q'
+                },
+                {
+                    'name': 'validate',
+                    'task': 'validate_dataset',
+                    'queue': 'fetch.cpa.sca.iu.edu.q'
+                },
+                {
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download',
+                    'queue': 'fetch.cpa.sca.iu.edu.q'
+                },
+                {
+                    'name': 'delete source directory',
+                    'task': 'delete_source',
+                    'queue': 'legacy_archive.cpa.sca.iu.edu.q'
                 }
             ]
         }

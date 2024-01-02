@@ -153,8 +153,15 @@ if __name__ == "__main__":
         callback=Register('DATA_PRODUCT').register,
         interval=config['registration']['poll_interval_seconds']
     )
+    obs3 = Observer(
+        name='legacy_obs',
+        dir_path='',
+        callback=Register('DATA_PRODUCT', default_wf_name='legacy').register,
+        interval=config['registration']['poll_interval_seconds']
+    )
 
     poller = Poller()
-    poller.register(obs1)
-    poller.register(obs2)
+    # poller.register(obs1)
+    # poller.register(obs2)
+    poller.register(obs3)
     poller.poll()
