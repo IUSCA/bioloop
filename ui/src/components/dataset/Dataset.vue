@@ -308,9 +308,6 @@ import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import workflowService from "@/services/workflow";
-const router = useRouter();
-const route = useRoute();
-const isDark = useDark();
 
 const downloadModal = ref(null);
 
@@ -323,7 +320,6 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
-
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
