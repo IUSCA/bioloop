@@ -5,6 +5,7 @@
     no-outside-dismiss
     fixed-layout
     hide-default-actions
+    size="small"
   >
     <va-inner-loading :loading="loading" class="sm:w-96">
       <ProjectInfoForm />
@@ -27,8 +28,8 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps(["id"]);
 const emit = defineEmits(["update"]);

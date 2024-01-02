@@ -208,22 +208,12 @@
 
 <script setup>
 import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
 import UserService from "@/services/user";
 import { cmp } from "@/services/utils";
-
 import { useAuthStore } from "@/stores/auth";
-import { useNavStore } from "@/stores/nav";
-import { useToastStore } from "@/stores/toast";
 
-const toast = useToastStore();
 const auth = useAuthStore();
-const nav = useNavStore();
-
-nav.setNavItems([
-  {
-    label: "Users",
-  },
-]);
 
 const users = ref([]);
 const filterInput = ref("");
@@ -412,4 +402,5 @@ fetch_all_users();
 meta:
   title: Users
   requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Users" }]
 </route>

@@ -21,9 +21,8 @@
 </template>
 
 <script setup>
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
-import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
 
 const auth = useAuthStore();
 

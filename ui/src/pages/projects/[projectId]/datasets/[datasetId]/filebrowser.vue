@@ -6,15 +6,15 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import DatasetService from "@/services/dataset";
 import projectService from "@/services/projects";
-import config from "@/config";
-import { useToastStore } from "@/stores/toast";
-import { useNavStore } from "@/stores/nav";
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
+import { useNavStore } from "@/stores/nav";
 
 const auth = useAuthStore();
-const toast = useToastStore();
+
 const nav = useNavStore();
 
 const props = defineProps({ projectId: String, datasetId: String });
@@ -55,7 +55,7 @@ Promise.all([
   .catch((err) => {
     console.error(err);
     if (err?.response?.status == 404) toast.error("Could not find the dataset");
-    else toast.error("Something went wrong. Could not fetch datatset");
+    else toast.error("Could not fetch datatset");
   });
 </script>
 

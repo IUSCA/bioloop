@@ -3,11 +3,11 @@
     v-model="visible"
     fixed-layout
     hide-default-actions
-    size="large"
+    size="small"
     title="Advanced File Search"
   >
     <va-inner-loading :loading="loading">
-      <div class="w-96">
+      <div class="w-full">
         <va-form class="flex flex-col gap-3 md:gap-5">
           <!-- name filter -->
           <va-input

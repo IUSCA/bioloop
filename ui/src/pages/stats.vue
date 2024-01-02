@@ -53,16 +53,12 @@
 </template>
 
 <script setup>
-import { useNavStore } from "@/stores/nav";
 import config from "@/config";
-import _ from "lodash";
-
-const nav = useNavStore();
-
-// set page breadcrumbs
-nav.setNavItems([
-  {
-    label: "Stats/Tracking",
-  },
-]);
 </script>
+
+<route lang="yaml">
+meta:
+  title: Stats/Tracking
+  requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Stats/Tracking" }]
+</route>

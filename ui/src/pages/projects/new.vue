@@ -11,21 +11,9 @@
 
 <script setup>
 import { useProjectFormStore } from "@/stores/projects/projectForm";
-import { useNavStore } from "@/stores/nav";
 
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
-const nav = useNavStore();
-
-nav.setNavItems([
-  {
-    label: "Projects",
-    to: "/projects",
-  },
-  {
-    label: "New Project",
-  },
-]);
 
 onUnmounted(() => {
   // clear project store when navigating away from this page
@@ -37,4 +25,5 @@ onUnmounted(() => {
 meta:
   title: Create Project
   requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Projects" }, { label: "New Project" }]
 </route>
