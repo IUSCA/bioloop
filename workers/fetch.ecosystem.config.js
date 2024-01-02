@@ -3,7 +3,7 @@ module.exports = {
   apps: [
     {
       name: "celery_worker",
-      script: "python",
+      script: "/opt/sca/cpa/workers/.venv/bin/python",
       args: "-m celery -A workers.fetch_celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'cpa-celery-fetch-w1@%h' --autoscale=8,2 --queues 'fetch.cpa.sca.iu.edu.q'",
       watch: false,
       interpreter: "",
@@ -16,7 +16,7 @@ module.exports = {
     },
     {
       name: "metrics",
-      script: "python",
+      script: "/opt/sca/cpa/workers/.venv/bin/python",
       args: "-u -m workers.scripts.metrics",
       watch: false,
       interpreter: "",
@@ -30,7 +30,7 @@ module.exports = {
     },
     {
       name: "purge_staged_datasets",
-      script: "python",
+      script: "/opt/sca/cpa/workers/.venv/bin/python",
       args: "-u -m workers.scripts.purge_staged_datasets",
       watch: false,
       interpreter: "",

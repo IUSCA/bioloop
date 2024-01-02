@@ -57,9 +57,9 @@ config = {
             'source_dir': '/opt/sca/proteome/data_products/',
             'rejects': ['.snapshots'],
         },
-        'recency_threshold_seconds': ONE_HOUR,
+        'recency_threshold_seconds': 10*60,
         'minimum_dataset_size': ONE_GIGABYTE,
-        'wait_between_stability_checks_seconds': FIVE_MINUTES,
+        'wait_between_stability_checks_seconds': 60,
         'poll_interval_seconds': 10
     },
     'service_user': 'cpauser',

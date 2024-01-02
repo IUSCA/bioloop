@@ -22,16 +22,16 @@
 </template>
 
 <script setup>
-import dayjs from "dayjs";
-import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
-import "dayjs/locale/en";
-import MetricsService from "@/services/metrics";
-import { formatBytes } from "@/services/utils";
+import config from "@/config";
 import { getDefaultChartColors } from "@/services/charts";
 import { absolute } from "@/services/datetime";
-import config from "@/config";
+import MetricsService from "@/services/metrics";
+import toast from "@/services/toast";
+import { formatBytes } from "@/services/utils";
+import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
+import dayjs from "dayjs";
+import "dayjs/locale/en";
 import _ from "lodash";
-import { useToastStore } from "@/stores/toast";
 
 const props = defineProps({
   measurement: {
@@ -47,7 +47,6 @@ const props = defineProps({
 });
 
 const isDark = useDark();
-const toast = useToastStore();
 
 const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);

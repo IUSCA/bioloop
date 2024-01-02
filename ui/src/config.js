@@ -13,10 +13,6 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    stage: {
-      RAW_DATA: "/N/scratch/cpauser/cpa/production/stage/raw_data",
-      DATA_PRODUCT: "/N/scratch/cpauser/cpa/production/stage/data_products",
-    },
     download: "/N/scratch/cpauser/cpa/production/download",
   },
   file_browser: {
@@ -46,6 +42,20 @@ const exports = {
     SDA: "sda",
     SLATE_SCRATCH: "/N/scratch",
     SLATE_SCRATCH_FILES: "/N/scratch files",
+  },
+  dashboard: {
+    active_tasks: {
+      steps: [
+        "await stability",
+        "inspect",
+        "archive",
+        "stage",
+        "validate",
+        "setup download",
+        "delete source",
+      ],
+      refresh_interval_ms: 10000,
+    },
   },
 };
 

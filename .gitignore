@@ -60,3 +60,4 @@ backup
 !db/postgres
 
 .pm2
+todo.md

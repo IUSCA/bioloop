@@ -21,6 +21,7 @@ model dataset {
   updated_at       DateTime            @default(now()) @updatedAt @db.Timestamp(6)
   origin_path      String?
   archive_path     String?
+  staged_path      String?
   is_deleted       Boolean             @default(false)
   is_staged        Boolean             @default(false)
   metadata         Json?

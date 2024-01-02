@@ -88,12 +88,45 @@
           value-by="valueBy"
         />
       </div>
+
+      <!-- failure modes -->
+      <div v-if="Object.keys(failure_modes).length">
+        <va-divider />
+
+        <!-- failure modes -->
+        <div class="text-lg font-semibold hidden md:block md:pb-2">
+          Failure Modes
+          <span class="text-sm va-text-secondary ml-1 font-thin">
+            in this page
+          </span>
+        </div>
+        <!-- show failure modes -->
+        <div class="flex gap-1">
+          <va-tabs
+            v-model="query_params.failure_mode"
+            :vertical="!breakpoint_sm"
+            class="md:min-h-[100px]"
+          >
+            <template #tabs>
+              <va-tab
+                v-for="fm in Object.keys(failure_modes)"
+                :key="fm"
+                :name="fm"
+              >
+                <span class="text-base font-normal">
+                  {{ fm }} ({{ failure_modes[fm] }})
+                </span>
+              </va-tab>
+            </template>
+          </va-tabs>
+        </div>
+      </div>
     </div>
 
     <!-- workflows -->
     <div class="md:w-5/6 space-y-2">
       <collapsible
-        v-for="workflow in workflows"
+        v-for="workflow in filtered_workflows"
         :key="workflow.id"
         v-model="workflow.collapse"
       >
@@ -123,22 +156,24 @@
       </div>
 
       <!-- pagination -->
-      <va-pagination
-        v-if="total_pages > 1"
-        v-model="query_params.page"
-        class="my-3 justify-center"
-        :pages="total_pages"
-        :visible-pages="5"
+      <Pagination
+        class="mt-5 px-1 lg:px-3"
+        v-if="query_params.failure_mode == null"
+        v-model:page="query_params.page"
+        v-model:page_size="query_params.page_size"
+        :total_results="total_results"
+        :curr_items="workflows.length"
+        :page_size_options="PAGE_SIZE_OPTIONS"
       />
     </div>
   </div>
 </template>
 
 <script setup>
+import useQueryPersistence from "@/composables/useQueryPersistence";
 import workflowService from "@/services/workflow";
 import { useNavStore } from "@/stores/nav";
 import { useBreakpoint } from "vuestic-ui";
-import useQueryPersistence from "@/composables/useQueryPersistence";
 
 const nav = useNavStore();
 const breakpoint = useBreakpoint();
@@ -149,11 +184,13 @@ nav.setNavItems([
   },
 ]);
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const default_query_params = () => ({
   status: null,
   page: 1,
   auto_refresh: 10,
+  failure_mode: null,
+  page_size: 10,
 });
 const auto_refresh_options = [
   { valueBy: 0, text: "Off" },
@@ -165,7 +202,7 @@ const auto_refresh_options = [
 ];
 
 const workflows = ref([]);
-const workflows_total_count = ref(0);
+const total_results = ref(0);
 const status_counts = ref({});
 
 const query_params = ref(default_query_params());
@@ -189,15 +226,40 @@ const breakpoint_sm = computed(() => {
   return breakpoint.width < 768;
 });
 
-const total_pages = computed(() => {
-  return Math.ceil(workflows_total_count.value / PAGE_SIZE);
+const skip = computed(() => {
+  return query_params.value.page_size * (query_params.value.page - 1);
+});
+
+const failure_modes = computed(() => {
+  return compute_failure_modes(workflows.value);
+});
+
+const filtered_workflows = computed(() => {
+  return workflows.value.filter((wf) => {
+    if (!query_params.value.failure_mode) {
+      return true;
+    }
+    return get_failure_mode(wf) === query_params.value.failure_mode;
+  });
 });
 
 // fetch data when query params change
 watch(
-  [() => query_params.value.status, () => query_params.value.page],
-  () => {
-    getData();
+  [
+    () => query_params.value.status,
+    () => query_params.value.page,
+    () => query_params.value.page_size,
+  ],
+  (newVals, oldVals) => {
+    // set page to 1 when page_size changes
+    if (newVals[2] !== oldVals[2]) {
+      query_params.value.page = 1;
+    }
+
+    getData().then(() => {
+      // remove failure mode selection when user selects a status or changes page
+      query_params.value.failure_mode = null;
+    });
   },
   {
     deep: true,
@@ -234,13 +296,12 @@ watch(
 );
 
 function getWorkflows() {
-  const skip = PAGE_SIZE * (query_params.value.page - 1);
   return workflowService
     .getAll({
       last_task_run: true,
       status: query_params.value.status,
-      skip,
-      limit: PAGE_SIZE,
+      skip: skip.value,
+      limit: query_params.value.page_size,
     })
     .then((res) => {
       // keep workflows open that were open
@@ -250,7 +311,7 @@ function getWorkflows() {
           collapse: workflows.value[i]?.collapse || false,
         };
       });
-      workflows_total_count.value =
+      total_results.value =
         res.data?.metadata?.total || workflows.value?.length || 0;
     })
     .catch((err) => {
@@ -270,20 +331,32 @@ function getCounts() {
 }
 
 function getData() {
-  getWorkflows();
-  getCounts();
+  return Promise.allSettled([getWorkflows(), getCounts()]);
 }
 
 function reset_query_params() {
   query_params.value = default_query_params();
 }
-</script>
 
-<route lang="yaml">
-meta:
-  title: Workflows
-  requiresRoles: ["operator", "admin"]
-</route>
+function get_failure_mode(wf) {
+  const last_step =
+    wf?.steps?.length > 0 ? wf.steps[wf.steps.length - 1] : null;
+  const failure_mode = last_step?.last_task_run?.result?.exc_type;
+  return failure_mode;
+}
+
+function compute_failure_modes(workflows) {
+  return workflows
+    .filter((wf) => wf.status === "FAILURE")
+    .reduce((acc, wf) => {
+      const failure_mode = get_failure_mode(wf);
+      if (failure_mode) {
+        acc[failure_mode] = (acc[failure_mode] || 0) + 1;
+      }
+      return acc;
+    }, {});
+}
+</script>
 
 <!-- making this style scoped does not seem to apply this style to the select component -->
 <style>
@@ -291,3 +364,10 @@ meta:
   width: 100%;
 }
 </style>
+
+<route lang="yaml">
+meta:
+  title: Workflows
+  requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Workflows" }]
+</route>
