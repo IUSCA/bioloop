@@ -78,7 +78,7 @@ const statusText = computed(() => {
   return _loading.value
     ? "Loading..."
     : options.value.length === 0
-      ? "None matches found"
+      ? "No matches found"
       : "";
 });
 
