@@ -155,7 +155,7 @@ if __name__ == "__main__":
     )
     obs3 = Observer(
         name='legacy_obs',
-        dir_path='',
+        dir_path='/N/scratch/cpauser/legacy_data',
         callback=Register('DATA_PRODUCT', default_wf_name='legacy').register,
         interval=config['registration']['poll_interval_seconds']
     )
