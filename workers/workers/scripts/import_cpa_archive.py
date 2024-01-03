@@ -2,7 +2,6 @@ import os
 import shutil
 import sys
 import time
-import tarfile
 
 import workers.sda as sda
 from workers.config import config
@@ -108,8 +107,7 @@ def main():
                     del directory_list[directory]
           
                 # Unzip compressed files
-                # unzip_file(dest_file_path)
-                untar_file(dest_file_path, curr_dest_dir)
+                unzip_file(dest_file_path)
 
                 # Update total size
                 total_size += file_size
@@ -146,12 +144,6 @@ def parse_output(input_string):
     return directory_structure
 
 
-
-def untar_file(file_path, extract_path):
-    # Open the tar file
-    with tarfile.open(file_path) as tar:
-        # Extract all files into the specified directory
-        tar.extractall(path=extract_path)
 
 def unzip_file(file_path):
     print("Extracting file... ", file_path)
