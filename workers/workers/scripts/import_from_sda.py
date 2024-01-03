@@ -2,11 +2,12 @@ import os
 import sys
 import time
 import tarfile
+import shutil
+import tempfile
 
 import workers.sda as sda
 from workers.config import config
-import workers.cmd as cmd
-
+from pathlib import Path
 
 # Config variables
 src_dir = config['import_from_sda']['src_dir']
@@ -107,8 +108,8 @@ def main():
                     del directory_list[directory]
           
                 # Unzip compressed files
-                # unzip_file(dest_file_path)
-                untar_file(dest_file_path, curr_dest_dir)
+                if tarfile.is_tarfile(file_path):
+                  extract_tarfile(dest_file_path, curr_dest_dir)
 
                 # Update total size
                 total_size += file_size
@@ -145,15 +146,40 @@ def parse_output(input_string):
     return directory_structure
 
 
+def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
+    """
+    tar_path: path to the tar file to extract
+    target_dir: path to the top level directory after extraction
 
-def untar_file(file_path, extract_path):
-    # Open the tar file
-    with tarfile.open(file_path) as tar:
-        # Extract all files into the specified directory
-        tar.extractall(path=extract_path)
+    extracts the tar file to  target_dir.parent directory.
 
-    # Delete the original tar file
-    os.remove(file_path)
+    The directory created here after extraction will have the same name as the top level directory inside the archive.
+
+    If that is not desired and the name of the directory created needs to be the same as target_dir.name,
+    then set override_arcname = True
+
+    If a directory with the same name as extracted dir already exists, it will be deleted.
+    @param tar_path:
+    @param target_dir:
+    @param override_arcname:
+    """
+    with tarfile.open(tar_path, mode='r') as archive:
+        # find the top-level directory in the extracted archive
+        archive_name = os.path.commonprefix(archive.getnames())
+        extraction_dir = target_dir if override_arcname else (target_dir.parent / archive_name)
+
+        # if extraction_dir exists then delete it
+        if extraction_dir.exists():
+            shutil.rmtree(extraction_dir)
+
+        # create parent directories if missing
+        extraction_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        # extracts the tar contents to a temp directory
+        # move the contents to the extraction_dir
+        with tempfile.TemporaryDirectory(dir=extraction_dir.parent) as tmp_dir:
+            archive.extractall(path=tmp_dir)
+            shutil.move(Path(tmp_dir) / archive_name, extraction_dir)
 
 
 
