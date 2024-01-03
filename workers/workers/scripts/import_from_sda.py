@@ -146,32 +146,12 @@ def parse_output(input_string):
     return directory_structure
 
 
-
+# Unzip file
 def untar_file(file_path, extract_path):
     # Open the tar file
     with tarfile.open(file_path) as tar:
         # Extract all files into the specified directory
         tar.extractall(path=extract_path)
-
-
-
-# Move to root of destination directory
-def move_folders_with_files(src_dir):
-    for root, dirs, files in os.walk(src_dir):
-        # if the directory contains any files
-        if files:
-            
-            # DEBUG PRINTS
-            print("DEST_PATH", dest)
-            print("ROOT", root)
-
-            # Move the directory to the destination path
-            shutil.move(root, dest)
-
-    # Delete the source directory if it is empty
-    if not os.listdir(src_dir):
-      shutil.rmtree(src_dir)
-
 
 # Get size of directory
 def get_directory_size(directory):
