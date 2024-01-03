@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 import time
 import tarfile
@@ -146,12 +145,17 @@ def parse_output(input_string):
     return directory_structure
 
 
-# Unzip file
+
 def untar_file(file_path, extract_path):
     # Open the tar file
     with tarfile.open(file_path) as tar:
         # Extract all files into the specified directory
         tar.extractall(path=extract_path)
+
+    # Delete the original tar file
+    os.remove(file_path)
+
+
 
 # Get size of directory
 def get_directory_size(directory):
