@@ -108,7 +108,7 @@ def main():
                     del directory_list[directory]
           
                 # Unzip compressed files
-                if tarfile.is_tarfile(file_path):
+                if tarfile.is_tarfile(dest_file_path):
                   extract_tarfile(dest_file_path, curr_dest_dir)
 
                 # Update total size
