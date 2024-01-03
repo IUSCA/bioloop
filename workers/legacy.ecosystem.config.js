@@ -25,6 +25,18 @@ module.exports = {
       out_file: "../logs/workers/watch.log",
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
+    },
+    {
+      name: "import_from_sda",
+      script: "python",
+      args: "-u -m workers.scripts.import_from_sda",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/workers/import_from_sda.err",
+      out_file: "../logs/workers/import_from_sda.log",
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
     }
   ]
 }
