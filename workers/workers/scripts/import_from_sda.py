@@ -153,21 +153,6 @@ def untar_file(file_path, extract_path):
         # Extract all files into the specified directory
         tar.extractall(path=extract_path)
 
-def unzip_file(file_path):
-    print("Extracting file... ", file_path)
-    command = [f'{script_dir}extract.sh', file_path]
-
-    stdout, stderr = cmd.execute(command)
-
-    # DEBUG PRINTS
-    print("STDOUT", stdout)
-    print("STDERR", stderr)
-
-    if "NOT SUPPORTED" in stdout:
-      return
- 
-    print("Flatten directory... ", os.path.dirname(file_path))
-    move_folders_with_files(os.path.dirname(file_path))
 
 
 # Move to root of destination directory
