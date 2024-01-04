@@ -148,30 +148,13 @@ def parse_output(input_string):
     return directory_structure
 
 
-def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
-    """
-    tar_path: path to the tar file to extract
-    target_dir: path to the top level directory after extraction
-
-    extracts the tar file to  target_dir.
-
-    The directory created here after extraction will have the same name as the top level directory inside the archive.
-
-    If that is not desired and the name of the directory created needs to be the same as target_dir.name,
-    then set override_arcname = True
-
-    If a directory with the same name as extracted dir already exists, it will be deleted.
-    @param tar_path:
-    @param target_dir:
-    @param override_arcname:
-    """
+def extract_tarfile(tar_path: Path, target_dir: Path):
     with tarfile.open(tar_path, mode='r') as archive:
-        # find the top-level directory in the extracted archive
+        # Get the name of the top level directory inside the archive
         archive_name = os.path.basename(os.path.commonprefix(archive.getnames()))
-        print("archive_name", archive_name)
-        extraction_dir = target_dir if override_arcname else ( Path(os.path.join(target_dir, archive_name)))
 
-
+        # Create the extraction directory
+        extraction_dir =  Path(os.path.join(target_dir, archive_name))
 
         # if extraction_dir exists then delete it
         if extraction_dir.exists():
@@ -180,7 +163,11 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
         # create parent directories if missing
         extraction_dir.mkdir(parents=True, exist_ok=True)
 
+        # extract the archive
         archive.extractall(path=extraction_dir)
+
+        # remove the tar file
+        shutil.rmtree(tar_path)
 
 
 
