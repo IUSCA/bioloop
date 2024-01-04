@@ -156,6 +156,8 @@ def extract_tarfile(tar_path: Path, target_dir: Path):
         # Create the extraction directory
         extraction_dir =  Path(os.path.join(target_dir, archive_name))
 
+        print(extraction_dir)
+
         # if extraction_dir exists then delete it
         if extraction_dir.exists():
             shutil.rmtree(extraction_dir)
