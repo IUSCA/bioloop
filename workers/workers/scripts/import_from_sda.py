@@ -169,7 +169,7 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
         # find the top-level directory in the extracted archive
         archive_name = os.path.basename(os.path.commonprefix(archive.getnames()))
         print("archive_name", archive_name)
-        extraction_dir = target_dir if override_arcname else ( Path(os.path.join(target_dir, archive_name)))
+        extraction_dir = ( Path(os.path.join(target_dir, archive_name)))
 
 
 
@@ -181,6 +181,9 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
         extraction_dir.mkdir(parents=True, exist_ok=True)
 
         archive.extractall(path=extraction_dir)
+
+        # remove the tar file
+        shutil.rmtree(tar_path)
 
 
 
