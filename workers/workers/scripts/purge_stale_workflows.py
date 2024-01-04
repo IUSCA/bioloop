@@ -13,8 +13,7 @@ def main():
     workflow_meta_col = mongo_client['celery']['workflow_meta']
 
     wf_cursor = workflow_meta_col.find({})
-    wf_count = workflow_meta_col.count_documents({})
-    print(f'Number of workflows in Celery broker: {wf_count}')
+    print(f'Number of workflows in Celery broker: {workflow_meta_col.count_documents({})}')
 
     delete_requests = [DeleteOne({'_id': wf['_id']}) for wf in wf_cursor if wf['_id'] not in workflow_ids]
     print(f'Number of workflows to delete: {len(delete_requests)}')
