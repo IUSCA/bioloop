@@ -109,7 +109,9 @@ def main():
           
                 # Unzip compressed files
                 if tarfile.is_tarfile(dest_file_path):
-                  extract_tarfile(Path(dest_file_path), Path(curr_dest_dir))
+                  print("Extracting tar file... ", dest_file_path)
+                  print("Extracting to... ", curr_dest_dir)
+                  extract_tarfile(Path(dest_file_path), Path(curr_dest_dir), override_arcname=True)
 
                 # Update total size
                 total_size += file_size
