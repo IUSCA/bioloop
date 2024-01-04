@@ -153,7 +153,7 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
     tar_path: path to the tar file to extract
     target_dir: path to the top level directory after extraction
 
-    extracts the tar file to  target_dir.parent directory.
+    extracts the tar file to  target_dir.
 
     The directory created here after extraction will have the same name as the top level directory inside the archive.
 
@@ -171,18 +171,20 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
         print("archive_name", archive_name)
         extraction_dir = target_dir if override_arcname else ( Path(os.path.join(target_dir, archive_name)))
 
+
+
         # if extraction_dir exists then delete it
         if extraction_dir.exists():
             shutil.rmtree(extraction_dir)
 
         # create parent directories if missing
-        extraction_dir.parent.mkdir(parents=True, exist_ok=True)
+        extraction_dir.mkdir(parents=True, exist_ok=True)
 
         # extracts the tar contents to a temp directory
         # move the contents to the extraction_dir
-        with tempfile.TemporaryDirectory(dir=extraction_dir.parent) as tmp_dir:
+        with tempfile.TemporaryDirectory(dir=extraction_dir) as tmp_dir:
             archive.extractall(path=tmp_dir)
-            shutil.move(Path(tmp_dir) / archive_name, extraction_dir)
+            shutil.move(Path(tmp_dir), extraction_dir)
 
 
 
