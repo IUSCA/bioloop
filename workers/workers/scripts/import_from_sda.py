@@ -111,7 +111,7 @@ def main():
 
                 # Update total size
                 total_size += file_size
-                
+
       except ContinueException:
         continue
 
@@ -164,7 +164,8 @@ def extract_tarfile(tar_path: Path, target_dir: Path):
         archive.extractall(path=extraction_dir)
 
     # delete tar file
-    shutil.rmtree(tar_path)
+    if os.path.exists(tar_path):
+        os.remove(tar_path)
 
 
 
