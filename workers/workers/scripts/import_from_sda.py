@@ -180,11 +180,7 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
         # create parent directories if missing
         extraction_dir.mkdir(parents=True, exist_ok=True)
 
-        # extracts the tar contents to a temp directory
-        # move the contents to the extraction_dir
-        with tempfile.TemporaryDirectory(dir=extraction_dir) as tmp_dir:
-            archive.extractall(path=tmp_dir)
-            shutil.move(Path(tmp_dir), extraction_dir)
+        archive.extractall(path=extraction_dir)
 
 
 
