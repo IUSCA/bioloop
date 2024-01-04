@@ -168,6 +168,7 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
     with tarfile.open(tar_path, mode='r') as archive:
         # find the top-level directory in the extracted archive
         archive_name = os.path.commonprefix(archive.getnames())
+        print("archive_name", archive_name)
         extraction_dir = target_dir if override_arcname else ( Path(os.path.join(target_dir, archive_name)))
 
         # if extraction_dir exists then delete it
