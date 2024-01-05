@@ -27,18 +27,20 @@ def main():
     task_delete_requests = []
 
     for wf in wf_cursor:
-        created_datetime = wf['created_at']
-        hours_since_creation = (datetime.now() - created_datetime).total_seconds() / 3600
-        if wf['_id'] not in app_workflow_ids and hours_since_creation > 24:
+        if wf['_id'] not in app_workflow_ids and hours_since_workflow_creation(wf) > 24:
             print(f"added workflow {wf['_id']} to list of workflows to be deleted")
             workflow_delete_requests.append(DeleteOne({'_id': wf['_id']}))
 
     for task in task_cursor:
-        if (task['kwargs'] is not None and
-                task['kwargs']['app_id'] == config['app_id'] and
-                task['kwargs']['workflow_id'] not in app_workflow_ids):
-            print(f"added task {task['_id']} to list of tasks to be deleted")
-            task_delete_requests.append(DeleteOne({'kwargs.workflow_id': task['kwargs']['workflow_id']}))
+        if task['kwargs'] is not None:
+            task_workflow_id = task['kwargs']['workflow_id']
+            task_workflow = wf_cursor.find({"_id": task_workflow_id})[0]
+
+            if (task['kwargs']['app_id'] == config['app_id'] and
+                    hours_since_workflow_creation(task_workflow) > 24 and
+                    task_workflow_id not in app_workflow_ids):
+                print(f"added task {task['_id']} to list of tasks to be deleted")
+                task_delete_requests.append(DeleteOne({'kwargs.workflow_id': task['kwargs']['workflow_id']}))
 
     print(f'Number of workflows to delete from Celery persistence: {len(workflow_delete_requests)}')
     print(f'Number of tasks to delete from Celery persistence: {len(task_delete_requests)}')
@@ -51,6 +53,10 @@ def main():
 
     wf_cursor.close()
     task_cursor.close()
+
+
+def hours_since_workflow_creation(workflow):
+    return (datetime.now() - workflow['created_at']).total_seconds() / 3600
 
 
 def bulk_delete(collection: Collection, delete_requests: [DeleteOne]) -> None:
