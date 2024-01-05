@@ -223,19 +223,11 @@ def post_worker_logs(process_id: str, logs: list[dict]):
         r.raise_for_status()
 
 
-# filters = {
-#             'last_task_run': false,
-#             'prev_task_runs': false,
-#             'workflow_id': 1
-#             'skip': 0,
-#             'limit': 10,
-#             'status': 'SUCCESS'
-#         }
-def get_all_workflows(filters=None):
+def get_all_workflows():
     with APIServerSession() as s:
-        r = s.get('workflows', params=filters)
+        r = s.get('workflows/current')
         r.raise_for_status()
-        return r.json()['results']
+        return r.json()
 
 
 if __name__ == '__main__':
