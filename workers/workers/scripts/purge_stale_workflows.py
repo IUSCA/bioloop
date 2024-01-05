@@ -3,6 +3,7 @@ from pymongo.collection import Collection
 from pymongo.errors import BulkWriteError
 
 from workers.config.celeryconfig import result_backend
+from workers.config import config
 import workers.api as api
 
 
@@ -22,9 +23,14 @@ def main():
     task_cursor = task_collection.find({})
     print(f'Current number of tasks: {task_collection.count_documents({})}')
 
-    workflow_delete_requests = [DeleteOne({'_id': wf['_id']}) for wf in wf_cursor if wf['_id'] not in app_workflow_ids]
-    task_delete_requests = [DeleteOne({'kwargs.workflow_id': task['kwargs']['workflow_id']}) for task in task_cursor if
-                            task['kwargs'] is not None and task['kwargs']['workflow_id'] not in app_workflow_ids]
+    workflow_delete_requests = [DeleteOne({'_id': wf['_id']})
+                                for wf in wf_cursor if
+                                wf['_id'] not in app_workflow_ids]
+    task_delete_requests = [DeleteOne({'kwargs.workflow_id': task['kwargs']['workflow_id']})
+                            for task in task_cursor if
+                            task['kwargs'] is not None and
+                            task['kwargs']['app_id'] == config['app_id'] and
+                            task['kwargs']['workflow_id'] not in app_workflow_ids]
     print(task_delete_requests)
 
     print(f'Number of workflows to delete: {len(workflow_delete_requests)}')
