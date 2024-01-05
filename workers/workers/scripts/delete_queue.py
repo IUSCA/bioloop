@@ -16,11 +16,24 @@ from workers.celery_app import app
 
 queue_name = app.conf.get('task_default_queue')
 
+
+# def clear_queue(channel, queue_name):
+#     while True:
+#         method_frame, header_frame, body = channel.basic_get(queue=queue_name, auto_ack=True)
+#         if method_frame:
+#             print(f"Message cleared: {body}")
+#         else:
+#             break
+
+
 with app.connection_for_read() as connection:
     # Create a channel
     channel = connection.channel()
 
     try:
+        # Clear the queue of pending messages
+        # clear_queue(channel, queue_name)
+
         # Delete the queue
         channel.queue_delete(queue=queue_name)
         print(f"Queue '{queue_name}' deleted successfully.")
