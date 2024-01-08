@@ -3,7 +3,7 @@
     v-model="selectedOption"
     @update:model-value="handleSelect"
     class="w-full autocomplete-select"
-    clearable
+    :clearable="props.clearable"
     :placeholder="props.placeholder"
     autocomplete
     :options="options"
@@ -39,6 +39,10 @@ const props = defineProps({
   placeholder: {
     type: String,
     default: "Type here",
+  },
+  clearable: {
+    type: Boolean,
+    default: () => false,
   },
   textBy: {
     type: [String, Function],

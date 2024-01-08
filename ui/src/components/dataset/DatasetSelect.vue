@@ -5,6 +5,7 @@
     placeholder="Search datasets by name"
     @update-search="updateSearch"
     :loading="loading"
+    :clearable="true"
   >
     <template #filtered="{ item }">
       <div class="flex min-w-full">
