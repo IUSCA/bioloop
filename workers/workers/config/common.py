@@ -106,6 +106,11 @@ config = {
             'password': MONGO_PASSWORD
         }
     },
-    'workflows_to_purge': ['source_integrated', 'stage', 'delete_dataset'],
-    'workflow_purge_age_threshold': 86400,
+
+    'workflow': {
+        'workflows_to_purge': ['source_integrated', 'stage', 'delete_dataset'],
+        'purge_threshold_seconds': 86400,
+        'max_purge_count': 5
+    }
+
 }
