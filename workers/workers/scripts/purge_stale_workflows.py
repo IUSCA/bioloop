@@ -10,7 +10,6 @@ from workers.config.celeryconfig import result_backend
 
 
 class MongoConnection:
-    WORKFLOWS_TO_PURGE = ['source_integrated', 'stage', 'delete_dataset']
     WORKFLOW_COLLECTION = 'workflow_meta'
     TASK_COLLECTION = 'celery_taskmeta'
 
@@ -27,7 +26,7 @@ class MongoConnection:
         app_workflows = api.get_all_workflows()
         app_workflow_ids = [wf['id'] for wf in app_workflows]
 
-        orphaned_tasks_cursor = self.get_orphaned_tasks(config['app_id'], app_workflow_ids, self.WORKFLOWS_TO_PURGE)
+        orphaned_tasks_cursor = self.get_orphaned_tasks(config['app_id'], app_workflow_ids, config['workflows_to_purge'])
         orphaned_workflows = []
         for task in orphaned_tasks_cursor:
             print(f"added task {task['_id']} to list of tasks to be deleted")
@@ -56,7 +55,7 @@ class MongoConnection:
         app_id: str,
         current_wf_ids: list[str],
         check_workflows_types: list[str],
-        age_threshold_sec: int = 86400
+        age_threshold_sec: int = config['workflow_purge_age_threshold']
     ) -> Cursor:
         return self.task_collection.aggregate([
             {
