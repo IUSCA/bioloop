@@ -1,58 +1,148 @@
 from datetime import datetime
+
+import workers.api as api
 from pymongo import MongoClient, DeleteOne
 from pymongo.collection import Collection
 from pymongo.errors import BulkWriteError
-
-from workers.config.celeryconfig import result_backend
 from workers.config import config
-import workers.api as api
+from workers.config.celeryconfig import result_backend
+
+
+class MongoConnection:
+    WORKFLOWS_TO_PURGE = ['source_integrated', 'stage', 'delete_dataset']
+    WORKFLOW_COLLECTION = 'workflow_meta'
+    TASK_COLLECTION = 'celery_taskmeta'
+
+    def __init__(self):
+        self.mongo_client = MongoClient(result_backend)
+        self.celery_db = self.mongo_client['celery']
+        self.workflow_collection = self.celery_db[self.WORKFLOW_COLLECTION]
+        self.task_collection = self.celery_db[self.TASK_COLLECTION]
+
+    def purge(self):
+        task_delete_requests = []
+        workflow_delete_requests = []
+
+        app_workflows = api.get_all_workflows()
+        app_workflow_ids = [wf['id'] for wf in app_workflows]
+
+        orphaned_tasks = self.get_orphaned_tasks(config['app_id'], app_workflow_ids, self.WORKFLOWS_TO_PURGE)
+        orphaned_workflows = []
+        for task in orphaned_tasks:
+            # print(task)
+            print(f"added task {task['_id']} to list of tasks to be deleted")
+            task_delete_requests.append(DeleteOne({'_id': task['_id']}))
+
+            if task['workflow']['_id'] not in orphaned_workflows:
+                orphaned_workflows.append(task['workflow']['_id'])
+
+
+        for wf_id in orphaned_workflows:
+            print(f"added workflow {wf_id} to list of workflows to be deleted")
+            workflow_delete_requests.append(DeleteOne({'_id': wf_id}))
+
+        # bulk_delete(workflows, workflow_delete_requests)
+        # bulk_delete(task_collection, task_delete_requests)
+
+        print(
+            f'Number of workflows in Celery persistence after deletion: {self.workflow_collection.count_documents({})}')
+        # print(f'Number of tasks in Celery persistence after deletion: {task_collection.count_documents({})}')
+
+    def get_orphaned_tasks(
+        self,
+        app_id: str,
+        current_wf_ids: list[str],
+        check_workflows_types: list[str],
+        age_threshold_sec: int = 86400
+    ) -> list[dict]:
+        return self.task_collection.aggregate([
+            {
+                '$match':
+                    {
+                        '$and': [
+                            {'kwargs.app_id': app_id},
+                            {'kwargs.workflow_id': {'$not': {'$in': current_wf_ids}}},
+                            {'kwargs.step': {'$in': check_workflows_types}}
+                        ]
+                    }
+            }, {
+                '$lookup':
+                    {
+                        'from': self.WORKFLOW_COLLECTION,
+                        'localField': "kwargs.workflow_id",
+                        'foreignField': "_id",
+                        'as': "workflows"
+                    }
+            }, {
+                "$project": {
+                    "workflow": {"$arrayElemAt": ["$workflows", 0]}
+                }
+            }, {
+                "$set": {
+                    "workflow.seconds_since_creation": {
+                        '$dateDiff': {
+                            'startDate': '$workflow.created_at',
+                            'endDate': datetime.now(),
+                            'unit': 'second'
+                        }
+                    }
+                }
+            }, {
+                "$match": {
+                    "workflow.seconds_since_creation": {"$gt": age_threshold_sec}
+                }
+            }
+        ])
 
 
 def main():
-    app_workflows = api.get_all_workflows()
-    app_workflow_ids = [wf['id'] for wf in app_workflows]
+    mongo_connection = MongoConnection()
+    mongo_connection.purge()
+    # mongo_client = MongoClient(result_backend)
+    # celery_db = mongo_client['celery']
+    # workflow_collection = celery_db['workflow_meta']
+    # task_collection = celery_db['celery_taskmeta']
 
-    mongo_client = MongoClient(result_backend)
-    celery_db = mongo_client['celery']
-    workflow_collection = celery_db['workflow_meta']
-    task_collection = celery_db['celery_taskmeta']
+    # wf_cursor = workflow_collection.find({
+    #     ''
+    # })
+    # print(f'Current number of workflows in Celery persistence: {workflow_collection.count_documents({})}')
 
-    wf_cursor = workflow_collection.find({})
-    print(f'Current number of workflows in Celery persistence: {workflow_collection.count_documents({})}')
+    # task_cursor = task_collection.find({
+    #     'kwargs.app_id': {'$eq': config['app_id']}
+    # })
+    # print(f'Current number of tasks in Celery persistence: {task_collection.count_documents({})}')
 
-    task_cursor = task_collection.find({})
-    print(f'Current number of tasks in Celery persistence: {task_collection.count_documents({})}')
-
-    workflow_delete_requests = []
-    task_delete_requests = []
-
-    for wf in wf_cursor:
-        if wf['_id'] not in app_workflow_ids and hours_since_workflow_creation(wf) > 24:
-            print(f"added workflow {wf['_id']} to list of workflows to be deleted")
-            workflow_delete_requests.append(DeleteOne({'_id': wf['_id']}))
-
-    for task in task_cursor:
-        if task['kwargs'] is not None:
-            task_workflow_id = task['kwargs']['workflow_id']
-            task_workflow = wf_cursor.find({"_id": task_workflow_id})[0]
-
-            if (task['kwargs']['app_id'] == config['app_id'] and
-                    hours_since_workflow_creation(task_workflow) > 24 and
-                    task_workflow_id not in app_workflow_ids):
-                print(f"added task {task['_id']} to list of tasks to be deleted")
-                task_delete_requests.append(DeleteOne({'kwargs.workflow_id': task['kwargs']['workflow_id']}))
-
-    print(f'Number of workflows to delete from Celery persistence: {len(workflow_delete_requests)}')
-    print(f'Number of tasks to delete from Celery persistence: {len(task_delete_requests)}')
-
-    bulk_delete(workflow_collection, workflow_delete_requests)
-    bulk_delete(task_collection, task_delete_requests)
-
-    print(f'Number of workflows in Celery persistence after deletion: {workflow_collection.count_documents({})}')
-    print(f'Number of tasks in Celery persistence after deletion: {task_collection.count_documents({})}')
-
-    wf_cursor.close()
-    task_cursor.close()
+    # workflow_delete_requests = []
+    # task_delete_requests = []
+    #
+    # for wf in wf_cursor:
+    #     if wf['_id'] not in app_workflow_ids and hours_since_workflow_creation(wf) > 24:
+    #         print(f"added workflow {wf['_id']} to list of workflows to be deleted")
+    #         workflow_delete_requests.append(DeleteOne({'_id': wf['_id']}))
+    #
+    # for task in task_cursor:
+    #     if task['kwargs'] is not None:
+    #         task_workflow_id = task['kwargs']['workflow_id']
+    #         task_workflow = wf_cursor.find({"_id": task_workflow_id})[0]
+    #
+    #         if (task['kwargs']['app_id'] == config['app_id'] and
+    #             hours_since_workflow_creation(task_workflow) > 24 and
+    #             task_workflow_id not in app_workflow_ids):
+    #             print(f"added task {task['_id']} to list of tasks to be deleted")
+    #             task_delete_requests.append(DeleteOne({'kwargs.workflow_id': task['kwargs']['workflow_id']}))
+    #
+    # print(f'Number of workflows to delete from Celery persistence: {len(workflow_delete_requests)}')
+    # print(f'Number of tasks to delete from Celery persistence: {len(task_delete_requests)}')
+    #
+    # bulk_delete(workflow_collection, workflow_delete_requests)
+    # bulk_delete(task_collection, task_delete_requests)
+    #
+    # print(f'Number of workflows in Celery persistence after deletion: {workflow_collection.count_documents({})}')
+    # print(f'Number of tasks in Celery persistence after deletion: {task_collection.count_documents({})}')
+    #
+    # wf_cursor.close()
+    # task_cursor.close()
 
 
 def hours_since_workflow_creation(workflow):
