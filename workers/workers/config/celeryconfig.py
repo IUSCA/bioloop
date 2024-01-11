@@ -70,6 +70,10 @@ task_soft_time_limit = ONE_DAY - TEN_MINUTES
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-default-queue
 task_default_queue = f'{config["app_id"]}.q'
 
+# https://docs.celeryq.dev/en/stable/userguide/routing.html#rabbitmq-message-priorities
+task_queue_max_priority = 10
+task_default_priority = 1
+
 # The queue name for each worker is automatically generated
 # based on the worker hostname and a .dq suffix, using the C.dq exchange.
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#worker-direct

@@ -124,16 +124,15 @@
       </template>
     </va-data-table>
 
-    <div class="flex justify-center mt-4" v-if="total_page_count > 1">
-      <div class="flex-none">
-        <va-pagination
-          v-model="currentPageIndex"
-          :pages="total_page_count"
-          :visible-pages="Math.min(total_page_count, VISIBLE_PAGES_THRESHOLD)"
-        >
-        </va-pagination>
-      </div>
-    </div>
+    <!-- pagination -->
+    <Pagination
+      class="mt-4 px-1 lg:px-3"
+      v-model:page="currPage"
+      v-model:page_size="pageSize"
+      :total_results="total_results"
+      :curr_items="datasets.length"
+      :page_size_options="PAGE_SIZE_OPTIONS"
+    />
 
     <!-- launch modal -->
     <va-modal
@@ -193,20 +192,21 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
-import { formatBytes } from "@/services/utils";
-import * as datetime from "@/services/datetime";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
-import { useToastStore } from "@/stores/toast";
+import DatasetService from "@/services/dataset";
+import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
+import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
-const toast = useToastStore();
 useSearchKeyShortcut();
 
 const props = defineProps({
   dtype: String,
   label: String,
 });
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 const datasets = ref([]);
 const filterInput = ref("");
@@ -219,6 +219,13 @@ const delete_modal = ref({
   visible: false,
   selected: null,
 });
+const defaultSortField = ref("updated_at");
+const defaultSortOrder = ref("desc");
+const currPage = ref(1);
+const total_results = ref(0);
+const pageSize = ref(20);
+// Criteria for group of true/false fields that results can be filtered by
+const filters_group_query = ref({});
 
 /**
  * Results are fetched in batches for efficient pagination, but the sorting criteria specified
@@ -230,7 +237,7 @@ const delete_modal = ref({
  * va-data-table's 'sorted' event, and added to the sorting criteria maintained in the
  * `datasets_sort_query` reactive variable.
  */
-const columns = ref([
+const columns = [
   // { key: "id", sortable: true, sortingOptions: ["desc", "asc", null] },
   {
     key: "name",
@@ -291,7 +298,7 @@ const columns = ref([
     width: "80px",
   },
   { key: "actions", width: "100px" },
-]);
+];
 
 // function getRowBind(row) {
 //   // const active_wf = row.workflows?.filter(
@@ -307,27 +314,13 @@ const columns = ref([
 //   }
 // }
 
-const defaultSortField = ref("updated_at");
-const defaultSortOrder = ref("desc");
-
-const PAGE_SIZE = 20;
-const VISIBLE_PAGES_THRESHOLD = 5; // Maximum number of visible pages shown at a time
-
-const currentPageIndex = ref(1);
-const total_page_count = ref(0);
-
 // used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
-const offset = computed(() => (currentPageIndex.value - 1) * PAGE_SIZE);
-// used for LIMIT clause in the SQL used to retrieve the next paginated batch of results
-const resultLimit = ref(PAGE_SIZE);
+const offset = computed(() => (currPage.value - 1) * pageSize.value);
 
 // Criterion based on search input
 const search_query = computed(() => {
   return filterInput.value?.length > 0 && { name: filterInput.value };
 });
-
-// Criteria for group of true/false fields that results can be filtered by
-const filters_group_query = ref({});
 
 // Aggregation of all filtering criteria. Used for retrieving results, and configuring number of
 // pages for pagination.
@@ -350,7 +343,7 @@ let datasets_sort_query = computed(() => {
 // Criteria used to limit the number of results retrieved, and to define the offset starting at
 // which the next batch of results will be retrieved.
 const datasets_batching_query = computed(() => {
-  return { offset: offset.value, limit: resultLimit.value };
+  return { offset: offset.value, limit: pageSize.value };
 });
 
 // Aggregate of all other criteria. Used for retrieving results according to the criteria
@@ -374,8 +367,7 @@ function fetch_datasets(query = {}, updatePageCount = true) {
     .then((res) => {
       datasets.value = res.data.datasets;
       if (updatePageCount) {
-        // update page-count for pagination
-        total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
+        total_results.value = res.data.metadata.count;
       }
     })
     .catch((err) => {
@@ -430,7 +422,7 @@ onMounted(() => {
 
 watch([datasets_sort_query, datasets_filter_query], () => {
   // when sorting or filtering criteria changes, show results starting from the first page
-  currentPageIndex.value = 1;
+  currPage.value = 1;
 });
 
 watch(datasets_retrieval_query, (newQuery, oldQuery) => {
