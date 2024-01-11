@@ -20,6 +20,7 @@ import config from "../vuestic.config.js"; // https://vuestic.dev/en/styles/tail
 
 import "./styles/main.css";
 import "./styles/overrides.css";
+import "./styles/footer.css";
 // import "material-design-icons-iconfont/dist/material-design-icons.min.css";
 
 import router from "@/router";
