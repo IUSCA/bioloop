@@ -9,34 +9,28 @@
     <!-- Primary divider -->
     <va-divider />
 
-    <div class="flex flex-col">
-      <div class="max-w-max flex flex-col m-auto">
-        <div class="max-w-max">
-          <p class="max-w-max">
-            {{ config.appTitle }} is a service of the Indiana University
-            <a href="https://sca.iu.edu" class="footer-link"
-              >Scalable Compute Archive (IU SCA)</a
-            >
-            group.
-          </p>
-        </div>
+    <div class="flex flex-wrap mt-3.5 gap-y-3">
+      <div class="text-center">
+        {{ config.appTitle }} is a service of the Indiana University
 
-        <!-- Secondary divider -->
-        <va-divider />
+        <a href="https://sca.iu.edu" class="footer-link">
+          Scalable Compute Archive (IU SCA)
+        </a>
+        group.
       </div>
-    </div>
 
-    <div class="mt-3.5">
-      <FooterMobile v-if="ui.isMobileView" />
-      <FooterDesktop v-else />
+      <div>
+        <FooterMobile v-if="ui.isMobileView" />
+        <FooterDesktop v-else />
+      </div>
     </div>
   </footer>
 </template>
 
 <script setup>
-import { useUIStore } from "@/stores/ui";
 import FooterDesktop from "@/components/layout/footer/FooterDesktop.vue";
 import config from "@/config";
+import { useUIStore } from "@/stores/ui";
 
 const ui = useUIStore();
 </script>
