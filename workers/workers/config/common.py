@@ -88,8 +88,8 @@ config = {
                     'task': 'setup_dataset_download'
                 },
                 {
-                    'name': 'generate_qc',
-                    'task': 'generate_qc'
+                    'name': 'delete source',
+                    'task': 'delete_source'
                 }
             ]
         },
