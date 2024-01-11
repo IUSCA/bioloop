@@ -158,7 +158,9 @@ def total_size(dir_path: Path | str):
 
 
 def tar(tar_path: Path | str, source_dir: Path | str) -> None:
-    command = ['tar', 'cf', str(tar_path), '--sparse', str(source_dir)]
+    # Tar only files, not directories
+    command = ['find', str(source_dir), '-type', 'f', '-print0', '|', 'tar', 'cf', str(tar_path), '--null', '-T', '-']
+
     execute(command)
 
 
