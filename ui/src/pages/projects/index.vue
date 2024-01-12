@@ -91,9 +91,9 @@
         </template>
 
         <template #cell(actions)="{ rowData }">
-          <div class="flex">
+          <div class="flex gap-1">
             <va-button
-              class="flex-1"
+              class="flex-auto"
               preset="plain"
               icon="edit"
               @click="openModalToEditProject(rowData)"
