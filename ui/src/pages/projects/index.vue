@@ -91,13 +91,15 @@
         </template>
 
         <template #cell(actions)="{ rowData }">
-          <div class="flex gap-1">
+          <div class="flex">
             <va-button
+              class="flex-1"
               preset="plain"
               icon="edit"
               @click="openModalToEditProject(rowData)"
             />
             <va-button
+              class="flex-1"
               preset="plain"
               icon="delete"
               color="danger"
