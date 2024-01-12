@@ -11,7 +11,7 @@
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.count != undefined"
-              class="va-h3 ma-0 va-text-center"
+              class="va-h3 my-0 ma-0 va-text-center"
               :style="{ color: colors.primary }"
             >
               {{ number_formatter.format(props.data.count) }}
@@ -29,7 +29,7 @@
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.total_size != undefined"
-              class="va-h3 ma-0 va-text-center"
+              class="va-h3 my-0 ma-0 va-text-center"
               :style="{ color: colors.info }"
             >
               {{ formatBytes(props.data.total_size, 0) }}
@@ -47,7 +47,7 @@
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.total_num_genome_files != undefined"
-              class="va-h3 ma-0 va-text-center"
+              class="va-h3 my-0 ma-0 va-text-center"
               :style="{ color: colors.success }"
             >
               {{ number_formatter.format(props.data.total_num_genome_files) }}
@@ -65,7 +65,7 @@
           <div class="flex flex-col items-center justify-end">
             <h2
               v-if="props.data?.workflows != undefined"
-              class="va-h3 ma-0 va-text-center text-indigo-600"
+              class="va-h3 my-0 ma-0 va-text-center text-indigo-600"
             >
               {{ number_formatter.format(props.data.workflows) }}
             </h2>
