@@ -15,7 +15,9 @@ import {
 import { createPinia } from "pinia";
 import { createApp } from "vue";
 import { createVuestic } from "vuestic-ui";
-import "vuestic-ui/css";
+import "vuestic-ui/styles/essential.css";
+import "vuestic-ui/styles/typography.css";
+import "vuestic-ui/styles/reset.css";
 import config from "../vuestic.config.js"; // https://vuestic.dev/en/styles/tailwind
 
 import "./styles/main.css";
