@@ -1,5 +1,6 @@
 // https://pm2.keymetrics.io/docs/usage/application-declaration/
 module.exports = {
+  // replace script [python] with path of poetry's python executable
   apps: [
     {
       name: "celery_worker",
