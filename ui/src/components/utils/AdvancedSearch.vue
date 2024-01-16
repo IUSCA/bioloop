@@ -53,14 +53,9 @@
             class="search_table"
             :items="searchResults"
             :columns="searchColumns"
+            selectable
+            select-mode="multiple"
           >
-            <template #cell(select)="{ rowData }">
-              <va-checkbox
-                v-model="selectedResults"
-                :array-value="props.trackBy(rowData)"
-              />
-            </template>
-            <!--        rowData[fieldConfig["field"]]-->
             <template
               v-for="(templateName, i) in searchResultColumnTemplateNames"
               #[templateName]="{ rowData }"
@@ -161,11 +156,7 @@ const props = defineProps({
   },
 });
 
-// const skip = ref(0);
 const page = ref(1);
-const totalPageCount = computed(() => {
-  return Math.ceil(totalResults.value / props.pageSize);
-});
 const skip = computed(() => {
   return props.pageSize * (page.value - 1);
 });
@@ -193,17 +184,13 @@ const resultsToAssign = ref([
 
 const actionColumns = [
   {
-    key: "select",
-    label: "Select",
-  },
-  {
     key: "Action",
     label: "actions",
   },
 ];
 
 const searchColumns = computed(() => {
-  return [actionColumns[0], ...props.searchResultColumns, actionColumns[1]];
+  return props.searchResultColumns.concat(actionColumns);
 });
 
 // const searchResultColumnsConfig = computed(() => {
