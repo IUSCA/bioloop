@@ -4,6 +4,11 @@
     selected-title="Datasets to assign"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
+    :fetch-fn="datasetService.getAll"
+    search-field="name"
+    results-by="datasets"
+    count-by="metadata.count"
+    :page-size="5"
   />
 
   <!--  <AutoComplete-->
@@ -48,8 +53,8 @@ const retrievedDatasetColumns = [
     label: "Type",
   },
   {
-    key: "Size",
-    label: "size",
+    key: "size",
+    label: "Size",
   },
   {
     key: "created_on",

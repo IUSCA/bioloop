@@ -1,4 +1,10 @@
 <template>
+  <!--  <VaInfiniteScroll :load="appendRecordsAsync">-->
+  <!--    <div v-for="(record, index) in records" :key="index">-->
+  <!--      List item and some text #{{ index }}-->
+  <!--    </div>-->
+  <!--  </VaInfiniteScroll>-->
+
   <div class="flex search">
     <!-- Search, and results   -->
     <div class="flex flex-col">
@@ -22,21 +28,66 @@
 
       <div class="flex gap-1">
         <va-button class="flex-none">Add Selected</va-button>
-        <span>Showing X of Y elements</span>
+        <span
+          >Showing {{ searchResults.length }} of {{ totalResults }} filtered
+          results</span
+        >
       </div>
 
-      <va-data-table :items="searchResults" :columns="searchColumns">
-        <template #cell(select)="{ value }">
-          <va-checkbox />
-        </template>
-        <!--        rowData[fieldConfig["field"]]-->
-        <template
-          v-for="(templateName, i) in searchResultColumnTemplateNames"
-          #[templateName]="{ rowData }"
+      <div ref="infiniteScrollTarget" class="max-h-64 overflow-y-auto">
+        <va-infinite-scroll
+          class="search_scroll"
+          :load="loadMore"
+          :scroll-target="infiniteScrollTarget"
+          :disabled="
+            searchResults.length === totalResults ||
+            searchResults.length < props.pageSize
+          "
         >
-          {{ rowData[props.searchResultColumns[i]["key"]] }}
-        </template>
-      </va-data-table>
+          <!--          <div v-for="(result, index) in searchResults" :key="index">-->
+          <!--            {{ result["name"] }}-->
+          <!--          </div>-->
+          <!--          <div class="overflow-y-auto">-->
+          <!--        <div ref="infiniteScrollTarget">-->
+          <va-data-table
+            class="search_table"
+            :items="searchResults"
+            :columns="searchColumns"
+          >
+            <template #cell(select)="{ rowData }">
+              <va-checkbox
+                v-model="selectedResults"
+                :array-value="props.trackBy(rowData)"
+              />
+            </template>
+            <!--        rowData[fieldConfig["field"]]-->
+            <template
+              v-for="(templateName, i) in searchResultColumnTemplateNames"
+              #[templateName]="{ rowData }"
+            >
+              {{ rowData[props.searchResultColumns[i]["key"]] }}
+            </template>
+          </va-data-table>
+          <!--        </div>-->
+          <!--          </div>-->
+        </va-infinite-scroll>
+      </div>
+
+      <!--      <va-data-table :items="searchResults" :columns="searchColumns">-->
+      <!--        <template #cell(select)="{ rowData }">-->
+      <!--          <va-checkbox-->
+      <!--            v-model="selectedResults"-->
+      <!--            :array-value="props.trackBy(rowData)"-->
+      <!--          />-->
+      <!--        </template>-->
+      <!--        &lt;!&ndash;        rowData[fieldConfig["field"]]&ndash;&gt;-->
+      <!--        <template-->
+      <!--          v-for="(templateName, i) in searchResultColumnTemplateNames"-->
+      <!--          #[templateName]="{ rowData }"-->
+      <!--        >-->
+      <!--          {{ rowData[props.searchResultColumns[i]["key"]] }}-->
+      <!--        </template>-->
+      <!--      </va-data-table>-->
     </div>
 
     <va-divider vertical class="flex-none"></va-divider>
@@ -45,18 +96,30 @@
     <div>
       <div class="va-h6">{{ props.selectedTitle }}</div>
       <va-data-table
-        :items="selectedResults"
+        :items="resultsToAssign"
         :columns="props.selectedResultColumns"
       >
-        <template #select(row)>
-          <va-checkbox v-model="row.selected" />
-        </template>
+        <!--        <template #select(row)>-->
+        <!--          <va-checkbox v-model="row.selected" />-->
+        <!--        </template>-->
       </va-data-table>
     </div>
   </div>
 </template>
 
 <script setup>
+import _ from "lodash";
+
+const recordsRef = [{}, {}, {}, {}, {}, {}, {}];
+
+async function appendRecordsAsyncRef() {
+  console.log("appendRecordsAsyncRef called");
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  recordsRef.value.push({}, {}, {}, {});
+}
+
+const infiniteScrollTarget = ref(null);
+
 const props = defineProps({
   placeholder: {
     type: String,
@@ -74,22 +137,59 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  trackBy: {
+    type: Function,
+    default: (e) => e.id,
+  },
+  fetchFn: {
+    type: Function,
+    required: true,
+  },
+  searchField: {
+    type: String,
+    required: true,
+  },
+  resultsBy: {
+    type: [String, Function],
+  },
+  countBy: {
+    type: [String, Function],
+  },
+  pageSize: {
+    type: Number,
+    required: true,
+  },
 });
 
-debugger;
+// const skip = ref(0);
+const page = ref(1);
+const totalPageCount = computed(() => {
+  return Math.ceil(totalResults.value / props.pageSize);
+});
+const skip = computed(() => {
+  return props.pageSize * (page.value - 1);
+});
 
 const filterRawData = ref(false);
 const filterDataProducts = ref(false);
 const searchTerm = ref("");
-const searchResults = ref([
+const searchResults = ref([]);
+const totalResults = ref(0);
+const selectedResults = ref([]);
+const resultsToAssign = ref([
   {
     name: "d1",
     type: "Raw",
     size: 0,
     // created_on: "2020-01-01T00:00:0",
   },
+  {
+    name: "d2",
+    type: "Raw",
+    size: 0,
+    // created_on: "2020-01-01T00:00:0",
+  },
 ]);
-const selectedResults = ref([]);
 
 const actionColumns = [
   {
@@ -98,7 +198,7 @@ const actionColumns = [
   },
   {
     key: "Action",
-    label: "Actions",
+    label: "actions",
   },
 ];
 
@@ -113,6 +213,54 @@ const searchColumns = computed(() => {
 const searchResultColumnTemplateNames = computed(() => {
   return props.searchResultColumns.map((e) => `cell(${e.key})`);
 });
+
+const loadResults = () => {
+  // const query =
+  return props
+    .fetchFn({
+      ...(searchTerm.value && { [props.searchField]: searchTerm.value }),
+      offset: skip.value,
+      limit: props.pageSize,
+    })
+    .then((res) => {
+      // debugger;
+      let results;
+      if (!props.resultsBy) {
+        results = res.data;
+      } else if (typeof props.resultsBy === "function") {
+        results = props.resultsBy(res.data);
+      } else {
+        results = _.get(res.data, props.resultsBy);
+      }
+      searchResults.value = searchResults.value.concat(results);
+
+      if (!props.countBy) {
+        totalResults.value = res.data.length;
+      } else if (typeof props.countBy === "function") {
+        totalResults.value = props.countBy(res.data);
+      } else {
+        totalResults.value = _.get(res.data, props.countBy);
+      }
+    });
+};
+
+const loadMore = () => {
+  // debugger;
+  page.value += 1;
+  return loadResults();
+};
+
+watch(searchTerm, () => {
+  // reset search results
+  searchResults.value = [];
+  // reset page value
+  page.value = 1;
+  loadResults();
+});
+
+onMounted(() => {
+  loadResults();
+});
 </script>
 
 <style scoped lang="scss">
@@ -122,5 +270,13 @@ const searchResultColumnTemplateNames = computed(() => {
   .icon {
     color: var(--va-secondary);
   }
+}
+
+.search_scroll {
+  border: 1px solid yellow;
+}
+
+.search_table {
+  border: 1px solid blue;
 }
 </style>
