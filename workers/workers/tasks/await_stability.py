@@ -29,7 +29,7 @@ def dir_last_modified_time(dataset_path: Path) -> float:
     float: The last modified time in epoch seconds.
     """
     paths = itertools.chain([dataset_path], dataset_path.rglob('*'))
-    return max((p.lstat().st_mtime for p in paths), default=time.time())
+    return max((p.lstat().st_mtime for p in paths if p.exists()), default=time.time())
 
 
 def update_progress(celery_task, mod_time, delta):
