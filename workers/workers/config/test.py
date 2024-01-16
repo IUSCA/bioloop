@@ -3,6 +3,7 @@ import datetime
 YEAR = datetime.datetime.now().year
 
 config = {
+    'app_id': 'bioloop-dev.sca.iu.edu',
     'api': {
         'base_url': 'http://localhost:3130/',  # trailing slash is required
     },
