@@ -89,28 +89,29 @@
             v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
             class="flex justify-start items-center gap-3"
           >
-            <confirm-hold-button
+            <confirm-button
               action="Resume Workflow"
               icon="mdi-play"
               color="primary"
+              :disabled="is_resume_locked"
               @click="resume_workflow"
-            ></confirm-hold-button>
+            ></confirm-button>
 
-            <confirm-button
+            <confirm-hold-button
               action="Delete Workflow"
               icon="mdi-delete"
               color="danger"
               @click="delete_workflow"
-            ></confirm-button>
+            ></confirm-hold-button>
           </div>
 
           <div v-else-if="workflow.status == 'SUCCESS'">
-            <confirm-button
+            <confirm-hold-button
               action="Delete Workflow"
               icon="mdi-delete"
               color="danger"
               @click="delete_workflow"
-            ></confirm-button>
+            ></confirm-hold-button>
           </div>
 
           <div v-else>
@@ -121,12 +122,12 @@
                 color="danger"
                 @click="pause_workflow"
               ></confirm-button>
-              <confirm-button
+              <confirm-hold-button
                 action="Delete Workflow"
                 icon="mdi-delete"
                 color="danger"
                 @click="delete_workflow"
-              ></confirm-button>
+              ></confirm-hold-button>
             </div>
           </div>
         </div>
@@ -138,10 +139,9 @@
 </template>
 
 <script setup>
-import workflowService from "@/services/workflow";
-import { useToastStore } from "@/stores/toast";
 import * as datetime from "@/services/datetime";
-const toast = useToastStore();
+import toast from "@/services/toast";
+import workflowService from "@/services/workflow";
 
 const props = defineProps({ workflow: Object });
 const emit = defineEmits(["update"]);
@@ -210,6 +210,15 @@ const row_items = computed(() => {
       duration: compute_step_duration(s),
     };
   });
+});
+
+const is_resume_locked = computed(() => {
+  /**
+   * Computes whether the resume lock is enabled for the workflow.
+   *
+   * @returns {boolean} True if the resume lock is enabled, false otherwise.
+   */
+  return !!workflow.value?.resume_lock;
 });
 
 const columns = ref([

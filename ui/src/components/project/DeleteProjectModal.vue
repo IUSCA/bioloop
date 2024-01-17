@@ -6,6 +6,7 @@
     no-outside-dismiss
     fixed-layout
     ok-text="Delete"
+    size="small"
     @ok="handleOk"
     @cancel="hide"
   >

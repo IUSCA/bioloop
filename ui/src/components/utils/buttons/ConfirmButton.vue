@@ -1,24 +1,21 @@
 <template>
-  <div>
-    <va-button
-      v-if="!showConfirmAction"
-      @click="showConfirmTemporarily"
-      :color="props.color"
-      preset="primary"
-    >
-      <Icon :icon="props.icon" class="mr-3 text-xl" />
-      <span>{{ props.action }}</span>
-    </va-button>
-
-    <va-button
-      v-if="showConfirmAction"
-      @click="emit('click')"
-      :color="props.color"
-    >
-      <Icon icon="mdi-alert-circle-outline" class="mr-3 text-xl" />
-      <span> Click again to confirm </span>
-    </va-button>
-  </div>
+  <va-button
+    v-if="showConfirmAction"
+    @click="emit('click')"
+    :color="props.color"
+  >
+    <Icon icon="mdi-alert-circle-outline" class="mr-3 text-xl" />
+    <span> Click again to confirm </span>
+  </va-button>
+  <va-button
+    v-else
+    @click="showConfirmTemporarily"
+    :color="props.color"
+    preset="primary"
+  >
+    <Icon :icon="props.icon" class="mr-3 text-xl" />
+    <span>{{ props.action }}</span>
+  </va-button>
 </template>
 
 <script setup>

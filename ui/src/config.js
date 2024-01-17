@@ -17,10 +17,6 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    stage: {
-      RAW_DATA: "/path/to/staged/raw_data",
-      DATA_PRODUCT: "/path/to/staged/data_products",
-    },
     download: "/N/scratch/bioloop/production/download",
   },
   file_browser: {
@@ -54,6 +50,20 @@ const exports = {
   auth_enabled: {
     google: true,
     cilogon: true,
+  },
+  dashboard: {
+    active_tasks: {
+      steps: [
+        "await stability",
+        "inspect",
+        "archive",
+        "stage",
+        "validate",
+        "setup download",
+        "delete source",
+      ],
+      refresh_interval_ms: 10000,
+    },
   },
 };
 

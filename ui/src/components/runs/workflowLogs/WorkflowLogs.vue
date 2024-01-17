@@ -82,13 +82,12 @@
 
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
-import workflowService from "@/services/workflow";
-import { useToastStore } from "@/stores/toast";
 import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
+import workflowService from "@/services/workflow";
 
 useSearchKeyShortcut();
 
-const toast = useToastStore();
 const { copy } = useClipboard();
 
 const props = defineProps({

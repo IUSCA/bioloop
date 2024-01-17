@@ -1,8 +1,6 @@
-import api from "./api";
 import config from "@/config";
-import { useToastStore } from "@/stores/toast";
-
-const toast = useToastStore();
+import toast from "@/services/toast";
+import api from "./api";
 
 class DatasetService {
   /**
@@ -97,20 +95,6 @@ class DatasetService {
         type,
       },
     });
-  }
-
-  // is_staged(states) {
-  //   return (
-  //     (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
-  //       .length > 0
-  //   );
-  // }
-
-  get_staged_path(dataset) {
-    if (dataset?.metadata?.stage_alias) {
-      const dataset_type = dataset.type;
-      return `${config.paths.stage[dataset_type]}/${dataset.metadata.stage_alias}/${dataset.name}`;
-    }
   }
 
   update({ id, updated_data }) {

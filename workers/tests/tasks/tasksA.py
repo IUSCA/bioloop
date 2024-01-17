@@ -20,7 +20,11 @@ def task1(celery_task, dataset_id, **kwargs):
     logger.info(f'task - {os.getpid()} 1 starts with {dataset_id}')
 
     # cmd.execute(['ls', '-l123'])
-    time.sleep(1)
+    i = 0
+    while i < 120:
+        i = i + 1
+        logger.info(i)
+        time.sleep(1)
     return dataset_id, {'return_obj': 'foo'}
 
 
@@ -35,7 +39,7 @@ def task2(celery_task, dataset_id, **kwargs):
     # 1/0
 
     i = 0
-    while i < 120:
+    while i < 240:
         i = i + 1
         logger.info(i)
         time.sleep(1)
@@ -44,5 +48,9 @@ def task2(celery_task, dataset_id, **kwargs):
 
 def task3(celery_task, dataset_id, **kwargs):
     logger.info(f'task - {os.getpid()} 3 starts with {dataset_id}')
-    time.sleep(1)
+    i = 0
+    while i < 120:
+        i = i + 1
+        logger.info(i)
+        time.sleep(1)
     return dataset_id,

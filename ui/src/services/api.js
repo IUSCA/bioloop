@@ -1,6 +1,7 @@
-import axios from "axios";
 import config from "@/config";
 import router from "@/router";
+import axios from "axios";
+import toast from "./toast";
 
 const token = ref(useLocalStorage("token", ""));
 
@@ -28,12 +29,43 @@ axiosInstance.interceptors.response.use(
   (err) => {
     if (err.response && err.response.status === 401) {
       console.error("Error: Unauthorized", err);
-
-      // logout
-      router.push("/auth/logout");
+      router.push("/auth/logout"); // logout
     }
     return Promise.reject(err);
   },
 );
+
+// handle unhandled promise rejections for axios globally
+window.addEventListener("unhandledrejection", (event) => {
+  if (axios.isAxiosError(event.reason)) {
+    const err = event.reason;
+    if (err.response) {
+      // if status is 4xx show toast called Request Failed
+      if (err.response.status >= 400 && err.response.status < 500) {
+        console.error("Error: Request Failed", err);
+        toast.error("Request Failed");
+      }
+
+      // if status if 5xx show toast called Server Error
+      else if (err.response.status >= 500) {
+        console.error("Error: Server Error", err);
+        toast.error("Server Error");
+      }
+    } else if (err.request) {
+      // show offline message for errors of code "ERR_NETWORK"
+      if (err.code === "ERR_NETWORK") {
+        console.error("Error: Network Error", err);
+        toast.error("Network Error");
+      } else {
+        console.error("The request was made but no response was received", err);
+        toast.error("Request Failed");
+      }
+    } else {
+      console.error("Error: Unknown Error", err);
+      toast.error("Unknown Error");
+    }
+    event.preventDefault();
+  }
+});
 
 export default axiosInstance;
