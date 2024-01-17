@@ -50,6 +50,14 @@ task_serializer = 'json'
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-track-started
 task_track_started = True
 
+# rabbitmq settings
+# consumer_timeout=86400000
+# https://www.rabbitmq.com/consumers.html#acknowledgement-timeout
+# Why: I’m running celery tasks which acks messages in queue after the task is complete. 
+# The tasks can take as long as 1 day to complete. 
+# But rabbitmq closes the channel if it does not receive acknowledgements within 30 min.
+# We couldn't configure this setting per vhost, so we had to set it globally.
+
 # The worker processing the task will be killed and replaced with a new one when this is exceeded.
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-time-limit
 ONE_DAY = 24 * 60 * 60
