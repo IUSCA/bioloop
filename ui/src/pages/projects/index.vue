@@ -99,7 +99,7 @@
               @click="openModalToEditProject(rowData)"
             />
             <va-button
-              class="flex-1"
+              class="flex-auto"
               preset="plain"
               icon="delete"
               color="danger"
@@ -229,6 +229,7 @@ function fetch_projects() {
       data_loading.value = false;
     });
 }
+
 fetch_projects();
 
 // edit modal code
@@ -263,6 +264,6 @@ function openModalToDeleteProject(rowData) {
 
 <route lang="yaml">
 meta:
-  title: Projects
-  nav: [{ label: "Projects" }]
+title: Projects
+nav: [{ label: "Projects" }]
 </route>
