@@ -50,6 +50,7 @@
           <!--          <div class="overflow-y-auto">-->
           <!--        <div ref="infiniteScrollTarget">-->
           <va-data-table
+            v-model="selectedResults"
             class="search_table"
             :items="searchResults"
             :columns="searchColumns"
@@ -60,7 +61,11 @@
               v-for="(templateName, i) in searchResultColumnTemplateNames"
               #[templateName]="{ rowData }"
             >
-              {{ rowData[props.searchResultColumns[i]["key"]] }}
+              {{
+                columnConfig(i)["formatFn"]
+                  ? columnConfig(i)["formatFn"](rowData[columnConfig(i)["key"]])
+                  : rowData[columnConfig(i)["key"]]
+              }}
             </template>
           </va-data-table>
           <!--        </div>-->
@@ -105,16 +110,6 @@
 <script setup>
 import _ from "lodash";
 
-const recordsRef = [{}, {}, {}, {}, {}, {}, {}];
-
-async function appendRecordsAsyncRef() {
-  console.log("appendRecordsAsyncRef called");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  recordsRef.value.push({}, {}, {}, {});
-}
-
-const infiniteScrollTarget = ref(null);
-
 const props = defineProps({
   placeholder: {
     type: String,
@@ -155,6 +150,10 @@ const props = defineProps({
     required: true,
   },
 });
+
+const columnConfig = (i) => props.searchResultColumns[i];
+
+const infiniteScrollTarget = ref(null);
 
 const page = ref(1);
 const skip = computed(() => {

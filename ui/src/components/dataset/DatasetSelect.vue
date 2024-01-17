@@ -38,7 +38,8 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
-// import { formatBytes } from "@/services/utils";
+import { date } from "@/services/datetime";
+import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
@@ -55,10 +56,12 @@ const retrievedDatasetColumns = [
   {
     key: "size",
     label: "Size",
+    formatFn: (val) => formatBytes(val),
   },
   {
-    key: "created_on",
+    key: "created_at",
     label: "Registered On",
+    formatFn: (val) => date(val),
   },
 ];
 
