@@ -264,6 +264,6 @@ function openModalToDeleteProject(rowData) {
 
 <route lang="yaml">
 meta:
-title: Projects
-nav: [{ label: "Projects" }]
+  title: Projects
+  nav: [{ label: "Projects" }]
 </route>
