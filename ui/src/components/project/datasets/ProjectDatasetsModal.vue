@@ -6,10 +6,11 @@
     fixed-layout
     @ok="handleOk"
     @close="hide"
+    size="large"
   >
     <va-inner-loading
       :loading="loading"
-      class="lg:w-[720px] sm:min-h-[50vh] sm:max-h-[65vh]"
+      class="min-w-full sm:min-h-[50vh] sm:max-h-[65vh]"
     >
       <ProjectDatasetsForm />
     </va-inner-loading>

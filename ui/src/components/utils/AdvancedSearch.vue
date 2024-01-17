@@ -1,13 +1,7 @@
 <template>
-  <!--  <VaInfiniteScroll :load="appendRecordsAsync">-->
-  <!--    <div v-for="(record, index) in records" :key="index">-->
-  <!--      List item and some text #{{ index }}-->
-  <!--    </div>-->
-  <!--  </VaInfiniteScroll>-->
-
   <div class="flex search">
     <!-- Search, and results   -->
-    <div class="flex flex-col">
+    <div class="flex flex-col w-9/12 flex-none">
       <div class="flex gap-1.5">
         <va-input
           v-model="searchTerm"
@@ -44,11 +38,6 @@
             searchResults.length < props.pageSize
           "
         >
-          <!--          <div v-for="(result, index) in searchResults" :key="index">-->
-          <!--            {{ result["name"] }}-->
-          <!--          </div>-->
-          <!--          <div class="overflow-y-auto">-->
-          <!--        <div ref="infiniteScrollTarget">-->
           <va-data-table
             v-model="selectedResults"
             class="search_table"
@@ -68,32 +57,14 @@
               }}
             </template>
           </va-data-table>
-          <!--        </div>-->
-          <!--          </div>-->
         </va-infinite-scroll>
       </div>
-
-      <!--      <va-data-table :items="searchResults" :columns="searchColumns">-->
-      <!--        <template #cell(select)="{ rowData }">-->
-      <!--          <va-checkbox-->
-      <!--            v-model="selectedResults"-->
-      <!--            :array-value="props.trackBy(rowData)"-->
-      <!--          />-->
-      <!--        </template>-->
-      <!--        &lt;!&ndash;        rowData[fieldConfig["field"]]&ndash;&gt;-->
-      <!--        <template-->
-      <!--          v-for="(templateName, i) in searchResultColumnTemplateNames"-->
-      <!--          #[templateName]="{ rowData }"-->
-      <!--        >-->
-      <!--          {{ rowData[props.searchResultColumns[i]["key"]] }}-->
-      <!--        </template>-->
-      <!--      </va-data-table>-->
     </div>
 
     <va-divider vertical class="flex-none"></va-divider>
 
     <!-- Selected results -->
-    <div>
+    <div class="w-3/12 flex-none">
       <div class="va-h6">{{ props.selectedTitle }}</div>
       <va-data-table
         :items="resultsToAssign"
