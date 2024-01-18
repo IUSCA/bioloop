@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-4">
     <!-- Storage -->
-    <div class="">
+    <div>
       <span class="text-xl font-bold block mb-1">RESOURCE USAGE</span>
       <Storage></Storage>
     </div>

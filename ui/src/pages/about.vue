@@ -14,6 +14,16 @@
       <va-card>
         <va-card-content>
           <div class="p-3">
+            <div class="text-lg mb-3.5">
+              <p class="max-w-max">
+                {{ config.appTitle }} is a service of the Indiana University
+                <a href="https://sca.iu.edu" class="footer-link">
+                  Scalable Compute Archive (IU SCA)
+                </a>
+                group.
+              </p>
+            </div>
+
             <div class="text-lg">
               This instance of
               <a href="https://github.com/IUSCA/bioloop">Bioloop</a> is being
@@ -38,6 +48,7 @@
 
 <script setup>
 import { useNavStore } from "@/stores/nav";
+import config from "@/config";
 
 const nav = useNavStore();
 

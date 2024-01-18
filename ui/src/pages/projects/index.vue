@@ -93,11 +93,13 @@
         <template #cell(actions)="{ rowData }">
           <div class="flex gap-1">
             <va-button
+              class="flex-auto"
               preset="plain"
               icon="edit"
               @click="openModalToEditProject(rowData)"
             />
             <va-button
+              class="flex-auto"
               preset="plain"
               icon="delete"
               color="danger"
@@ -227,6 +229,7 @@ function fetch_projects() {
       data_loading.value = false;
     });
 }
+
 fetch_projects();
 
 // edit modal code
