@@ -117,5 +117,14 @@ config = {
             'username': 'root',
             'password': MONGO_PASSWORD
         }
+    },
+
+    'workflow': {
+        'purge': {
+            'types': ['source_integrated', 'stage', 'delete_dataset'],
+            'age_threshold_seconds': 86400,
+            'max_purge_count': 10
+        }
     }
+
 }
