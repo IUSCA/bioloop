@@ -54,6 +54,20 @@ module.exports = {
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
+    },
+    {
+      name: "purge_stale_workflows",
+      script: python_path,
+      args: "-u -m workers.scripts.purge_stale_workflows",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/workers/purge_stale_workflows.err",
+      out_file: "../logs/workers/purge_stale_workflows.log",
+      cron_restart: "00 07 * * *",
+      autorestart: false,
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
     }
   ]
 }
