@@ -1,16 +1,16 @@
 {
   "mode": "production",
-  "app_id": "bioloop.sca.iu.edu",
+  "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
   "workflow_server": {
-    "base_url": "https://core-dev1.sca.iu.edu/rhythm"
+    "base_url": "http://172.19.0.4:5001"
   },
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "bioloop.sca.iu.edu",
+      "iss": "bioloop-dev.sca.iu.edu",
       "ttl_milliseconds": 3600000
     }
   },
@@ -18,6 +18,6 @@
     "base_url": "https://oauth-dev.sca.iu.edu"
   },
   "download_server": {
-    "base_url": "https://bioloop2.sca.iu.edu"
+    "base_url": "https://bioloop-dev2.sca.iu.edu"
   }
 }
