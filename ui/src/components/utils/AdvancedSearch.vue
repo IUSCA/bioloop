@@ -41,7 +41,7 @@
             "
           >
             <va-data-table
-              v-model="selectedResults"
+              v-model="selectedSearchResults"
               class="search_table"
               :items="searchResults"
               :columns="searchColumns"
@@ -59,6 +59,31 @@
                       )
                     : rowData[columnConfig(i)["key"]]
                 }}
+              </template>
+
+              <template #cell(actions)="{ rowData }">
+                <va-button
+                  class="flex-none"
+                  @click="
+                    () => {
+                      resultsToAssign.push(rowData);
+                      emit('select', rowData);
+                    }
+                  "
+                >
+                  Add
+                </va-button>
+                <va-button
+                  class="flex-none"
+                  @click="
+                    () => {
+                      deleteResult(rowData);
+                      emit('remove', rowData);
+                    }
+                  "
+                >
+                  Delete
+                </va-button>
               </template>
             </va-data-table>
           </va-infinite-scroll>
@@ -109,7 +134,7 @@ const props = defineProps({
     required: true,
   },
   trackBy: {
-    type: Function,
+    type: [Function, String],
     default: (e) => e.id,
   },
   fetchFn: {
@@ -132,6 +157,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["select", "remove"]);
+
 const columnConfig = (i) => props.searchResultColumns[i];
 
 const infiniteScrollTarget = ref(null);
@@ -144,31 +171,44 @@ const skip = computed(() => {
 const searchTerm = ref("");
 const searchResults = ref([]);
 const totalResults = ref(0);
-const selectedResults = ref([]);
-const resultsToAssign = ref([
-  {
-    name: "d1",
-    type: "Raw",
-    size: 0,
-    // created_on: "2020-01-01T00:00:0",
-  },
-  {
-    name: "d2",
-    type: "Raw",
-    size: 0,
-    // created_on: "2020-01-01T00:00:0",
-  },
+const selectedSearchResults = ref([]);
+let resultsToAssign = ref([
+  // {
+  //   name: "d1",
+  //   type: "Raw",
+  //   size: 0,
+  // },
+  // {
+  //   name: "d2",
+  //   type: "Raw",
+  //   size: 0,
+  // },
 ]);
 
-const actionColumns = [
-  {
-    key: "Action",
-    label: "actions",
-  },
-];
+const deleteResult = (row) => {
+  const targetIdentity =
+    typeof props.trackBy === "function"
+      ? props.trackBy(row)
+      : _.get(row, props.trackBy);
+
+  resultsToAssign.value.splice(
+    // find the target element (the one to be deleted) among the results
+    resultsToAssign.value.findIndex((e) => {
+      const sourceIdentity =
+        typeof props.trackBy === "function"
+          ? props.trackBy(e)
+          : _.get(e, props.trackBy);
+      return sourceIdentity === targetIdentity;
+    }),
+    1,
+  );
+};
 
 const searchColumns = computed(() => {
-  return props.searchResultColumns.concat(actionColumns);
+  return props.searchResultColumns.concat({
+    key: "actions",
+    label: "Actions",
+  });
 });
 
 const searchResultColumnTemplateNames = computed(() => {
@@ -193,7 +233,6 @@ const fetchQuery = computed(() => {
 });
 
 const loadResults = () => {
-  // const query =
   return props.fetchFn(fetchQuery.value).then((res) => {
     // debugger;
     let results;
@@ -217,19 +256,16 @@ const loadResults = () => {
 };
 
 const loadMore = () => {
-  // debugger;
   page.value += 1;
   return loadResults();
 };
 
 watch([searchTerm, _query], () => {
-  // if (!_.isEqual(value, oldValue)) {
   // reset search results
   searchResults.value = [];
   // reset page value
   page.value = 1;
   loadResults();
-  // }
 });
 
 onMounted(() => {

@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <DatasetSelect @select="handleSelect" />
+    <DatasetSelect @select="handleSelect" @remove="handleRemove" />
 
     <div class="flex flex-row justify-between px-1">
       <span class="text-lg font-bold tracking-wide">Datasets to assign</span>
@@ -9,11 +9,11 @@
       </span>
     </div>
 
-    <ProjectDatasetsList
-      :datasets="projectFormStore.datasets"
-      show-remove
-      @remove="handleRemove"
-    />
+    <!--    <ProjectDatasetsList-->
+    <!--      :datasets="projectFormStore.datasets"-->
+    <!--      show-remove-->
+    <!--      @remove="handleRemove"-->
+    <!--    />-->
   </div>
 </template>
 
