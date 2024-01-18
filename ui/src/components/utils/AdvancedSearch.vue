@@ -56,13 +56,13 @@
               >
                 <div v-if="_searchResultColumns[i].key !== 'actions'" :key="i">
                   <slot
+                    v-if="_searchResultColumns[i].slotted"
                     :name="
                       _searchResultColumns[i].slot ||
                       _searchResultColumns[i].key
                     "
-                    v-if="_searchResultColumns[i].slotted"
+                    :value="fieldValue(i, rowData)"
                   >
-                    {{ fieldValue(i, rowData) }}
                   </slot>
                   <div v-else>{{ fieldValue(i, rowData) }}</div>
                 </div>

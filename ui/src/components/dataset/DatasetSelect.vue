@@ -23,9 +23,8 @@
       </va-button-dropdown>
     </template>
 
-    <template #type>
-      <!--      <DatasetType :type="value" class="" show-icon />-->
-      <va-button color="danger">TYPE</va-button>
+    <template #type="slotProps">
+      <DatasetType :type="slotProps['value']" show-icon />
     </template>
   </AdvancedSearch>
 
