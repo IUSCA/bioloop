@@ -108,9 +108,11 @@ config = {
     },
 
     'workflow': {
-        'workflows_to_purge': ['source_integrated', 'stage', 'delete_dataset'],
-        'purge_threshold_seconds': 86400,
-        'max_purge_count': 5
+        'purge': {
+            'types': ['source_integrated', 'stage', 'delete_dataset'],
+            'age_threshold_seconds': 86400,
+            'max_purge_count': 10
+        }
     }
 
 }

@@ -1,114 +1,135 @@
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
+
+import fire
+from pymongo import MongoClient
 
 import workers.api as api
-from pymongo import MongoClient, DeleteOne
-from pymongo.cursor import Cursor
 from workers.config import config
 from workers.config.celeryconfig import result_backend
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-class MongoConnection:
+
+class WorkflowPurgeManager:
     WORKFLOW_COLLECTION_NAME = 'workflow_meta'
     TASK_COLLECTION_NAME = 'celery_taskmeta'
 
-    def __init__(self):
+    def __init__(self, app_id, workflow_types, age_threshold, max_purge_count, dry_run=False):
         self.mongo_client = MongoClient(result_backend)
         self.celery_db = self.mongo_client['celery']
         self.workflow_collection = self.celery_db[self.WORKFLOW_COLLECTION_NAME]
         self.task_collection = self.celery_db[self.TASK_COLLECTION_NAME]
 
+        self.app_id = app_id
+        self.workflow_types = workflow_types
+        self.age_threshold = age_threshold
+        self.max_purges = max_purge_count
+        self.dry_run = dry_run
+
+        logger.warning(f'app_id: {app_id}, '
+                       f'workflow_types: {workflow_types}, '
+                       f'age_threshold: {age_threshold}, '
+                       f'max_purges: {max_purge_count}')
+
     def purge(self):
+        """
+        Purge orphaned workflows and associated tasks from the result backend
+        """
         app_workflows = api.get_all_workflows()
         app_workflow_ids = [wf['id'] for wf in app_workflows]
 
-        orphaned_tasks_cursor = self.get_orphaned_tasks(
-            config['app_id'],
-            app_workflow_ids,
-            config['workflow']['workflows_to_purge']
+        orphaned_wfs = self.get_orphaned_workflows(
+            app_id=self.app_id,
+            current_wf_ids=app_workflow_ids,
+            workflows_types=self.workflow_types,
+            age_threshold_sec=self.age_threshold
         )
 
-        orphaned_workflows = []
-        for task in orphaned_tasks_cursor:
-            if task['workflow']['_id'] not in orphaned_workflows:
-                print(f"added workflow {task['workflow']['_id']} to list of workflows to be deleted")
-                orphaned_workflows.append(task['workflow']['_id'])
+        logger.warning(f'Found {len(orphaned_wfs)} orphaned workflows')
 
-        workflow_delete_ids = [wf_id for wf_id in orphaned_workflows]
+        # sanity check. If the API accidentally returns no workflows then do not blindly delete all the workflows in
+        # result backend
+        if len(orphaned_wfs) > self.max_purges:
+            logger.warning(
+                f"Number of orphaned workflows ({len(orphaned_wfs)}) to purge is more than {self.max_purges} (MAX_PURGES). "
+                f"Only the first {self.max_purges} will be purged")
 
-        print(f'Number of workflows in Celery persistence before deletion: {self.workflow_collection.count_documents({})}')
-        print(f'Number of workflows to delete from Celery persistence: {len(workflow_delete_ids)}')
-        self.delete_workflows(workflow_delete_ids)
-        print(f'Number of workflows in Celery persistence after deletion: {self.workflow_collection.count_documents({})}')
+        wfs = orphaned_wfs[:self.max_purges]
 
-        orphaned_tasks_cursor.close()
+        wf_ids = [wf['_id'] for wf in wfs]
 
-    def get_orphaned_tasks(
+        _task_ids = [task_run.get('task_id', None)
+                     for wf in wfs
+                     for step in wf.get('steps', [])
+                     for task_run in step.get('task_runs', [])
+                     ]
+        task_ids = [t for t in _task_ids if t is not None]
+
+        if len(task_ids):
+            logger.warning(f'Deletes {len(task_ids)} tasks')
+            if not self.dry_run:
+                res = self.task_collection.delete_many({
+                    '_id': {
+                        '$in': task_ids
+                    }
+                })
+                logger.warning(f'Deleted {res.deleted_count} tasks')
+
+        if len(wf_ids):
+            logger.warning(f'Deletes {len(wf_ids)} workflows')
+            if not self.dry_run:
+                res = self.workflow_collection.delete_many({
+                    '_id': {
+                        '$in': wf_ids
+                    }
+                })
+                logger.warning(f'Deleted {res.deleted_count} workflows')
+
+    def get_orphaned_workflows(
         self,
         app_id: str,
         current_wf_ids: list[str],
-        check_workflows_types: list[str],
-        age_threshold_sec: int = config['workflow']['purge_threshold_seconds']
-    ) -> Cursor:
-        return self.task_collection.aggregate([
-            {
-                '$match':
-                    {
-                        '$and': [
-                            {'kwargs.app_id': app_id},
-                            {'kwargs.workflow_id': {'$not': {'$in': current_wf_ids}}},
-                            {'kwargs.step': {'$in': check_workflows_types}}
-                        ]
-                    }
-            }, {
-                '$lookup':
-                    {
-                        'from': self.WORKFLOW_COLLECTION_NAME,
-                        'localField': "kwargs.workflow_id",
-                        'foreignField': "_id",
-                        'as': "workflows"
-                    }
-            }, {
-                "$project": {
-                    "workflow": {"$arrayElemAt": ["$workflows", 0]}
-                }
-            }, {
-                "$set": {
-                    "workflow.seconds_since_creation": {
-                        '$dateDiff': {
-                            'startDate': '$workflow.created_at',
-                            'endDate': datetime.now(),
-                            'unit': 'second'
-                        }
-                    }
-                }
-            }, {
-                "$match": {
-                    "workflow.seconds_since_creation": {"$gt": age_threshold_sec}
-                }
+        workflows_types: list[str],
+        age_threshold_sec: int
+    ) -> list[dict]:
+        threshold_date_utc = datetime.utcnow() - timedelta(seconds=age_threshold_sec)
+        cursor = self.workflow_collection.find({
+            'app_id': app_id,
+            'name': {
+                '$in': workflows_types
+            },
+            'created_at': {
+                '$lte': threshold_date_utc
+            },
+            '_id': {
+                '$nin': current_wf_ids
             }
-        ])
-
-    def delete_workflows(self, workflow_delete_ids: [str]) -> None:
-        """
-        Deletes matching workflows and their associated tasks
-        :param workflow_delete_ids: List containing workflow ids that need to be deleted
-        """
-        delete_counter = 0
-        for _id in workflow_delete_ids:
-            if delete_counter < config['workflow']['max_purge_count'] - 1:
-                print(f"deleting all tasks associated with workflow {_id}")
-                for task in self.task_collection.find({'kwargs.workflow_id': _id}):
-                    self.task_collection.delete_one({'_id': task['_id']})
-                print(f"deleted all tasks associated with workflow {_id}")
-                self.workflow_collection.delete_one({'_id': _id})
-
-                delete_counter += 1
+        })
+        return list(cursor)
 
 
-def main():
-    mongo_connection = MongoConnection()
-    mongo_connection.purge()
+def purge_stale_workflows(app_id: str = config['app_id'],
+                          workflow_types: list[str] = config['workflow']['purge']['types'],
+                          age_threshold: int = config['workflow']['purge']['age_threshold_seconds'],
+                          max_purge_count: int = config['workflow']['purge']['max_purge_count'],
+                          dry_run=False):
+    """
+    Purge orphaned workflows and associated tasks from the result backend.
+    
+    @param app_id: app_id to purge workflows for
+    @param workflow_types: list of workflow types to purge
+    @param age_threshold: purge workflows older than this threshold (in seconds)
+    @param max_purge_count: max number of workflows to purge
+    @param dry_run: if True, do not delete workflows
+
+    example usage: 
+    
+    python -m workers.scripts.purge_stale_workflows --app_id='bioloop-dev.sca.iu.edu' --workflow_types='["stage", "integrated"]' --age_threshold=86400 --max_purge_count=10 --dry_run
+    """
+    WorkflowPurgeManager(app_id, workflow_types, age_threshold, max_purge_count, dry_run).purge()
 
 
 if __name__ == "__main__":
-    main()
+    fire.Fire(purge_stale_workflows)
