@@ -62,28 +62,37 @@
               </template>
 
               <template #cell(actions)="{ rowData }">
-                <va-button
-                  class="flex-none"
-                  @click="
-                    () => {
-                      resultsToAssign.push(rowData);
-                      emit('select', rowData);
-                    }
-                  "
-                >
-                  Add
-                </va-button>
-                <va-button
-                  class="flex-none"
-                  @click="
-                    () => {
-                      deleteResult(rowData);
-                      emit('remove', rowData);
-                    }
-                  "
-                >
-                  Delete
-                </va-button>
+                <div class="flex gap-2">
+                  <va-button
+                    class="flex-initial"
+                    icon="add"
+                    size="small"
+                    preset="primary"
+                    :disabled="resultsToAssign.includes(rowData)"
+                    @click="
+                      () => {
+                        resultsToAssign.push(rowData);
+                        emit('select', rowData);
+                      }
+                    "
+                  >
+                  </va-button>
+                  <va-button
+                    class="flex-initial"
+                    icon="delete"
+                    size="small"
+                    preset="primary"
+                    color="danger"
+                    :disabled="!resultsToAssign.includes(rowData)"
+                    @click="
+                      () => {
+                        deleteResult(rowData);
+                        emit('remove', rowData);
+                      }
+                    "
+                  >
+                  </va-button>
+                </div>
               </template>
             </va-data-table>
           </va-infinite-scroll>
