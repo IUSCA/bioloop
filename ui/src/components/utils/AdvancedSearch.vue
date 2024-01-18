@@ -49,12 +49,13 @@
               select-mode="multiple"
             >
               <template
-                v-for="(templateName, i) in _searchResultColumns.map(
-                  (e) => e.template,
-                )"
+                v-for="(templateName, i) in _searchResultColumns
+                  .filter((e) => e.key !== 'actions')
+                  .map((e) => e.template)"
                 #[templateName]="{ rowData }"
+                :key="i"
               >
-                <div v-if="_searchResultColumns[i].key !== 'actions'" :key="i">
+                <div>
                   <slot
                     v-if="_searchResultColumns[i].slotted"
                     :name="
