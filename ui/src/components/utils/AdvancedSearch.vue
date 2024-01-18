@@ -17,7 +17,7 @@
           </va-input>
           <div class="flex-none">
             <div class="flex flex-col gap-0.5">
-              <slot></slot>
+              <slot name="filters"></slot>
             </div>
           </div>
         </div>
@@ -44,21 +44,28 @@
               v-model="selectedSearchResults"
               class="search_table"
               :items="searchResults"
-              :columns="searchColumns"
+              :columns="_searchResultColumns"
               selectable
               select-mode="multiple"
             >
               <template
-                v-for="(templateName, i) in searchResultColumnTemplateNames"
+                v-for="(templateName, i) in _searchResultColumns.map(
+                  (e) => e.template,
+                )"
                 #[templateName]="{ rowData }"
               >
-                {{
-                  columnConfig(i)["formatFn"]
-                    ? columnConfig(i)["formatFn"](
-                        rowData[columnConfig(i)["key"]],
-                      )
-                    : rowData[columnConfig(i)["key"]]
-                }}
+                <div v-if="_searchResultColumns[i].key !== 'actions'" :key="i">
+                  <slot
+                    :name="
+                      _searchResultColumns[i].slot ||
+                      _searchResultColumns[i].key
+                    "
+                    v-if="_searchResultColumns[i].slotted"
+                  >
+                    {{ fieldValue(i, rowData) }}
+                  </slot>
+                  <div v-else>{{ fieldValue(i, rowData) }}</div>
+                </div>
               </template>
 
               <template #cell(actions)="{ rowData }">
@@ -130,6 +137,10 @@ const props = defineProps({
   query: {
     type: Object,
   },
+  // slots: {
+  //   type: Array,
+  //   default: () => [],
+  // },
   selectedTitle: {
     type: String,
     default: () => "Selected Results",
@@ -168,7 +179,12 @@ const props = defineProps({
 
 const emit = defineEmits(["select", "remove"]);
 
-const columnConfig = (i) => props.searchResultColumns[i];
+const fieldValue = (i, rowData) => {
+  const columnConfig = props.searchResultColumns[i];
+  return columnConfig["formatFn"]
+    ? columnConfig["formatFn"](rowData[columnConfig["key"]])
+    : rowData[columnConfig["key"]];
+};
 
 const infiniteScrollTarget = ref(null);
 
@@ -203,15 +219,12 @@ const deleteResult = (row) => {
   );
 };
 
-const searchColumns = computed(() => {
-  return props.searchResultColumns.concat({
+const _searchResultColumns = computed(() => {
+  const columnConfig = props.searchResultColumns.concat({
     key: "actions",
     label: "Actions",
   });
-});
-
-const searchResultColumnTemplateNames = computed(() => {
-  return props.searchResultColumns.map((e) => `cell(${e.key})`);
+  return columnConfig.map((e) => ({ ...e, template: `cell(${e.key})` }));
 });
 
 const batchingQuery = computed(() => {

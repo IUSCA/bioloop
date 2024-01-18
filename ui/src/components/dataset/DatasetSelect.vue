@@ -11,15 +11,22 @@
     count-by="metadata.count"
     :page-size="5"
   >
-    <va-button-dropdown
-      :label="`Filters${activeCountText}`"
-      :close-on-content-click="false"
-    >
-      <div class="flex flex-col gap-1">
-        <va-checkbox v-model="checkboxes.rawData" label="Raw Data" />
-        <va-checkbox v-model="checkboxes.dataProduct" label="Data Products" />
-      </div>
-    </va-button-dropdown>
+    <template #filters>
+      <va-button-dropdown
+        :label="`Filters${activeCountText}`"
+        :close-on-content-click="false"
+      >
+        <div class="flex flex-col gap-1">
+          <va-checkbox v-model="checkboxes.rawData" label="Raw Data" />
+          <va-checkbox v-model="checkboxes.dataProduct" label="Data Products" />
+        </div>
+      </va-button-dropdown>
+    </template>
+
+    <template #type>
+      <!--      <DatasetType :type="value" class="" show-icon />-->
+      <va-button color="danger">TYPE</va-button>
+    </template>
   </AdvancedSearch>
 
   <!--  <AutoComplete-->
@@ -63,6 +70,7 @@ const retrievedDatasetColumns = [
   {
     key: "type",
     label: "Type",
+    slotted: true,
   },
   {
     key: "size",
