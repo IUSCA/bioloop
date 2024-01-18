@@ -2,6 +2,7 @@
   <AdvancedSearch
     placeholder="Search Datasets by name"
     selected-title="Datasets to assign"
+    :query="query"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :fetch-fn="datasetService.getAll"
@@ -9,7 +10,17 @@
     results-by="datasets"
     count-by="metadata.count"
     :page-size="5"
-  />
+  >
+    <va-button-dropdown
+      :label="`Filters${activeCountText}`"
+      :close-on-content-click="false"
+    >
+      <div class="flex flex-col gap-1">
+        <va-checkbox v-model="checkboxes.rawData" label="Raw Data" />
+        <va-checkbox v-model="checkboxes.dataProduct" label="Data Products" />
+      </div>
+    </va-button-dropdown>
+  </AdvancedSearch>
 
   <!--  <AutoComplete-->
   <!--    :async="true"-->
@@ -39,7 +50,7 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
-import { formatBytes } from "@/services/utils";
+import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
 
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
@@ -76,6 +87,28 @@ const selectedDatasetColumns = [
   },
 ];
 
+const checkboxes = ref({
+  rawData: false,
+  dataProduct: false,
+});
+const activeCountText = computed(() => {
+  const activeCount = Object.values(checkboxes.value).filter(
+    (val) => !!val,
+  ).length;
+  return activeCount > 0 ? ` (${activeCount})` : "";
+});
+const query = computed(() => {
+  const selectedDatasetType = checkboxes.value.rawData
+    ? "RAW_DATA"
+    : checkboxes.value.dataProduct && "DATA_PRODUCT";
+
+  return {
+    type: lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+      ? selectedDatasetType
+      : undefined,
+  };
+});
+
 const searches = ref([]); // array of Promises, where each Promise represents a search operation
 const searchStack = ref([]); // stack that is pushed to when a search is started, and
 // popped from when a search resolves
@@ -88,10 +121,6 @@ const searchQuery = computed(() => {
     ...(searchText.value && { name: searchText.value }),
   };
 });
-
-const updateSearch = (newText) => {
-  searchText.value = newText;
-};
 
 const search = (query) => {
   loading.value = true;
