@@ -135,7 +135,7 @@ const props = defineProps({
   },
   trackBy: {
     type: [Function, String],
-    default: (e) => e.id,
+    default: "id",
   },
   fetchFn: {
     type: Function,
@@ -172,34 +172,24 @@ const searchTerm = ref("");
 const searchResults = ref([]);
 const totalResults = ref(0);
 const selectedSearchResults = ref([]);
-let resultsToAssign = ref([
-  // {
-  //   name: "d1",
-  //   type: "Raw",
-  //   size: 0,
-  // },
-  // {
-  //   name: "d2",
-  //   type: "Raw",
-  //   size: 0,
-  // },
-]);
+let resultsToAssign = ref([]);
 
 const deleteResult = (row) => {
   const targetIdentity =
     typeof props.trackBy === "function"
       ? props.trackBy(row)
       : _.get(row, props.trackBy);
+  const targetIndex = resultsToAssign.value.findIndex((e) => {
+    const sourceIdentity =
+      typeof props.trackBy === "function"
+        ? props.trackBy(e)
+        : _.get(e, props.trackBy);
+    return sourceIdentity === targetIdentity;
+  });
 
   resultsToAssign.value.splice(
     // find the target element (the one to be deleted) among the results
-    resultsToAssign.value.findIndex((e) => {
-      const sourceIdentity =
-        typeof props.trackBy === "function"
-          ? props.trackBy(e)
-          : _.get(e, props.trackBy);
-      return sourceIdentity === targetIdentity;
-    }),
+    targetIndex,
     1,
   );
 };
