@@ -2,9 +2,8 @@ import logging
 from datetime import datetime, timedelta
 
 import fire
-from pymongo import MongoClient
-
 import workers.api as api
+from pymongo import MongoClient
 from workers.config import config
 from workers.config.celeryconfig import result_backend
 
@@ -18,7 +17,7 @@ class WorkflowPurgeManager:
 
     def __init__(self, app_id, workflow_types, age_threshold, max_purge_count, dry_run=False):
         self.mongo_client = MongoClient(result_backend)
-        self.celery_db = self.mongo_client['celery']
+        self.celery_db = self.mongo_client.get_default_database()
         self.workflow_collection = self.celery_db[self.WORKFLOW_COLLECTION_NAME]
         self.task_collection = self.celery_db[self.TASK_COLLECTION_NAME]
 

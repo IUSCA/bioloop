@@ -113,7 +113,7 @@ config = {
             'password': QUEUE_PASSWORD
         },
         'mongo': {
-            'url': 'localhost:27017',
+            'url': 'localhost:27017/celery?authSource=admin',
             'username': 'root',
             'password': MONGO_PASSWORD
         }
