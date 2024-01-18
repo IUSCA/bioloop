@@ -65,21 +65,26 @@ const retrievedDatasetColumns = [
   {
     key: "name",
     label: "Name",
+    width: "200px",
+    formatFn: (val) => (val.length > 15 ? val.substring(0, 15) + "..." : val),
   },
   {
     key: "type",
     label: "Type",
     slotted: true,
+    width: "160px",
   },
   {
     key: "size",
     label: "Size",
     formatFn: (val) => formatBytes(val),
+    width: "100px",
   },
   {
     key: "created_at",
     label: "Registered On",
     formatFn: (val) => date(val),
+    width: "110px",
   },
 ];
 
