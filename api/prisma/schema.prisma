@@ -72,6 +72,7 @@ model dataset_file_hierarchy {
   child     dataset_file? @relation(name: "child", fields: [child_id], references: [id], onDelete: Cascade)
 
   @@id([parent_id, child_id])
+  @@index([child_id])
 }
 
 model dataset_audit {

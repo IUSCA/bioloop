@@ -11,9 +11,9 @@
     >
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
-    <main id="main" class="overflow-y-scroll">
-      <div class="px-4 pb-10 pt-3 min-h-screen">
-        <LeaveBreadcrumbs class="mb-3" />
+    <main id="main" class="w-full overflow-y-scroll">
+      <div class="px-6 pb-10 pt-4 min-h-screen">
+        <LeaveBreadcrumbs class="mb-4" />
         <router-view></router-view>
       </div>
       <Footer></Footer>
