@@ -3,10 +3,9 @@
     v-model="visible"
     title="Manage Access"
     no-outside-dismiss
-    fixed-layout
     @ok="handleOk"
     @close="hide"
-    size="large"
+    :size="modalSize"
   >
     <va-inner-loading
       :loading="loading"
@@ -20,6 +19,9 @@
 <script setup>
 import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+import { useBreakpoint } from "vuestic-ui";
+
+const breakpoint = useBreakpoint();
 
 const props = defineProps(["id"]);
 const emit = defineEmits(["update"]);
@@ -28,6 +30,13 @@ const emit = defineEmits(["update"]);
 defineExpose({
   show,
   hide,
+});
+
+const modalSize = computed(() => {
+  if (breakpoint.xs || breakpoint.sm) {
+    return "medium";
+  }
+  return "large";
 });
 
 const projectFormStore = useProjectFormStore();
