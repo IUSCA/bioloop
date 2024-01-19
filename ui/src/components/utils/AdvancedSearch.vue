@@ -44,7 +44,12 @@
                 color="success"
                 border-color="success"
                 icon="add"
-                @click="emit('select', selectedSearchResults)"
+                @click="
+                  () => {
+                    emit('select', selectedSearchResults);
+                    resetSelections();
+                  }
+                "
               >
                 Add Selected
               </va-button>
@@ -53,7 +58,12 @@
                 color="danger"
                 border-color="danger"
                 icon="delete"
-                @click="emit('remove', selectedSearchResults)"
+                @click="
+                  () => {
+                    emit('remove', selectedSearchResults);
+                    resetSelections();
+                  }
+                "
               >
                 Delete Selected
               </va-button>
@@ -113,6 +123,7 @@
                       () => {
                         if (!isSelected(rowData)) {
                           emit('select', [rowData]);
+                          resetSelections();
                         }
                       }
                     "
@@ -127,6 +138,7 @@
                     @click="
                       () => {
                         emit('remove', [rowData]);
+                        resetSelections();
                       }
                     "
                   >
@@ -181,6 +193,11 @@
 <script setup>
 import _ from "lodash";
 import { maybePluralize } from "@/services/utils";
+
+const resetSelections = () => {
+  // reset selected search results
+  selectedSearchResults.value = [];
+};
 
 const props = defineProps({
   placeholder: {
@@ -247,6 +264,10 @@ const searchTerm = ref("");
 const searchResults = ref([]);
 const totalResults = ref(0);
 const selectedSearchResults = ref([]);
+
+watch(selectedSearchResults, () => {
+  console.dir(selectedSearchResults.value, { depth: null });
+});
 
 const _searchResultColumns = computed(() => {
   return props.searchResultColumns
@@ -347,6 +368,8 @@ const loadMore = () => {
 watch([searchTerm, _query], () => {
   // reset search results
   searchResults.value = [];
+  // reset selected search results
+  selectedSearchResults.value = [];
   // reset page value
   page.value = 1;
   loadResults();
