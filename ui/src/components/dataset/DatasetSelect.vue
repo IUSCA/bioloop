@@ -60,31 +60,40 @@ import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
 
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
+const COLUMN_WIDTHS = {
+  name: "140px",
+  type: "150px",
+  size: "100px",
+  created_at: "105px",
+};
+
+const trimName = (val) =>
+  val.length > 12 ? val.substring(0, 12) + "..." : val;
 
 const retrievedDatasetColumns = [
   {
     key: "name",
     label: "Name",
-    width: "160px",
-    formatFn: (val) => (val.length > 15 ? val.substring(0, 15) + "..." : val),
+    width: COLUMN_WIDTHS.name,
+    formatFn: trimName,
   },
   {
     key: "type",
     label: "Type",
     slotted: true,
-    width: "160px",
+    width: COLUMN_WIDTHS.type,
   },
   {
     key: "size",
     label: "Size",
     formatFn: (val) => formatBytes(val),
-    width: "100px",
+    width: COLUMN_WIDTHS.size,
   },
   {
     key: "created_at",
     label: "Registered On",
     formatFn: (val) => date(val),
-    width: "110px",
+    width: COLUMN_WIDTHS.created_at,
   },
 ];
 
@@ -92,11 +101,13 @@ const selectedDatasetColumns = [
   {
     key: "name",
     label: "Name",
-    formatFn: (val) => (val.length > 15 ? val.substring(0, 15) + "..." : val),
+    width: COLUMN_WIDTHS.name,
+    formatFn: trimName,
   },
   {
     key: "type",
     label: "Type",
+    slotted: true,
   },
 ];
 

@@ -1,7 +1,7 @@
 <template>
-  <div class="flex search">
+  <div class="flex gap-2 search">
     <!-- Search, and results   -->
-    <div class="flex-none w-9/12">
+    <div class="flex-none">
       <div class="flex flex-col">
         <div class="flex gap-2">
           <!-- Search input -->
@@ -48,23 +48,29 @@
               select-mode="multiple"
             >
               <template
-                v-for="(templateName, i) in _searchResultColumns
+                v-for="(templateName, colIndex) in _searchResultColumns
                   .filter((e) => e.key !== 'actions')
                   .map((e) => e.template)"
                 #[templateName]="{ rowData }"
-                :key="i"
+                :key="colIndex"
               >
                 <div>
                   <slot
-                    v-if="_searchResultColumns[i].slotted"
+                    v-if="_searchResultColumns[colIndex].slotted"
                     :name="
-                      _searchResultColumns[i].slot ||
-                      _searchResultColumns[i].key
+                      _searchResultColumns[colIndex].slot ||
+                      _searchResultColumns[colIndex].key
                     "
-                    :value="fieldValue(i, rowData)"
+                    :value="
+                      fieldValue(rowData, props.searchResultColumns[colIndex])
+                    "
                   >
                   </slot>
-                  <div v-else>{{ fieldValue(i, rowData) }}</div>
+                  <div v-else>
+                    {{
+                      fieldValue(rowData, props.searchResultColumns[colIndex])
+                    }}
+                  </div>
                 </div>
               </template>
 
@@ -78,8 +84,10 @@
                     :disabled="resultsToAssign.includes(rowData)"
                     @click="
                       () => {
-                        resultsToAssign.push(rowData);
-                        emit('select', rowData);
+                        if (!resultsToAssign.includes(rowData)) {
+                          resultsToAssign.push(rowData);
+                          emit('select', rowData);
+                        }
                       }
                     "
                   >
@@ -107,18 +115,36 @@
       </div>
     </div>
 
-    <va-divider vertical></va-divider>
+    <va-divider class="flex-none" vertical></va-divider>
 
     <!-- Selected results -->
-    <div class="w-3/12 flex-none">
+    <div>
       <div class="va-h6">{{ props.selectedTitle }}</div>
+
       <va-data-table
         :items="resultsToAssign"
         :columns="props.selectedResultColumns"
       >
-        <!--        <template #select(row)>-->
-        <!--          <va-checkbox v-model="row.selected" />-->
-        <!--        </template>-->
+        <template
+          v-for="(templateName, colIndex) in _selectedResultColumns.map(
+            (e) => e.template,
+          )"
+          #[templateName]="{ rowData }"
+          :key="colIndex"
+        >
+          <slot
+            v-if="_selectedResultColumns[colIndex].slotted"
+            :name="
+              _selectedResultColumns[colIndex].slot ||
+              _selectedResultColumns[colIndex].key
+            "
+            :value="fieldValue(rowData, props.selectedResultColumns[colIndex])"
+          >
+          </slot>
+          <div v-else>
+            {{ fieldValue(rowData, props.selectedResultColumns[colIndex]) }}
+          </div>
+        </template>
       </va-data-table>
     </div>
   </div>
@@ -169,19 +195,14 @@ const props = defineProps({
     type: Number,
     required: true,
   },
-  actionsWidth: {
-    type: String,
-    default: "80px",
-  },
 });
 
 const emit = defineEmits(["select", "remove"]);
 
-const fieldValue = (i, rowData) => {
-  const columnConfig = props.searchResultColumns[i];
-  return columnConfig["formatFn"]
-    ? columnConfig["formatFn"](rowData[columnConfig["key"]])
-    : rowData[columnConfig["key"]];
+const fieldValue = (rowData, columnsConfig) => {
+  return columnsConfig["formatFn"]
+    ? columnsConfig["formatFn"](rowData[columnsConfig["key"]])
+    : rowData[columnsConfig["key"]];
 };
 
 const infiniteScrollTarget = ref(null);
@@ -217,13 +238,22 @@ const deleteResult = (row) => {
   );
 };
 
+const getTemplate = (field) => `cell(${field["key"]})`;
+
 const _searchResultColumns = computed(() => {
-  const columnConfig = props.searchResultColumns.concat({
-    key: "actions",
-    label: "Actions",
-    width: props.actionsWidth,
-  });
-  return columnConfig.map((e) => ({ ...e, template: `cell(${e.key})` }));
+  return props.searchResultColumns
+    .concat({
+      key: "actions",
+      label: "Actions",
+    })
+    .map((e) => ({ ...e, template: getTemplate(e) }));
+});
+
+const _selectedResultColumns = computed(() => {
+  return props.selectedResultColumns.map((e) => ({
+    ...e,
+    template: getTemplate(e),
+  }));
 });
 
 const batchingQuery = computed(() => {
@@ -284,10 +314,8 @@ onMounted(() => {
 });
 </script>
 
-<style scoped lang="scss">
+<style lang="scss">
 .search {
-  //border: 1px solid red;
-
   .icon {
     color: var(--va-secondary);
   }
