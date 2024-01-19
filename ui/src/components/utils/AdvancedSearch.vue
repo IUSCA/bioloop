@@ -77,11 +77,10 @@
                     icon="add"
                     size="small"
                     preset="primary"
-                    :disabled="resultsToAssign.includes(rowData)"
+                    :disabled="isSelected(rowData)"
                     @click="
                       () => {
-                        if (!resultsToAssign.includes(rowData)) {
-                          resultsToAssign.push(rowData);
+                        if (!isSelected(rowData)) {
                           emit('select', rowData);
                         }
                       }
@@ -94,10 +93,9 @@
                     size="small"
                     preset="primary"
                     color="danger"
-                    :disabled="!resultsToAssign.includes(rowData)"
+                    :disabled="!isSelected(rowData)"
                     @click="
                       () => {
-                        deleteResult(rowData);
                         emit('remove', rowData);
                       }
                     "
@@ -115,9 +113,12 @@
 
     <!-- Selected results -->
     <div>
-      <div class="va-h6">{{ props.selectedTitle }}</div>
+      <div class="va-h6">{{ props.selectedLabel }}</div>
 
-      <va-data-table :items="resultsToAssign" :columns="_selectedResultColumns">
+      <va-data-table
+        :items="props.selectedResults"
+        :columns="_selectedResultColumns"
+      >
         <template
           v-for="(templateName, colIndex) in _selectedResultColumns.map(
             (e) => e.template,
@@ -154,7 +155,7 @@ const props = defineProps({
   query: {
     type: Object,
   },
-  selectedTitle: {
+  selectedLabel: {
     type: String,
     default: () => "Selected Results",
   },
@@ -188,15 +189,13 @@ const props = defineProps({
     type: Number,
     required: true,
   },
+  selectedResults: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(["select", "remove"]);
-
-const fieldValue = (rowData, columnsConfig) => {
-  return columnsConfig["formatFn"]
-    ? columnsConfig["formatFn"](rowData[columnsConfig["key"]])
-    : rowData[columnsConfig["key"]];
-};
 
 const infiniteScrollTarget = ref(null);
 
@@ -209,29 +208,6 @@ const searchTerm = ref("");
 const searchResults = ref([]);
 const totalResults = ref(0);
 const selectedSearchResults = ref([]);
-let resultsToAssign = ref([]);
-
-const deleteResult = (row) => {
-  const targetIdentity =
-    typeof props.trackBy === "function"
-      ? props.trackBy(row)
-      : _.get(row, props.trackBy);
-  const targetIndex = resultsToAssign.value.findIndex((e) => {
-    const sourceIdentity =
-      typeof props.trackBy === "function"
-        ? props.trackBy(e)
-        : _.get(e, props.trackBy);
-    return sourceIdentity === targetIdentity;
-  });
-
-  resultsToAssign.value.splice(
-    // find the target element (the one to be deleted) among the results
-    targetIndex,
-    1,
-  );
-};
-
-const getTemplate = (field) => `cell(${field["key"]})`;
 
 const _searchResultColumns = computed(() => {
   return props.searchResultColumns
@@ -239,13 +215,13 @@ const _searchResultColumns = computed(() => {
       key: "actions",
       label: "Actions",
     })
-    .map((e) => ({ ...e, template: getTemplate(e) }));
+    .map((e) => ({ ...e, template: templateName(e) }));
 });
 
 const _selectedResultColumns = computed(() => {
   return props.selectedResultColumns.map((e) => ({
     ...e,
-    template: getTemplate(e),
+    template: templateName(e),
   }));
 });
 
@@ -265,6 +241,41 @@ const fetchQuery = computed(() => {
     ...batchingQuery.value,
   };
 });
+
+const getIdentity = (result) => {
+  return typeof props.trackBy === "function"
+    ? props.trackBy(result)
+    : _.get(result, props.trackBy);
+};
+
+/**
+ * determines if a search result is selected
+ * @param result the search result to check for selection
+ * @returns {boolean} whether or not the search result is selected
+ */
+const isSelected = (result) => {
+  return (
+    props.selectedResults.findIndex(
+      (e) => getIdentity(e) === getIdentity(result),
+    ) > -1
+  );
+};
+
+/**
+ * Given a search result and a display config for one of the columns in the search result table,
+ * returns the column's formatted value.
+ * @param rowData the search result to format
+ * @param columnConfig the display config for a column in the search results table. This object
+ * corresponds to the display config for this column that was provided to <va-data-table> via the `columns` prop.
+ * @returns {*} the formatted value of the search result
+ */
+const fieldValue = (rowData, columnConfig) => {
+  return columnConfig["formatFn"]
+    ? columnConfig["formatFn"](rowData[columnConfig["key"]])
+    : rowData[columnConfig["key"]];
+};
+
+const templateName = (field) => `cell(${field["key"]})`;
 
 const loadResults = () => {
   return props.fetchFn(fetchQuery.value).then((res) => {

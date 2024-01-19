@@ -1,7 +1,8 @@
 <template>
   <AdvancedSearch
     placeholder="Search Datasets by name"
-    selected-title="Datasets to assign"
+    selected-label="Datasets to assign"
+    :selected-results="props.selectedResults"
     :query="query"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
@@ -66,6 +67,13 @@ const COLUMN_WIDTHS = {
   size: "100px",
   created_at: "105px",
 };
+
+const props = defineProps({
+  selectedResults: {
+    type: Array,
+    default: () => [],
+  },
+});
 
 const trimName = (val) =>
   val.length > 12 ? val.substring(0, 12) + "..." : val;
