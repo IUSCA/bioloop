@@ -76,14 +76,14 @@ const props = defineProps({
 
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 const COLUMN_WIDTHS = {
-  name: "140px",
+  name: "190px",
   type: "150px",
   size: "100px",
   created_at: "105px",
 };
 
 const trimName = (val) =>
-  val.length > 12 ? val.substring(0, 12) + "..." : val;
+  val.length > 17 ? val.substring(0, 17) + "..." : val;
 
 const retrievedDatasetColumns = [
   {
@@ -118,11 +118,6 @@ const selectedDatasetColumns = [
     label: "Name",
     width: COLUMN_WIDTHS.name,
     formatFn: trimName,
-  },
-  {
-    key: "type",
-    label: "Type",
-    slotted: true,
   },
 ];
 

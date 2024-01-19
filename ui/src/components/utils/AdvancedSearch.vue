@@ -128,38 +128,14 @@
 
               <!-- template for Actions column -->
               <template #cell(actions)="{ rowData }">
-                <div class="flex gap-2">
-                  <va-button
-                    icon="add"
-                    color="success"
-                    size="small"
-                    preset="primary"
-                    :disabled="isSelected(rowData)"
-                    @click="
-                      () => {
-                        if (!isSelected(rowData)) {
-                          emit('select', [rowData]);
-                          resetSelections();
-                        }
-                      }
-                    "
-                  >
-                  </va-button>
-                  <va-button
-                    icon="delete"
-                    size="small"
-                    preset="primary"
-                    color="danger"
-                    :disabled="!isSelected(rowData)"
-                    @click="
-                      () => {
-                        emit('remove', [rowData]);
-                        resetSelections();
-                      }
-                    "
-                  >
-                  </va-button>
-                </div>
+                <va-button
+                  :icon="isSelected(rowData) ? 'delete' : 'add'"
+                  :color="isSelected(rowData) ? 'danger' : 'success'"
+                  size="small"
+                  preset="primary"
+                  @click="addOrDelete(rowData)"
+                >
+                </va-button>
               </template>
             </va-data-table>
           </va-infinite-scroll>
@@ -183,9 +159,9 @@
       >
         <!-- dynamically generated templates for displaying columns of the selected results table  -->
         <template
-          v-for="(templateName, colIndex) in _selectedResultColumns.map(
-            (e) => e.template,
-          )"
+          v-for="(templateName, colIndex) in _selectedResultColumns
+            .filter((e) => e.key !== 'actions')
+            .map((e) => e.template)"
           #[templateName]="{ rowData }"
           :key="colIndex"
         >
@@ -202,6 +178,18 @@
           <div v-else>
             {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
           </div>
+        </template>
+
+        <!-- template for Actions column -->
+        <template #cell(actions)="{ rowData }">
+          <va-button
+            :icon="isSelected(rowData) ? 'delete' : 'add'"
+            :color="isSelected(rowData) ? 'danger' : 'success'"
+            size="small"
+            preset="primary"
+            @click="addOrDelete(rowData)"
+          >
+          </va-button>
         </template>
       </va-data-table>
     </div>
@@ -278,17 +266,19 @@ const searchResults = ref([]);
 const totalResults = ref(0);
 const selectedSearchResults = ref([]);
 
+const ACTIONS_COLUMN_CONFIG = {
+  key: "actions",
+  label: "Actions",
+};
+
 const _searchResultColumns = computed(() => {
   return props.searchResultColumns
-    .concat({
-      key: "actions",
-      label: "Actions",
-    })
+    .concat(ACTIONS_COLUMN_CONFIG)
     .map((e) => ({ ...e, template: templateName(e) }));
 });
 
 const _selectedResultColumns = computed(() => {
-  return props.selectedResultColumns.map((e) => ({
+  return props.selectedResultColumns.concat(ACTIONS_COLUMN_CONFIG).map((e) => ({
     ...e,
     template: templateName(e),
   }));
@@ -381,8 +371,17 @@ const loadResults = () => {
 };
 
 const loadMoreResults = () => {
-  page.value += 1; // increase page value for offset calculation
+  page.value += 1; // increase page value for offset recalculation
   return loadResults();
+};
+
+const addOrDelete = (rowData) => {
+  if (!isSelected(rowData)) {
+    emit("select", [rowData]);
+  } else {
+    emit("remove", [rowData]);
+  }
+  resetSelections();
 };
 
 watch([searchTerm, _query], () => {
