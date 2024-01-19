@@ -61,15 +61,11 @@
                       _searchResultColumns[colIndex].slot ||
                       _searchResultColumns[colIndex].key
                     "
-                    :value="
-                      fieldValue(rowData, props.searchResultColumns[colIndex])
-                    "
+                    :value="fieldValue(rowData, _searchResultColumns[colIndex])"
                   >
                   </slot>
                   <div v-else>
-                    {{
-                      fieldValue(rowData, props.searchResultColumns[colIndex])
-                    }}
+                    {{ fieldValue(rowData, _searchResultColumns[colIndex]) }}
                   </div>
                 </div>
               </template>
@@ -121,10 +117,7 @@
     <div>
       <div class="va-h6">{{ props.selectedTitle }}</div>
 
-      <va-data-table
-        :items="resultsToAssign"
-        :columns="props.selectedResultColumns"
-      >
+      <va-data-table :items="resultsToAssign" :columns="_selectedResultColumns">
         <template
           v-for="(templateName, colIndex) in _selectedResultColumns.map(
             (e) => e.template,
@@ -138,11 +131,11 @@
               _selectedResultColumns[colIndex].slot ||
               _selectedResultColumns[colIndex].key
             "
-            :value="fieldValue(rowData, props.selectedResultColumns[colIndex])"
+            :value="fieldValue(rowData, _selectedResultColumns[colIndex])"
           >
           </slot>
           <div v-else>
-            {{ fieldValue(rowData, props.selectedResultColumns[colIndex]) }}
+            {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
           </div>
         </template>
       </va-data-table>
