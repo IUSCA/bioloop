@@ -24,22 +24,44 @@
         </div>
 
         <div class="flex gap-2">
-          <div>
-            Showing {{ searchResults.length }} of {{ totalResults }}
-            {{ searchTerm !== "" ? "filtered " : "" }}
-            results
+          <!-- Counts -->
+          <div class="flex flex-col">
+            <div>
+              Showing {{ searchResults.length }} of {{ totalResults }}
+              {{ searchTerm !== "" ? "filtered " : "" }}
+              results
+            </div>
+            <div v-if="selectedSearchResults.length > 0">
+              {{ selectedSearchResults.length }} selected
+            </div>
           </div>
 
+          <!-- Add Selected / Delete Selected -->
           <div class="flex-none">
             <div class="flex gap-2">
-              <va-button color="success" icon="add">Add Selected</va-button>
-              <va-button color="danger" icon="delete"
-                >Delete Selected
+              <va-button
+                preset="secondary"
+                color="success"
+                border-color="success"
+                icon="add"
+                @click="emit('select', selectedSearchResults)"
+              >
+                Add Selected
+              </va-button>
+              <va-button
+                preset="secondary"
+                color="danger"
+                border-color="danger"
+                icon="delete"
+                @click="emit('remove', selectedSearchResults)"
+              >
+                Delete Selected
               </va-button>
             </div>
           </div>
         </div>
 
+        <!-- Search results table -->
         <div ref="infiniteScrollTarget" class="max-h-64 overflow-y-auto">
           <va-infinite-scroll
             :load="loadMore"
@@ -85,12 +107,12 @@
                     icon="add"
                     color="success"
                     size="small"
-                    preset="plain"
+                    preset="primary"
                     :disabled="isSelected(rowData)"
                     @click="
                       () => {
                         if (!isSelected(rowData)) {
-                          emit('select', rowData);
+                          emit('select', [rowData]);
                         }
                       }
                     "
@@ -99,12 +121,12 @@
                   <va-button
                     icon="delete"
                     size="small"
-                    preset="plain"
+                    preset="primary"
                     color="danger"
                     :disabled="!isSelected(rowData)"
                     @click="
                       () => {
-                        emit('remove', rowData);
+                        emit('remove', [rowData]);
                       }
                     "
                   >
