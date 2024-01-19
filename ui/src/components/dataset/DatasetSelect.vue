@@ -65,7 +65,7 @@ const retrievedDatasetColumns = [
   {
     key: "name",
     label: "Name",
-    width: "200px",
+    width: "160px",
     formatFn: (val) => (val.length > 15 ? val.substring(0, 15) + "..." : val),
   },
   {
@@ -92,6 +92,7 @@ const selectedDatasetColumns = [
   {
     key: "name",
     label: "Name",
+    formatFn: (val) => (val.length > 15 ? val.substring(0, 15) + "..." : val),
   },
   {
     key: "type",

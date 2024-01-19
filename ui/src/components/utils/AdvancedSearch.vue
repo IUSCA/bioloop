@@ -3,10 +3,11 @@
     <!-- Search, and results   -->
     <div class="flex-none w-9/12">
       <div class="flex flex-col">
-        <div class="flex gap-1.5">
+        <div class="flex gap-2">
+          <!-- Search input -->
           <va-input
             v-model="searchTerm"
-            :placeholder="props.placeholder || 'Search'"
+            :placeholder="props.placeholder || 'Type to search'"
           >
             <template #prependInner>
               <va-icon name="search" class="icon"></va-icon>
@@ -15,10 +16,10 @@
               <va-icon name="highlight_off" class="icon"></va-icon>
             </template>
           </va-input>
+
+          <!-- Search filters -->
           <div class="flex-none">
-            <div class="flex flex-col gap-0.5">
-              <slot name="filters"></slot>
-            </div>
+            <slot name="filters"></slot>
           </div>
         </div>
 
@@ -32,7 +33,6 @@
 
         <div ref="infiniteScrollTarget" class="max-h-64 overflow-y-auto">
           <va-infinite-scroll
-            class="search_scroll"
             :load="loadMore"
             :scroll-target="infiniteScrollTarget"
             :disabled="
@@ -42,7 +42,6 @@
           >
             <va-data-table
               v-model="selectedSearchResults"
-              class="search_table"
               :items="searchResults"
               :columns="_searchResultColumns"
               selectable
@@ -108,9 +107,7 @@
       </div>
     </div>
 
-    <div class="flex-none">
-      <va-divider vertical></va-divider>
-    </div>
+    <va-divider vertical></va-divider>
 
     <!-- Selected results -->
     <div class="w-3/12 flex-none">
@@ -138,10 +135,6 @@ const props = defineProps({
   query: {
     type: Object,
   },
-  // slots: {
-  //   type: Array,
-  //   default: () => [],
-  // },
   selectedTitle: {
     type: String,
     default: () => "Selected Results",
@@ -175,6 +168,10 @@ const props = defineProps({
   pageSize: {
     type: Number,
     required: true,
+  },
+  actionsWidth: {
+    type: String,
+    default: "80px",
   },
 });
 
@@ -224,6 +221,7 @@ const _searchResultColumns = computed(() => {
   const columnConfig = props.searchResultColumns.concat({
     key: "actions",
     label: "Actions",
+    width: props.actionsWidth,
   });
   return columnConfig.map((e) => ({ ...e, template: `cell(${e.key})` }));
 });
@@ -288,18 +286,10 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .search {
-  border: 1px solid red;
+  //border: 1px solid red;
 
   .icon {
     color: var(--va-secondary);
   }
-}
-
-.search_scroll {
-  border: 1px solid yellow;
-}
-
-.search_table {
-  border: 1px solid blue;
 }
 </style>
