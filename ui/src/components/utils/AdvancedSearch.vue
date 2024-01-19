@@ -16,17 +16,19 @@
             </template>
             <!-- Clear button -->
             <template #appendInner>
-              <va-button
-                preset="plain"
-                color="secondary"
-                icon="highlight_off"
-                @click="
-                  () => {
-                    searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
-                    emit('reset');
-                  }
-                "
-              />
+              <va-popover message="Reset Filters">
+                <va-button
+                  preset="plain"
+                  color="secondary"
+                  icon="highlight_off"
+                  @click="
+                    () => {
+                      searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
+                      emit('reset');
+                    }
+                  "
+                />
+              </va-popover>
             </template>
           </va-input>
 
