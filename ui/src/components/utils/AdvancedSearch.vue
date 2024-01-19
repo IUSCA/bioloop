@@ -46,9 +46,6 @@
               {{ searchTerm !== "" ? "filtered " : "" }}
               results
             </div>
-            <div v-if="selectedSearchResults.length > 0">
-              {{ selectedSearchResults.length }} selected
-            </div>
           </div>
 
           <!-- Add Selected / Delete Selected -->
@@ -66,7 +63,11 @@
                   }
                 "
               >
-                Add Selected
+                Add Selected{{
+                  selectedSearchResults.length > 0
+                    ? ` (${selectedSearchResults.length})`
+                    : ""
+                }}
               </va-button>
               <va-button
                 preset="secondary"
@@ -80,7 +81,11 @@
                   }
                 "
               >
-                Delete Selected
+                Delete Selected{{
+                  selectedSearchResults.length > 0
+                    ? ` (${selectedSearchResults.length})`
+                    : ""
+                }}
               </va-button>
             </div>
           </div>
