@@ -2,6 +2,7 @@
   <div class="flex gap-2 search">
     <!-- Search, and results   -->
     <div class="flex-none">
+      <!-- Container for search controls, and search results table -->
       <div class="flex flex-col gap-3">
         <div class="flex gap-2">
           <!-- Search input -->
@@ -9,11 +10,23 @@
             v-model="searchTerm"
             :placeholder="props.placeholder || 'Type to search'"
           >
+            <!-- Search icon -->
             <template #prependInner>
               <va-icon name="search" class="icon"></va-icon>
             </template>
+            <!-- Clear button -->
             <template #appendInner>
-              <va-icon name="highlight_off" class="icon"></va-icon>
+              <va-button
+                preset="plain"
+                color="secondary"
+                icon="highlight_off"
+                @click="
+                  () => {
+                    searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
+                    emit('reset');
+                  }
+                "
+              />
             </template>
           </va-input>
 
@@ -74,7 +87,7 @@
         <!-- Search results table -->
         <div ref="infiniteScrollTarget" class="max-h-64 overflow-y-auto">
           <va-infinite-scroll
-            :load="loadMore"
+            :load="loadMoreResults"
             :scroll-target="infiniteScrollTarget"
             :disabled="
               searchResults.length === totalResults ||
@@ -88,6 +101,7 @@
               selectable
               select-mode="multiple"
             >
+              <!-- dynamically generated templates for displaying columns of the search results table -->
               <template
                 v-for="(templateName, colIndex) in _searchResultColumns
                   .filter((e) => e.key !== 'actions')
@@ -95,22 +109,22 @@
                 #[templateName]="{ rowData }"
                 :key="colIndex"
               >
-                <div>
-                  <slot
-                    v-if="_searchResultColumns[colIndex].slotted"
-                    :name="
-                      _searchResultColumns[colIndex].slot ||
-                      _searchResultColumns[colIndex].key
-                    "
-                    :value="fieldValue(rowData, _searchResultColumns[colIndex])"
-                  >
-                  </slot>
-                  <div v-else>
-                    {{ fieldValue(rowData, _searchResultColumns[colIndex]) }}
-                  </div>
+                <!-- Wrap column's value in the provided slot, or display plain value -->
+                <slot
+                  v-if="_searchResultColumns[colIndex].slotted"
+                  :name="
+                    _searchResultColumns[colIndex].slot ||
+                    _searchResultColumns[colIndex].key
+                  "
+                  :value="fieldValue(rowData, _searchResultColumns[colIndex])"
+                >
+                </slot>
+                <div v-else>
+                  {{ fieldValue(rowData, _searchResultColumns[colIndex]) }}
                 </div>
               </template>
 
+              <!-- template for Actions column -->
               <template #cell(actions)="{ rowData }">
                 <div class="flex gap-2">
                   <va-button
@@ -165,6 +179,7 @@
         :items="props.selectedResults"
         :columns="_selectedResultColumns"
       >
+        <!-- dynamically generated templates for displaying columns of the selected results table  -->
         <template
           v-for="(templateName, colIndex) in _selectedResultColumns.map(
             (e) => e.template,
@@ -172,6 +187,7 @@
           #[templateName]="{ rowData }"
           :key="colIndex"
         >
+          <!-- Wrap column's value in the provided slot, or display plain value -->
           <slot
             v-if="_selectedResultColumns[colIndex].slotted"
             :name="
@@ -193,11 +209,6 @@
 <script setup>
 import _ from "lodash";
 import { maybePluralize } from "@/services/utils";
-
-const resetSelections = () => {
-  // reset selected search results
-  selectedSearchResults.value = [];
-};
 
 const props = defineProps({
   placeholder: {
@@ -251,7 +262,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["select", "remove"]);
+const emit = defineEmits(["select", "remove", "reset"]);
 
 const infiniteScrollTarget = ref(null);
 
@@ -264,10 +275,6 @@ const searchTerm = ref("");
 const searchResults = ref([]);
 const totalResults = ref(0);
 const selectedSearchResults = ref([]);
-
-watch(selectedSearchResults, () => {
-  console.dir(selectedSearchResults.value, { depth: null });
-});
 
 const _searchResultColumns = computed(() => {
   return props.searchResultColumns
@@ -337,42 +344,47 @@ const fieldValue = (rowData, columnConfig) => {
 
 const templateName = (field) => `cell(${field["key"]})`;
 
+// resets selected search results
+const resetSelections = () => {
+  selectedSearchResults.value = [];
+};
+
+const resetSearchState = () => {
+  resetSelections();
+  // reset search results
+  searchResults.value = [];
+  // reset page value
+  page.value = 1;
+  // load initial set of search results
+  loadResults();
+};
+
 const loadResults = () => {
   return props.fetchFn(fetchQuery.value).then((res) => {
-    // debugger;
-    let results;
-    if (!props.resultsBy) {
-      results = res.data;
-    } else if (typeof props.resultsBy === "function") {
-      results = props.resultsBy(res.data);
-    } else {
-      results = _.get(res.data, props.resultsBy);
-    }
+    let results =
+      typeof props.resultsBy === "function"
+        ? props.resultsBy(res.data)
+        : typeof props.resultsBy === "string"
+          ? _.get(res.data, props.resultsBy)
+          : res.data;
     searchResults.value = searchResults.value.concat(results);
 
-    if (!props.countBy) {
-      totalResults.value = res.data.length;
-    } else if (typeof props.countBy === "function") {
-      totalResults.value = props.countBy(res.data);
-    } else {
-      totalResults.value = _.get(res.data, props.countBy);
-    }
+    totalResults.value =
+      typeof props.countBy === "function"
+        ? (totalResults.value = props.countBy(res.data))
+        : typeof props.countBy === "string"
+          ? _.get(res.data, props.countBy)
+          : res.data.length;
   });
 };
 
-const loadMore = () => {
-  page.value += 1;
+const loadMoreResults = () => {
+  page.value += 1; // increase page value for offset calculation
   return loadResults();
 };
 
 watch([searchTerm, _query], () => {
-  // reset search results
-  searchResults.value = [];
-  // reset selected search results
-  selectedSearchResults.value = [];
-  // reset page value
-  page.value = 1;
-  loadResults();
+  resetSearchState();
 });
 
 onMounted(() => {

@@ -12,6 +12,12 @@
     count-by="metadata.count"
     :page-size="5"
     resource="dataset"
+    @reset="
+      () => {
+        checkboxes.rawData = false;
+        checkboxes.dataProduct = false;
+      }
+    "
   >
     <template #filters>
       <va-button-dropdown
@@ -61,6 +67,13 @@ import { date } from "@/services/datetime";
 import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
 
+const props = defineProps({
+  selectedResults: {
+    type: Array,
+    default: () => [],
+  },
+});
+
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 const COLUMN_WIDTHS = {
   name: "140px",
@@ -68,13 +81,6 @@ const COLUMN_WIDTHS = {
   size: "100px",
   created_at: "105px",
 };
-
-const props = defineProps({
-  selectedResults: {
-    type: Array,
-    default: () => [],
-  },
-});
 
 const trimName = (val) =>
   val.length > 12 ? val.substring(0, 12) + "..." : val;
