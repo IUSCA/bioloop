@@ -11,6 +11,7 @@
     results-by="datasets"
     count-by="metadata.count"
     :page-size="5"
+    resource="dataset"
   >
     <template #filters>
       <va-button-dropdown

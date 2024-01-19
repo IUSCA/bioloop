@@ -2,7 +2,7 @@
   <div class="flex gap-2 search">
     <!-- Search, and results   -->
     <div class="flex-none">
-      <div class="flex flex-col">
+      <div class="flex flex-col gap-3">
         <div class="flex gap-2">
           <!-- Search input -->
           <va-input
@@ -23,12 +23,21 @@
           </div>
         </div>
 
-        <div class="flex gap-1">
-          <va-button class="flex-none">Add Selected</va-button>
-          <span
-            >Showing {{ searchResults.length }} of {{ totalResults }} filtered
-            results</span
-          >
+        <div class="flex gap-2">
+          <div>
+            Showing {{ searchResults.length }} of {{ totalResults }}
+            {{ searchTerm !== "" ? "filtered " : "" }}
+            results
+          </div>
+
+          <div class="flex-none">
+            <div class="flex gap-2">
+              <va-button color="success" icon="add">Add Selected</va-button>
+              <va-button color="danger" icon="delete"
+                >Delete Selected
+              </va-button>
+            </div>
+          </div>
         </div>
 
         <div ref="infiniteScrollTarget" class="max-h-64 overflow-y-auto">
@@ -73,10 +82,10 @@
               <template #cell(actions)="{ rowData }">
                 <div class="flex gap-2">
                   <va-button
-                    class="flex-initial"
                     icon="add"
+                    color="success"
                     size="small"
-                    preset="primary"
+                    preset="plain"
                     :disabled="isSelected(rowData)"
                     @click="
                       () => {
@@ -88,10 +97,9 @@
                   >
                   </va-button>
                   <va-button
-                    class="flex-initial"
                     icon="delete"
                     size="small"
-                    preset="primary"
+                    preset="plain"
                     color="danger"
                     :disabled="!isSelected(rowData)"
                     @click="
@@ -114,6 +122,10 @@
     <!-- Selected results -->
     <div>
       <div class="va-h6">{{ props.selectedLabel }}</div>
+      <div>
+        {{ maybePluralize(props.selectedResults.length, props.resource) }}
+        selected
+      </div>
 
       <va-data-table
         :items="props.selectedResults"
@@ -146,6 +158,7 @@
 
 <script setup>
 import _ from "lodash";
+import { maybePluralize } from "@/services/utils";
 
 const props = defineProps({
   placeholder: {
@@ -192,6 +205,10 @@ const props = defineProps({
   selectedResults: {
     type: Array,
     default: () => [],
+  },
+  resource: {
+    type: String,
+    required: true,
   },
 });
 

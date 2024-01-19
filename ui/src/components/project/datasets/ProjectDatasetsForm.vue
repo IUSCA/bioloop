@@ -6,11 +6,11 @@
       :selected-results="projectFormStore.datasets"
     />
 
-    <div class="flex flex-row justify-between px-1">
-      <span class="text-right"
-        >{{ maybePluralize(projectFormStore.datasets.length, "dataset") }}
-      </span>
-    </div>
+    <!--    <div class="flex flex-row justify-between px-1">-->
+    <!--      <span class="text-right"-->
+    <!--        >{{ maybePluralize(projectFormStore.datasets.length, "dataset") }}-->
+    <!--      </span>-->
+    <!--    </div>-->
 
     <!--    <ProjectDatasetsList-->
     <!--      :datasets="projectFormStore.datasets"-->
@@ -21,7 +21,6 @@
 </template>
 
 <script setup>
-import { maybePluralize } from "@/services/utils";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const projectFormStore = useProjectFormStore();
