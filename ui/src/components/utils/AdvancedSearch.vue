@@ -8,7 +8,7 @@
           <!-- Search input -->
           <va-input
             v-model="searchTerm"
-            :placeholder="breakpoint.current || props.placeholder"
+            :placeholder="props.placeholder || 'Type to search'"
           >
             <!-- Search icon -->
             <template #prependInner>
@@ -38,66 +38,50 @@
           </div>
         </div>
 
-        <div class="flex gap-2 flex-row flex-wrap">
-          <!-- Counts -->
-          <div class="flex-1">
-            <!--            Showing {{ searchResults.length }} of {{ totalResults }}-->
-            <!--            {{ searchTerm !== "" ? "filtered " : "" }}-->
-            <!--            results results results results results results results results-->
-            <!--            results results results-->
+        <div class="flex gap-2 flex-wrap items-center">
+          <!-- Add Selected / Delete Selected -->
+          <div class="flex gap-2">
+            <va-button
+              class="flex-none"
+              preset="secondary"
+              color="success"
+              border-color="success"
+              icon="add"
+              @click="
+                () => {
+                  emit('select', selectedSearchResults);
+                  resetSelections();
+                }
+              "
+            >
+              Add Selected
+            </va-button>
+            <va-button
+              class="flex-none"
+              preset="secondary"
+              color="danger"
+              border-color="danger"
+              icon="delete"
+              @click="
+                () => {
+                  emit('remove', selectedSearchResults);
+                  resetSelections();
+                }
+              "
+            >
+              Delete Selected
+            </va-button>
           </div>
 
-          <!-- Add Selected / Delete Selected -->
-          <!--          <div class="flex-none">-->
-          <!--          <div class="flex gap-2">-->
           <div class="flex-none">
-            <div class="flex gap-2">
-              <va-button
-                class="flex-none"
-                preset="secondary"
-                color="success"
-                border-color="success"
-                icon="add"
-                @click="
-                  () => {
-                    emit('select', selectedSearchResults);
-                    resetSelections();
-                  }
-                "
-              >
-                Add Selected{{
-                  selectedSearchResults.length > 0
-                    ? ` (${selectedSearchResults.length})`
-                    : ""
-                }}
-              </va-button>
-              <va-button
-                class="flex-none"
-                preset="secondary"
-                color="danger"
-                border-color="danger"
-                icon="delete"
-                @click="
-                  () => {
-                    emit('remove', selectedSearchResults);
-                    resetSelections();
-                  }
-                "
-              >
-                Delete Selected{{
-                  selectedSearchResults.length > 0
-                    ? ` (${selectedSearchResults.length})`
-                    : ""
-                }}
-              </va-button>
-            </div>
+            <va-chip v-if="selectedSearchResults.length > 0">
+              Selected: {{ selectedSearchResults.length }}
+            </va-chip>
           </div>
-          <!--          </div>-->
-          <!--          </div>-->
         </div>
 
         <!-- Search results table -->
-        <div ref="infiniteScrollTarget" class="max-h-64 overflow-y-auto">
+        <div ref="infiniteScrollTarget" class="h-80 mt-4 overflow-y-auto">
           <va-infinite-scroll
             :load="loadMoreResults"
             :scroll-target="infiniteScrollTarget"
@@ -112,7 +96,23 @@
               :columns="_searchResultColumns"
               selectable
               select-mode="multiple"
+              sticky-header
+              footer-clone
+              sticky-footer
+              height="320px"
             >
+              <template #headerPrepend>
+                <tr>
+                  <th colspan="6">
+                    <span class="selected-count">
+                      Showing {{ searchResults.length }} of {{ totalResults }}
+                      {{ searchTerm !== "" ? "filtered " : "" }}
+                      results
+                    </span>
+                  </th>
+                </tr>
+              </template>
+
               <!-- dynamically generated templates for displaying columns of the search results table -->
               <template
                 v-for="(templateName, colIndex) in _searchResultColumns
@@ -157,15 +157,22 @@
 
     <!-- Selected results -->
     <div>
-      <div class="va-h6">{{ props.selectedLabel }}</div>
-      <div>
-        {{ maybePluralize(props.selectedResults.length, props.resource) }}
-        selected
+      <div class="va-h6">
+        {{ props.selectedLabel }}
+        {{
+          props.selectedResults.length > 0
+            ? `(${props.selectedResults.length})`
+            : ""
+        }}
       </div>
 
       <va-data-table
         :items="props.selectedResults"
         :columns="_selectedResultColumns"
+        sticky-header
+        footer-clone
+        sticky-footer
+        height="270px"
       >
         <!-- dynamically generated templates for displaying columns of the selected results table  -->
         <template
@@ -208,10 +215,6 @@
 
 <script setup>
 import _ from "lodash";
-import { maybePluralize } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
-
-const breakpoint = useBreakpoint();
 
 const props = defineProps({
   placeholder: {
@@ -408,7 +411,14 @@ onMounted(() => {
 
 <style lang="scss">
 .search {
+  --va-data-table-thead-background: var(--va-background-secondary);
+  --va-data-table-tfoot-background: var(--va-background-secondary);
+
   .icon {
+    color: var(--va-secondary);
+  }
+
+  .selected-count {
     color: var(--va-secondary);
   }
 }
