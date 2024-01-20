@@ -1,14 +1,14 @@
 <template>
   <div class="flex gap-2 search">
     <!-- Search, and results   -->
-    <div class="flex-none">
+    <div>
       <!-- Container for search controls, and search results table -->
       <div class="flex flex-col gap-3">
         <div class="flex gap-2">
           <!-- Search input -->
           <va-input
             v-model="searchTerm"
-            :placeholder="props.placeholder || 'Type to search'"
+            :placeholder="breakpoint.current || props.placeholder"
           >
             <!-- Search icon -->
             <template #prependInner>
@@ -38,20 +38,22 @@
           </div>
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-row flex-wrap">
           <!-- Counts -->
-          <div class="flex flex-col">
-            <div>
-              Showing {{ searchResults.length }} of {{ totalResults }}
-              {{ searchTerm !== "" ? "filtered " : "" }}
-              results
-            </div>
+          <div class="flex-1">
+            <!--            Showing {{ searchResults.length }} of {{ totalResults }}-->
+            <!--            {{ searchTerm !== "" ? "filtered " : "" }}-->
+            <!--            results results results results results results results results-->
+            <!--            results results results-->
           </div>
 
           <!-- Add Selected / Delete Selected -->
+          <!--          <div class="flex-none">-->
+          <!--          <div class="flex gap-2">-->
           <div class="flex-none">
             <div class="flex gap-2">
               <va-button
+                class="flex-none"
                 preset="secondary"
                 color="success"
                 border-color="success"
@@ -70,6 +72,7 @@
                 }}
               </va-button>
               <va-button
+                class="flex-none"
                 preset="secondary"
                 color="danger"
                 border-color="danger"
@@ -89,6 +92,8 @@
               </va-button>
             </div>
           </div>
+          <!--          </div>-->
+          <!--          </div>-->
         </div>
 
         <!-- Search results table -->
@@ -204,6 +209,9 @@
 <script setup>
 import _ from "lodash";
 import { maybePluralize } from "@/services/utils";
+import { useBreakpoint } from "vuestic-ui";
+
+const breakpoint = useBreakpoint();
 
 const props = defineProps({
   placeholder: {

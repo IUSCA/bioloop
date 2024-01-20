@@ -1,12 +1,15 @@
 <template>
   <va-modal
+    class="modal"
     v-model="visible"
     title="Manage Access"
     no-outside-dismiss
+    fixed-layout
     @ok="handleOk"
     @close="hide"
     :size="modalSize"
   >
+    {{ modalSize }}
     <va-inner-loading
       :loading="loading"
       class="min-w-full sm:min-h-[50vh] sm:max-h-[65vh]"
@@ -33,7 +36,10 @@ defineExpose({
 });
 
 const modalSize = computed(() => {
-  if (breakpoint.xs || breakpoint.sm) {
+  if (breakpoint.xs) {
+    return "small";
+  }
+  if (breakpoint.sm) {
     return "medium";
   }
   return "large";
@@ -62,3 +68,11 @@ function handleOk() {
   });
 }
 </script>
+
+<style scoped>
+.modal {
+  .va-modal__inner {
+    //overflow: auto !important;
+  }
+}
+</style>

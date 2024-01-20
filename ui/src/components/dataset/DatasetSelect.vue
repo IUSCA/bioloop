@@ -32,33 +32,12 @@
     </template>
 
     <template #type="slotProps">
-      <DatasetType :type="slotProps['value']" show-icon />
+      <DatasetType
+        :type="slotProps['value']"
+        :show-icon="!(breakpoint.sm || breakpoint.xs)"
+      />
     </template>
   </AdvancedSearch>
-
-  <!--  <AutoComplete-->
-  <!--    :async="true"-->
-  <!--    :data="datasets"-->
-  <!--    placeholder="Search datasets by name"-->
-  <!--    @update-search="updateSearch"-->
-  <!--    :loading="loading"-->
-  <!--    :clearable="true"-->
-  <!--  >-->
-  <!--    <template #filtered="{ item }">-->
-  <!--      <div class="flex min-w-full">-->
-  <!--        <div>-->
-  <!--          <span> {{ item.name }} </span>-->
-  <!--          <span class="va-text-secondary p-1"> &VerticalLine; </span>-->
-  <!--          <span class="va-text-secondary text-sm"> {{ item.type }} </span>-->
-  <!--        </div>-->
-  <!--        <div class="text-right">-->
-  <!--          <span class="text-sm">-->
-  <!--            {{ formatBytes(item.du_size) }}-->
-  <!--          </span>-->
-  <!--        </div>-->
-  <!--      </div>-->
-  <!--    </template>-->
-  <!--  </AutoComplete>-->
 </template>
 
 <script setup>
@@ -66,6 +45,7 @@ import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
 import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
+import { useBreakpoint } from "vuestic-ui";
 
 const props = defineProps({
   selectedResults: {
@@ -74,10 +54,12 @@ const props = defineProps({
   },
 });
 
+const breakpoint = useBreakpoint();
+
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 const COLUMN_WIDTHS = {
   name: "190px",
-  type: "150px",
+  type: "120px",
   size: "100px",
   created_at: "105px",
 };
@@ -85,7 +67,7 @@ const COLUMN_WIDTHS = {
 const trimName = (val) =>
   val.length > 17 ? val.substring(0, 17) + "..." : val;
 
-const retrievedDatasetColumns = [
+const mobileViewColumns = [
   {
     key: "name",
     label: "Name",
@@ -98,6 +80,9 @@ const retrievedDatasetColumns = [
     slotted: true,
     width: COLUMN_WIDTHS.type,
   },
+];
+
+const desktopViewColumns = [
   {
     key: "size",
     label: "Size",
@@ -111,6 +96,12 @@ const retrievedDatasetColumns = [
     width: COLUMN_WIDTHS.created_at,
   },
 ];
+
+const retrievedDatasetColumns = computed(() => {
+  return breakpoint.sm || breakpoint.xs
+    ? mobileViewColumns
+    : mobileViewColumns.concat(desktopViewColumns);
+});
 
 const selectedDatasetColumns = [
   {
