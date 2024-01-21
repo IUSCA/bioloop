@@ -101,9 +101,7 @@
               selectable
               select-mode="multiple"
               sticky-header
-              footer-clone
-              sticky-footer
-              height="320px"
+              height="280px"
             >
               <template #headerPrepend>
                 <tr>
@@ -203,9 +201,7 @@
             :items="props.selectedResults"
             :columns="_selectedResultColumns"
             sticky-header
-            footer-clone
-            sticky-footer
-            height="320px"
+            height="280px"
             selectable
             select-mode="multiple"
           >
