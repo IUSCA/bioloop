@@ -10,6 +10,7 @@
           <va-input
             v-model="searchTerm"
             :placeholder="props.placeholder || 'Type to search'"
+            class="flex-auto"
           >
             <!-- Search icon -->
             <template #prependInner>
