@@ -40,9 +40,9 @@
             </div>
           </div>
 
-          <div class="flex gap-2 flex-wrap items-center">
+          <div class="flex gap-2 flex-wrap">
             <!-- Add Selected / Delete Selected -->
-            <div class="flex flex-auto gap-2">
+            <div class="flex flex-auto gap-2 items-center">
               <va-button
                 class="flex-none"
                 preset="secondary"
@@ -58,27 +58,12 @@
               >
                 Add Selected
               </va-button>
-              <va-button
-                class="flex-none"
-                preset="secondary"
-                color="danger"
-                border-color="danger"
-                icon="delete"
-                @click="
-                  () => {
-                    emit('remove', searchResultSelections);
-                    resetSearchSelections();
-                  }
-                "
-              >
-                Delete Selected
-              </va-button>
-            </div>
 
-            <div class="flex-none">
-              <va-chip v-if="searchResultSelections.length > 0">
-                Selected: {{ searchResultSelections.length }}
-              </va-chip>
+              <div class="flex-none">
+                <va-chip v-if="searchResultSelections.length > 0">
+                  Selected: {{ searchResultSelections.length }}
+                </va-chip>
+              </div>
             </div>
           </div>
         </div>
@@ -161,13 +146,13 @@
     <!-- Selected results -->
     <div>
       <div class="flex flex-col gap-2">
-        <div class="flex flex-col gap-2 h-24">
+        <div class="flex flex-col gap-2">
           <div class="va-h6 h-9 my-0">
             {{ props.selectedLabel }}
           </div>
 
           <div class="flex gap-2 items-center">
-            <div class="flex-auto">
+            <div class="flex gap-2 flex-auto items-center">
               <va-button
                 class="flex-none"
                 preset="secondary"
@@ -183,17 +168,17 @@
               >
                 Delete Selected
               </va-button>
-            </div>
 
-            <div class="flex-auto text-right">
-              <va-chip v-if="selectedResultSelections.length > 0">
-                Selected: {{ selectedResultSelections.length }}
-              </va-chip>
+              <div class="flex-none">
+                <va-chip v-if="selectedResultSelections.length > 0">
+                  Selected: {{ selectedResultSelections.length }}
+                </va-chip>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="overflow-y-auto">
+        <div class="overflow-y-auto mt-7">
           <va-data-table
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
