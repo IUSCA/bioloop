@@ -42,7 +42,6 @@
 import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
 import { formatBytes, lxor } from "@/services/utils";
-import _ from "lodash";
 import { useBreakpoint } from "vuestic-ui";
 
 const NAME_TRIM_THRESHOLD = 15;
@@ -56,77 +55,76 @@ const props = defineProps({
 
 const breakpoint = useBreakpoint();
 
-const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
-const COLUMN_WIDTHS = {
-  name: "175px",
-  type: "120px",
-  size: "100px",
-  created_at: "105px",
-};
+const columnWidths = computed(() => {
+  return {
+    name: breakpoint.xs || breakpoint.sm ? "170px" : "175px",
+    type: "120px",
+    size: "100px",
+    created_at: "105px",
+  };
+});
 
 const trimName = (val) =>
   val.length > NAME_TRIM_THRESHOLD
     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
     : val;
 
-const mobileViewColumns = [
-  {
-    key: "name",
-    label: "Name",
-    width: COLUMN_WIDTHS.name,
-    formatFn: trimName,
-    // expandable: false,
-  },
-  {
-    key: "type",
-    label: "Type",
-    slotted: true,
-    width: COLUMN_WIDTHS.type,
-  },
-];
+const mobileViewColumns = computed(() => {
+  return [
+    {
+      key: "name",
+      label: "Name",
+      width: columnWidths.value.name,
+      formatFn: trimName,
+    },
+    {
+      key: "type",
+      label: "Type",
+      slotted: true,
+      width: columnWidths.value.type,
+    },
+  ];
+});
 
-const desktopViewColumns = [
-  {
-    key: "size",
-    label: "Size",
-    formatFn: (val) => formatBytes(val),
-    width: COLUMN_WIDTHS.size,
-  },
-  {
-    key: "created_at",
-    label: "Registered On",
-    formatFn: (val) => date(val),
-    width: COLUMN_WIDTHS.created_at,
-  },
-];
+const desktopViewColumns = computed(() => {
+  return [
+    {
+      key: "size",
+      label: "Size",
+      formatFn: (val) => formatBytes(val),
+      width: columnWidths.value.size,
+    },
+    {
+      key: "created_at",
+      label: "Registered On",
+      formatFn: (val) => date(val),
+      width: columnWidths.value.created_at,
+    },
+  ];
+});
 
 const retrievedDatasetColumns = computed(() => {
   return breakpoint.sm || breakpoint.xs
-    ? mobileViewColumns
-    : mobileViewColumns.concat(desktopViewColumns);
+    ? mobileViewColumns.value
+    : mobileViewColumns.value.concat(desktopViewColumns.value);
 });
 
-// const expandableColumns = retrievedColumns.filter((col) => col.expandable);
-
-const selectedDatasetColumns = [
-  {
-    key: "name",
-    label: "Name",
-    width: COLUMN_WIDTHS.name,
-    formatFn: trimName,
-  },
-];
+const selectedDatasetColumns = computed(() =>
+  mobileViewColumns.value.filter((col) => col.key === "name"),
+);
 
 const checkboxes = ref({
   rawData: false,
   dataProduct: false,
 });
+
 const activeCountText = computed(() => {
   const activeCount = Object.values(checkboxes.value).filter(
     (val) => !!val,
   ).length;
   return activeCount > 0 ? ` (${activeCount})` : "";
 });
+
 const query = computed(() => {
   const selectedDatasetType = checkboxes.value.rawData
     ? "RAW_DATA"
@@ -137,66 +135,5 @@ const query = computed(() => {
       ? selectedDatasetType
       : undefined,
   };
-});
-
-const searches = ref([]); // array of Promises, where each Promise represents a search operation
-const searchStack = ref([]); // stack that is pushed to when a search is started, and
-// popped from when a search resolves
-const datasets = ref([]); // Options passed to the <select />
-const loading = ref(false);
-const searchText = ref("");
-const searchQuery = computed(() => {
-  return {
-    ...BASE_FILTER_QUERY,
-    ...(searchText.value && { name: searchText.value }),
-  };
-});
-
-const search = (query) => {
-  loading.value = true;
-  searchStack.value.push(null);
-
-  return new Promise((resolve) => {
-    let response;
-    datasetService
-      .getAll(query || BASE_FILTER_QUERY)
-      .then((res) => {
-        response = res;
-      })
-      .catch((e) => {
-        console.log(e);
-      })
-      .finally(() => {
-        searchStack.value.pop();
-        resolve(response); // always resolve. Enables recovery from network errors without
-        // page refresh
-      });
-  });
-};
-
-// Watcher that triggers when a new search is run
-watch(searchQuery, (value, oldValue) => {
-  if (!_.isEqual(value, oldValue)) {
-    searches.value.push(search(searchQuery.value));
-  }
-});
-
-watch(
-  searchStack,
-  () => {
-    // If stack is empty, all searches have been resolved
-    if (searchStack.value.length === 0) {
-      Promise.all(searches.value).then((responses) => {
-        const latestResponse = responses[responses.length - 1];
-        datasets.value = latestResponse.data.datasets;
-        loading.value = false;
-      });
-    }
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  searches.value.push(search());
 });
 </script>
