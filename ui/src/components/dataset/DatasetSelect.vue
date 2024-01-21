@@ -57,7 +57,7 @@ const breakpoint = useBreakpoint();
 
 const columnWidths = computed(() => {
   return {
-    name: breakpoint.xs || breakpoint.sm ? "170px" : "175px",
+    name: breakpoint.xs || breakpoint.sm ? "165px" : "175px",
     type: "120px",
     size: "100px",
     created_at: "105px",
