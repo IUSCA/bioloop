@@ -86,7 +86,7 @@
         <!-- Search results table -->
         <div
           ref="infiniteScrollTarget_search"
-          class="infinite-scroll mt-7 h-80 overflow-y-auto"
+          class="infinite-scroll mt-7 max-h-80 overflow-y-auto"
         >
           <va-infinite-scroll
             :load="loadNextSearchResults"
@@ -101,9 +101,7 @@
               :items="searchResults"
               :columns="_searchResultColumns"
               selectable
-              sticky-header
               select-mode="multiple"
-              height="280px"
             >
               <template #headerPrepend>
                 <tr>
@@ -195,13 +193,14 @@
           </div>
         </div>
 
-        <div class="h-80 overflow-y-auto">
+        <div class="overflow-y-auto">
           <va-data-table
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
             :items="props.selectedResults"
             :columns="_selectedResultColumns"
             height="280px"
+            virtual-scroller
             selectable
             select-mode="multiple"
           >
@@ -471,16 +470,16 @@ onMounted(() => {
     color: var(--va-secondary);
   }
 
-  .infinite-scroll {
-    //height: 350px;
-  }
+  //.infinite-scroll {
+  //  //height: 350px;
+  //}
 
-  .va-infinite-scroll {
-    height: 280px;
-  }
-
-  .va-virtual-scroller.va-data-table {
-    min-height: 280px;
-  }
+  //.va-infinite-scroll {
+  //  height: 280px;
+  //}
+  //
+  //.va-virtual-scroller.va-data-table {
+  //  min-height: 280px;
+  //}
 }
 </style>
