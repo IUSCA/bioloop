@@ -113,9 +113,18 @@ config = {
             'password': QUEUE_PASSWORD
         },
         'mongo': {
-            'url': 'localhost:27017',
+            'url': 'localhost:27017/celery?authSource=admin',
             'username': 'root',
             'password': MONGO_PASSWORD
         }
+    },
+
+    'workflow': {
+        'purge': {
+            'types': ['source_integrated', 'stage', 'delete_dataset'],
+            'age_threshold_seconds': 86400,
+            'max_purge_count': 10
+        }
     }
+
 }

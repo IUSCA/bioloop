@@ -35,6 +35,17 @@ router.get(
 );
 
 router.get(
+  '/current',
+  isPermittedTo('read'),
+  asyncHandler(
+    async (req, res, next) => {
+      const workflows = await prisma.workflow.findMany();
+      res.json(workflows);
+    },
+  ),
+);
+
+router.get(
   '/counts_by_status',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {

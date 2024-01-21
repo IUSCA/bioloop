@@ -1,11 +1,11 @@
 // https://pm2.keymetrics.io/docs/usage/application-declaration/
+const python_path = '/geode2/home/u080/scadev/Carbonate/bioloop/workers/.venv/bin/python'
 module.exports = {
-  // replace script [python] with path of poetry's python executable
   apps: [
     {
       name: "celery_worker",
-      script: "python",
-      args: "-m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'bioloop-celery-w1@%h' --autoscale=8,2 --queues 'bioloop.sca.iu.edu.q'",
+      script: python_path,
+      args: "-m celery -A workers.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'bioloop-dev-celery-w1@%h' --autoscale=8,2 --queues 'bioloop-dev.sca.iu.edu.q'",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
@@ -17,7 +17,7 @@ module.exports = {
     },
     {
       name: "watch",
-      script: "python",
+      script: python_path,
       args: "-u -m workers.scripts.watch",
       watch: false,
       interpreter: "",
@@ -29,7 +29,7 @@ module.exports = {
     },
     {
       name: "metrics",
-      script: "python",
+      script: python_path,
       args: "-u -m workers.scripts.metrics",
       watch: false,
       interpreter: "",
@@ -43,7 +43,7 @@ module.exports = {
     },
     {
       name: "purge_staged_datasets",
-      script: "python",
+      script: python_path,
       args: "-u -m workers.scripts.purge_staged_datasets",
       watch: false,
       interpreter: "",
@@ -57,7 +57,7 @@ module.exports = {
     },
     {
       name: "purge_stale_workflows",
-      script: "python",
+      script: python_path,
       args: "-u -m workers.scripts.purge_stale_workflows",
       watch: false,
       interpreter: "",

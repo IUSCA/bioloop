@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-row h-screen">
-    <main class="grow overflow-y-scroll flex flex-col justify-between">
+    <main class="grow shrink-0 overflow-y-scroll flex flex-col justify-between">
       <div class="text-center p-40">
         <router-view></router-view>
         <div class="m-3 text-sm mt-8">
