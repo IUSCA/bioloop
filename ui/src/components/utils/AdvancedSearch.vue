@@ -4,7 +4,7 @@
     <div>
       <!-- Container for search controls, and search results table -->
       <div class="flex flex-col gap-2">
-        <div class="flex flex-col gap-2 h-24">
+        <div class="flex flex-col gap-2">
           <div class="flex gap-2">
             <!-- Search input -->
             <va-input
@@ -84,7 +84,10 @@
         </div>
 
         <!-- Search results table -->
-        <div ref="infiniteScrollTarget_search" class="h-80 overflow-y-auto">
+        <div
+          ref="infiniteScrollTarget_search"
+          class="infinite-scroll mt-7 h-80 overflow-y-auto"
+        >
           <va-infinite-scroll
             :load="loadNextSearchResults"
             :scroll-target="infiniteScrollTarget_search"
@@ -98,8 +101,8 @@
               :items="searchResults"
               :columns="_searchResultColumns"
               selectable
-              select-mode="multiple"
               sticky-header
+              select-mode="multiple"
               height="280px"
             >
               <template #headerPrepend>
@@ -196,10 +199,8 @@
           <va-data-table
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
-            virtual-scroller
             :items="props.selectedResults"
             :columns="_selectedResultColumns"
-            sticky-header
             height="280px"
             selectable
             select-mode="multiple"
@@ -468,6 +469,18 @@ onMounted(() => {
 
   .selected-count {
     color: var(--va-secondary);
+  }
+
+  .infinite-scroll {
+    //height: 350px;
+  }
+
+  .va-infinite-scroll {
+    height: 280px;
+  }
+
+  .va-virtual-scroller.va-data-table {
+    min-height: 280px;
   }
 }
 </style>
