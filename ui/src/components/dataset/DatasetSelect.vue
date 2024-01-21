@@ -73,6 +73,7 @@ const mobileViewColumns = [
     label: "Name",
     width: COLUMN_WIDTHS.name,
     formatFn: trimName,
+    // expandable: false,
   },
   {
     key: "type",
@@ -102,6 +103,8 @@ const retrievedDatasetColumns = computed(() => {
     ? mobileViewColumns
     : mobileViewColumns.concat(desktopViewColumns);
 });
+
+// const expandableColumns = retrievedColumns.filter((col) => col.expandable);
 
 const selectedDatasetColumns = [
   {

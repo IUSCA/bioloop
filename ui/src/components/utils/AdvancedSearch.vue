@@ -4,6 +4,7 @@
     <div>
       <!-- Container for search controls, and search results table -->
       <div class="flex flex-col gap-3">
+        <!--        div class="-->
         <div class="flex gap-2">
           <!-- Search input -->
           <va-input
@@ -159,21 +160,28 @@
     <div>
       <div class="va-h6">
         {{ props.selectedLabel }}
-        {{
-          props.selectedResults.length > 0
-            ? `(${props.selectedResults.length})`
-            : ""
-        }}
       </div>
 
       <va-data-table
+        class="selected-results"
+        v-if="props.selectedResults.length > 0"
         :items="props.selectedResults"
         :columns="_selectedResultColumns"
         sticky-header
         footer-clone
         sticky-footer
-        height="270px"
+        height="320px"
       >
+        <template #headerPrepend>
+          <tr>
+            <th colspan="6">
+              <span class="selected-count">
+                Selected {{ props.selectedResults.length }} results
+              </span>
+            </th>
+          </tr>
+        </template>
+
         <!-- dynamically generated templates for displaying columns of the selected results table  -->
         <template
           v-for="(templateName, colIndex) in _selectedResultColumns
@@ -420,6 +428,10 @@ onMounted(() => {
 
   .selected-count {
     color: var(--va-secondary);
+  }
+
+  .selected-results {
+    margin-top: 90px;
   }
 }
 </style>
