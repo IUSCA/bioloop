@@ -42,7 +42,7 @@
 
           <div class="flex gap-2 flex-wrap items-center">
             <!-- Add Selected / Delete Selected -->
-            <div class="flex gap-2">
+            <div class="flex flex-auto gap-2">
               <va-button
                 class="flex-none"
                 preset="secondary"
@@ -51,8 +51,8 @@
                 icon="add"
                 @click="
                   () => {
-                    emit('select', selectedSearchResults);
-                    resetSelections();
+                    emit('select', searchResultSelections);
+                    resetSearchSelections();
                   }
                 "
               >
@@ -66,8 +66,8 @@
                 icon="delete"
                 @click="
                   () => {
-                    emit('remove', selectedSearchResults);
-                    resetSelections();
+                    emit('remove', searchResultSelections);
+                    resetSearchSelections();
                   }
                 "
               >
@@ -76,8 +76,8 @@
             </div>
 
             <div class="flex-none">
-              <va-chip v-if="selectedSearchResults.length > 0">
-                Selected: {{ selectedSearchResults.length }}
+              <va-chip v-if="searchResultSelections.length > 0">
+                Selected: {{ searchResultSelections.length }}
               </va-chip>
             </div>
           </div>
@@ -87,15 +87,15 @@
         <!-- Search results table -->
         <div ref="infiniteScrollTarget_search" class="h-80 overflow-y-auto">
           <va-infinite-scroll
-            :load="loadMoreResults"
+            :load="loadNextSearchResults"
             :scroll-target="infiniteScrollTarget_search"
             :disabled="
               searchResults.length === totalResults ||
-              searchResults.length < props.pageSize
+              searchResults.length < props.pageSizeSearch
             "
           >
             <va-data-table
-              v-model="selectedSearchResults"
+              v-model="searchResultSelections"
               :items="searchResults"
               :columns="_searchResultColumns"
               selectable
@@ -148,6 +148,7 @@
                   size="small"
                   preset="primary"
                   @click="addOrDelete(rowData)"
+                  :disabled="searchResultSelections.length > 0"
                 >
                 </va-button>
               </template>
@@ -162,20 +163,51 @@
     <!-- Selected results -->
     <div>
       <div class="flex flex-col gap-2">
-        <div class="va-h6 h-24 my-0">
-          {{ props.selectedLabel }}
+        <div class="flex flex-col gap-2 h-24">
+          <div class="va-h6 h-9 my-0">
+            {{ props.selectedLabel }}
+          </div>
+
+          <div class="flex gap-2 items-center">
+            <div class="flex-auto">
+              <va-button
+                class="flex-none"
+                preset="secondary"
+                color="danger"
+                border-color="danger"
+                icon="delete"
+                @click="
+                  () => {
+                    emit('remove', selectedResultSelections);
+                    resetSelectedSelections();
+                  }
+                "
+              >
+                Delete Selected
+              </va-button>
+            </div>
+
+            <div class="flex-auto text-right">
+              <va-chip v-if="selectedResultSelections.length > 0">
+                Selected: {{ selectedResultSelections.length }}
+              </va-chip>
+            </div>
+          </div>
         </div>
 
-        <div ref="infiniteScrollTarget_selected" class="h-80 overflow-y-auto">
+        <div class="h-80 overflow-y-auto">
           <va-data-table
+            v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
+            virtual-scroller
             :items="props.selectedResults"
             :columns="_selectedResultColumns"
-            :scroll-target="infiniteScrollTarget_selected"
             sticky-header
             footer-clone
             sticky-footer
             height="320px"
+            selectable
+            select-mode="multiple"
           >
             <template #headerPrepend>
               <tr>
@@ -218,6 +250,7 @@
                 size="small"
                 preset="primary"
                 @click="addOrDelete(rowData)"
+                :disabled="selectedResultSelections.length > 0"
               >
               </va-button>
             </template>
@@ -269,9 +302,13 @@ const props = defineProps({
   countBy: {
     type: [String, Function],
   },
-  pageSize: {
+  pageSizeSearch: {
     type: Number,
-    required: true,
+    default: () => 5,
+  },
+  pageSizeSelected: {
+    type: Number,
+    default: () => 5,
   },
   selectedResults: {
     type: Array,
@@ -286,17 +323,17 @@ const props = defineProps({
 const emit = defineEmits(["select", "remove", "reset"]);
 
 const infiniteScrollTarget_search = ref(null);
-const infiniteScrollTarget_selected = ref(null);
 
 const page = ref(1);
 const skip = computed(() => {
-  return props.pageSize * (page.value - 1);
+  return props.pageSizeSearch * (page.value - 1);
 });
 
 const searchTerm = ref("");
 const searchResults = ref([]);
 const totalResults = ref(0);
-const selectedSearchResults = ref([]);
+const searchResultSelections = ref([]);
+const selectedResultSelections = ref([]);
 
 const ACTIONS_COLUMN_CONFIG = {
   key: "actions",
@@ -319,7 +356,7 @@ const _selectedResultColumns = computed(() => {
 const batchingQuery = computed(() => {
   return {
     offset: skip.value,
-    limit: props.pageSize,
+    limit: props.pageSizeSearch,
   };
 });
 
@@ -368,13 +405,18 @@ const fieldValue = (rowData, columnConfig) => {
 
 const templateName = (field) => `cell(${field["key"]})`;
 
-// resets selected search results
-const resetSelections = () => {
-  selectedSearchResults.value = [];
+// resets search result selections
+const resetSearchSelections = () => {
+  searchResultSelections.value = [];
+};
+
+// resets selected result selections
+const resetSelectedSelections = () => {
+  selectedResultSelections.value = [];
 };
 
 const resetSearchState = () => {
-  resetSelections();
+  resetSearchSelections();
   // reset search results
   searchResults.value = [];
   // reset page value
@@ -402,7 +444,7 @@ const loadResults = () => {
   });
 };
 
-const loadMoreResults = () => {
+const loadNextSearchResults = () => {
   page.value += 1; // increase page value for offset recalculation
   return loadResults();
 };
@@ -413,7 +455,7 @@ const addOrDelete = (rowData) => {
   } else {
     emit("remove", [rowData]);
   }
-  resetSelections();
+  resetSearchSelections();
 };
 
 watch([searchTerm, _query], () => {

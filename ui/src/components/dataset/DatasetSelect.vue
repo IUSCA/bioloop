@@ -10,7 +10,6 @@
     search-field="name"
     results-by="datasets"
     count-by="metadata.count"
-    :page-size="5"
     resource="dataset"
     @reset="
       () => {
@@ -47,6 +46,8 @@ import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
 import { useBreakpoint } from "vuestic-ui";
 
+const NAME_TRIM_THRESHOLD = 15;
+
 const props = defineProps({
   selectedResults: {
     type: Array,
@@ -58,14 +59,16 @@ const breakpoint = useBreakpoint();
 
 const BASE_FILTER_QUERY = { sortBy: { name: "asc" }, limit: 5 };
 const COLUMN_WIDTHS = {
-  name: "190px",
+  name: "175px",
   type: "120px",
   size: "100px",
   created_at: "105px",
 };
 
 const trimName = (val) =>
-  val.length > 17 ? val.substring(0, 17) + "..." : val;
+  val.length > NAME_TRIM_THRESHOLD
+    ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
+    : val;
 
 const mobileViewColumns = [
   {
