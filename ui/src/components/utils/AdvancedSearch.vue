@@ -3,90 +3,92 @@
     <!-- Search, and results   -->
     <div>
       <!-- Container for search controls, and search results table -->
-      <div class="flex flex-col gap-3">
-        <!--        div class="-->
-        <div class="flex gap-2">
-          <!-- Search input -->
-          <va-input
-            v-model="searchTerm"
-            :placeholder="props.placeholder || 'Type to search'"
-            class="flex-auto"
-          >
-            <!-- Search icon -->
-            <template #prependInner>
-              <va-icon name="search" class="icon"></va-icon>
-            </template>
-            <!-- Clear button -->
-            <template #appendInner>
-              <va-popover message="Reset Filters">
-                <va-button
-                  preset="plain"
-                  color="secondary"
-                  icon="highlight_off"
-                  @click="
-                    () => {
-                      searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
-                      emit('reset');
-                    }
-                  "
-                />
-              </va-popover>
-            </template>
-          </va-input>
-
-          <!-- Search filters -->
-          <div class="flex-none">
-            <slot name="filters"></slot>
-          </div>
-        </div>
-
-        <div class="flex gap-2 flex-wrap items-center">
-          <!-- Add Selected / Delete Selected -->
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2 h-24">
           <div class="flex gap-2">
-            <va-button
-              class="flex-none"
-              preset="secondary"
-              color="success"
-              border-color="success"
-              icon="add"
-              @click="
-                () => {
-                  emit('select', selectedSearchResults);
-                  resetSelections();
-                }
-              "
+            <!-- Search input -->
+            <va-input
+              v-model="searchTerm"
+              :placeholder="props.placeholder || 'Type to search'"
+              class="flex-auto"
             >
-              Add Selected
-            </va-button>
-            <va-button
-              class="flex-none"
-              preset="secondary"
-              color="danger"
-              border-color="danger"
-              icon="delete"
-              @click="
-                () => {
-                  emit('remove', selectedSearchResults);
-                  resetSelections();
-                }
-              "
-            >
-              Delete Selected
-            </va-button>
+              <!-- Search icon -->
+              <template #prependInner>
+                <va-icon name="search" class="icon"></va-icon>
+              </template>
+              <!-- Clear button -->
+              <template #appendInner>
+                <va-popover message="Reset Filters">
+                  <va-button
+                    preset="plain"
+                    color="secondary"
+                    icon="highlight_off"
+                    @click="
+                      () => {
+                        searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
+                        emit('reset');
+                      }
+                    "
+                  />
+                </va-popover>
+              </template>
+            </va-input>
+
+            <!-- Search filters -->
+            <div class="flex-none">
+              <slot name="filters"></slot>
+            </div>
           </div>
 
-          <div class="flex-none">
-            <va-chip v-if="selectedSearchResults.length > 0">
-              Selected: {{ selectedSearchResults.length }}
-            </va-chip>
+          <div class="flex gap-2 flex-wrap items-center">
+            <!-- Add Selected / Delete Selected -->
+            <div class="flex gap-2">
+              <va-button
+                class="flex-none"
+                preset="secondary"
+                color="success"
+                border-color="success"
+                icon="add"
+                @click="
+                  () => {
+                    emit('select', selectedSearchResults);
+                    resetSelections();
+                  }
+                "
+              >
+                Add Selected
+              </va-button>
+              <va-button
+                class="flex-none"
+                preset="secondary"
+                color="danger"
+                border-color="danger"
+                icon="delete"
+                @click="
+                  () => {
+                    emit('remove', selectedSearchResults);
+                    resetSelections();
+                  }
+                "
+              >
+                Delete Selected
+              </va-button>
+            </div>
+
+            <div class="flex-none">
+              <va-chip v-if="selectedSearchResults.length > 0">
+                Selected: {{ selectedSearchResults.length }}
+              </va-chip>
+            </div>
           </div>
         </div>
+        <!--        </div>-->
 
         <!-- Search results table -->
-        <div ref="infiniteScrollTarget" class="h-80 mt-4 overflow-y-auto">
+        <div ref="infiniteScrollTarget_search" class="h-80 overflow-y-auto">
           <va-infinite-scroll
             :load="loadMoreResults"
-            :scroll-target="infiniteScrollTarget"
+            :scroll-target="infiniteScrollTarget_search"
             :disabled="
               searchResults.length === totalResults ||
               searchResults.length < props.pageSize
@@ -159,65 +161,69 @@
 
     <!-- Selected results -->
     <div>
-      <div class="va-h6">
-        {{ props.selectedLabel }}
+      <div class="flex flex-col gap-2">
+        <div class="va-h6 h-24 my-0">
+          {{ props.selectedLabel }}
+        </div>
+
+        <div ref="infiniteScrollTarget_selected" class="h-80 overflow-y-auto">
+          <va-data-table
+            v-if="props.selectedResults.length > 0"
+            :items="props.selectedResults"
+            :columns="_selectedResultColumns"
+            :scroll-target="infiniteScrollTarget_selected"
+            sticky-header
+            footer-clone
+            sticky-footer
+            height="320px"
+          >
+            <template #headerPrepend>
+              <tr>
+                <th colspan="6">
+                  <span class="selected-count">
+                    Selected {{ props.selectedResults.length }} results
+                  </span>
+                </th>
+              </tr>
+            </template>
+
+            <!-- dynamically generated templates for displaying columns of the selected results table  -->
+            <template
+              v-for="(templateName, colIndex) in _selectedResultColumns
+                .filter((e) => e.key !== 'actions')
+                .map((e) => e.template)"
+              #[templateName]="{ rowData }"
+              :key="colIndex"
+            >
+              <!-- Wrap column's value in the provided slot, or display plain value -->
+              <slot
+                v-if="_selectedResultColumns[colIndex].slotted"
+                :name="
+                  _selectedResultColumns[colIndex].slot ||
+                  _selectedResultColumns[colIndex].key
+                "
+                :value="fieldValue(rowData, _selectedResultColumns[colIndex])"
+              >
+              </slot>
+              <div v-else>
+                {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
+              </div>
+            </template>
+
+            <!-- template for Actions column -->
+            <template #cell(actions)="{ rowData }">
+              <va-button
+                :icon="isSelected(rowData) ? 'delete' : 'add'"
+                :color="isSelected(rowData) ? 'danger' : 'success'"
+                size="small"
+                preset="primary"
+                @click="addOrDelete(rowData)"
+              >
+              </va-button>
+            </template>
+          </va-data-table>
+        </div>
       </div>
-
-      <va-data-table
-        class="selected-results"
-        v-if="props.selectedResults.length > 0"
-        :items="props.selectedResults"
-        :columns="_selectedResultColumns"
-        sticky-header
-        footer-clone
-        sticky-footer
-        height="320px"
-      >
-        <template #headerPrepend>
-          <tr>
-            <th colspan="6">
-              <span class="selected-count">
-                Selected {{ props.selectedResults.length }} results
-              </span>
-            </th>
-          </tr>
-        </template>
-
-        <!-- dynamically generated templates for displaying columns of the selected results table  -->
-        <template
-          v-for="(templateName, colIndex) in _selectedResultColumns
-            .filter((e) => e.key !== 'actions')
-            .map((e) => e.template)"
-          #[templateName]="{ rowData }"
-          :key="colIndex"
-        >
-          <!-- Wrap column's value in the provided slot, or display plain value -->
-          <slot
-            v-if="_selectedResultColumns[colIndex].slotted"
-            :name="
-              _selectedResultColumns[colIndex].slot ||
-              _selectedResultColumns[colIndex].key
-            "
-            :value="fieldValue(rowData, _selectedResultColumns[colIndex])"
-          >
-          </slot>
-          <div v-else>
-            {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
-          </div>
-        </template>
-
-        <!-- template for Actions column -->
-        <template #cell(actions)="{ rowData }">
-          <va-button
-            :icon="isSelected(rowData) ? 'delete' : 'add'"
-            :color="isSelected(rowData) ? 'danger' : 'success'"
-            size="small"
-            preset="primary"
-            @click="addOrDelete(rowData)"
-          >
-          </va-button>
-        </template>
-      </va-data-table>
     </div>
   </div>
 </template>
@@ -279,7 +285,8 @@ const props = defineProps({
 
 const emit = defineEmits(["select", "remove", "reset"]);
 
-const infiniteScrollTarget = ref(null);
+const infiniteScrollTarget_search = ref(null);
+const infiniteScrollTarget_selected = ref(null);
 
 const page = ref(1);
 const skip = computed(() => {
@@ -429,10 +436,6 @@ onMounted(() => {
 
   .selected-count {
     color: var(--va-secondary);
-  }
-
-  .selected-results {
-    margin-top: 90px;
   }
 }
 </style>
