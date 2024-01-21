@@ -10,7 +10,6 @@
     search-field="name"
     results-by="datasets"
     count-by="metadata.count"
-    resource="dataset"
     @reset="
       () => {
         checkboxes.rawData = false;

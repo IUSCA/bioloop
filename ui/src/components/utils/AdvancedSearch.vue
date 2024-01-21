@@ -82,7 +82,6 @@
             </div>
           </div>
         </div>
-        <!--        </div>-->
 
         <!-- Search results table -->
         <div ref="infiniteScrollTarget_search" class="h-80 overflow-y-auto">
@@ -297,22 +296,15 @@ const props = defineProps({
   },
   countBy: {
     type: [String, Function],
+    required: true,
   },
   pageSizeSearch: {
-    type: Number,
-    default: () => 5,
-  },
-  pageSizeSelected: {
     type: Number,
     default: () => 5,
   },
   selectedResults: {
     type: Array,
     default: () => [],
-  },
-  resource: {
-    type: String,
-    required: true,
   },
 });
 
@@ -422,7 +414,9 @@ const resetSearchState = () => {
 };
 
 const loadResults = () => {
+  // debugger;
   return props.fetchFn(fetchQuery.value).then((res) => {
+    // debugger;
     let results =
       typeof props.resultsBy === "function"
         ? props.resultsBy(res.data)
@@ -433,7 +427,7 @@ const loadResults = () => {
 
     totalResults.value =
       typeof props.countBy === "function"
-        ? (totalResults.value = props.countBy(res.data))
+        ? props.countBy(res.data)
         : typeof props.countBy === "string"
           ? _.get(res.data, props.countBy)
           : res.data.length;

@@ -1,10 +1,42 @@
 # Utility Components
 
+## Advanced Search
+
+The `AdvancedSearch` widget offers these features:
+
+1. Searching for entities
+2. Applying additional filters for the search
+3. Infinite-scrolling-enabled search (the ability to load more results once the user has scrolled past the currently
+   retrieved results)
+4. Selecting / unselecting individual or multiple entities.
+5. Emitting events to make client aware of entities being selected/unselected, or the search being reset.
+6. Load the widget with certain results pre-selected
+
+### Basic Usage
+
+```html
+
+<template>
+  <AdvancedSearch
+    :search-result-columns="['text', 'index']"
+    :selected-result-columns="['text']"
+    :fetch-fn="({offset, limit}) => _.range(offset, offset + limit).map(i => `Result row ${i}`)"
+    search-field="text"
+    @select="(selections) => "
+  />
+</template>
+
+<script setup>
+  const selectedResults = ref([])
+</script>
+```
+
 ## Auto Complete
 
 ### Basic Usage
 
 ```html
+
 <template>
   <AutoComplete
     :data="datasets"
@@ -16,7 +48,8 @@
 </template>
 
 <script setup>
-  const datasets = [{name: 'dataset-1'},{name: 'dataset-2'},{name: 'dataset-3'}]
+  const datasets = [{name: 'dataset-1'}, {name: 'dataset-2'}, {name: 'dataset-3'}]
+
   function handleDatasetSelect(item) {
     console.log('selected', item)
   }
@@ -24,7 +57,9 @@
 ```
 
 ### Fetching options
+
 ```html
+
 <template>
   <AutoComplete
     :data="users"
@@ -36,28 +71,30 @@
 </template>
 
 <script setup>
-const users = ref([]);
-const selectedUser = ref();
-const filterFn = (text) => (user) => {
-  const _text = text.toLowerCase();
-  return (
-    user.name.toLowerCase().includes(_text) ||
-    user.username.toLowerCase().includes(_text) ||
-    user.email.toLowerCase().includes(_text)
-  );
-};
+  const users = ref([]);
+  const selectedUser = ref();
+  const filterFn = (text) => (user) => {
+    const _text = text.toLowerCase();
+    return (
+      user.name.toLowerCase().includes(_text) ||
+      user.username.toLowerCase().includes(_text) ||
+      user.email.toLowerCase().includes(_text)
+    );
+  };
 
-userService.getAll().then((data) => {
-  users.value = data;
-  console.log(users.value);
-});
+  userService.getAll().then((data) => {
+    users.value = data;
+    console.log(users.value);
+  });
 </script>
 ```
 
 ### Formatting options
+
 Options can be formatted via the `filtered` slot.
 
 ```html
+
 <template>
   <AutoComplete
     :data="users"
@@ -68,104 +105,117 @@ Options can be formatted via the `filtered` slot.
           {{ item.name }}
         </b>
       </span>
-    </template>    
+    </template>
   </AutoComplete>
 </template>
 
 <script setup>
-const users = [
-  {
-    id: 1,
-    name: "user-1",
-  },
-  {
-    id: 2,
-    name: "user-2",
-  },
-];
+  const users = [
+    {
+      id: 1,
+      name: "user-1",
+    },
+    {
+      id: 2,
+      name: "user-2",
+    },
+  ];
 </script>
 ```
 
 ### Async
+
 ```html
+
 <template>
   <AutoComplete
     :async="true"
     :data="datasets"
     @update-search="updateSearch"
-    :loading="loading" 
+    :loading="loading"
     :text-by="(dataset) => dataset.name"
   >
   </AutoComplete>
 </template>
 
 <script setup>
-const datasets = ref([])
-const loading = ref(false)
-const searchText = ref("")
+  const datasets = ref([])
+  const loading = ref(false)
+  const searchText = ref("")
 
-const updateSearch = (newText) => {
-  searchText.value = newText;
-};
+  const updateSearch = (newText) => {
+    searchText.value = newText;
+  };
 
-watch(searchText, () => {
-  loading.value = true;
-  // retrieve updated results based on new `searchText.value`
-  loading.value = false;
-})
+  watch(searchText, () => {
+    loading.value = true;
+    // retrieve updated results based on new `searchText.value`
+    loading.value = false;
+  })
 </script>
 ```
 
 ### Props
+
 - async: Boolean - determines if component should exhibit async behavior (like loading state)
 - placeholder: String - placeholder for the input element
 - data: Array of Objects - data to search and display
 - filter-by: String - property of data object to use with case-insensitive search, if `async` is `false`.
-- filter-fn: Function (text: String) => (item: Object) => Bool: When provided, used to filter the data based on entered text value, if `async` is `false`.
+- filter-fn: Function (text: String) => (item: Object) => Bool: When provided, used to filter the data based on entered
+  text value, if `async` is `false`.
 - loading: Boolean - determines if component should display loading state
 - track-by: String | Function - acts same as Vuestic's `<va-select />`'s `track-by` prop
 - text-by: String | Function - acts the same as Vuestic's `<va-select />`'s `text-by` prop.
 
 ### Events
+
 - select - emitted when one of the search results is clicked
 - update-search - emitted when the search term is updated
 
 ### Slots
-- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is displayed as a selectable option of the AutoComplete.
+
+- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is
+  displayed as a selectable option of the AutoComplete.
 
 ### Notes
+
 - AutoComplete only handles passing the selected value to an external component, not showing selected values.
-- Despite being configured to not show selected values, AutoComplete's `<va-select />` still uses the `textBy` prop to set its value internally upon selection.
-  - The `textBy` prop defaults to `name`, but may need to be provided differently, depending on your `data`. For customizing `textBy`, see [Vuestic's <va-select />](https://ui.vuestic.dev/ui-elements/select#props).
+- Despite being configured to not show selected values, AutoComplete's `<va-select />` still uses the `textBy` prop to
+  set its value internally upon selection.
+  - The `textBy` prop defaults to `name`, but may need to be provided differently, depending on your `data`. For
+    customizing `textBy`, see [Vuestic's <va-select />](https://ui.vuestic.dev/ui-elements/select#props).
 
 ## Maybe
 
 Show data if it is neither null or undefined, else show default (provided it is also not null or undefined)
 
 ```html
+
 <template>
-  <Maybe :data="rowData?.metadata?.num_genome_files" />
+  <Maybe :data="rowData?.metadata?.num_genome_files"/>
 </template
 ```
 
 ### Props
+
 - data: Any
 - default: Any
 
-
 ## CopyText
 
-- Show text in a read-only input attached with a copy to clipboard button. 
+- Show text in a read-only input attached with a copy to clipboard button.
 - Width is relative 100%.
 - Input container is x-scrollable if the text overflows
 
 ```html
+
 <template>
-  <CopyText :text="dataset.archive_path" />
+  <CopyText :text="dataset.archive_path"/>
 </template>
 ```
 
 ### props
+
 - text: String
 
 ## BinaryStatusChip
@@ -173,6 +223,7 @@ Show data if it is neither null or undefined, else show default (provided it is 
 Shows a chip with icon, text, color depending on status. Useful to on/off status
 
 ```html
+
 <template>
   <BinaryStatusChip
     :status="!source"
@@ -182,17 +233,19 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 ```
 
 ### Props
+
 - status: Boolean (0-off, 1-on)
 - icons - Array of 2 elements (off icon, on icon)
 - labels - Array of 2 element (off lable, on label)
   - default: `['disbaled', 'enabled']`
 
-
 ## useQueryPersistence Composable
 
-This composition function helps you manage query parameters in the URL and keep them in sync with a reactive object in your component.
+This composition function helps you manage query parameters in the URL and keep them in sync with a reactive object in
+your component.
 
 Usage:
+
 1. Create a ref to hold the query parameters
 2. Call this function on the ref.
 
@@ -215,4 +268,5 @@ useQueryPersistence({
 });
 ```
 
-It will update the URL query parameters by watching the refObject and it will update the refObject when URL query parameters change.
+It will update the URL query parameters by watching the refObject and it will update the refObject when URL query
+parameters change.
