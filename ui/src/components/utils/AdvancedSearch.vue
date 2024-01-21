@@ -398,9 +398,7 @@ const resetSearchState = () => {
 };
 
 const loadResults = () => {
-  // debugger;
   return props.fetchFn(fetchQuery.value).then((res) => {
-    // debugger;
     let results =
       typeof props.resultsBy === "function"
         ? props.resultsBy(res.data)
