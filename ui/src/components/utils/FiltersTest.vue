@@ -12,6 +12,13 @@
     results-by="currentResults"
     count-by="totalResultCount"
     :query="query"
+    @reset="
+      () => {
+        selectValue = '';
+      }
+    "
+    controls-margin="40px"
+    controls-height="100px"
   >
     <template #filters>
       <div class="max-w-xs">
@@ -19,6 +26,7 @@
           v-model="selectValue"
           :options="selectOptions"
           placeholder="Select an option"
+          label="Filter Dropdown"
         />
       </div>
     </template>
@@ -63,32 +71,19 @@ const fetchFn = ({ text, other, offset, limit }) => {
 };
 
 const mockRow = (i, searchTerm, dropdownVal) => {
-  let id = 0;
-
-  const getId = (searchTerm, dropdownVal) => {
-    id++;
-    return id;
-  };
-
-  let text = (i) => {
+  const filterSuffix = (searchTerm, dropdownVal) => {
     return (
-      (searchTerm
-        ? `Result ${i + 1} for keyword '${searchTerm}'`
-        : `Result ${i + 1}`) + (dropdownVal ? `, dropdown ${dropdownVal}` : "")
+      (searchTerm ? `, for keyword '${searchTerm}'` : "") +
+      (dropdownVal ? `, dropdown ${dropdownVal}` : "")
     );
   };
 
-  const other = (i) => {
-    return (
-      (searchTerm
-        ? `Other val for result ${i + 1} for keyword ${searchTerm}`
-        : `Other val for result ${i + 1}`) +
-      (dropdownVal ? `, dropdown '${dropdownVal}'` : "")
-    );
-  };
+  let text = (i) => `Result ${i + 1}` + filterSuffix(searchTerm, dropdownVal);
+
+  const other = (i) =>
+    `Other val for result ${i + 1}` + filterSuffix(searchTerm, dropdownVal);
 
   return {
-    id: "",
     text: text(i),
     other: other(i),
   };
