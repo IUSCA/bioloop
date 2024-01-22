@@ -1,10 +1,11 @@
 <template>
-  <div class="flex gap-2 search">
+  <div class="flex gap-2 search" :style="styles">
     <!-- Search, and results   -->
     <div>
       <!-- Container for search controls, and search results table -->
       <div class="flex flex-col gap-2">
-        <div class="flex flex-col gap-2">
+        <!-- Container for controls -->
+        <div class="flex flex-col gap-2 --controls-height --controls-margin">
           <div class="flex gap-2">
             <!-- Search input -->
             <va-input
@@ -69,10 +70,7 @@
         </div>
 
         <!-- Search results table -->
-        <div
-          ref="infiniteScrollTarget_search"
-          class="mt-7 max-h-80 overflow-y-auto"
-        >
+        <div ref="infiniteScrollTarget_search" class="max-h-80 overflow-y-auto">
           <va-infinite-scroll
             :load="loadNextSearchResults"
             :scroll-target="infiniteScrollTarget_search"
@@ -147,7 +145,8 @@
     <!-- Selected results -->
     <div>
       <div class="flex flex-col gap-2">
-        <div class="flex flex-col gap-2">
+        <!-- Container for Controls -->
+        <div class="flex flex-col gap-2 --controls-height --controls-margin">
           <div class="va-h6 h-9 my-0">
             {{ props.selectedLabel }}
           </div>
@@ -179,7 +178,8 @@
           </div>
         </div>
 
-        <div class="overflow-y-auto mt-7 h-80">
+        <!-- Selected Results table -->
+        <div class="overflow-y-auto h-80">
           <va-data-table
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
@@ -292,6 +292,22 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  tableMargin: {
+    type: String,
+  },
+  controlsHeight: {
+    type: String,
+  },
+});
+
+const _tableMargin = toRef(() => props.tableMargin);
+const _controlsHeight = toRef(() => props.controlsHeight);
+
+const styles = computed(() => {
+  return {
+    "--controls-margin": _tableMargin.value,
+    "--controls-height": _controlsHeight.value,
+  };
 });
 
 const emit = defineEmits(["select", "remove", "reset"]);
@@ -452,6 +468,14 @@ onMounted(() => {
 
   .selected-count {
     color: var(--va-secondary);
+  }
+
+  .--controls-margin {
+    margin-bottom: var(--controls-margin);
+  }
+
+  .--controls-height {
+    height: var(--controls-height);
   }
 }
 </style>
