@@ -90,7 +90,7 @@
             >
               <template #headerPrepend>
                 <tr>
-                  <th colspan="6">
+                  <th class="overflow-hidden" colspan="6">
                     <span class="selected-count">
                       Showing {{ searchResults.length }} of {{ totalResults }}
                       {{ searchTerm !== "" ? "filtered " : "" }}
@@ -116,9 +116,10 @@
                     _searchResultColumns[colIndex].key
                   "
                   :value="fieldValue(rowData, _searchResultColumns[colIndex])"
+                  class="overflow-hidden"
                 >
                 </slot>
-                <div v-else>
+                <div v-else class="overflow-hidden">
                   {{ fieldValue(rowData, _searchResultColumns[colIndex]) }}
                 </div>
               </template>
@@ -189,7 +190,7 @@
             select-mode="multiple"
           >
             <template #headerPrepend>
-              <tr>
+              <tr class="overflow-hidden">
                 <th colspan="6">
                   <span class="selected-count">
                     Selected {{ props.selectedResults.length }} results
@@ -214,9 +215,10 @@
                   _selectedResultColumns[colIndex].key
                 "
                 :value="fieldValue(rowData, _selectedResultColumns[colIndex])"
+                class="overflow-hidden"
               >
               </slot>
-              <div v-else>
+              <div v-else class="overflow-hidden">
                 {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
               </div>
             </template>
