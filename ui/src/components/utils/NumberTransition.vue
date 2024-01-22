@@ -1,6 +1,6 @@
 <template>
   <span>
-    {{ current.toFixed(0) }}
+    {{ number_formatter.format(current.toFixed(0)) }}
   </span>
 </template>
 
@@ -35,6 +35,7 @@ const props = defineProps({
     default: 300,
   },
 });
+const number_formatter = Intl.NumberFormat("en");
 
 const current = ref(0);
 
@@ -55,7 +56,7 @@ debouncedWatch(
       }
     }, props.duration);
   },
-  { debounce: props.debounce },
+  { debounce: props.debounce, immediate: true },
 );
 </script>
 
