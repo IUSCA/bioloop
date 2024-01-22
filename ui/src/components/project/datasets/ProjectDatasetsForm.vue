@@ -4,12 +4,6 @@
     @remove="handleRemove"
     :selected-results="projectFormStore.datasets"
   />
-
-  <!--    <ProjectDatasetsList-->
-  <!--      :datasets="projectFormStore.datasets"-->
-  <!--      show-remove-->
-  <!--      @remove="handleRemove"-->
-  <!--    />-->
 </template>
 
 <script setup>

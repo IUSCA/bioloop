@@ -1,56 +1,63 @@
+<!-- Adapted from and improved upon https://stevencotterill.com/articles/how-to-build-an-autocomplete-field-with-vue-3 -->
 <template>
-  <va-select
-    v-model="selectedOption"
-    @update:model-value="handleSelect"
-    class="w-full autocomplete-select"
-    :clearable="props.clearable"
-    :placeholder="props.placeholder"
-    autocomplete
-    :options="options"
-    :track-by="props.trackBy"
-    :text-by="props.textBy"
-    @update-search="updateSearch"
-    :loading="props.loading"
-    :highlight-matched-text="false"
-    :no-options-text="statusText"
-  >
-    <template #option="{ option, selectOption }">
-      <div class="va-select-option" role="option" @click="selectOption(option)">
-        <slot name="filtered" :item="option" />
-      </div>
-    </template>
-  </va-select>
+  <div class="relative">
+    <OnClickOutside @trigger="closeResults">
+      <va-form>
+        <va-input
+          outline
+          clearable
+          type="text"
+          :placeholder="props.placeholder"
+          v-model="text"
+          class="w-full autocomplete-input"
+          @click="openResults"
+        />
+      </va-form>
+
+      <ul
+        v-if="visible"
+        class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
+      >
+        <li
+          class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
+          v-if="search_results.length"
+        >
+          Showing {{ search_results.length }} of {{ data.length }} results
+        </li>
+        <li
+          v-for="(item, idx) in search_results"
+          :key="idx"
+          class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded"
+          @click="handleSelect(item)"
+        >
+          <slot name="filtered" :item="item">
+            {{ item[props.displayBy] }}
+          </slot>
+        </li>
+        <li v-if="search_results.length == 0" class="py-2 px-3">
+          <span
+            class="flex gap-2 items-center justify-center va-text-secondary"
+          >
+            <i-mdi:magnify-remove-outline class="flex-none text-xl" />
+            <span class="flex-none">None matched</span>
+          </span>
+        </li>
+      </ul>
+    </OnClickOutside>
+  </div>
 </template>
 
 <script setup>
+import { OnClickOutside } from "@vueuse/components";
+
 const props = defineProps({
-  async: {
-    type: Boolean,
-    default: () => false,
-  },
-  data: {
-    type: Array,
-    default: () => [],
-  },
-  loading: {
-    type: Boolean,
-    default: () => false,
-  },
   placeholder: {
     type: String,
     default: "Type here",
   },
-  clearable: {
-    type: Boolean,
-    default: () => false,
-  },
-  textBy: {
-    type: [String, Function],
-    default: () => "name",
-  },
-  trackBy: {
-    type: [String, Function],
-    default: () => "id",
+  data: {
+    type: Array,
+    default: () => [],
   },
   filterBy: {
     type: String,
@@ -60,68 +67,55 @@ const props = defineProps({
     type: Function,
     default: null,
   },
+  displayBy: {
+    type: String,
+    default: "name",
+  },
 });
 
-const emit = defineEmits(["select", "update-search"]);
+const emit = defineEmits(["select"]);
 
-const selectedOption = ref({});
-const searchText = ref("");
+const text = ref("");
+const visible = ref(false);
 
-const _loading = toRef(() => props.loading);
-const options = computed(() => {
-  // Vuestic does not have a way of conditionally hiding the dropdown options (which might
-  // be desired while results are being retrieved). It also does not provide a <slot> for
-  // displaying status messages like 'Loading'. As a workaround, while results are being
-  // retrieved, this component sets the `options` prop provided to <va-select /> to [],
-  // which causes <va-select /> to render the `noOptionsText` prop instead of the results.
-  // Additionally, `noOptionsText` is set to 'Loading' during this time, and updated again
-  // later once results have been retrieved.
-  return props.async ? (_loading.value ? [] : props.data) : getFilteredData();
-});
-const statusText = computed(() => {
-  return _loading.value
-    ? "Loading..."
-    : options.value.length === 0
-      ? "No matches found"
-      : "";
-});
+// when clicked outside, hide the results ul
+// when clicked on input show the results ul
+// when clicked on a search result, clear text and hide the results ul
 
-const handleSelect = (item) => {
-  emit("select", item);
-  resetAutoComplete();
-};
-
-const resetAutoComplete = () => {
-  selectedOption.value = {};
-  searchText.value = "";
-};
-
-const updateSearch = (updatedSearchText) => {
-  searchText.value = updatedSearchText;
-};
-
-const getFilteredData = () => {
-  if (!searchText.value) return props.data;
+const search_results = computed(() => {
+  if (text.value === "") return props.data;
 
   const filterFn =
     props.filterFn instanceof Function
-      ? props.filterFn(searchText.value)
-      : (item) => {
-          return (item[props.filterBy] || "")
+      ? props.filterFn(text.value)
+      : (item) =>
+          (item[props.filterBy] || "")
             .toLowerCase()
-            .includes(searchText.value.toLowerCase());
-        };
+            .includes(text.value.toLowerCase());
 
   return (props.data || []).filter(filterFn);
-};
-
-watch(searchText, () => {
-  emit("update-search", searchText.value);
 });
+
+function closeResults() {
+  visible.value = false;
+}
+
+function openResults() {
+  visible.value = true;
+}
+
+function handleSelect(item) {
+  text.value = "";
+  closeResults();
+  emit("select", item);
+}
 </script>
 
-<style scoped>
-.va-select-option:hover {
-  background-color: rgba(52, 114, 240, 0.2);
+<style lang="scss">
+.autocomplete-input {
+  /* Clear icon is too big and its font size is set by element style tag in the vuestic library */
+  .va-input-wrapper__field i.va-icon {
+    font-size: 24px !important;
+  }
 }
 </style>

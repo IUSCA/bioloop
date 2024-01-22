@@ -1,5 +1,244 @@
 # Utility Components
 
+## Auto Complete
+
+### Basic Usage
+
+```html
+
+<template>
+  <AutoComplete
+    :data="datasets"
+    filter-by="name"
+    placeholder="Search datasets"
+    @select="handleDatasetSelect"
+  />
+</template>
+
+<script setup>
+  const datasets = [{name: 'dataset-1'}, {name: 'dataset-2'}, {name: 'dataset-3'}]
+
+  function handleDatasetSelect(item) {
+    console.log('selected', item)
+  }
+</script>
+```
+
+### Advanced Usage
+
+```html
+
+<template>
+  <AutoComplete
+    :data="users"
+    :filter-fn="filterFn"
+    placeholder="Search users by name, username, or email"
+    @select="handleUserSelect"
+  >
+    <template #filtered="{ item }">
+      <span> {{ item.name }} </span>
+      <span class="va-text-secondary px-1 font-bold"> &centerdot; </span>
+      <span class="va-text-secondary text-sm"> {{ item.email }} </span>
+    </template>
+  </AutoComplete>
+</template>
+
+<script setup>
+  const users = ref([]);
+  const selectedUser = ref();
+  const filterFn = (text) => (user) => {
+    const _text = text.toLowerCase();
+    return (
+      user.name.toLowerCase().includes(_text) ||
+      user.username.toLowerCase().includes(_text) ||
+      user.email.toLowerCase().includes(_text)
+    );
+  };
+
+  userService.getAll().then((data) => {
+    users.value = data;
+    console.log(users.value);
+  });
+</script>
+```
+
+### Props
+
+- placeholder: String - placeholder for the input element
+- data: Array of Objects - data to search and display
+- filter-by: String - property of data object to use with case-insensitive search
+- display-by: String - property of data object to use to show search results
+- filter-fn: Function (text: String) => (item: Object) => Bool: When provided used to filter the data based on enetered
+  text value
+
+### Events
+
+- select - emitted when one of the search results is clicked
+
+### Slots
+
+- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is in
+  v-for and called for each search result.
+
+## Auto Complete Async
+
+`<AutoCompleteAsync />` allows for fetching results both synchronously and asynchronously.`
+
+### Basic Usage
+
+```html
+
+<template>
+  <AutoCompleteAsync
+    Async
+    :data="datasets"
+    filter-by="name"
+    placeholder="Search datasets"
+    @select="handleDatasetSelect"
+    text-by="name"
+  />
+</template>
+
+<script setup>
+  const datasets = [{name: 'dataset-1'}, {name: 'dataset-2'}, {name: 'dataset-3'}]
+
+  function handleDatasetSelect(item) {
+    console.log('selected', item)
+  }
+</script>
+```
+
+### Fetching options
+
+```html
+
+<template>
+  <AutoCompleteAsync
+    :data="users"
+    :filter-fn="filterFn"
+    placeholder="Search users by name, username, or email"
+    @select="handleUserSelect"
+    text-by="name"
+  />
+</template>
+
+<script setup>
+  const users = ref([]);
+  const selectedUser = ref();
+  const filterFn = (text) => (user) => {
+    const _text = text.toLowerCase();
+    return (
+      user.name.toLowerCase().includes(_text) ||
+      user.username.toLowerCase().includes(_text) ||
+      user.email.toLowerCase().includes(_text)
+    );
+  };
+
+  userService.getAll().then((data) => {
+    users.value = data;
+    console.log(users.value);
+  });
+</script>
+```
+
+### Formatting options
+
+Options can be formatted via the `filtered` slot.
+
+```html
+
+<template>
+  <AutoCompleteAsync
+    :data="users"
+  >
+    <template #filtered="{ item }">
+      <span>
+        <b>
+          {{ item.name }}
+        </b>
+      </span>
+    </template>
+  </AutoCompleteAsync>
+</template>
+
+<script setup>
+  const users = [
+    {
+      id: 1,
+      name: "user-1",
+    },
+    {
+      id: 2,
+      name: "user-2",
+    },
+  ];
+</script>
+```
+
+### Async
+
+```html
+
+<template>
+  <AutoCompleteAsync
+    `Async`
+    :async="`true`"
+    `:`data="datasets"
+    @update-search="updateSearch"
+    :loading="loading"
+    :text-by="(dataset) => dataset.name"
+  >
+  </AutoCompleteAsync>
+</template>
+
+<script setup>
+  const datasets = ref([])
+  const loading = ref(false)
+  const searchText = ref("")
+
+  const updateSearch = (newText) => {
+    searchText.value = newText;
+  };
+
+  watch(searchText, () => {
+    loading.value = true;
+    // retrieve updated results based on new `searchText.value`
+    loading.value = false;
+  })
+</script>
+```
+
+### Props
+
+- `async`: Boolean - determines if component should exhibit async behavior (like loading state)
+- `placeholder`: String - placeholder for the input element
+- `data`: Array of Objects - data to search and display
+- `filter-by`: String - property of data object to use with case-insensitive search, if `async` is `false`.
+- `filter-fn`: Function (text: String) => (item: Object) => Bool: When provided, used to filter the data based on
+  entered
+  text value, if `async` is `false`.
+- `loading`: Boolean - determines if component should display loading state
+- `track-by`: String | Function - acts same as Vuestic's `<va-select />`'s `track-by` prop
+- `text-by`: String | Function - acts the same as Vuestic's `<va-select />`'s `text-by` prop.
+
+### Events
+
+- `select` - emitted when one of the search results is clicked
+- `update-search` - emitted when the search term is updated
+
+### Slots
+
+- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is
+  displayed as a selectable option of the AutoComplete.
+
+### Notes
+
+- AutoComplete only handles passing the selected value to an external component, not showing selected values.
+- Despite being configured to not show selected values, AutoComplete's `<va-select />` still uses the `textBy` prop to
+  set its value internally upon selection.
+  - The `textBy` prop defaults to `name`, but may need to be provided differently, depending on your `data`. For
+    customizing `textBy`, see [Vuestic's <va-select />](https://ui.vuestic.dev/ui-elements/select#props).
+
 ## Advanced Search
 
 The `AdvancedSearch` widget offers these features:
@@ -326,32 +565,34 @@ the string is looked up in the target argument, and returned.
 
 ### Props
 
-- placeholder: String - Placeholder for the search input. Default - "Type to search"
-- selectedLabel: String - The label to show for the table of selected results. Default - "Selected Results"
-- searchResultColumns: Array - The display config for the `<va-data-table>` of search results. Extends the `columns`
+- `placeholder`: String - Placeholder for the search input. Default - "Type to search"
+- `selectedLabel`: String - The label to show for the table of selected results. Default - "Selected Results"
+- `searchResultColumns`: Array - The display config for the `<va-data-table>` of search results. Extends the `columns`
   prop provided to `<va-data-table>`. A `formatFn` function can be provided in a column's config to format the column's
   value a certain way. Moreover, `{ slotted: true }` can be added to the column's config to embed the column's value in
   custom markup. See the `Formatting and Slots` section above for details.
-- selectedResultColumns: Array - The display config for the `<va-data-table>` of selected results. Extends the `columns`
+- `selectedResultColumns`: Array - The display config for the `<va-data-table>` of selected results. Extends
+  the `columns`
   prop provided to `<va-data-table>`. A `formatFn` function can be provided in a column's config to format the column's
   value a certain way. Moreover, `{ slotted: true }` can be added to the column's config to embed the column's value in
   custom markup. See the `Formatting and Slots` section above for details.
-- trackBy: String | Function - Used to uniquely identity a result. Defaults to "id".
-- fetchFn: Function - Async function that is expected to return a batch of results for the infinite scroll. The search
+- `trackBy`: String | Function - Used to uniquely identity a result. Defaults to "id".
+- `fetchFn`: Function - Async function that is expected to return a batch of results for the infinite scroll. The search
   term, and queries from any active filters are passed to this method as arguments, including the offset and limit
   values necessary for fetching a batch of results.
-- query: Object - Object containing queries from any active filters. This query is passed to `fetchFn`,
+- `query`: Object - Object containing queries from any active filters. This query is passed to `fetchFn`,
   along with the search term and the offset/limit values.
-- searchField: String - The key of the column that the search term is matched against
-- resultsBy: String | Function - Can be used to extract results in cases where the actual results are embedded inside an
+- `searchField`: String - The key of the column that the search term is matched against
+- `resultsBy`: String | Function - Can be used to extract results in cases where the actual results are embedded inside
+  an
   object.
-- countBy: String | Function - Can be used to determine the total number of expected results for a search query. This
+- `countBy`: String | Function - Can be used to determine the total number of expected results for a search query. This
   prop is required for infinite scrolling to work.
-- pageSizeSearch: Number - the number of results to be fetched in one batch. Defaults to 5.
-- selectedResults: Array - the array of currently selected results. Can be used to load the widget with some items
+- `pageSizeSearch`: Number - the number of results to be fetched in one batch. Defaults to 5.
+- `selectedResults`: Array - the array of currently selected results. Can be used to load the widget with some items
   pre-selected. Defaults to [].
-- controlsMargin: String - margin between the controls and the tables
-- controlsHeight: String - height of the controls container element
+- `controlsMargin`: String - margin between the controls and the tables
+- `controlsHeight`: String - height of the controls container element
 
 ### Slots
 
@@ -363,163 +604,10 @@ the string is looked up in the target argument, and returned.
 
 Events
 
-- search - called when a list of elements are selected, with the list of selected elements provided as an argument.
-- remove - called when a list of elements are unselected, with the list of unselected elements provided as an argument.
-- reset - called when the search controls are reset
-
-## Auto Complete
-
-### Basic Usage
-
-```html
-
-<template>
-  <AutoComplete
-    :data="datasets"
-    filter-by="name"
-    placeholder="Search datasets"
-    @select="handleDatasetSelect"
-    text-by="name"
-  />
-</template>
-
-<script setup>
-  const datasets = [{name: 'dataset-1'}, {name: 'dataset-2'}, {name: 'dataset-3'}]
-
-  function handleDatasetSelect(item) {
-    console.log('selected', item)
-  }
-</script>
-```
-
-### Fetching options
-
-```html
-
-<template>
-  <AutoComplete
-    :data="users"
-    :filter-fn="filterFn"
-    placeholder="Search users by name, username, or email"
-    @select="handleUserSelect"
-    text-by="name"
-  />
-</template>
-
-<script setup>
-  const users = ref([]);
-  const selectedUser = ref();
-  const filterFn = (text) => (user) => {
-    const _text = text.toLowerCase();
-    return (
-      user.name.toLowerCase().includes(_text) ||
-      user.username.toLowerCase().includes(_text) ||
-      user.email.toLowerCase().includes(_text)
-    );
-  };
-
-  userService.getAll().then((data) => {
-    users.value = data;
-    console.log(users.value);
-  });
-</script>
-```
-
-### Formatting options
-
-Options can be formatted via the `filtered` slot.
-
-```html
-
-<template>
-  <AutoComplete
-    :data="users"
-  >
-    <template #filtered="{ item }">
-      <span>
-        <b>
-          {{ item.name }}
-        </b>
-      </span>
-    </template>
-  </AutoComplete>
-</template>
-
-<script setup>
-  const users = [
-    {
-      id: 1,
-      name: "user-1",
-    },
-    {
-      id: 2,
-      name: "user-2",
-    },
-  ];
-</script>
-```
-
-### Async
-
-```html
-
-<template>
-  <AutoComplete
-    :async="true"
-    :data="datasets"
-    @update-search="updateSearch"
-    :loading="loading"
-    :text-by="(dataset) => dataset.name"
-  >
-  </AutoComplete>
-</template>
-
-<script setup>
-  const datasets = ref([])
-  const loading = ref(false)
-  const searchText = ref("")
-
-  const updateSearch = (newText) => {
-    searchText.value = newText;
-  };
-
-  watch(searchText, () => {
-    loading.value = true;
-    // retrieve updated results based on new `searchText.value`
-    loading.value = false;
-  })
-</script>
-```
-
-### Props
-
-- async: Boolean - determines if component should exhibit async behavior (like loading state)
-- placeholder: String - placeholder for the input element
-- data: Array of Objects - data to search and display
-- filter-by: String - property of data object to use with case-insensitive search, if `async` is `false`.
-- filter-fn: Function (text: String) => (item: Object) => Bool: When provided, used to filter the data based on entered
-  text value, if `async` is `false`.
-- loading: Boolean - determines if component should display loading state
-- track-by: String | Function - acts same as Vuestic's `<va-select />`'s `track-by` prop
-- text-by: String | Function - acts the same as Vuestic's `<va-select />`'s `text-by` prop.
-
-### Events
-
-- select - emitted when one of the search results is clicked
-- update-search - emitted when the search term is updated
-
-### Slots
-
-- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is
-  displayed as a selectable option of the AutoComplete.
-
-### Notes
-
-- AutoComplete only handles passing the selected value to an external component, not showing selected values.
-- Despite being configured to not show selected values, AutoComplete's `<va-select />` still uses the `textBy` prop to
-  set its value internally upon selection.
-  - The `textBy` prop defaults to `name`, but may need to be provided differently, depending on your `data`. For
-    customizing `textBy`, see [Vuestic's <va-select />](https://ui.vuestic.dev/ui-elements/select#props).
+- `search` - called when a list of elements are selected, with the list of selected elements provided as an argument.
+- `remove` - called when a list of elements are unselected, with the list of unselected elements provided as an
+  argument.
+- `reset` - called when the search controls are reset
 
 ## Maybe
 

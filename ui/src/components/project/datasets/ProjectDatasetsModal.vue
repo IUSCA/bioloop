@@ -1,5 +1,6 @@
 <template>
   <va-modal
+    class="project-datasets-modal"
     v-model="visible"
     title="Manage Access"
     no-outside-dismiss
@@ -65,7 +66,9 @@ function handleOk() {
 </script>
 
 <style lang="scss">
-.va-modal__dialog {
-  overflow: auto !important;
+.project-datasets-modal {
+  .va-modal__dialog {
+    overflow: auto;
+  }
 }
 </style>

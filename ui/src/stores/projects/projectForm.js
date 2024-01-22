@@ -60,7 +60,6 @@ export const useProjectFormStore = defineStore("projectForm", {
         acc[ds.id] = ds;
         return acc;
       }, {});
-      debugger;
     },
   },
 });
