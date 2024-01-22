@@ -1,22 +1,16 @@
 <template>
-  <div class="flex flex-col gap-2">
-    <!--    <div :key="i" v-for="(result, i) in selectedResults">-->
-    <!--      {{ result["text"] }} is selected-->
-    <!--    </div>-->
-
-    <AdvancedSearch
-      :search-result-columns="searchColumnsConfig"
-      :selected-result-columns="selectedColumnsConfig"
-      :selected-results="selectedResults"
-      :fetch-fn="fetchFn"
-      search-field="text"
-      track-by="text"
-      @select="handleSelect"
-      @remove="handleRemove"
-      results-by="currentResults"
-      count-by="totalResultCount"
-    />
-  </div>
+  <AdvancedSearch
+    :search-result-columns="searchColumnsConfig"
+    :selected-result-columns="selectedColumnsConfig"
+    :selected-results="selectedResults"
+    :fetch-fn="fetchFn"
+    search-field="text"
+    track-by="text"
+    @select="handleSelect"
+    @remove="handleRemove"
+    results-by="currentResults"
+    count-by="totalResultCount"
+  />
 </template>
 
 <script setup>
@@ -49,17 +43,25 @@ const fetchFn = ({ text, offset, limit }) => {
   });
 };
 
-// const initialId = ref(1);
+const mockRow = (i, searchTerm) => {
+  const filterSuffix = (searchTerm) => {
+    return searchTerm ? `, for keyword '${searchTerm}'` : "";
+  };
 
-const mockResults = (start, end, suffix) =>
-  _.range(start, end).map((i) => ({
-    text: suffix
-      ? `Result ${i + 1} for keyword '${suffix}'`
-      : `Result ${i + 1}`,
-    other: suffix
-      ? `Some other val for result ${i + 1} for keyword ${suffix}`
-      : `Some other val for result ${i + 1}`,
-  }));
+  let text = (i) => `Result ${i + 1}` + filterSuffix(searchTerm);
+
+  const other = (i) =>
+    `Other val for result ${i + 1}` + filterSuffix(searchTerm);
+
+  return {
+    text: text(i),
+    other: other(i),
+  };
+};
+
+const mockResults = (start, end, searchTerm) => {
+  return _.range(start, end).map((i) => mockRow(i, searchTerm));
+};
 
 const searchColumnsConfig = [
   {
