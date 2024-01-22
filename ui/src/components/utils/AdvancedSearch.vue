@@ -292,7 +292,7 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  tableMargin: {
+  controlsMargin: {
     type: String,
   },
   controlsHeight: {
@@ -300,12 +300,12 @@ const props = defineProps({
   },
 });
 
-const _tableMargin = toRef(() => props.tableMargin);
+const _controlsMargin = toRef(() => props.controlsMargin);
 const _controlsHeight = toRef(() => props.controlsHeight);
 
 const styles = computed(() => {
   return {
-    "--controls-margin": _tableMargin.value,
+    "--controls-margin": _controlsMargin.value,
     "--controls-height": _controlsHeight.value,
   };
 });

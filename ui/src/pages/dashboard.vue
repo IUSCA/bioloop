@@ -1,7 +1,4 @@
 <template>
-  <!--  <BasicUsageTest />-->
-  <FiltersTest />
-
   <div class="flex flex-col gap-4">
     <!-- Storage -->
     <div>
@@ -67,7 +64,6 @@ import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 // import workflowService from "@/services/workflow";
 import { useNavStore } from "@/stores/nav";
-import FiltersTest from "@/components/utils/FiltersTest.vue";
 
 const nav = useNavStore();
 
