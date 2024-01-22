@@ -65,7 +65,7 @@ const searchColumnsConfig = [
   {
     key: "text",
     label: "Text",
-    width: "320px",
+    width: "350px",
   },
   {
     key: "other",
