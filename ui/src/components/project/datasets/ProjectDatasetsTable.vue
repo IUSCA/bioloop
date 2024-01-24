@@ -126,16 +126,13 @@
     </template>
   </va-data-table>
 
-  <div class="flex justify-center mt-4" v-if="total_page_count > 1">
-    <div class="flex-none">
-      <va-pagination
-        v-model="currentPageIndex"
-        :pages="total_page_count"
-        :visible-pages="Math.min(total_page_count, VISIBLE_PAGES_THRESHOLD)"
-      >
-      </va-pagination>
-    </div>
-  </div>
+  <Pagination
+    v-model:page="currentPageIndex"
+    v-model:page_size="pageSize"
+    :total_results="total_results"
+    :curr_items="projectDatasets.length"
+    :page_size_options="PAGE_SIZE_OPTIONS"
+  />
 
   <!-- Download Modal -->
   <DatasetDownloadModal
@@ -153,16 +150,16 @@
 </template>
 
 <script setup>
+import config from "@/config";
+import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
+import projectService from "@/services/projects";
 import { formatBytes } from "@/services/utils";
 import wfService from "@/services/workflow";
-import DatasetService from "@/services/dataset";
-import config from "@/config";
-import { HalfCircleSpinner } from "epic-spinners";
-import { useColors } from "vuestic-ui";
 import { useAuthStore } from "@/stores/auth";
+import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
-import projectService from "@/services/projects";
+import { useColors } from "vuestic-ui";
 
 const { colors } = useColors();
 const auth = useAuthStore();
@@ -172,6 +169,11 @@ const props = defineProps({
     type: Object,
   },
 });
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
+
+const pageSize = ref(10);
+const total_results = ref(0);
 
 const projectIdRef = toRef(() => props.project.id);
 const loading = ref(false);
@@ -185,16 +187,10 @@ const filters_group_query = ref({});
 const defaultSortField = ref("updated_at");
 const defaultSortOrder = ref("desc");
 
-const PAGE_SIZE = 10;
-const VISIBLE_PAGES_THRESHOLD = 5; // Maximum number of visible pages shown at a time
-
 const currentPageIndex = ref(1);
-const total_page_count = ref(0);
 
 // used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
-const offset = computed(() => (currentPageIndex.value - 1) * PAGE_SIZE);
-// used for LIMIT clause in the SQL used to retrieve the next paginated batch of results
-const resultLimit = ref(PAGE_SIZE);
+const offset = computed(() => (currentPageIndex.value - 1) * pageSize.value);
 
 // Criterion based on search input
 const search_query = computed(() => {
@@ -221,7 +217,7 @@ let datasets_sort_query = computed(() => {
 // Criteria used to limit the number of results retrieved, and to define the offset starting at
 // which the next batch of results will be retrieved.
 const datasets_batching_query = computed(() => {
-  return { offset: offset.value, limit: resultLimit.value };
+  return { offset: offset.value, limit: pageSize.value };
 });
 
 // Aggregate of all other criteria. Used for retrieving results according to the criteria
@@ -247,7 +243,7 @@ const fetch_project_datasets = () => {
     })
     .then((res) => {
       projectDatasets.value = res.data.datasets.map((d) => d.dataset);
-      total_page_count.value = Math.ceil(res.data.metadata.count / PAGE_SIZE);
+      total_results.value = res.data.metadata.count;
     });
 };
 
