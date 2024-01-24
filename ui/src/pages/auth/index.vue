@@ -1,6 +1,6 @@
 <template>
   <div class="flex justify-center">
-    <div class="max-w-md">
+    <div class="flex-auto max-w-md">
       <va-card class="mt-10 lg:mt-20" stripe stripe-color="success">
         <va-card-content>
           <div class="flex justify-center opacity-90">
@@ -19,7 +19,7 @@
           </div>
           <div class="flex justify-between px-8 mb-2">
             <va-button
-              class="py-2"
+              class="flex-auto py-2"
               @click="
                 $router.push({ path: '/auth/iucas', query: $route.query })
               "

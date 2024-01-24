@@ -241,5 +241,12 @@ def post_worker_logs(process_id: str, logs: list[dict]):
         r.raise_for_status()
 
 
+def get_all_workflows():
+    with APIServerSession() as s:
+        r = s.get('workflows/current')
+        r.raise_for_status()
+        return r.json()
+
+
 if __name__ == '__main__':
     pass

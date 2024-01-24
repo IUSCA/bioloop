@@ -90,9 +90,21 @@ config = {
                     'task': 'setup_dataset_download'
                 },
                 {
-                    'name': 'generate_qc',
-                    'task': 'generate_qc'
+                    'name': 'delete source',
+                    'task': 'delete_source'
                 }
+            ]
+        },
+        'reingest': {
+            'steps': [
+                {
+                    'name': 'inspect',
+                    'task': 'inspect_dataset'
+                },
+                {
+                    'name': 'mock archive',
+                    'task': 'mark_archived_and_delete'
+                },
             ]
         }
     },
@@ -103,9 +115,18 @@ config = {
             'password': QUEUE_PASSWORD
         },
         'mongo': {
-            'url': 'localhost:27017',
+            'url': 'localhost:27017/celery?authSource=admin',
             'username': 'root',
             'password': MONGO_PASSWORD
         }
+    },
+
+    'workflow': {
+        'purge': {
+            'types': ['source_integrated', 'stage', 'delete_dataset'],
+            'age_threshold_seconds': 86400,
+            'max_purge_count': 10
+        }
     }
+
 }

@@ -10,7 +10,7 @@
             <va-card-title>
               <!-- <span class="text-xl">Info</span> -->
               <div class="flex flex-nowrap items-center w-full">
-                <span class="text-lg"> Info </span>
+                <span class="flex-auto text-lg"> Info </span>
                 <AddEditButton
                   class="flex-none"
                   edit
