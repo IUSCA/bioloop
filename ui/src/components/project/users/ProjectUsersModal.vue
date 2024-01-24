@@ -4,6 +4,7 @@
     title="Manage Access"
     no-outside-dismiss
     fixed-layout
+    size="small"
     @ok="handleOk"
     @close="hide"
   >
@@ -17,8 +18,8 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps(["id"]);
 const emit = defineEmits(["update"]);

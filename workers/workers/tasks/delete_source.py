@@ -1,4 +1,5 @@
 import shutil
+from pathlib import Path
 
 from celery import Celery
 
@@ -11,8 +12,9 @@ app.config_from_object(celeryconfig)
 
 def delete_source(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    origin_path = dataset['origin_path']
+    origin_path = Path(dataset['origin_path']).resolve()
 
-    shutil.rmtree(origin_path)
+    if origin_path.exists():
+        shutil.rmtree(origin_path)
 
     return dataset_id,

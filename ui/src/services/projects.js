@@ -1,9 +1,8 @@
-import api from "./api";
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
-import { useToastStore } from "@/stores/toast";
+import api from "./api";
 
 const auth = useAuthStore();
-const toast = useToastStore();
 
 class projectService {
   getAll({ forSelf }) {

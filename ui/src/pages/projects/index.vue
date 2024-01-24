@@ -93,11 +93,13 @@
         <template #cell(actions)="{ rowData }">
           <div class="flex gap-1">
             <va-button
+              class="flex-auto"
               preset="plain"
               icon="edit"
               @click="openModalToEditProject(rowData)"
             />
             <va-button
+              class="flex-auto"
               preset="plain"
               icon="delete"
               color="danger"
@@ -128,22 +130,14 @@
 </template>
 
 <script setup>
+import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
-import * as datetime from "@/services/datetime";
-import { useNavStore } from "@/stores/nav";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
-const nav = useNavStore();
-
-nav.setNavItems([
-  {
-    label: "Projects",
-  },
-]);
 
 const projects = ref([]);
 const filterInput = ref("");
@@ -235,6 +229,7 @@ function fetch_projects() {
       data_loading.value = false;
     });
 }
+
 fetch_projects();
 
 // edit modal code
@@ -270,4 +265,5 @@ function openModalToDeleteProject(rowData) {
 <route lang="yaml">
 meta:
   title: Projects
+  nav: [{ label: "Projects" }]
 </route>

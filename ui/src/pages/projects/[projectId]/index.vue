@@ -14,7 +14,7 @@
           <va-card class="general-info">
             <va-card-title class="">
               <div class="flex flex-nowrap items-center w-full">
-                <span class="text-lg"> General Info </span>
+                <span class="flex-auto text-lg"> General Info </span>
                 <AddEditButton
                   class="flex-none"
                   edit
@@ -34,7 +34,7 @@
           <va-card class="h-full">
             <va-card-title class="">
               <div class="flex flex-nowrap items-center w-full">
-                <span class="text-lg"> Access Permissions </span>
+                <span class="flex-auto text-lg"> Access Permissions </span>
                 <AddEditButton
                   class="flex-none"
                   :edit="project.users?.length > 0"
@@ -57,10 +57,10 @@
 
       <!-- Associated datasets -->
       <div>
-        <va-card class="">
-          <va-card-title class="">
+        <va-card>
+          <va-card-title>
             <div class="flex flex-nowrap items-center w-full">
-              <span class="text-lg"> Associated Datasets </span>
+              <span class="flex-auto text-lg"> Associated Datasets </span>
 
               <AddEditButton
                 class="flex-none"
@@ -157,15 +157,15 @@
 
 <script setup>
 import projectService from "@/services/projects";
-import { useToastStore } from "@/stores/toast";
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useNavStore } from "@/stores/nav";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps({ projectId: String });
 const auth = useAuthStore();
 const router = useRouter();
-const toast = useToastStore();
+
 const projectFormStore = useProjectFormStore();
 const nav = useNavStore();
 
