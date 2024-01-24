@@ -42,7 +42,7 @@
           </div>
 
           <div class="flex gap-2 flex-wrap">
-            <!-- Add Selected / Delete Selected -->
+            <!-- Add Selected -->
             <div class="flex flex-auto gap-2 items-center">
               <va-button
                 class="flex-none"
@@ -56,15 +56,21 @@
                     resetSearchSelections();
                   }
                 "
+                :disabled="searchResultSelections.length === 0"
               >
-                Add Selected
+                Add
+                {{
+                  searchResultSelections.length === 0
+                    ? "Selected"
+                    : searchResultSelections.length
+                }}
               </va-button>
 
-              <div class="flex-none">
-                <va-chip v-if="searchResultSelections.length > 0">
-                  Selected: {{ searchResultSelections.length }}
-                </va-chip>
-              </div>
+              <!--              <va-chip v-if="searchResults.length > 0">-->
+              <!--                Showing {{ searchResults.length }} of {{ totalResults }}-->
+              <!--                {{ searchTerm !== "" ? "filtered " : "" }}-->
+              <!--                results-->
+              <!--              </va-chip>-->
             </div>
           </div>
         </div>
@@ -80,6 +86,7 @@
             "
           >
             <va-data-table
+              class="table"
               v-model="searchResultSelections"
               :items="searchResults"
               :columns="_searchResultColumns"
@@ -125,11 +132,12 @@
               <!-- template for Actions column -->
               <template #cell(actions)="{ rowData }">
                 <va-button
-                  :icon="isSelected(rowData) ? 'delete' : 'add'"
+                  class="w-full"
+                  :icon="isSelected(rowData) ? 'remove' : 'add'"
                   :color="isSelected(rowData) ? 'danger' : 'success'"
                   size="small"
                   preset="primary"
-                  @click="addOrDelete(rowData)"
+                  @click="addOrRemove(rowData)"
                   :disabled="searchResultSelections.length > 0"
                 >
                 </va-button>
@@ -158,22 +166,24 @@
                 preset="secondary"
                 color="danger"
                 border-color="danger"
-                icon="delete"
+                icon="remove"
                 @click="
                   () => {
                     emit('remove', selectedResultSelections);
                     resetSelectedSelections();
                   }
                 "
+                :disabled="selectedResultSelections.length === 0"
               >
-                Delete Selected
+                Remove
+                {{
+                  selectedResultSelections.length === 0
+                    ? "Selected"
+                    : selectedResultSelections.length
+                }}
               </va-button>
 
-              <div class="flex-none">
-                <va-chip v-if="selectedResultSelections.length > 0">
-                  Selected: {{ selectedResultSelections.length }}
-                </va-chip>
-              </div>
+              <!--              <va-chip> Selected: {{ props.selectedResults.length }}</va-chip>-->
             </div>
           </div>
         </div>
@@ -181,6 +191,7 @@
         <!-- Selected Results table -->
         <div class="overflow-y-auto h-80">
           <va-data-table
+            class="table"
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
             :items="props.selectedResults"
@@ -226,11 +237,12 @@
             <!-- template for Actions column -->
             <template #cell(actions)="{ rowData }">
               <va-button
-                :icon="isSelected(rowData) ? 'delete' : 'add'"
+                class="w-full"
+                :icon="isSelected(rowData) ? 'remove' : 'add'"
                 :color="isSelected(rowData) ? 'danger' : 'success'"
                 size="small"
                 preset="primary"
-                @click="addOrDelete(rowData)"
+                @click="addOrRemove(rowData)"
                 :disabled="selectedResultSelections.length > 0"
               >
               </va-button>
@@ -286,7 +298,7 @@ const props = defineProps({
   },
   pageSizeSearch: {
     type: Number,
-    default: () => 5,
+    default: () => 10,
   },
   selectedResults: {
     type: Array,
@@ -439,7 +451,7 @@ const loadNextSearchResults = () => {
   return loadResults();
 };
 
-const addOrDelete = (rowData) => {
+const addOrRemove = (rowData) => {
   if (!isSelected(rowData)) {
     emit("select", [rowData]);
   } else {
@@ -461,6 +473,10 @@ onMounted(() => {
 .search {
   --va-data-table-thead-background: var(--va-background-secondary);
   --va-data-table-tfoot-background: var(--va-background-secondary);
+
+  .table {
+    --va-data-table-cell-padding: 3px;
+  }
 
   .icon {
     color: var(--va-secondary);
