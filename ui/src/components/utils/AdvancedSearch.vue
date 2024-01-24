@@ -92,6 +92,7 @@
               :columns="_searchResultColumns"
               selectable
               select-mode="multiple"
+              sticky-header
             >
               <template #headerPrepend>
                 <tr>
@@ -199,6 +200,7 @@
             virtual-scroller
             selectable
             select-mode="multiple"
+            sticky-header
           >
             <template #headerPrepend>
               <tr class="overflow-hidden">
