@@ -143,6 +143,7 @@ async function main() {
 
   await Promise.all(operator_promises);
 
+  await prisma.dataset.deleteMany();
   const datasetPromises = data.datasets.map((dataset) => {
     console.log(`Creating dataset ${dataset.name}..., id: ${dataset.id}`);
 
