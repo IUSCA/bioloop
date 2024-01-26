@@ -92,7 +92,7 @@ const _datasets = [
     size: 160612394997,
     description: null,
     is_staged: true,
-    origin_path: '/N/scratch/scauser/bs_test/PCM230203',
+    origin_path: '/N/scratch/scadev/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     metadata: {
       num_genome_files: 60,
