@@ -1,9 +1,9 @@
 import shutil
 from pathlib import Path
-
 from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
+import json
 
 import workers.api as api
 import workers.cmd as cmd
@@ -71,11 +71,18 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'dataset_id': dataset['id']
     }
 
+    print('bundle_attrs:')
+    print('----------------------------')
+    print(json.dumps(bundle_attrs, indent=4))
+
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
         bundle.unlink()
 
     matching_bundles = api.get_bundle(name=bundle_attrs['name'], checksum=bundle_attrs['md5'])
+
+    print(f'len(matching_bundles): {len(matching_bundles)}')
+
     if matching_bundles.length == 0:
         api.log_bundle(bundle_attrs)
 

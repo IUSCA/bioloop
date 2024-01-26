@@ -46,12 +46,16 @@ def setup_download(celery_task, dataset_id, **kwargs):
     staged_path, alias = Path(dataset['staged_path']), glom(dataset, 'metadata.stage_alias')
     bundle_path = Path(dataset['bundle']['path'])
 
+    print(f'bundle_path: {bundle_path}')
+
     if not staged_path.exists():
         # TODO: more robust validation?
         raise ValidationFailed(f'Staged path does not exist {staged_path}')
 
     download_path = Path(config['paths']['download_dir']).resolve() / alias
     bundle_download_path = download_path / bundle_path.name
+
+    print(f'bundle_download_path: {bundle_download_path}')
 
     # remove if exists and create a symlink in download dir pointing to the staged path
     rm(download_path)
