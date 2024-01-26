@@ -27,12 +27,13 @@
                 <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
                   :disabled="!dataset.num_files"
-                  class="flex-none"
-                  preset="primary"
-                  color="info"
+                  class="flex-initial"
+                  color="primary"
+                  border-color="primary"
+                  preset="secondary"
                   @click="openModalToDownloadDataset"
                 >
-                  <i-mdi-folder-open class="pr-2 text-xl" /> Access Files
+                  <i-mdi-folder-open class="pr-2 text-2xl" /> Access Files
                 </va-button>
 
                 <!-- edit description -->
