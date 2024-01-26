@@ -77,7 +77,6 @@ const _datasets = [
     is_staged: true,
     origin_path: '/N/scratch/scauser/bs_test/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
-    workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     metadata: {
       num_genome_files: 60,
       report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
