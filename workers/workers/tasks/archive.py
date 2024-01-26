@@ -45,6 +45,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
+    # Tar the dataset directory and compute checksum
     bundle = Path(f'{config["paths"]["scratch"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
