@@ -18,27 +18,22 @@ const roles = [{
 const admins = [
   {
     id: 1,
-
     name: 'Rishi Pandey',
     username: 'ripandey',
   }, {
     id: 2,
-
     name: 'Charles Brandt',
     username: 'ccbrandt',
   }, {
     id: 3,
-
     name: 'Deepak Duggirala',
     username: 'deduggi',
   }, {
     id: 4,
-
     name: 'Ryan Long',
     username: 'ryanlong',
   }, {
     id: 5,
-
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
@@ -47,7 +42,6 @@ const admins = [
 const operators = [
   {
     id: 6,
-
     username: 'arodriguez',
     name: 'Alex Rodriguez',
   },
@@ -92,7 +86,7 @@ const _datasets = [
     size: 160612394997,
     description: null,
     is_staged: true,
-    origin_path: '/N/scratch/scadev/PCM230203',
+    origin_path: '/N/scratch/scadev/testing-102/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     metadata: {
       num_genome_files: 60,
