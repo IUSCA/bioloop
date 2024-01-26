@@ -10,9 +10,7 @@ const { generate_stage_request_logs } = require('./seed_data/stage_request_logs'
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-});
+const prisma = new PrismaClient();
 
 async function update_seq(table) {
   // Get the current maximum value of the id column
