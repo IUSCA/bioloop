@@ -10,7 +10,9 @@ const { generate_stage_request_logs } = require('./seed_data/stage_request_logs'
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+});
 
 async function update_seq(table) {
   // Get the current maximum value of the id column
@@ -144,6 +146,8 @@ async function main() {
   await Promise.all(operator_promises);
 
   const datasetPromises = data.datasets.map((dataset) => {
+    console.log(`Creating dataset ${dataset.name}..., id: ${dataset.id}`);
+
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
       dataset_obj.workflows = {
