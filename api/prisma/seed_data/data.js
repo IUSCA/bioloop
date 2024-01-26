@@ -17,18 +17,28 @@ const roles = [{
 
 const admins = [
   {
+    id: 1,
+
     name: 'Rishi Pandey',
     username: 'ripandey',
   }, {
+    id: 2,
+
     name: 'Charles Brandt',
     username: 'ccbrandt',
   }, {
+    id: 3,
+
     name: 'Deepak Duggirala',
     username: 'deduggi',
   }, {
+    id: 4,
+
     name: 'Ryan Long',
     username: 'ryanlong',
   }, {
+    id: 5,
+
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
@@ -36,14 +46,18 @@ const admins = [
 
 const operators = [
   {
+    id: 6,
+
     username: 'arodriguez',
     name: 'Alex Rodriguez',
   },
   {
+    id: 7,
     username: 'bfoster',
     name: 'Benjamin Foster',
   },
   {
+    id: 8,
     username: 'ejohnson',
     name: 'Emma Johnson',
   },
@@ -51,14 +65,17 @@ const operators = [
 
 const users = [
   {
+    id: 9,
     username: 'ajohnson',
     name: 'Alice Johnson',
   },
   {
+    id: 10,
     username: 'sdavis',
     name: 'Samuel Davis',
   },
   {
+    id: 11,
     username: 'ethompson',
     name: 'Emily Thompson',
   },
@@ -171,15 +188,15 @@ const _datasets = [
   },
   {
     id: 7,
-    name: 'PCM230203',
+    name: 'PCM230203_7',
     type: 'DATA_PRODUCT',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230203',
+    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230203_7',
   },
   {
     id: 8,
-    name: 'PCM230327',
+    name: 'PCM230327_8',
     type: 'DATA_PRODUCT',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230327',
+    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230327_8',
   },
   {
     id: 9,
@@ -281,7 +298,7 @@ const project_user_assoc = [
   },
   {
     project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    user_id: 5,
+    user_id: 1,
   },
   {
     project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
