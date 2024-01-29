@@ -1,6 +1,6 @@
 <template>
   <div class="flex gap-2 search" :style="styles">
-    <!-- Search, and results   -->
+    <!-- Search, and search results   -->
     <div>
       <!-- Container for search controls, and search results table -->
       <div class="flex flex-col gap-2">
@@ -12,10 +12,11 @@
               v-model="searchTerm"
               :placeholder="props.placeholder || 'Type to search'"
               class="flex-auto"
+              @input="$emit('update:input', $event.target.value)"
             >
               <!-- Search icon -->
               <template #prependInner>
-                <va-icon name="search" class="icon"></va-icon>
+                <va-icon name="search" class="icon" />
               </template>
               <!-- Clear button -->
               <template #appendInner>
@@ -26,7 +27,6 @@
                     icon="highlight_off"
                     @click="
                       () => {
-                        searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
                         emit('reset');
                       }
                     "
@@ -43,52 +43,46 @@
 
           <div class="flex gap-2 flex-wrap">
             <!-- Add Selected -->
-            <div class="flex flex-auto gap-2 items-center">
-              <va-button
-                class="flex-none"
-                preset="secondary"
-                color="success"
-                border-color="success"
-                icon="add"
-                @click="
-                  () => {
-                    emit('select', searchResultSelections);
-                    resetSearchSelections();
-                  }
-                "
-                :disabled="searchResultSelections.length === 0"
-              >
-                Add
-                {{
-                  searchResultSelections.length === 0
-                    ? "Selected"
-                    : searchResultSelections.length
-                }}
-              </va-button>
-
-              <!--              <va-chip v-if="searchResults.length > 0">-->
-              <!--                Showing {{ searchResults.length }} of {{ totalResults }}-->
-              <!--                {{ searchTerm !== "" ? "filtered " : "" }}-->
-              <!--                results-->
-              <!--              </va-chip>-->
-            </div>
+            <!--            <div class="flex flex-auto gap-2 items-center">-->
+            <!--              <va-button-->
+            <!--                class="flex-none"-->
+            <!--                preset="secondary"-->
+            <!--                color="success"-->
+            <!--                border-color="success"-->
+            <!--                icon="add"-->
+            <!--                @click="-->
+            <!--                  () => {-->
+            <!--                    emit('select', searchResultSelections);-->
+            <!--                    resetSearchSelections();-->
+            <!--                  }-->
+            <!--                "-->
+            <!--                :disabled="searchResultSelections.length === 0"-->
+            <!--              >-->
+            <!--                Add-->
+            <!--                {{-->
+            <!--                  searchResultSelections.length === 0-->
+            <!--                    ? "Selected"-->
+            <!--                    : searchResultSelections.length-->
+            <!--                }}-->
+            <!--              </va-button>-->
+            <!--            </div>-->
           </div>
         </div>
 
         <!-- Search results table -->
         <div ref="infiniteScrollTarget_search" class="max-h-80 overflow-y-auto">
           <va-infinite-scroll
-            :load="loadNextSearchResults"
+            :load="onScrollToEnd"
             :scroll-target="infiniteScrollTarget_search"
             :disabled="
-              searchResults.length === totalResults ||
-              searchResults.length < props.pageSizeSearch
+              props.searchResults.length === props.totalResultCount ||
+              props.searchResults.length < props.pageSizeSearch
             "
           >
             <va-data-table
               class="table"
               v-model="searchResultSelections"
-              :items="searchResults"
+              :items="props.searchResults"
               :columns="_searchResultColumns"
               selectable
               select-mode="multiple"
@@ -97,11 +91,7 @@
               <template #headerPrepend>
                 <tr>
                   <th class="overflow-hidden" colspan="6">
-                    <span class="selected-count">
-                      Showing {{ searchResults.length }} of {{ totalResults }}
-                      {{ searchTerm !== "" ? "filtered " : "" }}
-                      results
-                    </span>
+                    <span class="selected-count">{{ props.countLabel }}</span>
                   </th>
                 </tr>
               </template>
@@ -131,18 +121,18 @@
               </template>
 
               <!-- template for Actions column -->
-              <template #cell(actions)="{ rowData }">
-                <va-button
-                  class="w-full"
-                  :icon="isSelected(rowData) ? 'remove' : 'add'"
-                  :color="isSelected(rowData) ? 'danger' : 'success'"
-                  size="small"
-                  preset="primary"
-                  @click="addOrRemove(rowData)"
-                  :disabled="searchResultSelections.length > 0"
-                >
-                </va-button>
-              </template>
+              <!--              <template #cell(actions)="{ rowData }">-->
+              <!--                <va-button-->
+              <!--                  class="w-full"-->
+              <!--                  :icon="isSelected(rowData) ? 'remove' : 'add'"-->
+              <!--                  :color="isSelected(rowData) ? 'danger' : 'success'"-->
+              <!--                  size="small"-->
+              <!--                  preset="primary"-->
+              <!--                  @click="addOrRemove(rowData)"-->
+              <!--                  :disabled="searchResultSelections.length > 0"-->
+              <!--                >-->
+              <!--                </va-button>-->
+              <!--              </template>-->
             </va-data-table>
           </va-infinite-scroll>
         </div>
@@ -162,27 +152,27 @@
 
           <div class="flex gap-2 items-center">
             <div class="flex gap-2 flex-auto items-center">
-              <va-button
-                class="flex-none"
-                preset="secondary"
-                color="danger"
-                border-color="danger"
-                icon="remove"
-                @click="
-                  () => {
-                    emit('remove', selectedResultSelections);
-                    resetSelectedSelections();
-                  }
-                "
-                :disabled="selectedResultSelections.length === 0"
-              >
-                Remove
-                {{
-                  selectedResultSelections.length === 0
-                    ? "Selected"
-                    : selectedResultSelections.length
-                }}
-              </va-button>
+              <!--              <va-button-->
+              <!--                class="flex-none"-->
+              <!--                preset="secondary"-->
+              <!--                color="danger"-->
+              <!--                border-color="danger"-->
+              <!--                icon="remove"-->
+              <!--                @click="-->
+              <!--                  () => {-->
+              <!--                    emit('remove', selectedResultSelections);-->
+              <!--                    resetSelectedSelections();-->
+              <!--                  }-->
+              <!--                "-->
+              <!--                :disabled="selectedResultSelections.length === 0"-->
+              <!--              >-->
+              <!--                Remove-->
+              <!--                {{-->
+              <!--                  selectedResultSelections.length === 0-->
+              <!--                    ? "Selected"-->
+              <!--                    : selectedResultSelections.length-->
+              <!--                }}-->
+              <!--              </va-button>-->
 
               <!--              <va-chip> Selected: {{ props.selectedResults.length }}</va-chip>-->
             </div>
@@ -237,18 +227,18 @@
             </template>
 
             <!-- template for Actions column -->
-            <template #cell(actions)="{ rowData }">
-              <va-button
-                class="w-full"
-                :icon="isSelected(rowData) ? 'remove' : 'add'"
-                :color="isSelected(rowData) ? 'danger' : 'success'"
-                size="small"
-                preset="primary"
-                @click="addOrRemove(rowData)"
-                :disabled="selectedResultSelections.length > 0"
-              >
-              </va-button>
-            </template>
+            <!--            <template #cell(actions)="{ rowData }">-->
+            <!--              <va-button-->
+            <!--                class="w-full"-->
+            <!--                :icon="isSelected(rowData) ? 'remove' : 'add'"-->
+            <!--                :color="isSelected(rowData) ? 'danger' : 'success'"-->
+            <!--                size="small"-->
+            <!--                preset="primary"-->
+            <!--                @click="addOrRemove(rowData)"-->
+            <!--                :disabled="selectedResultSelections.length > 0"-->
+            <!--              >-->
+            <!--              </va-button>-->
+            <!--            </template>-->
           </va-data-table>
         </div>
       </div>
@@ -264,8 +254,12 @@ const props = defineProps({
     type: String,
     default: () => "Type to search",
   },
-  query: {
-    type: Object,
+  // query: {
+  //   type: Object,
+  // },
+  searchResults: {
+    type: Array,
+    default: () => [],
   },
   selectedLabel: {
     type: String,
@@ -279,25 +273,37 @@ const props = defineProps({
     type: Array,
     required: true,
   },
-  trackBy: {
-    type: [Function, String],
-    default: "id",
-  },
-  fetchFn: {
-    type: Function,
+  totalResultCount: {
+    type: Number,
     required: true,
   },
-  searchField: {
+  countLabel: {
     type: String,
     required: true,
   },
-  resultsBy: {
-    type: [String, Function],
+  searchTerm: {
+    type: String,
+    default: "",
   },
-  countBy: {
-    type: [String, Function],
-    required: true,
-  },
+  // trackBy: {
+  //   type: [Function, String],
+  //   default: "id",
+  // },
+  // fetchFn: {
+  //   type: Function,
+  //   required: true,
+  // },
+  // searchField: {
+  //   type: String,
+  //   required: true,
+  // },
+  // resultsBy: {
+  //   type: [String, Function],
+  // },
+  // countBy: {
+  //   type: [String, Function],
+  //   required: true,
+  // },
   pageSizeSearch: {
     type: Number,
     default: () => 10,
@@ -324,18 +330,27 @@ const styles = computed(() => {
   };
 });
 
-const emit = defineEmits(["select", "remove", "reset"]);
+const emit = defineEmits([
+  "select",
+  "remove",
+  "reset",
+  "update:input",
+  "scroll-end",
+]);
 
 const infiniteScrollTarget_search = ref(null);
 
-const page = ref(1);
-const skip = computed(() => {
-  return props.pageSizeSearch * (page.value - 1);
+// const page = ref(1);
+// const skip = computed(() => {
+//   return props.pageSizeSearch * (page.value - 1);Count// });
+
+const searchTerm = computed({
+  get: () => props.searchTerm,
+  set: (value) => emit("update:input", value),
 });
 
-const searchTerm = ref("");
-const searchResults = ref([]);
-const totalResults = ref(0);
+// const searchResults = ref([]);
+// const totalResults = ref(0);
 const searchResultSelections = ref([]);
 const selectedResultSelections = ref([]);
 
@@ -345,9 +360,11 @@ const ACTIONS_COLUMN_CONFIG = {
 };
 
 const _searchResultColumns = computed(() => {
-  return props.searchResultColumns
+  let ret = props.searchResultColumns
     .concat(ACTIONS_COLUMN_CONFIG)
     .map((e) => ({ ...e, template: templateName(e) }));
+  // debugger;
+  return ret;
 });
 
 const _selectedResultColumns = computed(() => {
@@ -357,41 +374,41 @@ const _selectedResultColumns = computed(() => {
   }));
 });
 
-const batchingQuery = computed(() => {
-  return {
-    offset: skip.value,
-    limit: props.pageSizeSearch,
-  };
-});
+// const batchingQuery = computed(() => {
+//   return {
+//     offset: skip.value,
+//     limit: props.pageSizeSearch,
+//   };
+// });
 
-const _query = toRef(() => props.query);
+// const _query = toRef(() => props.query);
 
-const fetchQuery = computed(() => {
-  return {
-    ...(searchTerm.value && { [props.searchField]: searchTerm.value }),
-    ..._query.value,
-    ...batchingQuery.value,
-  };
-});
+// const fetchQuery = computed(() => {
+//   return {
+//     ...(searchTerm.value && { [props.searchField]: searchTerm.value }),
+//     ..._query.value,
+//     ...batchingQuery.value,
+//   };
+// });
 
-const getIdentity = (result) => {
-  return typeof props.trackBy === "function"
-    ? props.trackBy(result)
-    : _.get(result, props.trackBy);
-};
+// const getIdentity = (result) => {
+//   return typeof props.trackBy === "function"
+//     ? props.trackBy(result)
+//     : _.get(result, props.trackBy);
+// };
 
 /**
  * determines if a search result is selected
  * @param result the search result to check for selection
  * @returns {boolean} whether or not the search result is selected
  */
-const isSelected = (result) => {
-  return (
-    props.selectedResults.findIndex(
-      (e) => getIdentity(e) === getIdentity(result),
-    ) > -1
-  );
-};
+// const isSelected = (result) => {
+//   return (
+//     props.selectedResults.findIndex(
+//       (e) => getIdentity(e) === getIdentity(result),
+//     ) > -1
+//   );
+// };
 
 /**
  * Given a search result and a display config for one of the columns in the search result table,
@@ -402,73 +419,82 @@ const isSelected = (result) => {
  * @returns {*} the formatted value of the search result
  */
 const fieldValue = (rowData, columnConfig) => {
-  return columnConfig["formatFn"]
+  let ret = columnConfig["formatFn"]
     ? columnConfig["formatFn"](rowData[columnConfig["key"]])
     : rowData[columnConfig["key"]];
+  // debugger;
+  return ret;
 };
 
 const templateName = (field) => `cell(${field["key"]})`;
 
-// resets search result selections
-const resetSearchSelections = () => {
-  searchResultSelections.value = [];
-};
+const onScrollToEnd = () => {
+  emit("scroll-end");
 
-// resets selected result selections
-const resetSelectedSelections = () => {
-  selectedResultSelections.value = [];
-};
-
-const resetSearchState = () => {
-  resetSearchSelections();
-  // reset search results
-  searchResults.value = [];
-  // reset page value
-  page.value = 1;
-  // load initial set of search results
-  loadResults();
-};
-
-const loadResults = () => {
-  return props.fetchFn(fetchQuery.value).then((res) => {
-    let results =
-      typeof props.resultsBy === "function"
-        ? props.resultsBy(res.data)
-        : typeof props.resultsBy === "string"
-          ? _.get(res.data, props.resultsBy)
-          : res.data;
-    searchResults.value = searchResults.value.concat(results);
-
-    totalResults.value =
-      typeof props.countBy === "function"
-        ? props.countBy(res.data)
-        : typeof props.countBy === "string"
-          ? _.get(res.data, props.countBy)
-          : res.data.length;
+  return new Promise((resolve) => {
+    resolve();
   });
 };
 
-const loadNextSearchResults = () => {
-  page.value += 1; // increase page value for offset recalculation
-  return loadResults();
-};
+// resets search result selections
+// const resetSearchSelections = () => {
+//   searchResultSelections.value = [];
+// };
 
-const addOrRemove = (rowData) => {
-  if (!isSelected(rowData)) {
-    emit("select", [rowData]);
-  } else {
-    emit("remove", [rowData]);
-  }
-  resetSearchSelections();
-};
+// resets selected result selections
+// const resetSelectedSelections = () => {
+//   selectedResultSelections.value = [];
+// };
 
-watch([searchTerm, _query], () => {
-  resetSearchState();
-});
+// const resetSearchState = () => {
+//   resetSearchSelections();
+// reset search results
+// reset page value
+// page.value = 1;
+// load initial set of search results
+// loadResults();
+// };
 
-onMounted(() => {
-  loadResults();
-});
+// const loadResults = () => {
+//   return props.fetchFn(fetchQuery.value).then((res) => {
+//     let results =
+//       typeof props.resultsBy === "function"
+//         ? props.resultsBy(res.data)
+//         : typeof props.resultsBy === "string"
+//           ? _.get(res.data, props.resultsBy)
+//           : res.data;
+//     // searchResults.value = searchResults.value.concat(results);
+//
+//     totalResults.value =
+//       typeof props.countBy === "function"
+//         ? props.countBy(res.data)
+//         : typeof props.countBy === "string"
+//           ? _.get(res.data, props.countBy)
+//           : res.data.length;
+//   });
+// };
+
+// const loadNextSearchResults = () => {
+//   page.value += 1; // increase page value for offset recalculation
+//   return loadResults();
+// };
+
+// const addOrRemove = (rowData) => {
+//   if (!isSelected(rowData)) {
+//     emit("select", [rowData]);
+//   } else {
+//     emit("remove", [rowData]);
+//   }
+//   resetSearchSelections();
+// };
+
+// watch([searchTerm, _query], () => {
+//   resetSearchState();
+// });
+
+// onMounted(() => {
+//   loadResults();
+// });
 </script>
 
 <style lang="scss" scoped>

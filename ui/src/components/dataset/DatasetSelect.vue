@@ -1,21 +1,24 @@
 <template>
   <AdvancedSearch
+    v-model:search-term="searchTerm"
+    :search-results="datasets"
+    :total-result-count="totalResultCount"
+    @scroll-end="loadNextSearchResults"
+    :count-label="countLabel"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
     :selected-results="props.selectedResults"
-    :query="query"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
-    :fetch-fn="datasetService.getAll"
-    search-field="name"
-    results-by="datasets"
-    count-by="metadata.count"
     @reset="
       () => {
+        searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
+        // reset filters
         checkboxes.rawData = false;
         checkboxes.dataProduct = false;
       }
     "
+    @input="(input) => (searchTerm = input)"
   >
     <template #filters>
       <va-button-dropdown
@@ -45,6 +48,7 @@ import { formatBytes, lxor } from "@/services/utils";
 import { useBreakpoint } from "vuestic-ui";
 
 const NAME_TRIM_THRESHOLD = 15;
+const PAGE_SIZE = 10;
 
 const props = defineProps({
   selectedResults: {
@@ -54,6 +58,28 @@ const props = defineProps({
 });
 
 const breakpoint = useBreakpoint();
+
+// const totalResults = ref(0);
+const page = ref(1);
+const skip = computed(() => {
+  return PAGE_SIZE * (page.value - 1);
+});
+const datasets = ref([]);
+const totalResultCount = ref(0);
+
+const searchTerm = ref("");
+
+const countLabel = computed(() => {
+  return `Showing ${datasets.value.length} of
+                      ${totalResultCount.value}
+                      ${searchTerm.value !== "" ? "filtered " : ""}
+                      results`;
+});
+
+const loadNextSearchResults = () => {
+  page.value += 1; // increase page value for offset recalculation
+  return loadResults();
+};
 
 const columnWidths = computed(() => {
   return {
@@ -69,7 +95,7 @@ const trimName = (val) =>
     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
     : val;
 
-const mobileViewColumns = computed(() => {
+const primaryColumns = computed(() => {
   return [
     {
       key: "name",
@@ -86,7 +112,7 @@ const mobileViewColumns = computed(() => {
   ];
 });
 
-const desktopViewColumns = computed(() => {
+const secondaryColumns = computed(() => {
   return [
     {
       key: "size",
@@ -105,12 +131,12 @@ const desktopViewColumns = computed(() => {
 
 const retrievedDatasetColumns = computed(() => {
   return breakpoint.sm || breakpoint.xs
-    ? mobileViewColumns.value
-    : mobileViewColumns.value.concat(desktopViewColumns.value);
+    ? primaryColumns.value
+    : primaryColumns.value.concat(secondaryColumns.value);
 });
 
 const selectedDatasetColumns = computed(() =>
-  mobileViewColumns.value.filter((col) => col.key === "name"),
+  primaryColumns.value.filter((col) => col.key === "name"),
 );
 
 const checkboxes = ref({
@@ -125,15 +151,63 @@ const activeCountText = computed(() => {
   return activeCount > 0 ? ` (${activeCount})` : "";
 });
 
-const query = computed(() => {
+const filterQuery = computed(() => {
   const selectedDatasetType = checkboxes.value.rawData
     ? "RAW_DATA"
-    : checkboxes.value.dataProduct && "DATA_PRODUCT";
+    : checkboxes.value.dataProduct
+      ? "DATA_PRODUCT"
+      : undefined;
 
   return {
-    type: lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
-      ? selectedDatasetType
-      : undefined,
+    type: selectedDatasetType,
   };
+});
+
+const batchingQuery = computed(() => {
+  return {
+    offset: skip.value,
+    limit: PAGE_SIZE,
+  };
+});
+
+const loadResults = () => {
+  debugger;
+  datasetService.getAll(fetchQuery.value).then((res) => {
+    datasets.value = datasets.value.concat(res.data.datasets);
+    totalResultCount.value = res.data.metadata.count;
+  });
+};
+
+const fetchQuery = computed(() => {
+  let ret = {
+    ...(searchTerm.value && { name: searchTerm.value }),
+    ...(lxor(checkboxes.value.rawData, checkboxes.value.dataProduct) && {
+      ...filterQuery.value,
+    }),
+    ...batchingQuery.value,
+  };
+  // debugger;
+  return ret;
+});
+
+// resets search result selections
+// const resetSearchSelections = () => {
+//   // searchResultSelections.value = [];
+// };
+
+watch([searchTerm, filterQuery], () => {
+  resetSearchState();
+});
+
+const resetSearchState = () => {
+  // resetSearchSelections();
+  // reset search results
+  datasets.value = [];
+  // reset page value
+  page.value = 1;
+};
+
+onMounted(() => {
+  loadResults();
 });
 </script>
