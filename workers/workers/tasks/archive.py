@@ -60,7 +60,7 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
                                 celery_task=celery_task)
 
     bundle_size = bundle.stat().st_size
-    bundle_checksum = utils.checkum(bundle)
+    bundle_checksum = utils.checksum(bundle)
     bundle_name = bundle["name"]
 
     bundle_attrs = {
