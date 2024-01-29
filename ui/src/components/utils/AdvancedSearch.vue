@@ -471,7 +471,7 @@ onMounted(() => {
 });
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .search {
   --va-data-table-thead-background: var(--va-background-secondary);
   --va-data-table-tfoot-background: var(--va-background-secondary);
