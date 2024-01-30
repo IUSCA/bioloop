@@ -10,9 +10,13 @@
             <!-- Search input -->
             <va-input
               :modelValue="props.searchTerm"
+              @update:modelValue="
+                (val) => {
+                  $emit('update:searchTerm', val);
+                }
+              "
               :placeholder="props.placeholder || 'Type to search'"
               class="flex-auto"
-              @input="onInput"
             >
               <!-- Search icon -->
               <template #prependInner>
@@ -337,11 +341,6 @@ const emit = defineEmits([
   "update:searchTerm",
   "scroll-end",
 ]);
-
-const onInput = (event) => {
-  debugger;
-  emit("update:searchTerm", event.target.value);
-};
 
 const infiniteScrollTarget_search = ref(null);
 

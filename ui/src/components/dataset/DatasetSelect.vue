@@ -1,7 +1,6 @@
 <template>
   <AdvancedSearch
     v-model:searchTerm="searchTerm"
-    @update:searchTerm="search"
     :search-results="datasets"
     :total-result-count="totalResultCount"
     @scroll-end="loadNextSearchResults"
@@ -59,10 +58,11 @@ const props = defineProps({
 
 const breakpoint = useBreakpoint();
 
-const search = (val) => {
-  debugger;
-  console.log(`val: ${val}`);
-};
+// const search = (val) => {
+//   debugger;
+//   console.log(`val: ${val}`);
+//   searchTerm.value = val;
+// };
 
 // const totalResults = ref(0);
 const page = ref(1);
@@ -205,14 +205,9 @@ const fetchQuery = computed(() => {
 //   resetSearchState();
 // });
 
-watch(
-  searchTerm,
-  () => {
-    debugger;
-    resetSearchState();
-  },
-  { deep: true },
-);
+watch(searchTerm, () => {
+  resetSearchState();
+});
 
 const resetSearchState = () => {
   // resetSearchSelections();
