@@ -112,13 +112,13 @@ const buildQueryObject = ({
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
-    archive_path: archived ? { not: null } : {},
+    archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
     type,
-    name: {
+    name: name ? {
       contains: name,
       mode: 'insensitive', // case-insensitive search
-    },
+    } : undefined,
   });
 
   // processed=true: datasets with one or more workflows associated
@@ -226,6 +226,11 @@ router.get(
         derived_datasets: true,
       },
     };
+
+    // console.log('datasetRetrievalQuery');
+    // console.dir(datasetRetrievalQuery, { depth: null });
+    // console.log('filterQuery');
+    // console.dir(filterQuery, { depth: null });
 
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
