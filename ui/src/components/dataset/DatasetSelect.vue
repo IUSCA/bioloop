@@ -1,6 +1,7 @@
 <template>
   <AdvancedSearch
-    v-model:search-term="searchTerm"
+    v-model:searchTerm="searchTerm"
+    @update:searchTerm="search"
     :search-results="datasets"
     :total-result-count="totalResultCount"
     @scroll-end="loadNextSearchResults"
@@ -18,7 +19,6 @@
         checkboxes.dataProduct = false;
       }
     "
-    @input="(input) => (searchTerm = input)"
   >
     <template #filters>
       <va-button-dropdown
@@ -58,6 +58,11 @@ const props = defineProps({
 });
 
 const breakpoint = useBreakpoint();
+
+const search = (val) => {
+  debugger;
+  console.log(`val: ${val}`);
+};
 
 // const totalResults = ref(0);
 const page = ref(1);
@@ -171,7 +176,7 @@ const batchingQuery = computed(() => {
 });
 
 const loadResults = () => {
-  debugger;
+  // debugger;
   datasetService.getAll(fetchQuery.value).then((res) => {
     datasets.value = datasets.value.concat(res.data.datasets);
     totalResultCount.value = res.data.metadata.count;
@@ -195,9 +200,19 @@ const fetchQuery = computed(() => {
 //   // searchResultSelections.value = [];
 // };
 
-watch([searchTerm, filterQuery], () => {
-  resetSearchState();
-});
+// watch([searchTerm, filterQuery], () => {
+//   debugger;
+//   resetSearchState();
+// });
+
+watch(
+  searchTerm,
+  () => {
+    debugger;
+    resetSearchState();
+  },
+  { deep: true },
+);
 
 const resetSearchState = () => {
   // resetSearchSelections();
@@ -205,6 +220,8 @@ const resetSearchState = () => {
   datasets.value = [];
   // reset page value
   page.value = 1;
+  // load initial set of search results
+  loadResults();
 };
 
 onMounted(() => {

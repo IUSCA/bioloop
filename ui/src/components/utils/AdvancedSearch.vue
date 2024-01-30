@@ -9,10 +9,10 @@
           <div class="flex gap-2">
             <!-- Search input -->
             <va-input
-              v-model="searchTerm"
+              :modelValue="props.searchTerm"
               :placeholder="props.placeholder || 'Type to search'"
               class="flex-auto"
-              @input="$emit('update:input', $event.target.value)"
+              @input="onInput"
             >
               <!-- Search icon -->
               <template #prependInner>
@@ -334,9 +334,14 @@ const emit = defineEmits([
   "select",
   "remove",
   "reset",
-  "update:input",
+  "update:searchTerm",
   "scroll-end",
 ]);
+
+const onInput = (event) => {
+  debugger;
+  emit("update:searchTerm", event.target.value);
+};
 
 const infiniteScrollTarget_search = ref(null);
 
@@ -344,10 +349,15 @@ const infiniteScrollTarget_search = ref(null);
 // const skip = computed(() => {
 //   return props.pageSizeSearch * (page.value - 1);Count// });
 
-const searchTerm = computed({
-  get: () => props.searchTerm,
-  set: (value) => emit("update:input", value),
-});
+// const searchTerm = computed({
+//   get() {
+//     return props.searchTerm;
+//   },
+//   set(newValue) {
+//     debugger;
+//     emit("update:searchTerm", newValue);
+//   },
+// });
 
 // const searchResults = ref([]);
 // const totalResults = ref(0);
