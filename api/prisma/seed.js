@@ -77,6 +77,8 @@ function createRandomUsers(num) {
   }));
 }
 
+const PROJECT_JACKSON = '1B3D3059-4038-4CBC-BA8D-AF25AC70F829';
+
 async function main() {
   await Promise.allSettled(data.roles.map((role) => prisma.role.upsert({
     where: { id: role.id },
@@ -143,6 +145,7 @@ async function main() {
 
   await Promise.all(operator_promises);
 
+  await prisma.dataset.deleteMany();
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
@@ -228,6 +231,41 @@ async function main() {
       create: pd,
     })),
   );
+
+  const startIndex = 26; // version-controlled seeded data ends at dataset_id == 10
+  const endIndex = 100;
+  const datasets = [];
+  const types = ['RAW_DATA', 'DATA_PRODUCT'];
+  _.range(startIndex, endIndex).forEach((i) => {
+    const type = types[Math.floor((Math.random() * 2))];
+    const bools = [true, false];
+    datasets.push({
+      id: i,
+      name: `Dataset_${type}_${i}`,
+      type,
+      archive_path: 'archive_path',
+      is_deleted: bools[Math.floor(Math.random() * 2)],
+      is_staged: bools[Math.floor(Math.random() * 2)],
+    });
+  });
+
+  // console.log(datasets);
+  // await prisma.dataset.deleteMany();
+  await prisma.dataset.createMany({
+    data: datasets,
+  });
+
+  const project_datasets = [];
+  _.range(startIndex, endIndex).forEach((i) => {
+    project_datasets.push({
+      project_id: PROJECT_JACKSON,
+      dataset_id: i,
+    });
+  });
+  // await prisma.project_dataset.deleteMany();
+  await prisma.project_dataset.createMany({
+    data: project_datasets,
+  });
 
   // create project contact associations
   await Promise.all(
