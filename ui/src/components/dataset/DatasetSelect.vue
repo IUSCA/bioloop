@@ -2,12 +2,12 @@
   <AdvancedSearch
     v-model:searchTerm="searchTerm"
     :search-results="datasets"
-    :total-result-count="totalResultCount"
-    @scroll-end="loadNextSearchResults"
+    :selected-results="props.selectedResults"
+    :search-result-count="totalResultCount"
     :count-label="countLabel"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
-    :selected-results="props.selectedResults"
+    @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     @reset="
@@ -81,7 +81,7 @@ const countLabel = computed(() => {
                       results`;
 });
 
-const loadNextSearchResults = () => {
+const loadNextPage = () => {
   page.value += 1; // increase page value for offset recalculation
   return loadResults();
 };

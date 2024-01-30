@@ -79,7 +79,7 @@
             :load="onScrollToEnd"
             :scroll-target="infiniteScrollTarget_search"
             :disabled="
-              props.searchResults.length === props.totalResultCount ||
+              props.searchResults.length === props.searchResultCount ||
               props.searchResults.length < props.pageSizeSearch
             "
           >
@@ -277,7 +277,7 @@ const props = defineProps({
     type: Array,
     required: true,
   },
-  totalResultCount: {
+  searchResultCount: {
     type: Number,
     required: true,
   },
@@ -439,7 +439,10 @@ const templateName = (field) => `cell(${field["key"]})`;
 
 const onScrollToEnd = () => {
   emit("scroll-end");
-
+  // This method returns a Promise simply because <va-infinite-scroll>'s expects its `load`
+  // callback prop to always return a Promise. The Promise in this instance doesn't do
+  // anything, and the actual fetching of subsequent results is handled by the client,
+  // who listens to the `scroll-to-end` event.
   return new Promise((resolve) => {
     resolve();
   });
