@@ -31,7 +31,7 @@
                     icon="highlight_off"
                     @click="
                       () => {
-                        emit('reset');
+                        $emit('reset');
                       }
                     "
                   />
@@ -177,22 +177,21 @@
                     : selectedResultSelections.length
                 }}
               </va-button>
-
-              <va-chip> Selected: {{ props.selectedResults.length }}</va-chip>
             </div>
           </div>
         </div>
 
         <!-- Selected Results table -->
-        <div class="overflow-y-auto h-80">
+        <div class="overflow-y-auto selected-table-container">
           <va-data-table
-            class="table"
+            class="table selected-table"
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
             :items="props.selectedResults"
             :columns="_selectedResultColumns"
             virtual-scroller
             selectable
+            height="1000px"
             select-mode="multiple"
             sticky-header
           >
@@ -338,7 +337,6 @@ const _searchResultColumns = computed(() => {
   let ret = props.searchResultColumns
     .concat(ACTIONS_COLUMN_CONFIG)
     .map((e) => ({ ...e, template: templateName(e) }));
-  // debugger;
   return ret;
 });
 
@@ -350,7 +348,6 @@ const _selectedResultColumns = computed(() => {
 });
 
 const getIdentity = (result) => {
-  debugger;
   let ret =
     typeof props.trackBy === "function"
       ? props.trackBy(result)
@@ -366,10 +363,8 @@ const getIdentity = (result) => {
 const isSelected = (result) => {
   let ret =
     props.selectedResults.findIndex((e) => {
-      debugger;
       return getIdentity(e) === getIdentity(result);
     }) > -1;
-  debugger;
   return ret;
 };
 
@@ -413,7 +408,6 @@ const resetSelectedSelections = () => {
 };
 
 const addOrRemove = (rowData) => {
-  debugger;
   if (!isSelected(rowData)) {
     emit("select", [rowData]);
   } else {
@@ -422,56 +416,29 @@ const addOrRemove = (rowData) => {
   resetSearchSelections();
   // resetSelectedSelections();
 };
-
-// const resetSearchState = () => {
-//   resetSearchSelections();
-// reset search results
-// reset page value
-// page.value = 1;
-// load initial set of search results
-// loadResults();
-// };
-
-// const loadResults = () => {
-//   return props.fetchFn(fetchQuery.value).then((res) => {
-//     let results =
-//       typeof props.resultsBy === "function"
-//         ? props.resultsBy(res.data)
-//         : typeof props.resultsBy === "string"
-//           ? _.get(res.data, props.resultsBy)
-//           : res.data;
-//     // searchResults.value = searchResults.value.concat(results);
-//
-//     totalResults.value =
-//       typeof props.countBy === "function"
-//         ? props.countBy(res.data)
-//         : typeof props.countBy === "string"
-//           ? _.get(res.data, props.countBy)
-//           : res.data.length;
-//   });
-// };
-
-// const loadNextSearchResults = () => {
-//   page.value += 1; // increase page value for offset recalculation
-//   return loadResults();
-// };
-
-// watch([searchTerm, _query], () => {
-//   resetSearchState();
-// });
-
-// onMounted(() => {
-//   loadResults();
-// });
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 .search {
   --va-data-table-thead-background: var(--va-background-secondary);
   --va-data-table-tfoot-background: var(--va-background-secondary);
 
   .table {
     --va-data-table-cell-padding: 3px;
+  }
+
+  .selected-table {
+    //.va-data-table__table.selectable {
+    //.va-data-table__table-tbody {
+    //.va-inner-loading {
+    //  height: unset !important;
+    //}
+    //height: 270px;
+    //}
+  }
+
+  .selected-table-container {
+    height: 320px;
   }
 
   .icon {
