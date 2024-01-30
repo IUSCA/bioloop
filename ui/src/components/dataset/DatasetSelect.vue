@@ -157,15 +157,15 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
-  const selectedDatasetType = checkboxes.value.rawData
-    ? "RAW_DATA"
-    : checkboxes.value.dataProduct
-      ? "DATA_PRODUCT"
-      : undefined;
-
-  return {
-    type: selectedDatasetType,
-  };
+  return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+    ? {
+        type: checkboxes.value.rawData
+          ? "RAW_DATA"
+          : checkboxes.value.dataProduct
+            ? "DATA_PRODUCT"
+            : undefined,
+      }
+    : undefined;
 });
 
 const batchingQuery = computed(() => {
@@ -186,12 +186,9 @@ const loadResults = () => {
 const fetchQuery = computed(() => {
   let ret = {
     ...(searchTerm.value && { name: searchTerm.value }),
-    ...(lxor(checkboxes.value.rawData, checkboxes.value.dataProduct) && {
-      ...filterQuery.value,
-    }),
+    ...filterQuery.value,
     ...batchingQuery.value,
   };
-  // debugger;
   return ret;
 });
 
@@ -200,12 +197,8 @@ const fetchQuery = computed(() => {
 //   // searchResultSelections.value = [];
 // };
 
-// watch([searchTerm, filterQuery], () => {
-//   debugger;
-//   resetSearchState();
-// });
-
-watch(searchTerm, () => {
+watch([searchTerm, filterQuery], () => {
+  // debugger;
   resetSearchState();
 });
 
