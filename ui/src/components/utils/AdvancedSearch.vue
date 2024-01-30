@@ -84,7 +84,6 @@
             "
           >
             <va-data-table
-              class="table"
               v-model="searchResultSelections"
               :items="props.searchResults"
               :columns="_searchResultColumns"
@@ -182,16 +181,14 @@
         </div>
 
         <!-- Selected Results table -->
-        <div class="overflow-y-auto selected-table-container">
+        <div class="overflow-y-auto h-80">
           <va-data-table
-            class="table selected-table"
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
             :items="props.selectedResults"
             :columns="_selectedResultColumns"
             virtual-scroller
             selectable
-            height="1000px"
             select-mode="multiple"
             sticky-header
           >
@@ -422,24 +419,6 @@ const addOrRemove = (rowData) => {
 .search {
   --va-data-table-thead-background: var(--va-background-secondary);
   --va-data-table-tfoot-background: var(--va-background-secondary);
-
-  .table {
-    --va-data-table-cell-padding: 3px;
-  }
-
-  .selected-table {
-    //.va-data-table__table.selectable {
-    //.va-data-table__table-tbody {
-    //.va-inner-loading {
-    //  height: unset !important;
-    //}
-    //height: 270px;
-    //}
-  }
-
-  .selected-table-container {
-    height: 320px;
-  }
 
   .icon {
     color: var(--va-secondary);
