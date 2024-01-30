@@ -47,7 +47,7 @@ import { date } from "@/services/datetime";
 import { formatBytes, lxor } from "@/services/utils";
 import { useBreakpoint } from "vuestic-ui";
 
-const NAME_TRIM_THRESHOLD = 15;
+const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
@@ -84,8 +84,8 @@ const loadNextPage = () => {
 
 const columnWidths = computed(() => {
   return {
-    name: breakpoint.xs || breakpoint.sm ? "165px" : "175px",
-    type: "120px",
+    name: breakpoint.xs || breakpoint.sm ? "160px" : "170px",
+    type: "130px",
     size: "100px",
     created_at: "105px",
   };
@@ -171,14 +171,6 @@ const batchingQuery = computed(() => {
   };
 });
 
-const loadResults = () => {
-  // debugger;
-  datasetService.getAll(fetchQuery.value).then((res) => {
-    datasets.value = datasets.value.concat(res.data.datasets);
-    totalResultCount.value = res.data.metadata.count;
-  });
-};
-
 const fetchQuery = computed(() => {
   let ret = {
     ...(searchTerm.value && { name: searchTerm.value }),
@@ -188,10 +180,17 @@ const fetchQuery = computed(() => {
   return ret;
 });
 
-// resets search result selections
-const resetSearchSelections = () => {
-  searchResultSelections.value = [];
+const loadResults = () => {
+  return datasetService.getAll(fetchQuery.value).then((res) => {
+    datasets.value = datasets.value.concat(res.data.datasets);
+    totalResultCount.value = res.data.metadata.count;
+  });
 };
+
+// resets search result selections
+// const resetSearchSelections = () => {
+//   searchResultSelections.value = [];
+// };
 
 watch([searchTerm, filterQuery], () => {
   // debugger;
