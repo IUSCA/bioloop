@@ -71,7 +71,7 @@
               </va-button>
             </div>
 
-            <va-chip outline>{{ props.countLabel }}</va-chip>
+            <va-chip outline>{{ countLabel }} </va-chip>
           </div>
         </div>
 
@@ -247,6 +247,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  selectedResults: {
+    type: Array,
+    default: () => [],
+  },
   selectedLabel: {
     type: String,
     default: () => "Selected Results",
@@ -263,10 +267,6 @@ const props = defineProps({
     type: Number,
     required: true,
   },
-  countLabel: {
-    type: String,
-    required: true,
-  },
   searchTerm: {
     type: String,
     default: "",
@@ -278,10 +278,6 @@ const props = defineProps({
   pageSizeSearch: {
     type: Number,
     default: () => 10,
-  },
-  selectedResults: {
-    type: Array,
-    default: () => [],
   },
   controlsMargin: {
     type: String,
@@ -310,6 +306,13 @@ const emit = defineEmits([
 ]);
 
 const infiniteScrollTarget_search = ref(null);
+
+const countLabel = computed(() => {
+  return `Showing ${props.searchResults.length} of
+                      ${props.searchResultCount}
+                      ${props.searchTerm !== "" ? "filtered " : ""}
+                      results`;
+});
 
 const searchResultSelections = ref([]);
 const selectedResultSelections = ref([]);

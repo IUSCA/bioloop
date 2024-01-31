@@ -1,11 +1,9 @@
 <template>
   <SearchAndSelect
     v-model:searchTerm="searchTerm"
-    v-model:selections="selections"
     :search-results="datasets"
     :selected-results="props.selectedResults"
     :search-result-count="totalResultCount"
-    :count-label="countLabel"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
     @scroll-end="loadNextPage"
@@ -59,8 +57,6 @@ const props = defineProps({
 
 const breakpoint = useBreakpoint();
 
-const selections = ref([]);
-
 const page = ref(1);
 const skip = computed(() => {
   return PAGE_SIZE * (page.value - 1);
@@ -69,13 +65,6 @@ const datasets = ref([]);
 const totalResultCount = ref(0);
 
 const searchTerm = ref("");
-
-const countLabel = computed(() => {
-  return `Showing ${datasets.value.length} of
-                      ${totalResultCount.value}
-                      ${searchTerm.value !== "" ? "filtered " : ""}
-                      results`;
-});
 
 const loadNextPage = () => {
   page.value += 1; // increase page value for offset recalculation
@@ -172,12 +161,11 @@ const batchingQuery = computed(() => {
 });
 
 const fetchQuery = computed(() => {
-  let ret = {
+  return {
     ...(searchTerm.value && { name: searchTerm.value }),
     ...filterQuery.value,
     ...batchingQuery.value,
   };
-  return ret;
 });
 
 const loadResults = () => {
@@ -187,18 +175,11 @@ const loadResults = () => {
   });
 };
 
-// resets search result selections
-// const resetSearchSelections = () => {
-//   searchResultSelections.value = [];
-// };
-
 watch([searchTerm, filterQuery], () => {
-  // debugger;
   resetSearchState();
 });
 
 const resetSearchState = () => {
-  // resetSearchSelections();
   // reset search results
   datasets.value = [];
   // reset page value
