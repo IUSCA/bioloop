@@ -227,11 +227,6 @@ router.get(
       },
     };
 
-    // console.log('datasetRetrievalQuery');
-    // console.dir(datasetRetrievalQuery, { depth: null });
-    // console.log('filterQuery');
-    // console.dir(filterQuery, { depth: null });
-
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
       prisma.dataset.count({ ...filterQuery }),

@@ -34,12 +34,9 @@ defineExpose({
   hide,
 });
 
-const modalSize = computed(() => {
-  if (breakpoint.xs || breakpoint.sm) {
-    return "medium";
-  }
-  return "large";
-});
+const modalSize = computed(() =>
+  breakpoint.xs || breakpoint.sm ? "medium" : "large",
+);
 
 const projectFormStore = useProjectFormStore();
 

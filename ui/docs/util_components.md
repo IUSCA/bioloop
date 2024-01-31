@@ -572,7 +572,7 @@ const selectedColumnsConfig = [searchColumnsConfig[0]];
 
 ### Notes
 
-Some props that can be either a string or a function. In such cases, if the prop is a function, it will be called with
+1. Some props that can be either a string or a function. In such cases, if the prop is a function, it will be called with
 the target argument, and return the result. If it is a string, the value of the property matching the path specified by
 the string is looked up in the target argument, and returned.
 

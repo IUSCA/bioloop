@@ -323,10 +323,9 @@ const ACTIONS_COLUMN_CONFIG = {
 };
 
 const _searchResultColumns = computed(() => {
-  let ret = props.searchResultColumns
+  return props.searchResultColumns
     .concat(ACTIONS_COLUMN_CONFIG)
     .map((e) => ({ ...e, template: templateName(e) }));
-  return ret;
 });
 
 const _selectedResultColumns = computed(() => {
@@ -337,11 +336,9 @@ const _selectedResultColumns = computed(() => {
 });
 
 const getIdentity = (result) => {
-  let ret =
-    typeof props.trackBy === "function"
-      ? props.trackBy(result)
-      : _.get(result, props.trackBy);
-  return ret;
+  return typeof props.trackBy === "function"
+    ? props.trackBy(result)
+    : _.get(result, props.trackBy);
 };
 
 /**
@@ -350,11 +347,11 @@ const getIdentity = (result) => {
  * @returns {boolean} whether or not the search result is selected
  */
 const isSelected = (result) => {
-  let ret =
+  return (
     props.selectedResults.findIndex((e) => {
       return getIdentity(e) === getIdentity(result);
-    }) > -1;
-  return ret;
+    }) > -1
+  );
 };
 
 /**
@@ -366,11 +363,9 @@ const isSelected = (result) => {
  * @returns {*} the formatted value of the search result
  */
 const fieldValue = (rowData, columnConfig) => {
-  let ret = columnConfig["formatFn"]
+  return columnConfig["formatFn"]
     ? columnConfig["formatFn"](rowData[columnConfig["key"]])
     : rowData[columnConfig["key"]];
-  // debugger;
-  return ret;
 };
 
 const templateName = (field) => `cell(${field["key"]})`;
