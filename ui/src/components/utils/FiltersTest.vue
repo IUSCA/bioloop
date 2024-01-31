@@ -1,24 +1,21 @@
 <template>
   <SearchAndSelect
-    placeholder="Test"
+    v-model:searchTerm="searchTerm"
+    :search-results="searchResults"
+    :selected-results="selectedResults"
+    :search-result-count="totalResultCount"
+    @scroll-end="loadNextPage"
     :search-result-columns="searchColumnsConfig"
     :selected-result-columns="selectedColumnsConfig"
-    :selected-results="selectedResults"
-    :fetch-fn="fetchFn"
-    search-field="text"
     track-by="text"
     @select="handleSelect"
     @remove="handleRemove"
-    results-by="currentResults"
-    count-by="totalResultCount"
-    :query="query"
     @reset="
       () => {
-        selectValue = '';
+        searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
+        selectValue = ''; // reset Filter
       }
     "
-    controls-margin="40px"
-    controls-height="100px"
   >
     <template #filters>
       <div class="max-w-xs">
@@ -36,14 +33,22 @@
 <script setup>
 import _ from "lodash";
 
-const selectedResults = ref([]);
+const PAGE_SIZE = 10;
 
 const selectValue = ref("");
 const selectOptions = ref([1, 2, 3]);
 
-const query = computed(() => ({
-  other: selectValue.value,
-}));
+const selectedResults = ref([]);
+const searchResults = ref([]);
+
+const page = ref(1);
+const skip = computed(() => {
+  return PAGE_SIZE * (page.value - 1);
+});
+
+const totalResultCount = ref(0);
+
+const searchTerm = ref("");
 
 const handleSelect = (selections) => {
   selections.forEach((selection) => {
@@ -59,37 +64,90 @@ const handleRemove = (removals) => {
   );
 };
 
-const fetchFn = ({ text, other, offset, limit }) => {
+const loadNextPage = () => {
+  page.value += 1; // increase page value for offset recalculation
+  return loadResults();
+};
+
+const batchingQuery = computed(() => {
+  return {
+    offset: skip.value,
+    limit: PAGE_SIZE,
+  };
+});
+
+const filterQuery = computed(() => {
+  return selectValue.value
+    ? {
+        other: selectValue.value,
+      }
+    : undefined;
+});
+
+const fetchQuery = computed(() => {
+  return {
+    ...(searchTerm.value && { text: searchTerm.value }),
+    ...filterQuery.value,
+    ...batchingQuery.value,
+  };
+});
+
+const loadResults = () => {
+  return fetchFn(fetchQuery.value).then((res) => {
+    searchResults.value = searchResults.value.concat(res.currentResults);
+    totalResultCount.value = res.totalResultCount;
+  });
+};
+
+watch([searchTerm, filterQuery], () => {
+  resetSearchState();
+});
+
+const resetSearchState = () => {
+  // reset search results
+  searchResults.value = [];
+  // reset page value
+  page.value = 1;
+  // load initial set of search results
+  loadResults();
+};
+
+onMounted(() => {
+  loadResults();
+});
+
+const fetchFn = ({ text, offset, limit, other }) => {
   return new Promise((resolve) => {
     resolve({
-      data: {
-        currentResults: mockResults(offset, offset + limit, text, other),
-        totalResultCount: 50,
-      },
+      currentResults: mockResults(offset, offset + limit, text, other),
+      totalResultCount: 50,
     });
   });
 };
 
-const mockRow = (i, searchTerm, dropdownVal) => {
+const mockRow = (i, searchTerm, filterValue) => {
   const filterSuffix = (searchTerm, dropdownVal) => {
     return (
       (searchTerm ? `, for keyword '${searchTerm}'` : "") +
-      (dropdownVal ? `, dropdown ${dropdownVal}` : "")
+      (dropdownVal
+        ? `, ${searchTerm ? "and" : "for"} dropdown ${dropdownVal}`
+        : "")
     );
   };
 
-  let text = (i) => `Result ${i + 1}` + filterSuffix(searchTerm, dropdownVal);
+  let text = (i) => `Result ${i + 1}` + filterSuffix(searchTerm, filterValue);
 
   const other = (i) =>
-    `Other val for result ${i + 1}` + filterSuffix(searchTerm, dropdownVal);
+    `Other val for result ${i + 1}` + filterSuffix(searchTerm, filterValue);
 
   return {
     text: text(i),
     other: other(i),
   };
 };
-const mockResults = (start, end, searchTerm, dropdownVal) => {
-  return _.range(start, end).map((i) => mockRow(i, searchTerm, dropdownVal));
+
+const mockResults = (start, end, searchTerm, filterValue) => {
+  return _.range(start, end).map((i) => mockRow(i, searchTerm, filterValue));
 };
 
 const searchColumnsConfig = [
