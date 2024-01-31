@@ -1,5 +1,5 @@
 <template>
-  <AdvancedSearch
+  <SearchAndSelect
     placeholder="Test"
     :search-result-columns="searchColumnsConfig"
     :selected-result-columns="selectedColumnsConfig"
@@ -30,7 +30,7 @@
         />
       </div>
     </template>
-  </AdvancedSearch>
+  </SearchAndSelect>
 </template>
 
 <script setup>

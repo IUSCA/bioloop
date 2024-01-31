@@ -1,5 +1,5 @@
 <template>
-  <AdvancedSearch
+  <SearchAndSelect
     v-model:searchTerm="searchTerm"
     v-model:selections="selections"
     :search-results="datasets"
@@ -38,7 +38,7 @@
         :show-icon="!(breakpoint.sm || breakpoint.xs)"
       />
     </template>
-  </AdvancedSearch>
+  </SearchAndSelect>
 </template>
 
 <script setup>

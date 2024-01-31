@@ -241,7 +241,7 @@ Options can be formatted via the `filtered` slot.
 
 ## Advanced Search
 
-The `AdvancedSearch` widget offers these features:
+The `SearchAndSelect` widget offers these features:
 
 1. Searching for entities
 2. Applying additional filters for the search
@@ -256,7 +256,7 @@ The `AdvancedSearch` widget offers these features:
 ```html
 
 <template>
-  <AdvancedSearch
+  <SearchAndSelect
     :search-result-columns="searchColumnsConfig"
     :selected-result-columns="selectedColumnsConfig"
     :selected-results="selectedResults"
@@ -346,7 +346,7 @@ its filters.
 ```html
 
 <template>
-  <AdvancedSearch
+  <SearchAndSelect
     :search-result-columns="searchColumnsConfig"
     :selected-result-columns="selectedColumnsConfig"
     :selected-results="selectedResults"
@@ -376,7 +376,7 @@ its filters.
         />
       </div>
     </template>
-  </AdvancedSearch>
+  </SearchAndSelect>
 </template>
 
 <script setup>
@@ -470,7 +470,7 @@ The below example formats the first column, and embeds the second column inside 
 ```html
 
 <template>
-  <AdvancedSearch
+  <SearchAndSelect
     :search-result-columns="searchColumnsConfig"
     :selected-result-columns="selectedColumnsConfig"
     :selected-results="selectedResults"
@@ -485,7 +485,7 @@ The below example formats the first column, and embeds the second column inside 
     <template #other="slotProps">
       <va-chip>{{ slotProps["value"] }}</va-chip>
     </template>
-  </AdvancedSearch>
+  </SearchAndSelect>
 </template>
 
 <script setup>
