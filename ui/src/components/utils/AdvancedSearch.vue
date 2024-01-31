@@ -87,6 +87,7 @@
             :offset="0"
           >
             <va-data-table
+              class="results-table"
               v-model="searchResultSelections"
               :items="props.searchResults"
               :columns="_searchResultColumns"
@@ -181,6 +182,7 @@
         <!-- Selected Results table -->
         <div class="overflow-y-auto selected-table">
           <va-data-table
+            class="results-table"
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
             :items="props.selectedResults"
@@ -407,9 +409,9 @@ const addOrRemove = (rowData) => {
   --va-data-table-thead-background: var(--va-background-secondary);
   --va-data-table-tfoot-background: var(--va-background-secondary);
 
-  //.test-table {
-  //  --va-data-table-cell-padding: 3px;
-  //}
+  .results-table {
+    --va-data-table-cell-padding: 3px;
+  }
 
   .icon {
     color: var(--va-secondary);
