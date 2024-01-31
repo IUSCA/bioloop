@@ -47,7 +47,7 @@
 
           <div class="flex gap-2 flex-wrap">
             <!-- Add Selected -->
-            <div class="flex flex-auto gap-2 items-center">
+            <div class="flex gap-2 items-center">
               <va-button
                 class="flex-none"
                 preset="secondary"
@@ -70,6 +70,8 @@
                 }}
               </va-button>
             </div>
+
+            <va-chip outline>{{ props.countLabel }}</va-chip>
           </div>
         </div>
 
@@ -82,10 +84,8 @@
               props.searchResults.length === props.searchResultCount ||
               props.searchResults.length < props.pageSizeSearch
             "
+            :offset="0"
           >
-            <!--                          height="320px"-->
-
-            <!--            ref="infiniteScrollTarget_search"-->
             <va-data-table
               v-model="searchResultSelections"
               :items="props.searchResults"
@@ -93,14 +93,6 @@
               selectable
               select-mode="multiple"
             >
-              <template #headerPrepend>
-                <tr class="overflow-hidden">
-                  <th colspan="6">
-                    <span class="selected-count">{{ props.countLabel }} </span>
-                  </th>
-                </tr>
-              </template>
-
               <!-- dynamically generated templates for displaying columns of the search results table -->
               <template
                 v-for="(templateName, colIndex) in _searchResultColumns
@@ -155,8 +147,8 @@
             {{ props.selectedLabel }}
           </div>
 
-          <div class="flex gap-2 items-center">
-            <div class="flex gap-2 flex-auto items-center">
+          <div class="flex gap-2 flex-wrap">
+            <div class="flex gap-2 items-center">
               <va-button
                 class="flex-none"
                 preset="secondary"
@@ -179,6 +171,10 @@
                 }}
               </va-button>
             </div>
+
+            <va-chip outline>
+              {{ props.selectedResults.length }} results
+            </va-chip>
           </div>
         </div>
 
@@ -193,16 +189,6 @@
             selectable
             select-mode="multiple"
           >
-            <template #headerPrepend>
-              <tr class="overflow-hidden">
-                <th colspan="6">
-                  <span class="selected-count">
-                    {{ props.selectedResults.length }} results
-                  </span>
-                </th>
-              </tr>
-            </template>
-
             <!-- dynamically generated templates for displaying columns of the selected results table  -->
             <template
               v-for="(templateName, colIndex) in _selectedResultColumns
