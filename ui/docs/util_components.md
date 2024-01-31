@@ -596,7 +596,7 @@ the string is looked up in the target argument, and returned.
   number of results in the current batch)
 - `searchTerm`: String - The search term to be used for performing the search. Client provides this as a component v-model, via `v-model:searchTerm`.
 - `trackBy`: String | Function - Used to uniquely identity a result. Defaults to "id".
-- `pageSizeSearch`: Number - the number of results to be fetched in one batch. Defaults to 5.
+- `pageSizeSearch`: Number - the number of results to be fetched in one batch. Defaults to 10.
 - `controlsMargin`: String - margin between the controls and the tables
 - `controlsHeight`: String - height of the controls container element
 
@@ -610,10 +610,12 @@ the string is looked up in the target argument, and returned.
 
 Events
 
-- `search` - called when a list of elements are selected, with the list of selected elements provided as an argument.
-- `remove` - called when a list of elements are unselected, with the list of unselected elements provided as an
+- `search` - emitted when a list of elements are selected, with the list of selected elements provided as an argument.
+- `remove` - emitted when a list of elements are unselected, with the list of unselected elements provided as an
   argument.
-- `reset` - called when the search controls are reset
+- `reset` - emitted when the search controls are reset
+- `update:searchTerm` - emitted when the `searchTerm` v-model is to be updated
+- `scroll-end` - emitted when user scrolls to the end of the current batch of results
 
 ## Maybe
 
