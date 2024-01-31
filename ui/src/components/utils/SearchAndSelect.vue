@@ -17,26 +17,27 @@
               "
               :placeholder="props.placeholder || 'Type to search'"
               class="flex-auto"
+              clearable
             >
               <!-- Search icon -->
               <template #prependInner>
-                <va-icon name="search" class="icon" />
+                <va-icon class="text-xl" name="search" />
               </template>
-              <!-- Clear button -->
-              <template #appendInner>
-                <va-popover message="Reset Filters">
-                  <va-button
-                    preset="plain"
-                    color="secondary"
-                    icon="highlight_off"
-                    @click="
-                      () => {
-                        $emit('reset');
-                      }
-                    "
-                  />
-                </va-popover>
-              </template>
+              <!--              &lt;!&ndash; Clear button &ndash;&gt;-->
+              <!--              <template #appendInner>-->
+              <!--                <va-popover message="Reset Filters">-->
+              <!--                  <va-button-->
+              <!--                    preset="plain"-->
+              <!--                    color="secondary"-->
+              <!--                    icon="highlight_off"-->
+              <!--                    @click="-->
+              <!--                      () => {-->
+              <!--                        $emit('reset');-->
+              <!--                      }-->
+              <!--                    "-->
+              <!--                  />-->
+              <!--                </va-popover>-->
+              <!--              </template>-->
             </va-input>
 
             <!-- Search filters -->
