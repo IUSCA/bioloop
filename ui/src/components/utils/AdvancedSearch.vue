@@ -83,18 +83,20 @@
               props.searchResults.length < props.pageSizeSearch
             "
           >
+            <!--                          height="320px"-->
+
+            <!--            ref="infiniteScrollTarget_search"-->
             <va-data-table
               v-model="searchResultSelections"
               :items="props.searchResults"
               :columns="_searchResultColumns"
               selectable
               select-mode="multiple"
-              sticky-header
             >
               <template #headerPrepend>
-                <tr>
-                  <th class="overflow-hidden" colspan="6">
-                    <span class="selected-count">{{ props.countLabel }}</span>
+                <tr class="overflow-hidden">
+                  <th colspan="6">
+                    <span class="selected-count">{{ props.countLabel }} </span>
                   </th>
                 </tr>
               </template>
@@ -181,7 +183,7 @@
         </div>
 
         <!-- Selected Results table -->
-        <div class="overflow-y-auto h-80">
+        <div class="overflow-y-auto selected-table">
           <va-data-table
             v-model="selectedResultSelections"
             v-if="props.selectedResults.length > 0"
@@ -190,13 +192,12 @@
             virtual-scroller
             selectable
             select-mode="multiple"
-            sticky-header
           >
             <template #headerPrepend>
               <tr class="overflow-hidden">
                 <th colspan="6">
                   <span class="selected-count">
-                    Selected {{ props.selectedResults.length }} results
+                    {{ props.selectedResults.length }} results
                   </span>
                 </th>
               </tr>
@@ -411,7 +412,7 @@ const addOrRemove = (rowData) => {
     emit("remove", [rowData]);
   }
   resetSearchSelections();
-  // resetSelectedSelections();
+  resetSelectedSelections();
 };
 </script>
 
@@ -419,6 +420,10 @@ const addOrRemove = (rowData) => {
 .search {
   --va-data-table-thead-background: var(--va-background-secondary);
   --va-data-table-tfoot-background: var(--va-background-secondary);
+
+  //.test-table {
+  //  --va-data-table-cell-padding: 3px;
+  //}
 
   .icon {
     color: var(--va-secondary);
@@ -434,6 +439,14 @@ const addOrRemove = (rowData) => {
 
   .--controls-height {
     height: var(--controls-height);
+  }
+
+  .search-table {
+    height: 320px;
+  }
+
+  .selected-table {
+    height: 320px;
   }
 }
 </style>
