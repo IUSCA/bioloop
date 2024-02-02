@@ -22,7 +22,7 @@ pids
 .pnpm-store
 
 # MacOS metadata file
-.DS_Store
+.DS_store
 
 # keys
 keys/*.pub
