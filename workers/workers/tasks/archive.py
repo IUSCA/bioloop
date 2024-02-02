@@ -77,6 +77,7 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
+        print("deleting local bundle")
         bundle.unlink()
 
     matching_bundles = api.get_bundle(name=bundle_attrs['name'], checksum=bundle_attrs['md5'])
