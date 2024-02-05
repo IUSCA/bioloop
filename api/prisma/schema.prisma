@@ -137,6 +137,7 @@ model user {
   login          user_login?
   accesses       data_access_log[]
   stage_requests stage_request_log[]
+  about_edits    about[]
 }
 
 model user_password {
@@ -276,6 +277,15 @@ model worker_process {
   start_time  DateTime @default(now()) @db.Timestamp(6)
   hostname    String
   logs        log[]
+}
+
+model about {
+  id Int @id @default(autoincrement())
+  version Int @default(autoincrement())
+  text String
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  created_by user @relation(fields: [created_by_id], references: [id])
+  created_by_id Int
 }
 
 enum access_type {

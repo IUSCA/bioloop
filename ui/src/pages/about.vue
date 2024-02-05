@@ -10,49 +10,47 @@
     </div> -->
     <!--  -->
 
-    <div class="">
-      <va-card>
-        <va-card-content>
-          <div class="p-3">
-            <div class="text-lg mb-3.5">
-              <p class="max-w-max">
-                {{ config.appTitle }} is a service of the Indiana University
-                <a href="https://sca.iu.edu" class="footer-link">
-                  Scalable Compute Archive (IU SCA)
-                </a>
-                group.
-              </p>
-            </div>
+    <va-card>
+      <va-card-content>
+        <div class="p-3">
+          <span v-html="aboutHTML"></span>
+        </div>
+      </va-card-content>
+    </va-card>
 
-            <div class="text-lg">
-              This instance of
-              <a href="https://github.com/IUSCA/bioloop">Bioloop</a> is being
-              run by:
-            </div>
-            <div class="text-lg">
-              For questions or support, please contact the primary operator:
-            </div>
-            <div class="text-lg">
-              Bioloop is a web-based portal to simplify the management of
-              large-scale datasets shared among research teams in scientific
-              domains. This platform optimizes data handling by effectively
-              utilizing both cold and hot storage solutions, like tape and disk
-              storage, to reduce overall storage costs.
-            </div>
-          </div>
-        </va-card-content>
-      </va-card>
-    </div>
+    <va-button class="flex-none" @click="showModal = true">Edit</va-button>
+    <va-modal v-model="showModal" ok-text="Save">
+      <div class="flex gap-2">
+        <va-textarea class="flex-1" v-model="newText"></va-textarea>
+        <va-textarea class="flex-1" />
+      </div>
+    </va-modal>
   </div>
 </template>
 
 <script setup>
 import { useNavStore } from "@/stores/nav";
-import config from "@/config";
+import aboutService from "@/services/about";
+import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 
 const nav = useNavStore();
-
 nav.setNavItems([], false);
+
+const showModal = ref(false);
+const newText = ref("");
+const currentText = ref("");
+const aboutRecords = ref([]);
+
+const aboutHTML = computed(() => {
+  return marked.parse(currentText.value);
+});
+
+onMounted(() => {
+  aboutService.getAll().then((res) => {
+    currentText.value = res.data[res.data.length - 1].text;
+    aboutRecords.value = res.data;
+  });
+});
 </script>
 
 <style scoped>
