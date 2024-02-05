@@ -1,5 +1,5 @@
 <template>
-  <span>
+  <span class="number-transition">
     {{ number_formatter.format(current.toFixed(0)) }}
   </span>
 </template>
@@ -42,22 +42,40 @@ const current = ref(0);
 debouncedWatch(
   () => props.target,
   (_target) => {
+    // console.log("target", _target);
     const target = Number(_target) || 0;
     const diff = target - current.value;
+    if (diff === 0) {
+      return;
+    }
     let step = diff / props.iterations;
 
     let count = 0;
-    const { pause } = useIntervalFn(() => {
-      count += 1;
-      current.value = current.value + step;
-      if (count >= props.iterations) {
-        pause();
-        current.value = target;
-      }
-    }, props.duration);
+    const { pause } = useIntervalFn(
+      () => {
+        count += 1;
+        current.value = current.value + step;
+        if (count >= props.iterations) {
+          pause();
+          current.value = target;
+        }
+      },
+      props.duration,
+      { immediate: true },
+    );
   },
   { debounce: props.debounce, immediate: true },
 );
+
+// watch(
+//   current,
+//   (value) => {
+//     console.log("current", value);
+//   },
+//   {
+//     immediate: true,
+//   },
+// );
 </script>
 
 <style scoped>
