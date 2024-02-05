@@ -13,16 +13,19 @@
     <va-card>
       <va-card-content>
         <div class="p-3">
-          <span v-html="aboutHTML"></span>
+          <span v-html="currentAboutHTML"></span>
         </div>
       </va-card-content>
     </va-card>
 
     <va-button class="flex-none" @click="showModal = true">Edit</va-button>
     <va-modal v-model="showModal" ok-text="Save">
+      <va-form ref="aboutForm"></va-form>
       <div class="flex gap-2">
-        <va-textarea class="flex-1" v-model="newText"></va-textarea>
-        <va-textarea class="flex-1" />
+        <va-textarea class="flex-1" v-model="updatedText" :rules></va-textarea>
+        <va-divider vertical />
+        <!--        <va-textarea class="flex-1" v-model="updatedText"></va-textarea>-->
+        <span class="flex-1" v-html="updatedAboutHTML"></span>
       </div>
     </va-modal>
   </div>
@@ -32,22 +35,33 @@
 import { useNavStore } from "@/stores/nav";
 import aboutService from "@/services/about";
 import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
+import { useForm } from "vuestic-ui";
+import DOMPurify from "dompurify";
 
 const nav = useNavStore();
 nav.setNavItems([], false);
 
+useForm("aboutForm");
+
 const showModal = ref(false);
-const newText = ref("");
 const currentText = ref("");
+const updatedText = ref("");
 const aboutRecords = ref([]);
 
-const aboutHTML = computed(() => {
+const currentAboutHTML = computed(() => {
   return marked.parse(currentText.value);
+});
+const updatedAboutHTML = computed(() => {
+  let ret = DOMPurify.sanitize(marked.parse(updatedText.value));
+  // debugger;
+  return ret;
 });
 
 onMounted(() => {
   aboutService.getAll().then((res) => {
-    currentText.value = res.data[res.data.length - 1].text;
+    const latestAboutText = res.data[res.data.length - 1].text;
+    currentText.value = latestAboutText;
+    updatedText.value = latestAboutText;
     aboutRecords.value = res.data;
   });
 });
