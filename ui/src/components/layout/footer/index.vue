@@ -10,7 +10,7 @@
     <va-divider />
 
     <div class="flex flex-wrap mt-3.5 gap-y-3">
-      <div class="text-center">
+      <div class="flex-auto text-left">
         {{ config.appTitle }} is a service of the Indiana University
 
         <a href="https://sca.iu.edu" class="footer-link">

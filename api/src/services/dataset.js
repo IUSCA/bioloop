@@ -484,7 +484,6 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
-
   create_filetree,
   has_dataset_assoc,
   files_ls,
