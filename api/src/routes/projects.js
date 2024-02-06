@@ -1,7 +1,9 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-const { body } = require('express-validator');
+const {
+  query, body, param,
+} = require('express-validator');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
@@ -9,19 +11,24 @@ const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
+const datasetService = require('../services/dataset');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const INCLUDE_USERS_DATASETS_CONTACTS = {
-  users: {
+const build_include_object = ({
+  include_users = true,
+  include_datasets = true,
+  include_contacts = true,
+} = {}) => _.omitBy(_.isUndefined)({
+  users: include_users ? {
     select: {
       user: true,
       assigned_at: true,
     },
-  },
-  datasets: {
+  } : undefined,
+  datasets: include_datasets ? {
     select: {
       dataset: {
         include: {
@@ -34,14 +41,14 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
       },
       assigned_at: true,
     },
-  },
-  contacts: {
+  } : undefined,
+  contacts: include_contacts ? {
     select: {
       contact: true,
       assigned_at: true,
     },
-  },
-};
+  } : undefined,
+});
 
 // router.get(
 //   '/:username/:id/slug',
@@ -64,7 +71,7 @@ router.get(
     // #swagger.description = admin and operator roles are allowed and user role is forbidden
     const projects = await prisma.project.findMany({
       where: {},
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     res.json(projects);
   }),
@@ -73,10 +80,15 @@ router.get(
 router.get(
   '/:id',
   isPermittedTo('read'),
+  validate([
+    query('include_datasets').toBoolean().optional().default(true),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project irrespective of user association.
     // #swagger.description = admin and operator roles are allowed and user role is forbidden
+    const { include_datasets } = req.query;
+
     const project = await prisma.project.findFirstOrThrow({
       where: {
         OR: [
@@ -87,12 +99,12 @@ router.get(
             slug: req.params.id,
           },
         ],
-      }, // filter by username
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      },
+      include: build_include_object({ include_datasets }),
     });
 
     // include workflow objects with dataset
-    const wfPromises = project.datasets.map(async (ds) => {
+    const wfPromises = (project.datasets || []).map(async (ds) => {
       const { dataset, assigned_at } = ds;
       if (dataset.workflows.length > 0) {
         return wfService.getAll({
@@ -120,6 +132,102 @@ router.get(
 );
 
 router.get(
+  '/:username/:id/datasets',
+  isPermittedTo('read', { checkOwnerShip: true }),
+  validate([
+    param('username').notEmpty().escape(),
+    query('staged').toBoolean().optional(),
+    query('limit').isInt().toInt().optional(),
+    query('offset').isInt().toInt().optional(),
+    query('name').notEmpty().escape().optional(),
+    query('sortBy').isObject().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const sortBy = req.query.sortBy || {};
+
+    const userQuery = {
+      some: {
+        user: {
+          username: req.params.username,
+        },
+      },
+    };
+
+    const query_obj = _.omitBy(_.isUndefined)({
+      projects: {
+        some: {
+          project: {
+            OR: [
+              {
+                id: req.params.id,
+              },
+              {
+                slug: req.params.id,
+              },
+            ],
+            users: userQuery,
+          },
+        },
+      },
+      name: req.query.name ? {
+        contains: req.query.name,
+        mode: 'insensitive', // case-insensitive search
+      } : undefined,
+      is_staged: req.query.staged,
+    });
+
+    const filterQuery = { where: query_obj };
+    const datasetRetrievalQuery = {
+      skip: req.query.offset,
+      take: req.query.limit,
+      ...filterQuery,
+      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
+      include: {
+        ...datasetService.INCLUDE_WORKFLOWS,
+        projects: { include: { project: true } },
+      },
+    };
+
+    const [datasets, count] = await prisma.$transaction([
+      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
+      prisma.dataset.count({ ...filterQuery }),
+    ]);
+
+    const project_datasets = datasets.map((d) => {
+      const project = d.projects.find((e) => e.project_id === req.params.id);
+      return {
+        project_id: req.params.id,
+        dataset_id: d.id,
+        dataset: d,
+        project,
+        assigned_at: project.assigned_at,
+      };
+    });
+
+    res.json({
+      metadata: { count },
+      datasets: project_datasets,
+    });
+  }),
+);
+
+const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
+  const nullable_order_by_fields = ['du_size', 'size'];
+
+  if (!field || !sortOrder) {
+    return {};
+  }
+  if (nullable_order_by_fields.includes(field)) {
+    return {
+      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
+    };
+  }
+  return {
+    [field]: sortOrder,
+  };
+};
+
+router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
@@ -138,7 +246,7 @@ router.get(
           },
         },
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     // don't know why projects.map(req.permission.filter) wouldn't work
     res.json(projects.map((p) => req.permission.filter(p)));
@@ -147,6 +255,9 @@ router.get(
 
 router.get(
   '/:username/:id',
+  validate([
+    query('include_datasets').toBoolean().optional().default(true),
+  ]),
   isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -154,6 +265,8 @@ router.get(
     /* #swagger.description = user role: can only see their project.
       operator, admin: can see anyone's project
     */
+    const { include_datasets } = req.query;
+
     const project = await prisma.project.findFirstOrThrow({
       where: {
         OR: [
@@ -172,7 +285,7 @@ router.get(
           },
         },
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object({ include_datasets }),
     });
 
     // include workflow objects with dataset
@@ -240,7 +353,7 @@ router.post(
 
     const project = await prisma.project.create({
       data,
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     res.json(project);
   }),
@@ -264,7 +377,7 @@ router.post(
       where: {
         id: req.params.src,
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     // get target projects
@@ -274,7 +387,7 @@ router.post(
           in: req.body.target_project_ids,
         },
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     // assemble all unique dataset_ids associated with the target projects
@@ -333,7 +446,7 @@ router.put(
       where: {
         id: req.params.id,
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     const cur_user_ids = project.users.map((obj) => obj.user.id);
@@ -480,7 +593,7 @@ router.patch(
       where: {
         id: req.params.id,
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     data.metadata = _.merge(projectToUpdate?.metadata)(data.metadata); // deep merge
@@ -498,7 +611,7 @@ router.patch(
         id: req.params.id,
       },
       data,
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     res.json(updatedProject);
   }),
