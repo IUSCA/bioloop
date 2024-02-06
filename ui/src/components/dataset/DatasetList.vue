@@ -20,7 +20,7 @@
 
       <!-- filter -->
       <div class="flex-none flex items-center justify-center">
-        <DatasetFiltersGroup @update="updateFiltersGroupQuery" />
+        <filters-group @update="updateFiltersGroupQuery"></filters-group>
       </div>
     </div>
 
