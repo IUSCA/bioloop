@@ -3,24 +3,24 @@ FROM node:19
 ARG APP_GID
 ARG APP_UID 
 
-# create scauser and sca group with the same ids as in the production VM.
-RUN groupadd -o --gid ${APP_GID} sca
-RUN useradd -ms /bin/bash --uid ${APP_UID} --gid ${APP_GID} scauser
+# create appuser and appgroup with the same ids as in the production VM.
+RUN groupadd -o --gid ${APP_GID} appgroup
+RUN useradd -ms /bin/bash --uid ${APP_UID} --gid ${APP_GID} appuser
 
 WORKDIR /opt/sca/app
-RUN chown -R scauser:sca /opt/sca/app
+RUN chown -R appuser:appgroup /opt/sca/app
 
 # execute below steps as
-USER scauser:sca
+USER appuser:appgroup
 
 # create node_modules directory before the external / docker volume mounts
 # otherwise docker daemon will attempt to create this directory and it will be owned by root:root.
 RUN mkdir /opt/sca/app/node_modules
 
 # setup for installing npm global packages as non-root user
-RUN npm config set prefix '/home/scauser/.local/'
-RUN mkdir -p /home/scauser/.local/bin
-ENV PATH="/home/scauser/.local/bin/:${PATH}"
+RUN npm config set prefix '/home/appuser/.local/'
+RUN mkdir -p /home/appuser/.local/bin
+ENV PATH="/home/appuser/.local/bin/:${PATH}"
 
 # install pnpm and install packages from pnpm-lock.yaml
 RUN npm install pm2 -g

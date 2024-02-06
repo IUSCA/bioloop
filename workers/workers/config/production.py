@@ -31,14 +31,4 @@ config = {
         'wait_between_stability_checks_seconds': 45
     },
     'service_user': 'scadev',
-    'celery': {
-        'queue': {
-            'username': 'celery_dev',
-            'url': 'commons3.sca.iu.edu:5672/celery_dev',
-        },
-        'mongo': {
-            'username': 'celery_dev',
-            'url': 'commons3.sca.iu.edu:27017/celery_dev?authSource=celery_dev',
-        }
-    }
 }

@@ -6,7 +6,11 @@ from dotenv import load_dotenv
 load_dotenv()  # take environment variables from .env.
 YEAR = datetime.datetime.now().year
 APP_API_TOKEN = os.environ['APP_API_TOKEN']
+QUEUE_URL = os.environ['QUEUE_URL']
+QUEUE_USER = os.environ['QUEUE_USER']
 QUEUE_PASSWORD = os.environ['QUEUE_PASS']
+MONGO_URL= os.environ['MONGO_URL']
+MONGO_USER = os.environ['MONGO_USER']
 MONGO_PASSWORD = os.environ['MONGO_PASS']
 ALIAS_SALT = os.environ['ALIAS_SALT']
 
@@ -108,13 +112,13 @@ config = {
     },
     'celery': {
         'queue': {
-            'url': 'localhost:5672/myvhost',
-            'username': 'user',
+            'url': QUEUE_URL,
+            'username': QUEUE_USER,
             'password': QUEUE_PASSWORD
         },
         'mongo': {
-            'url': 'localhost:27017/celery?authSource=admin',
-            'username': 'root',
+            'url': MONGO_URL,
+            'username': MONGO_USER,
             'password': MONGO_PASSWORD
         }
     },

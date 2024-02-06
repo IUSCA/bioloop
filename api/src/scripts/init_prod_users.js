@@ -45,15 +45,6 @@ async function main() {
   // Create default admins
   const admins = [
     {
-      name: 'Charles Brandt',
-      username: 'ccbrandt',
-    }, {
-      name: 'Deepak Duggirala',
-      username: 'deduggi',
-    }, {
-      name: 'Ray Perigo',
-      username: 'rperigo',
-    }, {
       name: 'svc_tasks',
       username: 'svc_tasks',
     },

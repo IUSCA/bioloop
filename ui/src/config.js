@@ -9,11 +9,10 @@ const exports = {
   appTitle: "BIOLOOP",
   contact: {
     app_admin: "admin@sca.iu.edu",
-    sca_admin: "sca-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
   paths: {
-    download: "/N/scratch/bioloop/production/download",
+    download: "/bioloop/production/download",
   },
   file_browser: {
     enable_downloads: true,
