@@ -23,9 +23,7 @@ export default defineConfig({
           { text: 'Auth', link: '/docs/ui/auth_explained' },
           { text: 'Util', link: '/docs/ui/util_components' },
         ] },
-        { text: 'Api', link: '/docs/api/' , items: [
-          { text: 'Examples', link: '/docs/api/api-examples' },
-        ]},
+        { text: 'Api', link: '/docs/api/' },
         { text: 'Worker', link: '/docs/worker/' },
         { text: 'Secure Download', link: '/docs/secure_download' },
         { text: 'Contributing', link: '/docs/pull_request_template' },

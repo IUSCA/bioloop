@@ -19,14 +19,14 @@ hero:
       link: https://github.com/IUSCA/bioloop
 
 features:
-  - title: Bioloop
-    details: Your Big Data solution for storage and delivery
-    link: /bioloop/
-  - title: Projects
-    details: Our track record.
-    link: /projects/
-  - title: People
-    details: Meet our team.
-    link: /people/
+  - title: Installation
+    details: Get Started with Bioloop
+    link: /docs/
+  - title: UI
+    details: Explore the features of our UI.
+    link: /docs/ui/
+  - title: API
+    details: The backend.
+    link: /docs/api/
 ---
 
