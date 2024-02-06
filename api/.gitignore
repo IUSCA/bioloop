@@ -21,9 +21,6 @@ pids
 .node_repl_history
 .pnpm-store
 
-# MacOS metadata file
-.DS_store
-
 # keys
 keys/*.pub
 keys/*.key
