@@ -72,7 +72,10 @@
             </div>
           </va-card-title>
           <va-card-content>
-            <ProjectDatasetsTable :project="project" />
+            <ProjectDatasetsTable
+              :datasets="project.datasets"
+              :project="project"
+            />
           </va-card-content>
         </va-card>
       </div>
@@ -170,9 +173,6 @@ const projectFormStore = useProjectFormStore();
 const nav = useNavStore();
 
 const project = ref({});
-const projectId = computed(() => {
-  return project.value?.id || toRef(() => props.projectId).value;
-});
 const data_loading = ref(false);
 
 watch(project, () => {
@@ -191,11 +191,8 @@ function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: projectId.value,
+      id: project.value?.id || props.projectId,
       forSelf: !auth.canOperate,
-      query: {
-        include_datasets: false,
-      },
     })
     .then((res) => {
       project.value = res.data;
@@ -209,9 +206,7 @@ function fetch_project() {
     });
 }
 
-onMounted(() => {
-  fetch_project();
-});
+fetch_project();
 
 const users = computed(() => {
   return (project.value.users || []).map((obj) => ({

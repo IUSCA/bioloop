@@ -50,7 +50,7 @@ ENTRYPOINT npm ci && npx prisma generate client && exec pm2-runtime ecosystem.co
 
 
 # exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM index.js
-# exec - replaces the current process with the spawned process -
+# exec - replaces the current process with the spawned process - 
 #      - This means /opt/sca/app/node_modules/.bin/nodemon will get the PID 1, and
 #      - will be able to receive UNIX signals (SIGTERM) and perform gracious shutdown of the server.
 #      - nodemon internally sends SIGTERM to the express server (index.js) which then waits for the existing connections to close before stopping the server.
