@@ -73,7 +73,6 @@ const loading = ref(false);
 const visible = ref(false);
 
 const updateDatasetsToAdd = (datasets) => {
-  // debugger;
   datasets.forEach((d) => {
     // filter out datasets that are already associated with the project, or are already selected for a new association
     if (
@@ -88,7 +87,6 @@ const updateDatasetsToAdd = (datasets) => {
 };
 
 const updateDatasetsToRemove = (datasets) => {
-  // debugger;
   datasets.forEach((d) => {
     if (!datasetsToRemove.value.find((ds) => ds.id === d.id)) {
       datasetsToRemove.value.push(d);

@@ -614,9 +614,6 @@ router.patch(
       },
     });
 
-    console.dir(create_data, { depth: null });
-    console.dir(delete_data, { depth: null });
-
     await prisma.$transaction([
       delete_assocs,
       add_assocs,

@@ -225,13 +225,6 @@ const users = computed(() => {
   }));
 });
 
-// const datasets = computed(() => {
-//   return (project.value.datasets || []).map((obj) => ({
-//     ...obj.dataset,
-//     assigned_at: obj.assigned_at,
-//   }));
-// });
-
 // edit modal code
 // template ref binding
 const editModal = ref(null);
@@ -280,8 +273,6 @@ function openUsersModal() {
 const datasetsModal = ref(null);
 
 function openDatasetsModal() {
-  // debugger;
-  // projectFormStore.setDatasets(datasets.value);
   datasetsModal.value.show();
 }
 

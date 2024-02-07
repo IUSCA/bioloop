@@ -157,20 +157,19 @@ import projectService from "@/services/projects";
 import { formatBytes } from "@/services/utils";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";
 
 const { colors } = useColors();
 const auth = useAuthStore();
-const projectFormStore = useProjectFormStore();
 
 const props = defineProps({
   project: {
     type: Object,
   },
   triggerDatasetsRetrieval: {
+    // If true, triggers datasets' re-retrieval
     type: Boolean,
     default: false,
   },
@@ -259,7 +258,6 @@ const fetch_project_datasets = () => {
 };
 
 watch(_triggerDatasetsRetrieval, () => {
-  // debugger;
   if (_triggerDatasetsRetrieval.value) {
     currentPageIndex.value = 1;
     fetch_project_datasets();
@@ -296,8 +294,7 @@ watch(datasets_retrieval_query, (newQuery, oldQuery) => {
 const rows = computed(() => {
   return Object.values(_datasets.value).map((ds) => ({
     ...ds,
-    // is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
-    is_staging_pending: [0, 1, 2, 3].includes(ds.id),
+    is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
   }));
 });
 
