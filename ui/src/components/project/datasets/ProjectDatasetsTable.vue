@@ -261,6 +261,7 @@ const fetch_project_datasets = () => {
 watch(_triggerDatasetsRetrieval, () => {
   // debugger;
   if (_triggerDatasetsRetrieval.value) {
+    currentPageIndex.value = 1;
     fetch_project_datasets();
   }
 });
@@ -296,7 +297,7 @@ const rows = computed(() => {
   return Object.values(_datasets.value).map((ds) => ({
     ...ds,
     // is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
-    is_staging_pending: true,
+    is_staging_pending: [0, 1, 2, 3].includes(ds.id),
   }));
 });
 
