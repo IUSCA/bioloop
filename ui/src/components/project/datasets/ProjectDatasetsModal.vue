@@ -19,6 +19,7 @@
         @select="(datasets) => updateDatasetsToAdd(datasets)"
         @remove="(datasets) => updateDatasetsToRemove(datasets)"
         :column-widths="columnWidths"
+        :project-id="props.id"
       />
     </va-inner-loading>
   </va-modal>

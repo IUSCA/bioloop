@@ -15,6 +15,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const projectService = require('../services/project');
 const authService = require('../services/auth');
 
 const isPermittedTo = accessControl('datasets');
@@ -198,9 +199,21 @@ router.get(
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
+    query('project_id').isString().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
+
+    if (req.query.project_id) {
+      const hasProjectAssociation = await projectService.has_project_assoc({
+        projectId: req.query.project_id,
+        userId: req.user.id,
+      });
+      if (!hasProjectAssociation) {
+        res.send([]);
+        return;
+      }
+    }
 
     const sortBy = req.query.sortBy || {};
 

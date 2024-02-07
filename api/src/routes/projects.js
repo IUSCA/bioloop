@@ -215,6 +215,17 @@ router.get(
   '/:id/datasets',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+
+    const hasProjectAssociation = await projectService.has_project_assoc({
+      projectId: req.params.id,
+      userId: req.user.id,
+    });
+    if (!hasProjectAssociation) {
+      res.send([]);
+      return;
+    }
+
     const query_obj = _.omitBy(_.isUndefined)({
       projects: {
         some: {
@@ -320,7 +331,7 @@ router.get(
     });
 
     // include workflow objects with dataset
-    const wfPromises = project.datasets.map(async (ds) => {
+    const wfPromises = (project.datasets || []).map(async (ds) => {
       const { dataset, assigned_at } = ds;
       if (dataset.workflows.length > 0) {
         return wfService.getAll({

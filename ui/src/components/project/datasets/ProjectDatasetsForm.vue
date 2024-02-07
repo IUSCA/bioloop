@@ -4,6 +4,7 @@
     @select="handleSelect"
     @remove="handleRemove"
     :column-widths="props.columnWidths"
+    :project-id="props.projectId"
   />
 </template>
 
@@ -11,6 +12,9 @@
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps({
+  projectId: {
+    type: String,
+  },
   selectedResults: {
     type: Array,
     default: () => [],
