@@ -211,6 +211,37 @@ router.get(
   }),
 );
 
+router.get(
+  '/:id/datasets',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const query_obj = _.omitBy(_.isUndefined)({
+      projects: {
+        some: {
+          project: {
+            OR: [
+              {
+                id: req.params.id,
+              },
+              {
+                slug: req.params.id,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const project_datasets = await prisma.dataset.findMany({
+      where: query_obj,
+    });
+
+    res.json({
+      datasets: project_datasets,
+    });
+  }),
+);
+
 const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
   const nullable_order_by_fields = ['du_size', 'size'];
 
@@ -529,9 +560,13 @@ router.put(
   }),
 );
 
-router.put(
+router.patch(
   '/:id/datasets',
   isPermittedTo('update'),
+  validate([
+    body('add_dataset_ids').isArray(),
+    body('remove_dataset_ids').isArray(),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
@@ -545,21 +580,31 @@ router.put(
       },
     });
 
-    // delete existing associations
-    const delete_assocs = prisma.project_dataset.deleteMany({
-      where: {
-        project_id: req.params.id,
-      },
-    });
+    const add_dataset_ids = req.body.add_dataset_ids || [];
+    const remove_dataset_ids = req.body.remove_dataset_ids || [];
 
-    const dataset_ids = req.body.dataset_ids || [];
-    const data = dataset_ids.map((dataset_id) => ({
+    const create_data = add_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
       dataset_id,
     }));
+    const delete_data = remove_dataset_ids.map((dataset_id) => ({
+      project_id: req.params.id,
+      dataset_id,
+    }));
+
+    // create new associations
     const add_assocs = prisma.project_dataset.createMany({
-      data,
+      data: create_data,
     });
+    // delete existing associations
+    const delete_assocs = prisma.project_dataset.deleteMany({
+      where: {
+        OR: delete_data,
+      },
+    });
+
+    console.dir(create_data, { depth: null });
+    console.dir(delete_data, { depth: null });
 
     await prisma.$transaction([
       delete_assocs,

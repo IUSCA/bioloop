@@ -157,26 +157,36 @@ import projectService from "@/services/projects";
 import { formatBytes } from "@/services/utils";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";
 
 const { colors } = useColors();
 const auth = useAuthStore();
+const projectFormStore = useProjectFormStore();
 
 const props = defineProps({
   project: {
     type: Object,
   },
+  triggerDatasetsRetrieval: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(["datasets-retrieved"]);
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const pageSize = ref(10);
 const total_results = ref(0);
 
+const _triggerDatasetsRetrieval = toRef(() => props.triggerDatasetsRetrieval);
 const projectIdRef = toRef(() => props.project.id);
 const loading = ref(false);
+
 const projectDatasets = ref([]);
 const _datasets = ref({});
 const filterInput = ref("");
@@ -237,15 +247,23 @@ const updateFiltersGroupQuery = (newVal) => {
 const fetch_project_datasets = () => {
   if (!props.project.id) return [];
   projectService
-    .getDatasets({
+    .getUserDatasets({
       id: props.project.id,
       params: datasets_retrieval_query.value,
     })
     .then((res) => {
       projectDatasets.value = res.data.datasets.map((d) => d.dataset);
       total_results.value = res.data.metadata.count;
+      emit("datasets-retrieved");
     });
 };
+
+watch(_triggerDatasetsRetrieval, () => {
+  // debugger;
+  if (_triggerDatasetsRetrieval.value) {
+    fetch_project_datasets();
+  }
+});
 
 // _datasets is a mapping of dataset_ids to dataset objects. While polling one or more datasets,
 // this object is updated with latest dataset values.
@@ -277,7 +295,8 @@ watch(datasets_retrieval_query, (newQuery, oldQuery) => {
 const rows = computed(() => {
   return Object.values(_datasets.value).map((ds) => ({
     ...ds,
-    is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
+    // is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
+    is_staging_pending: true,
   }));
 });
 

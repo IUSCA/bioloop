@@ -48,13 +48,42 @@ export const useProjectFormStore = defineStore("projectForm", {
       }, {});
     },
     addDataset(ds) {
+      debugger;
       if (!this.dataset_dict[ds.id]) {
         this.dataset_dict[ds.id] = ds;
       }
+
+      // if (!this.add_dataset_ids.includes(ds.id)) {
+      //   this.add_dataset_ids.push(ds.id);
+      // }
+      // if (this.remove_dataset_ids.includes(ds.id)) {
+      //   this.remove_dataset_ids.splice(
+      //     this.remove_dataset_ids.indexOf(ds.id),
+      //     1,
+      //   );
+      // }
+      debugger;
     },
     removeDataset(ds) {
+      debugger;
       delete this.dataset_dict[[ds.id]];
+
+      // if (!this.remove_dataset_ids.includes(ds.id)) {
+      //   this.remove_dataset_ids.push(ds.id);
+      // }
+      // if (this.add_dataset_ids.includes(ds.id)) {
+      //   this.add_dataset_ids.splice(this.add_dataset_ids.indexOf(ds.id), 1);
+      // }
+      //
+      // debugger;
     },
+    // setPaginatedDatasets(datasets) {
+    //   debugger;
+    //   this.paginated_datasets = datasets;
+    // },
+    // setPaginatedDatasetsTotalCount(total_count) {
+    //   this.paginated_datasets_total_count = total_count;
+    // },
     setDatasets(datasets) {
       this.dataset_dict = datasets.reduce((acc, ds) => {
         acc[ds.id] = ds;

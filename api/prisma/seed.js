@@ -152,11 +152,9 @@ async function main() {
     const bools = [true, false];
     datasets.push({
       id: i,
-      name: `Dataset_${type}_${i}`,
+      name: `${i}_Dataset`,
       type,
       archive_path: 'archive_path',
-      is_deleted: bools[Math.floor(Math.random() * 2)],
-      is_staged: bools[Math.floor(Math.random() * 2)],
       // workflows: { create: [{ id: '02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68' }] },
     });
   });
@@ -174,9 +172,9 @@ async function main() {
       dataset_id: i,
     });
   });
-  await prisma.project_dataset.createMany({
-    data: project_datasets,
-  });
+  // await prisma.project_dataset.createMany({
+  //   data: project_datasets,
+  // });
 
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;

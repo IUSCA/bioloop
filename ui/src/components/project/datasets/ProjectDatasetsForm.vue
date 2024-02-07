@@ -1,25 +1,30 @@
 <template>
-  <DatasetSelect
-    @select="handleSelect"
-    @remove="handleRemove"
-    :selected-results="projectFormStore.datasets"
-  />
+  <!--    @select="handleSelect"-->
+  <!--    @remove="handleRemove"-->
+  <DatasetSelect :selected-results="props.selectedResults" />
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
+// import { useProjectFormStore } from "@/stores/projects/projectForm";
 
-const projectFormStore = useProjectFormStore();
+const props = defineProps({
+  selectedResults: {
+    type: Array,
+    default: () => [],
+  },
+});
 
-function handleSelect(datasets) {
-  for (const ds of datasets) {
-    projectFormStore.addDataset(ds);
-  }
-}
+// const projectFormStore = useProjectFormStore();
 
-function handleRemove(datasets) {
-  for (const ds of datasets) {
-    projectFormStore.removeDataset(ds);
-  }
-}
+// function handleSelect(datasets) {
+//   for (const ds of datasets) {
+//     projectFormStore.addDataset(ds);
+//   }
+// }
+
+// function handleRemove(datasets) {
+//   for (const ds of datasets) {
+//     projectFormStore.removeDataset(ds);
+//   }
+// }
 </script>

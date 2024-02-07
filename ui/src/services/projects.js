@@ -81,17 +81,24 @@ class projectService {
       });
   }
 
-  getDatasets({ id, params }) {
+  getUserDatasets({ id, params }) {
     const username = auth.user.username;
     return api.get(`/projects/${username}/${id}/datasets`, {
       params,
     });
   }
 
-  setDatasets({ id, dataset_ids }) {
+  getDatasets({ id, params }) {
+    return api.get(`/projects/${id}/datasets`, {
+      params,
+    });
+  }
+
+  updateDatasets({ id, add_dataset_ids, remove_dataset_ids }) {
     return api
-      .put(`/projects/${id}/datasets`, {
-        dataset_ids,
+      .patch(`/projects/${id}/datasets`, {
+        add_dataset_ids,
+        remove_dataset_ids,
       })
       .catch((err) => {
         console.error(err);

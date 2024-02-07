@@ -72,7 +72,11 @@
             </div>
           </va-card-title>
           <va-card-content>
-            <ProjectDatasetsTable :project="project" />
+            <ProjectDatasetsTable
+              :project="project"
+              @datasets-retrieved="triggerDatasetsRetrieval = false"
+              :trigger-datasets-retrieval="triggerDatasetsRetrieval"
+            />
           </va-card-content>
         </va-card>
       </div>
@@ -174,6 +178,7 @@ const projectId = computed(() => {
   return project.value?.id || toRef(() => props.projectId).value;
 });
 const data_loading = ref(false);
+const triggerDatasetsRetrieval = ref(false);
 
 watch(project, () => {
   nav.setNavItems([
@@ -220,12 +225,12 @@ const users = computed(() => {
   }));
 });
 
-const datasets = computed(() => {
-  return (project.value.datasets || []).map((obj) => ({
-    ...obj.dataset,
-    assigned_at: obj.assigned_at,
-  }));
-});
+// const datasets = computed(() => {
+//   return (project.value.datasets || []).map((obj) => ({
+//     ...obj.dataset,
+//     assigned_at: obj.assigned_at,
+//   }));
+// });
 
 // edit modal code
 // template ref binding
@@ -248,6 +253,9 @@ function handleEditUpdate() {
       router.push({
         path: `/projects/${new_slug}`,
       });
+    } else {
+      // update prop which will trigger re-fetching of project-dataset associations
+      triggerDatasetsRetrieval.value = true;
     }
   });
 }
@@ -272,7 +280,8 @@ function openUsersModal() {
 const datasetsModal = ref(null);
 
 function openDatasetsModal() {
-  projectFormStore.setDatasets(datasets.value);
+  // debugger;
+  // projectFormStore.setDatasets(datasets.value);
   datasetsModal.value.show();
 }
 
