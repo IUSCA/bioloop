@@ -52,6 +52,8 @@ workers/venv/
 workers/venv/*
 workers/.env
 
+docs/.vitepress/cache/*
+
 app.pid
 
 qc
