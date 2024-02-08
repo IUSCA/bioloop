@@ -15,7 +15,7 @@ with Diagram("Architecture", show=False) as diag:
     ui - app_api
     app_reverse_proxy - ui
 
-  with Cluster("colo carbonate"):
+  with Cluster("worker server"):
     celery = Celery("Celery")
     workers = Python("Workers")
     file_server = Nginx("File Server")

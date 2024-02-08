@@ -9,7 +9,6 @@ const exports = {
   appTitle: "BIOLOOP",
   contact: {
     app_admin: "admin@sca.iu.edu",
-    sca_admin: "sca-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
   paths: {

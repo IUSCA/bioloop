@@ -4,8 +4,8 @@
   </div>
   <div class="va-text-secondary">
     If you feel that it's not right, please send us a message at
-    <a class="va-link" :href="`mailto:${config.contact.sca_admin}`">{{
-      config.contact.sca_admin
+    <a class="va-link" :href="`mailto:${config.contact.app_admin}`">{{
+      config.contact.app_admin
     }}</a>
   </div>
 </template>
