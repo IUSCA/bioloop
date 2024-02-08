@@ -5,10 +5,33 @@
   >
     <div class="flex flex-col gap-1">
       <va-checkbox
-        v-for="(filter, i) in checkboxFilters"
-        :key="i"
-        v-model="checkboxes[filter.field]"
-        :label="filter.label"
+        v-model="checkboxes.deleted"
+        label="Deleted"
+        @update:model-value="handle_filters"
+      />
+      <va-checkbox
+        v-model="checkboxes.saved"
+        label="Saved"
+        @update:model-value="handle_filters"
+      />
+      <va-checkbox
+        v-model="checkboxes.archived"
+        label="Archived"
+        @update:model-value="handle_filters"
+      />
+      <va-checkbox
+        v-model="checkboxes.staged"
+        label="Staged"
+        @update:model-value="handle_filters"
+      />
+      <va-checkbox
+        v-model="checkboxes.processed"
+        label="Processed"
+        @update:model-value="handle_filters"
+      />
+      <va-checkbox
+        v-model="checkboxes.unprocessed"
+        label="Unprocessed"
         @update:model-value="handle_filters"
       />
     </div>
@@ -18,51 +41,7 @@
 <script setup>
 import { lxor } from "@/services/utils";
 
-const props = defineProps({
-  filters: {
-    type: Array,
-    default: () => [],
-  },
-});
-
 const emit = defineEmits(["update"]);
-
-const filtersConfig = [
-  {
-    field: "deleted",
-    label: "Deleted",
-  },
-  {
-    field: "saved",
-    label: "Saved",
-  },
-  {
-    field: "archived",
-    label: "Archived",
-  },
-
-  {
-    field: "staged",
-    label: "Staged",
-  },
-  {
-    field: "processed",
-    label: "Processed",
-  },
-  {
-    field: "unprocessed",
-    label: "Unprocessed",
-  },
-];
-
-const checkboxFilters = computed(() => {
-  if (props.filters.length === 0) {
-    return filtersConfig;
-  }
-  return filtersConfig.filter((e) => {
-    return props.filters.includes(e.field);
-  });
-});
 
 const checkboxes = ref({
   deleted: false,

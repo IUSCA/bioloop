@@ -13,11 +13,5 @@
       "iss": "bioloop-dev.sca.iu.edu",
       "ttl_milliseconds": 3600000
     }
-  },
-  "oauth": {
-    "base_url": "https://oauth-dev.sca.iu.edu"
-  },
-  "download_server": {
-    "base_url": "https://bioloop-dev2.sca.iu.edu"
   }
 }

@@ -100,3 +100,4 @@ celery_worker.pid
 requirements.txt
 
 workers/scripts/get_size.py
+workers/config/production.py

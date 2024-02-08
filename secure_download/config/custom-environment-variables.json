@@ -1,0 +1,5 @@
+{
+  "auth": {
+    "jwks_uri": "JWKS_URI"
+  }
+}

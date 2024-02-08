@@ -1,6 +1,9 @@
+const path = require('path');
+
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
+
 const { normalize_name } = require('../src/services/project');
 const data = require('./seed_data/data');
 const { random_files } = require('./seed_data/random_paths');
@@ -9,6 +12,9 @@ const { generate_staged_logs } = require('./seed_data/staged_logs');
 const { generate_stage_request_logs } = require('./seed_data/stage_request_logs');
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
+const { readAdminsFromFile } = require('../src/utils');
+
+global.__basedir = path.join(__dirname, '..');
 
 const prisma = new PrismaClient();
 
@@ -85,7 +91,8 @@ async function main() {
   })));
 
   // Create default admins
-  const admin_data = insert_random_dates(data.admins);
+  const additional_admins = readAdminsFromFile();
+  const admin_data = insert_random_dates(data.admins.concat(additional_admins));
   const admin_promises = admin_data.map((admin) => prisma.user.upsert({
     where: { email: `${admin.username}@iu.edu` },
     update: {},
@@ -143,7 +150,6 @@ async function main() {
 
   await Promise.all(operator_promises);
 
-  await prisma.dataset.deleteMany();
   const datasetPromises = data.datasets.map((dataset) => {
     console.log(`Creating dataset ${dataset.name}..., id: ${dataset.id}`);
 

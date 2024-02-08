@@ -103,7 +103,7 @@ const _datasets = [
     du_size: 58097236036,
     size: 58097207364,
     description: null,
-    origin_path: '/N/scratch/scauser/test/PCM230327PL',
+    origin_path: '/origin/path/test/PCM230327PL',
     archive_path: 'archive/2023/PCM230327PL.tar',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
     metadata: {
@@ -120,7 +120,7 @@ const _datasets = [
     du_size: 2685335,
     size: 2648471,
     description: null,
-    origin_path: '/N/scratch/scauser/test/PCM230215_657496842_Aborted_WF',
+    origin_path: '/origin/path/test/PCM230215_657496842_Aborted_WF',
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
     metadata: {
@@ -139,7 +139,7 @@ const _datasets = [
     size: 137205924022,
     description: null,
     is_staged: true,
-    origin_path: '/N/scratch/scauser/test/PCM230306PL',
+    origin_path: '/origin/path/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
     metadata: {
@@ -157,7 +157,7 @@ const _datasets = [
     size: 87835338192,
     description: null,
     is_staged: true,
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
+    origin_path: '/origin/path/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
     metadata: {
       num_genome_files: 636,
@@ -173,7 +173,7 @@ const _datasets = [
     du_size: 357839228469,
     size: 357839175221,
     description: null,
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/PCM221205',
+    origin_path: '/origin/path/PCM221205',
     archive_path: 'archive/2023/PCM221205.tar',
     metadata: {
       num_genome_files: 93,
@@ -196,13 +196,13 @@ const _datasets = [
     id: 9,
     name: 'PCM230406',
     type: 'RAW_DATA',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230406',
+    origin_path: '/origin/path/data_products/PCM230406',
   },
   {
     id: 10,
     name: 'PCM230417',
     type: 'RAW_DATA',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230417',
+    origin_path: '/origin/path/data_products/PCM230417',
   },
 ];
 
@@ -211,7 +211,7 @@ const additional_datasets = [11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24,
     id,
     name: `PCM2304${id}_new`,
     type: 'RAW_DATA',
-    origin_path: `/N/project/DG_Multiple_Myeloma/share/data_products/PCM2304${id}`,
+    origin_path: `/origin/path/data_products/PCM2304${id}`,
   }));
 
 const datasets = _datasets.concat(additional_datasets);

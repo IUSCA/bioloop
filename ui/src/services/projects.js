@@ -16,11 +16,11 @@ class projectService {
     });
   }
 
-  getById({ id, forSelf, query }) {
+  getById({ id, forSelf }) {
     const username = auth.user.username;
     return forSelf
-      ? api.get(`/projects/${username}/${id}`, { params: query })
-      : api.get(`/projects/${id}`, { params: query });
+      ? api.get(`/projects/${username}/${id}`)
+      : api.get(`/projects/${id}`);
   }
 
   createProject({ project_data, dataset_ids, user_ids }) {
@@ -79,13 +79,6 @@ class projectService {
         toast.error("Failed to update project users");
         return Promise.reject(err);
       });
-  }
-
-  getDatasets({ id, params }) {
-    const username = auth.user.username;
-    return api.get(`/projects/${username}/${id}/datasets`, {
-      params,
-    });
   }
 
   setDatasets({ id, dataset_ids }) {
