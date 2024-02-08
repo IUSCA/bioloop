@@ -11,9 +11,6 @@ hero:
     light: /logo.svg
     alt: Bioloop
   actions:
-    - theme: brand
-      text: Docs
-      link: /docs/
     - theme: alt
       text: Github
       link: https://github.com/IUSCA/bioloop
@@ -21,12 +18,15 @@ hero:
 features:
   - title: Installation
     details: Get Started with Bioloop
-    link: /docs/
+    link: /install-docker
   - title: UI
     details: Explore the features of our UI.
-    link: /docs/ui/
+    link: /ui/
   - title: API
     details: The backend.
-    link: /docs/api/
+    link: /api/
 ---
+
+
+
 

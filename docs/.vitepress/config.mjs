@@ -9,24 +9,26 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Docs', link: '/docs/' },
+      { text: 'UI', link: '/ui/' },
+      { text: 'API', link: '/api/' },
+      { text: 'Workers', link: '/worker/' },
 
     ],
 
     sidebar: [
-      { text: 'Overview', link: '/docs/', items: [
+      { text: 'Overview', link: '/', items: [
         { text: 'Installation', items: [
-          {text: 'Docker', link: '/docs/install-docker', },
-          { text: 'Template', link: '/docs/template' }
+          {text: 'Docker', link: '/install-docker', },
+          { text: 'Template', link: '/template' }
         ] },
-        { text: 'Ui', link: '/docs/ui/', items: [
-          { text: 'Auth', link: '/docs/ui/auth_explained' },
-          { text: 'Util', link: '/docs/ui/util_components' },
+        { text: 'Ui', link: '/ui/', items: [
+          { text: 'Auth', link: '/ui/auth_explained' },
+          { text: 'Util', link: '/ui/util_components' },
         ] },
-        { text: 'Api', link: '/docs/api/' },
-        { text: 'Worker', link: '/docs/worker/' },
-        { text: 'Secure Download', link: '/docs/secure_download' },
-        { text: 'Contributing', link: '/docs/pull_request_template' },
+        { text: 'Api', link: '/api/' },
+        { text: 'Worker', link: '/worker/' },
+        { text: 'Secure Download', link: '/secure_download' },
+        { text: 'Contributing', link: '/pull_request_template' },
 
       ]}
     ],
