@@ -211,14 +211,11 @@ router.get(
           last_task_run: false,
           prev_task_runs: false,
           workflow_ids: ds.workflows.map((x) => x.id),
-        }).then((wf_res) => ({
-          dataset: Object.assign(ds, { workflows: wf_res.data.results }),
-        })).catch((error) => {
-          log_axios_error(error);
-          return {
-            dataset: Object.assign(ds, { workflows: [] }),
-          };
-        });
+        }).then((wf_res) => (Object.assign(ds, { workflows: wf_res.data.results })))
+          .catch((error) => {
+            log_axios_error(error);
+            return Object.assign(ds, { workflows: [] });
+          });
       }
       return ds;
     });
