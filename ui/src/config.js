@@ -12,7 +12,7 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    download: "/bioloop/production/download",
+    download: "/N/scratch/bioloop/production/download",
   },
   file_browser: {
     enable_downloads: true,
