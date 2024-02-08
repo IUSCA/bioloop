@@ -151,8 +151,6 @@ async function main() {
   await Promise.all(operator_promises);
 
   const datasetPromises = data.datasets.map((dataset) => {
-    console.log(`Creating dataset ${dataset.name}..., id: ${dataset.id}`);
-
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
       dataset_obj.workflows = {
@@ -167,6 +165,7 @@ async function main() {
       create: dataset_obj,
     });
   });
+  await prisma.dataset.deleteMany({});
   await Promise.all(datasetPromises);
 
   // create bundle data
