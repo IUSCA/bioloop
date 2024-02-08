@@ -1,4 +1,8 @@
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
+const { readAdminsFromFile } = require('../utils');
+
+global.__basedir = path.join(__dirname, '..', '..');
 
 const prisma = new PrismaClient();
 
@@ -43,26 +47,31 @@ async function main() {
   console.log(`created ${roles.length} roles`);
 
   // Create default admins
-  const admins = [
+  const _admins = [
     {
       name: 'svc_tasks',
       username: 'svc_tasks',
     },
   ];
 
-  const admin_promises = admins.map((admin) => prisma.user.upsert({
-    where: { email: `${admin.username}@iu.edu` },
-    update: {},
-    create: {
-      username: admin.username,
-      email: `${admin.username}@iu.edu`,
-      cas_id: admin.username,
-      name: admin.name,
-      user_role: {
-        create: [{ role_id: 1 }],
+  const additional_admins = readAdminsFromFile();
+
+  const admins = _admins.concat(additional_admins);
+
+  const admin_promises = admins
+    .map((admin) => prisma.user.upsert({
+      where: { email: `${admin.username}@iu.edu` },
+      update: {},
+      create: {
+        username: admin.username,
+        email: `${admin.username}@iu.edu`,
+        cas_id: admin.username,
+        name: admin.name,
+        user_role: {
+          create: [{ role_id: 1 }],
+        },
       },
-    },
-  }));
+    }));
 
   await Promise.all(admin_promises);
 

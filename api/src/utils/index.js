@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const _ = require('lodash/fp');
 
 function renameKey(oldKey, newKey) {
@@ -198,6 +200,32 @@ function numericStringsToNumbers(arr, numericStringFields = []) {
   })(arr);
 }
 
+function readAdminsFromFile() {
+  try {
+    const adminFile = path.join(global.__basedir, 'admins.json');
+
+    // check if additional admins file exists
+    const exists = fs.existsSync(adminFile, fs.constants.F_OK);
+
+    // read additional admins from file
+    if (exists) {
+      const admins_read = JSON.parse(fs.readFileSync(adminFile, 'utf8'));
+
+      // validate admins_read is an array
+      if (Array.isArray(admins_read)) {
+        return admins_read;
+      }
+      // eslint-disable-next-line no-console
+      console.log('admins.json is not an array. Skipping.');
+    }
+    return [];
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.log('Unable to read additional admins from file admins.json. Skipping.', e);
+    return [];
+  }
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -207,4 +235,5 @@ module.exports = {
   sanitize_timestamp,
   groupByAndAggregate,
   numericStringsToNumbers,
+  readAdminsFromFile,
 };

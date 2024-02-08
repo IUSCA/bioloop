@@ -5,9 +5,7 @@ from workers.config import config
 queue_url = config['celery']['queue']['url']
 queue_username = config['celery']['queue']['username']
 queue_password = config['celery']['queue']['password']
-mongo_url = config['celery']['mongo']['url']
-mongo_username = config['celery']['mongo']['username']
-mongo_password = config['celery']['mongo']['password']
+mongo_uri = config['celery']['mongo']['uri']
 
 # https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/rabbitmq.html
 broker_url = f'amqp://{queue_username}:{urllib.parse.quote(queue_password)}@{queue_url}'
@@ -19,7 +17,7 @@ broker_connection_retry_on_startup = True
 # result_backend = 'redis://localhost:6379/0'
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#conf-mongodb-result-backend
-result_backend = f'mongodb://{mongo_username}:{urllib.parse.quote(mongo_password)}@{mongo_url}'
+result_backend = mongo_uri
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#database-backend-settings
 # https://stackoverflow.com/questions/69952488/celery-task-result-in-postgres-database-is-in-byte-format
