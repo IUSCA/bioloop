@@ -126,9 +126,7 @@ function handleOk() {
 
 const fetchAssociatedDatasets = () => {
   projectService.getDatasets({ id: props.id }).then((res) => {
-    persistedDatasetAssociations.value = res.data.datasets.map(
-      (d) => d.dataset,
-    );
+    persistedDatasetAssociations.value = res.data.datasets;
   });
 };
 </script>

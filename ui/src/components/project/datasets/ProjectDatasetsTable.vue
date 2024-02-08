@@ -251,7 +251,7 @@ const fetch_project_datasets = () => {
       params: datasets_retrieval_query.value,
     })
     .then((res) => {
-      projectDatasets.value = res.data.datasets.map((d) => d.dataset);
+      projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
       emit("datasets-retrieved");
     });

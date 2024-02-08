@@ -195,7 +195,6 @@ router.get(
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
-        projects: { include: { project: true } },
       },
     };
 
@@ -204,20 +203,9 @@ router.get(
       prisma.dataset.count({ ...filterQuery }),
     ]);
 
-    const project_datasets = datasets.map((d) => {
-      const project = d.projects.find((e) => e.project_id === req.params.id);
-      return {
-        project_id: project.project_id,
-        dataset_id: d.id,
-        dataset: d,
-        project,
-        assigned_at: project.assigned_at,
-      };
-    });
-
     res.json({
       metadata: { count },
-      datasets: project_datasets,
+      datasets,
     });
   }),
 );
