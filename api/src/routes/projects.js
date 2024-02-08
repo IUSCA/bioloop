@@ -145,8 +145,6 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const sortBy = req.query.sortBy || {};
 
-    // console.dir(req.user, { depth: null });
-
     const query_obj = _.omitBy(_.isUndefined)({
       projects: {
         some: {
@@ -203,48 +201,6 @@ router.get(
     });
   }),
 );
-
-// router.get(
-//   '/:id/datasets',
-//   isPermittedTo('read'),
-//   asyncHandler(async (req, res, next) => {
-//     // #swagger.tags = ['Projects']
-//
-//     const hasProjectAssociation = await projectService.has_project_assoc({
-//       projectId: req.params.id,
-//       userId: req.user.id,
-//     });
-//     if (!hasProjectAssociation) {
-//       res.send([]);
-//       return;
-//     }
-//
-//     const query_obj = _.omitBy(_.isUndefined)({
-//       projects: {
-//         some: {
-//           project: {
-//             OR: [
-//               {
-//                 id: req.params.id,
-//               },
-//               {
-//                 slug: req.params.id,
-//               },
-//             ],
-//           },
-//         },
-//       },
-//     });
-//
-//     const project_datasets = await prisma.dataset.findMany({
-//       where: query_obj,
-//     });
-//
-//     res.json({
-//       datasets: project_datasets,
-//     });
-//   }),
-// );
 
 const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
   const nullable_order_by_fields = ['du_size', 'size'];
