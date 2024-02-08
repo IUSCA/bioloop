@@ -49,9 +49,6 @@ const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
-  projectId: {
-    type: String,
-  },
   selectedResults: {
     type: Array,
     default: () => [],
@@ -163,7 +160,6 @@ const fetchQuery = computed(() => {
     ...(searchTerm.value && { name: searchTerm.value }),
     ...filterQuery.value,
     ...batchingQuery.value,
-    project_id: props.projectId,
   };
 });
 

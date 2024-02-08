@@ -81,15 +81,9 @@ class projectService {
       });
   }
 
-  getUserDatasets({ id, params }) {
+  getDatasets({ id, params }) {
     const username = auth.user.username;
     return api.get(`/projects/${username}/${id}/datasets`, {
-      params,
-    });
-  }
-
-  getDatasets({ id, params }) {
-    return api.get(`/projects/${id}/datasets`, {
       params,
     });
   }

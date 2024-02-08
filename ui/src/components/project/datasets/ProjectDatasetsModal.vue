@@ -19,7 +19,6 @@
         @select="(datasets) => updateDatasetsToAdd(datasets)"
         @remove="(datasets) => updateDatasetsToRemove(datasets)"
         :column-widths="columnWidths"
-        :project-id="props.id"
       />
     </va-inner-loading>
   </va-modal>
@@ -117,7 +116,6 @@ function handleOk() {
   const remove_dataset_ids = datasetsToRemove.value.map(
     (dataset) => dataset.id,
   );
-  // debugger;
   projectService
     .updateDatasets({ id: props.id, add_dataset_ids, remove_dataset_ids })
     .finally(() => {
@@ -128,7 +126,9 @@ function handleOk() {
 
 const fetchAssociatedDatasets = () => {
   projectService.getDatasets({ id: props.id }).then((res) => {
-    persistedDatasetAssociations.value = res.data.datasets;
+    persistedDatasetAssociations.value = res.data.datasets.map(
+      (d) => d.dataset,
+    );
   });
 };
 </script>

@@ -17,7 +17,6 @@ class DatasetService {
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
-   * @param project_id If included, datasets will be returned only if user is associated to this project
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll({
@@ -30,7 +29,6 @@ class DatasetService {
     limit = null,
     offset = null,
     sortBy = null,
-    project_id = null,
   } = {}) {
     return api.get("/datasets", {
       params: {
@@ -43,7 +41,6 @@ class DatasetService {
         limit,
         offset,
         sortBy,
-        project_id,
       },
     });
   }

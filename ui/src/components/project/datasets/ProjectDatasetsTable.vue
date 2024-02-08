@@ -246,7 +246,7 @@ const updateFiltersGroupQuery = (newVal) => {
 const fetch_project_datasets = () => {
   if (!props.project.id) return [];
   projectService
-    .getUserDatasets({
+    .getDatasets({
       id: props.project.id,
       params: datasets_retrieval_query.value,
     })

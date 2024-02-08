@@ -76,20 +76,7 @@ async function generate_slug({ name, project_id }) {
   }
 }
 
-async function has_project_assoc({
-  projectId, userId,
-}) {
-  const projectUserAssociations = await prisma.project_user.findMany({
-    where: {
-      project_id: projectId,
-      user_id: userId,
-    },
-  });
-  return projectUserAssociations.length > 0;
-}
-
 module.exports = {
   normalize_name,
   generate_slug,
-  has_project_assoc,
 };

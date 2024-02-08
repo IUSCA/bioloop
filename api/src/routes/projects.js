@@ -145,13 +145,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const sortBy = req.query.sortBy || {};
 
-    const userQuery = {
-      some: {
-        user: {
-          username: req.params.username,
-        },
-      },
-    };
+    // console.dir(req.user, { depth: null });
 
     const query_obj = _.omitBy(_.isUndefined)({
       projects: {
@@ -165,7 +159,6 @@ router.get(
                 slug: req.params.id,
               },
             ],
-            users: userQuery,
           },
         },
       },
@@ -196,7 +189,7 @@ router.get(
     const project_datasets = datasets.map((d) => {
       const project = d.projects.find((e) => e.project_id === req.params.id);
       return {
-        project_id: req.params.id,
+        project_id: project.project_id,
         dataset_id: d.id,
         dataset: d,
         project,
@@ -211,47 +204,47 @@ router.get(
   }),
 );
 
-router.get(
-  '/:id/datasets',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Projects']
-
-    const hasProjectAssociation = await projectService.has_project_assoc({
-      projectId: req.params.id,
-      userId: req.user.id,
-    });
-    if (!hasProjectAssociation) {
-      res.send([]);
-      return;
-    }
-
-    const query_obj = _.omitBy(_.isUndefined)({
-      projects: {
-        some: {
-          project: {
-            OR: [
-              {
-                id: req.params.id,
-              },
-              {
-                slug: req.params.id,
-              },
-            ],
-          },
-        },
-      },
-    });
-
-    const project_datasets = await prisma.dataset.findMany({
-      where: query_obj,
-    });
-
-    res.json({
-      datasets: project_datasets,
-    });
-  }),
-);
+// router.get(
+//   '/:id/datasets',
+//   isPermittedTo('read'),
+//   asyncHandler(async (req, res, next) => {
+//     // #swagger.tags = ['Projects']
+//
+//     const hasProjectAssociation = await projectService.has_project_assoc({
+//       projectId: req.params.id,
+//       userId: req.user.id,
+//     });
+//     if (!hasProjectAssociation) {
+//       res.send([]);
+//       return;
+//     }
+//
+//     const query_obj = _.omitBy(_.isUndefined)({
+//       projects: {
+//         some: {
+//           project: {
+//             OR: [
+//               {
+//                 id: req.params.id,
+//               },
+//               {
+//                 slug: req.params.id,
+//               },
+//             ],
+//           },
+//         },
+//       },
+//     });
+//
+//     const project_datasets = await prisma.dataset.findMany({
+//       where: query_obj,
+//     });
+//
+//     res.json({
+//       datasets: project_datasets,
+//     });
+//   }),
+// );
 
 const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
   const nullable_order_by_fields = ['du_size', 'size'];
