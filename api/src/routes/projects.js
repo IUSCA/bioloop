@@ -145,7 +145,8 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
-    // #swagger.summary = get all datasets associated with a project
+    // #swagger.summary = get all datasets associated with a project, with optional params for
+    // filtering;
     /* #swagger.description = user role: can only see datasets if they have access to the project.
       operator, admin: can see any project's datasets
     */
