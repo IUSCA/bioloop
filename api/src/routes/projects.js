@@ -226,7 +226,7 @@ router.get(
 
     res.json({
       metadata: { count },
-      datasets_with_wfs,
+      datasets: datasets_with_wfs,
     });
   }),
 );
