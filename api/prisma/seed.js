@@ -1,6 +1,9 @@
+const path = require('path');
+
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
+
 const { normalize_name } = require('../src/services/project');
 const data = require('./seed_data/data');
 const { random_files } = require('./seed_data/random_paths');
@@ -9,6 +12,9 @@ const { generate_staged_logs } = require('./seed_data/staged_logs');
 const { generate_stage_request_logs } = require('./seed_data/stage_request_logs');
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
+const { readAdminsFromFile } = require('../src/utils');
+
+global.__basedir = path.join(__dirname, '..');
 
 const prisma = new PrismaClient();
 
@@ -85,7 +91,8 @@ async function main() {
   })));
 
   // Create default admins
-  const admin_data = insert_random_dates(data.admins);
+  const additional_admins = readAdminsFromFile();
+  const admin_data = insert_random_dates(data.admins.concat(additional_admins));
   const admin_promises = admin_data.map((admin) => prisma.user.upsert({
     where: { email: `${admin.username}@iu.edu` },
     update: {},
@@ -143,41 +150,6 @@ async function main() {
 
   await Promise.all(operator_promises);
 
-  const startIndex = 0;
-  const endIndex = 100;
-  const datasets = [];
-  const types = ['RAW_DATA', 'DATA_PRODUCT'];
-  _.range(startIndex, endIndex).forEach((i) => {
-    const type = types[Math.floor((Math.random() * 2))];
-    const bools = [true, false];
-    datasets.push({
-      id: i,
-      name: `Dataset_${type}_${i}`,
-      type,
-      archive_path: 'archive_path',
-      is_deleted: bools[Math.floor(Math.random() * 2)],
-      is_staged: bools[Math.floor(Math.random() * 2)],
-      // workflows: { create: [{ id: '02fc5cba-d4b8-4e74-8e0c-4e187c8e7f68' }] },
-    });
-  });
-
-  // console.log(datasets);
-  await prisma.dataset.deleteMany();
-  await prisma.dataset.createMany({
-    data: datasets,
-  });
-
-  const project_datasets = [];
-  _.range(startIndex, endIndex).forEach((i) => {
-    project_datasets.push({
-      project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-      dataset_id: i,
-    });
-  });
-  await prisma.project_dataset.createMany({
-    data: project_datasets,
-  });
-
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
@@ -185,12 +157,6 @@ async function main() {
         create: workflows.map((workflow_id) => ({ id: workflow_id })),
       };
     }
-
-    // if (dataset_obj.workflows) {
-    //   console.log('WORKFLOWS');
-    //   console.log(dataset_obj);
-    //   console.log(dataset_obj.workflows);
-    // }
     return prisma.dataset.upsert({
       where: {
         id: dataset_obj.id,

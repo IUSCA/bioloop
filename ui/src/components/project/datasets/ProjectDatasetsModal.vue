@@ -1,17 +1,15 @@
 <template>
   <va-modal
-    class="project-datasets-modal"
     v-model="visible"
     title="Manage Access"
     no-outside-dismiss
     fixed-layout
     @ok="handleOk"
     @close="hide"
-    :size="modalSize"
   >
     <va-inner-loading
       :loading="loading"
-      class="min-w-full sm:min-h-[50vh] sm:max-h-[65vh]"
+      class="lg:w-[720px] sm:min-h-[50vh] sm:max-h-[65vh]"
     >
       <ProjectDatasetsForm />
     </va-inner-loading>
@@ -21,9 +19,6 @@
 <script setup>
 import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
-import { useBreakpoint } from "vuestic-ui";
-
-const breakpoint = useBreakpoint();
 
 const props = defineProps(["id"]);
 const emit = defineEmits(["update"]);
@@ -33,10 +28,6 @@ defineExpose({
   show,
   hide,
 });
-
-const modalSize = computed(() =>
-  breakpoint.xs || breakpoint.sm ? "medium" : "large",
-);
 
 const projectFormStore = useProjectFormStore();
 
@@ -61,11 +52,3 @@ function handleOk() {
   });
 }
 </script>
-
-<style lang="scss">
-.project-datasets-modal {
-  .va-modal__dialog {
-    overflow: auto;
-  }
-}
-</style>
