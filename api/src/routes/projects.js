@@ -4,6 +4,7 @@ const _ = require('lodash/fp');
 const {
   query, body, param,
 } = require('express-validator');
+const createError = require('http-errors');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
@@ -143,6 +144,24 @@ router.get(
     query('sortBy').isObject().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = get all datasets associated with a project
+    /* #swagger.description = user role: can only see datasets if they have access to the project.
+      operator, admin: can see any project's datasets
+    */
+
+    const hasProjectAssociation = await projectService.has_project_assoc({
+      projectId: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (
+      req.user.roles.includes('user')
+        && !hasProjectAssociation
+    ) {
+      return next(createError(403)); // Forbidden
+    }
+
     const sortBy = req.query.sortBy || {};
 
     const query_obj = _.omitBy(_.isUndefined)({
@@ -524,14 +543,14 @@ router.patch(
   '/:id/datasets',
   isPermittedTo('update'),
   validate([
-    body('add_dataset_ids').isArray(),
-    body('remove_dataset_ids').isArray(),
+    body('add_dataset_ids').isArray().optional(),
+    body('remove_dataset_ids').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
     /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+     */
 
     // get project or send 404 if not found
     await prisma.project.findFirstOrThrow({
@@ -563,10 +582,7 @@ router.patch(
       },
     });
 
-    await prisma.$transaction([
-      delete_assocs,
-      add_assocs,
-    ]);
+    await prisma.$transaction([delete_assocs, add_assocs]);
 
     res.send();
   }),
@@ -583,7 +599,7 @@ router.patch(
     // #swagger.tags = ['Projects']
     // #swagger.summary = update a project
     /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+     */
 
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
