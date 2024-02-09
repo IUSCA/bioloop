@@ -296,7 +296,7 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    // body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -337,6 +337,8 @@ router.post(
   }),
 );
 
+// router.post('/:id/bundle')
+
 // modify - worker
 router.patch(
   '/:id',
@@ -347,8 +349,7 @@ router.patch(
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().bail()
-      .customSanitizer(BigInt),
+    body('bundle').isObject().optional()
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -367,6 +368,15 @@ router.patch(
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
+    
+    if (req.body.bundle) {
+      data.bundle = {
+        upsert: {
+            create: req.body.bundle,
+            update: req.body.bundle
+          }
+      }
+    }
 
     const dataset = await prisma.dataset.update({
       where: {
