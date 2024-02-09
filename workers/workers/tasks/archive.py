@@ -67,34 +67,42 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'path': f'{config["paths"][dataset["type"]]["bundle"]}/{bundle.name}',
         'size': bundle_size,
         'md5': bundle_checksum,
-        'dataset_id': dataset['id']
     }
 
-    print('bundle_attrs:')
     print('----------------------------')
+    print('bundle_attrs:')
     print(json.dumps(bundle_attrs, indent=4))
+
+    # print('----------------------------')
+    # print('dataset:')
+    # print(dataset)
+
+
+    # matching_bundles = api.get_bundle(name=bundle_attrs['name'], checksum=bundle_attrs['md5'])
+    # persisted_bundle = dataset['bundle']
+    # print(f'len(matching_bundles): {len(matching_bundles)}')
+    # print('persisted_bundle')
+    # logger.info(json.dumps(persisted_bundle, indent=4))
+
+    # if matching_bundles.length == 0:
+    # api.post_bundle(bundle_attrs)
+
+    print("POSTED")
 
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
         print("deleting local bundle")
         bundle.unlink()
 
-    matching_bundles = api.get_bundle(name=bundle_attrs['name'], checksum=bundle_attrs['md5'])
-
-    print(f'len(matching_bundles): {len(matching_bundles)}')
-
-    if matching_bundles.length == 0:
-        api.log_bundle(bundle_attrs)
-
-    return sda_bundle_path, bundle_size
+    return sda_bundle_path, bundle_attrs
 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id)
-    sda_bundle_path, bundle_size = archive(celery_task, dataset)
+    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+    sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
     update_data = {
         'archive_path': sda_bundle_path,
-        'bundle_size': bundle_size
+        'bundle': bundle_attrs
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='ARCHIVED')
