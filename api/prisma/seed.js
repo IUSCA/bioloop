@@ -91,8 +91,9 @@ async function main() {
   })));
 
   // Create default admins
-  const additional_admins = readAdminsFromFile();
-  const admin_data = insert_random_dates(data.admins.concat(additional_admins));
+  // const additional_admins = readAdminsFromFile();
+  const admin_data = insert_random_dates(data.admins);
+
   const admin_promises = admin_data.map((admin) => prisma.user.upsert({
     where: { email: `${admin.username}@iu.edu` },
     update: {},
