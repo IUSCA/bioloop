@@ -24,13 +24,19 @@ Bioloop is a web-based portal to simplify the management of large-scale datasets
 
 
 ## Getting started
-- [Create a new project from this template](docs/new_project.md)
 
-- [API](api/README.md)
-- [UI](ui/README.md)
-- [Workers](workers/README.md)
+- [Install with Docker](README-docker.md)  
+- [API](api/README.md)  
+- [UI](ui/README.md)  
+- [Workers](workers/README.md)  
 
-- [Docker](README-docker.md)
+## Dependencies
+
+Bioloop leverages a few other projects to get up and running. 
+
+- [SCA OAuth Application](https://github.com/IUSCA/signet)  
+- [Rest api for non-python languages to make use of rhythm celery workflow library](https://github.com/IUSCA/rhythm_api)  
+- [Rhythm python module for celery workflow patterns](https://github.com/IUSCA/rhythm)  
 
 
 ## Architecture
