@@ -624,7 +624,7 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    // Catch errors to ensure that logging does not get in the way of a token being returned.
     try {
       await prisma.data_access_log.create({
         data: {
