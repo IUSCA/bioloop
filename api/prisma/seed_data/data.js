@@ -17,23 +17,18 @@ const roles = [{
 
 const admins = [
   {
-    id: 1,
     name: 'Rishi Pandey',
     username: 'ripandey',
   }, {
-    id: 2,
     name: 'Charles Brandt',
     username: 'ccbrandt',
   }, {
-    id: 3,
     name: 'Deepak Duggirala',
     username: 'deduggi',
   }, {
-    id: 4,
     name: 'Ryan Long',
     username: 'ryanlong',
   }, {
-    id: 5,
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
@@ -41,17 +36,14 @@ const admins = [
 
 const operators = [
   {
-    id: 6,
     username: 'arodriguez',
     name: 'Alex Rodriguez',
   },
   {
-    id: 7,
     username: 'bfoster',
     name: 'Benjamin Foster',
   },
   {
-    id: 8,
     username: 'ejohnson',
     name: 'Emma Johnson',
   },
@@ -59,17 +51,14 @@ const operators = [
 
 const users = [
   {
-    id: 9,
     username: 'ajohnson',
     name: 'Alice Johnson',
   },
   {
-    id: 10,
     username: 'sdavis',
     name: 'Samuel Davis',
   },
   {
-    id: 11,
     username: 'ethompson',
     name: 'Emily Thompson',
   },
