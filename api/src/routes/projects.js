@@ -203,9 +203,27 @@ router.get(
       prisma.dataset.count({ ...filterQuery }),
     ]);
 
+    // include workflow objects with dataset
+    const wfPromises = (datasets || []).map(async (ds) => {
+      if (ds.workflows.length > 0) {
+        return wfService.getAll({
+          only_active: true,
+          last_task_run: false,
+          prev_task_runs: false,
+          workflow_ids: ds.workflows.map((x) => x.id),
+        }).then((wf_res) => (Object.assign(ds, { workflows: wf_res.data.results })))
+          .catch((error) => {
+            log_axios_error(error);
+            return Object.assign(ds, { workflows: [] });
+          });
+      }
+      return ds;
+    });
+    const datasets_with_wfs = await Promise.all(wfPromises);
+
     res.json({
       metadata: { count },
-      datasets,
+      datasets: datasets_with_wfs,
     });
   }),
 );
