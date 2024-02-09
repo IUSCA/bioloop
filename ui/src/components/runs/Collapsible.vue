@@ -3,6 +3,9 @@
     <div
       class="collapsible-header bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded"
       @click="toggleCollapsible"
+      @keydown.enter="toggleCollapsible"
+      role="button"
+      tabindex="0"
     >
       <div class="flex-grow">
         <slot name="header-content"></slot>

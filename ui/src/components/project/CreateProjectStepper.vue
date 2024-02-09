@@ -12,7 +12,7 @@
         :key="step.label"
         #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
       >
-        <div
+        <button
           class="step-button p-1 sm:p-3 cursor-pointer"
           :class="{
             'step-button--active': isActive,
@@ -24,7 +24,7 @@
             <va-icon :name="step.icon" />
             <span class="hidden sm:block"> {{ step.label }} </span>
           </div>
-        </div>
+        </button>
       </template>
 
       <!-- general info -->
@@ -123,8 +123,8 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useBreakpoint } from "vuestic-ui";
 
 const emit = defineEmits(["update"]);

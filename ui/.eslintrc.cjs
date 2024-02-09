@@ -8,6 +8,7 @@ module.exports = {
     "plugin:vue/vue3-essential",
     "eslint:recommended", //https://github.com/eslint/eslint/blob/main/conf/eslint-recommended.js
     "@vue/eslint-config-prettier",
+    "plugin:vuejs-accessibility/recommended",
   ],
   parserOptions: {
     ecmaVersion: "latest",

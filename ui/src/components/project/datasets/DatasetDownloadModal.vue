@@ -42,7 +42,7 @@
 
           <!-- Action icon -->
           <va-list-item-section class="flex-none">
-            <a target="_blank" :href="downloadURL">
+            <a target="_blank" :href="downloadURL" aria-label="Download">
               <va-button
                 preset="secondary"
                 icon="open_in_new"
