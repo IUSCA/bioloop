@@ -1,7 +1,6 @@
 <template>
   <footer
     id="footer-v1"
-    role="contentinfo"
     itemScope="itemscope"
     itemType="http://schema.org/CollegeOrUniversity"
     class="text-sm pb-3.5"

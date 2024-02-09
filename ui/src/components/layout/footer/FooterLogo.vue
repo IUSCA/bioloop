@@ -1,5 +1,9 @@
 <template>
-  <a class="max-w-max logo" href="https://www.iu.edu">
+  <a
+    class="max-w-max logo"
+    href="https://www.iu.edu"
+    aria-label="Go to IU website"
+  >
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"

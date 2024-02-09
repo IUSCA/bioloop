@@ -1,5 +1,5 @@
 <template>
-  <div
+  <button
     class="va-link"
     :class="{ 'cursor-pointer': !isDir }"
     @click="isDir ? null : emit('click', parent)"
@@ -16,7 +16,7 @@
         {{ getShortPath(props.data.path, isDir).replaceAll("/", " / ") }}
       </span>
     </div>
-  </div>
+  </button>
 </template>
 
 <script setup>
