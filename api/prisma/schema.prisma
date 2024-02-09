@@ -106,8 +106,8 @@ model bundle {
   path       String
   size       BigInt?
   md5        String
-  dataset_id Int?     @unique
-  dataset    dataset? @relation(fields: [dataset_id], references: [id])
+  dataset_id Int      @unique
+  dataset    dataset  @relation(fields: [dataset_id], references: [id])
 }
 
 model data_access_log {
