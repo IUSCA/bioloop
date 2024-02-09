@@ -74,6 +74,7 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     bundle_md5 = bundle["md5"]
     bundle_download_path = Path(bundle["path"])
 
+    print(f'staging_dir: {staging_dir}')
     print(f'bundle_download_path: {bundle_download_path}')
     print(f'bundle_md5: {bundle_md5}')
 
@@ -96,13 +97,11 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     # delete the local tar copy after extraction
     # bundle_path.unlink()
 
-    print(f'staging_dir: {staging_dir}')
-
     return str(staging_dir), alias
 
 
 def stage_dataset(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id)
+    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     staged_path, alias = stage(celery_task, dataset)
 
     update_data = {

@@ -52,10 +52,6 @@
         {
           "name": "validate",
           "task": "validate_dataset"
-        },
-        {
-          "name": "generate_qc",
-          "task": "generate_qc"
         }
       ]
     },
@@ -68,10 +64,6 @@
         {
           "name": "validate",
           "task": "validate_dataset"
-        },
-        {
-          "name": "generate_qc",
-          "task": "generate_qc"
         }
       ]
     },
