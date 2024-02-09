@@ -13,6 +13,7 @@
     <template #appendInner>
       <va-button preset="secondary" round @click="emit('advancedSearch')">
         <Icon icon="mdi:tune" class="text-xl" />
+        <span class="sr-only">Advanced Search</span>
       </va-button>
     </template>
   </va-input>

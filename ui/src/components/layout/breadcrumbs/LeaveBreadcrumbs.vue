@@ -2,7 +2,7 @@
   <!-- min height prevents the vertical layout shift-->
   <!-- min-h-[1.75rem] removed because  -->
   <!-- As breadcrumbs are not reset between page transitions, there is no vertical layout shift -->
-  <va-breadcrumbs class="text-lg breadcrumbs space-x-1">
+  <va-breadcrumbs class="text-lg breadcrumbs">
     <va-breadcrumbs-item
       v-for="(item, index) in nav.breadcrumbs"
       :key="`${item}-${index}`"
@@ -11,7 +11,10 @@
       :disabled="index === nav.breadcrumbs.length - 1"
       class="flex items-center justify-center"
     >
-      <Icon :icon="item.icon" v-if="!!item.icon" class="text-xl" />
+      <div v-if="!!item.icon">
+        <Icon :icon="item.icon" class="text-xl" :aria-label="item.to" />
+        <span class="sr-only">{{ item.to }}</span>
+      </div>
     </va-breadcrumbs-item>
   </va-breadcrumbs>
 </template>

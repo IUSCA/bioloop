@@ -30,7 +30,7 @@
       </div>
 
       <!-- file -->
-      <div
+      <button
         class="flex items-center gap-1"
         :class="{ 'cursor-pointer': showDownload }"
         v-else
@@ -49,7 +49,7 @@
           v-if="showDownload"
         >
         </va-button>
-      </div>
+      </button>
     </template>
 
     <!-- <template #cell(lastModified)="{ source }">

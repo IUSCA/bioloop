@@ -7,9 +7,9 @@
     >
       <!-- reset -->
       <div class="text-right px-3">
-        <span class="va-link text-center" @click="reset_query_params">
+        <button class="va-link text-center" @click="reset_query_params">
           Reset
-        </span>
+        </button>
       </div>
 
       <!-- status filters -->
