@@ -95,7 +95,7 @@ def int_to_str(d: dict, key: str):
     return d
 
 
-def entity_getter(dataset: dict):
+def dataset_getter(dataset: dict):
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
     date_keys = ['created_at', 'updated_at']
 
@@ -118,6 +118,28 @@ def entity_getter(dataset: dict):
     return dataset
 
 
+def bundle_getter(bundle: dict):
+    date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
+    date_keys = ['created_at']
+
+    # convert size from string to int
+    if bundle is None:
+        return bundle
+
+    for key in ['size']:
+        str_to_int(bundle, key)
+    
+    # convert date strings to date objects
+    for date_key in date_keys:
+        date_str = glom(bundle, date_key, default=None)
+        if date_str is not None:
+            try:
+                glom_assign(bundle, date_key, datetime.strptime(date_str, date_format))
+            except ValueError:  # unable to parse date string
+                glom_assign(bundle, date_key, None)
+    return bundle
+
+
 def dataset_setter(dataset: dict):
     # convert du_size and size from int to string
     if dataset is not None:
@@ -137,7 +159,7 @@ def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, 
         r = s.get('datasets', params=payload)
         r.raise_for_status()
         datasets = r.json()['datasets']
-        return [entity_getter(dataset) for dataset in datasets]
+        return [dataset_getter(dataset) for dataset in datasets]
 
 
 def get_dataset(dataset_id: str, files: bool = False):
@@ -147,7 +169,7 @@ def get_dataset(dataset_id: str, files: bool = False):
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
         r.raise_for_status()
-        return entity_getter(r.json())
+        return dataset_getter(r.json())
 
 
 def create_dataset(dataset):
@@ -218,7 +240,7 @@ def get_bundle(name: str, checksum: str):
         }
         r = s.get(f'bundles', params=payload)
         r.raise_for_status()
-        return entity_getter(r.json())
+        return bundle_getter(r.json())
 
 
 def post_bundle(data: dict):
