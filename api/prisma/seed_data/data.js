@@ -325,9 +325,9 @@ const project_contact_assoc = [
 
 const bundles = [{
   name: 'PCM230203.tar',
-  path: '/path/to/bundle',
-  md5: 'md5',
-  size: 160612394997,
+  path: '/N/scratch/scadev/bioloop/dev/bundles/raw_data/PCM230203.tar',
+  md5: '8d8f68ac3c1e0d5748cfb06ca235fdbd',
+  size: 10240,
   dataset_id: 1,
 }];
 
