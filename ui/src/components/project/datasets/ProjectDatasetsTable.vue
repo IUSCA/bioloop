@@ -168,15 +168,24 @@ const props = defineProps({
   project: {
     type: Object,
   },
+  triggerDatasetsRetrieval: {
+    // If true, triggers datasets' re-retrieval
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(["datasets-retrieved"]);
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const pageSize = ref(10);
 const total_results = ref(0);
 
+const _triggerDatasetsRetrieval = toRef(() => props.triggerDatasetsRetrieval);
 const projectIdRef = toRef(() => props.project.id);
 const loading = ref(false);
+
 const projectDatasets = ref([]);
 const _datasets = ref({});
 const filterInput = ref("");
@@ -242,10 +251,18 @@ const fetch_project_datasets = () => {
       params: datasets_retrieval_query.value,
     })
     .then((res) => {
-      projectDatasets.value = res.data.datasets.map((d) => d.dataset);
+      projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
+      emit("datasets-retrieved");
     });
 };
+
+watch(_triggerDatasetsRetrieval, () => {
+  if (_triggerDatasetsRetrieval.value) {
+    currentPageIndex.value = 1;
+    fetch_project_datasets();
+  }
+});
 
 // _datasets is a mapping of dataset_ids to dataset objects. While polling one or more datasets,
 // this object is updated with latest dataset values.

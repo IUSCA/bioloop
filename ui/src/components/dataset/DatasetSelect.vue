@@ -53,6 +53,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  columnWidths: {
+    type: Object,
+    required: true,
+  },
 });
 
 const breakpoint = useBreakpoint();
@@ -71,15 +75,6 @@ const loadNextPage = () => {
   return loadResults();
 };
 
-const columnWidths = computed(() => {
-  return {
-    name: breakpoint.xs || breakpoint.sm ? "160px" : "170px",
-    type: "130px",
-    size: "100px",
-    created_at: "105px",
-  };
-});
-
 const trimName = (val) =>
   val.length > NAME_TRIM_THRESHOLD
     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
@@ -90,14 +85,14 @@ const primaryColumns = computed(() => {
     {
       key: "name",
       label: "Name",
-      width: columnWidths.value.name,
+      width: props.columnWidths.name,
       formatFn: trimName,
     },
     {
       key: "type",
       label: "Type",
       slotted: true,
-      width: columnWidths.value.type,
+      width: props.columnWidths.type,
     },
   ];
 });
@@ -108,13 +103,13 @@ const secondaryColumns = computed(() => {
       key: "size",
       label: "Size",
       formatFn: (val) => formatBytes(val),
-      width: columnWidths.value.size,
+      width: props.columnWidths.size,
     },
     {
       key: "created_at",
       label: "Registered On",
       formatFn: (val) => date(val),
-      width: columnWidths.value.created_at,
+      width: props.columnWidths.created_at,
     },
   ];
 });

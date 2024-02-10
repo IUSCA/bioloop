@@ -1,5 +1,3 @@
 {
-  "auth": {
-    "jwks_uri": "https://oauth-dev.sca.iu.edu/oauth/jwks"
-  }
+  
 }

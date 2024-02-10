@@ -88,10 +88,11 @@ class projectService {
     });
   }
 
-  setDatasets({ id, dataset_ids }) {
+  updateDatasets({ id, add_dataset_ids, remove_dataset_ids }) {
     return api
-      .put(`/projects/${id}/datasets`, {
-        dataset_ids,
+      .patch(`/projects/${id}/datasets`, {
+        add_dataset_ids,
+        remove_dataset_ids,
       })
       .catch((err) => {
         console.error(err);

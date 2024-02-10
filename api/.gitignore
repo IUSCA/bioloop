@@ -38,3 +38,5 @@ reports
 test.js
 src/test.js
 coverage
+
+admins.json
