@@ -11,6 +11,17 @@
     <!--  -->
 
     <va-card>
+      <va-card-title>
+        <div class="flex flex-nowrap items-center w-full">
+          <span class="flex-auto"></span>
+          <AddEditButton
+            class="flex-none"
+            edit
+            @click="showModal = true"
+            v-if="auth.canAdmin"
+          />
+        </div>
+      </va-card-title>
       <va-card-content>
         <va-inner-loading :loading="loading">
           <!--          <div class="p-3">-->
@@ -20,7 +31,7 @@
       </va-card-content>
     </va-card>
 
-    <va-button class="flex-none" @click="showModal = true">Edit</va-button>
+    <!--    <va-button class="flex-none" @click="showModal = true">Edit</va-button>-->
 
     <div class="max-h-screen">
       <va-form ref="aboutForm">
@@ -61,11 +72,14 @@ import MarkdownIt from "markdown-it";
 import { useForm } from "vuestic-ui";
 import DOMPurify from "dompurify";
 import toast from "@/services/toast";
+import { useAuthStore } from "@/stores/auth";
 
 const md = new MarkdownIt();
 
 const nav = useNavStore();
 nav.setNavItems([], false);
+
+const auth = useAuthStore();
 
 const { validate } = useForm("aboutForm");
 // const aboutModal = ref(null);
