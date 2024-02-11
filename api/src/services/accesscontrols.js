@@ -60,6 +60,9 @@ const grantsObject = {
     project_dataset_files: {
       'read:own': ['*'],
     },
+    about: {
+      'read:any': ['*'],
+    },
   },
 
   // operator role permissions
@@ -94,6 +97,9 @@ const grantsObject = {
       'read:any': ['*'],
     },
     metrics: {
+      'read:any': ['*'],
+    },
+    about: {
       'read:any': ['*'],
     },
   },
