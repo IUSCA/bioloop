@@ -1,5 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const { body } = require('express-validator');
 
 const { accessControl } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -7,9 +8,6 @@ const { validate } = require('../middleware/validators');
 
 const router = express.Router();
 const prisma = new PrismaClient();
-const {
-  query, param, body, checkSchema,
-} = require('express-validator');
 
 const isPermittedTo = accessControl('about');
 
@@ -19,7 +17,7 @@ router.get('/', isPermittedTo('read'), asyncHandler(async (req, res, next) => {
 }));
 
 router.post('/', isPermittedTo('update'), validate([
-  body('text').notEmpty().isString(),
+  body('text').escape().notEmpty().isString(),
 ]), asyncHandler(async (req, res, next) => {
   const ret = await prisma.about.create({
     data: {
