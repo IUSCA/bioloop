@@ -22,34 +22,36 @@
 
     <va-button class="flex-none" @click="showModal = true">Edit</va-button>
 
-    <va-form ref="aboutForm">
-      <va-modal
-        size="large"
-        title="Edit About"
-        ref="aboutModal"
-        v-model="showModal"
-        ok-text="Save"
-        @ok="submit"
-        @before-close="reset"
-        no-dismiss
-      >
-        <va-inner-loading :loading="loading">
-          <div class="flex gap-2">
-            <div class="flex-1">
-              <va-textarea
-                class="w-full h-full"
-                v-model="updatedText"
-                :rules="[(v) => (v && v.length > 0) || 'Required']"
-              ></va-textarea>
+    <div class="max-h-screen">
+      <va-form ref="aboutForm">
+        <va-modal
+          size="large"
+          title="Edit About"
+          ref="aboutModal"
+          v-model="showModal"
+          ok-text="Save"
+          @ok="submit"
+          @before-close="reset"
+          no-dismiss
+        >
+          <va-inner-loading :loading="loading">
+            <div class="flex gap-2">
+              <div class="flex-1">
+                <va-textarea
+                  class="w-full h-full"
+                  v-model="updatedText"
+                  :rules="[(v) => (v && v.length > 0) || 'Required']"
+                ></va-textarea>
+              </div>
+              <va-divider class="flex-none" vertical />
+              <div class="flex-1 break-words">
+                <div v-html="updatedAboutHTML"></div>
+              </div>
             </div>
-            <va-divider class="flex-none" vertical />
-            <div class="flex-1 break-all">
-              <div v-html="updatedAboutHTML"></div>
-            </div>
-          </div>
-        </va-inner-loading>
-      </va-modal>
-    </va-form>
+          </va-inner-loading>
+        </va-modal>
+      </va-form>
+    </div>
   </div>
 </template>
 
