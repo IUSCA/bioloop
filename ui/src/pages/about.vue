@@ -24,10 +24,13 @@
 
     <va-form ref="aboutForm">
       <va-modal
+        size="large"
+        title="Edit About"
         ref="aboutModal"
         v-model="showModal"
         ok-text="Save"
         @ok="submit"
+        @before-close="reset"
         no-dismiss
       >
         <va-inner-loading :loading="loading">
@@ -115,6 +118,10 @@ const submit = () => {
       console.log(err);
       toast.error("Failed to update About");
     });
+};
+
+const reset = () => {
+  updatedText.value = currentText.value;
 };
 
 // const isFormValid = () => {
