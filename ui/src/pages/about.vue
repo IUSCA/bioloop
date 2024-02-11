@@ -25,9 +25,8 @@
     <div class="max-h-screen">
       <va-form ref="aboutForm">
         <va-modal
-          size="large"
+          size="medium"
           title="Edit About"
-          ref="aboutModal"
           v-model="showModal"
           ok-text="Save"
           @ok="submit"
@@ -69,7 +68,7 @@ const nav = useNavStore();
 nav.setNavItems([], false);
 
 const { validate } = useForm("aboutForm");
-const aboutModal = ref(null);
+// const aboutModal = ref(null);
 
 const showModal = ref(false);
 const currentText = ref("");
