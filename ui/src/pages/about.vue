@@ -34,9 +34,12 @@
 <script setup>
 import { useNavStore } from "@/stores/nav";
 import aboutService from "@/services/about";
-import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
+// import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
+import MarkdownIt from "markdown-it";
 import { useForm } from "vuestic-ui";
 import DOMPurify from "dompurify";
+
+const md = new MarkdownIt();
 
 const nav = useNavStore();
 nav.setNavItems([], false);
@@ -49,10 +52,11 @@ const updatedText = ref("");
 const aboutRecords = ref([]);
 
 const currentAboutHTML = computed(() => {
-  return marked.parse(currentText.value);
+  // return DOMPurify.sanitize(marked.parse(currentText.value));
+  return DOMPurify.sanitize(md.render(currentText.value));
 });
 const updatedAboutHTML = computed(() => {
-  let ret = DOMPurify.sanitize(marked.parse(updatedText.value));
+  let ret = DOMPurify.sanitize(md.render(updatedText.value));
   // debugger;
   return ret;
 });
