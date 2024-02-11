@@ -22,16 +22,21 @@
 
     <va-button class="flex-none" @click="showModal = true">Edit</va-button>
 
-    <va-modal v-model="showModal" ok-text="Save" @ok="submit">
-      <va-inner-loading :loading="loading">
-        <va-form ref="aboutForm">
+    <va-form ref="aboutForm">
+      <va-modal
+        ref="aboutModal"
+        v-model="showModal"
+        ok-text="Save"
+        @ok="submit"
+        no-dismiss
+      >
+        <va-inner-loading :loading="loading">
           <div class="flex gap-2">
             <div class="flex-1">
               <va-textarea
                 class="w-full h-full"
                 v-model="updatedText"
                 :rules="[(v) => (v && v.length > 0) || 'Required']"
-                :error="!isValid"
               ></va-textarea>
             </div>
             <va-divider class="flex-none" vertical />
@@ -39,33 +44,34 @@
               <div v-html="updatedAboutHTML"></div>
             </div>
           </div>
-        </va-form>
-      </va-inner-loading>
-    </va-modal>
+        </va-inner-loading>
+      </va-modal>
+    </va-form>
   </div>
 </template>
 
 <script setup>
 import { useNavStore } from "@/stores/nav";
 import aboutService from "@/services/about";
-// import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 import MarkdownIt from "markdown-it";
 import { useForm } from "vuestic-ui";
 import DOMPurify from "dompurify";
+import toast from "@/services/toast";
 
 const md = new MarkdownIt();
 
 const nav = useNavStore();
 nav.setNavItems([], false);
 
-const { validate, isValid } = useForm("aboutForm");
+const { validate } = useForm("aboutForm");
+const aboutModal = ref(null);
 
 const showModal = ref(false);
 const currentText = ref("");
 const updatedText = ref("");
 const aboutRecords = ref([]);
 const loading = ref(false);
-const updateSucceeded = ref(true);
+// const updateSucceeded = ref(true);
 
 const currentAboutHTML = computed(() => {
   // return DOMPurify.sanitize(marked.parse(currentText.value));
@@ -77,8 +83,22 @@ const updatedAboutHTML = computed(() => {
   return ret;
 });
 
+// const beforeOk = (hide) => {
+//   console.log("beforeOk");
+//   debugger;
+//   validate();
+//   console.log(`isValid.value: ${isValid.value}`);
+//   if (isValid.value) {
+//     aboutModal.value.hide();
+//   }
+// };
+
 const submit = () => {
-  console.log(`isValid: ${isValid.value}`);
+  if (!validate()) {
+    return;
+  }
+
+  // console.log(`isValid: ${isValid.value}`);
 
   loading.value = true;
   aboutService
@@ -87,21 +107,26 @@ const submit = () => {
       console.log(res);
       updatedText.value = res.data.text;
       currentText.value = res.data.text;
-      // updatedAboutHTML.value = DOMPurify.sanitize(md.render(updatedText.value));
       loading.value = false;
       showModal.value = false;
-      // updateSucceeded.value = true;
+      toast.success("Update About!");
     })
     .catch((err) => {
       console.log(err);
-      // updateSucceeded.value = false;
+      toast.error("Failed to update About");
     });
 };
 
-// const isFormValid = computed(() => {
-//     validate();
-//
-// })
+// const isFormValid = () => {
+//   // validate();
+//   debugger;
+//   return isValid.value;
+// };
+
+// watch(showModal, (val) => {
+//   debugger;
+//   console.log(showModal.value);
+// });
 
 onMounted(() => {
   loading.value = true;
