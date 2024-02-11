@@ -12,21 +12,35 @@
 
     <va-card>
       <va-card-content>
-        <div class="p-3">
+        <va-inner-loading :loading="loading">
+          <!--          <div class="p-3">-->
           <span v-html="currentAboutHTML"></span>
-        </div>
+          <!--          </div>-->
+        </va-inner-loading>
       </va-card-content>
     </va-card>
 
     <va-button class="flex-none" @click="showModal = true">Edit</va-button>
-    <va-modal v-model="showModal" ok-text="Save">
-      <va-form ref="aboutForm"></va-form>
-      <div class="flex gap-2">
-        <va-textarea class="flex-1" v-model="updatedText" :rules></va-textarea>
-        <va-divider vertical />
-        <!--        <va-textarea class="flex-1" v-model="updatedText"></va-textarea>-->
-        <span class="flex-1" v-html="updatedAboutHTML"></span>
-      </div>
+
+    <va-modal v-model="showModal" ok-text="Save" @ok="submit">
+      <va-inner-loading :loading="loading">
+        <va-form ref="aboutForm">
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <va-textarea
+                class="w-full h-full"
+                v-model="updatedText"
+                :rules="[(v) => (v && v.length > 0) || 'Required']"
+                :error="!isValid"
+              ></va-textarea>
+            </div>
+            <va-divider class="flex-none" vertical />
+            <div class="flex-1 break-all">
+              <div v-html="updatedAboutHTML"></div>
+            </div>
+          </div>
+        </va-form>
+      </va-inner-loading>
     </va-modal>
   </div>
 </template>
@@ -44,12 +58,14 @@ const md = new MarkdownIt();
 const nav = useNavStore();
 nav.setNavItems([], false);
 
-useForm("aboutForm");
+const { validate, isValid } = useForm("aboutForm");
 
 const showModal = ref(false);
 const currentText = ref("");
 const updatedText = ref("");
 const aboutRecords = ref([]);
+const loading = ref(false);
+const updateSucceeded = ref(true);
 
 const currentAboutHTML = computed(() => {
   // return DOMPurify.sanitize(marked.parse(currentText.value));
@@ -61,12 +77,41 @@ const updatedAboutHTML = computed(() => {
   return ret;
 });
 
+const submit = () => {
+  console.log(`isValid: ${isValid.value}`);
+
+  loading.value = true;
+  aboutService
+    .create({ text: updatedText.value })
+    .then((res) => {
+      console.log(res);
+      updatedText.value = res.data.text;
+      currentText.value = res.data.text;
+      // updatedAboutHTML.value = DOMPurify.sanitize(md.render(updatedText.value));
+      loading.value = false;
+      showModal.value = false;
+      // updateSucceeded.value = true;
+    })
+    .catch((err) => {
+      console.log(err);
+      // updateSucceeded.value = false;
+    });
+};
+
+// const isFormValid = computed(() => {
+//     validate();
+//
+// })
+
 onMounted(() => {
+  loading.value = true;
   aboutService.getAll().then((res) => {
-    const latestAboutText = res.data[res.data.length - 1].text;
+    const latestAboutText =
+      res.data.length > 0 ? res.data[res.data.length - 1].text : "";
     currentText.value = latestAboutText;
     updatedText.value = latestAboutText;
     aboutRecords.value = res.data;
+    loading.value = false;
   });
 });
 </script>
@@ -90,5 +135,4 @@ div.banner h1.heading_text {
 <route lang="yaml">
 meta:
   title: Dashboard
-  requiresAuth: false
 </route>
