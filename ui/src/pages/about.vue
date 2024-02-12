@@ -13,7 +13,7 @@
     <va-card>
       <va-card-title>
         <div class="flex flex-nowrap items-center w-full">
-          <span class="flex-auto"></span>
+          <span class="flex-auto text-lg">About</span>
           <AddEditButton
             class="flex-none"
             edit
@@ -46,8 +46,10 @@
         >
           <va-inner-loading :loading="loading">
             <div class="flex gap-2">
-              <div class="flex-1">
+              <div class="flex-1 min-h-96">
+                <!--                    min-rows="10"-->
                 <va-textarea
+                  :resize="false"
                   class="w-full h-full"
                   v-model="updatedText"
                   :rules="[(v) => (v && v.length > 0) || 'Required']"
@@ -111,12 +113,10 @@ const updatedAboutHTML = computed(() => {
 //   }
 // };
 
-const submit = () => {
+const submit = (hide) => {
   if (!validate()) {
     return;
   }
-
-  // console.log(`isValid: ${isValid.value}`);
 
   loading.value = true;
   aboutService
@@ -127,10 +127,9 @@ const submit = () => {
       currentText.value = res.data.text;
       loading.value = false;
       showModal.value = false;
-      toast.success("Update About!");
+      toast.success("Updated About!");
     })
-    .catch((err) => {
-      console.log(err);
+    .catch(() => {
       toast.error("Failed to update About");
     });
 };
@@ -152,14 +151,21 @@ const reset = () => {
 
 onMounted(() => {
   loading.value = true;
-  aboutService.getAll().then((res) => {
-    const latestAboutText =
-      res.data.length > 0 ? res.data[res.data.length - 1].text : "";
-    currentText.value = latestAboutText;
-    updatedText.value = latestAboutText;
-    aboutRecords.value = res.data;
-    loading.value = false;
-  });
+  aboutService
+    .getAll()
+    .then((res) => {
+      const latestAboutText =
+        res.data.length > 0 ? res.data[res.data.length - 1].text : "";
+      currentText.value = latestAboutText;
+      updatedText.value = latestAboutText;
+      aboutRecords.value = res.data;
+    })
+    .catch(() => {
+      toast.error("Failed to fetch About");
+    })
+    .finally(() => {
+      loading.value = false;
+    });
 });
 </script>
 
@@ -181,5 +187,5 @@ div.banner h1.heading_text {
 
 <route lang="yaml">
 meta:
-  title: Dashboard
+  title: About
 </route>
