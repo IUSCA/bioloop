@@ -5,8 +5,8 @@ class AboutService {
     return api.get("/about");
   }
 
-  create(data) {
-    return api.post("/about", data);
+  createOrUpdate({ id, data }) {
+    return id ? api.patch(`/about/${id}`, data) : api.post("/about", data);
   }
 }
 

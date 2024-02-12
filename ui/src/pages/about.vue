@@ -24,9 +24,7 @@
       </va-card-title>
       <va-card-content>
         <va-inner-loading :loading="loading">
-          <!--          <div class="p-3">-->
           <span v-html="currentAboutHTML"></span>
-          <!--          </div>-->
         </va-inner-loading>
       </va-card-content>
     </va-card>
@@ -44,23 +42,20 @@
           @before-close="reset"
           no-dismiss
         >
-          <va-inner-loading :loading="loading">
-            <div class="flex gap-2">
-              <div class="flex-1 min-h-96">
-                <!--                    min-rows="10"-->
-                <va-textarea
-                  :resize="false"
-                  class="w-full h-full"
-                  v-model="updatedText"
-                  :rules="[(v) => (v && v.length > 0) || 'Required']"
-                ></va-textarea>
-              </div>
-              <va-divider class="flex-none" vertical />
-              <div class="flex-1 break-words">
-                <div v-html="updatedAboutHTML"></div>
-              </div>
+          <div class="flex gap-2">
+            <div class="flex-1 min-h-96">
+              <va-textarea
+                :resize="false"
+                class="w-full h-full"
+                v-model="updatedText"
+                :rules="[(v) => (v && v.length > 0) || 'Required']"
+              ></va-textarea>
             </div>
-          </va-inner-loading>
+            <va-divider class="flex-none" vertical />
+            <div class="flex-1 break-words">
+              <div v-html="updatedAboutHTML"></div>
+            </div>
+          </div>
         </va-modal>
       </va-form>
     </div>
@@ -75,6 +70,7 @@ import { useForm } from "vuestic-ui";
 import DOMPurify from "dompurify";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
+import { htmlDecode } from "@/services/utils";
 
 const md = new MarkdownIt();
 
@@ -84,53 +80,42 @@ nav.setNavItems([], false);
 const auth = useAuthStore();
 
 const { validate } = useForm("aboutForm");
-// const aboutModal = ref(null);
 
 const showModal = ref(false);
 const currentText = ref("");
 const updatedText = ref("");
 const aboutRecords = ref([]);
+const latestRecord = ref({});
 const loading = ref(false);
-// const updateSucceeded = ref(true);
 
 const currentAboutHTML = computed(() => {
-  // return DOMPurify.sanitize(marked.parse(currentText.value));
   return DOMPurify.sanitize(md.render(currentText.value));
 });
 const updatedAboutHTML = computed(() => {
-  let ret = DOMPurify.sanitize(md.render(updatedText.value));
-  // debugger;
-  return ret;
+  return DOMPurify.sanitize(md.render(updatedText.value));
 });
 
-// const beforeOk = (hide) => {
-//   console.log("beforeOk");
-//   debugger;
-//   validate();
-//   console.log(`isValid.value: ${isValid.value}`);
-//   if (isValid.value) {
-//     aboutModal.value.hide();
-//   }
-// };
-
-const submit = (hide) => {
+const submit = () => {
   if (!validate()) {
     return;
   }
 
   loading.value = true;
   aboutService
-    .create({ text: updatedText.value })
+    .createOrUpdate({
+      ...(latestRecord.value && { id: latestRecord.value.id }),
+      data: { text: updatedText.value },
+    })
     .then((res) => {
-      console.log(res);
-      updatedText.value = res.data.text;
-      currentText.value = res.data.text;
-      loading.value = false;
+      latestRecord.value = res.data;
       showModal.value = false;
       toast.success("Updated About!");
     })
     .catch(() => {
       toast.error("Failed to update About");
+    })
+    .finally(() => {
+      loading.value = false;
     });
 };
 
@@ -138,27 +123,14 @@ const reset = () => {
   updatedText.value = currentText.value;
 };
 
-// const isFormValid = () => {
-//   // validate();
-//   debugger;
-//   return isValid.value;
-// };
-
-// watch(showModal, (val) => {
-//   debugger;
-//   console.log(showModal.value);
-// });
-
 onMounted(() => {
   loading.value = true;
   aboutService
     .getAll()
     .then((res) => {
-      const latestAboutText =
-        res.data.length > 0 ? res.data[res.data.length - 1].text : "";
-      currentText.value = latestAboutText;
-      updatedText.value = latestAboutText;
       aboutRecords.value = res.data;
+      latestRecord.value =
+        res.data.length > 0 ? res.data[res.data.length - 1] : undefined;
     })
     .catch(() => {
       toast.error("Failed to fetch About");
@@ -166,6 +138,11 @@ onMounted(() => {
     .finally(() => {
       loading.value = false;
     });
+});
+
+watch(latestRecord, () => {
+  currentText.value = htmlDecode(latestRecord.value?.text || "");
+  updatedText.value = htmlDecode(latestRecord.value?.text || "");
 });
 </script>
 
