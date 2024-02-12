@@ -13,7 +13,9 @@
     <va-card>
       <va-card-title>
         <div class="flex flex-nowrap items-center w-full">
+          <!-- Title -->
           <span class="flex-auto text-lg">About</span>
+          <!-- Edit button -->
           <AddEditButton
             class="flex-none"
             edit
@@ -22,14 +24,13 @@
           />
         </div>
       </va-card-title>
+      <!-- Current About text -->
       <va-card-content>
         <va-inner-loading :loading="loading">
           <span v-html="currentAboutHTML"></span>
         </va-inner-loading>
       </va-card-content>
     </va-card>
-
-    <!--    <va-button class="flex-none" @click="showModal = true">Edit</va-button>-->
 
     <div class="max-h-screen">
       <va-form ref="aboutForm">
@@ -63,7 +64,7 @@
 
             <div class="flex-1 flex flex-col gap-1">
               <div class="va-title">Preview</div>
-              <!-- Preview Card -->
+              <!-- Preview -->
               <div class="min-h-96 h-full">
                 <va-card class="h-full">
                   <va-card-content>
@@ -101,7 +102,6 @@ const { validate } = useForm("aboutForm");
 const showModal = ref(false);
 const currentText = ref("");
 const updatedText = ref("");
-// const aboutRecords = ref([]);
 const latestRecord = ref({});
 const loading = ref(false);
 
@@ -158,7 +158,6 @@ onMounted(() => {
 watch(latestRecord, () => {
   currentText.value = htmlDecode(latestRecord.value?.text || "");
   updatedText.value = htmlDecode(latestRecord.value?.text || "");
-  debugger;
 });
 </script>
 

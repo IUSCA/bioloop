@@ -7,7 +7,6 @@ const router = express.Router();
 router.get('/health', (req, res) => { res.send('OK'); });
 router.use('/auth', require('./auth'));
 router.use('/reports', require('./reports'));
-
 router.use('/about_latest', require('./about_latest'));
 
 // From this point on, all routes require authentication.
