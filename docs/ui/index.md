@@ -149,7 +149,7 @@ Add the name and value of the environment variable to the `.env` file. This file
 
 ## Authentication
 
-Users are authenticated using IU CAS. [More on auth module](docs/auth_explained.md).
+Users are authenticated using IU CAS. [More on auth module](/ui/auth_explained.md).
 
 By default any page will require user authentication
 
@@ -181,7 +181,7 @@ meta:
 
 ## Utility Components
 
-Vue Components developed in house to be reused in the app. [Documentation](docs/util_components.md)
+Vue Components developed in house to be reused in the app. [Documentation](/ui/util_components.md)
 
 ## Coding Conventions
 - Use custom component names as `<CustomComponent>`

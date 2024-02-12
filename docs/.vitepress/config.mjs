@@ -17,6 +17,7 @@ export default defineConfig({
 
     sidebar: [
       { text: 'Overview', link: '/', items: [
+        { text: 'Architecture', link: '/architecture' },
         { text: 'Installation', items: [
           {text: 'Docker', link: '/install-docker', },
           { text: 'Template', link: '/template' }
@@ -25,6 +26,7 @@ export default defineConfig({
           { text: 'Auth', link: '/ui/auth_explained' },
           { text: 'Util', link: '/ui/util_components' },
         ] },
+        
         { text: 'Api', link: '/api/' },
         { text: 'Worker', link: '/worker/' },
         { text: 'Secure Download', link: '/secure_download' },
@@ -36,5 +38,17 @@ export default defineConfig({
     socialLinks: [
       { icon: 'github', link: 'https://github.com/IUSCA/bioloop' }
     ]
-  }
+  },
+  ignoreDeadLinks: [
+    // ignore exact url "/playground"
+    '/playground',
+    // ignore all localhost links
+    /^https?:\/\/localhost/,
+    // ignore all links include "/repl/""
+    /\/repl\//,
+    // custom function, ignore all links include "ignore"
+    (url) => {
+      return url.toLowerCase().includes('ignore')
+    }
+  ]
 })

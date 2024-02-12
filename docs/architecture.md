@@ -1,5 +1,5 @@
 
 ## Architecture
-<img src="../architecture.png" >
+<img src="/architecture.png" >
 <br />
-<img src="../app-celery-communication-diagram.png" >
+<img src="/app-celery-communication-diagram.png" >
