@@ -42,24 +42,35 @@
           @before-close="reset"
           no-dismiss
         >
-          <template #header>
-            <va-popover message="Markdown supported" placement="left">
-              <va-icon size="small" name="help"></va-icon>
-            </va-popover>
-          </template>
-
           <div class="flex gap-2">
-            <div class="flex-1 min-h-96">
-              <va-textarea
-                :resize="false"
-                class="w-full h-full"
-                v-model="updatedText"
-                :rules="[(v) => (v && v.length > 0) || 'Required']"
-              ></va-textarea>
+            <div class="flex-1 flex flex-col gap-1">
+              <!-- Help Icon -->
+              <va-popover message="Markdown supported" placement="left">
+                <va-icon size="small" name="help"></va-icon>
+              </va-popover>
+              <!-- Textarea -->
+              <div class="min-h-96 h-full">
+                <va-textarea
+                  :resize="false"
+                  class="w-full h-full"
+                  v-model="updatedText"
+                  :rules="[(v) => (v && v.length > 0) || 'Required']"
+                ></va-textarea>
+              </div>
             </div>
+
             <va-divider class="flex-none" vertical />
-            <div class="flex-1 break-words">
-              <div v-html="updatedAboutHTML"></div>
+
+            <div class="flex-1 flex flex-col gap-1">
+              <div class="va-title">Preview</div>
+              <!-- Preview Card -->
+              <div class="min-h-96 h-full">
+                <va-card class="h-full">
+                  <va-card-content>
+                    <div class="break-words" v-html="updatedAboutHTML"></div>
+                  </va-card-content>
+                </va-card>
+              </div>
             </div>
           </div>
         </va-modal>
@@ -171,4 +182,5 @@ div.banner h1.heading_text {
 <route lang="yaml">
 meta:
   title: About
+  requiresAuth: false
 </route>
