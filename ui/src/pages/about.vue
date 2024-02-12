@@ -42,6 +42,12 @@
           @before-close="reset"
           no-dismiss
         >
+          <template #header>
+            <va-popover message="Markdown supported" placement="left">
+              <va-icon size="small" name="help"></va-icon>
+            </va-popover>
+          </template>
+
           <div class="flex gap-2">
             <div class="flex-1 min-h-96">
               <va-textarea
