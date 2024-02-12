@@ -11,15 +11,6 @@ const prisma = new PrismaClient();
 
 const isPermittedTo = accessControl('about');
 
-router.get(
-  '/',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const ret = await prisma.about.findMany();
-    res.json(ret);
-  }),
-);
-
 router.post(
   '/',
   isPermittedTo('update'),

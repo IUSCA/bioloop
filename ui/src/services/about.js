@@ -1,8 +1,8 @@
 import api from "./api";
 
 class AboutService {
-  getAll() {
-    return api.get("/about");
+  getLatest() {
+    return api.get("/about_latest");
   }
 
   createOrUpdate({ id, data }) {

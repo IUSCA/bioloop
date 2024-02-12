@@ -1,7 +1,6 @@
 -- CreateTable
 CREATE TABLE "about" (
     "id" SERIAL NOT NULL,
-    "version" SERIAL NOT NULL,
     "text" TEXT NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_by_id" INTEGER NOT NULL,

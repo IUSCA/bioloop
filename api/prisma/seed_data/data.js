@@ -315,22 +315,15 @@ const project_contact_assoc = [
 const about_records = [
   {
     text: 'BIOLOOP is a service of the Indiana University Scalable Compute Archive (IU SCA) group.\n'
-    + '\n'
-    + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs. \n'
-    + '\n'
-    + 'This instance of Bioloop is being run by:\n'
-    + '\n'
-    + 'For questions or support, please contact the primary operator:',
-    created_by_id: 1,
-  },
-  {
-    text: '[BIOLOOP](https://github.com/IUSCA/bioloop) is a service of the Indiana University [Scalable Compute Archive (IU SCA)](https://sca.iu.edu/) group.'
-        + '\\\n\\\n'
-    + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.'
-    + '\\\n\\\n'
-    + 'This instance of Bioloop is being run by:'
-    + '\\\n\\\n'
-    + 'For questions or support, please contact the primary operator:',
+        + '\\\n'
+        + '\\\n'
+        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs. \n'
+        + '\\\n'
+        + '\\\n'
+        + 'This instance of Bioloop is being run by:\n'
+        + '\\\n'
+        + '\\\n'
+        + 'For questions or support, please contact the primary operator:',
     created_by_id: 2,
   }];
 

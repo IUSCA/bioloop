@@ -101,7 +101,7 @@ const { validate } = useForm("aboutForm");
 const showModal = ref(false);
 const currentText = ref("");
 const updatedText = ref("");
-const aboutRecords = ref([]);
+// const aboutRecords = ref([]);
 const latestRecord = ref({});
 const loading = ref(false);
 
@@ -143,11 +143,9 @@ const reset = () => {
 onMounted(() => {
   loading.value = true;
   aboutService
-    .getAll()
+    .getLatest()
     .then((res) => {
-      aboutRecords.value = res.data;
-      latestRecord.value =
-        res.data.length > 0 ? res.data[res.data.length - 1] : undefined;
+      latestRecord.value = res.data;
     })
     .catch(() => {
       toast.error("Failed to fetch About");
@@ -160,6 +158,7 @@ onMounted(() => {
 watch(latestRecord, () => {
   currentText.value = htmlDecode(latestRecord.value?.text || "");
   updatedText.value = htmlDecode(latestRecord.value?.text || "");
+  debugger;
 });
 </script>
 
