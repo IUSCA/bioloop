@@ -49,19 +49,18 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
-                 tar_path=bundle,
-                 source_dir=dataset['origin_path'],
-                 source_size=dataset['du_size'])
+              tar_path=bundle,
+              source_dir=dataset['origin_path'],
+              source_size=dataset['du_size'])
 
-    sda_dir = wf_utils.get_archive_dir(dataset['type'])
-    sda_bundle_path = f'{sda_dir}/{bundle.name}'
-    wf_utils.upload_file_to_sda(local_file_path=bundle,
-                                sda_file_path=sda_bundle_path,
-                                celery_task=celery_task)
+    logger.info("tarfile made")
 
     bundle_size = bundle.stat().st_size
     bundle_checksum = utils.checksum(bundle)
     
+    logger.info('----------------------------')
+    logger.info(f'config["paths"][dataset["type"]]: {config["paths"][dataset["type"]]}')
+
     bundle_attrs = {
         'name': bundle.name,
         'path': str(bundle),
@@ -69,25 +68,25 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'md5': bundle_checksum,
     }
 
+    logger.info('bundle_attrs:')
+    logger.info('----------------------------')
+    logger.info(json.dumps(bundle_attrs, indent=4))
+
+    sda_dir = wf_utils.get_archive_dir(dataset['type'])
+    sda_bundle_path = f'{sda_dir}/{bundle.name}'
+    logger.info(f'sda_bundle_path: {sda_bundle_path}')
+
+    wf_utils.upload_file_to_sda(local_file_path=bundle,
+                                sda_file_path=sda_bundle_path,
+                                celery_task=celery_task)
+
+    logger.info("archived to SDA")
+
+    api.log_bundle(bundle_attrs)
+
     print('----------------------------')
     print('bundle_attrs:')
     print(json.dumps(bundle_attrs, indent=4))
-
-    # print('----------------------------')
-    # print('dataset:')
-    # print(dataset)
-
-
-    # matching_bundles = api.get_bundle(name=bundle_attrs['name'], checksum=bundle_attrs['md5'])
-    # persisted_bundle = dataset['bundle']
-    # print(f'len(matching_bundles): {len(matching_bundles)}')
-    # print('persisted_bundle')
-    # logger.info(json.dumps(persisted_bundle, indent=4))
-
-    # if matching_bundles.length == 0:
-    # api.post_bundle(bundle_attrs)
-
-    print("POSTED")
 
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
