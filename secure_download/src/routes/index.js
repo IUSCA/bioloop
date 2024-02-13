@@ -93,6 +93,20 @@ router.post(
       name, data_product_name, total, index, size, checksum, chunk_checksum,
     } = req.body;
 
+    const UPLOAD_SCOPE = config.get('upload_scope');
+
+    const scopes = (req.token?.scope || '').split(' ')
+    console.log(`scopes: ${scopes}`)
+
+    const has_upload_scope = scopes.find((scope) => scope === UPLOAD_SCOPE);
+    console.log(`has_upload_scope: ${has_upload_scope}`)
+  
+    if (!has_upload_scope) {
+      return next(createError.Forbidden('Invalid scope'));
+    }
+    console.log('passed scope check')
+  
+
     if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
       res.sendStatus(400);
     }
