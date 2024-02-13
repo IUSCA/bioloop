@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from urllib.parse import urljoin
+import json
 
 import requests
 from glom import glom, assign as glom_assign
@@ -85,7 +86,7 @@ class APIServerSession(requests.Session):
 
 
 def str_to_int(d: dict, key: str):
-    d['du_size'] = utils.parse_number(d.get(key, None))
+    d[key] = utils.parse_number(d.get(key, None))
     return d
 
 
@@ -126,6 +127,8 @@ def bundle_getter(bundle: dict):
     if bundle is None:
         return bundle
 
+    print(json.dumps(bundle, indent=4))
+
     for key in ['size']:
         str_to_int(bundle, key)
     
@@ -162,12 +165,17 @@ def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, 
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False):
+def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
     with APIServerSession() as s:
         payload = {
-            'files': files
+            'files': files,
+            'bundle': bundle
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
+
+        # logger.info('DATASET')
+        # print(json.dumps(r.json()))
+
         r.raise_for_status()
         return dataset_getter(r.json())
 
@@ -232,22 +240,25 @@ def add_workflow_to_dataset(dataset_id, workflow_id):
         r.raise_for_status()
 
 
-def get_bundle(name: str, checksum: str):
-    with APIServerSession() as s:
-        payload = {
-            'name': name,
-            'checksum': checksum
-        }
-        r = s.get(f'bundles', params=payload)
-        r.raise_for_status()
-        return bundle_getter(r.json())
+# def get_bundle(name: str, checksum: str):
+#     with APIServerSession() as s:
+#         payload = {
+#             'name': name,
+#             'checksum': checksum
+#         }
+#         r = s.get(f'bundles', params=payload)
+#         r.raise_for_status()
+#         print('RESPONSE')
+#         bundles = r.json()
+#         json.dumps(bundles)
+#         return bundles if len(bundles) == 0 else bundle_getter(bundles[0])
 
 
-def post_bundle(data: dict):
-    with APIServerSession(enable_retry=False) as s:
-        r = s.post('bundles', json=data)
-        r.raise_for_status()
-        return r.json()
+# def post_bundle(data: dict):
+#     with APIServerSession(enable_retry=False) as s:
+#         r = s.post('datasets/bundle', json=data)
+#         r.raise_for_status()
+#         return r.json()
 
 
 def register_process(worker_process: dict):

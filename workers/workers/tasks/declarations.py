@@ -8,7 +8,12 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
 
-@app.task(base=WorkflowTask, bind=True, name='archive_dataset')
+@app.task(base=WorkflowTask, bind=True, name='archive_dataset'
+# ,
+#           autoretry_for=(Exception,),
+#           max_retries=3,
+#           default_retry_delay=5
+          )
 def archive_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.archive import archive_dataset as task_body
     return task_body(celery_task, dataset_id, **kwargs)

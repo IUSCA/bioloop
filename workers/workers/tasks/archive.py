@@ -45,10 +45,9 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
-    bundle = Path(f'{config["paths"]["scratch"]}/{dataset["name"]}.tar')
-    logger.info(bundle)
-    
     # Tar the dataset directory and compute checksum
+    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar')
+
     make_tarfile(celery_task=celery_task,
               tar_path=bundle,
               source_dir=dataset['origin_path'],
@@ -64,27 +63,19 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
     bundle_attrs = {
         'name': bundle.name,
-        'path': f'{config["paths"][dataset["type"]]["bundle"]}/{bundle.name}',
+        'path': str(bundle),
         'size': bundle_size,
         'md5': bundle_checksum,
-        'dataset_id': dataset['id']
     }
 
     logger.info('bundle_attrs:')
     logger.info('----------------------------')
     logger.info(json.dumps(bundle_attrs, indent=4))
 
-    # matching_bundles = api.get_bundle(name=bundle_attrs['name'], checksum=bundle_attrs['md5'])
-    # logger.info(f'len(matching_bundles): {len(matching_bundles)}')
-
     sda_dir = wf_utils.get_archive_dir(dataset['type'])
     sda_bundle_path = f'{sda_dir}/{bundle.name}'
     logger.info(f'sda_bundle_path: {sda_bundle_path}')
 
-    # if matching_bundles.length != 0:
-    #     logger.info(f"A bundle with name {dataset['name']} and checksum {bundle_checksum} has already been archived to SDA.")
-    #     return sda_bundle_path, bundle_size
-    
     wf_utils.upload_file_to_sda(local_file_path=bundle,
                                 sda_file_path=sda_bundle_path,
                                 celery_task=celery_task)
@@ -93,20 +84,24 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
     api.log_bundle(bundle_attrs)
 
+    print('----------------------------')
+    print('bundle_attrs:')
+    print(json.dumps(bundle_attrs, indent=4))
+
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
         print("deleting local bundle")
         bundle.unlink()
 
-    return sda_bundle_path, bundle_size
+    return sda_bundle_path, bundle_attrs
 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id)
-    sda_bundle_path, bundle_size = archive(celery_task, dataset)
+    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+    sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
     update_data = {
         'archive_path': sda_bundle_path,
-        'bundle_size': bundle_size
+        'bundle': bundle_attrs
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='ARCHIVED')
