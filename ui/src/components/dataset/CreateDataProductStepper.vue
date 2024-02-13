@@ -18,6 +18,9 @@
             'step-button--active': isActive,
             'step-button--completed': isCompleted,
           }"
+          role="button"
+          @keydown.enter="isFormValid() && setStep(i)"
+          tabindex="0"
           @click="isFormValid() && setStep(i)"
         >
           <div class="flex flex-col items-center">
@@ -662,6 +665,9 @@ const onNextClick = (nextStep) => {
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
   const uploadToken = await uploadService.getToken().data;
+  // debugger;
+  console.log("uploadToken", uploadToken);
+
   auth.setUploadToken(uploadToken);
 
   await evaluateChecksums(filesNotUploaded.value);
