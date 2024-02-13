@@ -44,6 +44,7 @@ import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
 import { formatBytes, lxor } from "@/services/utils";
 import { useBreakpoint } from "vuestic-ui";
+import toast from "@/services/toast";
 
 const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
@@ -58,6 +59,8 @@ const props = defineProps({
     required: true,
   },
 });
+
+const emit = defineEmits(["loading", "loaded"]);
 
 const breakpoint = useBreakpoint();
 
@@ -164,10 +167,19 @@ const fetchQuery = computed(() => {
 });
 
 const loadResults = () => {
-  return datasetService.getAll(fetchQuery.value).then((res) => {
-    datasets.value = datasets.value.concat(res.data.datasets);
-    totalResultCount.value = res.data.metadata.count;
-  });
+  emit("loading");
+  return datasetService
+    .getAll(fetchQuery.value)
+    .then((res) => {
+      datasets.value = datasets.value.concat(res.data.datasets);
+      totalResultCount.value = res.data.metadata.count;
+    })
+    .catch(() => {
+      toast.error("Failed to load datasets");
+    })
+    .finally(() => {
+      emit("loaded");
+    });
 };
 
 watch([searchTerm, filterQuery], () => {
