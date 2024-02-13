@@ -4,12 +4,13 @@
     title="Manage Access"
     no-outside-dismiss
     fixed-layout
+    size="small"
     @ok="handleOk"
     @close="hide"
   >
     <va-inner-loading
       :loading="loading"
-      class="sm:w-96 sm:min-h-[50vh] sm:max-h-[65vh]"
+      class="sm:min-h-[50vh] sm:max-h-[65vh]"
     >
       <ProjectUsersForm />
     </va-inner-loading>
@@ -17,8 +18,8 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const props = defineProps(["id"]);
 const emit = defineEmits(["update"]);

@@ -10,7 +10,6 @@ const exports = {
   appTitle: "BIOLOOP",
   contact: {
     app_admin: "admin@sca.iu.edu",
-    sca_admin: "sca-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
   paths: {
@@ -43,6 +42,20 @@ const exports = {
     SDA: "sda",
     SLATE_SCRATCH: "/N/scratch",
     SLATE_SCRATCH_FILES: "/N/scratch files",
+  },
+  dashboard: {
+    active_tasks: {
+      steps: [
+        "await stability",
+        "inspect",
+        "archive",
+        "stage",
+        "validate",
+        "setup download",
+        "delete source",
+      ],
+      refresh_interval_ms: 10000,
+    },
   },
   upload_status: {
     UPLOADING: "UPLOADING",

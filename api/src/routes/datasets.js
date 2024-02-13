@@ -1,5 +1,3 @@
-// const fs = require('fs');
-// const { createHash } = require('node:crypto');
 const fsPromises = require('fs/promises');
 
 const express = require('express');
@@ -115,14 +113,13 @@ const buildQueryObject = ({
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
-    archive_path: archived ? { not: null } : {},
+    archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
     type,
-    name: {
+    name: name ? {
       ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
-    },
-
+    } : undefined,
   });
 
   // processed=true: datasets with one or more workflows associated
@@ -422,7 +419,6 @@ router.patch(
       data,
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
-        ...datasetService.INCLUDE_STATES,
         source_datasets: true,
         derived_datasets: true,
       },
@@ -535,6 +531,7 @@ router.post(
     // Allowed names are stage, integrated
 
     // Log the staging attempt first.
+    // Catch errors to ensure that logging does not get in the way of the rest of the method.
     if (req.params.wf === 'stage') {
       try {
         await prisma.stage_request_log.create({

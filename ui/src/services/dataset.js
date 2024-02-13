@@ -1,8 +1,6 @@
-import api from "./api";
 import config from "@/config";
-import { useToastStore } from "@/stores/toast";
-
-const toast = useToastStore();
+import toast from "@/services/toast";
+import api from "./api";
 
 class DatasetService {
   /**

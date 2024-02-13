@@ -251,5 +251,12 @@ def update_file_upload_log(file_upload_log_id, log):
         r.raise_for_status()
 
 
+def get_all_workflows():
+    with APIServerSession() as s:
+        r = s.get('workflows/current')
+        r.raise_for_status()
+        return r.json()
+
+
 if __name__ == '__main__':
     pass

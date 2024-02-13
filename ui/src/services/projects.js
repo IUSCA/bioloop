@@ -1,9 +1,8 @@
-import api from "./api";
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
-import { useToastStore } from "@/stores/toast";
+import api from "./api";
 
 const auth = useAuthStore();
-const toast = useToastStore();
 
 class projectService {
   getAll({ forSelf }) {
@@ -17,11 +16,11 @@ class projectService {
     });
   }
 
-  getById({ id, forSelf }) {
+  getById({ id, forSelf, query }) {
     const username = auth.user.username;
     return forSelf
-      ? api.get(`/projects/${username}/${id}`)
-      : api.get(`/projects/${id}`);
+      ? api.get(`/projects/${username}/${id}`, { params: query })
+      : api.get(`/projects/${id}`, { params: query });
   }
 
   createProject({ project_data, dataset_ids, user_ids }) {
@@ -82,10 +81,18 @@ class projectService {
       });
   }
 
-  setDatasets({ id, dataset_ids }) {
+  getDatasets({ id, params }) {
+    const username = auth.user.username;
+    return api.get(`/projects/${username}/${id}/datasets`, {
+      params,
+    });
+  }
+
+  updateDatasets({ id, add_dataset_ids, remove_dataset_ids }) {
     return api
-      .put(`/projects/${id}/datasets`, {
-        dataset_ids,
+      .patch(`/projects/${id}/datasets`, {
+        add_dataset_ids,
+        remove_dataset_ids,
       })
       .catch((err) => {
         console.error(err);

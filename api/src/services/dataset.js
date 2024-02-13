@@ -150,7 +150,6 @@ async function get_dataset({
       files: fileSelect,
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
-      ...INCLUDE_STATES,
       source_datasets: true,
       derived_datasets: fetch_uploading_data_products ? true : {
         where: {
@@ -503,7 +502,6 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
-
   create_filetree,
   has_dataset_assoc,
   files_ls,

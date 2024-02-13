@@ -6,13 +6,12 @@
 </template>
 
 <script setup>
-import { storeToRefs } from "pinia";
-import DatasetService from "@/services/dataset";
 import config from "@/config";
-import { useToastStore } from "@/stores/toast";
+import DatasetService from "@/services/dataset";
+import toast from "@/services/toast";
 import { useNavStore } from "@/stores/nav";
+import { storeToRefs } from "pinia";
 
-const toast = useToastStore();
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 
@@ -41,7 +40,7 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
   .catch((err) => {
     console.error(err);
     if (err?.response?.status == 404) toast.error("Could not find the dataset");
-    else toast.error("Something went wrong. Could not fetch datatset");
+    else toast.error("Could not fetch datatset");
   });
 </script>
 

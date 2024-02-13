@@ -12,8 +12,7 @@
 
 <script setup>
 import MetricService from "@/services/metrics";
-import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
+import toast from "@/services/toast";
 
 const disk_usage_metrics = ref([]);
 

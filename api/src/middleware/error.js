@@ -21,6 +21,16 @@ function prismaNotFoundHandler(e, req, res, next) {
   return next(e);
 }
 
+// catch prisma constraint failed errors and send 40
+function prismaConstraintFailedHandler(e, req, res, next) {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    if (e?.code === 'P2002') {
+      return next(createError.BadRequest('Unique constraint failed'));
+    }
+  }
+  return next(e);
+}
+
 // catch assertion errors and send 400
 function assertionErrorHandler(e, req, res, next) {
   if (e instanceof AssertionError) {
@@ -64,4 +74,5 @@ module.exports = {
   prismaNotFoundHandler,
   assertionErrorHandler,
   axiosErrorHandler,
+  prismaConstraintFailedHandler,
 };
