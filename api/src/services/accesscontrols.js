@@ -37,6 +37,9 @@ const grantsObject = {
       'create:any': ['*'],
       'read:any': ['*'],
     },
+    uploads: {
+      'create:any': ['*'],
+    },
     auth: {
       'create:any': ['*'],
     },
@@ -89,6 +92,9 @@ const grantsObject = {
     },
     metrics: {
       'read:any': ['*'],
+    },
+    uploads: {
+      'create:any': ['*'],
     },
   },
 };

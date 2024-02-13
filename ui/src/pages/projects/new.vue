@@ -1,7 +1,7 @@
 <template>
   <!-- Form -->
   <div class="w-full flex justify-center">
-    <va-card class="flex-auto max-w-xl md:h-[calc(85vh)]">
+    <va-card class="flex-auto max-w-5xl md:h-[calc(85vh)]">
       <va-card-content class="h-full">
         <CreateProjectStepper class="" @update="router.push('/projects')" />
       </va-card-content>

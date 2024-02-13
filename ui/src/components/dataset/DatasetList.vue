@@ -20,7 +20,7 @@
 
       <!-- filter -->
       <div class="flex-none flex items-center justify-center">
-        <filters-group @update="updateFiltersGroupQuery"></filters-group>
+        <DatasetFiltersGroup @update="updateFiltersGroupQuery" />
       </div>
     </div>
 
@@ -46,6 +46,12 @@
 
       <template #cell(created_at)="{ value }">
         <span>{{ datetime.date(value) }}</span>
+      </template>
+
+      <template #cell(file_type_name)="{ value }">
+        <va-chip v-if="value" outline size="small">
+          {{ value }}
+        </va-chip>
       </template>
 
       <template #cell(archived)="{ source }">
@@ -254,6 +260,12 @@ const columns = [
     width: "100px",
   },
   {
+    key: "file_type_name",
+    label: "File Type",
+    thAlign: "center",
+    tdAlign: "center",
+  },
+  {
     key: "archive_path",
     name: "archived",
     label: "archived",
@@ -365,7 +377,10 @@ function fetch_datasets(query = {}, updatePageCount = true) {
 
   return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
     .then((res) => {
-      datasets.value = res.data.datasets;
+      datasets.value = res.data.datasets.map((d) => ({
+        ...d,
+        file_type_name: d.file_type?.name,
+      }));
       if (updatePageCount) {
         total_results.value = res.data.metadata.count;
       }

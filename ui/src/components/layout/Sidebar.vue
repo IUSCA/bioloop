@@ -176,6 +176,11 @@ const operator_items = ref([
     title: "Workflows",
     path: "/workflows",
   },
+  {
+    icon: "mdi:folder-upload",
+    title: "Data Product Upload",
+    path: "/dataProductUploads",
+  },
   // {
   //   icon: "mdi-account-multiple",
   //   title: "Group Management",

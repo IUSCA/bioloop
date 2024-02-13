@@ -129,6 +129,8 @@ async function get_dataset({
   last_task_run = false,
   prev_task_runs = false,
   only_active = false,
+  fetch_uploading_data_products = false,
+  upload_log = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -149,7 +151,23 @@ async function get_dataset({
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
       source_datasets: true,
-      derived_datasets: true,
+      derived_datasets: fetch_uploading_data_products ? true : {
+        where: {
+          derived_dataset: {
+            OR: [
+              {
+                upload_log: null,
+              },
+              {
+                upload_log: {
+                  status: config.upload_status.COMPLETE,
+                },
+              },
+            ],
+          },
+        },
+      },
+      upload_log,
     },
   });
 
@@ -484,7 +502,6 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
-
   create_filetree,
   has_dataset_assoc,
   files_ls,

@@ -48,7 +48,9 @@ export const useProjectFormStore = defineStore("projectForm", {
       }, {});
     },
     addDataset(ds) {
-      this.dataset_dict[ds.id] = ds;
+      if (!this.dataset_dict[ds.id]) {
+        this.dataset_dict[ds.id] = ds;
+      }
     },
     removeDataset(ds) {
       delete this.dataset_dict[[ds.id]];

@@ -150,6 +150,11 @@ async function main() {
 
   await Promise.all(operator_promises);
 
+  // create dataset_file_type
+  await prisma.dataset_file_type.deleteMany();
+  await prisma.dataset_file_type.createMany({ data: data.dataset_file_types });
+
+  // create datasets
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
@@ -287,6 +292,26 @@ async function main() {
   await prisma.stage_request_log.deleteMany();
   await prisma.stage_request_log.createMany({
     data: stage_request_logs,
+  });
+
+  // create data upload entries
+  const dataset_uploads = data.dataset_upload_logs;
+  const operators = await prisma.user.findMany({
+    where: {
+      user_role: {
+        some: {
+          role_id: 2,
+        },
+      },
+    },
+  });
+  const uploads = dataset_uploads.map((e) => {
+    const operator = operators[Math.floor(Math.random() * operators.length)];
+    return { ...e, user_id: operator.id };
+  });
+  await prisma.upload_log.deleteMany();
+  await prisma.upload_log.createMany({
+    data: uploads,
   });
 }
 

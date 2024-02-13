@@ -1,33 +1,37 @@
 <template>
-  <div class="space-y-4">
-    <DatasetSelect @select="handleSelect" />
-
-    <div class="flex flex-row justify-between px-1">
-      <span class="text-lg font-bold tracking-wide">Datasets to assign</span>
-      <span class="text-right"
-        >{{ maybePluralize(projectFormStore.datasets.length, "dataset") }}
-      </span>
-    </div>
-
-    <ProjectDatasetsList
-      :datasets="projectFormStore.datasets"
-      show-remove
-      @remove="handleRemove"
-    />
-  </div>
+  <DatasetSelect
+    :selected-results="props.selectedResults"
+    @select="handleSelect"
+    @remove="handleRemove"
+    :column-widths="props.columnWidths"
+  />
 </template>
 
 <script setup>
-import { maybePluralize } from "@/services/utils";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+
+const props = defineProps({
+  selectedResults: {
+    type: Array,
+    default: () => [],
+  },
+  columnWidths: {
+    type: Object,
+    required: true,
+  },
+});
 
 const projectFormStore = useProjectFormStore();
 
-function handleSelect(ds) {
-  projectFormStore.addDataset(ds);
+function handleSelect(datasets) {
+  for (const ds of datasets) {
+    projectFormStore.addDataset(ds);
+  }
 }
 
-function handleRemove(ds) {
-  projectFormStore.removeDataset(ds);
+function handleRemove(datasets) {
+  for (const ds of datasets) {
+    projectFormStore.removeDataset(ds);
+  }
 }
 </script>

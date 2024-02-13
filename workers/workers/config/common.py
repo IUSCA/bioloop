@@ -71,6 +71,20 @@ config = {
         },
         'alias_salt': ALIAS_SALT
     },
+    'upload_status': {
+        'UPLOADING': 'UPLOADING',
+        'UPLOAD_FAILED': 'UPLOAD_FAILED',
+        'UPLOADED': 'UPLOADED',
+        'PROCESSING': 'PROCESSING',
+        'PROCESSING_FAILED': 'PROCESSING_FAILED',
+        'COMPLETE': 'COMPLETE',
+        'FAILED': 'FAILED'
+    },
+    'DONE_STATUSES': {
+        'REVOKED': 'REVOKED',
+        'FAILURE': 'FAILURE',
+        'SUCCESS': 'SUCCESS'
+    },
     'workflow_registry': {
         'integrated': {
             'steps': [
@@ -114,6 +128,14 @@ config = {
                     'name': 'mock archive',
                     'task': 'mark_archived_and_delete'
                 },
+            ]
+        },
+        'process_uploads': {
+            'steps': [
+                {
+                    'name': 'chunks_to_files',
+                    'task': 'chunks_to_files'
+                }
             ]
         }
     },
