@@ -1,10 +1,10 @@
-import axios from "axios";
 import config from "@/config";
+import axios from "axios";
 
 const token = ref(useLocalStorage("uploadToken", ""));
 
 const uploadApi = axios.create({
-  baseURL: config.uploadPath,
+  baseURL: config.uploadBasePath,
 });
 
 uploadApi.interceptors.request.use(
