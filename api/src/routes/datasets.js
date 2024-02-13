@@ -661,6 +661,8 @@ router.get(
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}/${dataset.bundle.name}`;
+      console.log(`download_file_path: ${download_file_path}`)
+
       const download_token = await authService.get_download_token(download_file_path);
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
