@@ -14,6 +14,7 @@ from workers.config import config
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.dataset import compute_staging_path
+from workers.dataset import compute_bundle_path
 from workers import exceptions as exc
 
 app = Celery("tasks")
@@ -108,7 +109,7 @@ def stage_dataset(celery_task, dataset_id, **kwargs):
     update_data = {
         'staged_path': staged_path,
         'metadata': {
-            'stage_alias': alias
+            'stage_alias': alias,
             'bundle_alias': bundle_alias
         }
     }

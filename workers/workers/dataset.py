@@ -40,6 +40,6 @@ def bundle_alias(bundle: dict) -> str:
     return deterministic_uuid(f'{bundle["id"]}{bundle["name"]}{salt}')
 
 
-def compute_bundle_path(dataset: dict) -> tuple[Path, str]:
+def compute_bundle_path(dataset: dict) -> str:
     alias = glom(dataset, 'metadata.bundle_alias', default=bundle_alias(dataset['bundle']))
-    return staging_dir / alias / dataset['name'], alias
+    return alias

@@ -68,9 +68,9 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'md5': bundle_checksum,
     }
 
-    logger.info('bundle_attrs:')
-    logger.info('----------------------------')
-    logger.info(json.dumps(bundle_attrs, indent=4))
+    print('----------------------------')
+    print('bundle_attrs:')
+    print(json.dumps(bundle_attrs, indent=4))
 
     sda_dir = wf_utils.get_archive_dir(dataset['type'])
     sda_bundle_path = f'{sda_dir}/{bundle.name}'
@@ -81,12 +81,6 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
                                 celery_task=celery_task)
 
     logger.info("archived to SDA")
-
-    api.log_bundle(bundle_attrs)
-
-    print('----------------------------')
-    print('bundle_attrs:')
-    print(json.dumps(bundle_attrs, indent=4))
 
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
