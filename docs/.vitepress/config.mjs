@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "Bioloop",
-
+  base: "/bioloop/docs/",
   description: "Bioloop Documentation",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
