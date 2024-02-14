@@ -45,6 +45,7 @@ import { date } from "@/services/datetime";
 import { formatBytes, lxor } from "@/services/utils";
 import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
+import _ from "lodash";
 
 const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
@@ -72,6 +73,8 @@ const datasets = ref([]);
 const totalResultCount = ref(0);
 
 const searchTerm = ref("");
+const _searchTerm = ref("");
+const debouncedSearch = ref(null);
 
 const loadNextPage = () => {
   page.value += 1; // increase page value for offset recalculation
@@ -166,36 +169,103 @@ const fetchQuery = computed(() => {
   };
 });
 
-const loadResults = () => {
-  emit("loading");
-  return datasetService
-    .getAll(fetchQuery.value)
-    .then((res) => {
-      datasets.value = datasets.value.concat(res.data.datasets);
-      totalResultCount.value = res.data.metadata.count;
-    })
-    .catch(() => {
-      toast.error("Failed to load datasets");
-    })
-    .finally(() => {
-      emit("loaded");
-    });
+const searchIndex = ref(0);
+const searches = ref([]);
+const previousQuery = ref(null);
+
+const fetchDatasets = ({ queryIndex = null, query = null } = {}) => {
+  console.log(
+    `fetchDatasets(): queryIndex: ${queryIndex}, searchTerm: ${query.name}`,
+  );
+  // console.dir(query, { depth: null });
+  return datasetService.getAll(query).then((res) => {
+    return { data: res.data, ...(queryIndex && { queryIndex }) };
+  });
 };
 
+const loadResults = (incrementSearchIndex = false) => {
+  if (!_.isEqual(previousQuery.value, fetchQuery.value)) {
+    previousQuery.value = fetchQuery.value;
+
+    if (incrementSearchIndex) {
+      console.log(
+        `loadResults() :incrementing searchIndex to ${incrementSearchIndex}, searchTerm: ${searchTerm.value}`,
+      );
+      searchIndex.value += 1;
+      searches.value.push(searchIndex.value);
+    }
+
+    return fetchDatasets({
+      ...(searchIndex.value > 0 && { queryIndex: searchIndex.value }),
+      query: fetchQuery.value,
+    })
+      .then((res) => {
+        console.log(`resolved for queryIndex: ${res.queryIndex}`);
+        datasets.value = datasets.value.concat(res.data.datasets);
+        console.dir(`datasets:`);
+        console.dir(datasets.value, { depth: null });
+        totalResultCount.value = res.data.metadata.count;
+        searches.value.splice(searches.value.indexOf(res.queryIndex, 0));
+        console.log(`removed ${res.queryIndex} from searches[]`);
+        console.dir(`searches:`);
+        console.dir(searches.value);
+        console.log(`searches.value.length: ${searches.value.length}`);
+      })
+      .catch(() => {
+        toast.error("Failed to load datasets");
+      })
+      .finally(() => {
+        if (searches.value.length === 0) {
+          console.log("loadResults(): loaded emitted");
+          emit("loaded");
+        }
+      });
+  } else {
+    console.log(
+      `trying to search for ${fetchQuery.value.name}, when previous query was ${previousQuery.value.name}`,
+    );
+  }
+};
+
+// watch(filterQuery, () => {
+//   emit("loading");
+//   resetSearchState();
+// });
+
 watch([searchTerm, filterQuery], () => {
-  resetSearchState();
+  // console.log(`old: ${oldValue}, new: ${newValue}`);
+  // if (newValue !== oldValue) {
+  //   _searchTerm.value = newValue;
+  console.log(`watch(): searchTerm: ${searchTerm.value}`);
+  console.log("watch(): loading emitted");
+  emit("loading");
+  debouncedSearch.value = _.debounce(resetSearchState, 2000, null);
+  debouncedSearch.value(true);
+  // console.log("queried");
+  // }
 });
 
-const resetSearchState = () => {
+const resetSearchState = (incrementSearchIndex) => {
+  console.log(
+    `resetSearchState(): incrementSearchIndex: ${incrementSearchIndex}`,
+  );
   // reset search results
   datasets.value = [];
   // reset page value
   page.value = 1;
   // load initial set of search results
-  loadResults();
+  loadResults(incrementSearchIndex);
 };
 
 onMounted(() => {
+  console.log("onMounted(): loading emitted");
+  emit("loading");
   loadResults();
+});
+
+onBeforeUnmount(() => {
+  if (debouncedSearch.value) {
+    debouncedSearch.value.cancel();
+  }
 });
 </script>
