@@ -170,7 +170,7 @@ const fetchQuery = computed(() => {
 });
 
 const searchIndex = ref(0);
-const searches = ref([]);
+const searchHistory = ref([]);
 const previousQuery = ref(null);
 
 const fetchDatasets = ({ queryIndex = null, query = null } = {}) => {
@@ -183,39 +183,45 @@ const fetchDatasets = ({ queryIndex = null, query = null } = {}) => {
   });
 };
 
-const loadResults = (incrementSearchIndex = false) => {
+const loadResults = (searchIndex = null) => {
   if (!_.isEqual(previousQuery.value, fetchQuery.value)) {
+    // if (previousQuery.value.name !== fetchQuery.value.name) {
     previousQuery.value = fetchQuery.value;
 
-    if (incrementSearchIndex) {
-      console.log(
-        `loadResults() :incrementing searchIndex to ${incrementSearchIndex}, searchTerm: ${searchTerm.value}`,
-      );
-      searchIndex.value += 1;
-      searches.value.push(searchIndex.value);
-    }
-
     return fetchDatasets({
-      ...(searchIndex.value > 0 && { queryIndex: searchIndex.value }),
+      ...(searchIndex && { queryIndex: searchIndex }),
       query: fetchQuery.value,
     })
       .then((res) => {
-        console.log(`resolved for queryIndex: ${res.queryIndex}`);
+        console.log(
+          `loadResults(): resolved for queryIndex: ${res.queryIndex}`,
+        );
         datasets.value = datasets.value.concat(res.data.datasets);
         console.dir(`datasets:`);
         console.dir(datasets.value, { depth: null });
         totalResultCount.value = res.data.metadata.count;
-        searches.value.splice(searches.value.indexOf(res.queryIndex, 0));
-        console.log(`removed ${res.queryIndex} from searches[]`);
-        console.dir(`searches:`);
-        console.dir(searches.value);
-        console.log(`searches.value.length: ${searches.value.length}`);
+        console.dir(`searchHistory:`);
+        console.dir(searchHistory.value);
+        console.log(
+          `searchHistory.value.length: ${searchHistory.value.length}`,
+        );
+        console.log(`removing ${res.queryIndex} from searchHistory[]`);
+        searchHistory.value.splice(
+          searchHistory.value.indexOf(res.queryIndex),
+          1,
+        );
+        console.log(`removed ${res.queryIndex} from searchHistory[]`);
+        console.dir(`searchHistory:`);
+        console.dir(searchHistory.value);
+        console.log(
+          `searchHistory.value.length: ${searchHistory.value.length}`,
+        );
       })
       .catch(() => {
         toast.error("Failed to load datasets");
       })
       .finally(() => {
-        if (searches.value.length === 0) {
+        if (searchHistory.value.length === 0) {
           console.log("loadResults(): loaded emitted");
           emit("loaded");
         }
@@ -224,37 +230,54 @@ const loadResults = (incrementSearchIndex = false) => {
     console.log(
       `trying to search for ${fetchQuery.value.name}, when previous query was ${previousQuery.value.name}`,
     );
+    console.log(`removing ${searchIndex} from searchHistory[]`);
+    searchHistory.value.splice(searchHistory.value.indexOf(searchIndex), 1);
+    console.log(`removed ${searchIndex} from searchHistory[]`);
   }
 };
-
-// watch(filterQuery, () => {
-//   emit("loading");
-//   resetSearchState();
-// });
 
 watch([searchTerm, filterQuery], () => {
   // console.log(`old: ${oldValue}, new: ${newValue}`);
   // if (newValue !== oldValue) {
   //   _searchTerm.value = newValue;
+  searchIndex.value += 1;
+  searchHistory.value.push(searchIndex.value);
+
+  // debugger;
+  console.log(
+    `watch() :incrementing searchIndex to ${searchIndex.value}, searchTerm: ${searchTerm.value}`,
+  );
+  console.log(`watch(): searchHistory:`);
+  console.dir(searchHistory.value);
+  console.log(
+    `watch(): searchHistory.value.length: ${searchHistory.value.length}`,
+  );
+
   console.log(`watch(): searchTerm: ${searchTerm.value}`);
   console.log("watch(): loading emitted");
   emit("loading");
   debouncedSearch.value = _.debounce(resetSearchState, 2000, null);
-  debouncedSearch.value(true);
+  debouncedSearch.value(searchIndex.value);
   // console.log("queried");
   // }
 });
 
-const resetSearchState = (incrementSearchIndex) => {
-  console.log(
-    `resetSearchState(): incrementSearchIndex: ${incrementSearchIndex}`,
-  );
+// watch(searchHistory, () => {
+//   console.log(`watch() on searchHistory: searchHistory:`);
+//   console.dir(searchHistory.value);
+// });
+
+const resetSearchState = (searchIndex) => {
+  // console.log(
+  //   `resetSearchState(): incrementSearchIndex: ${incrementSearchIndex}`,
+  // );
   // reset search results
   datasets.value = [];
   // reset page value
   page.value = 1;
   // load initial set of search results
-  loadResults(incrementSearchIndex);
+
+  loadResults(searchIndex);
 };
 
 onMounted(() => {
