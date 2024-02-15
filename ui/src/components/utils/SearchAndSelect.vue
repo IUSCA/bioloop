@@ -176,56 +176,60 @@
         </div>
 
         <!-- Selected Results table -->
-        <div class="overflow-y-auto selected-table">
-          <va-data-table
-            class="results-table"
-            v-model="selectedResultSelections"
-            v-if="props.selectedResults.length > 0"
-            :items="props.selectedResults"
-            :columns="_selectedResultColumns"
-            virtual-scroller
-            selectable
-            select-mode="multiple"
-          >
-            <!-- dynamically generated templates for displaying columns of the selected results table  -->
-            <template
-              v-for="(templateName, colIndex) in _selectedResultColumns
-                .filter((e) => e.key !== 'actions')
-                .map((e) => e.template)"
-              #[templateName]="{ rowData }"
-              :key="colIndex"
+        <va-inner-loading :loading="props.loading">
+          <div class="overflow-y-auto selected-table">
+            <va-data-table
+              class="results-table"
+              v-model="selectedResultSelections"
+              v-if="props.selectedResults.length > 0"
+              :items="props.selectedResults"
+              :columns="_selectedResultColumns"
+              virtual-scroller
+              selectable
+              select-mode="multiple"
             >
-              <!-- Wrap column's value in the provided slot, or display plain value -->
-              <slot
-                v-if="_selectedResultColumns[colIndex].slotted"
-                :name="
-                  _selectedResultColumns[colIndex].slot ||
-                  _selectedResultColumns[colIndex].key
-                "
-                :value="fieldValue(rowData, _selectedResultColumns[colIndex])"
-                class="overflow-hidden"
+              <!-- dynamically generated templates for displaying columns of the selected results table  -->
+              <template
+                v-for="(templateName, colIndex) in _selectedResultColumns
+                  .filter((e) => e.key !== 'actions')
+                  .map((e) => e.template)"
+                #[templateName]="{ rowData }"
+                :key="colIndex"
               >
-              </slot>
-              <div v-else class="overflow-hidden">
-                {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
-              </div>
-            </template>
+                <!-- Wrap column's value in the provided slot, or display plain value -->
+                <slot
+                  v-if="_selectedResultColumns[colIndex].slotted"
+                  :name="
+                    _selectedResultColumns[colIndex].slot ||
+                    _selectedResultColumns[colIndex].key
+                  "
+                  :value="fieldValue(rowData, _selectedResultColumns[colIndex])"
+                  class="overflow-hidden"
+                >
+                </slot>
+                <div v-else class="overflow-hidden">
+                  {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
+                </div>
+              </template>
 
-            <!-- template for Actions column -->
-            <template #cell(actions)="{ rowData }">
-              <va-button
-                class="w-full"
-                :icon="isSelected(rowData) ? 'remove' : 'add'"
-                :color="isSelected(rowData) ? 'danger' : 'success'"
-                size="small"
-                preset="primary"
-                @click="addOrRemove(rowData)"
-                :disabled="selectedResultSelections.length > 0 || props.loading"
-              >
-              </va-button>
-            </template>
-          </va-data-table>
-        </div>
+              <!-- template for Actions column -->
+              <template #cell(actions)="{ rowData }">
+                <va-button
+                  class="w-full"
+                  :icon="isSelected(rowData) ? 'remove' : 'add'"
+                  :color="isSelected(rowData) ? 'danger' : 'success'"
+                  size="small"
+                  preset="primary"
+                  @click="addOrRemove(rowData)"
+                  :disabled="
+                    selectedResultSelections.length > 0 || props.loading
+                  "
+                >
+                </va-button>
+              </template>
+            </va-data-table>
+          </div>
+        </va-inner-loading>
       </div>
     </div>
   </div>
