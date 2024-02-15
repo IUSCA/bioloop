@@ -47,7 +47,7 @@
                     resetSearchSelections();
                   }
                 "
-                :disabled="searchResultSelections.length === 0"
+                :disabled="searchResultSelections.length === 0 || props.loading"
               >
                 Add
                 {{
@@ -63,64 +63,71 @@
         </div>
 
         <!-- Search results table -->
-        <div ref="infiniteScrollTarget_search" class="max-h-80 overflow-y-auto">
-          <va-infinite-scroll
-            :load="onScrollToEnd"
-            :scroll-target="infiniteScrollTarget_search"
-            :disabled="
-              props.searchResults.length === props.searchResultCount ||
-              props.searchResults.length < props.pageSizeSearch
-            "
-            :offset="0"
+        <va-inner-loading :loading="props.loading">
+          <div
+            ref="infiniteScrollTarget_search"
+            class="max-h-80 overflow-y-auto"
           >
-            <va-data-table
-              class="results-table"
-              v-model="searchResultSelections"
-              :items="props.searchResults"
-              :columns="_searchResultColumns"
-              selectable
-              select-mode="multiple"
+            <va-infinite-scroll
+              :load="onScrollToEnd"
+              :scroll-target="infiniteScrollTarget_search"
+              :disabled="
+                props.searchResults.length === props.searchResultCount ||
+                props.searchResults.length < props.pageSizeSearch
+              "
+              :offset="0"
             >
-              <!-- dynamically generated templates for displaying columns of the search results table -->
-              <template
-                v-for="(templateName, colIndex) in _searchResultColumns
-                  .filter((e) => e.key !== 'actions')
-                  .map((e) => e.template)"
-                #[templateName]="{ rowData }"
-                :key="colIndex"
+              <va-data-table
+                class="results-table"
+                v-model="searchResultSelections"
+                :items="props.searchResults"
+                :columns="_searchResultColumns"
+                selectable
+                select-mode="multiple"
               >
-                <!-- Wrap column's value in the provided slot, or display plain value -->
-                <slot
-                  v-if="_searchResultColumns[colIndex].slotted"
-                  :name="
-                    _searchResultColumns[colIndex].slot ||
-                    _searchResultColumns[colIndex].key
-                  "
-                  :value="fieldValue(rowData, _searchResultColumns[colIndex])"
-                  class="overflow-hidden"
+                <!-- dynamically generated templates for displaying columns of the search results table -->
+                <template
+                  v-for="(templateName, colIndex) in _searchResultColumns
+                    .filter((e) => e.key !== 'actions')
+                    .map((e) => e.template)"
+                  #[templateName]="{ rowData }"
+                  :key="colIndex"
                 >
-                </slot>
-                <div v-else class="overflow-hidden">
-                  {{ fieldValue(rowData, _searchResultColumns[colIndex]) }}
-                </div>
-              </template>
+                  <!-- Wrap column's value in the provided slot, or display plain value -->
+                  <slot
+                    v-if="_searchResultColumns[colIndex].slotted"
+                    :name="
+                      _searchResultColumns[colIndex].slot ||
+                      _searchResultColumns[colIndex].key
+                    "
+                    :value="fieldValue(rowData, _searchResultColumns[colIndex])"
+                    class="overflow-hidden"
+                  >
+                  </slot>
+                  <div v-else class="overflow-hidden">
+                    {{ fieldValue(rowData, _searchResultColumns[colIndex]) }}
+                  </div>
+                </template>
 
-              <!-- template for Actions column -->
-              <template #cell(actions)="{ rowData }">
-                <va-button
-                  class="w-full"
-                  :icon="isSelected(rowData) ? 'remove' : 'add'"
-                  :color="isSelected(rowData) ? 'danger' : 'success'"
-                  size="small"
-                  preset="primary"
-                  @click="addOrRemove(rowData)"
-                  :disabled="searchResultSelections.length > 0"
-                >
-                </va-button>
-              </template>
-            </va-data-table>
-          </va-infinite-scroll>
-        </div>
+                <!-- template for Actions column -->
+                <template #cell(actions)="{ rowData }">
+                  <va-button
+                    class="w-full"
+                    :icon="isSelected(rowData) ? 'remove' : 'add'"
+                    :color="isSelected(rowData) ? 'danger' : 'success'"
+                    size="small"
+                    preset="primary"
+                    @click="addOrRemove(rowData)"
+                    :disabled="
+                      searchResultSelections.length > 0 || props.loading
+                    "
+                  >
+                  </va-button>
+                </template>
+              </va-data-table>
+            </va-infinite-scroll>
+          </div>
+        </va-inner-loading>
       </div>
     </div>
 
@@ -149,7 +156,9 @@
                     resetSelectedSelections();
                   }
                 "
-                :disabled="selectedResultSelections.length === 0"
+                :disabled="
+                  selectedResultSelections.length === 0 || props.loading
+                "
               >
                 Remove
                 {{
@@ -211,7 +220,7 @@
                 size="small"
                 preset="primary"
                 @click="addOrRemove(rowData)"
-                :disabled="selectedResultSelections.length > 0"
+                :disabled="selectedResultSelections.length > 0 || props.loading"
               >
               </va-button>
             </template>
@@ -271,6 +280,10 @@ const props = defineProps({
   },
   controlsHeight: {
     type: String,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
   },
 });
 

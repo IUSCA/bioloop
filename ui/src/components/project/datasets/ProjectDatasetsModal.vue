@@ -10,19 +10,15 @@
     @close="hide"
     :size="modalSize"
   >
-    <va-inner-loading
+    <ProjectDatasetsForm
+      :selected-results="selectedDatasets"
+      @select="(datasets) => updateDatasetsToAdd(datasets)"
+      @remove="(datasets) => updateDatasetsToRemove(datasets)"
+      :column-widths="columnWidths"
+      @loading="loadingSearchableDatasets = true"
+      @loaded="loadingSearchableDatasets = false"
       :loading="loading || loadingSearchableDatasets"
-      class="min-w-full sm:min-h-[50vh] sm:max-h-[65vh]"
-    >
-      <ProjectDatasetsForm
-        :selected-results="selectedDatasets"
-        @select="(datasets) => updateDatasetsToAdd(datasets)"
-        @remove="(datasets) => updateDatasetsToRemove(datasets)"
-        :column-widths="columnWidths"
-        @loading="loadingSearchableDatasets = true"
-        @loaded="loadingSearchableDatasets = false"
-      />
-    </va-inner-loading>
+    />
   </va-modal>
 </template>
 

@@ -9,6 +9,7 @@
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
+    :loading="props.loading"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -58,6 +59,10 @@ const props = defineProps({
   columnWidths: {
     type: Object,
     required: true,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
   },
 });
 
