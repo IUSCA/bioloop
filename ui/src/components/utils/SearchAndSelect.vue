@@ -362,7 +362,7 @@ const onScrollToEnd = () => {
   // This method returns a Promise simply because <va-infinite-scroll>'s expects its `load`
   // callback prop to always return a Promise. The Promise in this instance doesn't do
   // anything, and the actual fetching of subsequent results is handled by the client,
-  // who listens to the `scroll-to-end` event.
+  // who listens to the `scroll-end` event.
   return new Promise((resolve) => {
     resolve();
   });
