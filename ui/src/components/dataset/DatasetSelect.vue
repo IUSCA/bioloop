@@ -9,6 +9,7 @@
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
+    :loading="props.loading"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -44,6 +45,8 @@ import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
 import { formatBytes, lxor } from "@/services/utils";
 import { useBreakpoint } from "vuestic-ui";
+import toast from "@/services/toast";
+import _ from "lodash";
 
 const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
@@ -57,7 +60,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(["loading", "loaded"]);
 
 const breakpoint = useBreakpoint();
 
@@ -68,11 +77,15 @@ const skip = computed(() => {
 const datasets = ref([]);
 const totalResultCount = ref(0);
 
-const searchTerm = ref("");
+const searchTerm = ref(undefined);
+const debouncedSearch = ref(null);
+const searchIndex = ref(0);
+const searches = ref([]);
+const latestQuery = ref(null);
 
 const loadNextPage = () => {
   page.value += 1; // increase page value for offset recalculation
-  return loadResults();
+  return searchDatasets({ appendToCurrentResults: true });
 };
 
 const trimName = (val) =>
@@ -163,27 +176,80 @@ const fetchQuery = computed(() => {
   };
 });
 
-const loadResults = () => {
-  return datasetService.getAll(fetchQuery.value).then((res) => {
-    datasets.value = datasets.value.concat(res.data.datasets);
-    totalResultCount.value = res.data.metadata.count;
+const queryDatasets = ({ queryIndex = null, query = null } = {}) => {
+  return datasetService.getAll(query).then((res) => {
+    return { data: res.data, ...(queryIndex && { queryIndex }) };
+  });
+};
+
+const searchDatasets = ({
+  searchIndex = null,
+  appendToCurrentResults = false,
+  logQuery = false,
+} = {}) => {
+  // Ensure that the same query is not being run a second time (which
+  // is possible due to debounced searches). If it is, the search
+  // can be resolved immediately.
+  if (_.isEqual(latestQuery.value, fetchQuery.value)) {
+    resolveSearch(searchIndex);
+  } else {
+    if (logQuery) {
+      latestQuery.value = fetchQuery.value;
+    }
+
+    return queryDatasets({
+      ...(searchIndex && { queryIndex: searchIndex }),
+      query: fetchQuery.value,
+    })
+      .then((res) => {
+        datasets.value = appendToCurrentResults
+          ? datasets.value.concat(res.data.datasets)
+          : res.data.datasets;
+        totalResultCount.value = res.data.metadata.count;
+        resolveSearch(res.queryIndex);
+      })
+      .catch(() => {
+        toast.error("Failed to load datasets");
+      });
+  }
+};
+
+const resolveSearch = (searchIndex) => {
+  searches.value.splice(searches.value.indexOf(searchIndex), 1);
+  if (searches.value.length === 0) {
+    emit("loaded");
+  }
+};
+
+const performSearch = (searchIndex) => {
+  // reset page value
+  page.value = 1;
+  // load search results
+  searchDatasets({
+    searchIndex,
+    appendToCurrentResults: false,
+    logQuery: true,
   });
 };
 
 watch([searchTerm, filterQuery], () => {
-  resetSearchState();
+  searchIndex.value += 1;
+  searches.value.push(searchIndex.value);
+
+  emit("loading");
+
+  debouncedSearch.value = _.debounce(performSearch, 300);
+  debouncedSearch.value(searchIndex.value);
 });
 
-const resetSearchState = () => {
-  // reset search results
-  datasets.value = [];
-  // reset page value
-  page.value = 1;
-  // load initial set of search results
-  loadResults();
-};
-
 onMounted(() => {
-  loadResults();
+  emit("loading");
+  searchDatasets();
+});
+
+onBeforeUnmount(() => {
+  if (debouncedSearch.value) {
+    debouncedSearch.value.cancel();
+  }
 });
 </script>
