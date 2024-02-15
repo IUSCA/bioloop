@@ -45,10 +45,8 @@
         >
           <div class="flex gap-2">
             <div class="flex-1 flex flex-col gap-1">
-              <!-- Help Icon -->
-              <va-popover message="Markdown supported" placement="left">
-                <va-icon size="small" name="help"></va-icon>
-              </va-popover>
+              <div class="va-title va-text-primary">Markdown Supported</div>
+
               <!-- Textarea -->
               <div class="min-h-96 h-full">
                 <va-textarea
@@ -63,7 +61,7 @@
             <va-divider class="flex-none" vertical />
 
             <div class="flex-1 flex flex-col gap-1">
-              <div class="va-title">Preview</div>
+              <div class="va-title va-text-primary">Preview</div>
               <!-- Preview -->
               <div class="min-h-96 h-full">
                 <va-card class="h-full">
