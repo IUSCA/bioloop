@@ -1,11 +1,10 @@
 <template>
-  <!--  <div class="min-h-96 h-full">-->
   <va-textarea
-    class="w-full h-full"
     v-model="input"
+    class="w-full"
     :rules="[(v) => (v && v.length > 0) || 'Required']"
+    :resize="false"
   ></va-textarea>
-  <!--  </div>-->
 </template>
 
 <script setup>
@@ -23,6 +22,9 @@ const input = computed({
     return props.modelValue;
   },
   set(value) {
+    // console.log(`set():`);
+    // console.log(`emitting:`);
+    // console.log(value);
     emit("update:modelValue", value);
   },
 });
@@ -31,7 +33,7 @@ const input = computed({
 </script>
 
 <style scoped>
-.va-textarea * {
-  height: 100%;
+.va-textarea {
+  height: 500px;
 }
 </style>

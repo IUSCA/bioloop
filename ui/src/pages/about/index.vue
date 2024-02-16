@@ -59,15 +59,17 @@
               </template>
             </va-tabs>
 
-            <div class="min-h-96 h-full">
-              <Edit v-model="updatedText" v-if="activeTab === 0" />
-              <Preview :text="updatedText" v-else />
-            </div>
+            <!--            <div class="min-h-96">-->
+
+            <Edit v-model="updatedText" v-if="activeTab === 0" />
+            <Preview :text="updatedText" v-else />
+            <!--            </div>-->
           </div>
 
           <div v-else>
-            <div class="flex gap-2 min-h-96">
+            <div class="flex gap-2">
               <Edit class="flex-1" v-model="updatedText" />
+              <va-divider vertical />
               <Preview class="flex-1" :text="updatedText" />
             </div>
           </div>
@@ -119,9 +121,9 @@ const loading = ref(false);
 const currentAboutHTML = computed(() => {
   return DOMPurify.sanitize(md.render(currentText.value));
 });
-const updatedAboutHTML = computed(() => {
-  return DOMPurify.sanitize(md.render(updatedText.value));
-});
+// const updatedAboutHTML = computed(() => {
+//   return DOMPurify.sanitize(md.render(updatedText.value));
+// });
 
 const submit = () => {
   if (!validate()) {
