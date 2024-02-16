@@ -162,6 +162,11 @@ const operator_items = ref([
     path: "/dataproducts",
   },
   {
+    icon: "mdi-file-cog-outline",
+    title: "Ingest",
+    path: "/ingest",
+  },
+  {
     icon: "mdi-table-account",
     title: "User Management",
     path: "/users",
