@@ -59,19 +59,18 @@
               </template>
             </va-tabs>
 
-            <!--            <div class="min-h-96">-->
-
-            <Edit v-model="updatedText" v-if="activeTab === 0" />
-            <Preview :text="updatedText" v-else />
-            <!--            </div>-->
+            <Edit
+              v-model="updatedText"
+              v-if="activeTab === 0"
+              :show-label="false"
+            />
+            <Preview :text="updatedText" v-else :show-label="false" />
           </div>
 
-          <div v-else>
-            <div class="flex gap-2">
-              <Edit class="flex-1" v-model="updatedText" />
-              <va-divider vertical />
-              <Preview class="flex-1" :text="updatedText" />
-            </div>
+          <div class="flex gap-2" v-else>
+            <Edit class="flex-1" v-model="updatedText" />
+            <va-divider vertical />
+            <Preview class="flex-1" :text="updatedText" />
           </div>
         </va-modal>
       </va-form>
