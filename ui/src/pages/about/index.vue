@@ -43,33 +43,32 @@
           @before-close="reset"
           no-dismiss
         >
-          <div class="flex gap-2">
-            <div class="flex-1 flex flex-col gap-1">
-              <div class="va-title va-text-primary">Markdown Supported</div>
+          <!--          <va-select-->
+          <!--            class="mb-2"-->
+          <!--            label="Mode"-->
+          <!--            :options="[MODES.DESKTOP, MODES.MOBILE]"-->
+          <!--            v-model="mode"-->
+          <!--          ></va-select>-->
 
-              <!-- Textarea -->
-              <div class="min-h-96 h-full">
-                <va-textarea
-                  :resize="false"
-                  class="w-full h-full"
-                  v-model="updatedText"
-                  :rules="[(v) => (v && v.length > 0) || 'Required']"
-                ></va-textarea>
-              </div>
+          <div v-if="breakpoint.xs || breakpoint.sm">
+            <va-tabs v-model="activeTab">
+              <template #tabs>
+                <va-tab v-for="tab in [TABS.MARKDOWN, TABS.PREVIEW]" :key="tab">
+                  {{ tab }}
+                </va-tab>
+              </template>
+            </va-tabs>
+
+            <div class="min-h-96 h-full">
+              <Edit v-model="updatedText" v-if="activeTab === 0" />
+              <Preview :text="updatedText" v-else />
             </div>
+          </div>
 
-            <va-divider class="flex-none" vertical />
-
-            <div class="flex-1 flex flex-col gap-1">
-              <div class="va-title va-text-primary">Preview</div>
-              <!-- Preview -->
-              <div class="min-h-96 h-full">
-                <va-card class="h-full">
-                  <va-card-content>
-                    <div class="break-words" v-html="updatedAboutHTML"></div>
-                  </va-card-content>
-                </va-card>
-              </div>
+          <div v-else>
+            <div class="flex gap-2 min-h-96">
+              <Edit class="flex-1" v-model="updatedText" />
+              <Preview class="flex-1" :text="updatedText" />
             </div>
           </div>
         </va-modal>
@@ -87,11 +86,25 @@ import DOMPurify from "dompurify";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { htmlDecode } from "@/services/utils";
+import Edit from "@/pages/about/Edit.vue";
+import Preview from "@/pages/about/Preview.vue";
+// import Edit from "@/pages/about/Edit.vue";
+import { useBreakpoint } from "vuestic-ui";
 
+const MODES = { DESKTOP: "desktop", MOBILE: "mobile" };
+const mode = ref(MODES.DESKTOP);
+
+const breakpoint = useBreakpoint();
 const md = new MarkdownIt();
-
 const nav = useNavStore();
 nav.setNavItems([], false);
+const TABS = { MARKDOWN: "Markdown", PREVIEW: "Preview" };
+const activeTab = ref(0);
+
+watch(activeTab, () => {
+  console.log(`activeTab.value);`);
+  console.log(activeTab.value);
+});
 
 const auth = useAuthStore();
 
