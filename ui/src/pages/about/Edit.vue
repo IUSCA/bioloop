@@ -1,6 +1,6 @@
 <template>
   <va-textarea
-    :label="label"
+    :label="_showLabel ? 'Markdown' : ''"
     v-model="input"
     class="w-full"
     :rules="[(v) => (v && v.length > 0) || 'Required']"
@@ -20,45 +20,22 @@ const props = defineProps({
   },
 });
 
-const _showLabel = toRef(() => props.showLabel);
-watch(_showLabel, (val) => {
-  console.log(`watch`);
-  console.log(`showLabel:`);
-  console.log(val);
-});
-
-onMounted(() => {
-  console.log(`mounted`);
-  console.log(`showLabel:`);
-  console.log(_showLabel.value);
-});
-
-const label = computed(() => {
-  console.log(`computed`);
-  console.log(`showLabel:`);
-  console.log(_showLabel.value);
-  return _showLabel.value ? "Markdown" : "";
-});
-
 const emit = defineEmits(["update:modelValue"]);
+
+const _showLabel = toRef(() => props.showLabel);
 
 const input = computed({
   get() {
     return props.modelValue;
   },
   set(value) {
-    // console.log(`set():`);
-    // console.log(`emitting:`);
-    // console.log(value);
     emit("update:modelValue", value);
   },
 });
-
-// const updatedText = ref("");
 </script>
 
 <style scoped>
 .va-textarea {
-  height: 500px;
+  height: 450px;
 }
 </style>

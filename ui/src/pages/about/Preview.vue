@@ -7,7 +7,7 @@
       <!--    <va-card-title>Preview</va-card-title>-->
       <va-card-content>
         <!--      Test-->
-        <div class="break-words" v-html="html"></div>
+        <div class="break-words" v-html="DOMPurify.sanitize(props.html)"></div>
       </va-card-content>
     </va-card>
   </div>
@@ -18,7 +18,7 @@ import MarkdownIt from "markdown-it";
 import DOMPurify from "dompurify";
 
 const props = defineProps({
-  text: {
+  html: {
     type: String,
     default: "",
   },
@@ -28,21 +28,23 @@ const props = defineProps({
   },
 });
 
+// const _html = computed(() => {
+//   return DOMPurify.sanitize(props.html);
+// });
+
 const md = new MarkdownIt();
-const _text = toRef(() => props.text);
-
-watch(_text, () => {
-  console.log("-------");
-  console.log("_text.value");
-  console.log(_text.value);
-});
-
-const html = computed(() => DOMPurify.sanitize(md.render(props.text)));
+// const _text = toRef(() => props.html);
+//
+// watch(_text, () => {
+//   console.log("-------");
+//   console.log("_text.value");
+//   console.log(_text.value);
+// });
 </script>
 
 <style scoped>
 .va-card {
-  height: 484px;
+  height: 434px;
   overflow: auto;
 }
 </style>

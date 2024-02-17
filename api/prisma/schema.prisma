@@ -283,7 +283,7 @@ model worker_process {
 
 model about {
   id            Int      @id @default(autoincrement())
-  text          String
+  html          String
   created_at    DateTime @default(now()) @db.Timestamp(6)
   created_by    user     @relation(fields: [created_by_id], references: [id])
   created_by_id Int

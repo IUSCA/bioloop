@@ -3,12 +3,6 @@
     <div class="banner flex items-end">
       <h1 class="heading_text p-[20px] text-center text-gray-800">Bioloop</h1>
     </div>
-    <!-- <div class="flex justify-center mt-10">
-      <div class="max-w-xl drop-shadow-xl rounded-xl">
-        <img src="/colorful_helix.jpg" />
-      </div>
-    </div> -->
-    <!--  -->
 
     <va-card>
       <va-card-title>
@@ -27,7 +21,7 @@
       <!-- Current About text -->
       <va-card-content>
         <va-inner-loading :loading="loading">
-          <span v-html="currentAboutHTML"></span>
+          <span v-html="DOMPurify.sanitize(currentHTML)"></span>
         </va-inner-loading>
       </va-card-content>
     </va-card>
@@ -43,13 +37,6 @@
           @before-close="reset"
           no-dismiss
         >
-          <!--          <va-select-->
-          <!--            class="mb-2"-->
-          <!--            label="Mode"-->
-          <!--            :options="[MODES.DESKTOP, MODES.MOBILE]"-->
-          <!--            v-model="mode"-->
-          <!--          ></va-select>-->
-
           <div v-if="breakpoint.xs || breakpoint.sm">
             <va-tabs v-model="activeTab">
               <template #tabs>
@@ -60,17 +47,17 @@
             </va-tabs>
 
             <Edit
-              v-model="updatedText"
+              v-model="markdownInput"
               v-if="activeTab === 0"
               :show-label="false"
             />
-            <Preview :text="updatedText" v-else :show-label="false" />
+            <Preview :html="updatedHTML" v-else :show-label="false" />
           </div>
 
           <div class="flex gap-2" v-else>
-            <Edit class="flex-1" v-model="updatedText" />
+            <Edit class="flex-1" v-model="markdownInput" />
             <va-divider vertical />
-            <Preview class="flex-1" :text="updatedText" />
+            <Preview class="flex-1" :html="updatedHTML" />
           </div>
         </va-modal>
       </va-form>
@@ -89,11 +76,15 @@ import { useAuthStore } from "@/stores/auth";
 import { htmlDecode } from "@/services/utils";
 import Edit from "@/pages/about/Edit.vue";
 import Preview from "@/pages/about/Preview.vue";
-// import Edit from "@/pages/about/Edit.vue";
 import { useBreakpoint } from "vuestic-ui";
+// import TurndownService from "turndown";
+// const TurndownService = require("turndown");
+import TurndownService from "turndown/lib/turndown.browser.umd.js";
 
-const MODES = { DESKTOP: "desktop", MOBILE: "mobile" };
-const mode = ref(MODES.DESKTOP);
+const turndownService = new TurndownService();
+
+// const MODES = { DESKTOP: "desktop", MOBILE: "mobile" };
+// const mode = ref(MODES.DESKTOP);
 
 const breakpoint = useBreakpoint();
 const md = new MarkdownIt();
@@ -102,27 +93,20 @@ nav.setNavItems([], false);
 const TABS = { MARKDOWN: "Markdown", PREVIEW: "Preview" };
 const activeTab = ref(0);
 
-watch(activeTab, () => {
-  console.log(`activeTab.value);`);
-  console.log(activeTab.value);
-});
-
 const auth = useAuthStore();
 
 const { validate } = useForm("aboutForm");
 
 const showModal = ref(false);
-const currentText = ref("");
-const updatedText = ref("");
+
+const markdownInput = ref("");
+const currentHTML = ref("");
+const updatedHTML = computed(() => {
+  return DOMPurify.sanitize(markdownInput.value);
+});
+
 const latestRecord = ref({});
 const loading = ref(false);
-
-const currentAboutHTML = computed(() => {
-  return DOMPurify.sanitize(md.render(currentText.value));
-});
-// const updatedAboutHTML = computed(() => {
-//   return DOMPurify.sanitize(md.render(updatedText.value));
-// });
 
 const submit = () => {
   if (!validate()) {
@@ -133,7 +117,7 @@ const submit = () => {
   aboutService
     .createOrUpdate({
       ...(latestRecord.value && { id: latestRecord.value.id }),
-      data: { text: updatedText.value },
+      data: { html: updatedHTML.value },
     })
     .then((res) => {
       latestRecord.value = res.data;
@@ -149,7 +133,7 @@ const submit = () => {
 };
 
 const reset = () => {
-  updatedText.value = currentText.value;
+  updatedHTML.value = currentHTML.value;
 };
 
 onMounted(() => {
@@ -168,8 +152,8 @@ onMounted(() => {
 });
 
 watch(latestRecord, () => {
-  currentText.value = htmlDecode(latestRecord.value?.text || "");
-  updatedText.value = htmlDecode(latestRecord.value?.text || "");
+  currentHTML.value = latestRecord.value?.html;
+  markdownInput.value = turndownService.turndown(latestRecord.value?.html);
 });
 </script>
 
