@@ -4,9 +4,9 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const requestLogger = require('morgan');
 // const compression = require('compression');
-// const cors = require('cors');
+const cors = require('cors');
 // const swaggerUi = require('swagger-ui-express');
-// const config = require('config');
+const config = require('config');
 
 const indexRouter = require('./routes/index');
 const {
@@ -38,18 +38,18 @@ app.use(cookieParser());
 // compress all responses
 // app.use(compression());
 
-// enable CORS - cross origin resource sharing
-// app.use(cors());
+if (!['production', 'test'].includes(config.get('mode'))) {
+  // enable CORS - cross origin resource sharing
+  app.use(cors());
 
-// if (!['production', 'test'].includes(config.get('mode'))) {
-//   // mount swagger ui
-//   try {
-//     const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));
-//     app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
-//   } catch (e) {
-//     console.error('Unable to load "./swagger_output.json"', e);
-//   }
-// }
+  // mount swagger ui
+  // try {
+  //   const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));
+  //   app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+  // } catch (e) {
+  //   console.error('Unable to load "./swagger_output.json"', e);
+  // }
+}
 
 // mount router
 app.use('/', indexRouter);
