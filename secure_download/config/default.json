@@ -1,4 +1,5 @@
 {
+  "mode": "default",
   "express": {
     "port": 3060,
     "host": "localhost"

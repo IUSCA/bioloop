@@ -9,6 +9,7 @@ const axiosInstance = axios.create({
   baseURL: config.apiBasePath,
 });
 
+// set request Authorization header with token
 axiosInstance.interceptors.request.use(
   (config) => {
     const _token = token.value;
