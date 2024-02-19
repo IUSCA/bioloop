@@ -28,21 +28,26 @@
       </template>
 
       <template #step-content-0>
-        <va-input
-          class="w-full"
-          label="File Path"
-          placeholder="File Path"
-          v-model="filePath"
-          :rules="[
-            (value) => {
-              return (value && value.length > 0) || 'Path is required';
-            },
-          ]"
-        >
-          <template #append>
-            <va-button class="ml-2">Load</va-button>
-          </template>
-        </va-input>
+        <va-inner-loading :loading="loading">
+          <va-select
+            class="w-full"
+            autocomplete
+            label="File Path"
+            placeholder="Enter File's Path"
+            v-model:search="filePath"
+            :rules="[
+              (value) => {
+                return (value && value.length > 0) || 'Path is required';
+              },
+            ]"
+            :options="filesInPath"
+            text-by="path"
+          >
+            <template #append>
+              <va-button class="ml-2" @click="loadPathFiles">Load</va-button>
+            </template>
+          </va-select>
+        </va-inner-loading>
       </template>
 
       <template #step-content-1>
@@ -118,7 +123,9 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
+import dataImportService from "@/services/dataImport";
 import { useForm } from "vuestic-ui";
+import toast from "@/services/toast";
 
 const steps = [
   { label: "Path", icon: "mdi:folder" },
@@ -132,6 +139,8 @@ const fileTypeList = ref([]);
 const rawDataSelected = ref();
 const rawDataSelected_search = ref("");
 
+const loading = ref(false);
+const filesInPath = ref([]);
 const statusChipColor = ref();
 const submissionAlert = ref(); // For handling network errors before upload begins
 const submissionAlertColor = ref();
@@ -145,6 +154,39 @@ const isLastStep = computed(() => {
 });
 
 const { isValid, validate } = useForm("dataProductIngestionForm");
+
+const loadPathFiles = () => {
+  loading.value = true;
+  dataImportService
+    .listDir(filePath.value)
+    .then((res) => {
+      // console.log("resolved");
+      // filesInPath.value = res.data.filesData;
+      filesInPath.value = [
+        {
+          name: "file_1",
+          isDir: false,
+          path: "/path/to/file_1",
+        },
+        {
+          name: "file_2",
+          isDir: false,
+          path: "/path/to/file_2",
+        },
+        {
+          name: "dir_1",
+          isDir: true,
+          path: "/path/to/dir_1",
+        },
+      ];
+    })
+    .catch(() => {
+      toast.error("Could not retrieve directory's contents");
+    })
+    .finally(() => {
+      loading.value = false;
+    });
+};
 
 const isFormValid = () => {
   validate();

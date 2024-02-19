@@ -6,7 +6,12 @@ const fsApi = axios.create({
 
 class DataImportService {
   listDir(path) {
-    return fsApi.get(`/fs?path=${path}`);
+    // return fsApi.get(`/fs?path=${path}`);
+    return new Promise((resolve, reject) => {
+      // setTimeout(function () {
+      resolve();
+      // }, 2000);
+    });
   }
 
   dirSize(path) {
