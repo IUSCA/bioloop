@@ -29,16 +29,20 @@
 
       <template #step-content-0>
         <va-input
-          label="Data Product Path"
-          placeholder="Path"
-          v-model="dataProductPath"
           class="w-full"
+          label="File Path"
+          placeholder="File Path"
+          v-model="filePath"
           :rules="[
             (value) => {
               return (value && value.length > 0) || 'Path is required';
             },
           ]"
-        />
+        >
+          <template #append>
+            <va-button class="ml-2">Load</va-button>
+          </template>
+        </va-input>
       </template>
 
       <template #step-content-1>
@@ -122,7 +126,7 @@ const steps = [
   { label: "Source Raw Data", icon: "mdi:dna" },
 ];
 
-const dataProductPath = ref("");
+const filePath = ref("");
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
 const rawDataSelected = ref();
