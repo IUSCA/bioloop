@@ -120,7 +120,6 @@ const steps = [
   { label: "Path", icon: "mdi:folder" },
   { label: "File Type", icon: "material-symbols:category" },
   { label: "Source Raw Data", icon: "mdi:dna" },
-  { label: "Select Files", icon: "material-symbols:folder" },
 ];
 
 const dataProductPath = ref("");
@@ -140,13 +139,6 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
-// const formData = computed(() => {
-//   return {
-//     data_product_name: dataProductPath.value,
-//     source_dataset_id: rawDataSelected.value.id,
-//     file_type: fileTypeSelected.value,
-//   };
-// });
 
 const { isValid, validate } = useForm("dataProductIngestionForm");
 
@@ -164,8 +156,6 @@ const onNextClick = (nextStep) => {
     nextStep();
   }
 };
-
-// Evaluates selected file checksums, logs the upload
 
 // Log (or update) upload status
 

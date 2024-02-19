@@ -11,6 +11,8 @@ model dataset {
   id               Int                 @id @default(autoincrement())
   name             String
   type             String
+  file_type        dataset_file_type? @relation(fields: [file_type_id], references: [id])
+  file_type_id     Int?
   num_directories  Int?
   num_files        Int?
   du_size          BigInt?
@@ -35,6 +37,15 @@ model dataset {
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
   @@unique([name, type, is_deleted])
+}
+
+model dataset_file_type {
+  id        Int       @id @default(autoincrement())
+  name      String
+  extension String
+  datasets  dataset[]
+
+  @@unique([name, extension])
 }
 
 model dataset_hierarchy {

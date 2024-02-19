@@ -239,6 +239,16 @@ router.get(
   }),
 );
 
+// Data Products - UI
+router.get(
+  '/dataset-file-types',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const dataset_file_types = await prisma.dataset_file_type.findMany();
+    res.json(dataset_file_types);
+  }),
+);
+
 const dataset_access_check = asyncHandler(async (req, res, next) => {
   // assumes req.params.id is the dataset id user is requesting
   // access check
