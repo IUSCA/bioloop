@@ -33,7 +33,7 @@
     "vue": "^3.3.4",
     "vue-chartjs": "^5.2.0",
     "vue-router": "^4.2.5",
-    "vuestic-ui": "^1.8.0"
+    "vuestic-ui": "^1.9.2"
   },
   "devDependencies": {
     "@iconify-json/mdi": "^1.1.54",
