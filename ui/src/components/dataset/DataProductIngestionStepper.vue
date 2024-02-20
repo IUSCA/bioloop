@@ -29,24 +29,26 @@
 
       <template #step-content-0>
         <va-inner-loading :loading="loading">
-          <va-select
-            class="w-full"
-            autocomplete
-            label="File Path"
-            placeholder="Enter File's Path"
-            v-model:search="filePath"
-            :rules="[
-              (value) => {
-                return (value && value.length > 0) || 'Path is required';
-              },
-            ]"
-            :options="filesInPath"
-            text-by="path"
-          >
-            <template #append>
-              <va-button class="ml-2" @click="loadPathFiles">Load</va-button>
-            </template>
-          </va-select>
+          <!--          <va-select-->
+          <!--            class="w-full"-->
+          <!--            autocomplete-->
+          <!--            label="File Path"-->
+          <!--            placeholder="Enter File's Path"-->
+          <!--            v-model:search="filePath"-->
+          <!--            :rules="[-->
+          <!--              (value) => {-->
+          <!--                return (value && value.length > 0) || 'Path is required';-->
+          <!--              },-->
+          <!--            ]"-->
+          <!--            :options="filesInPath"-->
+          <!--            text-by="path"-->
+          <!--          >-->
+          <!--            <template #append>-->
+          <!--              <va-button class="ml-2" @click="loadPathFiles">Load</va-button>-->
+          <!--            </template>-->
+          <!--          </va-select>-->
+
+          <FileListAutoComplete @select="(val) => (filePath = val)" />
         </va-inner-loading>
       </template>
 
@@ -154,39 +156,6 @@ const isLastStep = computed(() => {
 });
 
 const { isValid, validate } = useForm("dataProductIngestionForm");
-
-const loadPathFiles = () => {
-  loading.value = true;
-  dataImportService
-    .listDir(filePath.value)
-    .then((res) => {
-      // console.log("resolved");
-      // filesInPath.value = res.data.filesData;
-      filesInPath.value = [
-        {
-          name: "file_1",
-          isDir: false,
-          path: "/path/to/file_1",
-        },
-        {
-          name: "file_2",
-          isDir: false,
-          path: "/path/to/file_2",
-        },
-        {
-          name: "dir_1",
-          isDir: true,
-          path: "/path/to/dir_1",
-        },
-      ];
-    })
-    .catch(() => {
-      toast.error("Could not retrieve directory's contents");
-    })
-    .finally(() => {
-      loading.value = false;
-    });
-};
 
 const isFormValid = () => {
   validate();

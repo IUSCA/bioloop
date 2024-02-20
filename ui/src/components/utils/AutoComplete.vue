@@ -11,6 +11,7 @@
           v-model="text"
           class="w-full autocomplete-input"
           @click="openResults"
+          @input="onTextChange"
         />
       </va-form>
 
@@ -30,7 +31,7 @@
             @click="handleSelect(item)"
           >
             <slot name="filtered" :item="item">
-              {{ item[props.displayBy] }}
+              {{ display(item) }}
             </slot>
           </button>
         </li>
@@ -51,6 +52,10 @@
 import { OnClickOutside } from "@vueuse/components";
 
 const props = defineProps({
+  async: {
+    type: Boolean,
+    default: false,
+  },
   placeholder: {
     type: String,
     default: "Type here",
@@ -68,12 +73,12 @@ const props = defineProps({
     default: null,
   },
   displayBy: {
-    type: String,
+    type: [String, Function],
     default: "name",
   },
 });
 
-const emit = defineEmits(["select"]);
+const emit = defineEmits(["input", "select", "open", "close"]);
 
 const text = ref("");
 const visible = ref(false);
@@ -83,7 +88,7 @@ const visible = ref(false);
 // when clicked on a search result, clear text and hide the results ul
 
 const search_results = computed(() => {
-  if (text.value === "") return props.data;
+  if (text.value === "" || props.async) return props.data;
 
   const filterFn =
     props.filterFn instanceof Function
@@ -96,16 +101,32 @@ const search_results = computed(() => {
   return (props.data || []).filter(filterFn);
 });
 
+const display = (item) => {
+  return typeof props.displayBy === "string"
+    ? item[props.displayBy]
+    : props.displayBy(item);
+};
+
 function closeResults() {
   visible.value = false;
+  emit("close");
 }
 
 function openResults() {
   visible.value = true;
+  emit("open");
+}
+
+function onTextChange() {
+  if (props.async) {
+    console.log(`emitting input: ${text.value}`);
+    emit("input", text.value);
+  }
 }
 
 function handleSelect(item) {
   text.value = "";
+
   closeResults();
   emit("select", item);
 }
