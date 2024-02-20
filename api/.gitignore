@@ -40,3 +40,5 @@ src/test.js
 coverage
 
 admins.json
+operators.json
+users.json
