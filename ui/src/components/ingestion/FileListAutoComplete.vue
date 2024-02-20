@@ -1,5 +1,6 @@
 <template>
   <AutoComplete
+    ref="fileListAutoComplete"
     v-model="searchText"
     @update:model-value="(path) => loadFileList(path)"
     :async="true"
@@ -7,7 +8,8 @@
     @close="resetFileList"
     placeholder="Enter Directory Path"
     :data="filesInPath"
-    :display-by="(item) => item.path + '/' + item.name"
+    :display-by="(item) => item.path"
+    :error-message="error ? 'Please select a directory' : ''"
   />
 </template>
 
@@ -19,6 +21,11 @@ import toast from "@/services/toast";
 const loading = ref(true);
 const filesInPath = ref([]);
 const searchText = ref("");
+// const noFileSelected = ref(false);
+const fileListAutoComplete = ref(null);
+const error = computed(
+  () => fileListAutoComplete.value?.hasSelectedResult === false,
+);
 
 const loadFileList = (path) => {
   loading.value = true;

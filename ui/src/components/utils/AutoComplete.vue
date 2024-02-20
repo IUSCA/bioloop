@@ -18,6 +18,8 @@
             }
           "
           @input="hasSelectedResult = false"
+          :error="props.required && props.errorMessage"
+          :error-message="props.errorMessage"
         />
       </va-form>
 
@@ -86,11 +88,22 @@ const props = defineProps({
     type: [String, Function],
     default: "name",
   },
+  errorMessage: {
+    type: String,
+  },
+  required: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["update:modelValue", "open", "close"]);
+const emit = defineEmits(["select", "update:modelValue", "open", "close"]);
 
-const hasSelectedResult = ref(false);
+const hasSelectedResult = ref(undefined);
+
+defineExpose({
+  hasSelectedResult,
+});
 
 const text = computed({
   get() {
