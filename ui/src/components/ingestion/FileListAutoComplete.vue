@@ -1,7 +1,8 @@
 <template>
   <AutoComplete
+    v-model="searchText"
+    @update:model-value="(path) => loadFileList(path)"
     :async="true"
-    @input="(path) => loadFileList(path)"
     @open="loadFileList"
     @close="resetFileList"
     placeholder="Enter Directory Path"
@@ -17,9 +18,9 @@ import toast from "@/services/toast";
 
 const loading = ref(true);
 const filesInPath = ref([]);
+const searchText = ref("");
 
 const loadFileList = (path) => {
-  debugger;
   loading.value = true;
   dataImportService
     .listDir(path)

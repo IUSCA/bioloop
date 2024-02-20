@@ -11,7 +11,6 @@
           v-model="text"
           class="w-full autocomplete-input"
           @click="openResults"
-          @input="onTextChange"
         />
       </va-form>
 
@@ -56,6 +55,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  modelValue: {
+    type: String,
+    default: "",
+  },
   placeholder: {
     type: String,
     default: "Type here",
@@ -78,9 +81,16 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["input", "select", "open", "close"]);
+const emit = defineEmits(["select", "update:modelValue", "open", "close"]);
 
-const text = ref("");
+const text = computed({
+  get() {
+    return props.modelValue;
+  },
+  set(value) {
+    emit("update:modelValue", value);
+  },
+});
 const visible = ref(false);
 
 // when clicked outside, hide the results ul
@@ -117,18 +127,18 @@ function openResults() {
   emit("open");
 }
 
-function onTextChange() {
-  if (props.async) {
-    console.log(`emitting input: ${text.value}`);
-    emit("input", text.value);
-  }
-}
+// function onTextChange() {
+//   if (props.async) {
+//     console.log(`emitting input: ${text.value}`);
+//     emit("input", text.value);
+//   }
+// }
 
 function handleSelect(item) {
-  text.value = "";
-
-  closeResults();
+  // text.value = "";
+  emit("update:modelValue", display(item));
   emit("select", item);
+  closeResults();
 }
 </script>
 
