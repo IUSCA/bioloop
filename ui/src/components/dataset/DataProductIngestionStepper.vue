@@ -114,6 +114,7 @@
             class="flex-none"
             @click="isFormValid() && onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
+            :disabled="!isFormValid()"
           >
             {{ isLastStep ? "Ingest" : "Next" }}
           </va-button>
@@ -158,8 +159,13 @@ const isLastStep = computed(() => {
 const { isValid, validate } = useForm("dataProductIngestionForm");
 
 const isFormValid = () => {
-  validate();
-  return isValid.value;
+  // validate();
+
+  console.log("isFormValid");
+  console.log(`filePath.value`);
+  console.log(filePath.value);
+  return typeof filePath.value === "string" && filePath.value !== "";
+  // return false;
 };
 
 const handleSubmit = () => {};

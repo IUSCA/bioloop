@@ -11,6 +11,13 @@
           v-model="text"
           class="w-full autocomplete-input"
           @click="openResults"
+          @clear="
+            () => {
+              hasSelectedResult = false;
+              closeResults();
+            }
+          "
+          @input="hasSelectedResult = false"
         />
       </va-form>
 
@@ -81,7 +88,9 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["select", "update:modelValue", "open", "close"]);
+const emit = defineEmits(["update:modelValue", "open", "close"]);
+
+const hasSelectedResult = ref(false);
 
 const text = computed({
   get() {
@@ -119,12 +128,18 @@ const display = (item) => {
 
 function closeResults() {
   visible.value = false;
+  resolveSearch();
   emit("close");
 }
 
 function openResults() {
   visible.value = true;
   emit("open");
+}
+
+function resolveSearch(item) {
+  emit("update:modelValue", !hasSelectedResult.value ? "" : display(item));
+  emit("select", !hasSelectedResult.value ? "" : display(item));
 }
 
 // function onTextChange() {
@@ -135,9 +150,9 @@ function openResults() {
 // }
 
 function handleSelect(item) {
+  hasSelectedResult.value = true;
   // text.value = "";
-  emit("update:modelValue", display(item));
-  emit("select", item);
+  resolveSearch(item);
   closeResults();
 }
 </script>
