@@ -6,7 +6,7 @@ class AboutService {
   }
 
   createOrUpdate({ id, data }) {
-    return id ? api.patch(`/about/${id}`, data) : api.put("/about", data);
+    return id ? api.put(`/about/${id}`, data) : api.post("/about", data);
   }
 }
 

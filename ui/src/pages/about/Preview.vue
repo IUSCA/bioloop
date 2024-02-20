@@ -3,13 +3,13 @@
     <div v-if="props.showLabel" class="va-title va-text-primary mb-1">
       Preview
     </div>
-    <va-card>
-      <!--    <va-card-title>Preview</va-card-title>-->
-      <va-card-content>
-        <!--      Test-->
-        <div class="break-words" v-html="DOMPurify.sanitize(props.html)"></div>
-      </va-card-content>
-    </va-card>
+    <!--    <va-card>-->
+    <!--      &lt;!&ndash;    <va-card-title>Preview</va-card-title>&ndash;&gt;-->
+    <!--      <va-card-content>-->
+    <!--      Test-->
+    <div class="break-words" v-html="DOMPurify.sanitize(props.html)"></div>
+    <!--      </va-card-content>-->
+    <!--    </va-card>-->
   </div>
 </template>
 

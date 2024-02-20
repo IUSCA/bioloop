@@ -1,6 +1,8 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { body, param } = require('express-validator');
+const createDOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
 
 const { authenticate } = require('../middleware/auth');
 const { accessControl } = require('../middleware/auth');
@@ -11,6 +13,10 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 const isPermittedTo = accessControl('about');
+
+const { window } = new JSDOM('');
+const DOMPurify = createDOMPurify(window);
+// const sanitizeHTML = (html) => ;
 
 router.get(
   '/latest',
@@ -30,14 +36,14 @@ router.post(
   '/',
   authenticate,
   isPermittedTo('update'),
-  validate([
-    body('text').escape().notEmpty().isString(),
-  ]),
+  // validate([
+  //   body('text').escape().notEmpty().isString(),
+  // ]),
   asyncHandler(async (req, res, next) => {
     const ret = await prisma.about.create({
       data: {
-        text: req.body.text,
-        created_by_id: req.user.id,
+        html: DOMPurify.sanitize(req.body.html),
+        last_updated_by_id: req.user.id,
       },
     });
     res.json(ret);
@@ -50,7 +56,6 @@ router.put(
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
-    body('text').escape().notEmpty().isString(),
   ]),
   asyncHandler(async (req, res, next) => {
     const ret = await prisma.about.update({
@@ -58,8 +63,8 @@ router.put(
         id: req.params.id,
       },
       data: {
-        text: req.body.text,
-        created_by_id: req.user.id,
+        html: DOMPurify.sanitize(req.body.html),
+        last_updated_by_id: req.user.id,
       },
     });
     res.json(ret);

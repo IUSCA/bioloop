@@ -285,8 +285,8 @@ model about {
   id            Int      @id @default(autoincrement())
   html          String
   created_at    DateTime @default(now()) @db.Timestamp(6)
-  created_by    user     @relation(fields: [created_by_id], references: [id])
-  created_by_id Int
+  last_updated_by user   @relation(fields: [last_updated_by_id], references: [id])
+  last_updated_by_id Int
 }
 
 enum access_type {

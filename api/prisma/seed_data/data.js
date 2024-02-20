@@ -314,18 +314,33 @@ const project_contact_assoc = [
 
 const about_records = [
   // {
-  //   text: 'BIOLOOP is a service of the Indiana University Scalable Compute Archive (IU SCA) group.\n'
-  //       + '\\\n'
-  //       + '\\\n'
-  //       + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs. \n'
-  //       + '\\\n'
-  //       + '\\\n'
-  //       + 'This instance of Bioloop is being run by:\n'
-  //       + '\\\n'
-  //       + '\\\n'
-  //       + 'For questions or support, please contact the primary operator:',
-  //   created_by_id: 2,
-  // }
+  //   html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a></p>',
+  //   last_updated_by_id: 2,
+  // },
+//   <div data-v-2fdb03c5="" className="break-words"><p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>. Before new line.</p>
+// <p>Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.</p>
+// <p>This instance of Bioloop is being run by:</p>
+// <p>For questions or support, please contact the primary operator:</p>
+// </div>
+  {
+    // html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>.\n'
+    //     + '<br>\n'
+    //     + '<br>\n'
+    //     + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.\n'
+    //     + '<br>\n'
+    //     + '<br>\n'
+    //     + 'This instance of Bioloop is being run by:\n'
+    //     + '<br>\n'
+    //     + '<br>\n'
+    //     + 'For questions or support, please contact the primary operator:</p>',
+    html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>. Before new line.</p>'
+        + '<br><br><br><br><br><br><br><br><br>'
+        + '<p>Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.</p>\n'
+        + '<p>This instance of Bioloop is being run by:</p>\n'
+        + '<p>For questions or support, please contact the primary operator:</p>\n'
+        + '</div>',
+    last_updated_by_id: 2,
+  },
 ];
 
 module.exports = {

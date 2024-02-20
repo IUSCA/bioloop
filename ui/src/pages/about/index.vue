@@ -21,7 +21,7 @@
       <!-- Current About text -->
       <va-card-content>
         <va-inner-loading :loading="loading">
-          <span v-html="DOMPurify.sanitize(currentHTML)"></span>
+          <div v-html="currentAboutHTML"></div>
         </va-inner-loading>
       </va-card-content>
     </va-card>
@@ -51,13 +51,13 @@
               v-if="activeTab === 0"
               :show-label="false"
             />
-            <Preview :html="updatedHTML" v-else :show-label="false" />
+            <Preview :html="updatedAboutHTML" v-else :show-label="false" />
           </div>
 
           <div class="flex gap-2" v-else>
             <Edit class="flex-1" v-model="markdownInput" />
             <va-divider vertical />
-            <Preview class="flex-1" :html="updatedHTML" />
+            <Preview class="flex-1" :html="updatedAboutHTML" />
           </div>
         </va-modal>
       </va-form>
@@ -77,17 +77,22 @@ import { htmlDecode } from "@/services/utils";
 import Edit from "@/pages/about/Edit.vue";
 import Preview from "@/pages/about/Preview.vue";
 import { useBreakpoint } from "vuestic-ui";
-// import TurndownService from "turndown";
-// const TurndownService = require("turndown");
-import TurndownService from "turndown/lib/turndown.browser.umd.js";
+import TurndownService from "turndown";
 
-const turndownService = new TurndownService();
+const turndownService = new TurndownService({
+  blankReplacement: false,
+});
+// turndownService.keep("<br>");
 
 // const MODES = { DESKTOP: "desktop", MOBILE: "mobile" };
 // const mode = ref(MODES.DESKTOP);
 
 const breakpoint = useBreakpoint();
 const md = new MarkdownIt();
+//   {
+// html: true,
+// xhtmlOut: true,
+// }
 const nav = useNavStore();
 nav.setNavItems([], false);
 const TABS = { MARKDOWN: "Markdown", PREVIEW: "Preview" };
@@ -100,9 +105,15 @@ const { validate } = useForm("aboutForm");
 const showModal = ref(false);
 
 const markdownInput = ref("");
-const currentHTML = ref("");
-const updatedHTML = computed(() => {
-  return DOMPurify.sanitize(markdownInput.value);
+const currentAboutHTML = ref("");
+const updatedAboutHTML = computed(() => {
+  console.log(`updatedAboutHTML computed:`);
+  const renderedHTML = md.render(markdownInput.value);
+  console.log(`markdownInput.value`);
+  console.log(markdownInput.value);
+  console.log(`md.render(markdownInput.value)`);
+  console.log(renderedHTML);
+  return DOMPurify.sanitize(renderedHTML);
 });
 
 const latestRecord = ref({});
@@ -117,7 +128,7 @@ const submit = () => {
   aboutService
     .createOrUpdate({
       ...(latestRecord.value && { id: latestRecord.value.id }),
-      data: { html: updatedHTML.value },
+      data: { html: updatedAboutHTML.value },
     })
     .then((res) => {
       latestRecord.value = res.data;
@@ -133,7 +144,7 @@ const submit = () => {
 };
 
 const reset = () => {
-  updatedHTML.value = currentHTML.value;
+  updatedAboutHTML.value = DOMPurify.sanitize(currentAboutHTML.value);
 };
 
 onMounted(() => {
@@ -152,8 +163,21 @@ onMounted(() => {
 });
 
 watch(latestRecord, () => {
-  currentHTML.value = latestRecord.value?.html;
-  markdownInput.value = turndownService.turndown(latestRecord.value?.html);
+  console.log("WATCH");
+  console.log(`latestRecord.value?.html`);
+  console.log(latestRecord.value?.html);
+
+  currentAboutHTML.value = DOMPurify.sanitize(latestRecord.value?.html);
+  // debugger;
+
+  console.log(`currentAboutHTML.value`);
+  console.log(currentAboutHTML.value);
+
+  markdownInput.value = turndownService.turndown(currentAboutHTML.value || "");
+
+  console.log(`markdownInput.value`);
+  console.log(markdownInput.value);
+  console.log(`--------`);
 });
 </script>
 
