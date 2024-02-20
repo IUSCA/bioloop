@@ -76,7 +76,7 @@ async function main() {
       create: [{ role_id: 3 }],
     },
   }));
-
+  
   const operators_read = readUsersFromJSON('operators.json');
   const operators = operators_read.map((user) => ({
     ...user,
