@@ -4,6 +4,7 @@
     @select="handleSelect"
     @remove="handleRemove"
     :column-widths="props.columnWidths"
+    :loading="props.loading"
   />
 </template>
 
@@ -18,6 +19,10 @@ const props = defineProps({
   columnWidths: {
     type: Object,
     required: true,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
   },
 });
 

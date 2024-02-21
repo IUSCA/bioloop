@@ -118,18 +118,6 @@ config = {
                 }
             ]
         },
-        'reingest': {
-            'steps': [
-                {
-                    'name': 'inspect',
-                    'task': 'inspect_dataset'
-                },
-                {
-                    'name': 'mock archive',
-                    'task': 'mark_archived_and_delete'
-                },
-            ]
-        },
         'process_uploads': {
             'steps': [
                 {
@@ -152,7 +140,7 @@ config = {
 
     'workflow': {
         'purge': {
-            'types': ['source_integrated', 'stage', 'delete_dataset'],
+            'types': ['integrated', 'stage', 'delete'],
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }

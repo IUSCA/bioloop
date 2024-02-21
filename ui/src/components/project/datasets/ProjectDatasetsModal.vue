@@ -10,17 +10,15 @@
     @close="hide"
     :size="modalSize"
   >
-    <va-inner-loading
-      :loading="loading"
-      class="min-w-full sm:min-h-[50vh] sm:max-h-[65vh]"
-    >
-      <ProjectDatasetsForm
-        :selected-results="selectedDatasets"
-        @select="(datasets) => updateDatasetsToAdd(datasets)"
-        @remove="(datasets) => updateDatasetsToRemove(datasets)"
-        :column-widths="columnWidths"
-      />
-    </va-inner-loading>
+    <ProjectDatasetsForm
+      :selected-results="selectedDatasets"
+      @select="(datasets) => updateDatasetsToAdd(datasets)"
+      @remove="(datasets) => updateDatasetsToRemove(datasets)"
+      :column-widths="columnWidths"
+      @loading="loadingSearchableDatasets = true"
+      @loaded="loadingSearchableDatasets = false"
+      :loading="loading || loadingSearchableDatasets"
+    />
   </va-modal>
 </template>
 
@@ -28,6 +26,7 @@
 import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useBreakpoint } from "vuestic-ui";
+import toast from "@/services/toast";
 
 const breakpoint = useBreakpoint();
 
@@ -69,6 +68,7 @@ const columnWidths = computed(() => {
 const projectFormStore = useProjectFormStore();
 
 const loading = ref(false);
+const loadingSearchableDatasets = ref(false);
 const visible = ref(false);
 
 const updateDatasetsToAdd = (datasets) => {
@@ -125,9 +125,18 @@ function handleOk() {
 }
 
 const fetchAssociatedDatasets = () => {
-  projectService.getDatasets({ id: props.id }).then((res) => {
-    persistedDatasetAssociations.value = res.data.datasets;
-  });
+  loading.value = true;
+  projectService
+    .getDatasets({ id: props.id })
+    .then((res) => {
+      persistedDatasetAssociations.value = res.data.datasets;
+    })
+    .catch(() => {
+      toast.error("Failed to fetch project's datasets");
+    })
+    .finally(() => {
+      loading.value = false;
+    });
 };
 </script>
 
