@@ -16,10 +16,10 @@
   >
     <template #content="{ value }">
       <va-chip class="mr-2" key="name" size="small">
-        {{ value[0].name }}
+        {{ value.name }}
       </va-chip>
       <va-chip class="mr-2" key="extension" size="small">
-        {{ value[0].extension }}
+        {{ value.extension }}
       </va-chip>
     </template>
 
