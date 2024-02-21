@@ -58,14 +58,6 @@ const oAuth2DownloadClient = new OAuth2Client({
   tokenEndpoint: 'oauth/token',
 });
 
-const oAuth2UploadClient = new OAuth2Client({
-  // The base URI of your OAuth2 server
-  server: config.get('oauth.base_url'),
-  // OAuth2 client id
-  clientId: config.get('oauth.upload.client_id'),
-  clientSecret: config.get('oauth.upload.client_secret'),
-  tokenEndpoint: 'oauth/token',
-});
 
 function get_download_token(file_path) {
   return oAuth2DownloadClient.clientCredentials({
@@ -75,9 +67,8 @@ function get_download_token(file_path) {
 
 function get_upload_token() {
   console.log(`upload scope: ${config.get('oauth.upload.scope')}`)
-  return oAuth2UploadClient.clientCredentials({
-    // scope: [`${config.get('oauth.upload.scope')}`],
-    scope: ["upload_file"]
+  return oAuth2DownloadClient.clientCredentials({
+    scope: [`${config.get('oauth.upload.scope')}`],
   });
 }
 

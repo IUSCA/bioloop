@@ -664,9 +664,12 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  const uploadToken = await uploadService.getToken().data;
+  const tokenResponse = await uploadService.getToken()
+  const uploadToken = tokenResponse.data.accessToken;
+
   // debugger;
-  console.log("uploadToken", uploadToken);
+  console.log("uploadToken");
+  console.dir(uploadToken, {depth: null})
 
   auth.setUploadToken(uploadToken);
 
