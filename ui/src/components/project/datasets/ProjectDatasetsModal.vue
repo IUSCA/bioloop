@@ -17,7 +17,6 @@
       :column-widths="columnWidths"
       @loading="loadingSearchableDatasets = true"
       @loaded="loadingSearchableDatasets = false"
-      :loading="loading || loadingSearchableDatasets"
     />
   </va-modal>
 </template>
@@ -38,6 +37,13 @@ defineExpose({
   show,
   hide,
 });
+
+const loading = ref(false);
+const loadingSearchableDatasets = ref(false);
+const loadingResources = computed(
+  () => loading.value || loadingSearchableDatasets.value,
+);
+provide("loadingResources", loadingResources);
 
 const datasetsToAdd = ref([]);
 const datasetsToRemove = ref([]);
@@ -67,8 +73,6 @@ const columnWidths = computed(() => {
 
 const projectFormStore = useProjectFormStore();
 
-const loading = ref(false);
-const loadingSearchableDatasets = ref(false);
 const visible = ref(false);
 
 const updateDatasetsToAdd = (datasets) => {
