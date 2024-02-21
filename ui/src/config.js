@@ -3,7 +3,7 @@ const exports = {
   // vite server redirects traffic on starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
-  uploadPath: "http://localhost:8000",
+  uploadBasePath: "https://bioloop-dev2.sca.iu.edu",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",

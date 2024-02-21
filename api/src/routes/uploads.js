@@ -11,7 +11,8 @@ router.get(
   '/token',
   isPermittedTo('create'),
   asyncHandler(async (req, res) => {
-    res.json(authService.get_upload_token());
+    const token = await authService.get_upload_token();
+    res.json(token)
   }),
 );
 

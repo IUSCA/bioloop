@@ -32,7 +32,7 @@
     "upload": {
       "client_id": "",
       "client_secret": "",
-      "scope_prefix": "upload"
+      "scope": "upload_file"
     }
   },
   "download_server": {

@@ -74,8 +74,10 @@ function get_download_token(file_path) {
 }
 
 function get_upload_token() {
+  console.log(`upload scope: ${config.get('oauth.upload.scope')}`)
   return oAuth2UploadClient.clientCredentials({
-    scope: [`${config.get('oauth.upload.scope')}`],
+    // scope: [`${config.get('oauth.upload.scope')}`],
+    scope: ["upload_file"]
   });
 }
 
