@@ -59,7 +59,7 @@ export const useAuthStore = defineStore("auth", () => {
   function refreshTokenBeforeExpiry() {
     // idempotent method - will not create a timeout if one already exists
     if (!refreshTokenTimer) {
-      // timer is not running running
+      // timer is not running
       try {
         const payload = jwtDecode(token.value);
         const expiresAt = new Date(payload.exp * 1000);
