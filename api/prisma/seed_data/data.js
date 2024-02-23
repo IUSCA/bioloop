@@ -333,12 +333,18 @@ const about_records = [
     //     + '<br>\n'
     //     + '<br>\n'
     //     + 'For questions or support, please contact the primary operator:</p>',
-    html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>. Before new line.</p>'
-        + '<br><br><br><br><br><br><br><br><br>'
-        + '<p>Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.</p>\n'
-        + '<p>This instance of Bioloop is being run by:</p>\n'
-        + '<p>For questions or support, please contact the primary operator:</p>\n'
-        + '</div>',
+
+    // html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a>.'
+    //     + '<br><br>'
+    //     + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.'
+    //     + '<br><br>'
+    //     + 'This instance of Bioloop is being run by:'
+    //     + '<br><br>'
+    //     + 'For questions or support, please contact the primary operator:</p>',
+
+    html: '<p>a<br>\n'
+        + '<br>\n'
+        + 'b</p>',
     last_updated_by_id: 2,
   },
 ];

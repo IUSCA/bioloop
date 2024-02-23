@@ -1,6 +1,7 @@
 <template>
   <va-textarea
-    :label="_showLabel ? 'Markdown' : ''"
+    placeholder="Markdown supported"
+    :label="_showLabel ? 'Updated text' : ''"
     v-model="input"
     class="w-full"
     :rules="[(v) => (v && v.length > 0) || 'Required']"
