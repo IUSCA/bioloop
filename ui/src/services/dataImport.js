@@ -7,9 +7,9 @@ const fsApi = axios.create({
 class DataImportService {
   listDir(path) {
     // return fsApi.get(`/fs?path=${path}`);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // setTimeout(function () {
-      resolve();
+      resolve({ data: !path ? mockResults("base") : mockResults(path) });
       // }, 2000);
     });
   }
@@ -53,5 +53,28 @@ class DataImportService {
     });
   }
 }
+
+const mockResults = (path) => {
+  const mock = (path, index) =>
+    path ? `${path}_${index}` : `base_file_${index}`;
+
+  return [
+    {
+      name: mock(path, 1),
+      isDir: false,
+      path: `/path/to/${mock(path, 1)}`,
+    },
+    {
+      name: mock(path, 2),
+      isDir: false,
+      path: `/path/to/${mock(path, 2)}`,
+    },
+    // {
+    //   name: mock(path, 3),
+    //   isDir: true,
+    //   path: `/path/to/${mock(path, 3)}`,
+    // },
+  ];
+};
 
 export default new DataImportService();

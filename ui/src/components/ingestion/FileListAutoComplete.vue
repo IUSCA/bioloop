@@ -43,8 +43,7 @@ const loadFileList = (path) => {
     .listDir(path)
     .then((res) => {
       console.log(`FileListAutoComplete, loadFileList(): RETRIEVED`);
-      const mockResponse = mockResults(path);
-      filesInPath.value = mockResponse.data;
+      filesInPath.value = res.data;
     })
     .catch(() => {
       console.log(`FileListAutoComplete, loadFileList(): ERROR`);
@@ -61,33 +60,4 @@ const resetFileList = () => {
   filesInPath.value = [];
   console.log(`FileListAutoComplete, resetFileList(): END`);
 };
-
-const mockResults = (path) => {
-  const mock = (path, index) =>
-    path ? `${path}_${index}` : `base_file_${index}`;
-
-  return {
-    data: [
-      {
-        name: mock(path, 1),
-        isDir: false,
-        path: `/path/to/${mock(path, 1)}`,
-      },
-      // {
-      //   name: mock(path, 2),
-      //   isDir: false,
-      //   path: `/path/to/${mock(path, 2)}`,
-      // },
-      // {
-      //   name: mock(path, 3),
-      //   isDir: true,
-      //   path: `/path/to/${mock(path, 3)}`,
-      // },
-    ],
-  };
-};
-
-// onMounted(() => {
-//   loadFileList();
-// });
 </script>
