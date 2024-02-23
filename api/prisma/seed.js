@@ -21,7 +21,7 @@ const prisma = new PrismaClient();
 
 if (['production'].includes(config.get('mode'))) {
   // exit if in production mode
-  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_users.js instead.');
+  console.error('Seed script should not be run in production mode. Run the appropriate init script instead: Example: `node src/scripts/init_prod_users.js`');
   process.exit(1);
 }
 
@@ -296,9 +296,21 @@ async function main() {
     data: stage_request_logs,
   });
 
-  const aboutRecords = data.about_records;
   await prisma.about.deleteMany({});
-  await prisma.about.createMany({ data: aboutRecords });
+  const aboutRecords = data.about_records;
+  const svc_admin = await prisma.user.findUnique({
+    where: {
+      username: 'svc_tasks',
+    },
+  });
+  await prisma.about.createMany({
+    data: aboutRecords.map((record) => (
+      {
+        ...record,
+        last_updated_by_id: svc_admin.id,
+      }
+    )),
+  });
 }
 
 main()
