@@ -16,7 +16,6 @@ const isPermittedTo = accessControl('about');
 
 const { window } = new JSDOM('');
 const DOMPurify = createDOMPurify(window);
-// const sanitizeHTML = (html) => ;
 
 router.get(
   '/latest',
