@@ -159,6 +159,7 @@ const display = (item) => {
 };
 
 function closeResults({ selectedItem = null } = {}) {
+  if (!visible.value) return;
   console.log(`AutoComplete, closeResults(): BEGIN`);
   visible.value = false;
   console.log(`AutoComplete, closeResults(): selectedItem`);
