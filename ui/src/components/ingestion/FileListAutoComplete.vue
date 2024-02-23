@@ -10,6 +10,7 @@
     :data="filesInPath"
     :display-by="displayBy"
     :error-message="error ? 'Please select a directory' : ''"
+    label="Directory"
   />
 </template>
 

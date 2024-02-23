@@ -20,6 +20,7 @@
           @input="setHasSelectedResult(false)"
           :error="props.required && props.errorMessage"
           :error-message="props.errorMessage"
+          :label="props.label"
         />
       </va-form>
 
@@ -94,6 +95,10 @@ const props = defineProps({
   required: {
     type: Boolean,
     default: false,
+  },
+  label: {
+    type: String,
+    default: "",
   },
 });
 
