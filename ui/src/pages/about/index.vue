@@ -116,7 +116,6 @@ import TurndownService from "turndown";
 import { useUIStore } from "@/stores/ui";
 
 const nav = useNavStore();
-// const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
 
@@ -148,17 +147,8 @@ const markdownInput = ref("");
 
 const currentAboutHTML = ref("");
 const updatedAboutHTML = computed(() => {
-  // console.log("---------------");
-  // console.log(`updatedAboutHTML COMPUTED:`);
-  // const renderedHTML = md.render("<p>a<br>\n" + "<br>\n" + "b</p>");
   const renderedHTML = md.render(markdownInput.value);
-
-  // console.log(`md.render(markdownInput.value)`);
-  // console.log(renderedHTML);
-  const sanitizedHTML = DOMPurify.sanitize(renderedHTML);
-  // console.log(`sanitizedHTML:`);
-  // console.log(sanitizedHTML);
-  return sanitizedHTML;
+  return DOMPurify.sanitize(renderedHTML);
 });
 
 const latestRecord = ref({});
@@ -214,16 +204,8 @@ onMounted(() => {
 });
 
 watch(latestRecord, () => {
-  // console.log("WATCH");
   currentAboutHTML.value = DOMPurify.sanitize(latestRecord.value?.html);
-
-  // console.log(`currentAboutHTML.value`);
-  // console.log(currentAboutHTML.value);
-
   markdownInput.value = turndownService.turndown(currentAboutHTML.value || "");
-  // console.log(`markdownInput.value`);
-  // console.log(markdownInput.value);
-  // console.log(`--------`);
 });
 </script>
 
