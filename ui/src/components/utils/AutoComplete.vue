@@ -180,10 +180,12 @@ function resolveSearch({ selectedItem = null } = {}) {
   console.log(`AutoComplete, resolveSearch(): BEGIN`);
   console.log(selectedItem);
   console.log(`hasSelectedResult.value: ${hasSelectedResult.value}`);
-  const displayedItem = display(selectedItem);
+  const displayedItem = selectedItem ? display(selectedItem) : "";
   console.log(`displayedItem: ${displayedItem}`);
   emit("update:modelValue", !hasSelectedResult.value ? "" : displayedItem);
-  emit("select", !hasSelectedResult.value ? "" : displayedItem);
+  if (selectedItem) {
+    emit("select", !hasSelectedResult.value ? "" : displayedItem);
+  }
   console.log(`AutoComplete, resolveSearch(): END`);
 }
 
