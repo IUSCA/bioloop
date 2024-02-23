@@ -34,6 +34,7 @@ model dataset {
   projects         project_dataset[]
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
+
   @@unique([name, type, is_deleted])
 }
 
@@ -48,19 +49,20 @@ model dataset_hierarchy {
 }
 
 model dataset_file {
-  id             Int                      @id @default(autoincrement())
-  name           String?
-  path           String
-  md5            String?
-  size           BigInt?
-  filetype       String?
-  metadata       Json?
-  status         String?
-  dataset_id     Int
-  dataset        dataset                  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  parents        dataset_file_hierarchy[] @relation("child")
-  children       dataset_file_hierarchy[] @relation("parent")
-  accesses       data_access_log[]
+  id         Int                      @id @default(autoincrement())
+  name       String?
+  path       String
+  md5        String?
+  size       BigInt?
+  filetype   String?
+  metadata   Json?
+  status     String?
+  dataset_id Int
+  dataset    dataset                  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  parents    dataset_file_hierarchy[] @relation("child")
+  children   dataset_file_hierarchy[] @relation("parent")
+  accesses   data_access_log[]
+
   @@unique([path, dataset_id])
   @@index([dataset_id])
 }
@@ -98,36 +100,36 @@ model dataset_state {
 }
 
 model data_access_log {
-  id            Int           @id @default(autoincrement())
-  timestamp     DateTime      @default(now()) @db.Timestamp(6)
-  access_type   access_type
-  file_id       Int?
-  dataset_file  dataset_file? @relation(fields: [file_id], references: [id])
-  dataset_id    Int?
-  dataset       dataset?      @relation(fields: [dataset_id], references: [id])
-  user_id       Int
-  user          user          @relation(fields: [user_id], references: [id])
+  id           Int           @id @default(autoincrement())
+  timestamp    DateTime      @default(now()) @db.Timestamp(6)
+  access_type  access_type
+  file_id      Int?
+  dataset_file dataset_file? @relation(fields: [file_id], references: [id])
+  dataset_id   Int?
+  dataset      dataset?      @relation(fields: [dataset_id], references: [id])
+  user_id      Int
+  user         user          @relation(fields: [user_id], references: [id])
 }
 
 model stage_request_log {
-  id            Int           @id @default(autoincrement())
-  timestamp     DateTime      @default(now()) @db.Timestamp(6)
-  dataset_id    Int?
-  dataset       dataset?      @relation(fields: [dataset_id], references: [id])
-  user_id       Int
-  user          user          @relation(fields: [user_id], references: [id])
+  id         Int      @id @default(autoincrement())
+  timestamp  DateTime @default(now()) @db.Timestamp(6)
+  dataset_id Int?
+  dataset    dataset? @relation(fields: [dataset_id], references: [id])
+  user_id    Int
+  user       user     @relation(fields: [user_id], references: [id])
 }
 
 model user {
-  id             Int             @id @default(autoincrement())
-  username       String          @unique @db.VarChar(100)
-  name           String?         @db.VarChar(100)
-  email          String          @unique @db.VarChar(100)
-  cas_id         String?         @unique @db.VarChar(100)
+  id             Int                 @id @default(autoincrement())
+  username       String              @unique @db.VarChar(100)
+  name           String?             @db.VarChar(100)
+  email          String              @unique @db.VarChar(100)
+  cas_id         String?             @unique @db.VarChar(100)
   notes          String?
-  created_at     DateTime        @default(now()) @db.Timestamp(6)
-  updated_at     DateTime        @default(now()) @updatedAt @db.Timestamp(6)
-  is_deleted     Boolean         @default(false)
+  created_at     DateTime            @default(now()) @db.Timestamp(6)
+  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  is_deleted     Boolean             @default(false)
   user_role      user_role[]
   settings       user_settings?
   contacts       contact[]
@@ -137,6 +139,7 @@ model user {
   login          user_login?
   accesses       data_access_log[]
   stage_requests stage_request_log[]
+  about_edits    about[]
 }
 
 model user_password {
@@ -276,6 +279,14 @@ model worker_process {
   start_time  DateTime @default(now()) @db.Timestamp(6)
   hostname    String
   logs        log[]
+}
+
+model about {
+  id            Int      @id @default(autoincrement())
+  html          String
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  last_updated_by user   @relation(fields: [last_updated_by_id], references: [id])
+  last_updated_by_id Int
 }
 
 enum access_type {
