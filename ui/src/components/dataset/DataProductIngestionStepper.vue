@@ -29,25 +29,6 @@
 
       <template #step-content-0>
         <va-inner-loading :loading="loading">
-          <!--          <va-select-->
-          <!--            class="w-full"-->
-          <!--            autocomplete-->
-          <!--            label="File Path"-->
-          <!--            placeholder="Enter File's Path"-->
-          <!--            v-model:search="filePath"-->
-          <!--            :rules="[-->
-          <!--              (value) => {-->
-          <!--                return (value && value.length > 0) || 'Path is required';-->
-          <!--              },-->
-          <!--            ]"-->
-          <!--            :options="filesInPath"-->
-          <!--            text-by="path"-->
-          <!--          >-->
-          <!--            <template #append>-->
-          <!--              <va-button class="ml-2" @click="loadPathFiles">Load</va-button>-->
-          <!--            </template>-->
-          <!--          </va-select>-->
-
           <FileListAutoComplete @select="(val) => (filePath = val)" />
         </va-inner-loading>
       </template>
@@ -161,9 +142,9 @@ const { isValid, validate } = useForm("dataProductIngestionForm");
 const isFormValid = () => {
   // validate();
 
-  console.log("isFormValid");
-  console.log(`filePath.value`);
-  console.log(filePath.value);
+  // console.log("isFormValid() says");
+  // console.log(`filePath.value`);
+  // console.log(filePath.value);
   return typeof filePath.value === "string" && filePath.value !== "";
   // return false;
 };

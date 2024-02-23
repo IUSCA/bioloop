@@ -13,11 +13,11 @@
           @click="openResults"
           @clear="
             () => {
-              hasSelectedResult = false;
+              setHasSelectedResult(false);
               closeResults();
             }
           "
-          @input="hasSelectedResult = false"
+          @input="setHasSelectedResult(false)"
           :error="props.required && props.errorMessage"
           :error-message="props.errorMessage"
         />
@@ -99,7 +99,14 @@ const props = defineProps({
 
 const emit = defineEmits(["select", "update:modelValue", "open", "close"]);
 
-const hasSelectedResult = ref(undefined);
+const hasSelectedResult = ref(false);
+
+const setHasSelectedResult = (value) => {
+  console.log("AutoComplete: setHasSelectedResult() BEGIN");
+  hasSelectedResult.value = value;
+  console.log(`hasSelectedResult:  ${hasSelectedResult.value}`);
+  console.log("AutoComplete: setHasSelectedResult() END");
+};
 
 defineExpose({
   hasSelectedResult,
@@ -120,8 +127,14 @@ const visible = ref(false);
 // when clicked on a search result, clear text and hide the results ul
 
 const search_results = computed(() => {
+  console.log(`AutoComplete: search_results COMPUTED: BEGIN`);
+  console.log(`AutoComplete: search_results COMPUTED: END`);
+
   if (text.value === "" || props.async) return props.data;
 
+  console.log(
+    `AutoComplete: search_results COMPUTED: did not early return: BEGIN`,
+  );
   const filterFn =
     props.filterFn instanceof Function
       ? props.filterFn(text.value)
@@ -130,43 +143,58 @@ const search_results = computed(() => {
             .toLowerCase()
             .includes(text.value.toLowerCase());
 
+  console.log(
+    `AutoComplete: search_results COMPUTED: did not early return: END`,
+  );
   return (props.data || []).filter(filterFn);
 });
 
 const display = (item) => {
+  console.log(`AutoComplete, display(): BEGIN, item:`);
+  console.log(item);
+  console.log(`AutoComplete, display(): END`);
   return typeof props.displayBy === "string"
     ? item[props.displayBy]
     : props.displayBy(item);
 };
 
-function closeResults() {
+function closeResults({ selectedItem = null } = {}) {
+  console.log(`AutoComplete, closeResults(): BEGIN`);
   visible.value = false;
-  resolveSearch();
+  console.log(`AutoComplete, closeResults(): selectedItem`);
+  console.log(selectedItem);
+  resolveSearch({ selectedItem });
   emit("close");
+  console.log(`AutoComplete, closeResults(): END`);
 }
 
 function openResults() {
+  console.log(`AutoComplete, openResults(): BEGIN`);
   visible.value = true;
   emit("open");
+  console.log(`AutoComplete, openResults(): END`);
 }
 
-function resolveSearch(item) {
-  emit("update:modelValue", !hasSelectedResult.value ? "" : display(item));
-  emit("select", !hasSelectedResult.value ? "" : display(item));
+function resolveSearch({ selectedItem = null } = {}) {
+  console.log(`AutoComplete, resolveSearch(): BEGIN`);
+  console.log(selectedItem);
+  console.log(`hasSelectedResult.value: ${hasSelectedResult.value}`);
+  const displayedItem = display(selectedItem);
+  console.log(`displayedItem: ${displayedItem}`);
+  emit("update:modelValue", !hasSelectedResult.value ? "" : displayedItem);
+  emit("select", !hasSelectedResult.value ? "" : displayedItem);
+  console.log(`AutoComplete, resolveSearch(): END`);
 }
-
-// function onTextChange() {
-//   if (props.async) {
-//     console.log(`emitting input: ${text.value}`);
-//     emit("input", text.value);
-//   }
-// }
 
 function handleSelect(item) {
-  hasSelectedResult.value = true;
-  // text.value = "";
-  resolveSearch(item);
-  closeResults();
+  console.log(`AutoComplete, handleSelect(): BEGIN`);
+  console.log(`item`);
+  console.log(item);
+  setHasSelectedResult(true);
+  console.log(`hasSelectedResult.value: ${hasSelectedResult.value}`);
+  // resolveSearch(item);
+  closeResults({ selectedItem: item });
+  console.log(`AutoComplete, handleSelect(): END`);
 }
 </script>
 
