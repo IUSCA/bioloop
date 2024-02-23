@@ -45,8 +45,6 @@ services:
         npm install \
         && npx prisma generate client \
         && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
-
-
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
@@ -62,6 +60,8 @@ services:
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
+      - ./db/postgres/aux_scripts:/opt/sca/scripts
+      - ./db/backups:/opt/sca/backups
     ports:
       - 127.0.0.1:5432:5432
     expose:
