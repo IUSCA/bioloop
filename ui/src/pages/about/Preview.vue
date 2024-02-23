@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <div v-if="props.showLabel" class="va-title va-text-primary mb-1">
-      Preview
+      {{ props.label }}
     </div>
     <va-card :class="[props.showLabel ? 'card--labelled' : 'card--unlabelled']">
       <va-card-content>
@@ -22,6 +22,10 @@ const props = defineProps({
   showLabel: {
     type: Boolean,
     default: true,
+  },
+  label: {
+    type: String,
+    default: "",
   },
 });
 </script>

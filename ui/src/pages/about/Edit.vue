@@ -1,7 +1,7 @@
 <template>
   <va-textarea
-    placeholder="Markdown supported. Use <br> for new line."
-    :label="props.showLabel ? 'Updated text' : ''"
+    placeholder="Use <br> for new lines"
+    :label="props.showLabel ? props.label : ''"
     v-model="input"
     class="w-full"
     :class="[props.showLabel ? 'textarea--labelled' : 'textarea--unlabelled']"
@@ -19,6 +19,10 @@ const props = defineProps({
   showLabel: {
     type: Boolean,
     default: true,
+  },
+  label: {
+    type: String,
+    default: "",
   },
 });
 

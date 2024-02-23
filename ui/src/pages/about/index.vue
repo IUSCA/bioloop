@@ -28,6 +28,7 @@
 
     <div class="max-h-screen">
       <va-form ref="aboutForm">
+        <!-- Editor / Preview container modal -->
         <va-modal
           ref="editAboutModal"
           size="medium"
@@ -50,13 +51,14 @@
             </div>
           </template>
 
+          <!-- Editor / Preview -->
           <va-inner-loading :loading="loading">
             <!-- Mobile view -->
             <div v-if="ui.isMobileView">
               <va-tabs v-model="activeTab">
                 <template #tabs>
                   <va-tab
-                    v-for="tab in [TABS.UPDATED_TEXT, TABS.PREVIEW]"
+                    v-for="tab in [TABS.UPDATED_MARKDOWN, TABS.PREVIEW]"
                     :key="tab"
                   >
                     {{ tab }}
@@ -68,20 +70,30 @@
                 v-model="markdownInput"
                 v-if="activeTab === 0"
                 :show-label="false"
+                :label="TABS.UPDATED_MARKDOWN"
               />
               <Preview
                 class="preview"
                 :html="updatedAboutHTML"
                 v-else
                 :show-label="false"
+                :label="TABS.PREVIEW"
               />
             </div>
 
             <!-- Desktop view -->
             <div class="flex gap-2" v-else>
-              <Edit class="flex-1" v-model="markdownInput" />
+              <Edit
+                class="flex-1"
+                v-model="markdownInput"
+                :label="TABS.UPDATED_MARKDOWN"
+              />
               <va-divider vertical />
-              <Preview class="flex-1 preview" :html="updatedAboutHTML" />
+              <Preview
+                class="flex-1 preview"
+                :html="updatedAboutHTML"
+                :label="TABS.PREVIEW"
+              />
             </div>
           </va-inner-loading>
         </va-modal>
@@ -100,7 +112,6 @@ import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import Edit from "@/pages/about/Edit.vue";
 import Preview from "@/pages/about/Preview.vue";
-import { useBreakpoint } from "vuestic-ui";
 import TurndownService from "turndown";
 import { useUIStore } from "@/stores/ui";
 
@@ -125,7 +136,7 @@ const md = markdownit("commonmark", {
   typographer: true,
 });
 
-const TABS = { UPDATED_TEXT: "Updated Text", PREVIEW: "Preview" };
+const TABS = { UPDATED_MARKDOWN: "Updated Markdown", PREVIEW: "Preview" };
 const activeTab = ref(0);
 
 const { validate, isValid } = useForm("aboutForm");
