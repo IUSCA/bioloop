@@ -3,8 +3,7 @@
     <div v-if="props.showLabel" class="va-title va-text-primary mb-1">
       Preview
     </div>
-    <va-card>
-      <!--    <va-card-title>Preview</va-card-title>-->
+    <va-card :class="[props.showLabel ? 'card--labelled' : 'card--unlabelled']">
       <va-card-content>
         <div class="break-words" v-html="DOMPurify.sanitize(props.html)"></div>
       </va-card-content>
@@ -13,7 +12,6 @@
 </template>
 
 <script setup>
-import MarkdownIt from "markdown-it";
 import DOMPurify from "dompurify";
 
 const props = defineProps({
@@ -26,23 +24,18 @@ const props = defineProps({
     default: true,
   },
 });
-
-// const _html = computed(() => {
-//   return DOMPurify.sanitize(props.html);
-// });
-
-// const _text = toRef(() => props.html);
-//
-// watch(_text, () => {
-//   console.log("-------");
-//   console.log("_text.value");
-//   console.log(_text.value);
-// });
 </script>
 
 <style scoped>
 .va-card {
-  height: 434px;
   overflow: auto;
+}
+
+.card--labelled {
+  height: 434px;
+}
+
+.card--unlabelled {
+  height: 418px;
 }
 </style>

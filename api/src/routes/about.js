@@ -1,6 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { body, param } = require('express-validator');
+const { param } = require('express-validator');
 const createDOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
 
@@ -36,9 +36,6 @@ router.post(
   '/',
   authenticate,
   isPermittedTo('update'),
-  // validate([
-  //   body('text').escape().notEmpty().isString(),
-  // ]),
   asyncHandler(async (req, res, next) => {
     const ret = await prisma.about.create({
       data: {

@@ -1,9 +1,10 @@
 <template>
   <va-textarea
-    placeholder="Markdown supported"
-    :label="_showLabel ? 'Updated text' : ''"
+    placeholder="Markdown supported. Use <br> for new line."
+    :label="props.showLabel ? 'Updated text' : ''"
     v-model="input"
     class="w-full"
+    :class="[props.showLabel ? 'textarea--labelled' : 'textarea--unlabelled']"
     :rules="[(v) => (v && v.length > 0) || 'Required']"
     :resize="false"
   ></va-textarea>
@@ -23,8 +24,6 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue"]);
 
-const _showLabel = toRef(() => props.showLabel);
-
 const input = computed({
   get() {
     return props.modelValue;
@@ -36,7 +35,11 @@ const input = computed({
 </script>
 
 <style scoped>
-.va-textarea {
+.textarea--labelled {
   height: 450px;
+}
+
+.textarea--unlabelled {
+  height: 418px;
 }
 </style>
