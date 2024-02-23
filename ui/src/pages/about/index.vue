@@ -265,11 +265,11 @@ watch(latestRecord, () => {
   }
 
   :deep(li ul) {
-    padding-left: var(--va-menu-padding-x);
+    padding-left: 15px;
   }
 
   :deep(li ol) {
-    padding-left: var(--va-menu-padding-x);
+    padding-left: 15px;
   }
 
   :deep(blockquote) {
@@ -280,6 +280,7 @@ watch(latestRecord, () => {
 
   :deep(code) {
     color: var(--va-secondary);
+    font-family: var(--va-font-family);
   }
 }
 
