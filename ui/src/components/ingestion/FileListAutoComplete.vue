@@ -4,6 +4,7 @@
     v-model="searchText"
     @update:model-value="(path) => loadFileList(path)"
     :async="true"
+    :show-selected-result="true"
     @open="loadFileList"
     @close="resetFileList"
     placeholder="Enter Directory Path"
@@ -31,7 +32,13 @@ const displayBy = (item) => {
 const loading = ref(true);
 const filesInPath = ref([]);
 const searchText = ref("");
-// const noFileSelected = ref(false);
+
+// watch(searchText, () => {
+//   console.log(`FileListAutoComplete, watch(): BEGIN: searchText changed`);
+//   console.log(`searchText`);
+//   console.log(searchText.value);
+// });
+
 const fileListAutoComplete = ref(null);
 const error = computed(
   () => fileListAutoComplete.value?.hasSelectedResult === false,

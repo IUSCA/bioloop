@@ -60,6 +60,10 @@
 <script setup>
 import { OnClickOutside } from "@vueuse/components";
 
+// when clicked outside, hide the results ul
+// when clicked on input show the results ul
+// when clicked on a search result, clear text and hide the results ul
+
 const props = defineProps({
   async: {
     type: Boolean,
@@ -100,9 +104,19 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  showSelectedResult: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["select", "update:modelValue", "open", "close"]);
+const emit = defineEmits([
+  "select",
+  "update:modelValue",
+  "clear",
+  "open",
+  "close",
+]);
 
 const hasSelectedResult = ref(false);
 
@@ -126,10 +140,6 @@ const text = computed({
   },
 });
 const visible = ref(false);
-
-// when clicked outside, hide the results ul
-// when clicked on input show the results ul
-// when clicked on a search result, clear text and hide the results ul
 
 const search_results = computed(() => {
   console.log(`AutoComplete: search_results COMPUTED: BEGIN`);
@@ -163,13 +173,13 @@ const display = (item) => {
     : props.displayBy(item);
 };
 
-function closeResults({ selectedItem = null } = {}) {
+function closeResults() {
   if (!visible.value) return;
   console.log(`AutoComplete, closeResults(): BEGIN`);
   visible.value = false;
-  console.log(`AutoComplete, closeResults(): selectedItem`);
-  console.log(selectedItem);
-  resolveSearch({ selectedItem });
+  // console.log(`AutoComplete, closeResults(): selectedItem`);
+  // console.log(selectedItem);
+  // resolve({ selectedItem });
   emit("close");
   console.log(`AutoComplete, closeResults(): END`);
 }
@@ -181,17 +191,17 @@ function openResults() {
   console.log(`AutoComplete, openResults(): END`);
 }
 
-function resolveSearch({ selectedItem = null } = {}) {
-  console.log(`AutoComplete, resolveSearch(): BEGIN`);
+function resolveSelect({ selectedItem = null } = {}) {
+  console.log(`AutoComplete, resolveSelect(): BEGIN`);
   console.log(selectedItem);
   console.log(`hasSelectedResult.value: ${hasSelectedResult.value}`);
   const displayedItem = selectedItem ? display(selectedItem) : "";
   console.log(`displayedItem: ${displayedItem}`);
-  emit("update:modelValue", !hasSelectedResult.value ? "" : displayedItem);
-  if (selectedItem) {
-    emit("select", !hasSelectedResult.value ? "" : displayedItem);
+  if (props.showSelectedResult) {
+    emit("update:modelValue", !hasSelectedResult.value ? "" : displayedItem);
   }
-  console.log(`AutoComplete, resolveSearch(): END`);
+  emit("select", !hasSelectedResult.value ? "" : selectedItem);
+  console.log(`AutoComplete, resolveSelect(): END`);
 }
 
 function handleSelect(item) {
@@ -200,8 +210,8 @@ function handleSelect(item) {
   console.log(item);
   setHasSelectedResult(true);
   console.log(`hasSelectedResult.value: ${hasSelectedResult.value}`);
-  // resolveSearch(item);
-  closeResults({ selectedItem: item });
+  resolveSelect({ selectedItem: item });
+  closeResults();
   console.log(`AutoComplete, handleSelect(): END`);
 }
 </script>
