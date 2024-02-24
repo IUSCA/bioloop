@@ -29,7 +29,7 @@
 
       <template #step-content-0>
         <va-inner-loading :loading="loading">
-          <FileListAutoComplete @select="(val) => (filePath = val)" />
+          <FileListAutoComplete v-model:selected="selectedFile" />
         </va-inner-loading>
       </template>
 
@@ -117,7 +117,17 @@ const steps = [
   { label: "Source Raw Data", icon: "mdi:dna" },
 ];
 
-const filePath = ref("");
+const selectedFile = ref({});
+const filePath = computed(() =>
+  selectedFile.value ? selectedFile.value.path : "",
+);
+
+watch(selectedFile, () => {
+  console.log("DataProductIngestionStepper, WATCH():");
+  console.log(`selectedFile.value`);
+  console.log(selectedFile.value);
+});
+
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
 const rawDataSelected = ref();
@@ -145,7 +155,7 @@ const isFormValid = () => {
   // console.log("isFormValid() says");
   // console.log(`filePath.value`);
   // console.log(filePath.value);
-  return typeof filePath.value === "string" && filePath.value !== "";
+  return typeof filePath.value === "string" && filePath.value.trim() !== "";
   // return false;
 };
 
