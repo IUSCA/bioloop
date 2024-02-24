@@ -18,8 +18,9 @@
             }
           "
           @input="setHasSelectedResult(false)"
-          :error="props.required && props.errorMessage"
-          :error-message="props.errorMessage"
+          :error="props.error"
+          :error-messages="props.errorMessages"
+          :error-count="props.errorCount"
           :label="props.label"
         />
       </va-form>
@@ -93,12 +94,17 @@ const props = defineProps({
     type: [String, Function],
     default: "name",
   },
-  errorMessage: {
-    type: String,
-  },
-  required: {
+  error: {
     type: Boolean,
     default: false,
+  },
+  errorMessages: {
+    type: [Array, String],
+    default: "",
+  },
+  errorCount: {
+    type: [String, Number],
+    default: 1,
   },
   label: {
     type: String,
@@ -126,10 +132,6 @@ const setHasSelectedResult = (value) => {
   // console.log(`hasSelectedResult:  ${hasSelectedResult.value}`);
   // console.log("AutoComplete: setHasSelectedResult() END");
 };
-
-defineExpose({
-  hasSelectedResult,
-});
 
 const text = computed({
   get() {

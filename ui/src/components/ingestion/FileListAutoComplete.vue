@@ -11,7 +11,8 @@
     placeholder="Enter Directory Path"
     :data="filesInPath"
     :display-by="displayBy"
-    :error-message="error ? 'Please select a directory' : ''"
+    :error="!!requiredError"
+    :error-messages="requiredError"
     label="Directory"
   />
 </template>
@@ -25,6 +26,10 @@ const props = defineProps({
   selected: {
     type: Object,
     required: true,
+  },
+  required: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -45,18 +50,44 @@ const loading = ref(true);
 const filesInPath = ref([]);
 
 const searchText = ref("");
-watchEffect(() => (searchText.value = props.selected.path));
+watchEffect(() => (searchText.value = props.selected.path || ""));
 
-// watch(searchText, () => {
+const requiredError = ref("");
+
+const handleInput = () => {
+  console.log(`FileListAutoComplete, handleClear - BEGIN`);
+
+  console.log(`searchText.value`);
+  console.log(searchText.value);
+
+  requiredError.value =
+    searchText.value === "" && props.required
+      ? "Please select a directory"
+      : "";
+
+  console.log(`requiredError.value`);
+  console.log(requiredError.value);
+
+  if (searchText.value === "") {
+    emit("update:selected", {});
+    console.log(`emitted 'update:selected'`);
+  }
+  console.log(`FileListAutoComplete, handleClear - END`);
+};
+
+watch(searchText, () => {
+  console.log(`FileListAutoComplete, searchText WATCH - BEGIN`);
+  handleInput();
+  console.log(`FileListAutoComplete, searchText WATCH - END`);
+});
+
+// watch(searchFileListAutoComplete, searchText WATCH - END => {
 //   console.log(`FileListAutoComplete, watch(): BEGIN: searchText changed`);
 //   console.log(`searchText`);
 //   console.log(searchText.value);
 // });
 
 const fileListAutoComplete = ref(null);
-const error = computed(
-  () => fileListAutoComplete.value?.hasSelectedResult === false,
-);
 
 const loadFileList = (path) => {
   // console.log(`FileListAutoComplete, loadFileList(): BEGIN`);

@@ -29,7 +29,10 @@
 
       <template #step-content-0>
         <va-inner-loading :loading="loading">
-          <FileListAutoComplete v-model:selected="selectedFile" />
+          <FileListAutoComplete
+            v-model:selected="selectedFile"
+            :required="true"
+          />
         </va-inner-loading>
       </template>
 
@@ -119,14 +122,14 @@ const steps = [
 
 const selectedFile = ref({});
 const filePath = computed(() =>
-  selectedFile.value ? selectedFile.value.path : "",
+  Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
 );
 
-watch(selectedFile, () => {
-  console.log("DataProductIngestionStepper, WATCH():");
-  console.log(`selectedFile.value`);
-  console.log(selectedFile.value);
-});
+// watch(selectedFile, () => {
+//   console.log("DataProductIngestionStepper, WATCH():");
+//   console.log(`selectedFile.value`);
+//   console.log(selectedFile.value);
+// });
 
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
