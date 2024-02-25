@@ -312,24 +312,6 @@ const project_contact_assoc = [
   },
 ];
 
-const dataset_file_types = [{
-  id: 1,
-  name: 'FASTQ',
-  extension: 'fastq',
-}, {
-  id: 2,
-  name: 'BAM',
-  extension: 'bam',
-}, {
-  id: 3,
-  name: 'BIGWIG',
-  extension: 'bw',
-}, {
-  id: 4,
-  name: 'IMAGE_HE',
-  extension: '.tif',
-}];
-
 module.exports = {
   roles,
   admins,
@@ -339,7 +321,6 @@ module.exports = {
   dataset_heirarchical_association,
   metrics,
   dataset_audit_data,
-  dataset_file_types,
   contacts,
   projects,
   project_user_assoc,

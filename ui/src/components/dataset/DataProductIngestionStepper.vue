@@ -27,16 +27,16 @@
         </button>
       </template>
 
-      <template #step-content-0>
-        <va-inner-loading :loading="loading">
-          <FileListAutoComplete
-            v-model:selected="selectedFile"
-            :required="true"
-          />
-        </va-inner-loading>
-      </template>
+      <!--      <template #step-content-0>-->
+      <!--        <va-inner-loading :loading="loading">-->
+      <!--          <FileListAutoComplete-->
+      <!--            v-model:selected="selectedFile"-->
+      <!--            :required="true"-->
+      <!--          />-->
+      <!--        </va-inner-loading>-->
+      <!--      </template>-->
 
-      <template #step-content-1>
+      <template #step-content-0>
         <DataProductFileTypeSelect
           v-model="fileTypeSelected"
           :file-type-list="fileTypeList"
@@ -45,8 +45,9 @@
             (newFileType) => {
               // if a new File Type has already been created, remove it
               const currentNewFileType = fileTypeList.find(
-                (e) => e.id === null,
+                (e) => !Object.keys(e).includes('id'),
               );
+              console.log(`currentNewFileType: ${currentNewFileType}`);
               if (currentNewFileType) {
                 fileTypeList.pop();
               }
@@ -56,7 +57,7 @@
         />
       </template>
 
-      <template #step-content-2>
+      <template #step-content-1>
         <va-select
           name="raw_data"
           v-model="rawDataSelected"
