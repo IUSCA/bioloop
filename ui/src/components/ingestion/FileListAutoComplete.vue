@@ -55,30 +55,30 @@ watchEffect(() => (searchText.value = props.selected.path || ""));
 const requiredError = ref("");
 
 const handleInput = () => {
-  console.log(`FileListAutoComplete, handleClear - BEGIN`);
+  // console.log(`FileListAutoComplete, handleClear - BEGIN`);
 
-  console.log(`searchText.value`);
-  console.log(searchText.value);
+  // console.log(`searchText.value`);
+  // console.log(searchText.value);
 
   requiredError.value =
     searchText.value === "" && props.required
       ? "Please select a directory"
       : "";
 
-  console.log(`requiredError.value`);
-  console.log(requiredError.value);
+  // console.log(`requiredError.value`);
+  // console.log(requiredError.value);
 
   if (searchText.value === "") {
     emit("update:selected", {});
-    console.log(`emitted 'update:selected'`);
+    // console.log(`emitted 'update:selected'`);
   }
-  console.log(`FileListAutoComplete, handleClear - END`);
+  // console.log(`FileListAutoComplete, handleClear - END`);
 };
 
 watch(searchText, () => {
-  console.log(`FileListAutoComplete, searchText WATCH - BEGIN`);
+  // console.log(`FileListAutoComplete, searchText WATCH - BEGIN`);
   handleInput();
-  console.log(`FileListAutoComplete, searchText WATCH - END`);
+  // console.log(`FileListAutoComplete, searchText WATCH - END`);
 });
 
 // watch(searchFileListAutoComplete, searchText WATCH - END => {

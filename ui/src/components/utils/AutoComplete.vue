@@ -1,7 +1,7 @@
 <!-- Adapted from and improved upon https://stevencotterill.com/articles/how-to-build-an-autocomplete-field-with-vue-3 -->
 <template>
   <div class="relative">
-    <OnClickOutside @trigger="closeResults">
+    <OnClickOutside @trigger="closeResults('click outside')">
       <va-form>
         <va-input
           outline
@@ -14,7 +14,7 @@
           @clear="
             () => {
               setHasSelectedResult(false);
-              closeResults();
+              closeResults('clear');
             }
           "
           @input="setHasSelectedResult(false)"
@@ -60,6 +60,7 @@
 
 <script setup>
 import { OnClickOutside } from "@vueuse/components";
+import { useFocus } from "@vueuse/core";
 
 // when clicked outside, hide the results ul
 // when clicked on input show the results ul
@@ -121,10 +122,10 @@ const emit = defineEmits(["select", "update:searchText", "open", "close"]);
 const hasSelectedResult = ref(false);
 
 const setHasSelectedResult = (value) => {
-  // console.log("AutoComplete: setHasSelectedResult() BEGIN");
+  console.log("AutoComplete: setHasSelectedResult() BEGIN");
   hasSelectedResult.value = value;
-  // console.log(`hasSelectedResult:  ${hasSelectedResult.value}`);
-  // console.log("AutoComplete: setHasSelectedResult() END");
+  console.log(`hasSelectedResult:  ${hasSelectedResult.value}`);
+  console.log("AutoComplete: setHasSelectedResult() END");
 };
 
 const text = computed({
@@ -169,13 +170,23 @@ const display = (item) => {
     : props.displayBy(item);
 };
 
-function closeResults() {
-  if (!visible.value) return;
+function closeResults(caller) {
   // console.log(`AutoComplete, closeResults(): BEGIN`);
+
+  // if (caller) {
+  // console.log(`called by: ${caller}`);
+  // }
+
+  // console.log(`visible: ${visible.value}`);
+
+  if (!visible.value) return;
   visible.value = false;
   // console.log(`AutoComplete, closeResults(): selectedItem`);
   // console.log(selectedItem);
   // resolve({ selectedItem });
+
+  // console.log(`hasSelectedResult:  ${hasSelectedResult.value}`);
+
   if (!hasSelectedResult.value) {
     emit("update:searchText", "");
   }
@@ -183,8 +194,11 @@ function closeResults() {
   // console.log(`AutoComplete, closeResults(): END`);
 }
 
-function openResults() {
+function openResults(caller) {
   // console.log(`AutoComplete, openResults(): BEGIN`);
+  // if (caller) {
+  //   console.log(`called by: ${caller}`);
+  // }
   visible.value = true;
   emit("open");
   // console.log(`AutoComplete, openResults(): END`);
@@ -192,6 +206,7 @@ function openResults() {
 
 function resolveSelect({ selectedItem = null } = {}) {
   // console.log(`AutoComplete, resolveSelect(): BEGIN`);
+  // console.log(`selectedItem:`);
   // console.log(selectedItem);
   // console.log(`hasSelectedResult.value: ${hasSelectedResult.value}`);
   const displayedItem = selectedItem ? display(selectedItem) : "";
