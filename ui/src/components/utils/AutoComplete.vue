@@ -116,13 +116,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  "select",
-  "update:searchText",
-  "clear",
-  "open",
-  "close",
-]);
+const emit = defineEmits(["select", "update:searchText", "open", "close"]);
 
 const hasSelectedResult = ref(false);
 
@@ -182,6 +176,9 @@ function closeResults() {
   // console.log(`AutoComplete, closeResults(): selectedItem`);
   // console.log(selectedItem);
   // resolve({ selectedItem });
+  if (!hasSelectedResult.value) {
+    emit("update:searchText", "");
+  }
   emit("close");
   // console.log(`AutoComplete, closeResults(): END`);
 }
