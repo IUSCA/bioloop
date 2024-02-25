@@ -1,8 +1,7 @@
 <template>
   <va-select
     :class="props.class"
-    :model-value="props.modelValue"
-    @update:model-value="(newVal) => $emit('update:modelValue', newVal)"
+    v-model="selectedFileType"
     label="File Type"
     placeholder="Select File Type"
     :options="props.fileTypeList"
@@ -103,7 +102,16 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "newFileTypeCreated"]);
+const emit = defineEmits(["update:modelValue", "newCreated"]);
+
+const selectedFileType = computed({
+  get() {
+    return props.modelValue;
+  },
+  set(newValue) {
+    emit("update:modelValue", newValue);
+  },
+});
 
 const { isValid, validate, reset } = useForm("createNewFileTypeForm");
 
@@ -112,18 +120,24 @@ const showFormWideErrors = ref(false);
 const newFileTypeName = ref("");
 const newFileTypeExtension = ref("");
 
+const matchingFileType = ref(null);
+watchEffect(() => {
+  matchingFileType.value = props.fileTypeList.find(
+    (e) => e.name === newFileTypeName.value,
+  );
+});
+
 // errors pertaining to the entire form, and not specific fields
 const formWideErrors = computed(() => {
   let formErrors = [];
-  const isDuplicateFileType =
-    props.fileTypeList.find(
-      (e) =>
-        e.name === newFileTypeName.value &&
-        e.extension === newFileTypeExtension.value,
-    ) !== undefined;
-  if (isDuplicateFileType) {
+  const isMatchingTypeNew = matchingFileType.value
+    ? !Object.keys(matchingFileType.value).includes("id")
+    : undefined;
+  if (matchingFileType.value) {
     formErrors.push(
-      `File Type with name '${newFileTypeName.value}', extension '${newFileTypeExtension.value}' already exists`,
+      (isMatchingTypeNew ? "A new " : "") +
+        `File Type '${newFileTypeName.value}'` +
+        `${isMatchingTypeNew ? " has already been created" : "already exists"}`,
     );
   }
   return formErrors;
@@ -138,20 +152,28 @@ const beforeModalOk = (hide) => {
   // force validation to run, which would otherwise only run when a field is interacted with
   validate();
   // if there are form-wide errors, show them
-  showFormWideErrors.value = true;
-  // hide modal only if there are no field-level or form-wide errors
-  if (isValid.value && formWideErrors.value.length === 0) {
-    hide();
+  if (isValid.value) {
+    if (formWideErrors.value.length > 0) {
+      showFormWideErrors.value = true;
+    } else {
+      hide();
+    }
   }
+  // hide modal only if there are no field-level or form-wide errors
+  // if (isValid.value && formWideErrors.value.length === 0) {
+  //   hide();
+  // }
 };
 
 const onModalOk = () => {
-  const newFileType = {
-    name: newFileTypeName.value,
-    extension: newFileTypeExtension.value,
-  };
-  emit("update:modelValue", newFileType);
-  emit("newFileTypeCreated", newFileType);
+  if (!matchingFileType.value) {
+    const newFileType = {
+      name: newFileTypeName.value,
+      extension: newFileTypeExtension.value,
+    };
+    emit("update:modelValue", newFileType);
+    emit("newCreated", newFileType);
+  }
   // reset form
   resetModalFormState();
 };
