@@ -3,14 +3,17 @@ import { ref } from "vue";
 import { jwtDecode } from "jwt-decode";
 import authService from "@/services/auth";
 import config from "@/config";
+import uploadService from "@/services/uploads";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
-  const uploadToken = ref(useLocalStorage("uploadToken", ""));
+  const uploadTokens = ref(useLocalStorage("uploadTokens", {}));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
+  let refreshUploadTokenTimer = null;
+
   const canOperate = computed(() => {
     return hasRole("operator") || hasRole("admin");
   });
@@ -30,6 +33,39 @@ export const useAuthStore = defineStore("auth", () => {
     token.value = data.token;
     loggedIn.value = true;
     refreshTokenBeforeExpiry();
+  }
+
+  async function onUpload(fileName) {
+    const tokenResponse = await uploadService.getToken(fileName);
+    uploadTokens.value = tokenResponse.data.accessToken;
+
+    refreshUploadTokenBeforeExpiry();
+  }
+
+  function refreshUploadTokenBeforeExpiry() {
+    // idempotent method - will not create a timeout if one already exists
+    if (!refreshUploadTokenTimer) {
+      // timer is not running
+      try {
+        const payload = jwtDecode(uploadTokens.value);
+        const expiresAt = new Date(payload.exp * 1000);
+        const now = new Date();
+        if (now < expiresAt) {
+          // token is still alive
+          const delay =
+            expiresAt - now - config.refreshTMinusSeconds.uploadToken * 1000;
+          console.log(
+            "auth store: refreshUploadTokenBeforeExpiry: trigerring refreshToken in ",
+            delay / 1000,
+            "seconds",
+          );
+          refreshUploadTokenTimer = setTimeout(refreshToken, delay);
+        }
+        // else - do nothing, navigation guard will redirect to /auth
+      } catch (err) {
+        console.error("Errored trying to decode access token", err);
+      }
+    }
   }
 
   function onLogout() {
@@ -68,7 +104,7 @@ export const useAuthStore = defineStore("auth", () => {
         if (now < expiresAt) {
           // token is still alive
           const delay =
-            expiresAt - now - config.refreshTokenTMinusSeconds * 1000;
+            expiresAt - now - config.refreshTMinusSeconds.token * 1000;
           console.log(
             "auth store: refreshTokenBeforeExpiry: trigerring refreshToken in ",
             delay / 1000,
@@ -96,8 +132,17 @@ export const useAuthStore = defineStore("auth", () => {
       });
   }
 
-  function setUploadToken(token) {
-    uploadToken.value = token;
+  function refreshUploadToken() {
+    console.log("refreshing upload token");
+    refreshTokenTimer = null; // reset timer state
+    authService
+      .refreshToken()
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+      })
+      .catch((err) => {
+        console.error("Unable to refresh token", err);
+      });
   }
 
   // Check for roles

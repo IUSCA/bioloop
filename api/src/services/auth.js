@@ -33,6 +33,7 @@ async function onLogin({ user, updateLastLogin = true }) {
   const userProfile = get_user_profile(user);
 
   const token = issueJWT({ userProfile });
+
   return {
     profile: userProfile,
     token,
@@ -49,7 +50,7 @@ function checkJWT(token) {
   }
 }
 
-const oAuth2DownloadClient = new OAuth2Client({
+const oAuth2Client = new OAuth2Client({
   // The base URI of your OAuth2 server
   server: config.get('oauth.base_url'),
   // OAuth2 client id
@@ -58,17 +59,16 @@ const oAuth2DownloadClient = new OAuth2Client({
   tokenEndpoint: 'oauth/token',
 });
 
-
 function get_download_token(file_path) {
-  return oAuth2DownloadClient.clientCredentials({
+  return oAuth2Client.clientCredentials({
     scope: [`${config.get('oauth.download.scope_prefix')}${file_path}`],
   });
 }
 
-function get_upload_token() {
-  console.log(`upload scope: ${config.get('oauth.upload.scope')}`)
-  return oAuth2DownloadClient.clientCredentials({
-    scope: [`${config.get('oauth.upload.scope')}`],
+function get_upload_token(file_name) {
+  // console.log(`upload scope: ${config.get('oauth.upload.scope')}`);
+  return oAuth2Client.clientCredentials({
+    scope: [`${config.get('oauth.upload.scope')}:${file_name}`],
   });
 }
 

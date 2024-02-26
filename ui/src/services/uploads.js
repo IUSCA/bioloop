@@ -2,8 +2,8 @@ import api from "./api";
 import uploadApi from "./uploadApi";
 
 class UploadService {
-  getToken() {
-    return api.get(`/uploads/token`);
+  getToken(fileName) {
+    return api.get(`/uploads/token/${fileName}`);
   }
 
   uploadFileChunk(data) {

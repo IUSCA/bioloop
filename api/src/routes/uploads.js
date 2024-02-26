@@ -3,16 +3,16 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 const authService = require('../services/auth');
 
-const isPermittedTo = accessControl('uploads');
+const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 
 router.get(
-  '/token',
+  '/token/:file_name',
   isPermittedTo('create'),
   asyncHandler(async (req, res) => {
-    const token = await authService.get_upload_token();
-    res.json(token)
+    const token = await authService.get_upload_token(req.params.file_name);
+    res.json(token);
   }),
 );
 

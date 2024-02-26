@@ -5,7 +5,11 @@ const exports = {
   apiBasePath: "/api",
   uploadBasePath: "https://bioloop-dev2.sca.iu.edu",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
-  refreshTokenTMinusSeconds: 300,
+  refreshTMinusSeconds: {
+    token: 300,
+    uploadToken: 30,
+  },
+  // refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
