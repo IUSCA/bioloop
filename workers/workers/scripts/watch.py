@@ -97,12 +97,12 @@ class Register:
         datasets = api.get_all_datasets(dataset_type=self.dataset_type)
         return [b['name'] for b in datasets]
 
-    def register(self, event: str, new_dirs: list[Path]) -> None:
+    def register(self, event: str, updated_dirs: list[Path]) -> None:
         if event != 'add':
             return
 
         candidates: list[Path] = [
-            p for p in new_dirs
+            p for p in updated_dirs
             if all([
                 slugify_(p.name) not in self.completed,
                 not self.is_a_reject(slugify_(p.name)),
@@ -114,7 +114,7 @@ class Register:
             self.register_candidate(candidate)
             self.completed.add(candidate.name)
 
-        duplicate_candidates = [p for p in new_dirs if slugify_(p.name) in self.completed]
+        duplicate_candidates = [p for p in updated_dirs if slugify_(p.name) in self.completed]
         # If candidate's name is in self.completed, it could potentially be a duplicate.
         # In such cases, we create a dataset of type DUPLICATE, which is later processed
         # by an end user.
@@ -134,6 +134,7 @@ class Register:
         }
         created_dataset = api.create_dataset(dataset)
         # TODO - kick off a separate workflow for duplicate datasets.
+        # TODO - perform duplication analysis before sending email to the end user.
         self.run_workflows(created_dataset)
 
 
