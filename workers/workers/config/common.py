@@ -83,6 +83,18 @@ config = {
         'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
+        'acknowledge': {
+            'steps': [
+                {
+                    'name': 'await stability',
+                    'task': 'await_stability'
+                },
+                {
+                    'name': 'inspect',
+                    'task': 'inspect_dataset'
+                },
+                ]
+        },
         'integrated': {
             'steps': [
                 {
