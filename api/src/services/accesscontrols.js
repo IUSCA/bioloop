@@ -40,6 +40,12 @@ const grantsObject = {
     uploads: {
       'create:any': ['*'],
     },
+    about: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     auth: {
       'create:any': ['*'],
     },

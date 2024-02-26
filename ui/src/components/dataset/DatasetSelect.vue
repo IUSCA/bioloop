@@ -9,7 +9,7 @@
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
-    :loading="props.loading"
+    :loading="loadingResources"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -60,13 +60,11 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
 });
 
 const emit = defineEmits(["loading", "loaded"]);
+
+const loadingResources = inject("loadingResources");
 
 const breakpoint = useBreakpoint();
 

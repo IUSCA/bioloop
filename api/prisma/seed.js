@@ -157,11 +157,6 @@ async function main() {
 
   await Promise.all(operator_promises);
 
-  // create dataset_file_type
-  await prisma.dataset_file_type.deleteMany();
-  await prisma.dataset_file_type.createMany({ data: data.dataset_file_types });
-
-  // create datasets
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;
     if (workflows) {
@@ -301,24 +296,20 @@ async function main() {
     data: stage_request_logs,
   });
 
-  // create data upload entries
-  const dataset_uploads = data.dataset_upload_logs;
-  const operators = await prisma.user.findMany({
+  await prisma.about.deleteMany({});
+  const aboutRecords = data.about_records;
+  const svc_admin = await prisma.user.findUnique({
     where: {
-      user_role: {
-        some: {
-          role_id: 2,
-        },
-      },
+      username: 'svc_tasks',
     },
   });
-  const uploads = dataset_uploads.map((e) => {
-    const operator = operators[Math.floor(Math.random() * operators.length)];
-    return { ...e, user_id: operator.id };
-  });
-  await prisma.upload_log.deleteMany();
-  await prisma.upload_log.createMany({
-    data: uploads,
+  await prisma.about.createMany({
+    data: aboutRecords.map((record) => (
+      {
+        ...record,
+        last_updated_by_id: svc_admin.id,
+      }
+    )),
   });
 }
 

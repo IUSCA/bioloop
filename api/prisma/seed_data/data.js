@@ -160,7 +160,7 @@ const _datasets = [
   },
   {
     id: 7,
-    name: 'PCM230123',
+    name: 'PCM230203',
     type: 'DATA_PRODUCT',
     origin_path: '/origin/path/data_products/PCM230203',
   },
@@ -182,24 +182,6 @@ const _datasets = [
     type: 'RAW_DATA',
     origin_path: '/origin/path/data_products/PCM230417',
   },
-  {
-    id: 11,
-    name: 'Uploaded data product 1',
-    type: 'DATA_PRODUCT',
-    file_type_id: 1,
-  },
-  {
-    id: 12,
-    name: 'Uploaded data product 2',
-    type: 'DATA_PRODUCT',
-    file_type_id: 2,
-  },
-  {
-    id: 13,
-    name: 'Uploaded data product 3',
-    type: 'DATA_PRODUCT',
-    file_type_id: 3,
-  },
 ];
 
 const additional_datasets = [11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25]
@@ -218,15 +200,6 @@ const dataset_heirarchical_association = [{
 }, {
   source_id: 2,
   derived_id: 8,
-}, {
-  source_id: 9,
-  derived_id: 11,
-}, {
-  source_id: 10,
-  derived_id: 12,
-}, {
-  source_id: 10,
-  derived_id: 13,
 }];
 
 const metrics = [{
@@ -339,37 +312,17 @@ const project_contact_assoc = [
   },
 ];
 
-const dataset_file_types = [{
-  id: 1,
-  name: 'FASTQ',
-  extension: 'fastq',
-}, {
-  id: 2,
-  name: 'BAM',
-  extension: 'bam',
-}, {
-  id: 3,
-  name: 'BIGWIG',
-  extension: 'bw',
-}, {
-  id: 4,
-  name: 'IMAGE_HE',
-  extension: '.tif',
-}];
-
-const dataset_upload_logs = [{
-  status: 'PROCESSING',
-  dataset_id: 11,
-  user_id: 60,
-}, {
-  status: 'FAILED',
-  dataset_id: 12,
-  user_id: 61,
-}, {
-  status: 'COMPLETE',
-  dataset_id: 13,
-  user_id: 61,
-}];
+const about_records = [
+  {
+    html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a> group.'
+        + '<br><br>'
+        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.'
+        + '<br><br>'
+        + 'This instance of Bioloop is being run by:'
+        + '<br><br>'
+        + 'For questions or support, please contact the primary operator:</p>',
+  },
+];
 
 module.exports = {
   roles,
@@ -380,11 +333,10 @@ module.exports = {
   dataset_heirarchical_association,
   metrics,
   dataset_audit_data,
-  dataset_file_types,
-  dataset_upload_logs,
   contacts,
   projects,
   project_user_assoc,
   project_dataset_assoc,
   project_contact_assoc,
+  about_records,
 };
