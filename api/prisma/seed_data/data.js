@@ -17,18 +17,6 @@ const roles = [{
 
 const admins = [
   {
-    name: 'Rishi Pandey',
-    username: 'ripandey',
-  }, {
-    name: 'Charles Brandt',
-    username: 'ccbrandt',
-  }, {
-    name: 'Deepak Duggirala',
-    username: 'deduggi',
-  }, {
-    name: 'Ryan Long',
-    username: 'ryanlong',
-  }, {
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
@@ -75,8 +63,9 @@ const _datasets = [
     size: 160612394997,
     description: null,
     is_staged: true,
-    origin_path: '/N/scratch/scadev/testing-102/PCM230203',
+    origin_path: '/origin/path/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
+    workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     metadata: {
       num_genome_files: 60,
       report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
@@ -171,15 +160,15 @@ const _datasets = [
   },
   {
     id: 7,
-    name: 'PCM230203_7',
+    name: 'PCM230203',
     type: 'DATA_PRODUCT',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230203_7',
+    origin_path: '/origin/path/data_products/PCM230203',
   },
   {
     id: 8,
-    name: 'PCM230327_8',
+    name: 'PCM230327',
     type: 'DATA_PRODUCT',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230327_8',
+    origin_path: '/origin/path/data_products/PCM230327',
   },
   {
     id: 9,
@@ -281,7 +270,7 @@ const project_user_assoc = [
   },
   {
     project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    user_id: 1,
+    user_id: 5,
   },
   {
     project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
@@ -323,13 +312,17 @@ const project_contact_assoc = [
   },
 ];
 
-const bundles = [{
-  name: 'PCM230203.tar',
-  path: '/N/scratch/scadev/bioloop/dev/bundles/raw_data/PCM230203.tar',
-  md5: '8d8f68ac3c1e0d5748cfb06ca235fdbd',
-  size: 10240,
-  dataset_id: 1,
-}];
+const about_records = [
+  {
+    html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a> group.'
+        + '<br><br>'
+        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.'
+        + '<br><br>'
+        + 'This instance of Bioloop is being run by:'
+        + '<br><br>'
+        + 'For questions or support, please contact the primary operator:</p>',
+  },
+];
 
 module.exports = {
   roles,
@@ -345,5 +338,5 @@ module.exports = {
   project_user_assoc,
   project_dataset_assoc,
   project_contact_assoc,
-  bundles,
+  about_records,
 };

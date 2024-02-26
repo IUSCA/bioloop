@@ -200,28 +200,28 @@ function numericStringsToNumbers(arr, numericStringFields = []) {
   })(arr);
 }
 
-function readAdminsFromFile() {
+function readUsersFromJSON(fname) {
   try {
-    const adminFile = path.join(global.__basedir, 'admins.json');
+    const fpath = path.join(global.__basedir, fname);
 
-    // check if additional admins file exists
-    const exists = fs.existsSync(adminFile, fs.constants.F_OK);
+    // check if file exists
+    const exists = fs.existsSync(fpath, fs.constants.F_OK);
 
-    // read additional admins from file
+    // read from file
     if (exists) {
-      const admins_read = JSON.parse(fs.readFileSync(adminFile, 'utf8'));
+      const users_read = JSON.parse(fs.readFileSync(fpath, 'utf8'));
 
-      // validate admins_read is an array
-      if (Array.isArray(admins_read)) {
-        return admins_read;
+      // validate users_read is an array
+      if (Array.isArray(users_read)) {
+        return users_read;
       }
       // eslint-disable-next-line no-console
-      console.log('admins.json is not an array. Skipping.');
+      console.log(`${fpath} is not an array. Skipping.`);
     }
     return [];
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.log('Unable to read additional admins from file admins.json. Skipping.', e);
+    console.log(`Unable to read users from file ${fname}. Skipping.`, e);
     return [];
   }
 }
@@ -235,5 +235,5 @@ module.exports = {
   sanitize_timestamp,
   groupByAndAggregate,
   numericStringsToNumbers,
-  readAdminsFromFile,
+  readUsersFromJSON,
 };

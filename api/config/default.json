@@ -38,22 +38,30 @@
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
-          "name": "inspect",
-          "task": "inspect_dataset"
+            "name": "await stability",
+            "task": "await_stability"
         },
         {
-          "name": "archive",
-          "task": "archive_dataset"
+            "name": "inspect",
+            "task": "inspect_dataset"
         },
         {
-          "name": "stage",
-          "task": "stage_dataset"
+            "name": "archive",
+            "task": "archive_dataset"
         },
         {
-          "name": "validate",
-          "task": "validate_dataset"
+            "name": "stage",
+            "task": "stage_dataset"
+        },
+        {
+            "name": "validate",
+            "task": "validate_dataset"
+        },
+        {
+            "name": "setup_download",
+            "task": "setup_dataset_download"
         }
-      ]
+    ]
     },
     "stage": {
       "steps": [
@@ -64,6 +72,10 @@
         {
           "name": "validate",
           "task": "validate_dataset"
+        },
+        {
+          "name": "generate_qc",
+          "task": "generate_qc"
         }
       ]
     },

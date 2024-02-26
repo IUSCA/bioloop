@@ -486,18 +486,31 @@ router.delete(
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
-  isPermittedTo('update'),
+  accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
     param('wf').isIn(['stage', 'integrated']),
   ]),
+  (req, res, next) => {
+    // admin and operator roles can run stage and integrated workflows
+    // user role can only run stage workflows
+
+    // allowed_wfs is an object with keys as workflow names and values as true
+    // filter only works on objects not arrays, so we use an object with true value
+    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
+    if (allowed_wfs[req.params.wf]) {
+      return next();
+    }
+    next(createError.Forbidden());
+  },
+  // user role can only run wf on the datasets they can access through project associations
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
     // Allowed names are stage, integrated
 
     // Log the staging attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
     if (req.params.wf === 'stage') {
       try {
         await prisma.stage_request_log.create({

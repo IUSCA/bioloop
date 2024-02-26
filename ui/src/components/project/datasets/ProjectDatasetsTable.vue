@@ -156,6 +156,7 @@ import { useAuthStore } from "@/stores/auth";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";
+import toast from "@/services/toast";
 
 const { colors } = useColors();
 const auth = useAuthStore();
@@ -240,6 +241,7 @@ const updateFiltersGroupQuery = (newVal) => {
 };
 
 const fetch_project_datasets = () => {
+  loading.value = true;
   if (!props.project.id) return [];
   projectService
     .getDatasets({
@@ -250,6 +252,12 @@ const fetch_project_datasets = () => {
       projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
       emit("datasets-retrieved");
+    })
+    .catch(() => {
+      toast.error("Failed to retrieve datasets");
+    })
+    .finally(() => {
+      loading.value = false;
     });
 };
 
