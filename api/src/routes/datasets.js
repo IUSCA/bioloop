@@ -283,7 +283,7 @@ router.get(
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
-      bundle: req.query.bundle
+      bundle: req.query.bundle,
     });
     res.json(dataset);
   }),
@@ -349,7 +349,7 @@ router.patch(
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
-    body('bundle').isObject().optional()
+    body('bundle').isObject().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -368,14 +368,14 @@ router.patch(
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
-    
+
     if (req.body.bundle) {
       data.bundle = {
         upsert: {
-            create: req.body.bundle,
-            update: req.body.bundle
-          }
-      }
+          create: req.body.bundle,
+          update: req.body.bundle,
+        },
+      };
     }
 
     const dataset = await prisma.dataset.update({
@@ -666,15 +666,15 @@ router.get(
         id: req.params.id,
       },
       include: {
-        bundle: true
-      }
+        bundle: true,
+      },
     });
 
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}/${dataset.bundle.name}`;
-      console.log(`download_file_path: ${download_file_path}`)
+      console.log(`download_file_path: ${download_file_path}`);
 
       const download_token = await authService.get_download_token(download_file_path);
 

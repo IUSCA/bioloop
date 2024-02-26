@@ -195,7 +195,7 @@ router.get(
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
-        bundle: true
+        bundle: true,
       },
     };
 
