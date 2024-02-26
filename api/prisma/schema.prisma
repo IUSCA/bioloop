@@ -10,7 +10,7 @@ datasource db {
 model dataset {
   id               Int                 @id @default(autoincrement())
   name             String
-  type             String
+  type             dataset_type
   num_directories  Int?
   num_files        Int?
   du_size          BigInt?
@@ -281,4 +281,10 @@ model worker_process {
 enum access_type {
   BROWSER
   SLATE_SCRATCH
+}
+
+enum dataset_type {
+  RAW_DATA
+  DATA_PRODUCT
+  DUPLUCATE
 }

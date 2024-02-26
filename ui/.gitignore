@@ -35,3 +35,5 @@ src/pages/test.vue
 
 # rollup visualizer output
 stats.html
+
+.vite

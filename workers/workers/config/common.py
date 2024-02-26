@@ -35,6 +35,17 @@ config = {
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
     },
+    'dataset_types': {
+        'RAW_DATA': {
+            'label': 'RAW_DATA'
+        },
+        'DATA_PRODUCT': {
+            'label': 'DATA_PRODUCT'
+        },
+        'DUPLICATE': {
+            'label': 'DUPLICATE'
+        }
+    },
     'paths': {
         'scratch': '/path/to/scratch',
         'RAW_DATA': {

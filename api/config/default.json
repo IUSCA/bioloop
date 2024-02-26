@@ -88,5 +88,15 @@
       ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"]
+  "dataset_types": {
+    "RAW_DATA": {
+        "label": "RAW_DATA"
+    },
+    "DATA_PRODUCT": {
+        "label": "DATA_PRODUCT"
+    },
+    "DUPLICATE": {
+        "label": "DUPLICATE"
+    }
+  }
 }

@@ -114,15 +114,28 @@ class Register:
             self.register_candidate(candidate)
             self.completed.add(candidate.name)
 
-    def register_candidate(self, candidate: Path):
-        logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
+        duplicate_candidates = [p for p in new_dirs if slugify_(p.name) in self.completed]
+        # If candidate's name is in self.completed, it could potentially be a duplicate.
+        # In such cases, we create a dataset of type DUPLICATE, which is later processed
+        # by an end user.
+        for candidate in duplicate_candidates:
+            self.register_candidate(candidate, True)
+
+
+
+    def register_candidate(self, candidate: Path, is_duplicate: bool = False):
+        dataset_type = config['dataset_types']['DUPLICATE']['label'] \
+            if is_duplicate else self.dataset_type
+        logger.info(f'registering {dataset_type} dataset - {candidate.name}')
         dataset = {
             'name': slugify_(candidate.name),
-            'type': self.dataset_type,
+            'type':  dataset_type,
             'origin_path': str(candidate.resolve()),
         }
         created_dataset = api.create_dataset(dataset)
+        # TODO - kick off a separate workflow for duplicate datasets.
         self.run_workflows(created_dataset)
+
 
     def run_workflows(self, dataset):
         dataset_id = dataset['id']
