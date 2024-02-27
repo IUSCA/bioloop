@@ -34,7 +34,6 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, files=True)
     staged_path = Path(dataset['staged_path'])
 
-    validation_errors = []
     validation_errors = check_files(celery_task=celery_task,
                                     dataset_dir=staged_path,
                                     files_metadata=dataset['files'])

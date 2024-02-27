@@ -53,14 +53,8 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
                  source_dir=dataset['origin_path'],
                  source_size=dataset['du_size'])
 
-    logger.info("tarfile made")
-
     bundle_size = bundle.stat().st_size
     bundle_checksum = utils.checksum(bundle)
-    
-    logger.info('----------------------------')
-    logger.info(f'config["paths"][dataset["type"]]: {config["paths"][dataset["type"]]}')
-
     bundle_attrs = {
         'name': bundle.name,
         'path': str(bundle),
@@ -68,19 +62,12 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'md5': bundle_checksum,
     }
 
-    print('----------------------------')
-    print('bundle_attrs:')
-    print(json.dumps(bundle_attrs, indent=4))
-
     sda_dir = wf_utils.get_archive_dir(dataset['type'])
     sda_bundle_path = f'{sda_dir}/{bundle.name}'
-    logger.info(f'sda_bundle_path: {sda_bundle_path}')
 
     wf_utils.upload_file_to_sda(local_file_path=bundle,
                                 sda_file_path=sda_bundle_path,
                                 celery_task=celery_task)
-
-    logger.info("archived to SDA")
 
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy

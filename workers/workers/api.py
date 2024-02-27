@@ -149,9 +149,6 @@ def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 
-        # logger.info('DATASET')
-        # print(json.dumps(r.json()))
-
         r.raise_for_status()
         return dataset_getter(r.json())
 

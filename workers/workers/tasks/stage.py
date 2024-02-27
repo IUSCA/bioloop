@@ -76,18 +76,11 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     bundle_md5 = bundle["md5"]
     bundle_download_path = Path(bundle["path"])
 
-    print(f'staging_dir: {staging_dir}')
-    print(f'bundle_download_path: {bundle_download_path}')
-    print(f'bundle_md5: {bundle_md5}')
-
     wf_utils.download_file_from_sda(sda_file_path=sda_bundle_path,
                                     local_file_path=bundle_download_path,
                                     celery_task=celery_task)
 
     evaluated_checksum = utils.checksum(bundle_download_path)
-
-    print(f'evaluated_checksum: {evaluated_checksum}')
-
     if evaluated_checksum != bundle_md5:
         raise exc.ValidationFailed(f'Expected checksum of downloaded file to be {bundle_md5},'
                                    f' but evaluated checksum was {evaluated_checksum}')
