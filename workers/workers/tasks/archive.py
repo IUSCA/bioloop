@@ -49,9 +49,9 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
-              tar_path=bundle,
-              source_dir=dataset['origin_path'],
-              source_size=dataset['du_size'])
+                 tar_path=bundle,
+                 source_dir=dataset['origin_path'],
+                 source_size=dataset['du_size'])
 
     logger.info("tarfile made")
 

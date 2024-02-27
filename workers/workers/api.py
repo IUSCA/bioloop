@@ -146,7 +146,7 @@ def bundle_getter(bundle: dict):
 def dataset_setter(dataset: dict):
     # convert du_size and size from int to string
     if dataset is not None:
-        for key in ['du_size', 'size', 'bundle_size']:
+        for key in ['du_size', 'size']:
             int_to_str(dataset, key)
     return dataset
 
