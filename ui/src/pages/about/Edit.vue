@@ -1,6 +1,6 @@
 <template>
   <va-textarea
-    placeholder="Use <br> for new lines"
+    placeholder="Use <br> for adding empty lines"
     :label="props.showLabel ? props.label : ''"
     v-model="input"
     class="w-full"

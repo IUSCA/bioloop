@@ -14,7 +14,7 @@
             class="flex-none"
             edit
             @click="showModal = true"
-            v-if="auth.canAdmin"
+            v-if="auth.canAdmin || auth.canOperate"
           />
         </div>
       </va-card-title>
