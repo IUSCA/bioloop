@@ -42,7 +42,7 @@ def grant_access_to_parent_chain(leaf: Path, root: Path):
 
 
 def setup_download(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id, bundle)
+    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     staged_path, alias = Path(dataset['staged_path']), glom(dataset, 'metadata.stage_alias')
     bundle_path = Path(dataset['bundle']['path'])
 
