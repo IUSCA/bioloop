@@ -99,6 +99,12 @@ const grantsObject = {
     metrics: {
       'read:any': ['*'],
     },
+    about: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 };
 const ac = new AccessControl(grantsObject);
