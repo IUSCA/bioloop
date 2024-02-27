@@ -119,30 +119,6 @@ def dataset_getter(dataset: dict):
     return dataset
 
 
-def bundle_getter(bundle: dict):
-    date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-    date_keys = ['created_at']
-
-    # convert size from string to int
-    if bundle is None:
-        return bundle
-
-    print(json.dumps(bundle, indent=4))
-
-    for key in ['size']:
-        str_to_int(bundle, key)
-    
-    # convert date strings to date objects
-    for date_key in date_keys:
-        date_str = glom(bundle, date_key, default=None)
-        if date_str is not None:
-            try:
-                glom_assign(bundle, date_key, datetime.strptime(date_str, date_format))
-            except ValueError:  # unable to parse date string
-                glom_assign(bundle, date_key, None)
-    return bundle
-
-
 def dataset_setter(dataset: dict):
     # convert du_size and size from int to string
     if dataset is not None:
