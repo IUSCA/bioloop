@@ -296,7 +296,7 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    // body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -337,8 +337,6 @@ router.post(
   }),
 );
 
-// router.post('/:id/bundle')
-
 // modify - worker
 router.patch(
   '/:id',
@@ -349,7 +347,7 @@ router.patch(
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
-    body('bundle').isObject().optional(),
+    body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -674,12 +672,10 @@ router.get(
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
-      console.log(`download_file_path: ${download_file_path}`);
 
       const download_token = await authService.get_download_token(download_file_path);
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
-      // console.log(`download: url.href: ${url.href}`)
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,

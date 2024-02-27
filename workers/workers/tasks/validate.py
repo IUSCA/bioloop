@@ -35,13 +35,13 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
     staged_path = Path(dataset['staged_path'])
 
     validation_errors = []
-    # validation_errors = check_files(celery_task=celery_task,
-    #                                 dataset_dir=staged_path,
-    #                                 files_metadata=dataset['files'])
+    validation_errors = check_files(celery_task=celery_task,
+                                    dataset_dir=staged_path,
+                                    files_metadata=dataset['files'])
 
-    # if len(validation_errors) > 0:
-    #     logger.warning(f'{len(validation_errors)} validation errors for dataset id: {dataset_id} path: {staged_path}')
-    #     raise exc.ValidationFailed(validation_errors)
+    if len(validation_errors) > 0:
+        logger.warning(f'{len(validation_errors)} validation errors for dataset id: {dataset_id} path: {staged_path}')
+        raise exc.ValidationFailed(validation_errors)
 
     update_data = {
         'is_staged': True

@@ -216,27 +216,6 @@ def add_workflow_to_dataset(dataset_id, workflow_id):
         r.raise_for_status()
 
 
-# def get_bundle(name: str, checksum: str):
-#     with APIServerSession() as s:
-#         payload = {
-#             'name': name,
-#             'checksum': checksum
-#         }
-#         r = s.get(f'bundles', params=payload)
-#         r.raise_for_status()
-#         print('RESPONSE')
-#         bundles = r.json()
-#         json.dumps(bundles)
-#         return bundles if len(bundles) == 0 else bundle_getter(bundles[0])
-
-
-# def post_bundle(data: dict):
-#     with APIServerSession(enable_retry=False) as s:
-#         r = s.post('datasets/bundle', json=data)
-#         r.raise_for_status()
-#         return r.json()
-
-
 def register_process(worker_process: dict):
     with APIServerSession(enable_retry=False) as s:
         r = s.post(f'workflows/processes', json=worker_process)

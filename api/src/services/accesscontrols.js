@@ -46,10 +46,6 @@ const grantsObject = {
     auth: {
       'create:any': ['*'],
     },
-    bundles: {
-      'read:any': ['*'],
-      'create:any': ['*'],
-    },
   },
 
   // user role permissions
