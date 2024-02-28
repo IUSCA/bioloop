@@ -131,9 +131,7 @@ class Register:
             'origin_path': str(candidate.resolve()),
         }
         created_dataset = api.create_dataset(dataset)
-        # TODO - kick off a separate workflow for duplicate datasets.
-        #        - perform duplication analysis
-        #        - sending email to the end user.
+
         self.run_workflows(
             created_dataset,
             config['workflow_registry']['handle_duplicate'] if is_duplicate else self.default_wf_name
