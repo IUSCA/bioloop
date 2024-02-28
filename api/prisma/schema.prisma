@@ -286,5 +286,5 @@ enum access_type {
 enum dataset_type {
   RAW_DATA
   DATA_PRODUCT
-  DUPLUCATE
+  DUPLICATE
 }
