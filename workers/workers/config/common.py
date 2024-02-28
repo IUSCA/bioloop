@@ -83,7 +83,7 @@ config = {
         'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
-        'acknowledge': {
+        'handle_duplicate': {
             'steps': [
                 {
                     'name': 'await stability',
@@ -93,7 +93,15 @@ config = {
                     'name': 'inspect',
                     'task': 'inspect_dataset'
                 },
-                ]
+                {
+                    'name': 'analyze_duplicate',
+                    'task': 'analyze'
+                },
+                {
+                    'name': 'send_email',
+                    'task': 'send_email'
+                }
+            ]
         },
         'integrated': {
             'steps': [

@@ -35,6 +35,20 @@ def download_illumina_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
+@app.task(base=WorkflowTask, bind=True, name='analyze_dataset',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def analyze_dataset(celery_task, dataset_id, **kwargs):
+    from workers.tasks.analyze import analyze_dataset as task_body
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.InspectionFailed:
+        raise
+    except Exception as e:
+        raise exc.RetryableException(e)
+
+
 @app.task(base=WorkflowTask, bind=True, name='inspect_dataset',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,

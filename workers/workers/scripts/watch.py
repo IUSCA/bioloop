@@ -121,26 +121,27 @@ class Register:
         for candidate in duplicate_candidates:
             self.register_candidate(candidate, True)
 
-
-
     def register_candidate(self, candidate: Path, is_duplicate: bool = False):
         dataset_type = config['dataset_types']['DUPLICATE']['label'] \
             if is_duplicate else self.dataset_type
         logger.info(f'registering {dataset_type} dataset - {candidate.name}')
         dataset = {
             'name': slugify_(candidate.name),
-            'type':  dataset_type,
+            'type': dataset_type,
             'origin_path': str(candidate.resolve()),
         }
         created_dataset = api.create_dataset(dataset)
         # TODO - kick off a separate workflow for duplicate datasets.
-        # TODO - perform duplication analysis before sending email to the end user.
-        self.run_workflows(created_dataset)
+        #        - perform duplication analysis
+        #        - sending email to the end user.
+        self.run_workflows(
+            created_dataset,
+            config['workflow_registry']['handle_duplicate'] if is_duplicate else self.default_wf_name
+        )
 
-
-    def run_workflows(self, dataset):
+    def run_workflows(self, dataset, workflow_name=None):
         dataset_id = dataset['id']
-        wf_body = wf_utils.get_wf_body(wf_name=self.default_wf_name)
+        wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
         wf = Workflow(celery_app=celery_app, **wf_body)
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
         wf.start(dataset_id)

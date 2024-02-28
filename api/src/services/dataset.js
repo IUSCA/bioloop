@@ -25,6 +25,20 @@ const INCLUDE_STATES = {
   },
 };
 
+const INCLUDE_FILES = {
+  files: {
+    select: {
+      path: true,
+      md5: true,
+    },
+    where: {
+      NOT: {
+        filetype: 'directory',
+      },
+    },
+  },
+};
+
 const INCLUDE_WORKFLOWS = {
   workflows: {
     select: {
@@ -130,22 +144,10 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
 }) {
-  const fileSelect = files ? {
-    select: {
-      path: true,
-      md5: true,
-    },
-    where: {
-      NOT: {
-        filetype: 'directory',
-      },
-    },
-  } : false;
-
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
-      files: fileSelect,
+      ...(files && INCLUDE_FILES),
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
       source_datasets: true,
@@ -480,6 +482,7 @@ async function add_files({ dataset_id, data }) {
 
 module.exports = {
   soft_delete,
+  INCLUDE_FILES,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
   get_dataset,

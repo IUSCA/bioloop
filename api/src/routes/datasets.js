@@ -16,6 +16,7 @@ const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
+const { INCLUDE_FILES } = require('../services/dataset');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -192,12 +193,15 @@ router.get(
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
-    query('type').isIn([config.dataset_types.RAW_DATA.label, config.dataset_types.DATA_PRODUCT.label]).optional(),
+    query('type')
+      .isIn(Object.entries(config.dataset_types).map(([, val]) => val.label))
+      .optional(),
     query('name').notEmpty().escape().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
+    query('include_files').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -219,9 +223,13 @@ router.get(
       skip: req.query.offset,
       take: req.query.limit,
       ...filterQuery,
-      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
+      orderBy: buildOrderByObject(
+        Object.keys(sortBy)[0],
+        Object.values(sortBy)[0],
+      ),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
+        ...(req.query.include_files && datasetService.INCLUDE_FILES),
         source_datasets: true,
         derived_datasets: true,
       },
