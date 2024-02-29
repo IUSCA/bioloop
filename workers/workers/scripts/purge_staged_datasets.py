@@ -13,7 +13,7 @@ MAX_PURGES = config['stage']['purge']['max_purges']
 
 
 def main():
-    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'])
+    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'], bundle=True)
 
     if len(datasets) > MAX_PURGES:
         logger.warning(

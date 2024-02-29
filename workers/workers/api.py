@@ -132,14 +132,16 @@ def get_all_datasets(
         name=None,
         days_since_last_staged=None,
         deleted=False,
-        archived=False):
+        archived=False,
+        bundle=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
             'name': name,
             'days_since_last_staged': days_since_last_staged,
             'deleted': deleted,
-            'archived': archived
+            'archived': archived,
+            'bundle': False
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()

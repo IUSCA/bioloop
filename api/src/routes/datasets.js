@@ -198,6 +198,7 @@ router.get(
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
+    query('bundle').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -224,6 +225,7 @@ router.get(
         ...datasetService.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
+        bundle: req.query.bundle || false
       },
     };
 
@@ -269,7 +271,7 @@ router.get(
     query('last_task_run').toBoolean().default(false),
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
-    query('bundle').toBoolean().default(false),
+    query('bundle').optional().toBoolean(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -283,7 +285,7 @@ router.get(
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
-      bundle: req.query.bundle,
+      bundle: req.query.bundle || false,
     });
     res.json(dataset);
   }),
