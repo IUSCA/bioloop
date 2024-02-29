@@ -22,14 +22,18 @@
               <DatasetInfo :dataset="dataset"></DatasetInfo>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
+
+                <!-- Download Modal -->
+                <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
                   :disabled="!dataset.num_files"
-                  preset="primary"
-                  @click="navigateToFileBrowser"
-                  class="flex-none"
-                  :color="isDark ? '#9171f8' : '#A020F0'"
+                  class="flex-initial"
+                  color="primary"
+                  border-color="primary"
+                  preset="secondary"
+                  @click="openModalToDownloadDataset"
                 >
-                  <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
+                  <i-mdi-folder-open class="pr-2 text-2xl" /> Access Files
                 </va-button>
 
                 <!-- edit description -->
@@ -305,9 +309,8 @@ import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import workflowService from "@/services/workflow";
-const router = useRouter();
-const route = useRoute();
-const isDark = useDark();
+
+const downloadModal = ref(null);
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
@@ -340,7 +343,7 @@ const polling_interval = computed(() => {
 
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  DatasetService.getById({ id: props.datasetId })
+  DatasetService.getById({ id: props.datasetId, bundle: true })
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
@@ -445,12 +448,8 @@ function openModalToEditDataset() {
   editModal.value.show();
 }
 
-function navigateToFileBrowser() {
-  if (props.appendFileBrowserUrl) {
-    router.push(route.path + "/filebrowser");
-  } else {
-    router.push(`/datasets/${props.datasetId}/filebrowser`);
-  }
+function openModalToDownloadDataset() {
+  downloadModal.value.show();
 }
 </script>
 

@@ -135,11 +135,7 @@
   />
 
   <!-- Download Modal -->
-  <DatasetDownloadModal
-    ref="downloadModal"
-    :dataset="datasetToDownload"
-    :project-id="props.project.id"
-  />
+  <DatasetDownloadModal ref="downloadModal" :dataset="datasetToDownload" />
 
   <!-- Stage Modal -->
   <StageDatasetModal

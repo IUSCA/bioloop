@@ -42,28 +42,30 @@ def grant_access_to_parent_chain(leaf: Path, root: Path):
 
 
 def setup_download(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id)
+    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     staged_path, alias = Path(dataset['staged_path']), glom(dataset, 'metadata.stage_alias')
-    # staged_path.parent = the alias sub-directory
-    bundle_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
+
+    bundle_path = Path(dataset['bundle']['path'])
+    bundle_alias = dataset['metadata']['bundle_alias']
 
     if not staged_path.exists():
         # TODO: more robust validation?
         raise ValidationFailed(f'Staged path does not exist {staged_path}')
 
-    download_path = Path(config['paths']['download_dir']).resolve() / alias
-    tar_download_path = download_path / f"{dataset['name']}.tar"
+    download_dir = Path(config['paths']['download_dir']).resolve()
+    download_path = download_dir / alias
+    bundle_download_path = download_dir / bundle_alias
 
     # remove if exists and create a symlink in download dir pointing to the staged path
     rm(download_path)
     download_path.symlink_to(staged_path, target_is_directory=True)
-    # do the same for tar file
-    rm(tar_download_path)
-    tar_download_path.symlink_to(bundle_path)
+    # do the same for bundle file
+    rm(bundle_download_path)
+    bundle_download_path.symlink_to(bundle_path)
 
     # enable others to read and cd into stage directory
     grant_read_permissions_to_others(staged_path)
-    grant_read_permissions_to_others(tar_download_path)
+    grant_read_permissions_to_others(bundle_download_path)
 
     # enable others to navigate to leaf by granting execute permission on parent directories
     grant_access_to_parent_chain(staged_path, root=Path(config['paths']['root']))
