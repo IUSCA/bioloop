@@ -100,7 +100,7 @@ def run_workflows(dataset):
     wf = Workflow(celery_app=celery_app, **wf_body)
     api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
     wf.start(dataset_id)
-    logger.info(f'started sync_archived_bundles for {dataset["id"]}, workflow_id: {wf.workflow["id"]}')
+    logger.info(f'started sync_archived_bundles for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
 
 
 if __name__ == '__main__':
