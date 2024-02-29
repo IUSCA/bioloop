@@ -3,6 +3,7 @@ from pathlib import Path
 from sca_rhythm import Workflow
 
 from workers.celery_app import app as celery_app
+import workers.sda as sda
 import workers.api as api
 import workers.cmd as cmd
 import workers.workflow_utils as wf_utils
@@ -26,7 +27,7 @@ def download_and_validate(dataset: dict) -> bool:
     sda_archive_path = dataset['archive_path']
     try:
         wf_utils.download_file_from_sda(sda_file_path=sda_archive_path,
-                                        local_file_path=str(bundle_download_path),
+                                        local_file_path=bundle_download_path,
                                         celery_task=None)
     except Exception as err:
         logger.info(f'Encountered exception while downloading dataset {dataset["id"]}:')
@@ -39,7 +40,7 @@ def download_and_validate(dataset: dict) -> bool:
 
     sda_archive_checksum = None
     try:
-        sda_archive_checksum = wf_utils.get_hash(dataset['archive_path'])
+        sda_archive_checksum = sda.get_hash(dataset['archive_path'])
         logger.info(f'sda_archive_checksum: {sda_archive_checksum}')
     except cmd.SubprocessError as err:
         # failed_checksum_retrieval.append(dataset['id'])
@@ -75,7 +76,13 @@ def main():
 
     unprocessed = []
     for dataset in archived_datasets:
-        download_validated = download_and_validate(dataset)
+        download_validated = False
+
+        try:
+            download_validated = download_and_validate(dataset)
+            logger.info(f'download_validated for {dataset["id"]}: {download_validated}')
+        except Exception as err:
+            logger.info(err)
 
         if download_validated:
             run_workflows(dataset)
