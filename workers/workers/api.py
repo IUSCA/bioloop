@@ -127,13 +127,19 @@ def dataset_setter(dataset: dict):
     return dataset
 
 
-def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, deleted=False):
+def get_all_datasets(
+        dataset_type=None,
+        name=None,
+        days_since_last_staged=None,
+        deleted=False,
+        archived=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
             'name': name,
             'days_since_last_staged': days_since_last_staged,
-            'deleted': deleted
+            'deleted': deleted,
+            'archived': archived
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
