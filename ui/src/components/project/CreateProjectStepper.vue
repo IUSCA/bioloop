@@ -123,8 +123,8 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useBreakpoint } from "vuestic-ui";
 
 const emit = defineEmits(["update"]);
