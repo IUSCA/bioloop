@@ -67,7 +67,8 @@
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
               <span class="">
-                Size: {{ formatBytes(dataset.bundle.size) }}
+                Transfer of file will use
+                {{ formatBytes(dataset.bundle.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>
