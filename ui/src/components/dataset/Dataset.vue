@@ -343,7 +343,7 @@ const polling_interval = computed(() => {
 
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  DatasetService.getById({ id: props.datasetId })
+  DatasetService.getById({ id: props.datasetId, bundle: true })
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
