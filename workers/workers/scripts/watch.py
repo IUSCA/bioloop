@@ -27,6 +27,8 @@ class Observer:
         self.directories = set()
 
     def watch(self) -> None:
+        logger.info('WATCH CALLED')
+        
         # Get the current subdirectories of the watched directory
         current_directories = set(p.name for p in self.dir_path.iterdir() if p.is_dir())
 
@@ -34,12 +36,19 @@ class Observer:
         added_directories = current_directories - self.directories
         deleted_directories = self.directories - current_directories
 
+        logger.info('ADDED')
+        logger.info(added_directories)
+        logger.info('DELETED')
+        logger.info(deleted_directories)
+
         if len(added_directories) > 0:
             self.callback('add', [self.dir_path / name for name in added_directories])
         if len(deleted_directories) > 0:
             self.callback('delete', [self.dir_path / name for name in deleted_directories])
 
         self.directories = current_directories
+        logger.info('self.directories:')
+        logger.info(self.directories)
 
 
 class Poller:
@@ -101,7 +110,7 @@ class Register:
         if event != 'add':
             return
 
-        candidates: list[Path] = [
+        new_candidates: list[Path] = [
             p for p in updated_dirs
             if all([
                 slugify_(p.name) not in self.completed,
@@ -109,17 +118,20 @@ class Register:
                 # cmd.total_size(p) >= config['registration']['minimum_dataset_size']
             ])
         ]
+        # If a candidate's name is in self.completed, it could potentially be a duplicate.
+        # In such cases, we create a dataset of type DUPLICATE, which is later processed
+        # by an end user.
+        duplicate_candidates = [p for p in updated_dirs if slugify_(p.name) in self.completed]
 
-        for candidate in candidates:
+        for candidate in new_candidates:
+            logger.info(f'processing candidate: {str(candidate.name)}')
             self.register_candidate(candidate)
             self.completed.add(candidate.name)
 
-        duplicate_candidates = [p for p in updated_dirs if slugify_(p.name) in self.completed]
-        # If candidate's name is in self.completed, it could potentially be a duplicate.
-        # In such cases, we create a dataset of type DUPLICATE, which is later processed
-        # by an end user.
         for candidate in duplicate_candidates:
+            logger.info(f'processing DUPLICATE candidate: {str(candidate.name)}')
             self.register_candidate(candidate, True)
+            self.completed.add(candidate.name)
 
     def register_candidate(self, candidate: Path, is_duplicate: bool = False):
         dataset_type = config['dataset_types']['DUPLICATE']['label'] \
@@ -134,7 +146,7 @@ class Register:
 
         self.run_workflows(
             created_dataset,
-            config['workflow_registry']['handle_duplicate'] if is_duplicate else self.default_wf_name
+            'handle_duplicate' if is_duplicate else self.default_wf_name
         )
 
     def run_workflows(self, dataset, workflow_name=None):
@@ -160,15 +172,15 @@ if __name__ == "__main__":
         callback=Register('RAW_DATA').register,
         interval=config['registration']['poll_interval_seconds']
     )
-    obs2 = Observer(
-        name='data_products_obs',
-        dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
-        callback=Register('DATA_PRODUCT').register,
-        # callback=RegisterDataProduct().register,
-        interval=config['registration']['poll_interval_seconds']
-    )
+    # obs2 = Observer(
+    #     name='data_products_obs',
+    #     dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
+    #     callback=Register('DATA_PRODUCT').register,
+    #     # callback=RegisterDataProduct().register,
+    #     interval=config['registration']['poll_interval_seconds']
+    # )
 
     poller = Poller()
     poller.register(obs1)
-    poller.register(obs2)
+    # poller.register(obs2)
     poller.poll()
