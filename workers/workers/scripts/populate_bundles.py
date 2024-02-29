@@ -18,7 +18,6 @@ def download_and_validate(dataset: dict) -> bool:
     logger.info(f'processing dataset {dataset["id"]}')
 
     bundle_download_path = Path(f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar')
-    logger.info(f'bundle_download_path: {bundle_download_path}')
     # delete pre-existing bundles to force reevaluation of bundle metadata in the archive step
     if bundle_download_path.exists():
         logger.info(f'deleting pre-existing bundle {bundle_download_path}')
@@ -31,9 +30,7 @@ def download_and_validate(dataset: dict) -> bool:
                                         celery_task=None)
     except Exception as err:
         logger.info(f'Encountered exception while downloading dataset {dataset["id"]}:')
-        logger.info('returning false')
         logger.info(err)
-        # failed_download.append(dataset['id'])
         return False
 
     logger.info(f'downloaded dataset {dataset["id"]}')
@@ -43,32 +40,18 @@ def download_and_validate(dataset: dict) -> bool:
         sda_archive_checksum = sda.get_hash(dataset['archive_path'])
         logger.info(f'sda_archive_checksum: {sda_archive_checksum}')
     except cmd.SubprocessError as err:
-        # failed_checksum_retrieval.append(dataset['id'])
         logger.info(f'Encountered exception while retrieving SDA checksum of dataset {dataset["id"]}:')
         logger.info(err)
-        logger.info('returning false')
         return False
 
     calculated_checksum = utils.checksum(Path(bundle_download_path))
     logger.info(f'calculated_checksum: {calculated_checksum}')
-    # if sda_archive_checksum is None:
-    #     logger.info('SDA checksum unknown for dataset %s', dataset['id'])
-        # failed_checksum_retrieval.append(dataset['id'])
     if sda_archive_checksum != calculated_checksum:
         logger.info('SDA checksum mismatch for dataset %s', dataset['id'])
-        logger.info('returning false')
         return False
-        # failed_checksum_validation.append(dataset['id'])
 
     logger.info(f'successfully finished processing dataset {dataset["id"]}')
     return True
-
-    # logger.info('The following datasets failed download:')
-    # logger.info(failed_download)
-    # logger.info('The following datasets failed checksum retrieval:')
-    # logger.info(failed_checksum_retrieval)
-    # logger.info('The following datasets failed checksum validation:')
-    # logger.info(failed_checksum_validation)
 
 
 def main():
@@ -82,19 +65,18 @@ def main():
             download_validated = download_and_validate(dataset)
             logger.info(f'download_validated for {dataset["id"]}: {download_validated}')
         except Exception as err:
+            logger.info(f'failed to download or validate dataset {dataset["id"]}')
             logger.info(err)
 
         if download_validated:
             run_workflows(dataset)
         else:
             unprocessed.append(dataset['id'])
-            logger.info(f'failed to download or validate dataset {dataset["id"]}')
 
     logger.info(f'unprocessed datasets: {unprocessed}')
 
 
 def run_workflows(dataset):
-    logger.info(f'starting sync_archived_bundles for {dataset["id"]}')
     dataset_id = dataset['id']
     wf_body = wf_utils.get_wf_body(wf_name='sync_archived_bundles')
     wf = Workflow(celery_app=celery_app, **wf_body)
