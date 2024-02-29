@@ -141,7 +141,7 @@ def get_all_datasets(
             'days_since_last_staged': days_since_last_staged,
             'deleted': deleted,
             'archived': archived,
-            'bundle': False
+            'bundle': bundle
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
