@@ -1,41 +1,36 @@
 <template>
-  <div class="flex justify-center">
-    <div class="flex-auto max-w-md">
-      <va-card class="mt-10 lg:mt-20" stripe stripe-color="success">
-        <va-card-content>
-          <div class="flex justify-center opacity-90">
-            <div class="flex flex-col gap-2 items-center">
-              <AppIcon size="3rem" />
-              <AppTitle />
-            </div>
-          </div>
-          <div class="text-center mt-8">
-            <span class="text-xl tracking-wide font-medium">
-              Log In / Sign Up
-            </span>
-          </div>
-          <div class="mt-2 mb-8">
-            <va-divider />
-          </div>
-          <div class="flex justify-between px-8 mb-2">
-            <va-button
-              class="flex-auto py-2"
-              @click="
-                $router.push({ path: '/auth/iucas', query: $route.query })
-              "
+  <div
+    class="min-h-screen flex items-center justify-center bg-gray-300 dark:bg-gray-600"
+  >
+    <va-card class="w-full max-w-md">
+      <va-card-content class="">
+        <div class="flex flex-col gap-2 items-center justify-center opacity-90">
+          <AppIcon size="3rem" />
+          <AppTitle />
+        </div>
+
+        <div class="flex flex-col gap-2 items-center justify-center mt-6">
+          <va-button
+            :preset="isDark ? null : 'primary'"
+            class="w-full py-1"
+            @click="$router.push({ path: '/auth/iucas', query: $route.query })"
+          >
+            <span
+              class="absolute left-0 top-0 flex items-center justify-center h-full w-10"
             >
-              <span class="text-lg font-medium"
-                >Continue with Indiana University</span
-              >
-            </va-button>
-          </div>
-        </va-card-content>
-      </va-card>
-    </div>
+              <IULogo />
+            </span>
+            <span class="font-semibold">Login with Indiana University</span>
+          </va-button>
+        </div>
+      </va-card-content>
+    </va-card>
   </div>
 </template>
 
-<script setup></script>
+<script setup>
+const isDark = useDark();
+</script>
 
 <route lang="yaml">
 meta:

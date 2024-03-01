@@ -225,7 +225,7 @@ router.get(
         ...datasetService.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
-        bundle: req.query.bundle || false
+        bundle: req.query.bundle || false,
       },
     };
 
