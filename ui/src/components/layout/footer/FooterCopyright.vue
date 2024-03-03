@@ -1,5 +1,5 @@
 <template>
-  <span class="max-w-max">
+  <span class="max-w-max text-center">
     <a href="https://www.iu.edu/copyright/index.html" class="footer-link"
       >Copyright
     </a>

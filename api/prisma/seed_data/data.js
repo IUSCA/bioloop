@@ -312,6 +312,18 @@ const project_contact_assoc = [
   },
 ];
 
+const about_records = [
+  {
+    html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a> group.'
+        + '<br><br>'
+        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.'
+        + '<br><br>'
+        + 'This instance of Bioloop is being run by:'
+        + '<br><br>'
+        + 'For questions or support, please contact the primary operator:</p>',
+  },
+];
+
 module.exports = {
   roles,
   admins,
@@ -326,4 +338,5 @@ module.exports = {
   project_user_assoc,
   project_dataset_assoc,
   project_contact_assoc,
+  about_records,
 };

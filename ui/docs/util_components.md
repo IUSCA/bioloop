@@ -580,6 +580,7 @@ the string is looked up in the target argument, and returned.
 
 - `placeholder`: String - Placeholder for the search input. Default - "Type to search"- `selectedResults`: Array - the array of currently selected results. Can be used to load the widget with some items
   pre-selected. Defaults to [].
+- `loading`: Boolean - Shows loading indicator and disables controls when loading. Defaults to False.
 - `searchResults`: Array - the array of results retrieved via the current search. Defaults to [].
 - `selectedResults`: Array - the array of currently selected search results. Can be used to load the widget with some items
   pre-selected. Defaults to [].

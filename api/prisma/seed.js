@@ -3,6 +3,7 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
+const config = require('config');
 
 const { normalize_name } = require('../src/services/project');
 const data = require('./seed_data/data');
@@ -12,11 +13,17 @@ const { generate_staged_logs } = require('./seed_data/staged_logs');
 const { generate_stage_request_logs } = require('./seed_data/stage_request_logs');
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
-const { readAdminsFromFile } = require('../src/utils');
+const { readUsersFromJSON } = require('../src/utils');
 
 global.__basedir = path.join(__dirname, '..');
 
 const prisma = new PrismaClient();
+
+if (['production'].includes(config.get('mode'))) {
+  // exit if in production mode
+  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_users.js instead.');
+  process.exit(1);
+}
 
 async function update_seq(table) {
   // Get the current maximum value of the id column
@@ -91,7 +98,7 @@ async function main() {
   })));
 
   // Create default admins
-  const additional_admins = readAdminsFromFile();
+  const additional_admins = readUsersFromJSON('admins.json');
   const admin_data = insert_random_dates(data.admins.concat(additional_admins));
   const admin_promises = admin_data.map((admin) => prisma.user.upsert({
     where: { email: `${admin.username}@iu.edu` },

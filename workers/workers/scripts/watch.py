@@ -150,7 +150,8 @@ if __name__ == "__main__":
     obs2 = Observer(
         name='data_products_obs',
         dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
-        callback=RegisterDataProduct().register,
+        callback=Register('DATA_PRODUCT').register,
+        # callback=RegisterDataProduct().register,
         interval=config['registration']['poll_interval_seconds']
     )
 

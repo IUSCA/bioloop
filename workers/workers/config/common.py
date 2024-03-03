@@ -40,11 +40,13 @@ config = {
         'RAW_DATA': {
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
+            'bundle': '/path/to/bundle/raw_data',
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
+            'bundle': '/path/to/bundle/data_products',
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
@@ -72,6 +74,26 @@ config = {
         'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
+        'sync_archived_bundles': {
+            'steps': [
+                {
+                    'name': 'archive',
+                    'task': 'archive_dataset'
+                },
+                {
+                    'name': 'stage',
+                    'task': 'stage_dataset'
+                },
+                {
+                    'name': 'validate',
+                    'task': 'validate_dataset'
+                },
+                {
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download'
+                }
+            ]
+        },
         'integrated': {
             'steps': [
                 {
@@ -97,23 +119,7 @@ config = {
                 {
                     'name': 'setup_download',
                     'task': 'setup_dataset_download'
-                },
-                {
-                    'name': 'delete source',
-                    'task': 'delete_source'
                 }
-            ]
-        },
-        'reingest': {
-            'steps': [
-                {
-                    'name': 'inspect',
-                    'task': 'inspect_dataset'
-                },
-                {
-                    'name': 'mock archive',
-                    'task': 'mark_archived_and_delete'
-                },
             ]
         }
     },
@@ -130,7 +136,7 @@ config = {
 
     'workflow': {
         'purge': {
-            'types': ['source_integrated', 'stage', 'delete_dataset'],
+            'types': ['integrated', 'stage', 'delete'],
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
