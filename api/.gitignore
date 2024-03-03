@@ -42,3 +42,4 @@ coverage
 admins.json
 operators.json
 users.json
+test_users.json

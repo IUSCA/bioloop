@@ -90,6 +90,21 @@ function createRandomUsers(num) {
   }));
 }
 
+const user_query = ({ user, role_id = 3 } = {}) => ({
+  where: { email: `${user.username}@iu.edu` },
+  update: {},
+  create: {
+    username: user.username,
+    email: `${user.username}@iu.edu`,
+    cas_id: user.username,
+    name: user.name,
+    created_at: user.date,
+    user_role: {
+      create: [{ role_id }],
+    },
+  },
+});
+
 async function main() {
   await Promise.allSettled(data.roles.map((role) => prisma.role.upsert({
     where: { id: role.id },
@@ -100,62 +115,34 @@ async function main() {
   // Create default admins
   const additional_admins = readUsersFromJSON('admins.json');
   const admin_data = insert_random_dates(data.admins.concat(additional_admins));
-  const admin_promises = admin_data.map((admin) => prisma.user.upsert({
-    where: { email: `${admin.username}@iu.edu` },
-    update: {},
-    create: {
-      username: admin.username,
-      email: `${admin.username}@iu.edu`,
-      cas_id: admin.username,
-      name: admin.name,
-      created_at: admin.date,
-      user_role: {
-        create: [{ role_id: 1 }],
-      },
-    },
-  }));
-
+  const admin_promises = admin_data.map((admin) => prisma.user.upsert(
+    user_query({ user: admin, role_id: 1 }),
+  ));
   await Promise.all(admin_promises);
 
-  // create test user
-  const user_data = insert_random_dates(
-    data.users.concat(createRandomUsers(50)), // mock some extra users
-  );
-  const user_promises = user_data.map((user) => prisma.user.upsert({
-    where: { email: `${user.username}@iu.edu` },
-    update: {},
-    create: {
-      username: user.username,
-      email: `${user.username}@iu.edu`,
-      cas_id: user.username,
-      name: user.name,
-      created_at: user.date,
-      user_role: {
-        create: [{ role_id: 3 }],
-      },
-    },
-  }));
-
+  const users = readUsersFromJSON('users.json');
+  const user_data = insert_random_dates(users.concat(createRandomUsers(50)));
+  const user_promises = user_data.map((user) => prisma.user.upsert(
+    user_query({ user }),
+  ));
   await Promise.all(user_promises);
 
   // create operators
-  const operator_data = insert_random_dates(data.operators);
-  const operator_promises = operator_data.map((user) => prisma.user.upsert({
-    where: { email: `${user.username}@iu.edu` },
-    update: {},
-    create: {
-      username: user.username,
-      email: `${user.username}@iu.edu`,
-      cas_id: user.username,
-      name: user.name,
-      created_at: user.date,
-      user_role: {
-        create: [{ role_id: 2 }],
-      },
-    },
-  }));
-
+  const operators = readUsersFromJSON('operators.json');
+  const operator_data = insert_random_dates(operators);
+  const operator_promises = operator_data.map((operator) => prisma.user.upsert(
+    user_query({ user: operator, role_id: 2 }),
+  ));
   await Promise.all(operator_promises);
+
+  if (config.mode === 'test') {
+    const test_users = readUsersFromJSON('test_users.json');
+    const test_user_data = insert_random_dates(test_users);
+    const test_user_promises = test_user_data.map((user) => prisma.user.upsert(
+      user_query({ user, role_id: 3 }),
+    ));
+    await Promise.all(test_user_promises);
+  }
 
   const datasetPromises = data.datasets.map((dataset) => {
     const { workflows, ...dataset_obj } = dataset;

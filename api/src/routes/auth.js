@@ -27,7 +27,9 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Auth']
-    const loginUrl = IULogin.get_login_url(req.query.service);
+    const loginUrl = config.mode === 'test'
+      ? `${req.query.service}?ticket=mockTicket`
+      : IULogin.get_login_url(req.query.service);
     res.json({ url: loginUrl });
   }),
 );
@@ -38,25 +40,43 @@ router.post(
     body('ticket').notEmpty(),
     body('service').notEmpty(),
   ]),
-  (req, res, next) => {
+  asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
-    IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id, profile) => {
-      if (err) return next(err);
-      try {
-        const user = await userService.findActiveUserBy('cas_id', cas_id);
-        if (user) {
-          const resObj = await authService.onLogin({ user });
-          return res.json(resObj);
-        }
-        // User was authenticated with CAS but they are not a portal user
-        // Send an empty success message
-        return res.status(204).send();
-      } catch (err2) {
-        return next(err2);
+
+    const login = async (cas_id) => {
+      console.log('cas_id');
+      console.log(cas_id);
+      const user = await userService.findActiveUserBy('cas_id', cas_id);
+      console.log('user');
+      console.dir(user, { depth: null });
+      if (user) {
+        const resObj = await authService.onLogin({ user });
+        console.log('resObj');
+        console.dir(resObj, { depth: null });
+        return res.json(resObj);
       }
-    });
-  },
+      // User was authenticated with CAS but they are not a portal user
+      // Send an empty success message
+      return res.status(204).send();
+    };
+
+    // if test env, do something different, still call authService.onLogin?
+    if (config.mode === 'test') {
+      console.log('in test mode');
+      await login(config.testing.username);
+    } else {
+      console.log('in prod mode');
+      IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id) => {
+        if (err) return next(err);
+        try {
+          await login(cas_id);
+        } catch (err2) {
+          return next(err2);
+        }
+      });
+    }
+  }),
 );
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {

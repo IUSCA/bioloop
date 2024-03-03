@@ -66,11 +66,22 @@ const authFailure = ref(false);
 const validation_loading = ref(false);
 
 const ticket = route.query.ticket;
+console.log("before if-else");
+console.log("ticket:");
+console.dir(ticket, { depth: null });
+
 if (ticket) {
+  console.log("inside if");
+  console.log("got ticket:");
+  console.dir(ticket, { depth: null });
   validation_loading.value = true;
   auth
     .casLogin(ticket)
     .then((user) => {
+      console.log("validated ticket:");
+      console.log("user:");
+      console.dir(user, { depth: null });
+
       if (user) {
         // read redirectPath value from local storage and reset it
         const _redirectPath = redirectPath.value;
@@ -96,12 +107,20 @@ if (ticket) {
     });
 } else {
   if (route.query.redirect_to) {
+    console.log("else if route.query.redirect_to:");
+    console.dir(route.query.redirect_to, { depth: null });
     redirectPath.value = route.query.redirect_to;
   }
 
+  console.log("outside if else");
+  console.log("config.casReturn");
+  console.dir(config.casReturn, { depth: null });
   authService
     .getCasUrl(config.casReturn)
     .then((res) => {
+      console.log("got canReturn url:");
+      console.log(`${res.data?.url}`);
+      // different url from API
       const casUrl = res.data?.url;
       if (casUrl) {
         window.location.replace(casUrl);

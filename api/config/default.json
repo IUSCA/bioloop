@@ -88,5 +88,8 @@
       ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"]
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "testing": {
+    "username": "e2eUser"
+  }
 }
