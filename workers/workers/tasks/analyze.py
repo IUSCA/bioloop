@@ -67,10 +67,7 @@ def are_files_same(files_1, files_2):
         # print('processed original: ', original)
 
         if not found_original_file:
-            # print(f'did not find original in list_2, will return False')
             return False
-
-    # print(f'processed original and duplicate, will return True')
     return True
 
 
