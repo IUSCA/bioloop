@@ -11,6 +11,7 @@
 
         <div class="flex flex-col gap-2 items-center justify-center mt-6">
           <va-button
+            id="login-button"
             :preset="isDark ? null : 'primary'"
             class="w-full py-1"
             @click="$router.push({ path: '/auth/iucas', query: $route.query })"
