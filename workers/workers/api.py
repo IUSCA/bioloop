@@ -134,7 +134,7 @@ def get_all_datasets(
         deleted=False,
         archived=False,
         bundle=False,
-        include_files=False):
+        files=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -143,7 +143,7 @@ def get_all_datasets(
             'deleted': deleted,
             'archived': archived,
             'bundle': bundle,
-            'include_files': include_files
+            'files': files
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()

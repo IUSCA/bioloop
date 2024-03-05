@@ -25,7 +25,7 @@ def analyze_dataset(celery_task, dataset_id, **kwargs):
     duplicate_dataset = api.get_all_datasets(
         dataset_type=config['dataset_types']['DUPLICATE']['label'],
         name=original_dataset['name'],
-        include_files=True,
+        files=True,
     )
 
     original_files = original_dataset['files']

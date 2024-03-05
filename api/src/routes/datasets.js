@@ -201,7 +201,7 @@ router.get(
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
-    query('include_files').toBoolean().optional(),
+    query('files').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -226,7 +226,7 @@ router.get(
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
-        ...(req.query.include_files && datasetService.INCLUDE_FILES),
+        ...(req.query.files && datasetService.INCLUDE_FILES),
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
