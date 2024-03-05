@@ -94,12 +94,12 @@ config = {
                     'task': 'inspect_dataset'
                 },
                 {
-                    'name': 'analyze_duplicate',
-                    'task': 'analyze'
+                    'name': 'analyze',
+                    'task': 'analyze_duplicate'
                 },
                 {
-                    'name': 'send_email',
-                    'task': 'send_email'
+                    'name': 'notify',
+                    'task': 'send_notification'
                 }
             ]
         },

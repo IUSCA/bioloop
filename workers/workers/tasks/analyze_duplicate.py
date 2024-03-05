@@ -22,16 +22,16 @@ logger = get_task_logger(__name__)
 
 def analyze_dataset(celery_task, dataset_id, **kwargs):
     original_dataset = api.get_dataset(dataset_id=dataset_id, files=True)
-    original_files = original_dataset['files']
-
     duplicate_dataset = api.get_all_datasets(
         dataset_type=config['dataset_types']['DUPLICATE']['label'],
         name=original_dataset['name'],
         include_files=True,
     )
+
+    original_files = original_dataset['files']
     duplicate_files = duplicate_dataset['files']
 
-    return compare_dataset_files(original_files, duplicate_files)
+    return dataset_id, compare_dataset_files(original_files, duplicate_files)
 
 
 def compare_dataset_files(files_1, files_2):

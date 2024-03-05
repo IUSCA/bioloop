@@ -35,14 +35,28 @@ def download_illumina_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='analyze_dataset',
+@app.task(base=WorkflowTask, bind=True, name='analyze_duplicate',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
-def analyze_dataset(celery_task, dataset_id, **kwargs):
-    from workers.tasks.analyze import analyze_dataset as task_body
+def analyze_duplicate(celery_task, dataset_id, **kwargs):
+    from workers.tasks.analyze_duplicate import analyze_dataset as task_body
     try:
         return task_body(celery_task, dataset_id, **kwargs)
+    except exc.InspectionFailed:
+        raise
+    except Exception as e:
+        raise exc.RetryableException(e)
+
+
+@app.task(base=WorkflowTask, bind=True, name='send_notification',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def send_notification(celery_task, dataset_id, are_duplicates, **kwargs):
+    from workers.tasks.notify import send_notification as task_body
+    try:
+        return task_body(celery_task, dataset_id, are_duplicates, **kwargs)
     except exc.InspectionFailed:
         raise
     except Exception as e:
