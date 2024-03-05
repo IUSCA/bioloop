@@ -19,8 +19,8 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
-def send_notification(celery_task, dataset_id, are_duplicates, **kwargs):
-    if are_duplicates:
-        logger.info(f"Dataset {dataset_id} was deemed to be a duplicate")
+def send_notification(celery_task, dataset_id, **kwargs):
+    # if are_duplicates:
+    #     logger.info(f"Dataset {dataset_id} was deemed to be a duplicate")
         # Send email
-        pass
+    pass

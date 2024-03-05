@@ -12,7 +12,7 @@ import workers.workflow_utils as wf_utils
 from workers.celery_app import app as celery_app
 from workers.config import config
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -158,6 +158,7 @@ class Register:
         )
 
     def run_workflows(self, dataset, workflow_name=None):
+        logger.info(f"started workflow {workflow_name} for {dataset['id']}")
         dataset_id = dataset['id']
         wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
         wf = Workflow(celery_app=celery_app, **wf_body)

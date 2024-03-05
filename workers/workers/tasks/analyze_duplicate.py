@@ -12,6 +12,7 @@ import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
+from workers.exceptions import InspectionFailed
 from workers import exceptions as exc
 from workers.config import config
 
@@ -21,27 +22,36 @@ logger = get_task_logger(__name__)
 
 
 def analyze_dataset(celery_task, dataset_id, **kwargs):
+    logger.info(f"Processing dataset {dataset_id}")
+
     original_dataset = api.get_dataset(dataset_id=dataset_id, files=True)
-    duplicate_dataset = api.get_all_datasets(
+    duplicate_datasets = api.get_all_datasets(
         dataset_type=config['dataset_types']['DUPLICATE']['label'],
         name=original_dataset['name'],
         files=True,
     )
+    if len(duplicate_datasets) > 1:
+        raise InspectionFailed(f"Found more than one duplicates for dataset {dataset_id}")
+    duplicate = duplicate_datasets[0]
 
     original_files = original_dataset['files']
-    duplicate_files = duplicate_dataset['files']
+    duplicate_files = duplicate['files']
 
     are_datasets_same = compare_dataset_files(original_files, duplicate_files)
+    logger.info(f"are_datasets_same: {are_datasets_same}")
     if are_datasets_same:
         api.post_action_item({
             "type": "DUPLICATE_INGESTION",
             "dataset_id": dataset_id
         })
 
-    return dataset_id, compare_dataset_files(original_files, duplicate_files)
+    logger.info(f"Processed dataset {dataset_id}")
+    return dataset_id,
 
 
 def compare_dataset_files(files_1, files_2):
+    logger.info(f"files_1 length: {len(files_1)}")
+    logger.info(f"files_2 length: {len(files_2)}")
     if len(files_1) != len(files_2):
         return False
 
@@ -50,31 +60,37 @@ def compare_dataset_files(files_1, files_2):
 
 
 def are_files_same(files_1, files_2):
-    # print(f'are ids same?: {id(list_1) == id(list_2)}')
+    # logger.info(f"are ids same?: {id(list_1) == id(list_2)}')
     maybe_same = True
     for original in files_1:
-        # print('processing original:', original)
+        # logger.info(f"processing original: {original['name']}")
         found_original_file = False
         for duplicate in files_2:
-            # print(f'processing duplicate: {duplicate}')
+            # logger.info(f"processing duplicate: - {duplicate['name']}")
             if original['name'] != duplicate['name']:
-                # print('names not same --- continue to next duplicate')
+                # logger.info("names not same --- continue to next duplicate")
                 continue
             else:
                 found_original_file = True
-                # print('found_original_file original["name"] in list_2')
+                # logger.info(f"found_original_file {original['name']} in list_2")
+                # logger.info(f"original_checksum: {original['md5']}")
+                # logger.info(f"duplicate_checksum: {duplicate['md5']}")
                 checksums_match = original['md5'] == duplicate['md5']
-                # print(f'checksums_match: {checksums_match}')
+                # logger.info(f"checksums_match: {checksums_match}")
+                # logger.info(f"maybe_same: {maybe_same}")
                 maybe_same = maybe_same and checksums_match
 
             if not maybe_same:
-                # print(f'maybe_same is False, will return False')
+                logger.info(f"maybe_same is False, will return False")
                 return False
 
-        # print('processed original: ', original)
+        # logger.info(f"processed original: {original['name']}")
 
         if not found_original_file:
+            logger.info(f"original file {original['name']} not found in list_2")
             return False
+    
+    logger.info("Returning true")
     return True
 
 
