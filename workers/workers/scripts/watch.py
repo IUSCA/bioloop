@@ -97,6 +97,7 @@ class Register:
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
         self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
+        self.duplicates: set[str] = set()
         self.default_wf_name = default_wf_name
 
     def is_a_reject(self, name):
@@ -129,9 +130,16 @@ class Register:
             self.completed.add(candidate.name)
 
         for candidate in duplicate_candidates:
-            logger.info(f'processing DUPLICATE candidate: {str(candidate.name)}')
-            self.register_candidate(candidate, True)
-            self.completed.add(candidate.name)
+            if candidate not in self.duplicates:
+                logger.info(f'processing DUPLICATE candidate: {str(candidate.name)}')
+                self.register_candidate(candidate, True)
+                self.duplicates.add(candidate.name)
+            else:
+                logger.info(f'Attempted to process another DUPLICATE candidate'
+                            f' named {str(candidate.name)} when a DUPLICATE'
+                            f' is already being processed.')
+            # todos:
+            #  what happens when a second duplicate comes in, while first duplicate is being processed?
 
     def register_candidate(self, candidate: Path, is_duplicate: bool = False):
         dataset_type = config['dataset_types']['DUPLICATE']['label'] \
