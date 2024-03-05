@@ -1,6 +1,16 @@
 <template></template>
 
-<script setup></script>
+<script setup>
+const loading = ref(false);
+
+const fetchActiveActionItems = () => {
+  return actionItemService.
+}
+
+onMounted(() => {
+  fetchActiveActionItems()
+});
+</script>
 
 <style scoped></style>
 

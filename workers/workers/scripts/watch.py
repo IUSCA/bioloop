@@ -135,7 +135,7 @@ class Register:
                 self.register_candidate(candidate, True)
                 self.duplicates.add(candidate.name)
             else:
-                logger.info(f'Attempted to process another DUPLICATE candidate'
+                logger.warning(f'Attempted to process another DUPLICATE candidate'
                             f' named {str(candidate.name)} when a DUPLICATE'
                             f' is already being processed.')
             # todos:
