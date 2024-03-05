@@ -16,7 +16,6 @@ const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
-const { INCLUDE_FILES } = require('../services/dataset');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -201,6 +200,7 @@ router.get(
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
+    query('bundle').optional().toBoolean(),
     query('include_files').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -223,15 +223,13 @@ router.get(
       skip: req.query.offset,
       take: req.query.limit,
       ...filterQuery,
-      orderBy: buildOrderByObject(
-        Object.keys(sortBy)[0],
-        Object.values(sortBy)[0],
-      ),
+      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...(req.query.include_files && datasetService.INCLUDE_FILES),
         source_datasets: true,
         derived_datasets: true,
+        bundle: req.query.bundle || false,
       },
     };
 
@@ -277,6 +275,7 @@ router.get(
     query('last_task_run').toBoolean().default(false),
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
+    query('bundle').optional().toBoolean(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -290,6 +289,7 @@ router.get(
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
+      bundle: req.query.bundle || false,
     });
     res.json(dataset);
   }),
@@ -302,7 +302,7 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -353,8 +353,7 @@ router.patch(
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().bail()
-      .customSanitizer(BigInt),
+    body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -373,6 +372,15 @@ router.patch(
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
+
+    if (req.body.bundle) {
+      data.bundle = {
+        upsert: {
+          create: req.body.bundle,
+          update: req.body.bundle,
+        },
+      };
+    }
 
     const dataset = await prisma.dataset.update({
       where: {
@@ -633,7 +641,7 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    // Catch errors to ensure that logging does not get in the way of a token being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -661,12 +669,16 @@ router.get(
       where: {
         id: req.params.id,
       },
+      include: {
+        bundle: true,
+      },
     });
 
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${dataset.metadata.stage_alias}/${dataset.name}.tar`;
+        : `${dataset.metadata.bundle_alias}`;
+
       const download_token = await authService.get_download_token(download_file_path);
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));

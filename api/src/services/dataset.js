@@ -143,6 +143,7 @@ async function get_dataset({
   last_task_run = false,
   prev_task_runs = false,
   only_active = false,
+  bundle = false,
 }) {
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
@@ -150,6 +151,8 @@ async function get_dataset({
       ...(files && INCLUDE_FILES),
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
+      ...INCLUDE_STATES,
+      bundle,
       source_datasets: true,
       derived_datasets: true,
     },

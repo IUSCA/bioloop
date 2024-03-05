@@ -52,6 +52,7 @@ class DatasetService {
     last_task_run = false,
     prev_task_runs = false,
     only_active = false,
+    bundle = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -60,6 +61,7 @@ class DatasetService {
         last_task_run,
         prev_task_runs,
         only_active,
+        bundle,
       },
     });
   }

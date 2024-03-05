@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from urllib.parse import urljoin
+import json
 
 import requests
 from glom import glom, assign as glom_assign
@@ -85,7 +86,7 @@ class APIServerSession(requests.Session):
 
 
 def str_to_int(d: dict, key: str):
-    d['du_size'] = utils.parse_number(d.get(key, None))
+    d[key] = utils.parse_number(d.get(key, None))
     return d
 
 
@@ -121,22 +122,27 @@ def dataset_getter(dataset: dict):
 def dataset_setter(dataset: dict):
     # convert du_size and size from int to string
     if dataset is not None:
-        for key in ['du_size', 'size', 'bundle_size']:
+        for key in ['du_size', 'size']:
             int_to_str(dataset, key)
     return dataset
 
 
-def get_all_datasets(dataset_type=None,
-                     name=None,
-                     days_since_last_staged=None,
-                     deleted=False,
-                     include_files=False):
+def get_all_datasets(
+        dataset_type=None,
+        name=None,
+        days_since_last_staged=None,
+        deleted=False,
+        archived=False,
+        bundle=False,
+        include_files=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
             'name': name,
             'days_since_last_staged': days_since_last_staged,
             'deleted': deleted,
+            'archived': archived,
+            'bundle': bundle,
             'include_files': include_files
         }
         r = s.get('datasets', params=payload)
@@ -145,12 +151,14 @@ def get_all_datasets(dataset_type=None,
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False):
+def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
     with APIServerSession() as s:
         payload = {
-            'files': files
+            'files': files,
+            'bundle': bundle
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
+
         r.raise_for_status()
         return dataset_getter(r.json())
 
