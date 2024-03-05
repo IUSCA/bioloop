@@ -4,7 +4,7 @@
 const loading = ref(false);
 
 const fetchActiveActionItems = () => {
-  return actionItemService.
+  // return actionItemService.
 }
 
 onMounted(() => {
