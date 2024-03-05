@@ -67,7 +67,7 @@ def are_files_same(files_1, files_2):
         found_original_file = False
         for duplicate in files_2:
             # logger.info(f"processing duplicate: - {duplicate['name']}")
-            if original['name'] != duplicate['name']:
+            if original['path'] != duplicate['path']:
                 # logger.info("names not same --- continue to next duplicate")
                 continue
             else:
@@ -76,8 +76,11 @@ def are_files_same(files_1, files_2):
                 # logger.info(f"original_checksum: {original['md5']}")
                 # logger.info(f"duplicate_checksum: {duplicate['md5']}")
                 checksums_match = original['md5'] == duplicate['md5']
-                # logger.info(f"checksums_match: {checksums_match}")
-                # logger.info(f"maybe_same: {maybe_same}")
+                if not checksums_match:
+                    logger.info(f"original['md5']: {original['md5']}")
+                    logger.info(f"duplicate['md5']: {duplicate['md5']}")
+                logger.info(f"checksums_match: {checksums_match}")
+                logger.info(f"maybe_same: {maybe_same}")
                 maybe_same = maybe_same and checksums_match
 
             if not maybe_same:

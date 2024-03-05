@@ -96,15 +96,15 @@ class Register:
         self.dataset_type = dataset_type
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
-        self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
-        self.duplicates: set[str] = set()
+        self.completed: set[str] = set(self.get_registered_dataset_names(self.dataset_type))  # HTTP GET
+        self.duplicates: set[str] = set(self.get_registered_dataset_names(config['dataset_types']['DUPLICATE']['label']))  # HTTP GET
         self.default_wf_name = default_wf_name
 
     def is_a_reject(self, name):
         return any([fnmatch.fnmatchcase(name, pat) for pat in self.rejects])
 
-    def get_registered_dataset_names(self):
-        datasets = api.get_all_datasets(dataset_type=self.dataset_type)
+    def get_registered_dataset_names(self, type):
+        datasets = api.get_all_datasets(dataset_type=type)
         return [b['name'] for b in datasets]
 
     def register(self, event: str, updated_dirs: list[Path]) -> None:
@@ -120,9 +120,9 @@ class Register:
             ])
         ]
         # If a candidate's name is in self.completed, it could potentially be a duplicate.
-        # In such cases, we create a dataset of type DUPLICATE, which is later processed
-        # by an end user.
-        duplicate_candidates = [p for p in updated_dirs if slugify_(p.name) in self.completed]
+        # In such cases, we create a dataset of type DUPLICATE, which is later accepted or
+        # rejected by an end user.
+        duplicate_candidates: list[Path] = [p for p in updated_dirs if slugify_(p.name) in self.completed]
 
         for candidate in new_candidates:
             logger.info(f'processing candidate: {str(candidate.name)}')
@@ -130,18 +130,19 @@ class Register:
             self.completed.add(candidate.name)
 
         for candidate in duplicate_candidates:
-            if candidate not in self.duplicates:
-                logger.info(f'processing DUPLICATE candidate: {str(candidate.name)}')
-                self.register_candidate(candidate, True)
-                self.duplicates.add(candidate.name)
+            if slugify_(candidate.name) not in self.duplicates: # some duplicates might already be under processing when this script is started
+                  self.register_candidate(candidate, True)
+                  self.duplicates.add(candidate.name)
             else:
                 logger.warning(f'Attempted to process another DUPLICATE candidate'
-                            f' named {str(candidate.name)} when a DUPLICATE'
-                            f' is already being processed.')
+                            f' named {str(candidate.name)} when a DUPLICATE candidate'
+                            f' named {str(candidate.name)} is already being processed.')
+                pass
             # todos:
             #  what happens when a second duplicate comes in, while first duplicate is being processed?
 
     def register_candidate(self, candidate: Path, is_duplicate: bool = False):
+        logger.info(candidate.__class__)
         dataset_type = config['dataset_types']['DUPLICATE']['label'] \
             if is_duplicate else self.dataset_type
         logger.info(f'registering {dataset_type} dataset - {candidate.name}')
