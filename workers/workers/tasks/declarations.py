@@ -53,12 +53,10 @@ def analyze_duplicate(celery_task, dataset_id, **kwargs):
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
-def send_notification(celery_task, dataset_id, are_duplicates, **kwargs):
+def send_notification(celery_task, dataset_id, **kwargs):
     from workers.tasks.notify import send_notification as task_body
     try:
-        return task_body(celery_task, dataset_id, are_duplicates, **kwargs)
-    except exc.InspectionFailed:
-        raise
+        return task_body(celery_task, dataset_id, **kwargs)
     except Exception as e:
         raise exc.RetryableException(e)
 
