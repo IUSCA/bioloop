@@ -11,8 +11,7 @@ CREATE TYPE "dataset_type" AS ENUM ('RAW_DATA', 'DATA_PRODUCT', 'DUPLICATE');
 CREATE TYPE "ACTION_ITEM" AS ENUM ('DUPLICATE_INGESTION');
 
 -- AlterTable
-ALTER TABLE "dataset" DROP COLUMN "type",
-ADD COLUMN     "type" "dataset_type" NOT NULL;
+ALTER TABLE "dataset" ALTER COLUMN "type" TYPE "dataset_type" USING "type"::"dataset_type";
 
 -- CreateTable
 CREATE TABLE "action_item" (
@@ -26,6 +25,9 @@ CREATE TABLE "action_item" (
 
     CONSTRAINT "action_item_pkey" PRIMARY KEY ("id")
 );
+
+-- DropIndex
+DROP INDEX "dataset_name_type_is_deleted_key";
 
 -- CreateIndex
 CREATE UNIQUE INDEX "dataset_name_type_is_deleted_key" ON "dataset"("name", "type", "is_deleted");
