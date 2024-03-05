@@ -243,5 +243,11 @@ def get_all_workflows():
         return r.json()
 
 
+def post_action_item(action_item: dict):
+    with APIServerSession(enable_retry=False) as s:
+        r = s.post(f'action-items', json=action_item)
+        r.raise_for_status()
+
+
 if __name__ == '__main__':
     pass

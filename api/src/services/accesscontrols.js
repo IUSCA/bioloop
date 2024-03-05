@@ -43,6 +43,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    action_items: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     auth: {
       'create:any': ['*'],
     },
@@ -100,6 +106,12 @@ const grantsObject = {
       'read:any': ['*'],
     },
     about: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    action_items: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

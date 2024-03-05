@@ -34,6 +34,7 @@ model dataset {
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
   bundle           bundle?
+  action_items     action_item[]
 
   @@unique([name, type, is_deleted])
 }
@@ -99,6 +100,18 @@ model dataset_state {
   @@id([timestamp, dataset_id, state])
 }
 
+model action_item {
+  id                 Int         @id @default(autoincrement())
+  created_at         DateTime    @default(now()) @db.Timestamp(6)
+  type               ACTION_ITEM
+  label              String?
+  dataset_id         Int?
+  dataset            dataset?    @relation(fields: [dataset_id], references: [id])
+  active             Boolean     @default(true)
+  acknowledged_by_id Int?
+  acknowledged_by    user?       @relation(fields: [acknowledged_by_id], references: [id])
+}
+
 model bundle {
   id         Int      @id @default(autoincrement())
   created_at DateTime @default(now()) @db.Timestamp(6)
@@ -151,6 +164,7 @@ model user {
   accesses       data_access_log[]
   stage_requests stage_request_log[]
   about_edits    about[]
+  action_items   action_item[]
 }
 
 model user_password {
@@ -309,4 +323,8 @@ enum dataset_type {
   RAW_DATA
   DATA_PRODUCT
   DUPLICATE
+}
+
+enum ACTION_ITEM {
+  DUPLICATE_INGESTION
 }

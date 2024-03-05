@@ -31,6 +31,13 @@ def analyze_dataset(celery_task, dataset_id, **kwargs):
     original_files = original_dataset['files']
     duplicate_files = duplicate_dataset['files']
 
+    are_datasets_same = compare_dataset_files(original_files, duplicate_files)
+    if are_datasets_same:
+        api.post_action_item({
+            "type": "DUPLICATE_INGESTION",
+            "dataset_id": dataset_id
+        })
+
     return dataset_id, compare_dataset_files(original_files, duplicate_files)
 
 
