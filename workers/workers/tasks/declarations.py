@@ -39,10 +39,10 @@ def download_illumina_dataset(celery_task, dataset_id, **kwargs):
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
-def analyze_duplicate(celery_task, dataset_id, **kwargs):
+def analyze_duplicate(celery_task, duplicate_dataset_id, **kwargs):
     from workers.tasks.analyze_duplicate import analyze_dataset as task_body
     try:
-        return task_body(celery_task, dataset_id, **kwargs)
+        return task_body(celery_task, duplicate_dataset_id, **kwargs)
     except exc.InspectionFailed:
         raise
     except Exception as e:

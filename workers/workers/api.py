@@ -96,27 +96,31 @@ def int_to_str(d: dict, key: str):
     return d
 
 
-def dataset_getter(dataset: dict):
+def entity_getter(entity: dict, date_keys: list, int_keys: list):
     date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-    date_keys = ['created_at', 'updated_at']
 
-    # convert du_size and size from string to int
-    if dataset is None:
-        return dataset
+    if entity is None:
+        return entity
 
-    for key in ['du_size', 'size']:
-        str_to_int(dataset, key)
-    dataset['files'] = [str_to_int(f, 'size') for f in dataset.get('files', [])]
+    # convert int values from string to int
+    for key in int_keys:
+        str_to_int(entity, key)
 
     # convert date strings to date objects
     for date_key in date_keys:
-        date_str = glom(dataset, date_key, default=None)
+        date_str = glom(entity, date_key, default=None)
         if date_str is not None:
             try:
-                glom_assign(dataset, date_key, datetime.strptime(date_str, date_format))
+                glom_assign(entity, date_key, datetime.strptime(date_str, date_format))
             except ValueError:  # unable to parse date string
-                glom_assign(dataset, date_key, None)
-    return dataset
+                glom_assign(entity, date_key, None)
+    return entity
+
+
+def dataset_getter(dataset: dict):
+    converted_dataset = entity_getter(dataset, ['created_at', 'updated_at'], ['du_size', 'size'])
+    converted_dataset['files'] = [str_to_int(f, 'size') for f in converted_dataset.get('files', [])]
+    return converted_dataset
 
 
 def dataset_setter(dataset: dict):
@@ -133,8 +137,7 @@ def get_all_datasets(
         days_since_last_staged=None,
         deleted=False,
         archived=False,
-        bundle=False,
-        files=False):
+        bundle=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -143,7 +146,6 @@ def get_all_datasets(
             'deleted': deleted,
             'archived': archived,
             'bundle': bundle,
-            'files': files
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -151,10 +153,9 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
+def get_dataset(dataset_id: str, bundle: bool = False):
     with APIServerSession() as s:
         payload = {
-            'files': files,
             'bundle': bundle
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
@@ -175,6 +176,13 @@ def update_dataset(dataset_id, update_data):
         r = s.patch(f'datasets/{dataset_id}', json=dataset_setter(update_data))
         r.raise_for_status()
         return r.json()
+
+
+def get_dataset_files(dataset_id: str, filters: dict = None):
+    with APIServerSession() as s:
+        r = s.get(f'datasets/{dataset_id}/files/search', params=filters)
+        r.raise_for_status()
+        return entity_getter(r.json(), ['created_at'], ['size'])
 
 
 def add_files_to_dataset(dataset_id, files: list[dict]):
@@ -243,9 +251,9 @@ def get_all_workflows():
         return r.json()
 
 
-def post_action_item(action_item: dict):
+def post_ingestion_action_item(action_item: dict):
     with APIServerSession(enable_retry=False) as s:
-        r = s.post(f'action-items', json=action_item)
+        r = s.post(f'ingestion/action-items', json=action_item)
         r.raise_for_status()
 
 

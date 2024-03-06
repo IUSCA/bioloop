@@ -21,32 +21,41 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def analyze_dataset(celery_task, dataset_id, **kwargs):
-    logger.info(f"Processing dataset {dataset_id}")
+def analyze_dataset(celery_task, duplicate_dataset_id, **kwargs):
+    logger.info(f"Processing dataset {duplicate_dataset_id}")
 
-    original_dataset = api.get_dataset(dataset_id=dataset_id, files=True)
-    duplicate_datasets = api.get_all_datasets(
-        dataset_type=config['dataset_types']['DUPLICATE']['label'],
-        name=original_dataset['name'],
-        files=True,
-    )
-    if len(duplicate_datasets) > 1:
-        raise InspectionFailed(f"Found more than one duplicates for dataset {dataset_id}")
-    duplicate = duplicate_datasets[0]
+    duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
+    duplicate_files = api.get_dataset_files(
+        dataset_id=duplicate_dataset['id'],
+        filters={
+            "filetype": "file"
+        })
 
-    original_files = original_dataset['files']
-    duplicate_files = duplicate['files']
+    matching_datasets = api.get_all_datasets(name=duplicate_dataset['name'])
+    if len(matching_datasets) > 2:
+        raise InspectionFailed(f"Expected 2 datasets named {duplicate_dataset['name']} (original and duplicate), "
+                               f"but found more.")
+
+    original_dataset = list(filter(lambda d: d['id'] != duplicate_dataset['id'], matching_datasets))[0]
+    original_files = api.get_dataset_files(
+        dataset_id=original_dataset['id'],
+        filters={
+            "filetype": "file"
+        })
 
     are_datasets_same = compare_dataset_files(original_files, duplicate_files)
     logger.info(f"are_datasets_same: {are_datasets_same}")
     if are_datasets_same:
-        api.post_action_item({
+        api.post_ingestion_action_item({
             "type": "DUPLICATE_INGESTION",
-            "dataset_id": dataset_id
+            "label": "Duplicate Ingestion",
+            "original_dataset_id": original_dataset['id'],
+            "duplicate_dataset_id": duplicate_dataset['id']
+
         })
 
-    logger.info(f"Processed dataset {dataset_id}")
-    return dataset_id,
+    logger.info(f"Processed dataset {duplicate_dataset_id}")
+    return duplicate_dataset_id,
 
 
 def compare_dataset_files(files_1, files_2):
