@@ -45,65 +45,95 @@ def analyze_dataset(celery_task, duplicate_dataset_id, **kwargs):
 
     are_datasets_same = compare_dataset_files(original_files, duplicate_files)
     logger.info(f"are_datasets_same: {are_datasets_same}")
+
+
     if are_datasets_same:
         api.post_ingestion_action_item({
             "type": "DUPLICATE_INGESTION",
             "label": "Duplicate Ingestion",
             "original_dataset_id": original_dataset['id'],
-            "duplicate_dataset_id": duplicate_dataset['id']
-
+            "duplicate_dataset_id": duplicate_dataset['id'],
+            "details": {
+                "num_files"
+            }
         })
 
     logger.info(f"Processed dataset {duplicate_dataset_id}")
     return duplicate_dataset_id,
 
 
-def compare_dataset_files(files_1, files_2):
-    logger.info(f"files_1 length: {len(files_1)}")
-    logger.info(f"files_2 length: {len(files_2)}")
-    if len(files_1) != len(files_2):
+def compare_dataset_files(original_files: list, duplicate_files: list):
+    logger.info(f"files_1 length: {len(original_files)}")
+    logger.info(f"files_2 length: {len(duplicate_files)}")
+    if len(original_files) != len(duplicate_files):
         return False
 
-    are_datasets_same = are_files_same(files_1, files_2)
+    are_datasets_same = are_files_same(original_files, duplicate_files)
     return are_datasets_same
 
 
-def are_files_same(files_1, files_2):
+def are_files_same(original_files: list, duplicate_files: list):
     # logger.info(f"are ids same?: {id(list_1) == id(list_2)}')
-    maybe_same = True
-    for original in files_1:
+    num_files_same = len(original_files) == len(duplicate_files)
+    comparison_results = [{
+        'check': 'num_files',
+        'status': num_files_same,
+        'details': {
+            'original_files_count': len(original_files),
+            'duplicate_files_count': len(duplicate_files)
+        }
+    }]
+
+    # maybe_same = True
+    checksum_error_files = []
+    missing_files = []
+    for original in original_files:
         # logger.info(f"processing original: {original['name']}")
-        found_original_file = False
-        for duplicate in files_2:
+        found_file = False
+        for duplicate in duplicate_files:
             # logger.info(f"processing duplicate: - {duplicate['name']}")
             if original['path'] != duplicate['path']:
                 # logger.info("names not same --- continue to next duplicate")
                 continue
             else:
-                found_original_file = True
-                # logger.info(f"found_original_file {original['name']} in list_2")
-                # logger.info(f"original_checksum: {original['md5']}")
-                # logger.info(f"duplicate_checksum: {duplicate['md5']}")
-                checksums_match = original['md5'] == duplicate['md5']
-                if not checksums_match:
-                    logger.info(f"original['md5']: {original['md5']}")
-                    logger.info(f"duplicate['md5']: {duplicate['md5']}")
-                logger.info(f"checksums_match: {checksums_match}")
-                logger.info(f"maybe_same: {maybe_same}")
-                maybe_same = maybe_same and checksums_match
-
-            if not maybe_same:
-                logger.info(f"maybe_same is False, will return False")
-                return False
-
-        # logger.info(f"processed original: {original['name']}")
-
-        if not found_original_file:
+                found_file = True
+                checksum_validated = original['md5'] == duplicate['md5']
+                # logger.info(f"checksum_validated: {checksum_validated}")
+                # logger.info(f"maybe_same: {maybe_same}")
+                # maybe_same = maybe_same and checksum_validated
+                if not checksum_validated:
+                    #     logger.info(f"original['md5']: {original['md5']}")
+                    #     logger.info(f"duplicate['md5']: {duplicate['md5']}")
+                    checksum_error_files.append({
+                        'name': original['name'],
+                        'path': original['path'],
+                        'original_checksum': original['md5'],
+                        'duplicate_checksum': duplicate['md5'],
+                    })
+                # Once original file has been found, end the loop.
+                break
+        if not found_file:
             logger.info(f"original file {original['name']} not found in list_2")
-            return False
-    
-    logger.info("Returning true")
-    return True
+            missing_files.append({
+                'name': original['name'],
+                'path': original['path'],
+                'missing': True,
+            })
+
+    if len(checksum_error_files) > 0:
+        comparison_results.append({
+            'check': 'passed_checksum_analysis',
+            'status': False,
+            'details': checksum_error_files
+        })
+    if len(missing_files) > 0:
+        comparison_results.append({
+            'check': 'original_files_missing',
+            'status': True,
+            'details': missing_files
+        })
+
+    return comparison_results
 
 
 # def update_directory_md5(directory, computed_hash):
