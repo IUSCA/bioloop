@@ -30,7 +30,7 @@ const INCLUDE_FILES = {
     select: {
       path: true,
       md5: true,
-      name: true
+      name: true,
     },
     where: {
       NOT: {

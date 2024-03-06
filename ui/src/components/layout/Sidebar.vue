@@ -163,8 +163,8 @@ const operator_items = ref([
   },
   {
     icon: "mdi-file-cog-outline",
-    title: "Ingestions",
-    path: "/ingestions",
+    title: "Ingestion Manager",
+    path: "/ingestionManager",
   },
   {
     icon: "mdi-table-account",

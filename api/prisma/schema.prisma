@@ -8,33 +8,34 @@ datasource db {
 }
 
 model dataset {
-  id               Int                 @id @default(autoincrement())
-  name             String
-  type             dataset_type
-  num_directories  Int?
-  num_files        Int?
-  du_size          BigInt?
-  size             BigInt?
-  description      String?
-  created_at       DateTime            @default(now()) @db.Timestamp(6)
-  updated_at       DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  origin_path      String?
-  archive_path     String?
-  staged_path      String?
-  is_deleted       Boolean             @default(false)
-  is_staged        Boolean             @default(false)
-  metadata         Json?
-  workflows        workflow[]
-  files            dataset_file[]
-  audit_logs       dataset_audit[]
-  states           dataset_state[]
-  derived_datasets dataset_hierarchy[] @relation("source_datasets")
-  source_datasets  dataset_hierarchy[] @relation("derived_datasets")
-  projects         project_dataset[]
-  accesses         data_access_log[]
-  stage_requests   stage_request_log[]
-  bundle           bundle?
-  action_items     action_item[]
+  id                  Int                     @id @default(autoincrement())
+  name                String
+  type                dataset_type
+  num_directories     Int?
+  num_files           Int?
+  du_size             BigInt?
+  size                BigInt?
+  description         String?
+  created_at          DateTime                @default(now()) @db.Timestamp(6)
+  updated_at          DateTime                @default(now()) @updatedAt @db.Timestamp(6)
+  origin_path         String?
+  archive_path        String?
+  staged_path         String?
+  is_deleted          Boolean                 @default(false)
+  is_staged           Boolean                 @default(false)
+  metadata            Json?
+  workflows           workflow[]
+  files               dataset_file[]
+  audit_logs          dataset_audit[]
+  states              dataset_state[]
+  derived_datasets    dataset_hierarchy[]     @relation("source_datasets")
+  source_datasets     dataset_hierarchy[]     @relation("derived_datasets")
+  projects            project_dataset[]
+  accesses            data_access_log[]
+  stage_requests      stage_request_log[]
+  bundle              bundle?
+  source_action_items ingestion_action_item[] @relation("source_action_items")
+  target_action_items ingestion_action_item[] @relation("target_action_items")
 
   @@unique([name, type, is_deleted])
 }
@@ -100,16 +101,19 @@ model dataset_state {
   @@id([timestamp, dataset_id, state])
 }
 
-model action_item {
-  id                 Int         @id @default(autoincrement())
-  created_at         DateTime    @default(now()) @db.Timestamp(6)
-  type               ACTION_ITEM
-  label              String?
-  dataset_id         Int?
-  dataset            dataset?    @relation(fields: [dataset_id], references: [id])
-  active             Boolean     @default(true)
-  acknowledged_by_id Int?
-  acknowledged_by    user?       @relation(fields: [acknowledged_by_id], references: [id])
+model ingestion_action_item {
+  id                   Int              @id @default(autoincrement())
+  created_at           DateTime         @default(now()) @db.Timestamp(6)
+  type                 ACTION_ITEM_TYPE
+  label                String?
+  original_dataset_id  Int?
+  original_dataset     dataset?         @relation("source_action_items", fields: [original_dataset_id], references: [id])
+  duplicate_dataset_id Int?
+  duplicate_dataset    dataset?         @relation("target_action_items", fields: [duplicate_dataset_id], references: [id])
+  active               Boolean          @default(true)
+  acknowledged_by_id   Int?
+  acknowledged_by      user?            @relation(fields: [acknowledged_by_id], references: [id])
+  details              Json?
 }
 
 model bundle {
@@ -145,26 +149,26 @@ model stage_request_log {
 }
 
 model user {
-  id             Int                 @id @default(autoincrement())
-  username       String              @unique @db.VarChar(100)
-  name           String?             @db.VarChar(100)
-  email          String              @unique @db.VarChar(100)
-  cas_id         String?             @unique @db.VarChar(100)
-  notes          String?
-  created_at     DateTime            @default(now()) @db.Timestamp(6)
-  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  is_deleted     Boolean             @default(false)
-  user_role      user_role[]
-  settings       user_settings?
-  contacts       contact[]
-  dataset_audit  dataset_audit[]
-  projects       project_user[]
-  password       user_password?
-  login          user_login?
-  accesses       data_access_log[]
-  stage_requests stage_request_log[]
-  about_edits    about[]
-  action_items   action_item[]
+  id                     Int                    @id @default(autoincrement())
+  username               String                 @unique @db.VarChar(100)
+  name                   String?                @db.VarChar(100)
+  email                  String                 @unique @db.VarChar(100)
+  cas_id                 String?                @unique @db.VarChar(100)
+  notes                  String?
+  created_at             DateTime               @default(now()) @db.Timestamp(6)
+  updated_at             DateTime               @default(now()) @updatedAt @db.Timestamp(6)
+  is_deleted             Boolean                @default(false)
+  user_role              user_role[]
+  settings               user_settings?
+  contacts               contact[]
+  dataset_audit          dataset_audit[]
+  projects               project_user[]
+  password               user_password?
+  login                  user_login?
+  accesses               data_access_log[]
+  stage_requests         stage_request_log[]
+  about_edits            about[]
+  ingestion_action_items ingestion_action_item[]
 }
 
 model user_password {
@@ -307,10 +311,10 @@ model worker_process {
 }
 
 model about {
-  id            Int      @id @default(autoincrement())
-  html          String
-  created_at    DateTime @default(now()) @db.Timestamp(6)
-  last_updated_by user   @relation(fields: [last_updated_by_id], references: [id])
+  id              Int      @id @default(autoincrement())
+  html            String
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+  last_updated_by user     @relation(fields: [last_updated_by_id], references: [id])
   last_updated_by_id Int
 }
 
@@ -325,6 +329,6 @@ enum dataset_type {
   DUPLICATE
 }
 
-enum ACTION_ITEM {
+enum ACTION_ITEM_TYPE {
   DUPLICATE_INGESTION
 }

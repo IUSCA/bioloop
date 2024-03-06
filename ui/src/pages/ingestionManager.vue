@@ -107,7 +107,37 @@
           </div>
         </template>
 
-        <div>Body</div>
+        <!-- Details of Ingestion -->
+        <div>
+          <!--          <va-data-table-->
+          <!--            :columns="columns"-->
+          <!--            :data="actionItemDetails(item)"-->
+          <!--          ></va-data-table>-->
+
+          <div class="flex flex-col">
+            <div
+              v-if="
+                item.original_dataset.num_files !==
+                item.duplicate_dataset.num_files
+              "
+            >
+              <div class="flex gap-2">
+                <div>
+                  <!--                  <span>-->
+                  Original Dataset Files:
+                  {{ item.original_dataset.num_files }}
+                  <!--                  </span>-->
+                </div>
+                <div>
+                  <!--                  <span>-->
+                  Duplicate Dataset Files:
+                  {{ item.duplicate_dataset.num_files }}
+                  <!--                  </span>-->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </collapsible>
     </div>
   </div>
@@ -129,6 +159,28 @@ import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
 import workflowService from "@/services/workflow";
 import * as datetime from "@/services/datetime";
+
+const actionItemDetails = (item) => {
+  return [
+    {
+      num_files_equal:
+        item.original_dataset_num_files === item.duplicate_dataset_num_files,
+    },
+    // {
+    //   passed_checksum_verification:
+    // }
+  ];
+};
+
+const columns = ref([
+  {
+    key: "check",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;",
+  },
+  { key: "status", width: "100px", thAlign: "center", tdAlign: "center" },
+  { key: "actions", width: "130px", thAlign: "center", tdAlign: "center" },
+]);
 
 const loading = ref(false);
 const actionItems = ref([]);

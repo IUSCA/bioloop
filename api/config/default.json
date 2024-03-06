@@ -98,5 +98,8 @@
     "DUPLICATE": {
         "label": "DUPLICATE"
     }
+  },
+  "ACTION_ITEMS_TYPES": {
+    "DUPLICATE_INGESTION": "DUPLICATE_INGESTION"
   }
 }

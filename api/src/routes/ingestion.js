@@ -35,6 +35,10 @@ router.get(
 
     const actionItems = await prisma.ingestion_action_item.findMany({
       where: filterQuery,
+      include: {
+        original_dataset: true,
+        duplicate_dataset: true,
+      },
     });
     res.json(actionItems);
   }),
