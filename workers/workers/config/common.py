@@ -117,7 +117,7 @@ config = {
                 },
                 {
                     'name': 'analyze',
-                    'task': 'analyze_duplicate'
+                    'task': 'compare_duplicates'
                 },
                 {
                     'name': 'notify',

@@ -21,7 +21,7 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def analyze_dataset(celery_task, duplicate_dataset_id, **kwargs):
+def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
 
     duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
@@ -43,41 +43,81 @@ def analyze_dataset(celery_task, duplicate_dataset_id, **kwargs):
             "filetype": "file"
         })
 
-    are_datasets_same = compare_dataset_files(original_files, duplicate_files)
-    logger.info(f"are_datasets_same: {are_datasets_same}")
+    are_files_same, comparison_report = compare_dataset_files(original_files, duplicate_files)
+    logger.info(f"are_files_same: {are_files_same}")
+    logger.info('comparison_report')
+    logger.info(comparison_report)
 
-
-    if are_datasets_same:
-        api.post_ingestion_action_item({
-            "type": "DUPLICATE_INGESTION",
-            "label": "Duplicate Ingestion",
-            "original_dataset_id": original_dataset['id'],
-            "duplicate_dataset_id": duplicate_dataset['id'],
-            "details": {
-                "num_files"
-            }
-        })
+    # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
+    # create an action item for operators to review later. This way, in case our comparison process
+    # mistakenly assumes the incoming dataset to be a duplicate, operators will still have a chance
+    # to review the incoming dataset before it is rejected.
+    api.post_ingestion_action_item({
+        "type": "DUPLICATE_INGESTION",
+        "label": "Duplicate Ingestion",
+        "original_dataset_id": original_dataset['id'],
+        "duplicate_dataset_id": duplicate_dataset['id'],
+        "details": {
+            "num_files"
+        }
+    })
 
     logger.info(f"Processed dataset {duplicate_dataset_id}")
     return duplicate_dataset_id,
 
 
-def compare_dataset_files(original_files: list, duplicate_files: list):
-    logger.info(f"files_1 length: {len(original_files)}")
-    logger.info(f"files_2 length: {len(duplicate_files)}")
-    if len(original_files) != len(duplicate_files):
-        return False
+# todo - document shape of returned dict
 
-    are_datasets_same = are_files_same(original_files, duplicate_files)
-    return are_datasets_same
+# Returns a tuple, the first element of which is a bool indicating whether both sets of files
+# are same, with the second element being a detailed comparison report of the two sets of files.
+#
+# Example of comparison report:
 
+# [
+#   {
+#     check: 'num_files_same',
+#     passed: True,
+#     details: {
+#       original_files_count: 20,
+#       duplicate_files_count: 20,
+#     },
+#   }, {
+#     check: 'checksums_validated',
+#     passed: False,
+#     details: {
+#       conflicting_checksum_files: [{
+#         name: 'checksum_error_file_1',
+#         path: '/path/to/checksum_error_2',
+#         original_md5: 'original_md5',
+#         duplicate_md5: 'duplicate_md5',
+#       }, {
+#         name: 'checksum_error_2',
+#         path: '/path/to/checksum_error_2',
+#         original_md5: 'original_md5',
+#         duplicate_md5: 'duplicate_md5',
+#       }],
+#     },
+#   }, {
+#     check: 'all_original_files_found',
+#     passed: False,
+#     details: {
+#       missing_files: [{
+#         name: 'missing_file_1',
+#         path: '/path/to/file_1',
+#       }, {
+#         name: 'missing_file_2',
+#         path: '/path/to/file_2',
+#       }],
+#     },
+#   }
+# ]
 
-def are_files_same(original_files: list, duplicate_files: list):
+def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
     # logger.info(f"are ids same?: {id(list_1) == id(list_2)}')
     num_files_same = len(original_files) == len(duplicate_files)
-    comparison_results = [{
-        'check': 'num_files',
-        'status': num_files_same,
+    comparison_checks = [{
+        'check': 'num_files_same',
+        'passed': num_files_same,
         'details': {
             'original_files_count': len(original_files),
             'duplicate_files_count': len(duplicate_files)
@@ -85,7 +125,7 @@ def are_files_same(original_files: list, duplicate_files: list):
     }]
 
     # maybe_same = True
-    checksum_error_files = []
+    conflicting_checksum_files = []
     missing_files = []
     for original in original_files:
         # logger.info(f"processing original: {original['name']}")
@@ -104,11 +144,11 @@ def are_files_same(original_files: list, duplicate_files: list):
                 if not checksum_validated:
                     #     logger.info(f"original['md5']: {original['md5']}")
                     #     logger.info(f"duplicate['md5']: {duplicate['md5']}")
-                    checksum_error_files.append({
+                    conflicting_checksum_files.append({
                         'name': original['name'],
                         'path': original['path'],
-                        'original_checksum': original['md5'],
-                        'duplicate_checksum': duplicate['md5'],
+                        'original_md5': original['md5'],
+                        'duplicate_md5': duplicate['md5'],
                     })
                 # Once original file has been found, end the loop.
                 break
@@ -117,23 +157,28 @@ def are_files_same(original_files: list, duplicate_files: list):
             missing_files.append({
                 'name': original['name'],
                 'path': original['path'],
-                'missing': True,
             })
 
-    if len(checksum_error_files) > 0:
-        comparison_results.append({
-            'check': 'passed_checksum_analysis',
-            'status': False,
-            'details': checksum_error_files
-        })
-    if len(missing_files) > 0:
-        comparison_results.append({
-            'check': 'original_files_missing',
-            'status': True,
-            'details': missing_files
-        })
+    passed_checksum_validation = len(conflicting_checksum_files) == 0
+    passed_missing_files_check = len(missing_files) == 0
 
-    return comparison_results
+    comparison_checks.append({
+        'check': 'checksums_validated',
+        'passed': passed_checksum_validation,
+        'details': {
+            'conflicting_checksum_files': conflicting_checksum_files
+        }
+    })
+    comparison_checks.append({
+        'check': 'all_original_files_found',
+        'passed': passed_missing_files_check,
+        'details': {
+            'missing_files': missing_files
+        }
+    })
+
+    are_files_same = num_files_same and passed_missing_files_check and passed_missing_files_check
+    return are_files_same, comparison_checks
 
 
 # def update_directory_md5(directory, computed_hash):

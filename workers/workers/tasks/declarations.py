@@ -35,12 +35,12 @@ def download_illumina_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='analyze_duplicate',
+@app.task(base=WorkflowTask, bind=True, name='compare_duplicates',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
-def analyze_duplicate(celery_task, duplicate_dataset_id, **kwargs):
-    from workers.tasks.analyze_duplicate import analyze_dataset as task_body
+def compare_duplicates(celery_task, duplicate_dataset_id, **kwargs):
+    from workers.tasks.compare_duplicates import compare_datasets as task_body
     try:
         return task_body(celery_task, duplicate_dataset_id, **kwargs)
     except exc.InspectionFailed:

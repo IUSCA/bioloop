@@ -113,7 +113,7 @@ model ingestion_action_item {
   active               Boolean          @default(true)
   acknowledged_by_id   Int?
   acknowledged_by      user?            @relation(fields: [acknowledged_by_id], references: [id])
-  details              Json?
+  checks               Json?
 }
 
 model bundle {
