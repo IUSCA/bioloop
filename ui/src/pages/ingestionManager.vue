@@ -1,146 +1,130 @@
 <template>
-  <div class="flex flex-col gap-3 md:flex-row">
-    <!-- filters -->
-    <div
-      class="md:w-1/6 md:border-solid md:border-r md:h-screen md:min-w-[130px]"
-      style="border-color: var(--va-background-border)"
-    >
-      <!-- reset -->
-      <div class="text-right px-3">
-        <button class="va-link text-center" @click="reset_query_params">
-          Reset
-        </button>
-      </div>
+  <!--  <div class="flex flex-col gap-3 md:flex-row">-->
+  <!--    &lt;!&ndash; filters &ndash;&gt;-->
+  <!--    <div-->
+  <!--      class="md:w-1/6 md:border-solid md:border-r md:h-screen md:min-w-[130px]"-->
+  <!--      style="border-color: var(&#45;&#45;va-background-border)"-->
+  <!--    >-->
+  <!--      &lt;!&ndash; reset &ndash;&gt;-->
+  <!--      <div class="text-right px-3">-->
+  <!--        <button class="va-link text-center" @click="reset_query_params">-->
+  <!--          Reset-->
+  <!--        </button>-->
+  <!--      </div>-->
 
-      <!-- status filters -->
-      <div class="text-lg font-semibold hidden md:block">Status</div>
-      <!-- reset page when user selects a new filter -->
+  <!--      &lt;!&ndash; status filters &ndash;&gt;-->
+  <!--      <div class="text-lg font-semibold hidden md:block">Status</div>-->
+  <!--      &lt;!&ndash; reset page when user selects a new filter &ndash;&gt;-->
 
-      <!--      <va-tabs-->
-      <!--        v-model="query_params.status"-->
-      <!--        :vertical="!breakpoint_sm"-->
-      <!--        @update:model-value="query_params.page = 1"-->
-      <!--        class="md:min-h-[164px]"-->
-      <!--      >-->
-      <!--        <template #tabs>-->
-      <!--          <va-tab-->
-      <!--            v-for="status in Object.keys(status_counts)"-->
-      <!--            :key="status"-->
-      <!--            :name="status"-->
-      <!--          >-->
-      <!--            <span class="text-base font-normal">-->
-      <!--&lt;!&ndash;              {{ status }} ({{ status_counts[status] }})&ndash;&gt;-->
-      <!--            </span>-->
-      <!--          </va-tab>-->
-      <!--        </template>-->
-      <!--      </va-tabs>-->
+  <!--      &lt;!&ndash;      <va-tabs&ndash;&gt;-->
+  <!--      &lt;!&ndash;        v-model="query_params.status"&ndash;&gt;-->
+  <!--      &lt;!&ndash;        :vertical="!breakpoint_sm"&ndash;&gt;-->
+  <!--      &lt;!&ndash;        @update:model-value="query_params.page = 1"&ndash;&gt;-->
+  <!--      &lt;!&ndash;        class="md:min-h-[164px]"&ndash;&gt;-->
+  <!--      &lt;!&ndash;      >&ndash;&gt;-->
+  <!--      &lt;!&ndash;        <template #tabs>&ndash;&gt;-->
+  <!--      &lt;!&ndash;          <va-tab&ndash;&gt;-->
+  <!--      &lt;!&ndash;            v-for="status in Object.keys(status_counts)"&ndash;&gt;-->
+  <!--      &lt;!&ndash;            :key="status"&ndash;&gt;-->
+  <!--      &lt;!&ndash;            :name="status"&ndash;&gt;-->
+  <!--      &lt;!&ndash;          >&ndash;&gt;-->
+  <!--      &lt;!&ndash;            <span class="text-base font-normal">&ndash;&gt;-->
+  <!--      &lt;!&ndash;&lt;!&ndash;              {{ status }} ({{ status_counts[status] }})&ndash;&gt;&ndash;&gt;-->
+  <!--      &lt;!&ndash;            </span>&ndash;&gt;-->
+  <!--      &lt;!&ndash;          </va-tab>&ndash;&gt;-->
+  <!--      &lt;!&ndash;        </template>&ndash;&gt;-->
+  <!--      &lt;!&ndash;      </va-tabs>&ndash;&gt;-->
 
-      <va-divider />
-    </div>
+  <!--      <va-divider />-->
+  <!--    </div>-->
 
-    <div class="md:w-5/6 space-y-2">
-      <collapsible
-        v-for="item in actionItems"
-        :key="item.id"
-        v-model="item.collapse"
-      >
-        <template #header-content>
-          <div class="flex-[0_0_90%]">
-            <div
-              class="grid grid-cols-6 lg:grid-cols-12 gap-1 lg:gap-3 items-center p-1"
-            >
-              <div
-                class="col-span-2 lg:col-span-6 flex flex-nowrap items-center gap-3 lg:gap-5"
-              >
-                <div class="flex-none md:mx-2">
-                  <i-mdi-check-circle
-                    style="color: var(--va-success)"
-                    class="text-xl"
-                  ></i-mdi-check-circle>
-                </div>
+  <!--    <div class="md:w-5/6 space-y-2">-->
+  <!--      <collapsible-->
+  <!--        v-for="item in actionItems"-->
+  <!--        :key="item.id"-->
+  <!--        v-model="item.collapse"-->
+  <!--      >-->
+  <!--        <template #header-content>-->
+  <!--          <div class="flex-[0_0_90%]">-->
+  <!--            <div-->
+  <!--              class="grid grid-cols-6 lg:grid-cols-12 gap-1 lg:gap-3 items-center p-1"-->
+  <!--            >-->
+  <!--              <div-->
+  <!--                class="col-span-2 lg:col-span-6 flex flex-nowrap items-center gap-3 lg:gap-5"-->
+  <!--              >-->
+  <!--                <div class="flex-none md:mx-2">-->
+  <!--                  <i-mdi-check-circle-->
+  <!--                    style="color: var(&#45;&#45;va-success)"-->
+  <!--                    class="text-xl"-->
+  <!--                  ></i-mdi-check-circle>-->
+  <!--                </div>-->
 
-                <div class="flex flex-col">
-                  <span class="text-lg font-semibold capitalize">
-                    {{ item.label }}
-                  </span>
+  <!--                <div class="flex flex-col">-->
+  <!--                  <span class="text-lg font-semibold capitalize">-->
+  <!--                    {{ item.label }}-->
+  <!--                  </span>-->
 
-                  <div class="flex gap-2 text-sm">
-                    <div>
-                      Original dataset:
-                      <router-link
-                        :to="`/datasets/${item.original_dataset_id}`"
-                        class="va-link"
-                        >#{{ item.original_dataset_id }}</router-link
-                      >
-                    </div>
-                    <div>
-                      Duplicate dataset:
-                      <router-link
-                        :to="`/datasets/${item.duplicate_dataset_id}`"
-                        class="va-link"
-                        >#{{ item.duplicate_dataset_id }}</router-link
-                      >
-                    </div>
-                  </div>
-                </div>
-              </div>
+  <!--                  <div class="flex gap-2 text-sm">-->
+  <!--                    <div>-->
+  <!--                      Original dataset:-->
+  <!--                      <router-link-->
+  <!--                        :to="`/datasets/${item.dataset_id}`"-->
+  <!--                        class="va-link"-->
+  <!--                        >#{{ item.dataset_id }}</router-link-->
+  <!--                      >-->
+  <!--                    </div>-->
+  <!--                    <div>-->
+  <!--                      Duplicate dataset:-->
+  <!--                      <router-link-->
+  <!--                        :to="`/datasets/${item.duplicate_dataset_id}`"-->
+  <!--                        class="va-link"-->
+  <!--                        >#{{ item.duplicate_dataset_id }}</router-link-->
+  <!--                      >-->
+  <!--                    </div>-->
+  <!--                  </div>-->
+  <!--                </div>-->
+  <!--              </div>-->
 
-              <!-- created at -->
-              <div class="col-span-2 lg:col-span-3">
-                <va-popover message="Ingested On" :hover-over-timeout="500">
-                  <i-mdi-calendar
-                    class="text-xl inline-block text-slate-700 dark:text-slate-300"
-                  />
-                </va-popover>
-                <span
-                  class="hidden md:inline pl-2 lg:spacing-wider text-sm lg:text-base"
-                >
-                  {{ datetime.absolute(item.created_at) }}
-                </span>
-                <span
-                  class="md:hidden pl-2 lg:spacing-wider text-sm lg:text-base"
-                >
-                  {{ datetime.date(item.created_at) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </template>
+  <!--              &lt;!&ndash; created at &ndash;&gt;-->
+  <!--              <div class="col-span-2 lg:col-span-3">-->
+  <!--                <va-popover message="Ingested On" :hover-over-timeout="500">-->
+  <!--                  <i-mdi-calendar-->
+  <!--                    class="text-xl inline-block text-slate-700 dark:text-slate-300"-->
+  <!--                  />-->
+  <!--                </va-popover>-->
+  <!--                <span-->
+  <!--                  class="hidden md:inline pl-2 lg:spacing-wider text-sm lg:text-base"-->
+  <!--                >-->
+  <!--                  {{ datetime.absolute(item.created_at) }}-->
+  <!--                </span>-->
+  <!--                <span-->
+  <!--                  class="md:hidden pl-2 lg:spacing-wider text-sm lg:text-base"-->
+  <!--                >-->
+  <!--                  {{ datetime.date(item.created_at) }}-->
+  <!--                </span>-->
+  <!--              </div>-->
+  <!--            </div>-->
+  <!--          </div>-->
+  <!--        </template>-->
 
-        <!-- Details of Ingestion -->
-        <div>
-          <!--          <va-data-table-->
-          <!--            :columns="columns"-->
-          <!--            :data="actionItemDetails(item)"-->
-          <!--          ></va-data-table>-->
+  <!--        &lt;!&ndash; Details of Ingestion &ndash;&gt;-->
+  <!--        <div>-->
+  <!--          <va-data-table-->
+  <!--            :columns="columns"-->
+  <!--            :data="getActionItemRows(item)"-->
+  <!--          ></va-data-table>-->
+  <!--        </div>-->
+  <!--      </collapsible>-->
+  <!--    </div>-->
+  <!--  </div>-->
 
-          <div class="flex flex-col">
-            <div
-              v-if="
-                item.original_dataset.num_files !==
-                item.duplicate_dataset.num_files
-              "
-            >
-              <div class="flex gap-2">
-                <div>
-                  <!--                  <span>-->
-                  Original Dataset Files:
-                  {{ item.original_dataset.num_files }}
-                  <!--                  </span>-->
-                </div>
-                <div>
-                  <!--                  <span>-->
-                  Duplicate Dataset Files:
-                  {{ item.duplicate_dataset.num_files }}
-                  <!--                  </span>-->
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </collapsible>
-    </div>
+  <div>
+    <va-data-table
+      :columns="columns"
+      :items="getActionItemRows()"
+    ></va-data-table>
   </div>
+
   <!-- pagination -->
   <!--  <Pagination-->
   <!--    class="mt-5 px-1 lg:px-3"-->
@@ -157,30 +141,19 @@
 import actionItemService from "@/services/ingestion";
 import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
-import workflowService from "@/services/workflow";
 import * as datetime from "@/services/datetime";
 
-const actionItemDetails = (item) => {
-  return [
-    {
-      num_files_equal:
-        item.original_dataset_num_files === item.duplicate_dataset_num_files,
-    },
-    // {
-    //   passed_checksum_verification:
-    // }
-  ];
+const getActionItemRows = (item) => {
+  return [{ check: "check1", passed: "check1" }];
+  // return item.metadata.checks.map((check) => {
+  //   return {
+  //     name: check.name,
+  //     passed: check.passed,
+  //   };
+  // });
 };
 
-const columns = ref([
-  {
-    key: "check",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;",
-  },
-  { key: "status", width: "100px", thAlign: "center", tdAlign: "center" },
-  { key: "actions", width: "130px", thAlign: "center", tdAlign: "center" },
-]);
+const columns = [{ key: "check" }, { key: "passed" }];
 
 const loading = ref(false);
 const actionItems = ref([]);
@@ -193,11 +166,16 @@ const fetchActiveActionItems = () => {
       active: true,
     })
     .then((res) => {
-      actionItems.value = res.data;
+      actionItems.value = res.data.map((item) => {
+        return {
+          ...item,
+          duplicate_dataset_id: item.metadata.duplicate_dataset_id,
+        };
+      });
     })
-    .catch(() => {
+    .catch((err) => {
       toast.error("Could not fetch action items");
-      // console.log(err);
+      console.log(err);
     })
     .finally(() => {
       loading.value = false;

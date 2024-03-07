@@ -20,7 +20,7 @@ router.get(
   '/action-items',
   validate([
     query('type').escape().notEmpty().isIn(Object.values(config.ACTION_ITEMS_TYPES)),
-    query('original_dataset_id').isInt().toInt().optional(),
+    query('dataset_id').isInt().toInt().optional(),
     query('active').optional().isBoolean().toBoolean(),
     query('acknowledged_by_id').isInt().toInt().optional(),
   ]),
@@ -28,7 +28,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const filterQuery = _.omitBy(_.isUndefined)({
       type: req.query.type,
-      original_dataset_id: req.query.id,
+      dataset_id: req.query.id,
       active: req.query.active || true,
       acknowledged_by_id: req.query.acknowledged_by_id,
     });
@@ -36,8 +36,7 @@ router.get(
     const actionItems = await prisma.ingestion_action_item.findMany({
       where: filterQuery,
       include: {
-        original_dataset: true,
-        duplicate_dataset: true,
+        dataset: true,
       },
     });
     res.json(actionItems);
@@ -50,16 +49,14 @@ router.post(
   validate([
     body('type').escape().notEmpty(),
     body('label').optional().escape().notEmpty(),
-    body('original_dataset_id').optional().isInt().toInt(),
-    body('original_dataset_id').optional().isInt().toInt(),
+    body('dataset_id').optional().isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     const actionItem = await prisma.ingestion_action_item.create({
       data: {
         type: req.body.type,
         label: req.body.label,
-        original_dataset_id: req.body.original_dataset_id,
-        duplicate_dataset_id: req.body.duplicate_dataset_id,
+        dataset_id: req.body.dataset_id,
       },
     });
     res.json(actionItem);

@@ -55,10 +55,10 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     api.post_ingestion_action_item({
         "type": "DUPLICATE_INGESTION",
         "label": "Duplicate Ingestion",
-        "original_dataset_id": original_dataset['id'],
-        "duplicate_dataset_id": duplicate_dataset['id'],
-        "details": {
-            "num_files"
+        "dataset_id": original_dataset['id'],
+        "metadata": {
+            "duplicate_dataset_id": duplicate_dataset['id'],
+            "checks": comparison_report
         }
     })
 

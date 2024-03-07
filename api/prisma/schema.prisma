@@ -34,8 +34,7 @@ model dataset {
   accesses            data_access_log[]
   stage_requests      stage_request_log[]
   bundle              bundle?
-  source_action_items ingestion_action_item[] @relation("source_action_items")
-  target_action_items ingestion_action_item[] @relation("target_action_items")
+  action_items        ingestion_action_item[]
 
   @@unique([name, type, is_deleted])
 }
@@ -106,14 +105,12 @@ model ingestion_action_item {
   created_at           DateTime         @default(now()) @db.Timestamp(6)
   type                 ACTION_ITEM_TYPE
   label                String?
-  original_dataset_id  Int?
-  original_dataset     dataset?         @relation("source_action_items", fields: [original_dataset_id], references: [id])
-  duplicate_dataset_id Int?
-  duplicate_dataset    dataset?         @relation("target_action_items", fields: [duplicate_dataset_id], references: [id])
+  dataset_id           Int?
+  dataset              dataset?         @relation(fields: [dataset_id], references: [id])
   active               Boolean          @default(true)
   acknowledged_by_id   Int?
   acknowledged_by      user?            @relation(fields: [acknowledged_by_id], references: [id])
-  checks               Json?
+  metadata             Json?
 }
 
 model bundle {
