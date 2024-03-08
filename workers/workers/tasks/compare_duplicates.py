@@ -76,6 +76,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 # [
 #   {
 #     check: 'num_files_same',
+#     label: 'Number of Files Match',
 #     passed: True,
 #     details: {
 #       original_files_count: 20,
@@ -83,6 +84,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #     },
 #   }, {
 #     check: 'checksums_validated',
+#     label: 'Checksums Validated',
 #     passed: False,
 #     details: {
 #       conflicting_checksum_files: [{
@@ -99,6 +101,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #     },
 #   }, {
 #     check: 'all_original_files_found',
+#     label: 'All Original Files Found',
 #     passed: False,
 #     details: {
 #       missing_files: [{
