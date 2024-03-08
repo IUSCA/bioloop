@@ -45,25 +45,16 @@
         <div v-if="rowData.check === 'checksums_validated'">
           <va-scroll-container class="max-h-52" vertical>
             <va-list>
-              <va-list-label>Files with differing checksums</va-list-label>
-
               <va-list-item
                 v-for="(file, index) in rowData.details
                   .conflicting_checksum_files"
                 :key="index"
               >
                 <va-list-item-section icon>
-                  <!--                  <va-avatar>-->
-                  <!--                      class="text-xl flex-none text-gray-700"-->
-                  <!--                    <Icon icon="mdi-folder" />-->
-                  <!--                  <button class="flex items-center gap-1">-->
-                  <!--                      <FileTypeIcon />-->
                   <Icon
                     icon="mdi-file"
                     class="text-2xl flex-none text-blue-600"
                   ></Icon>
-                  <!--                  </button>-->
-                  <!--                  </va-avatar>-->
                 </va-list-item-section>
 
                 <va-list-item-section>
