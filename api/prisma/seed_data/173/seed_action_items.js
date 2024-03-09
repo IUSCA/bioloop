@@ -16,8 +16,8 @@ const actionItems = [{
       passed: false,
       label: 'Number of Files Match',
       details: {
-        original_files_count: 20,
-        duplicate_files_count: 30,
+        original_files_count: 200000000,
+        duplicate_files_count: 300000000,
       },
     }, {
       check: 'checksums_validated',

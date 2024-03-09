@@ -1,9 +1,9 @@
 <template>
   <va-data-table :columns="columns" :items="props.items">
-    <template #cell(path)="{ rowData }">
+    <template #cell(name)="{ value }">
       <div class="flex items-center gap-1">
-        <FileTypeIcon :filename="rowData.name" />
-        <span>{{ rowData.path }}</span>
+        <FileTypeIcon :filename="value" />
+        <span>{{ value }}</span>
       </div>
     </template>
   </va-data-table>
@@ -19,9 +19,16 @@ const props = defineProps({
 
 const columns = [
   {
-    key: "path",
+    key: "name",
     label: "File",
-    tdStyle: "word-wrap: break-word; overflow-wrap: anywhere;",
+    // width: "90px",
+    // tdStyle: "word-wrap: break-word; overflow-wrap: anywhere;",
+    // tdClass: "break-words",
+  },
+  {
+    key: "path",
+    thAlign: "center",
+    tdAlign: "center",
   },
   {
     key: "original_md5",
@@ -32,8 +39,8 @@ const columns = [
   {
     key: "duplicate_md5",
     label: "Incoming Duplicate Checksum",
-    thAlign: "center",
-    tdAlign: "center",
+    thAlign: "right",
+    tdAlign: "right",
   },
 ];
 </script>
