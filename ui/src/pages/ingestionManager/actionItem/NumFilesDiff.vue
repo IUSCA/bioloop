@@ -1,15 +1,15 @@
 <template>
-  <va-alert :color="alertColor">
+  <va-alert outline :color="alertColor">
     {{ alertText }}
   </va-alert>
   <div class="flex flex-col gap-2">
     <div>
       Number of files in original dataset:
-      <va-chip outline>{{ props.original_files_count }}</va-chip>
+      <va-chip size="small" outline>{{ props.original_files_count }}</va-chip>
     </div>
     <div>
       Number of files in incoming duplicate dataset:
-      <va-chip outline>{{ props.duplicate_files_count }}</va-chip>
+      <va-chip size="small" outline>{{ props.duplicate_files_count }}</va-chip>
     </div>
   </div>
 </template>
