@@ -72,7 +72,7 @@
 
 <script setup>
 import * as datetime from "@/services/datetime";
-import ActionItemDetails from "@/pages/ingestionManager/ingestion/ActionItemDetails.vue";
+import ActionItemDetails from "@/pages/ingestionManager/actionItem/Details.vue";
 
 const props = defineProps({
   actionItems: {

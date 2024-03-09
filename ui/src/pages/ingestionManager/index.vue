@@ -59,7 +59,7 @@
 import actionItemService from "@/services/ingestion";
 import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
-import ActionItem from "@/pages/ingestionManager/ingestion/ActionItem.vue";
+import ActionItem from "@/pages/ingestionManager/actionItem/index.vue";
 
 const loading = ref(false);
 const actionItems = ref([]);

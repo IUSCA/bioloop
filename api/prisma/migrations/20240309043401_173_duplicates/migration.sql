@@ -28,6 +28,9 @@ CREATE TABLE "ingestion_action_item" (
     CONSTRAINT "ingestion_action_item_pkey" PRIMARY KEY ("id")
 );
 
+-- -- DropIndex
+-- DROP INDEX "dataset_name_type_is_deleted_key";
+
 -- CreateIndex
 CREATE UNIQUE INDEX "dataset_name_type_is_deleted_key" ON "dataset"("name", "type", "is_deleted");
 

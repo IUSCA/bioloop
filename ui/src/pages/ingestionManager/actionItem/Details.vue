@@ -44,53 +44,19 @@
 
         <div v-if="rowData.check === 'checksums_validated'">
           <va-scroll-container class="max-h-52" vertical>
-            <va-list>
-              <va-list-item
-                v-for="(file, index) in rowData.details
-                  .conflicting_checksum_files"
-                :key="index"
-              >
-                <va-list-item-section icon>
-                  <Icon
-                    icon="mdi-file"
-                    class="text-2xl flex-none text-blue-600"
-                  ></Icon>
-                </va-list-item-section>
-
-                <va-list-item-section>
-                  <va-list-item-label>
-                    {{ file.name }}
-                  </va-list-item-label>
-
-                  <va-list-item-label caption :lines="10">
-                    Original checksum: {{ file.original_md5 }}
-                    <br />
-                    Incoming checksum: {{ file.duplicate_md5 }}
-                  </va-list-item-label>
-                </va-list-item-section>
-              </va-list-item>
-            </va-list>
+            <checksum-diff-table
+              :items="rowData.details.conflicting_checksum_files"
+            />
           </va-scroll-container>
-          <!--          <div class="flex flex-col">-->
-          <!--            <div-->
-          <!--              :key="index"-->
-          <!--              v-for="(conflictingFile, index) in rowData.details-->
-          <!--                .conflicting_checksum_files"-->
-          <!--            >-->
-          <!--              {{ conflictingFile.name }}-->
-          <!--            </div>-->
-          <!--          </div>-->
-          <!--        </div>-->
-
-          <!--        <div v-if="rowData.check === 'all_original_files_found'">-->
         </div>
-        <!--                            {{ actionItemDetails(rowData) }}-->
       </template>
     </va-data-table>
   </div>
 </template>
 
 <script setup>
+import ChecksumDiffTable from "@/pages/ingestionManager/actionItem/ChecksumDiffTable.vue";
+
 const props = defineProps({
   item: {
     type: Object,
@@ -101,8 +67,7 @@ const props = defineProps({
 const columns = ref([
   {
     key: "label",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;",
+    tdStyle: "word-wrap: break-word; overflow-wrap: anywhere;",
   },
   { key: "passed", thAlign: "center", tdAlign: "center" },
   { key: "actions", thAlign: "center", tdAlign: "center" },

@@ -19,7 +19,7 @@ const isPermittedTo = accessControl('action_items');
 router.get(
   '/action-items',
   validate([
-    query('type').escape().notEmpty().isIn(Object.values(config.ACTION_ITEMS_TYPES)),
+    query('type').escape().notEmpty().isIn(config.ACTION_ITEMS_TYPES.DUPLICATE_INGESTION),
     query('dataset_id').isInt().toInt().optional(),
     query('active').optional().isBoolean().toBoolean(),
     query('acknowledged_by_id').isInt().toInt().optional(),

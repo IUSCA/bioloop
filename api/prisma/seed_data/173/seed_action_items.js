@@ -30,7 +30,7 @@ const actionItems = [{
           original_md5: 'original_md5',
           duplicate_md5: 'duplicate_md5',
         }, {
-          name: 'checksum_error_2',
+          name: 'checksum_error_2.json',
           path: '/path/to/checksum_error_2',
           original_md5: 'original_md5',
           duplicate_md5: 'duplicate_md5',
