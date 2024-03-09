@@ -14,7 +14,7 @@
 
 <script setup>
 import ActionItemHeader from "@/pages/ingestionManager/actionItem/ActionItemHeader.vue";
-import ActionItemCheckReport from "@/pages/ingestionManager/actionItem/ActionItemCheckReport.vue";
+import ActionItemCheckReport from "@/pages/ingestionManager/actionItem/ActionItemChecksReport.vue";
 
 const props = defineProps({
   actionItems: {

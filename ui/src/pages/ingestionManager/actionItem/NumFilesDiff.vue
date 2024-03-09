@@ -1,13 +1,15 @@
 <template>
-  <div class="flex gap-2">
+  <va-alert :color="alertColor">
+    {{ alertText }}
+  </va-alert>
+  <div class="flex flex-col gap-2">
     <div>
       Number of files in original dataset:
-      {{ props.original_files_count }}
+      <va-chip outline>{{ props.original_files_count }}</va-chip>
     </div>
-    <va-divider vertical></va-divider>
     <div>
       Number of files in incoming duplicate dataset:
-      {{ props.duplicate_files_count }}
+      <va-chip outline>{{ props.duplicate_files_count }}</va-chip>
     </div>
   </div>
 </template>
@@ -16,6 +18,18 @@
 const props = defineProps({
   original_files_count: { type: Number, required: true },
   duplicate_files_count: { type: Number, required: true },
+});
+
+const alertColor = computed(() => {
+  return props.original_files_count === props.duplicate_files_count
+    ? "success"
+    : "warning";
+});
+
+const alertText = computed(() => {
+  return props.original_files_count === props.duplicate_files_count
+    ? "Number of files in original dataset and incoming duplicate match"
+    : "Number of files in original dataset and incoming duplicate do not match";
 });
 </script>
 

@@ -1,12 +1,12 @@
 <template>
   <div class="flex-[0_0_90%]">
     <div
-      class="grid grid-cols-6 lg:grid-cols-12 gap-1 lg:gap-3 items-center p-1"
+      class="md:mx-2 grid sm:grid-cols-1 lg:grid-cols-12 gap-1 lg:gap-3 items-center p-1"
     >
       <div
-        class="col-span-2 lg:col-span-6 flex flex-nowrap items-center gap-3 lg:gap-5"
+        class="sm:col-span-1 lg:col-span-6 flex flex-nowrap items-center gap-3 lg:gap-5"
       >
-        <div class="flex-none md:mx-2">
+        <div class="flex-none">
           <i-mdi-check-circle
             style="color: var(--va-success)"
             class="text-xl"
@@ -40,7 +40,7 @@
       </div>
 
       <!-- created at -->
-      <div class="col-span-2 lg:col-span-3">
+      <div class="sm:col-span-1 lg:col-span-3">
         <va-popover message="Ingested On">
           <i-mdi-calendar
             class="text-xl inline-block text-slate-700 dark:text-slate-300"

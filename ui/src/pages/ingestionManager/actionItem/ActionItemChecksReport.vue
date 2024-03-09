@@ -41,20 +41,60 @@
 
       <!-- Expanded details for current action item -->
       <template #expandableRow="{ rowData }">
-        <div v-if="rowData.check === 'num_files_same'">
+        <!--        <div class="flex gap-2">-->
+        <!--          <VaAvatar :src="`https://randomuser.me/api/portraits/men/1.jpg`" />-->
+        <!--          <div class="pl-2">-->
+        <!--            <div class="flex gap-1">-->
+        <!--              <span>test</span>-->
+        <!--              <span class="va-link">test</span>-->
+        <!--            </div>-->
+        <!--            <div class="flex items-center">-->
+        <!--              <VaIcon-->
+        <!--                size="small"-->
+        <!--                name="phone"-->
+        <!--                color="secondary"-->
+        <!--                class="mr-2"-->
+        <!--              />-->
+        <!--              <span>test</span>-->
+        <!--            </div>-->
+        <!--            <div class="flex items-center">-->
+        <!--              <VaIcon-->
+        <!--                size="small"-->
+        <!--                name="email"-->
+        <!--                color="secondary"-->
+        <!--                class="mr-2"-->
+        <!--              />-->
+        <!--              <span>test</span>-->
+        <!--            </div>-->
+        <!--            <div class="flex items-center">-->
+        <!--              <VaIcon-->
+        <!--                size="small"-->
+        <!--                name="language"-->
+        <!--                color="secondary"-->
+        <!--                class="mr-2"-->
+        <!--              />-->
+        <!--              <span class="va-link">test</span>-->
+        <!--            </div>-->
+        <!--          </div>-->
+        <!--        </div>-->
+
+        <div class="pl-7">
           <num-files-diff
-            class="pl-7"
+            v-if="rowData.check === 'num_files_same'"
             :original_files_count="rowData.details.original_files_count"
             :duplicate_files_count="rowData.details.duplicate_files_count"
           />
-        </div>
 
-        <div v-if="rowData.check === 'checksums_validated'">
-          <va-scroll-container class="pl-7 max-h-52" vertical>
-            <checksum-diff-table
-              :items="rowData.details.conflicting_checksum_files"
-            />
-          </va-scroll-container>
+          <checksums-diff
+            v-if="rowData.check === 'checksums_validated'"
+            :conflicting-files="rowData.details.conflicting_checksum_files"
+          />
+
+          <files-diff
+            v-if="rowData.check === 'all_original_files_found'"
+            :missing-files="rowData.details.missing_files"
+          >
+          </files-diff>
         </div>
       </template>
 
@@ -64,8 +104,9 @@
 </template>
 
 <script setup>
-import ChecksumDiffTable from "@/pages/ingestionManager/actionItem/ChecksumDiffTable.vue";
 import NumFilesDiff from "@/pages/ingestionManager/actionItem/NumFilesDiff.vue";
+import FilesDiff from "@/pages/ingestionManager/actionItem/FilesDiff.vue";
+import ChecksumsDiff from "@/pages/ingestionManager/actionItem/ChecksumsDiff.vue";
 
 const props = defineProps({
   item: {
