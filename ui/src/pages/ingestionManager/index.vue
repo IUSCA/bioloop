@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import actionItemService from "@/services/ingestion";
+import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
 import ActionItem from "@/pages/ingestionManager/actionItem/index.vue";
@@ -66,7 +66,7 @@ const actionItems = ref([]);
 
 const fetchActiveActionItems = () => {
   loading.value = true;
-  return actionItemService
+  return datasetService
     .getActionItems({
       type: "DUPLICATE_INGESTION",
       active: true,

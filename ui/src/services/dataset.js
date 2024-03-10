@@ -142,6 +142,17 @@ class DatasetService {
       },
     });
   }
+
+  getActionItems({ type, dataset_id, active = true, acknowledged_by_id } = {}) {
+    return api.get("/datasets/action-items", {
+      params: {
+        type,
+        active,
+        dataset_id,
+        acknowledged_by_id,
+      },
+    });
+  }
 }
 
 export default new DatasetService();

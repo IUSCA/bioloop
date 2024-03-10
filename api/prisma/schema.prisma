@@ -34,7 +34,7 @@ model dataset {
   accesses            data_access_log[]
   stage_requests      stage_request_log[]
   bundle              bundle?
-  action_items        ingestion_action_item[]
+  action_items        dataset_action_item[]
 
   @@unique([name, type, is_deleted])
 }
@@ -100,7 +100,7 @@ model dataset_state {
   @@id([timestamp, dataset_id, state])
 }
 
-model ingestion_action_item {
+model dataset_action_item {
   id                   Int              @id @default(autoincrement())
   created_at           DateTime         @default(now()) @db.Timestamp(6)
   type                 ACTION_ITEM_TYPE
@@ -110,7 +110,18 @@ model ingestion_action_item {
   active               Boolean          @default(true)
   acknowledged_by_id   Int?
   acknowledged_by      user?            @relation(fields: [acknowledged_by_id], references: [id])
+  checks               dataset_action_item_check[]
   metadata             Json?
+}
+
+model dataset_action_item_check {
+  id                     Int                  @id @default(autoincrement())
+  created_at             DateTime             @default(now()) @db.Timestamp(6)
+  label                  String
+  passed                 Boolean
+  dataset_action_item_id Int?
+  dataset_action_item    dataset_action_item? @relation(fields: [dataset_action_item_id], references: [id])
+  report                 Json?
 }
 
 model bundle {
@@ -165,7 +176,7 @@ model user {
   accesses               data_access_log[]
   stage_requests         stage_request_log[]
   about_edits            about[]
-  ingestion_action_items ingestion_action_item[]
+  dataset_action_items   dataset_action_item[]
 }
 
 model user_password {

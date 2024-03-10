@@ -43,22 +43,22 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
             "filetype": "file"
         })
 
-    are_files_same, comparison_report = compare_dataset_files(original_files, duplicate_files)
+    are_files_same, comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
     logger.info(f"are_files_same: {are_files_same}")
-    logger.info('comparison_report')
-    logger.info(comparison_report)
+    logger.info('comparison_checks_report')
+    logger.info(comparison_checks_report)
 
     # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
     # create an action item for operators to review later. This way, in case our comparison process
     # mistakenly assumes the incoming dataset to be a duplicate, operators will still have a chance
     # to review the incoming dataset before it is rejected.
-    api.post_ingestion_action_item({
+    api.post_dataset_action_item({
         "type": "DUPLICATE_INGESTION",
         "label": "Duplicate Ingestion",
         "dataset_id": original_dataset['id'],
+        "checks": comparison_checks_report,
         "metadata": {
-            "duplicate_dataset_id": duplicate_dataset['id'],
-            "checks": comparison_report
+            "duplicate_dataset_id": duplicate_dataset['id']
         }
     })
 
@@ -66,62 +66,61 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     return duplicate_dataset_id,
 
 
-# todo - document shape of returned dict
-
+# Given two lists of dataset files, determines if the two sets of files are duplicates. The following checks are used
+# to determine whether files are same:
+#    1. Comparing number of files in both datasets
+#    2. Comparing checksums of files in both datasets
+#    3. Verifying if each file from the original dataset is present in the duplicate.
+#
 # Returns a tuple, the first element of which is a bool indicating whether both sets of files
-# are same, with the second element being a detailed comparison report of the two sets of files.
+# are same, with the second element being a detailed comparison report containing the results
+# for each of the 3 checks performed.
 #
 # Example of comparison report:
 
 # [
 #   {
-#     check: 'num_files_same',
 #     label: 'Number of Files Match',
 #     passed: True,
-#     details: {
+#     report: {
 #       original_files_count: 20,
 #       duplicate_files_count: 20,
 #     },
 #   }, {
-#     check: 'checksums_validated',
 #     label: 'Checksums Validated',
 #     passed: False,
-#     details: {
+#     report: {
 #       conflicting_checksum_files: [{
 #         name: 'checksum_error_file_1',
-#         path: '/path/to/checksum_error_2',
+#         path: '/path/to/checksum_error_file_1',
 #         original_md5: 'original_md5',
 #         duplicate_md5: 'duplicate_md5',
 #       }, {
-#         name: 'checksum_error_2',
-#         path: '/path/to/checksum_error_2',
+#         name: 'checksum_error_file_2',
+#         path: '/path/to/checksum_error_file_2',
 #         original_md5: 'original_md5',
 #         duplicate_md5: 'duplicate_md5',
 #       }],
 #     },
 #   }, {
-#     check: 'all_original_files_found',
 #     label: 'All Original Files Found',
 #     passed: False,
-#     details: {
+#     report: {
 #       missing_files: [{
 #         name: 'missing_file_1',
-#         path: '/path/to/file_1',
+#         path: '/path/to/missing_file_1',
 #       }, {
 #         name: 'missing_file_2',
-#         path: '/path/to/file_2',
+#         path: '/path/to/missing_file_1',
 #       }],
 #     },
 #   }
 # ]
-
 def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
-    # logger.info(f"are ids same?: {id(list_1) == id(list_2)}')
     num_files_same = len(original_files) == len(duplicate_files)
     comparison_checks = [{
-        'check': 'num_files_same',
         'passed': num_files_same,
-        'details': {
+        'report': {
             'original_files_count': len(original_files),
             'duplicate_files_count': len(duplicate_files)
         }
@@ -166,16 +165,14 @@ def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
     passed_missing_files_check = len(missing_files) == 0
 
     comparison_checks.append({
-        'check': 'checksums_validated',
         'passed': passed_checksum_validation,
-        'details': {
+        'report': {
             'conflicting_checksum_files': conflicting_checksum_files
         }
     })
     comparison_checks.append({
-        'check': 'all_original_files_found',
         'passed': passed_missing_files_check,
-        'details': {
+        'report': {
             'missing_files': missing_files
         }
     })

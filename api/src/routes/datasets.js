@@ -718,4 +718,62 @@ router.get(
   }),
 );
 
+router.get(
+  '/action-items',
+  validate([
+    query('type').escape().notEmpty().isIn(config.ACTION_ITEMS_TYPES.DUPLICATE_INGESTION),
+    query('dataset_id').isInt().toInt().optional(),
+    query('active').optional().isBoolean().toBoolean(),
+    query('acknowledged_by_id').isInt().toInt().optional(),
+  ]),
+  isPermittedTo('update'),
+  asyncHandler(async (req, res, next) => {
+    const filterQuery = _.omitBy(_.isUndefined)({
+      type: req.query.type,
+      dataset_id: req.query.id,
+      active: req.query.active || true,
+      acknowledged_by_id: req.query.acknowledged_by_id,
+    });
+
+    const actionItems = await prisma.dataset_action_item.findMany({
+      where: filterQuery,
+      include: {
+        dataset: true,
+      },
+    });
+    res.json(actionItems);
+  }),
+);
+
+router.post(
+  '/action-item',
+  isPermittedTo('update'),
+  validate([
+    body('type').escape().notEmpty(),
+    body('label').optional().escape().notEmpty(),
+    body('dataset_id').optional().isInt().toInt(),
+    body('metadata').optional().isObject(),
+    body('checks').isArray().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const {
+      type, label, dataset_id, metadata, checks,
+    } = req.body;
+
+    const actionItem = await prisma.dataset_action_item.create({
+      data: {
+        type,
+        label,
+        dataset_id,
+        metadata,
+        checks: {
+          create: checks,
+        },
+      },
+      include: { checks: true },
+    });
+    res.json(actionItem);
+  }),
+);
+
 module.exports = router;
