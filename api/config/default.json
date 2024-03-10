@@ -88,17 +88,7 @@
       ]
     }
   },
-  "dataset_types": {
-    "RAW_DATA": {
-        "label": "RAW_DATA"
-    },
-    "DATA_PRODUCT": {
-        "label": "DATA_PRODUCT"
-    },
-    "DUPLICATE": {
-        "label": "DUPLICATE"
-    }
-  },
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT", "DUPLICATE"],
   "ACTION_ITEMS_TYPES": {
     "DUPLICATE_INGESTION": "DUPLICATE_INGESTION"
   }
