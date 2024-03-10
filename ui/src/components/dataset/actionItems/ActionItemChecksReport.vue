@@ -58,9 +58,9 @@
 </template>
 
 <script setup>
-import NumFilesDiff from "@/pages/ingestionManager/actionItems/NumFilesDiff.vue";
-import FilesDiff from "@/pages/ingestionManager/actionItems/FilesDiff.vue";
-import ChecksumsDiff from "@/pages/ingestionManager/actionItems/ChecksumsDiff.vue";
+// import NumFilesDiff from "@/components/dataset/actionItems/NumFilesDiff.vue";
+// import FilesDiff from "@/components/dataset/actionItems/FilesDiff.vue";
+// import ChecksumsDiff from "@/components/dataset/actionItems/ChecksumsDiff.vue";
 
 const props = defineProps({
   item: {

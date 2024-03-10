@@ -59,7 +59,8 @@
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
-import ActionItems from "@/pages/ingestionManager/actionItems/index.vue";
+// eslint-disable-next-line no-unused-vars
+import ActionItems from "@/components/dataset/actionItems/index.vue";
 
 const loading = ref(false);
 const actionItems = ref([]);

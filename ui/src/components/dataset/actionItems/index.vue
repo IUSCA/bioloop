@@ -8,13 +8,13 @@
       <action-item-header :item="item" />
     </template>
 
-    <action-item-check-report :item="item" />
+    <action-item-checks-report :item="item" />
   </collapsible>
 </template>
 
 <script setup>
-import ActionItemHeader from "@/pages/ingestionManager/actionItems/ActionItemHeader.vue";
-import ActionItemCheckReport from "@/pages/ingestionManager/actionItems/ActionItemChecksReport.vue";
+// import ActionItemHeader from "@/components/dataset/actionItems/ActionItemHeader.vue";
+// import ActionItemCheckReport from "@/components/dataset/actionItems/ActionItemChecksReport.vue";
 
 const props = defineProps({
   actionItems: {
