@@ -1,10 +1,15 @@
 <template>
-  <va-alert outline v-if="props.missingFiles?.length === 0" color="success">
+  <va-alert
+    dense
+    outline
+    v-if="props.missingFiles?.length === 0"
+    color="success"
+  >
     All files in the original dataset were found in the incoming duplicate
   </va-alert>
 
   <div v-else>
-    <va-alert outline color="warning">
+    <va-alert dense outline color="warning">
       The following files in the original dataset were not found in the incoming
       duplicate
     </va-alert>

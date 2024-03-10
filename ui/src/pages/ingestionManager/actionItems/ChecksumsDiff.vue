@@ -1,11 +1,16 @@
 <template>
-  <va-alert outline v-if="props.conflictingFiles.length === 0" color="success">
+  <va-alert
+    dense
+    outline
+    v-if="props.conflictingFiles.length === 0"
+    color="success"
+  >
     All files in the original dataset match checksums of corresponding files in
     the incoming duplicate
   </va-alert>
 
   <div v-else>
-    <va-alert outline color="warning">
+    <va-alert dense outline color="warning">
       The following files in the original dataset did not match checksums of
       corresponding files in the incoming duplicate
     </va-alert>
