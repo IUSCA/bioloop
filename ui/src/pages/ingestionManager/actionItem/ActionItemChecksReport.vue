@@ -17,19 +17,8 @@
       <!-- The current check's passed / failed status -->
       <template #cell(passed)="{ value }">
         <va-chip size="small" :color="styleStatusChip(value)">
-          {{ value === true ? "PASSED" : "FAILED" }}
+          {{ value === "true" ? "PASSED" : "FAILED" }}
         </va-chip>
-
-        <!--        <div class="text-xl">-->
-        <!--          &lt;!&ndash; The explicit check for ` === true` is because Vuestic likely hides the boolean value behind-->
-        <!--               a proxy which evaluates to a truthy value. &ndash;&gt;-->
-        <!--          <i-mdi-check-circle-->
-        <!--            v-if="value === true"-->
-        <!--            style="color: var(&#45;&#45;va-success)"-->
-        <!--            class="m-auto"-->
-        <!--          />-->
-        <!--          <i-mdi-alert v-else style="color: var(&#45;&#45;va-warning)" class="m-auto" />-->
-        <!--        </div>-->
       </template>
 
       <!-- Actions -->
@@ -83,9 +72,6 @@ const props = defineProps({
 });
 
 const styleStatusChip = (passed) => {
-  console.log(`styleSttusChip:`);
-  console.log(passed);
-  console.log(typeof passed);
   return passed === "true" ? "success" : "warning";
 };
 
@@ -94,7 +80,7 @@ const columns = ref([
     key: "check",
     label: "Check",
   },
-  { key: "passed", thAlign: "center", tdAlign: "center" },
+  { key: "passed", label: "Status", thAlign: "center", tdAlign: "center" },
   { key: "actions", thAlign: "right", tdAlign: "right" },
 ]);
 </script>
