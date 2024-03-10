@@ -81,44 +81,43 @@ const actionItems = [{
       passed: false,
       label: 'All Original Files Found',
       details: {
-        missing_files: [],
-        // missing_files: [{
-        //   name: 'missing_file_1',
-        //   path: '/path/to/file_1',
-        // }, {
-        //   name: 'missing_file_2',
-        //   path: '/path/to/file_2',
-        // }, {
-        //   name: 'missing_file_1',
-        //   path: '/path/to/file_1',
-        // }, {
-        //   name: 'missing_file_2',
-        //   path: '/path/to/file_2',
-        // }, {
-        //   name: 'missing_file_1',
-        //   path: '/path/to/file_1',
-        // }, {
-        //   name: 'missing_file_2',
-        //   path: '/path/to/file_2',
-        // }, {
-        //   name: 'missing_file_1',
-        //   path: '/path/to/file_1',
-        // }, {
-        //   name: 'missing_file_2',
-        //   path: '/path/to/file_2',
-        // }, {
-        //   name: 'missing_file_1',
-        //   path: '/path/to/file_1',
-        // }, {
-        //   name: 'missing_file_2',
-        //   path: '/path/to/file_2',
-        // }, {
-        //   name: 'missing_file_1',
-        //   path: '/path/to/file_1',
-        // }, {
-        //   name: 'missing_file_2',
-        //   path: '/path/to/file_2',
-        // }],
+        missing_files: [{
+          name: 'missing_file_1',
+          path: '/path/to/file_1',
+        }, {
+          name: 'missing_file_2',
+          path: '/path/to/file_2',
+        }, {
+          name: 'missing_file_1',
+          path: '/path/to/file_1',
+        }, {
+          name: 'missing_file_2',
+          path: '/path/to/file_2',
+        }, {
+          name: 'missing_file_1',
+          path: '/path/to/file_1',
+        }, {
+          name: 'missing_file_2',
+          path: '/path/to/file_2',
+        }, {
+          name: 'missing_file_1',
+          path: '/path/to/file_1',
+        }, {
+          name: 'missing_file_2',
+          path: '/path/to/file_2',
+        }, {
+          name: 'missing_file_1',
+          path: '/path/to/file_1',
+        }, {
+          name: 'missing_file_2',
+          path: '/path/to/file_2',
+        }, {
+          name: 'missing_file_1',
+          path: '/path/to/file_1',
+        }, {
+          name: 'missing_file_2',
+          path: '/path/to/file_2',
+        }],
       },
     }],
   },

@@ -7,10 +7,10 @@
         class="sm:col-span-1 lg:col-span-6 flex flex-nowrap items-center gap-3 lg:gap-5"
       >
         <div class="flex-none">
-          <i-mdi-check-circle
-            style="color: var(--va-success)"
+          <i-mdi-alert-circle
+            style="color: var(--va-warning)"
             class="text-xl"
-          ></i-mdi-check-circle>
+          />
         </div>
 
         <div class="flex flex-col">

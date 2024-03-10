@@ -36,8 +36,8 @@ const columns = [
   },
   {
     key: "path",
-    thAlign: "center",
-    tdAlign: "center",
+    thAlign: "right",
+    tdAlign: "right",
   },
 ];
 </script>

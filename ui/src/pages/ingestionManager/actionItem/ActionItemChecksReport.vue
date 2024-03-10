@@ -16,16 +16,20 @@
 
       <!-- The current check's passed / failed status -->
       <template #cell(passed)="{ value }">
-        <div class="text-xl">
-          <!-- The explicit check for ` === true` is because Vuestic likely hides the boolean value behind
-                     a proxy which evaluates to a truthy value. -->
-          <i-mdi-check-circle
-            v-if="value === true"
-            style="color: var(--va-success)"
-            class="m-auto"
-          />
-          <i-mdi-alert v-else style="color: var(--va-warning)" class="m-auto" />
-        </div>
+        <va-chip size="small" :color="styleStatusChip(value)">
+          {{ value === true ? "PASSED" : "FAILED" }}
+        </va-chip>
+
+        <!--        <div class="text-xl">-->
+        <!--          &lt;!&ndash; The explicit check for ` === true` is because Vuestic likely hides the boolean value behind-->
+        <!--               a proxy which evaluates to a truthy value. &ndash;&gt;-->
+        <!--          <i-mdi-check-circle-->
+        <!--            v-if="value === true"-->
+        <!--            style="color: var(&#45;&#45;va-success)"-->
+        <!--            class="m-auto"-->
+        <!--          />-->
+        <!--          <i-mdi-alert v-else style="color: var(&#45;&#45;va-warning)" class="m-auto" />-->
+        <!--        </div>-->
       </template>
 
       <!-- Actions -->
@@ -41,44 +45,7 @@
 
       <!-- Expanded details for current action item -->
       <template #expandableRow="{ rowData }">
-        <!--        <div class="flex gap-2">-->
-        <!--          <VaAvatar :src="`https://randomuser.me/api/portraits/men/1.jpg`" />-->
-        <!--          <div class="pl-2">-->
-        <!--            <div class="flex gap-1">-->
-        <!--              <span>test</span>-->
-        <!--              <span class="va-link">test</span>-->
-        <!--            </div>-->
-        <!--            <div class="flex items-center">-->
-        <!--              <VaIcon-->
-        <!--                size="small"-->
-        <!--                name="phone"-->
-        <!--                color="secondary"-->
-        <!--                class="mr-2"-->
-        <!--              />-->
-        <!--              <span>test</span>-->
-        <!--            </div>-->
-        <!--            <div class="flex items-center">-->
-        <!--              <VaIcon-->
-        <!--                size="small"-->
-        <!--                name="email"-->
-        <!--                color="secondary"-->
-        <!--                class="mr-2"-->
-        <!--              />-->
-        <!--              <span>test</span>-->
-        <!--            </div>-->
-        <!--            <div class="flex items-center">-->
-        <!--              <VaIcon-->
-        <!--                size="small"-->
-        <!--                name="language"-->
-        <!--                color="secondary"-->
-        <!--                class="mr-2"-->
-        <!--              />-->
-        <!--              <span class="va-link">test</span>-->
-        <!--            </div>-->
-        <!--          </div>-->
-        <!--        </div>-->
-
-        <div class="pl-7">
+        <div class="px-7">
           <num-files-diff
             v-if="rowData.check === 'num_files_same'"
             :original_files_count="rowData.details.original_files_count"
@@ -114,6 +81,13 @@ const props = defineProps({
     required: true,
   },
 });
+
+const styleStatusChip = (passed) => {
+  console.log(`styleSttusChip:`);
+  console.log(passed);
+  console.log(typeof passed);
+  return passed === "true" ? "success" : "warning";
+};
 
 const columns = ref([
   {
