@@ -39,7 +39,7 @@
     </div>
 
     <div class="md:w-5/6 space-y-2">
-      <action-item :action-items="actionItems" />
+      <action-items :action-items="actionItems" />
     </div>
   </div>
 
@@ -59,7 +59,7 @@
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
-import ActionItem from "@/pages/ingestionManager/actionItem/index.vue";
+import ActionItems from "@/pages/ingestionManager/actionItems/index.vue";
 
 const loading = ref(false);
 const actionItems = ref([]);

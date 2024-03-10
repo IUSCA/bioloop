@@ -13,8 +13,8 @@
 </template>
 
 <script setup>
-import ActionItemHeader from "@/pages/ingestionManager/actionItem/ActionItemHeader.vue";
-import ActionItemCheckReport from "@/pages/ingestionManager/actionItem/ActionItemChecksReport.vue";
+import ActionItemHeader from "@/pages/ingestionManager/actionItems/ActionItemHeader.vue";
+import ActionItemCheckReport from "@/pages/ingestionManager/actionItems/ActionItemChecksReport.vue";
 
 const props = defineProps({
   actionItems: {

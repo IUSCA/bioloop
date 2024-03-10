@@ -80,6 +80,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
 # [
 #   {
+#     type: 'FILE_COUNT',
 #     label: 'Number of Files Match',
 #     passed: True,
 #     report: {
@@ -87,6 +88,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #       duplicate_files_count: 20,
 #     },
 #   }, {
+#     type: 'CHECKSUMS_MATCH',
 #     label: 'Checksums Validated',
 #     passed: False,
 #     report: {
@@ -103,6 +105,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #       }],
 #     },
 #   }, {
+#     type: 'NO_MISSING_FILES',
 #     label: 'All Original Files Found',
 #     passed: False,
 #     report: {
@@ -119,6 +122,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
     num_files_same = len(original_files) == len(duplicate_files)
     comparison_checks = [{
+        'type': 'FILE_COUNT',
         'passed': num_files_same,
         'report': {
             'original_files_count': len(original_files),
@@ -165,12 +169,14 @@ def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
     passed_missing_files_check = len(missing_files) == 0
 
     comparison_checks.append({
+        'type': 'CHECKSUMS_MATCH',
         'passed': passed_checksum_validation,
         'report': {
             'conflicting_checksum_files': conflicting_checksum_files
         }
     })
     comparison_checks.append({
+        'type': 'NO_MISSING_FILES',
         'passed': passed_missing_files_check,
         'report': {
             'missing_files': missing_files

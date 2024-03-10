@@ -9,7 +9,7 @@
    3. Verifying if each file from the original dataset is present in the duplicate.
   -->
   <div>
-    <va-data-table :columns="columns" :items="props.item.metadata.checks">
+    <va-data-table :columns="columns" :items="props.item.checks">
       <template #cell(check)="{ rowData }">
         {{ rowData.label }}
       </template>
@@ -36,33 +36,31 @@
       <template #expandableRow="{ rowData }">
         <div class="px-7">
           <num-files-diff
-            v-if="rowData.check === 'num_files_same'"
-            :original_files_count="rowData.details.original_files_count"
-            :duplicate_files_count="rowData.details.duplicate_files_count"
+            v-if="rowData.type === 'FILE_COUNT'"
+            :original_files_count="rowData.report.original_files_count"
+            :duplicate_files_count="rowData.report.duplicate_files_count"
           />
 
           <checksums-diff
-            v-if="rowData.check === 'checksums_validated'"
-            :conflicting-files="rowData.details.conflicting_checksum_files"
+            v-if="rowData.type === 'CHECKSUMS_MATCH'"
+            :conflicting-files="rowData.report.conflicting_checksum_files"
           />
 
           <files-diff
-            v-if="rowData.check === 'all_original_files_found'"
-            :missing-files="rowData.details.missing_files"
+            v-if="rowData.type === 'NO_MISSING_FILES'"
+            :missing-files="rowData.report.missing_files"
           >
           </files-diff>
         </div>
       </template>
-
-      <!--      <template> </template>-->
     </va-data-table>
   </div>
 </template>
 
 <script setup>
-import NumFilesDiff from "@/pages/ingestionManager/actionItem/NumFilesDiff.vue";
-import FilesDiff from "@/pages/ingestionManager/actionItem/FilesDiff.vue";
-import ChecksumsDiff from "@/pages/ingestionManager/actionItem/ChecksumsDiff.vue";
+import NumFilesDiff from "@/pages/ingestionManager/actionItems/NumFilesDiff.vue";
+import FilesDiff from "@/pages/ingestionManager/actionItems/FilesDiff.vue";
+import ChecksumsDiff from "@/pages/ingestionManager/actionItems/ChecksumsDiff.vue";
 
 const props = defineProps({
   item: {

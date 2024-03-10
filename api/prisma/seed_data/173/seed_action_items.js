@@ -14,6 +14,7 @@ const actionItem = {
 };
 
 const checks = [{
+  type: 'FILE_COUNT',
   passed: false,
   label: 'Number of Files Match',
   report: {
@@ -21,6 +22,7 @@ const checks = [{
     duplicate_files_count: 300000000,
   },
 }, {
+  type: 'CHECKSUMS_MATCH',
   passed: false,
   label: 'Checksums Validated',
   report: {
@@ -77,6 +79,7 @@ const checks = [{
     }],
   },
 }, {
+  type: 'NO_MISSING_FILES',
   passed: false,
   label: 'All Original Files Found',
   report: {

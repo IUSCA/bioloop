@@ -117,6 +117,7 @@ model dataset_action_item {
 model dataset_action_item_check {
   id                     Int                  @id @default(autoincrement())
   created_at             DateTime             @default(now()) @db.Timestamp(6)
+  type                   ACTION_ITEM_CHECK_TYPE
   label                  String
   passed                 Boolean
   dataset_action_item_id Int?
@@ -339,4 +340,10 @@ enum dataset_type {
 
 enum ACTION_ITEM_TYPE {
   DUPLICATE_INGESTION
+}
+
+enum ACTION_ITEM_CHECK_TYPE {
+  FILE_COUNT
+  CHECKSUMS_MATCH
+  NO_MISSING_FILES
 }
