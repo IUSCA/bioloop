@@ -97,7 +97,7 @@ class Register:
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
         self.completed: set[str] = set(self.get_registered_dataset_names(self.dataset_type))  # HTTP GET
-        self.duplicates: set[str] = set(self.get_registered_dataset_names(config['dataset_types']['DUPLICATE']['label']))  # HTTP GET
+        self.duplicates: set[str] = set(self.get_registered_dataset_names(config['dataset_types']['DUPLICATE']))  # HTTP GET
         self.default_wf_name = default_wf_name
 
     def is_a_reject(self, name):
@@ -143,7 +143,7 @@ class Register:
 
     def register_candidate(self, candidate: Path, is_duplicate: bool = False):
         logger.info(candidate.__class__)
-        dataset_type = config['dataset_types']['DUPLICATE']['label'] \
+        dataset_type = config['dataset_types']['DUPLICATE'] \
             if is_duplicate else self.dataset_type
         logger.info(f'registering {dataset_type} dataset - {candidate.name}')
         dataset = {

@@ -36,15 +36,9 @@ config = {
         'read_timeout': 30  # seconds
     },
     'dataset_types': {
-        'RAW_DATA': {
-            'label': 'RAW_DATA'
-        },
-        'DATA_PRODUCT': {
-            'label': 'DATA_PRODUCT'
-        },
-        'DUPLICATE': {
-            'label': 'DUPLICATE'
-        }
+        'RAW_DATA': 'RAW_DATA',
+        'DATA_PRODUCT': 'DATA_PRODUCT',
+        'DUPLICATE': 'DUPLICATE'
     },
     'paths': {
         'scratch': '/path/to/scratch',
