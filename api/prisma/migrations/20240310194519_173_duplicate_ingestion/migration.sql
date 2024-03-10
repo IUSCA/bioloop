@@ -10,9 +10,14 @@ CREATE TYPE "dataset_type" AS ENUM ('RAW_DATA', 'DATA_PRODUCT', 'DUPLICATE');
 -- CreateEnum
 CREATE TYPE "ACTION_ITEM_TYPE" AS ENUM ('DUPLICATE_INGESTION');
 
+-- CreateEnum
+CREATE TYPE "ACTION_ITEM_CHECK_TYPE" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MATCH', 'NO_MISSING_FILES');
+
 -- AlterTable
-ALTER TABLE "dataset" DROP COLUMN "type",
-ADD COLUMN     "type" "dataset_type" NOT NULL;
+ALTER TABLE "dataset" 
+  ALTER COLUMN "type"
+    SET DATA TYPE "dataset_type"
+    USING "type"::text::"dataset_type";
 
 -- CreateTable
 CREATE TABLE "dataset_action_item" (
@@ -32,13 +37,17 @@ CREATE TABLE "dataset_action_item" (
 CREATE TABLE "dataset_action_item_check" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "label" TEXT,
+    "type" "ACTION_ITEM_CHECK_TYPE" NOT NULL,
+    "label" TEXT NOT NULL,
     "passed" BOOLEAN NOT NULL,
     "dataset_action_item_id" INTEGER,
     "report" JSONB,
 
     CONSTRAINT "dataset_action_item_check_pkey" PRIMARY KEY ("id")
 );
+
+-- DropIndex
+DROP INDEX "dataset_name_type_is_deleted_key";
 
 -- CreateIndex
 CREATE UNIQUE INDEX "dataset_name_type_is_deleted_key" ON "dataset"("name", "type", "is_deleted");
