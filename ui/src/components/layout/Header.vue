@@ -40,6 +40,9 @@
         <HeaderUserDropdown />
       </va-navbar-item>
       <va-navbar-item class="flex items-center">
+        <NotificationDropdown />
+      </va-navbar-item>
+      <va-navbar-item class="flex items-center">
         <ThemeToggle />
       </va-navbar-item>
     </template>
