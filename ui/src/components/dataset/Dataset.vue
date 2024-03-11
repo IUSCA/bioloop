@@ -22,18 +22,14 @@
               <DatasetInfo :dataset="dataset"></DatasetInfo>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
-
-                <!-- Download Modal -->
-                <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
                   :disabled="!dataset.num_files"
-                  class="flex-initial"
-                  color="primary"
-                  border-color="primary"
-                  preset="secondary"
-                  @click="openModalToDownloadDataset"
+                  preset="primary"
+                  @click="navigateToFileBrowser"
+                  class="flex-none"
+                  :color="isDark ? '#9171f8' : '#A020F0'"
                 >
-                  <i-mdi-folder-open class="pr-2 text-2xl" /> Access Files
+                  <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
                 </va-button>
 
                 <!-- edit description -->
@@ -122,7 +118,7 @@
                     class="flex-initial"
                     @click="stage_modal = true"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" />
+                    <i-mdi-cloud-sync class="pr-2 text-2xl" />
                     Stage Files
                   </va-button>
 
@@ -138,6 +134,17 @@
                   >
                     <i-mdi-delete class="pr-2 text-2xl" />
                     Delete Archive
+                  </va-button>
+
+                  <va-button
+                    :disabled="!dataset.num_files"
+                    class="flex-initial"
+                    color="primary"
+                    border-color="primary"
+                    preset="secondary"
+                    @click="openModalToDownloadDataset"
+                  >
+                    <i-mdi-download class="pr-2 text-2xl" /> Downlaod
                   </va-button>
                 </div>
               </va-card-content>
@@ -293,6 +300,8 @@
         </div>
       </div>
     </div>
+    <!-- Download Modal -->
+    <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
   </va-inner-loading>
 
   <EditDatasetModal
@@ -309,8 +318,9 @@ import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import workflowService from "@/services/workflow";
-
-const downloadModal = ref(null);
+const router = useRouter();
+const route = useRoute();
+const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
@@ -448,6 +458,15 @@ function openModalToEditDataset() {
   editModal.value.show();
 }
 
+function navigateToFileBrowser() {
+  if (props.appendFileBrowserUrl) {
+    router.push(route.path + "/filebrowser");
+  } else {
+    router.push(`/datasets/${props.datasetId}/filebrowser`);
+  }
+}
+
+const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
