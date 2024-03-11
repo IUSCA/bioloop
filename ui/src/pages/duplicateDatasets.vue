@@ -196,7 +196,7 @@ function reset_query_params() {
 
 <route lang="yaml">
 meta:
-  title: Ingestion Manager
+  title: Duplicate Datasets
   requiresRoles: ["operator", "admin"]
-  nav: [{ label: "Ingestion Manager" }]
+  nav: [{ label: "Duplicate Datasets" }]
 </route>
