@@ -10,14 +10,18 @@
     </va-alert>
 
     <va-scroll-container class="max-h-52" vertical>
-      <va-data-table :columns="columns" :items="props.missingFiles">
-        <template #cell(name)="{ value }">
-          <div class="flex items-center gap-1">
-            <FileTypeIcon :filename="value" />
-            <span>{{ value }}</span>
-          </div>
-        </template>
-      </va-data-table>
+      <va-card>
+        <va-card-content>
+          <va-data-table :columns="columns" :items="props.missingFiles">
+            <template #cell(name)="{ value }">
+              <div class="flex items-center gap-1">
+                <FileTypeIcon :filename="value" />
+                <span>{{ value }}</span>
+              </div>
+            </template>
+          </va-data-table>
+        </va-card-content>
+      </va-card>
     </va-scroll-container>
   </div>
 </template>
