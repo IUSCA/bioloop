@@ -6,46 +6,42 @@ import utc from "dayjs/plugin/utc";
 dayjs.extend(utc);
 
 export const useNotificationStore = defineStore("notification", () => {
+  const loading = ref(false);
+
   const notifications = ref([]);
+
+  const notificationsSorted = computed(() => {
+    return notifications.value.sort((n1, n2) =>
+      dayjs(n1.created_at).diff(dayjs(n2.created_at)),
+    );
+  });
 
   function addNotification(notification) {
     notifications.value.push(notification);
   }
 
-  function removeNotification(notification) {
-    notifications.value = notifications.value.filter((n) => n !== notification);
+  function removeNotification(index) {
+    notifications.value = notifications.value.splice(index, 1);
   }
 
   function setNotifications(notificationList) {
-    console.log("setNotifications");
-    console.dir(notificationList, { depth: null });
     notifications.value = notificationList;
   }
 
   async function fetchActiveNotifications() {
-    let appNotifications = [
+    let activeNotifications = [
       {
         type: "OTHER_NOTIFICATION",
         label: "Other Notification",
         text: "Some other notification.",
-        to: "/ingestionManager",
+        to: "/rawdata",
         acknowledged: false,
         created_at: "2024-03-14T00:39:46.437Z",
       },
     ];
     const datasetNotifications = await loadDatasetNotifications();
-    console.log("datasetNotifications");
-    console.dir(datasetNotifications, { depth: null });
-    appNotifications = appNotifications.concat(datasetNotifications);
-    console.log("appNotifications");
-    console.dir(appNotifications, { depth: null });
-    // sort appNotifications by timestamp
-    appNotifications.sort((n1, n2) =>
-      dayjs(n1.created_at).diff(dayjs(n2.created_at)),
-    );
-    console.log("appNotifications");
-    console.dir(appNotifications, { depth: null });
-    setNotifications(appNotifications);
+    activeNotifications = activeNotifications.concat(datasetNotifications);
+    setNotifications(activeNotifications);
   }
 
   async function loadDatasetNotifications() {
@@ -53,8 +49,6 @@ export const useNotificationStore = defineStore("notification", () => {
       type: "DUPLICATE_INGESTION",
     });
     const datasetActionItems = datasetNotificationsResponse.data;
-    console.log("datasetActionItems");
-    console.dir(datasetActionItems, { depth: null });
     const unresolvedDatasetActionItems = (datasetActionItems || []).filter(
       (actionItem) => actionItem.active,
     );
@@ -64,9 +58,16 @@ export const useNotificationStore = defineStore("notification", () => {
             type: "DUPLICATE_INGESTION",
             label: "Duplicate Ingestion",
             text: "Duplicate dataset ingestions have been detected. Click here to resolve.",
-            to: "/ingestionManager",
+            to: "/duplicateDatasets",
             acknowledged: false,
             created_at: dayjs.utc().format(),
+            onClick: () => {
+              removeNotification(
+                notifications.value.findIndex(
+                  (n) => n.type === "DUPLICATE_INGESTION",
+                ),
+              );
+            },
           },
         ]
       : [];
@@ -76,7 +77,7 @@ export const useNotificationStore = defineStore("notification", () => {
   // }
 
   return {
-    notifications,
+    notifications: notificationsSorted,
     addNotification,
     removeNotification,
     fetchActiveNotifications,
