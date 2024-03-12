@@ -1,15 +1,6 @@
 <template>
-  <!--
-   Displays a report for each check performed in the process of determining
-   whether two datasets are the same.
-
-   The following checks are performed in the current process:
-   1. Comparing number of files in both datasets
-   2. Comparing checksums of files in both datasets
-   3. Verifying if each file from the original dataset is present in the duplicate.
-  -->
-  <div>
-    <va-data-table :columns="columns" :items="props.report.checks">
+  <va-inner-loading :loading="loading">
+    <va-data-table :columns="columns" :items="notification.checks">
       <template #cell(check)="{ rowData }">
         {{ rowData.label }}
       </template>
@@ -54,25 +45,46 @@
         </div>
       </template>
     </va-data-table>
-  </div>
+  </va-inner-loading>
 </template>
 
 <script setup>
+import datasetService from "@/services/dataset";
+import toast from "@/services/toast";
+
 const props = defineProps({
-  report: {
-    type: Object,
+  notificationId: {
+    type: String,
     required: true,
   },
 });
 
-const columns = ref([
-  {
-    key: "check",
-    label: "Check",
-  },
-  { key: "passed", label: "Status", thAlign: "center", tdAlign: "center" },
-  { key: "actions", thAlign: "right", tdAlign: "right" },
-]);
+const loading = ref(false);
+const notification = ref();
+
+const fetchNotificationDetails = (notificationId) => {
+  loading.value = true;
+  return datasetService
+    .getNotification(notificationId)
+    .then((res) => {
+      notification.value = res.data;
+    })
+    .catch((err) => {
+      toast.error("Failed to fetch ingestion report");
+      toast.error(err);
+    })
+    .finally(() => {
+      loading.value = false;
+    });
+};
+
+onMounted(() => {
+  fetchNotificationDetails(props.notificationId);
+});
+
+const styleStatusChip = (passed) => {
+  return passed === "true" ? "success" : "warning";
+};
 </script>
 
 <style scoped></style>

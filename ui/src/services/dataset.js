@@ -143,7 +143,11 @@ class DatasetService {
     });
   }
 
-  getDuplicateReports({
+  getNotification({ notification_id } = {}) {
+    return api.get(`/datasets/notifications/${notification_id}`);
+  }
+
+  getNotifications({
     type,
     dataset_id,
     active = true,

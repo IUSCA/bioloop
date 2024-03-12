@@ -15,24 +15,24 @@
 
         <div class="flex flex-col">
           <span class="text-lg font-semibold capitalize">
-            {{ props.item.label }}
+            {{ props.report.label }}
           </span>
 
           <div class="flex gap-2 text-sm">
             <div>
               Original Dataset:
               <router-link
-                :to="`/datasets/${props.item.dataset_id}`"
+                :to="`/datasets/${props.report.dataset_id}`"
                 class="va-link"
-                >#{{ props.item.dataset_id }}</router-link
+                >#{{ props.report.dataset_id }}</router-link
               >
             </div>
             <div>
               Incoming Duplicate:
               <router-link
-                :to="`/datasets/${props.item.duplicate_dataset_id}`"
+                :to="`/datasets/${props.report.duplicate_dataset_id}`"
                 class="va-link"
-                >#{{ props.item.duplicate_dataset_id }}</router-link
+                >#{{ props.report.duplicate_dataset_id }}</router-link
               >
             </div>
           </div>
@@ -49,10 +49,10 @@
         <span
           class="hidden md:inline pl-2 lg:spacing-wider text-sm lg:text-base"
         >
-          {{ datetime.absolute(props.item.created_at) }}
+          {{ datetime.absolute(props.report.created_at) }}
         </span>
         <span class="md:hidden pl-2 lg:spacing-wider text-sm lg:text-base">
-          {{ datetime.date(props.item.created_at) }}
+          {{ datetime.date(props.report.created_at) }}
         </span>
       </div>
     </div>
@@ -63,7 +63,7 @@
 import * as datetime from "@/services/datetime";
 
 const props = defineProps({
-  item: { type: Object, required: true },
+  report: { type: Object, required: true },
 });
 </script>
 

@@ -68,7 +68,7 @@ const duplicateReports = ref([]);
 const fetchActiveDuplicateReports = () => {
   loading.value = true;
   return datasetService
-    .getDuplicateReports({
+    .getNotifications({
       type: "DUPLICATE_INGESTION",
       active: true,
     })

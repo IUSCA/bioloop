@@ -1,14 +1,12 @@
 <template>
   <collapsible
-    v-for="item in props.reports"
-    :key="item.id"
-    v-model="item.collapse"
+    v-for="report in props.reports"
+    :key="report.id"
+    v-model="report.collapse"
   >
     <template #header-content>
-      <duplicate-checks-report-header :item="item" />
+      <duplicate-checks-report-header :report="report" />
     </template>
-
-    <duplicate-checks-report :item="item" />
   </collapsible>
 </template>
 

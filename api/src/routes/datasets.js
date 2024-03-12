@@ -82,6 +82,23 @@ router.post(
   }),
 );
 
+router.get(
+  '/notifications/:id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const notifications = await prisma.notification.findFirst({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    res.json(notifications);
+  }),
+);
+
 // stats - UI
 router.get(
   '/stats',

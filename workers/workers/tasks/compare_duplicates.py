@@ -20,7 +20,6 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
-
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
 

@@ -45,33 +45,23 @@ export const useNotificationStore = defineStore("notification", () => {
   }
 
   async function loadDatasetNotifications() {
-    const datasetNotificationsResponse =
-      await datasetService.getDuplicateReports({
-        type: "DUPLICATE_INGESTION",
-      });
+    const datasetNotificationsResponse = await datasetService.getNotifications({
+      type: "DUPLICATE_INGESTION",
+    });
     const datasetDuplicateReports = datasetNotificationsResponse.data;
     const unresolvedDatasetDuplicateReports = (
       datasetDuplicateReports || []
     ).filter((report) => report.active);
-    return unresolvedDatasetDuplicateReports.length > 0
-      ? [
-          {
-            type: "DUPLICATE_INGESTION",
-            label: "Duplicate Ingestion",
-            text: "Duplicate dataset ingestions have been detected. Click here to resolve.",
-            to: "/duplicateDatasets",
-            acknowledged: false,
-            created_at: dayjs.utc().format(),
-            onClick: () => {
-              removeNotification(
-                notifications.value.findIndex(
-                  (n) => n.type === "DUPLICATE_INGESTION",
-                ),
-              );
-            },
-          },
-        ]
-      : [];
+
+    return unresolvedDatasetDuplicateReports.map((report) => {
+      return {
+        ...report,
+        to: `/manageDuplicateDatasets/${report.id}`,
+        onClick: () => {
+          // change status of notification to ACK'd
+        },
+      };
+    });
   }
 
   // function $reset() {
