@@ -1,26 +1,14 @@
-/*
-  Warnings:
-
-  - Changed the type of `type` on the `dataset` table. No cast exists, the column would be dropped and recreated, which cannot be done if there is data, since the column is required.
-
-*/
 -- CreateEnum
-CREATE TYPE "dataset_type" AS ENUM ('RAW_DATA', 'DATA_PRODUCT', 'DUPLICATE');
-
--- CreateEnum
-CREATE TYPE "NOTIFICATION_TYPE" AS ENUM ('DUPLICATE_INGESTION');
+CREATE TYPE "DATASET_ACTION_ITEM_TYPE" AS ENUM ('DUPLICATE_INGESTION');
 
 -- CreateEnum
 CREATE TYPE "NOTIFICATION_STATUS" AS ENUM ('CREATED', 'ACKNOWLEDGED', 'RESOLVED');
 
 -- CreateEnum
-CREATE TYPE "DATASET_INGESTION_CHECKS" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MATCH', 'NO_MISSING_FILES');
+CREATE TYPE "NOTIFICATION_TYPE" AS ENUM ('DATASET');
 
--- AlterTable
-ALTER TABLE "dataset"
-  ALTER COLUMN "type"
-    SET DATA TYPE "dataset_type"
-    USING "type"::text::"dataset_type";
+-- CreateEnum
+CREATE TYPE "DATASET_INGESTION_CHECK_TYPE" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MATCH', 'NO_MISSING_FILES');
 
 -- CreateTable
 CREATE TABLE "notification" (
@@ -32,7 +20,6 @@ CREATE TABLE "notification" (
     "active" BOOLEAN NOT NULL DEFAULT true,
     "status" "NOTIFICATION_STATUS" NOT NULL DEFAULT 'CREATED',
     "acknowledged_by_id" INTEGER,
-    "metadata" JSONB,
 
     CONSTRAINT "notification_pkey" PRIMARY KEY ("id")
 );
@@ -41,7 +28,10 @@ CREATE TABLE "notification" (
 CREATE TABLE "dataset_action_item" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "type" "DATASET_ACTION_ITEM_TYPE" NOT NULL,
     "notification_id" INTEGER,
+    "dataset_id" INTEGER,
+    "metadata" JSONB,
 
     CONSTRAINT "dataset_action_item_pkey" PRIMARY KEY ("id")
 );
@@ -50,7 +40,7 @@ CREATE TABLE "dataset_action_item" (
 CREATE TABLE "dataset_ingestion_check" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "type" "DATASET_INGESTION_CHECKS" NOT NULL,
+    "type" "DATASET_INGESTION_CHECK_TYPE" NOT NULL,
     "label" TEXT NOT NULL,
     "passed" BOOLEAN NOT NULL,
     "report" JSONB,
@@ -59,17 +49,14 @@ CREATE TABLE "dataset_ingestion_check" (
     CONSTRAINT "dataset_ingestion_check_pkey" PRIMARY KEY ("id")
 );
 
--- DropIndex
-DROP INDEX "dataset_name_type_is_deleted_key";
-
--- CreateIndex
-CREATE UNIQUE INDEX "dataset_name_type_is_deleted_key" ON "dataset"("name", "type", "is_deleted");
-
 -- AddForeignKey
 ALTER TABLE "notification" ADD CONSTRAINT "notification_acknowledged_by_id_fkey" FOREIGN KEY ("acknowledged_by_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "notification"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "dataset_ingestion_check" ADD CONSTRAINT "dataset_ingestion_check_action_item_id_fkey" FOREIGN KEY ("action_item_id") REFERENCES "dataset_action_item"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -143,22 +143,15 @@ class DatasetService {
     });
   }
 
-  getNotification({ notification_id } = {}) {
-    return api.get(`/datasets/notifications/${notification_id}`);
+  getActionItem({ action_item_id } = {}) {
+    return api.get(`/datasets/action-items/${action_item_id}`);
   }
 
-  getNotifications({
-    type,
-    dataset_id,
-    active = true,
-    acknowledged_by_id,
-  } = {}) {
-    return api.get("/datasets/notifications", {
+  getActionItems({ type, active = true } = {}) {
+    return api.get("/datasets/action-items", {
       params: {
         type,
         active,
-        dataset_id,
-        acknowledged_by_id,
       },
     });
   }

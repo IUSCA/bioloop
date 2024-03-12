@@ -53,7 +53,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     # to review the incoming dataset before it is rejected.
 
     api.post_dataset_notification({
-        "type": "DUPLICATE_INGESTION",
+        "type": "DATASET",
         "label": "Duplicate Ingestion",
         "checks": comparison_checks_report,
         "metadata": {

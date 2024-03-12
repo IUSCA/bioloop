@@ -30,9 +30,9 @@
             <div>
               Incoming Duplicate:
               <router-link
-                :to="`/datasets/${props.report.duplicate_dataset_id}`"
+                :to="`/datasets/${props.report.metadata.duplicate_dataset_id}`"
                 class="va-link"
-                >#{{ props.report.duplicate_dataset_id }}</router-link
+                >#{{ props.report.metadata.duplicate_dataset_id }}</router-link
               >
             </div>
           </div>

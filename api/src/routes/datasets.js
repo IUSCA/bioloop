@@ -23,79 +23,43 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 router.get(
-  '/notifications',
+  '/action-items',
   isPermittedTo('update'),
   validate([
-    query('type').escape().notEmpty().isIn([config.NOTIFICATION_TYPES.DUPLICATE_INGESTION]),
-    query('dataset_id').isInt().toInt().optional(),
+    query('type').escape().notEmpty().isIn([config.DATASET_ACTION_ITEM_TYPES.DUPLICATE_INGESTION]),
     query('active').optional().isBoolean().toBoolean(),
-    query('acknowledged_by_id').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     const filterQuery = _.omitBy(_.isUndefined)({
       type: req.query.type,
-      dataset_id: req.query.id,
       active: req.query.active || true,
-      acknowledged_by_id: req.query.acknowledged_by_id,
     });
 
-    const notifications = await prisma.notification.findMany({
+    const actionItems = await prisma.dataset_action_item.findMany({
       where: filterQuery,
-      include: {
-        checks: true,
-      },
     });
 
-    console.dir(notifications, { depth: null });
-    res.json(notifications);
-  }),
-);
-
-router.post(
-  '/notification',
-  isPermittedTo('update'),
-  validate([
-    body('type').escape().notEmpty(),
-    body('label').optional().escape().notEmpty(),
-    body('dataset_id').optional().isInt().toInt(),
-    body('metadata').optional().isObject(),
-    body('checks').isArray().optional(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const {
-      type, label, dataset_id, metadata, checks,
-    } = req.body;
-
-    const notification = await prisma.notification.create({
-      data: {
-        type,
-        label,
-        dataset_id,
-        metadata,
-        checks: {
-          create: checks,
-        },
-      },
-      include: { checks: true },
-    });
-    res.json(notification);
+    res.json(actionItems);
   }),
 );
 
 router.get(
-  '/notifications/:id',
+  '/action-items/:id',
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const notifications = await prisma.notification.findFirst({
+    const actionItem = await prisma.dataset_action_item.findFirst({
       where: {
         id: req.params.id,
       },
+      include: {
+        ingestion_checks: true,
+      },
     });
 
-    res.json(notifications);
+    res.json(actionItem);
   }),
 );
 

@@ -162,9 +162,9 @@ const operator_items = ref([
     path: "/dataproducts",
   },
   {
-    icon: "mdi-file-cog-outline",
-    title: "Duplicate Datasets",
-    path: "/manageDuplicateDatasets",
+    icon: "mdi-alert-circle-outline",
+    title: "Dataset Action Items",
+    path: "/datasetActionItems",
   },
   {
     icon: "mdi-table-account",

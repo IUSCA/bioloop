@@ -10,7 +10,7 @@ datasource db {
 model dataset {
   id               Int                 @id @default(autoincrement())
   name             String
-  type             dataset_type
+  type             String
   num_directories  Int?
   num_files        Int?
   du_size          BigInt?
@@ -103,6 +103,7 @@ model dataset_state {
 model notification {
   id                 Int                       @id @default(autoincrement())
   created_at         DateTime                  @default(now()) @db.Timestamp(6)
+  type               NOTIFICATION_TYPE
   label              String
   text               String?
   active             Boolean                   @default(true)
@@ -116,6 +117,7 @@ model dataset_action_item {
   id               Int                       @id @default(autoincrement())
   created_at       DateTime                  @default(now()) @db.Timestamp(6)
   type             DATASET_ACTION_ITEM_TYPE
+  active           Boolean                  @default(true)
   notification_id  Int?
   notification     notification?             @relation(fields: [notification_id], references: [id])
   dataset_id       Int?
@@ -342,12 +344,6 @@ enum access_type {
   SLATE_SCRATCH
 }
 
-enum dataset_type {
-  RAW_DATA
-  DATA_PRODUCT
-  DUPLICATE
-}
-
 enum DATASET_ACTION_ITEM_TYPE {
   DUPLICATE_INGESTION
 }
@@ -356,6 +352,10 @@ enum NOTIFICATION_STATUS {
   CREATED
   ACKNOWLEDGED
   RESOLVED
+}
+
+enum NOTIFICATION_TYPE {
+  DATASET
 }
 
 enum DATASET_INGESTION_CHECK_TYPE {

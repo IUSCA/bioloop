@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import datasetService from "@/services/dataset";
+import notificationService from "@/services/notification";
 import { dayjs } from "@/services/utils";
 import utc from "dayjs/plugin/utc";
 
@@ -7,70 +7,84 @@ dayjs.extend(utc);
 
 export const useNotificationStore = defineStore("notification", () => {
   const loading = ref(false);
-
-  const notifications = ref([]);
-
-  const notificationsSorted = computed(() => {
-    return notifications.value.sort((n1, n2) =>
+  const appNotifications = ref([]);
+  // expose sorted notifications
+  const notifications = computed(() => {
+    return appNotifications.value.sort((n1, n2) =>
       dayjs(n1.created_at).diff(dayjs(n2.created_at)),
     );
   });
 
   function addNotification(notification) {
-    notifications.value.push(notification);
+    // console.log("add notification");
+    // console.log("before add notification");
+    // console.log(appNotifications.value);
+    appNotifications.value.push(notification);
+    // console.log("after add notification");
+    // console.log(appNotifications.value);
   }
 
   function removeNotification(index) {
-    notifications.value = notifications.value.splice(index, 1);
+    appNotifications.value = appNotifications.value.splice(index, 1);
   }
 
   function setNotifications(notificationList) {
-    notifications.value = notificationList;
+    // console.log("set notifications");
+    // console.log(notificationList);
+    appNotifications.value = notificationList;
   }
 
-  async function fetchActiveNotifications() {
+  function fetchActiveNotifications() {
     let activeNotifications = [
-      {
-        type: "OTHER_NOTIFICATION",
-        label: "Other Notification",
-        text: "Some other notification.",
-        to: "/rawdata",
-        acknowledged: false,
-        created_at: "2024-03-14T00:39:46.437Z",
-      },
+      // {
+      //   type: "OTHER_NOTIFICATION",
+      //   label: "Other Notification",
+      //   text: "Some other notification.",
+      //   to: "/rawdata",
+      //   acknowledged: false,
+      //   created_at: "2024-03-14T00:39:46.437Z",
+      // },
     ];
-    const datasetNotifications = await loadDatasetNotifications();
-    activeNotifications = activeNotifications.concat(datasetNotifications);
-    setNotifications(activeNotifications);
-  }
-
-  async function loadDatasetNotifications() {
-    const datasetNotificationsResponse = await datasetService.getNotifications({
-      type: "DUPLICATE_INGESTION",
-    });
-    const datasetDuplicateReports = datasetNotificationsResponse.data;
-    const unresolvedDatasetDuplicateReports = (
-      datasetDuplicateReports || []
-    ).filter((report) => report.active);
-
-    return unresolvedDatasetDuplicateReports.map((report) => {
-      return {
-        ...report,
-        to: `/manageDuplicateDatasets/${report.id}`,
-        onClick: () => {
-          // change status of notification to ACK'd
-        },
-      };
+    loadNotifications().then((notificationsList) => {
+      activeNotifications = activeNotifications.concat(notificationsList);
+      setNotifications(notificationsList);
+      loading.value = false;
     });
   }
 
-  // function $reset() {
-  // }
+  async function loadNotifications() {
+    return notificationService.getNotifications().then((res) => {
+      return res.data.map((notification) => {
+        if (notification.type === "DATASET") {
+          return configureDatasetNotification(notification);
+        }
+        /**
+         * configure other notification types here
+         */
+      });
+    });
+  }
+
+  function configureDatasetNotification(notification) {
+    return {
+      ...notification,
+      text: "Ingestion has been attempted on a duplicate dataset. Click here to resolve.",
+      to: `/datasetActionItems/${notification.dataset_action_items[0].id}`,
+      onClick: () => {
+        // change status of notification to ACK'd
+        return notificationService.updateNotificationStatus({
+          notification_id: notification.id,
+          status: "ACKNOWLEDGED",
+        });
+      },
+    };
+  }
 
   return {
-    notifications: notificationsSorted,
+    notifications,
     addNotification,
     removeNotification,
     fetchActiveNotifications,
+    loading,
   };
 });

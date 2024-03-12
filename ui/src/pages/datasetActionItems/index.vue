@@ -39,7 +39,7 @@
     </div>
 
     <div class="md:w-5/6 space-y-2">
-      <duplicates-report :reports="duplicateReports" />
+      <action-items :action-items="allActionItems" />
     </div>
   </div>
 
@@ -59,21 +59,20 @@
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
-// eslint-disable-next-line no-unused-vars
-import DuplicatesReport from "@/components/dataset/duplicatesReport/index.vue";
+import ActionItems from "@/components/dataset/actionItems/index.vue";
 
 const loading = ref(false);
-const duplicateReports = ref([]);
+const allActionItems = ref([]);
 
-const fetchActiveDuplicateReports = () => {
+const fetchActionItems = () => {
   loading.value = true;
   return datasetService
-    .getNotifications({
+    .getActionItems({
       type: "DUPLICATE_INGESTION",
       active: true,
     })
     .then((res) => {
-      duplicateReports.value = res.data.map((item) => {
+      allActionItems.value = res.data.map((item) => {
         return {
           ...item,
           duplicate_dataset_id: item.metadata.duplicate_dataset_id,
@@ -89,9 +88,9 @@ const fetchActiveDuplicateReports = () => {
     });
 };
 
-// onMounted(() => {
-//   fetchActiveDuplicateReports();
-// });
+onMounted(() => {
+  fetchActionItems();
+});
 
 const default_query_params = () => ({
   status: null,
@@ -101,29 +100,29 @@ const default_query_params = () => ({
   page_size: 10,
 });
 
-const query_params = ref(default_query_params());
-useQueryPersistence({
-  refObject: query_params,
-  defaultValue: default_query_params(),
-  key: "wq",
-  history_push: false,
-});
-
-const group_counts = computed(() => {
-  // const counts = status_counts.value;
-  return {
-    ACTIVE: 0,
-    RESOLVED: 0,
-  };
-});
-
-const breakpoint_sm = computed(() => {
-  return breakpoint.width < 768;
-});
-
-const skip = computed(() => {
-  return query_params.value.page_size * (query_params.value.page - 1);
-});
+// const query_params = ref(default_query_params());
+// useQueryPersistence({
+//   refObject: query_params,
+//   defaultValue: default_query_params(),
+//   key: "wq",
+//   history_push: false,
+// });
+//
+// const group_counts = computed(() => {
+//   // const counts = status_counts.value;
+//   return {
+//     ACTIVE: 0,
+//     RESOLVED: 0,
+//   };
+// });
+//
+// const breakpoint_sm = computed(() => {
+//   return breakpoint.width < 768;
+// });
+//
+// const skip = computed(() => {
+//   return query_params.value.page_size * (query_params.value.page - 1);
+// });
 
 const failure_modes = computed(() => {
   return [];
@@ -134,35 +133,35 @@ const filtered_notifications = computed(() => {
 });
 
 // fetch data when query params change
-watch(
-  [
-    () => query_params.value.status,
-    () => query_params.value.page,
-    () => query_params.value.page_size,
-  ],
-  (newVals, oldVals) => {
-    // set page to 1 when page_size changes
-    if (newVals[2] !== oldVals[2]) {
-      query_params.value.page = 1;
-    }
-
-    fetchActiveDuplicateReports().then(() => {
-      // remove failure mode selection when user selects a status or changes page
-      query_params.value.failure_mode = null;
-    });
-  },
-  {
-    deep: true,
-    immediate: true,
-  },
-);
-
-const auto_refresh_msec = computed(() => {
-  return query_params.value.auto_refresh * 1000;
-});
+// watch(
+//   [
+//     () => query_params.value.status,
+//     () => query_params.value.page,
+//     () => query_params.value.page_size,
+//   ],
+//   (newVals, oldVals) => {
+//     // set page to 1 when page_size changes
+//     if (newVals[2] !== oldVals[2]) {
+//       query_params.value.page = 1;
+//     }
+//
+//     fetchActionItems().then(() => {
+//       // remove failure mode selection when user selects a status or changes page
+//       query_params.value.failure_mode = null;
+//     });
+//   },
+//   {
+//     deep: true,
+//     immediate: true,
+//   },
+// );
+//
+// const auto_refresh_msec = computed(() => {
+//   return query_params.value.auto_refresh * 1000;
+// });
 
 // const { pause, resume } = useIntervalFn(
-//   fetchActiveDuplicateReports,
+//   fetchActionItems,
 //   auto_refresh_msec,
 //   {
 //     immediate: false,
@@ -183,12 +182,12 @@ const auto_refresh_msec = computed(() => {
 //   { immediate: true },
 // );
 
-function getCounts() {
-  return 0;
-}
-
+// function getCounts() {
+//   return 0;
+// }
+//
 function reset_query_params() {
-  query_params.value = default_query_params();
+  // query_params.value = default_query_params();
 }
 </script>
 

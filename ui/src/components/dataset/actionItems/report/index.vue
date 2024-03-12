@@ -1,6 +1,15 @@
 <template>
-  <va-inner-loading :loading="loading">
-    <va-data-table :columns="columns" :items="notification.checks">
+  <!--
+   Displays a report for each check performed in the process of determining
+   whether two datasets are the same.
+
+   The following checks are performed in the current process:
+   1. Comparing number of files in both datasets
+   2. Comparing checksums of files in both datasets
+   3. Verifying if each file from the original dataset is present in the duplicate.
+  -->
+  <div>
+    <va-data-table :columns="columns" :items="props.report.ingestion_checks">
       <template #cell(check)="{ rowData }">
         {{ rowData.label }}
       </template>
@@ -25,7 +34,7 @@
 
       <!-- Expanded details for current report -->
       <template #expandableRow="{ rowData }">
-        <div class="px-7">
+        <div>
           <num-files-diff
             v-if="rowData.type === 'FILE_COUNT'"
             :original_files_count="rowData.report.original_files_count"
@@ -45,42 +54,25 @@
         </div>
       </template>
     </va-data-table>
-  </va-inner-loading>
+  </div>
 </template>
 
 <script setup>
-import datasetService from "@/services/dataset";
-import toast from "@/services/toast";
-
 const props = defineProps({
-  notificationId: {
-    type: String,
+  report: {
+    type: Object,
     required: true,
   },
 });
 
-const loading = ref(false);
-const notification = ref();
-
-const fetchNotificationDetails = (notificationId) => {
-  loading.value = true;
-  return datasetService
-    .getNotification(notificationId)
-    .then((res) => {
-      notification.value = res.data;
-    })
-    .catch((err) => {
-      toast.error("Failed to fetch ingestion report");
-      toast.error(err);
-    })
-    .finally(() => {
-      loading.value = false;
-    });
-};
-
-onMounted(() => {
-  fetchNotificationDetails(props.notificationId);
-});
+const columns = ref([
+  {
+    key: "check",
+    label: "Check",
+  },
+  { key: "passed", label: "Status", thAlign: "center", tdAlign: "center" },
+  { key: "actions", thAlign: "right", tdAlign: "right" },
+]);
 
 const styleStatusChip = (passed) => {
   return passed === "true" ? "success" : "warning";

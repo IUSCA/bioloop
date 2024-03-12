@@ -1,5 +1,5 @@
 <template>
-  <va-alert dense outline :color="alertColor" class="mb-3.5">
+  <va-alert :color="alertColor" class="mb-3.5">
     {{ alertText }}
   </va-alert>
   <div class="flex flex-col gap-2">

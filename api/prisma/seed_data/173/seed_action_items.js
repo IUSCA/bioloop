@@ -4,6 +4,7 @@ const config = require('config');
 const prisma = new PrismaClient();
 
 const notification1 = {
+  type: 'DATASET',
   label: 'Duplicate Ingestion',
   acknowledged_by_id: null,
 };
@@ -53,6 +54,7 @@ const checks1 = [{
 }];
 
 const notification2 = {
+  type: 'DATASET',
   label: 'Duplicate Ingestion',
   acknowledged_by_id: null,
 };
@@ -142,6 +144,7 @@ const checks2 = [{
 }];
 
 const notification3 = {
+  type: 'DATASET',
   label: 'Duplicate Ingestion',
   acknowledged_by_id: null,
 };
@@ -176,6 +179,9 @@ const checks3 = [{
 
 async function main() {
   await prisma.notification.deleteMany({});
+  await prisma.dataset_action_item.deleteMany({});
+  await prisma.dataset_ingestion_check.deleteMany({});
+
   await prisma.notification.create({
     data: {
       ...notification1,

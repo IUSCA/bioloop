@@ -65,8 +65,4 @@ watch(
 const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
-
-onMounted(() => {
-  notificationStore.fetchActiveNotifications();
-});
 </script>
