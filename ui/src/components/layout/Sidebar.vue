@@ -163,8 +163,8 @@ const operator_items = ref([
   },
   {
     icon: "mdi-file-cog-outline",
-    title: "Ingestion Manager",
-    path: "/ingestionManager",
+    title: "Duplicate Datasets",
+    path: "/duplicateDatasets",
   },
   {
     icon: "mdi-table-account",

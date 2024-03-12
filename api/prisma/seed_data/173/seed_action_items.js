@@ -10,7 +10,15 @@ const actionItem = {
   active: true,
   acknowledged_by_id: null,
   metadata: { duplicate_dataset_id: 5 },
+};
 
+const actionItem2 = {
+  type: config.ACTION_ITEMS_TYPES.DUPLICATE_INGESTION,
+  label: 'Duplicate Ingestion',
+  dataset_id: 3,
+  active: true,
+  acknowledged_by_id: null,
+  metadata: { duplicate_dataset_id: 5 },
 };
 
 const checks = [{
@@ -128,6 +136,12 @@ async function main() {
   await prisma.dataset_action_item.create({
     data: {
       ...actionItem,
+      checks: { create: checks },
+    },
+  });
+  await prisma.dataset_action_item.create({
+    data: {
+      ...actionItem2,
       checks: { create: checks },
     },
   });

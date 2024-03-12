@@ -1,5 +1,5 @@
 <template>
-  <a :href="props.notification.to">
+  <a class="notification-anchor" :href="props.notification.to">
     <h6 class="va-h6">{{ props.notification.label }}</h6>
     <p>{{ props.notification.text }}</p>
   </a>
@@ -17,7 +17,7 @@ console.log(props.notification);
 </script>
 
 <style lang="scss" scoped>
-a {
+.notification-anchor {
   color: var(--va-text-primary);
 }
 </style>

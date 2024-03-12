@@ -1,9 +1,9 @@
 <template>
   <va-menu placement="left-bottom">
     <template #anchor>
-      <va-badge text="1" overlap :offset="[-3, 3]">
-        <va-button plain color="primary">
-          <Icon icon="mdi-bell" height="24px" width="24px" />
+      <va-badge text="1" overlap :offset="[-3, 10]">
+        <va-button class="notification-bell" plain>
+          <Icon icon="mdi-bell-outline" height="36px" width="36px" />
         </va-button>
       </va-badge>
     </template>
@@ -18,9 +18,22 @@
 <script setup>
 import { useNotificationStore } from "@/stores/notification";
 
-const notificationStore = useNotificationStore();
+const notifications = ref([]);
 
-const notifications = notificationStore.notifications;
+const notificationStore = useNotificationStore();
+// subscribe to notification store, so that the list of notifications shown to the user
+// automatically updates when a notification is added to the store by an external component.
+notificationStore.$subscribe((mutation, state) => {
+  notifications.value = state.notifications;
+});
+
+setTimeout(() => {
+  notifications.value = notificationStore.notifications;
+}, 1000);
 </script>
 
-<style scoped></style>
+<style lang="scss" scoped>
+.notification-bell {
+  color: var(--va-text-primary) !important;
+}
+</style>
