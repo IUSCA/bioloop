@@ -11,7 +11,10 @@ CREATE TYPE "dataset_type" AS ENUM ('RAW_DATA', 'DATA_PRODUCT', 'DUPLICATE');
 CREATE TYPE "NOTIFICATION_TYPE" AS ENUM ('DUPLICATE_INGESTION');
 
 -- CreateEnum
-CREATE TYPE "DATASET_INGESTION_CHECK_TYPE" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MATCH', 'NO_MISSING_FILES');
+CREATE TYPE "NOTIFICATION_STATUS" AS ENUM ('CREATED', 'ACKNOWLEDGED', 'RESOLVED');
+
+-- CreateEnum
+CREATE TYPE "DATASET_INGESTION_CHECKS" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MATCH', 'NO_MISSING_FILES');
 
 -- AlterTable
 ALTER TABLE "dataset"
@@ -24,9 +27,10 @@ CREATE TABLE "notification" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "type" "NOTIFICATION_TYPE" NOT NULL,
-    "label" TEXT,
-    "dataset_id" INTEGER,
+    "label" TEXT NOT NULL,
+    "text" TEXT,
     "active" BOOLEAN NOT NULL DEFAULT true,
+    "status" "NOTIFICATION_STATUS" NOT NULL DEFAULT 'CREATED',
     "acknowledged_by_id" INTEGER,
     "metadata" JSONB,
 
@@ -34,14 +38,23 @@ CREATE TABLE "notification" (
 );
 
 -- CreateTable
+CREATE TABLE "dataset_action_item" (
+    "id" SERIAL NOT NULL,
+    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "notification_id" INTEGER,
+
+    CONSTRAINT "dataset_action_item_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "dataset_ingestion_check" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "type" "DATASET_INGESTION_CHECK_TYPE" NOT NULL,
+    "type" "DATASET_INGESTION_CHECKS" NOT NULL,
     "label" TEXT NOT NULL,
     "passed" BOOLEAN NOT NULL,
-    "notification_id" INTEGER,
     "report" JSONB,
+    "action_item_id" INTEGER,
 
     CONSTRAINT "dataset_ingestion_check_pkey" PRIMARY KEY ("id")
 );
@@ -53,10 +66,10 @@ DROP INDEX "dataset_name_type_is_deleted_key";
 CREATE UNIQUE INDEX "dataset_name_type_is_deleted_key" ON "dataset"("name", "type", "is_deleted");
 
 -- AddForeignKey
-ALTER TABLE "notification" ADD CONSTRAINT "notification_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "notification" ADD CONSTRAINT "notification_acknowledged_by_id_fkey" FOREIGN KEY ("acknowledged_by_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "dataset_ingestion_check" ADD CONSTRAINT "dataset_ingestion_check_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "notification"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "notification"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "dataset_ingestion_check" ADD CONSTRAINT "dataset_ingestion_check_action_item_id_fkey" FOREIGN KEY ("action_item_id") REFERENCES "dataset_action_item"("id") ON DELETE SET NULL ON UPDATE CASCADE;
