@@ -5,7 +5,7 @@
     v-model="item.collapse"
   >
     <template #header-content>
-      <duplicate-checks-header :item="item" />
+      <duplicate-checks-report-header :item="item" />
     </template>
 
     <duplicate-checks-report :item="item" />
@@ -14,7 +14,7 @@
 
 <script setup>
 import DuplicateChecksReport from "@/components/dataset/duplicatesReport/DuplicateChecksReport.vue";
-import DuplicateChecksHeader from "@/components/dataset/duplicatesReport/DuplicateChecksHeader.vue";
+import DuplicateChecksReportHeader from "@/components/dataset/duplicatesReport/DuplicateChecksReportHeader.vue";
 
 const props = defineProps({
   reports: {
