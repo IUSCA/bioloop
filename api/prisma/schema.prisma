@@ -34,7 +34,7 @@ model dataset {
   accesses            data_access_log[]
   stage_requests      stage_request_log[]
   bundle              bundle?
-  action_items        dataset_action_item[]
+  notifications       notification[]
 
   @@unique([name, type, is_deleted])
 }
@@ -100,28 +100,28 @@ model dataset_state {
   @@id([timestamp, dataset_id, state])
 }
 
-model dataset_action_item {
+model notification {
   id                   Int              @id @default(autoincrement())
   created_at           DateTime         @default(now()) @db.Timestamp(6)
-  type                 ACTION_ITEM_TYPE
+  type                 NOTIFICATION_TYPE
   label                String?
   dataset_id           Int?
   dataset              dataset?         @relation(fields: [dataset_id], references: [id])
   active               Boolean          @default(true)
   acknowledged_by_id   Int?
   acknowledged_by      user?            @relation(fields: [acknowledged_by_id], references: [id])
-  checks               dataset_action_item_check[]
+  checks               dataset_ingestion_check[]
   metadata             Json?
 }
 
-model dataset_action_item_check {
+model dataset_ingestion_check {
   id                     Int                  @id @default(autoincrement())
   created_at             DateTime             @default(now()) @db.Timestamp(6)
-  type                   ACTION_ITEM_CHECK_TYPE
+  type                   DATASET_INGESTION_CHECK_TYPE
   label                  String
   passed                 Boolean
-  dataset_action_item_id Int?
-  dataset_action_item    dataset_action_item? @relation(fields: [dataset_action_item_id], references: [id])
+  notification_id        Int?
+  notification           notification? @relation(fields: [notification_id], references: [id])
   report                 Json?
 }
 
@@ -177,7 +177,7 @@ model user {
   accesses               data_access_log[]
   stage_requests         stage_request_log[]
   about_edits            about[]
-  dataset_action_items   dataset_action_item[]
+  notifications          notification[]
 }
 
 model user_password {
@@ -338,11 +338,11 @@ enum dataset_type {
   DUPLICATE
 }
 
-enum ACTION_ITEM_TYPE {
+enum NOTIFICATION_TYPE {
   DUPLICATE_INGESTION
 }
 
-enum ACTION_ITEM_CHECK_TYPE {
+enum DATASET_INGESTION_CHECK_TYPE {
   FILE_COUNT
   CHECKSUMS_MATCH
   NO_MISSING_FILES

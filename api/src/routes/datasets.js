@@ -23,10 +23,10 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 router.get(
-  '/action-items',
+  '/notifications',
   isPermittedTo('update'),
   validate([
-    query('type').escape().notEmpty().isIn([config.ACTION_ITEMS_TYPES.DUPLICATE_INGESTION]),
+    query('type').escape().notEmpty().isIn([config.NOTIFICATION_TYPES.DUPLICATE_INGESTION]),
     query('dataset_id').isInt().toInt().optional(),
     query('active').optional().isBoolean().toBoolean(),
     query('acknowledged_by_id').isInt().toInt().optional(),
@@ -39,20 +39,20 @@ router.get(
       acknowledged_by_id: req.query.acknowledged_by_id,
     });
 
-    const actionItems = await prisma.dataset_action_item.findMany({
+    const notifications = await prisma.notification.findMany({
       where: filterQuery,
       include: {
         checks: true,
       },
     });
 
-    console.dir(actionItems, { depth: null });
-    res.json(actionItems);
+    console.dir(notifications, { depth: null });
+    res.json(notifications);
   }),
 );
 
 router.post(
-  '/action-item',
+  '/notification',
   isPermittedTo('update'),
   validate([
     body('type').escape().notEmpty(),
@@ -66,7 +66,7 @@ router.post(
       type, label, dataset_id, metadata, checks,
     } = req.body;
 
-    const actionItem = await prisma.dataset_action_item.create({
+    const notification = await prisma.notification.create({
       data: {
         type,
         label,
@@ -78,7 +78,7 @@ router.post(
       },
       include: { checks: true },
     });
-    res.json(actionItem);
+    res.json(notification);
   }),
 );
 
@@ -87,7 +87,7 @@ router.get(
   '/stats',
   isPermittedTo('read'),
   validate([
-    query('type').isIn(config.dataset_types.filter(type => type !== "DUPLICATE")).optional(),
+    query('type').isIn(config.dataset_types.filter((type) => type !== 'DUPLICATE')).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']
@@ -371,7 +371,7 @@ router.post(
     const { workflow_id, state, ...data } = req.body;
 
     // create workflow association
-    if (workflow_id && data.dataset_type !== "DUPLICATE") {
+    if (workflow_id && data.dataset_type !== 'DUPLICATE') {
       data.workflows = {
         create: [
           {

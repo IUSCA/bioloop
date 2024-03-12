@@ -164,7 +164,7 @@ const operator_items = ref([
   {
     icon: "mdi-file-cog-outline",
     title: "Duplicate Datasets",
-    path: "/duplicateDatasets",
+    path: "/manageDuplicateDatasets",
   },
   {
     icon: "mdi-table-account",

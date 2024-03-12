@@ -52,7 +52,8 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     # create an action item for operators to review later. This way, in case our comparison process
     # mistakenly assumes the incoming dataset to be a duplicate, operators will still have a chance
     # to review the incoming dataset before it is rejected.
-    api.post_dataset_action_item({
+
+    api.post_dataset_notification({
         "type": "DUPLICATE_INGESTION",
         "label": "Duplicate Ingestion",
         "dataset_id": original_dataset['id'],

@@ -58,10 +58,6 @@
 </template>
 
 <script setup>
-// import NumFilesDiff from "@/components/dataset/actionItems/NumFilesDiff.vue";
-// import FilesDiff from "@/components/dataset/actionItems/FilesDiff.vue";
-// import ChecksumsDiff from "@/components/dataset/actionItems/ChecksumsDiff.vue";
-
 const props = defineProps({
   item: {
     type: Object,

@@ -39,7 +39,7 @@
     </div>
 
     <div class="md:w-5/6 space-y-2">
-      <action-items :action-items="actionItems" />
+      <duplicates-report :reports="duplicateReports" />
     </div>
   </div>
 
@@ -60,20 +60,20 @@ import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import useQueryPersistence from "@/composables/useQueryPersistence";
 // eslint-disable-next-line no-unused-vars
-import ActionItems from "@/components/dataset/actionItems/index.vue";
+import DuplicatesReport from "@/components/dataset/duplicatesReport/index.vue";
 
 const loading = ref(false);
-const actionItems = ref([]);
+const duplicateReports = ref([]);
 
-const fetchActiveActionItems = () => {
+const fetchActiveDuplicateReports = () => {
   loading.value = true;
   return datasetService
-    .getActionItems({
+    .getDuplicateReports({
       type: "DUPLICATE_INGESTION",
       active: true,
     })
     .then((res) => {
-      actionItems.value = res.data.map((item) => {
+      duplicateReports.value = res.data.map((item) => {
         return {
           ...item,
           duplicate_dataset_id: item.metadata.duplicate_dataset_id,
@@ -90,7 +90,7 @@ const fetchActiveActionItems = () => {
 };
 
 // onMounted(() => {
-//   fetchActiveActionItems();
+//   fetchActiveDuplicateReports();
 // });
 
 const default_query_params = () => ({
@@ -129,7 +129,7 @@ const failure_modes = computed(() => {
   return [];
 });
 
-const filtered_action_items = computed(() => {
+const filtered_notifications = computed(() => {
   return [];
 });
 
@@ -146,7 +146,7 @@ watch(
       query_params.value.page = 1;
     }
 
-    fetchActiveActionItems().then(() => {
+    fetchActiveDuplicateReports().then(() => {
       // remove failure mode selection when user selects a status or changes page
       query_params.value.failure_mode = null;
     });
@@ -162,7 +162,7 @@ const auto_refresh_msec = computed(() => {
 });
 
 // const { pause, resume } = useIntervalFn(
-//   fetchActiveActionItems,
+//   fetchActiveDuplicateReports,
 //   auto_refresh_msec,
 //   {
 //     immediate: false,
@@ -196,7 +196,7 @@ function reset_query_params() {
 
 <route lang="yaml">
 meta:
-  title: Duplicate Datasets
+  title: Manage Duplicate Datasets
   requiresRoles: ["operator", "admin"]
-  nav: [{ label: "Duplicate Datasets" }]
+  nav: [{ label: "Manage Duplicate Datasets" }]
 </route>

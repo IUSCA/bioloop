@@ -14,6 +14,6 @@ const { validate } = require('../middleware/validators');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const isPermittedTo = accessControl('action_items');
+const isPermittedTo = accessControl('notifications');
 
 module.exports = router;

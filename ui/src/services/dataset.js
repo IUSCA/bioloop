@@ -143,8 +143,13 @@ class DatasetService {
     });
   }
 
-  getActionItems({ type, dataset_id, active = true, acknowledged_by_id } = {}) {
-    return api.get("/datasets/action-items", {
+  getDuplicateReports({
+    type,
+    dataset_id,
+    active = true,
+    acknowledged_by_id,
+  } = {}) {
+    return api.get("/datasets/notifications", {
       params: {
         type,
         active,

@@ -45,14 +45,15 @@ export const useNotificationStore = defineStore("notification", () => {
   }
 
   async function loadDatasetNotifications() {
-    const datasetNotificationsResponse = await datasetService.getActionItems({
-      type: "DUPLICATE_INGESTION",
-    });
-    const datasetActionItems = datasetNotificationsResponse.data;
-    const unresolvedDatasetActionItems = (datasetActionItems || []).filter(
-      (actionItem) => actionItem.active,
-    );
-    return unresolvedDatasetActionItems.length > 0
+    const datasetNotificationsResponse =
+      await datasetService.getDuplicateReports({
+        type: "DUPLICATE_INGESTION",
+      });
+    const datasetDuplicateReports = datasetNotificationsResponse.data;
+    const unresolvedDatasetDuplicateReports = (
+      datasetDuplicateReports || []
+    ).filter((report) => report.active);
+    return unresolvedDatasetDuplicateReports.length > 0
       ? [
           {
             type: "DUPLICATE_INGESTION",

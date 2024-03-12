@@ -89,7 +89,7 @@
     }
   },
   "dataset_types" : ["RAW_DATA", "DATA_PRODUCT", "DUPLICATE"],
-  "ACTION_ITEMS_TYPES": {
+  "NOTIFICATION_TYPES": {
     "DUPLICATE_INGESTION": "DUPLICATE_INGESTION"
   }
 }

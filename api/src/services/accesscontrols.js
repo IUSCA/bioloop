@@ -43,7 +43,7 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
-    action_items: {
+    notifications: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
@@ -111,7 +111,7 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
-    action_items: {
+    notifications: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

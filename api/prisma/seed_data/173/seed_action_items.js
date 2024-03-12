@@ -4,7 +4,7 @@ const config = require('config');
 const prisma = new PrismaClient();
 
 const actionItem = {
-  type: config.ACTION_ITEMS_TYPES.DUPLICATE_INGESTION,
+  type: config.NOTIFICATION_TYPES.DUPLICATE_INGESTION,
   label: 'Duplicate Ingestion',
   dataset_id: 2,
   active: true,
@@ -13,7 +13,7 @@ const actionItem = {
 };
 
 const actionItem2 = {
-  type: config.ACTION_ITEMS_TYPES.DUPLICATE_INGESTION,
+  type: config.NOTIFICATION_TYPES.DUPLICATE_INGESTION,
   label: 'Duplicate Ingestion',
   dataset_id: 3,
   active: true,
@@ -132,14 +132,14 @@ const checks = [{
 }];
 
 async function main() {
-  await prisma.dataset_action_item.deleteMany({});
-  await prisma.dataset_action_item.create({
+  await prisma.notification.deleteMany({});
+  await prisma.notification.create({
     data: {
       ...actionItem,
       checks: { create: checks },
     },
   });
-  await prisma.dataset_action_item.create({
+  await prisma.notification.create({
     data: {
       ...actionItem2,
       checks: { create: checks },
