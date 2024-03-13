@@ -79,6 +79,7 @@
       <template #cell(actions)="{ rowData }">
         <!-- Archive / Delete buttons for RAW_DATA and DATA_PRODUCTS type datasets -->
         <div class="flex gap-2" v-if="rowData.type !== 'DUPLICATE'">
+          <!-- Archive Button -->
           <va-popover
             message="Archive"
             placement="left"
@@ -125,7 +126,10 @@
 
         <!-- Accept/Reject button for DUPLICATE type datasets -->
         <div v-else-if="rowData.type === 'DUPLICATE'">
-          <va-popover message="Accept/Reject" v-if="!rowData.is_deleted">
+          <va-popover
+            message="Accept/Reject"
+            v-if="!rowData.is_deleted && rowData.is_inspected"
+          >
             <va-button
               class="flex-initial"
               size="small"

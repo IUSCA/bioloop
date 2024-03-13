@@ -3,6 +3,12 @@ const config = require('config');
 
 const prisma = new PrismaClient();
 
+if (['production'].includes(config.get('mode'))) {
+  // exit if in production mode
+  console.error('Seed scripts should not be run in production mode.');
+  process.exit(1);
+}
+
 const notification1 = {
   type: 'DATASET',
   label: 'Duplicate Ingestion',

@@ -76,6 +76,7 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         'size': size,
         'num_files': num_files,
         'num_directories': num_directories,
+        'is_inspected': True,
         'metadata': {
             'num_genome_files': num_genome_files,
         }
