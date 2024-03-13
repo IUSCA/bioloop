@@ -133,6 +133,7 @@ def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
     num_files_same = len(original_files) == len(duplicate_files)
     comparison_checks = [{
         'type': 'FILE_COUNT',
+        'label': 'Number of Files Match',
         'passed': num_files_same,
         'report': {
             'original_files_count': len(original_files),
@@ -180,6 +181,7 @@ def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
 
     comparison_checks.append({
         'type': 'CHECKSUMS_MATCH',
+        'label': 'Checksums Validated',
         'passed': passed_checksum_validation,
         'report': {
             'conflicting_checksum_files': conflicting_checksum_files
@@ -187,6 +189,7 @@ def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
     })
     comparison_checks.append({
         'type': 'NO_MISSING_FILES',
+        'label': 'All Original Files Found',
         'passed': passed_missing_files_check,
         'report': {
             'missing_files': missing_files

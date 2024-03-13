@@ -189,7 +189,8 @@ def get_dataset_files(dataset_id: str, filters: dict = None):
     with APIServerSession() as s:
         r = s.get(f'datasets/{dataset_id}/files/search', params=filters)
         r.raise_for_status()
-        return entity_getter(r.json(), ['created_at'], ['size'])
+        files = r.json()
+        return [entity_getter(file, ['created_at'], ['size']) for file in files]
 
 
 def add_files_to_dataset(dataset_id, files: list[dict]):
