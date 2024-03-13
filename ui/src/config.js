@@ -31,6 +31,11 @@ const exports = {
         collection_path: "dataproducts",
         icon: "mdi-package-variant-closed",
       },
+      DUPLICATE: {
+        label: "Duplicate Dataset",
+        collection_path: "duplicateDatasets",
+        icon: "mdi-content-copy",
+      },
     },
   },
   download_types: {
