@@ -62,26 +62,26 @@ router.post(
   validate([
     body('type').escape().notEmpty(),
     body('label').optional().escape().notEmpty(),
-    body('dataset_id').optional().isInt().toInt(),
-    body('metadata').optional().isObject(),
-    body('checks').isArray().optional(),
+    body('text').optional().escape().notEmpty(),
+    body('dataset_action_items').optional().isArray(),
   ]),
   asyncHandler(async (req, res, next) => {
     const {
-      type, label, dataset_id, metadata, checks,
+      type, label, text, dataset_action_items,
     } = req.body;
+
+    const createActionItemsQuery = {
+      ...(dataset_action_items
+          && { dataset_action_items: { createMany: { data: dataset_action_items } } }),
+    };
 
     const notification = await prisma.notification.create({
       data: {
         type,
         label,
-        dataset_id,
-        metadata,
-        checks: {
-          create: checks,
-        },
+        text,
+        ...createActionItemsQuery,
       },
-      include: { checks: true },
     });
     res.json(notification);
   }),

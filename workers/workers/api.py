@@ -231,14 +231,14 @@ def add_state_to_dataset(dataset_id, state, metadata=None):
 
 
 def post_dataset_notification(notification: dict):
-    with APIServerSession(enable_retry=False) as s:
-        r = s.post(f'datasets/notifications', json=notification)
+    with APIServerSession() as s:
+        r = s.post(f'notifications', json=notification)
         r.raise_for_status()
 
 
 def accept_duplicate_dataset(dataset_id: str):
     with APIServerSession() as s:
-        r = s.patch(f'/datasets/duplicates/accept/{dataset_id}')
+        r = s.patch(f'datasets/duplicates/accept/{dataset_id}')
         r.raise_for_status()
         return r.json()
 

@@ -70,7 +70,6 @@ export const useNotificationStore = defineStore("notification", () => {
   function configureDatasetNotification(notification) {
     return {
       ...notification,
-      text: "Ingestion has been attempted on a duplicate dataset. Click here to resolve.",
       to: `/datasetActionItems/${notification.dataset_action_items[0].id}`,
       onClick: () => {
         // change status of notification to ACK'd

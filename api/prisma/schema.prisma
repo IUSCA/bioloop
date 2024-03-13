@@ -117,7 +117,7 @@ model dataset_action_item {
   id               Int                       @id @default(autoincrement())
   created_at       DateTime                  @default(now()) @db.Timestamp(6)
   type             DATASET_ACTION_ITEM_TYPE
-  active           Boolean                  @default(true)
+  active           Boolean                 @default(true)
   notification_id  Int?
   notification     notification?             @relation(fields: [notification_id], references: [id])
   dataset_id       Int?

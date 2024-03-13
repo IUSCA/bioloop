@@ -20,6 +20,12 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
+
+NOTIFICATION_TYPE = "DATASET"
+NOTIFICATION_LABEL = "Duplicate Dataset"
+NOTIFICATION_TEXT = "Ingestion has been attempted on a duplicate dataset. Click here to resolve."
+
+
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
 
@@ -51,15 +57,19 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     # create an action item for operators to review later. This way, in case our comparison process
     # mistakenly assumes the incoming dataset to be a duplicate, operators will still have a chance
     # to review the incoming dataset before it is rejected.
-
     api.post_dataset_notification({
-        "type": "DATASET",
-        "label": "Duplicate Ingestion",
-        "checks": comparison_checks_report,
-        "metadata": {
-            "original_dataset_id": original_dataset['id'],
-            "duplicate_dataset_id": duplicate_dataset['id'],
-        }
+        "type": NOTIFICATION_TYPE,
+        "label": NOTIFICATION_LABEL,
+        "text": NOTIFICATION_TEXT,
+        "dataset_action_items": [{
+            "type": "DUPLICATE_INGESTION",
+            "dataset_id": original_dataset['id'],
+            "ingestion_checks": comparison_checks_report,
+            "metadata": {
+                "original_dataset_id": original_dataset['id'],
+                "duplicate_dataset_id": duplicate_dataset['id'],
+            }
+        }],
     })
 
     logger.info(f"Processed dataset {duplicate_dataset_id}")
