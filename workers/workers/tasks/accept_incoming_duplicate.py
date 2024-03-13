@@ -28,14 +28,14 @@ logger = get_task_logger(__name__)
 def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
 
-    matching_datasets = api.get_all_datasets(name=incoming_duplicate_dataset.name, bundle=True)
-    original_dataset = list(filter(lambda d: d['id'] != incoming_duplicate_dataset.id, matching_datasets))[0]
+    matching_datasets = api.get_all_datasets(name=incoming_duplicate_dataset['name'], bundle=True)
+    original_dataset = list(filter(lambda d: d['id'] != incoming_duplicate_dataset['id'], matching_datasets))[0]
 
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
     original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve()
 
     accepted_incoming_dataset = api.accept_duplicate_dataset(
-        dataset_id=incoming_duplicate_dataset.id,
+        dataset_id=incoming_duplicate_dataset['id'],
     )
     # Once original dataset has been removed from the database, remove it
     # from the filesystem (`staged_path` and the corresponding bundle's path).
@@ -44,5 +44,5 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     if original_dataset_bundle_path:
         shutil.rmtree(original_dataset_bundle_path)
 
-    return accepted_incoming_dataset.id,
+    return accepted_incoming_dataset['id'],
 
