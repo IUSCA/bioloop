@@ -70,7 +70,7 @@ export const useNotificationStore = defineStore("notification", () => {
   function configureDatasetNotification(notification) {
     return {
       ...notification,
-      to: `/duplicateDatasets/${notification.dataset_action_items[0].id}`,
+      to: `/duplicateDatasets/resolveDuplicates/${notification.dataset_action_items[0].id}`,
       onClick: () => {
         // change status of notification to ACK'd
         return notificationService.updateNotificationStatus({

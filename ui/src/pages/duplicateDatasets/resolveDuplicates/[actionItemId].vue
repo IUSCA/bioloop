@@ -40,4 +40,9 @@ onMounted(() => {
 });
 </script>
 
-<style scoped></style>
+<route lang="yaml">
+meta:
+  title: Resolve Duplicate
+  requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Duplicate Datasets" }, { label: "Resolve Duplicate" }]
+</route>

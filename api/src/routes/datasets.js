@@ -21,7 +21,7 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient({
-  log: ["query", "info", "warn", "error"]
+  log: ['query', 'info', 'warn', 'error'],
 });
 
 router.get(
@@ -244,6 +244,7 @@ router.get(
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
+    query('include_action_items').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -271,6 +272,7 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
+        action_items: req.query.include_action_items || false,
       },
     };
 
@@ -782,18 +784,18 @@ router.patch(
       },
     });
 
-    console.log(`matchingDatsets:`)
-    console.dir(matchingDatasets, {depth: null})
+    console.log('matchingDatsets:');
+    console.dir(matchingDatasets, { depth: null });
 
     if (matchingDatasets.length !== 2) {
       next(createError.BadRequest(`Expected to find two datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
     }
 
-    const originalDataset = matchingDatasets.find(d => d.id !== req.params.id);
+    const originalDataset = matchingDatasets.find((d) => d.id !== req.params.id);
 
-    console.log('originalDatsset')
-    console.dir(originalDataset, {depth: null})
-    console.log(`originalDataset id: ${originalDataset.id}`)
+    console.log('originalDatsset');
+    console.dir(originalDataset, { depth: null });
+    console.log(`originalDataset id: ${originalDataset.id}`);
 
     const [acceptedDataset] = await prisma.$transaction([
       prisma.dataset.update({

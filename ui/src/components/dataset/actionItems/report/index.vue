@@ -8,6 +8,8 @@
    2. Comparing checksums of files in both datasets
    3. Verifying if each file from the original dataset is present in the duplicate.
   -->
+  <report-header :action-item="props.actionItem" />
+
   <div class="flex flex-col">
     <!-- Table for various checks performed as part of ingesting a dataset -->
     <va-data-table
@@ -60,25 +62,23 @@
     </va-data-table>
 
     <!-- Accept / Reject incoming dataset -->
-    <div class="flex gap-2">
+    <div class="flex gap-2 mt-5">
       <va-button
         @click="
-          datasetService.accept_duplicate_dataset(
-            {
-              duplicate_dataset_id: props.actionItem.metadata.duplicate_dataset_id
-            },
-          )
+          datasetService.accept_duplicate_dataset({
+            duplicate_dataset_id:
+              props.actionItem.metadata.duplicate_dataset_id,
+          })
         "
         >Accept Incoming</va-button
       >
 
       <va-button
         @click="
-          datasetService.reject_duplicate_dataset(
-            {
-              duplicate_dataset_id: props.actionItem.metadata.duplicate_dataset_id,
-            }
-          )
+          datasetService.reject_duplicate_dataset({
+            duplicate_dataset_id:
+              props.actionItem.metadata.duplicate_dataset_id,
+          })
         "
         >Reject Incoming</va-button
       >

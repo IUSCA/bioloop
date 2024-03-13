@@ -77,7 +77,8 @@
       </template>
 
       <template #cell(actions)="{ rowData }">
-        <div class="flex gap-2">
+        <!-- Archive / Delete buttons for RAW_DATA and DATA_PRODUCTS type datasets -->
+        <div class="flex gap-2" v-if="rowData.type !== 'DUPLICATE'">
           <va-popover
             message="Archive"
             placement="left"
@@ -97,7 +98,7 @@
           </va-popover>
 
           <!-- Delete button -->
-          <!-- Only show when the dataset has no workflows, is not archived, and has no workflows -->
+          <!-- Only show when the dataset has no workflows, is not archived, and is not deleted -->
           <va-popover
             message="Delete entry"
             placement="left"
@@ -118,6 +119,24 @@
               "
             >
               <i-mdi-delete />
+            </va-button>
+          </va-popover>
+        </div>
+
+        <!-- Accept/Reject button for DUPLICATE type datasets -->
+        <div v-else-if="rowData.type === 'DUPLICATE'">
+          <va-popover message="Accept/Reject" v-if="!rowData.is_deleted">
+            <va-button
+              class="flex-initial"
+              size="small"
+              preset="primary"
+              @click="
+                () => {
+                  router.push(actionItemURL(rowData));
+                }
+              "
+            >
+              <i-mdi-compare-horizontal />
             </va-button>
           </va-popover>
         </div>
@@ -199,6 +218,7 @@ import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
+const router = useRouter();
 useSearchKeyShortcut();
 
 const props = defineProps({
@@ -363,7 +383,11 @@ const datasets_retrieval_query = computed(() => {
 function fetch_datasets(query = {}, updatePageCount = true) {
   data_loading.value = true;
 
-  return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
+  return DatasetService.getAll({
+    ...datasets_retrieval_query.value,
+    ...query,
+    ...(props.dtype === "DUPLICATE" && { include_action_items: true }),
+  })
     .then((res) => {
       datasets.value = res.data.datasets;
       if (updatePageCount) {
@@ -413,6 +437,13 @@ function delete_dataset(id) {
 
 const updateFiltersGroupQuery = (newVal) => {
   filters_group_query.value = newVal;
+};
+
+const actionItemURL = (dataset) => {
+  const actionItem = dataset.action_items[0];
+  return actionItem.type === "DUPLICATE_INGESTION"
+    ? `/duplicateDatasets/resolveDuplicates/${actionItem.id}`
+    : "#";
 };
 
 onMounted(() => {

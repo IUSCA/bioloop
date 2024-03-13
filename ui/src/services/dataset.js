@@ -17,6 +17,7 @@ class DatasetService {
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
+   * @param include_action_items Includes any active action items on the dataset in the result
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll({
@@ -29,6 +30,7 @@ class DatasetService {
     limit = null,
     offset = null,
     sortBy = null,
+    include_action_items = false,
   } = {}) {
     return api.get("/datasets", {
       params: {
@@ -41,6 +43,7 @@ class DatasetService {
         limit,
         offset,
         sortBy,
+        include_action_items,
       },
     });
   }
