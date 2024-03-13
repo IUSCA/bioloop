@@ -79,23 +79,25 @@ router.post(
                 dataset_id: actionItem.dataset_id,
                 metadata: actionItem.metadata,
                 ingestion_checks: {
-                  create: {
-                    ...actionItem.ingestion_checks,
-                  },
+                  create: actionItem.ingestion_checks,
                 },
               })),
             },
           }),
     };
 
-    const notification = await prisma.notification.create({
+    const createQuery = {
       data: {
         type,
         label,
         text,
         ...createActionItemsQuery,
       },
-    });
+    }
+    console.log('createQuery:')
+    console.dir(createQuery, {depth: null})
+
+    const notification = await prisma.notification.create(createQuery);
     res.json(notification);
   }),
 );
