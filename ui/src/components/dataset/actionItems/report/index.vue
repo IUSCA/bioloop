@@ -8,9 +8,9 @@
    2. Comparing checksums of files in both datasets
    3. Verifying if each file from the original dataset is present in the duplicate.
   -->
-  <report-header :action-item="props.actionItem" />
+  <div class="flex flex-col gap-3">
+    <report-header :action-item="props.actionItem" />
 
-  <div class="flex flex-col">
     <report-body :action-item="props.actionItem" />
 
     <!-- Accept / Reject incoming dataset -->

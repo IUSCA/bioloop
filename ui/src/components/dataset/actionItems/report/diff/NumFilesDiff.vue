@@ -1,25 +1,31 @@
 <template>
-  <va-alert :color="alertColor">
+  <va-alert :color="alertColor" class="mb-3">
     {{ alertText }}
   </va-alert>
-  <va-card>
-    <va-card-content>
-      <div class="flex flex-col gap-2">
-        <div>
-          Number of files in original dataset:
-          <va-chip size="small" outline>{{
-            props.original_files_count
-          }}</va-chip>
-        </div>
-        <div>
-          Number of files in incoming duplicate dataset:
-          <va-chip size="small" outline>{{
-            props.duplicate_files_count
-          }}</va-chip>
-        </div>
-      </div>
-    </va-card-content>
-  </va-card>
+  <!--  <va-card>-->
+  <!--    <va-card-content>-->
+  <div class="va-table-responsive">
+    <table class="va-table">
+      <tbody>
+        <tr>
+          <td>Number of files in original dataset</td>
+          <td>
+            <va-chip size="small" outline>{{
+              props.original_files_count
+            }}</va-chip>
+          </td>
+        </tr>
+        <tr>
+          <td>Number of files in incoming duplicate dataset</td>
+          <td>
+            <va-chip size="small" outline>{{
+              props.duplicate_files_count
+            }}</va-chip>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </template>
 
 <script setup>
