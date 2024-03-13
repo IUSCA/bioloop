@@ -53,6 +53,8 @@ export const useNotificationStore = defineStore("notification", () => {
   }
 
   async function loadNotifications() {
+    // todo - get notifications whose status is CREATED || ACK, and whose corresponding
+    //  action item has not been resolved.
     return notificationService.getNotifications().then((res) => {
       return res.data.map((notification) => {
         if (notification.type === "DATASET") {

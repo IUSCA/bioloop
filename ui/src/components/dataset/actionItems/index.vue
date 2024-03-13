@@ -2,7 +2,7 @@
   <collapsible v-for="item in props.actionItems" :key="item.id">
     <!--    v-model="item.collapse"-->
     <template #header-content>
-      <action-item-report-header :report="item" />
+      <action-item-report-header :action-item="item" />
     </template>
 
     <va-button

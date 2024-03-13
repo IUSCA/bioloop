@@ -99,7 +99,39 @@ config = {
                 }
             ]
         },
-        'handle_duplicate': {
+        'accept_duplicate_dataset': {
+            'steps': [
+                {
+                    'name': 'accept incoming duplicate',
+                    'task': 'accept_incoming_duplicate'
+                },
+                {
+                    'name': 'archive',
+                    'task': 'archive_dataset'
+                },
+                {
+                    'name': 'stage',
+                    'task': 'stage_dataset'
+                },
+                {
+                    'name': 'validate',
+                    'task': 'validate_dataset'
+                },
+                {
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download'
+                }
+            ]
+        },
+        'reject_duplicate_dataset': {
+            'steps': [
+                {
+                    'name': 'reject incoming duplicate',
+                    'task': 'reject_incoming_duplicate'
+                },
+            ]
+        },
+        'handle_duplicate_dataset': {
             'steps': [
                 {
                     'name': 'await stability',
@@ -110,13 +142,9 @@ config = {
                     'task': 'inspect_dataset'
                 },
                 {
-                    'name': 'analyze',
-                    'task': 'compare_duplicates'
+                    'name': 'compare duplicate datasets',
+                    'task': 'compare_duplicate_datasets'
                 },
-                {
-                    'name': 'notify',
-                    'task': 'send_notification'
-                }
             ]
         },
         'integrated': {

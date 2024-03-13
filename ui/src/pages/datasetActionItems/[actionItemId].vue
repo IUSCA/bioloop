@@ -1,6 +1,6 @@
 <template>
   <va-inner-loading :loading="loading">
-    <action-item-report v-if="actionItem" :report="actionItem" />
+    <action-item-report v-if="actionItem" :action-item="actionItem" />
   </va-inner-loading>
 </template>
 

@@ -155,7 +155,7 @@ class Register:
 
         self.run_workflows(
             created_dataset,
-            'handle_duplicate' if is_duplicate else self.default_wf_name
+            'handle_duplicate_dataset' if is_duplicate else self.default_wf_name
         )
 
     def run_workflows(self, dataset, workflow_name=None):

@@ -178,6 +178,13 @@ def update_dataset(dataset_id, update_data):
         return r.json()
 
 
+def delete_dataset(dataset_id: str):
+    with APIServerSession() as s:
+        r = s.delete(f'datasets/{dataset_id}')
+        r.raise_for_status()
+        return r.json()
+
+
 def get_dataset_files(dataset_id: str, filters: dict = None):
     with APIServerSession() as s:
         r = s.get(f'datasets/{dataset_id}/files/search', params=filters)
@@ -229,6 +236,13 @@ def post_dataset_notification(notification: dict):
         r.raise_for_status()
 
 
+def accept_duplicate_dataset(dataset_id: str):
+    with APIServerSession() as s:
+        r = s.patch(f'/datasets/duplicates/accept/{dataset_id}')
+        r.raise_for_status()
+        return r.json()
+
+
 def add_workflow_to_dataset(dataset_id, workflow_id):
     with APIServerSession() as s:
         r = s.post(f'datasets/{dataset_id}/workflows', json={
@@ -255,8 +269,6 @@ def get_all_workflows():
         r = s.get('workflows/current')
         r.raise_for_status()
         return r.json()
-
-
 
 
 if __name__ == '__main__':

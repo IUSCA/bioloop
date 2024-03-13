@@ -8,8 +8,12 @@
    2. Comparing checksums of files in both datasets
    3. Verifying if each file from the original dataset is present in the duplicate.
   -->
-  <div>
-    <va-data-table :columns="columns" :items="props.report.ingestion_checks">
+  <div class="flex flex-col">
+    <!-- Table for various checks performed as part of ingesting a dataset -->
+    <va-data-table
+      :columns="columns"
+      :items="props.actionItem.ingestion_checks"
+    >
       <template #cell(check)="{ rowData }">
         {{ rowData.label }}
       </template>
@@ -21,7 +25,7 @@
         </va-chip>
       </template>
 
-      <!-- Actions -->
+      <!-- Expand current check's row -->
       <template #cell(actions)="{ row, isExpanded }">
         <va-button
           @click="row.toggleRowDetails()"
@@ -32,7 +36,7 @@
         </va-button>
       </template>
 
-      <!-- Expanded details for current report -->
+      <!-- Expanded details for current check -->
       <template #expandableRow="{ rowData }">
         <div>
           <num-files-diff
@@ -54,12 +58,35 @@
         </div>
       </template>
     </va-data-table>
+
+    <!-- Accept / Reject incoming dataset -->
+    <div class="flex gap-2">
+      <va-button
+        @click="
+          datasetService.accept_duplicate_dataset(
+            props.actionItem.metadata.duplicate_dataset_id,
+          )
+        "
+        >Accept Incoming</va-button
+      >
+
+      <va-button
+        @click="
+          datasetService.reject_duplicate_dataset(
+            props.actionItem.metadata.duplicate_dataset_id,
+          )
+        "
+        >Reject Incoming</va-button
+      >
+    </div>
   </div>
 </template>
 
 <script setup>
+import datasetService from "@/services/dataset";
+
 const props = defineProps({
-  report: {
+  actionItem: {
     type: Object,
     required: true,
   },

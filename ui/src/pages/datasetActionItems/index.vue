@@ -58,7 +58,6 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import useQueryPersistence from "@/composables/useQueryPersistence";
 import ActionItems from "@/components/dataset/actionItems/index.vue";
 
 const loading = ref(false);

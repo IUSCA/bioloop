@@ -532,7 +532,7 @@ router.post(
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
-    param('wf').isIn(['stage', 'integrated']),
+    param('wf').isIn(['stage', 'integrated', 'accept_duplicate_dataset', 'reject_duplicate_dataset']),
   ]),
   (req, res, next) => {
     // admin and operator roles can run stage and integrated workflows
@@ -756,6 +756,52 @@ router.get(
       ...req.query,
     });
     res.json(files);
+  }),
+);
+
+router.patch(
+  '/duplicates/accept/:id',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  isPermittedTo('delete'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Accept an incoming duplicate dataset
+
+    const duplicateDataset = await prisma.dataset.findFirst({
+      where: {
+        id: req.params.id,
+      },
+    });
+    const matchingDatasets = await prisma.dataset.findMany({
+      where: {
+        name: duplicateDataset.name,
+      },
+    });
+    if (matchingDatasets.length > 0) {
+      next(createError.BadRequest(`Expected to find two datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
+    }
+
+    const originalDataset = matchingDatasets[0];
+
+    const [acceptedDataset] = await prisma.$transaction([
+      prisma.dataset.update({
+        where: {
+          id: duplicateDataset.id,
+        },
+        data: {
+          type: originalDataset.type,
+        },
+      }),
+      prisma.dataset.delete({
+        where: {
+          id: originalDataset.id,
+        },
+      }),
+    ]);
+
+    res.json(acceptedDataset);
   }),
 );
 

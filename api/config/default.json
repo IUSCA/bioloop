@@ -86,6 +86,48 @@
           "task": "delete_dataset"
         }
       ]
+    },
+    "accept_duplicate_dataset": {
+      "description": "Overwrites an existing dataset with its incoming duplicate.",
+      "steps": [
+        {
+          "name": "accept incoming duplicate",
+          "task": "accept_incoming_duplicate"
+        },         {
+          "name": "archive",
+          "task": "archive_dataset"
+        },         {
+          "name": "stage",
+          "task": "stage_dataset"
+        },         {
+          "name": "validate",
+          "task": "validate_dataset"
+        },         {
+          "name": "setup_download",
+          "task": "setup_dataset_download"
+        }
+      ]
+    },
+    "reject_duplicate_dataset": {
+      "description": "Rejects an incoming duplicate dataset by prohibiting its ingestion.",
+      "steps": [
+        {
+          "name": "accept incoming duplicate",
+          "task": "accept_incoming_duplicate"
+        },         {
+          "name": "archive",
+          "task": "archive_dataset"
+        },         {
+          "name": "stage",
+          "task": "stage_dataset"
+        },         {
+          "name": "validate",
+          "task": "validate_dataset"
+        },         {
+          "name": "setup_download",
+          "task": "setup_dataset_download"
+        }
+      ]
     }
   },
   "dataset_types" : ["RAW_DATA", "DATA_PRODUCT", "DUPLICATE"],

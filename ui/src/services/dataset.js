@@ -91,6 +91,18 @@ class DatasetService {
     });
   }
 
+  accept_duplicate_dataset({ duplicate_dataset_id }) {
+    return api.post(
+      `/datasets/${duplicate_dataset_id}/workflow/accept_duplicate_dataset`,
+    );
+  }
+
+  reject_duplicate_dataset({ duplicate_dataset_id }) {
+    return api.post(
+      `/datasets/${duplicate_dataset_id}/workflow/reject_duplicate_dataset`,
+    );
+  }
+
   getStats({ type }) {
     return api.get("/datasets/stats", {
       params: {
