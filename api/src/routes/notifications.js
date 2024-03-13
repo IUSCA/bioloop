@@ -94,9 +94,7 @@ router.post(
         ...createActionItemsQuery,
       },
     }
-    console.log('createQuery:')
-    console.dir(createQuery, {depth: null})
-
+    
     const notification = await prisma.notification.create(createQuery);
     res.json(notification);
   }),

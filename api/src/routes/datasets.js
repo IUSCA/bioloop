@@ -20,7 +20,9 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ["query", "info", "warn", "error"]
+});
 
 router.get(
   '/action-items',
@@ -779,11 +781,19 @@ router.patch(
         name: duplicateDataset.name,
       },
     });
-    if (matchingDatasets.length > 0) {
+
+    console.log(`matchingDatsets:`)
+    console.dir(matchingDatasets, {depth: null})
+
+    if (matchingDatasets.length !== 2) {
       next(createError.BadRequest(`Expected to find two datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
     }
 
-    const originalDataset = matchingDatasets[0];
+    const originalDataset = matchingDatasets.find(d => d.id !== req.params.id);
+
+    console.log('originalDatsset')
+    console.dir(originalDataset, {depth: null})
+    console.log(`originalDataset id: ${originalDataset.id}`)
 
     const [acceptedDataset] = await prisma.$transaction([
       prisma.dataset.update({
