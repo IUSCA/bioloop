@@ -11,7 +11,7 @@
       size="small"
       @click="
         () => {
-          router.push(`/datasetActionItems/${item.id}`);
+          router.push(`/duplicateDatasets/${item.id}`);
         }
       "
       >Resolve</va-button
