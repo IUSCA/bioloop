@@ -1,9 +1,6 @@
 import { defineStore } from "pinia";
 import notificationService from "@/services/notification";
 import { dayjs } from "@/services/utils";
-import utc from "dayjs/plugin/utc";
-
-dayjs.extend(utc);
 
 export const useNotificationStore = defineStore("notification", () => {
   const loading = ref(false);
