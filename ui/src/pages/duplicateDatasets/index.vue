@@ -194,7 +194,7 @@ function reset_query_params() {
 
 <route lang="yaml">
 meta:
-  title: Manage Duplicate Datasets
+  title: Duplicate Datasets
   requiresRoles: ["operator", "admin"]
-  nav: [{ label: "Manage Duplicate Datasets" }]
+  nav: [{ label: "Duplicate Datasets" }]
 </route>
