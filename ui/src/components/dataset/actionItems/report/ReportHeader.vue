@@ -5,6 +5,7 @@
         <span class="text-lg">Info</span>
       </div>
     </va-card-title>
+
     <va-card-content>
       <div class="va-table-responsive">
         <table class="va-table">
