@@ -70,7 +70,6 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
             "ingestion_checks": comparison_checks_report,
             "metadata": {
                 "original_dataset_id": original_dataset['id'],
-                "duplicate_dataset_id": duplicate_dataset['id'],
             }
         }],
     })
