@@ -119,7 +119,7 @@ model dataset_action_item {
   type             DATASET_ACTION_ITEM_TYPE
   active           Boolean                 @default(true)
   notification_id  Int?
-  notification     notification?             @relation(fields: [notification_id], references: [id])
+  notification     notification? @relation(fields: [notification_id], references: [id], onDelete: Cascade)
   dataset_id       Int?
   dataset          dataset?                  @relation(fields: [dataset_id], references: [id])
   ingestion_checks dataset_ingestion_check[]
@@ -134,7 +134,7 @@ model dataset_ingestion_check {
   passed          Boolean
   report          Json?
   action_item_id  Int?
-  action_item     dataset_action_item? @relation(fields: [action_item_id], references: [id])
+  action_item     dataset_action_item? @relation(fields: [action_item_id], references: [id], onDelete: Cascade)
 }
 
 model bundle {
