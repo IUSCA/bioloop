@@ -26,7 +26,7 @@
                 <!-- Download Modal -->
                 <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
-                  :disabled="!dataset.num_files"
+                  :disabled="!dataset.is_staged"
                   class="flex-initial"
                   color="primary"
                   border-color="primary"

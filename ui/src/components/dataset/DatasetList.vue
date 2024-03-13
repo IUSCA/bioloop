@@ -128,7 +128,6 @@
         <div v-else-if="rowData.type === 'DUPLICATE'">
           <va-popover
             message="Accept/Reject"
-            v-if="!rowData.is_deleted && rowData.is_inspected"
           >
             <va-button
               class="flex-initial"
@@ -139,6 +138,7 @@
                   router.push(actionItemURL(rowData));
                 }
               "
+              :disabled="rowData.is_deleted || !rowData.is_inspected"
             >
               <i-mdi-compare-horizontal />
             </va-button>
