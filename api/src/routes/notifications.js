@@ -72,7 +72,20 @@ router.post(
 
     const createActionItemsQuery = {
       ...(dataset_action_items
-          && { dataset_action_items: { createMany: { data: dataset_action_items } } }),
+          && {
+            dataset_action_items: {
+              create: dataset_action_items.map((actionItem) => ({
+                type: actionItem.type,
+                dataset_id: actionItem.dataset_id,
+                metadata: actionItem.metadata,
+                ingestion_checks: {
+                  create: {
+                    ...actionItem.ingestion_checks,
+                  },
+                },
+              })),
+            },
+          }),
     };
 
     const notification = await prisma.notification.create({
