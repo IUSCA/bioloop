@@ -64,7 +64,9 @@
       <va-button
         @click="
           datasetService.accept_duplicate_dataset(
-            props.actionItem.metadata.duplicate_dataset_id,
+            {
+              duplicate_dataset_id: props.actionItem.metadata.duplicate_dataset_id
+            },
           )
         "
         >Accept Incoming</va-button
@@ -73,7 +75,9 @@
       <va-button
         @click="
           datasetService.reject_duplicate_dataset(
-            props.actionItem.metadata.duplicate_dataset_id,
+            {
+              duplicate_dataset_id: props.actionItem.metadata.duplicate_dataset_id,
+            }
           )
         "
         >Reject Incoming</va-button
