@@ -17,7 +17,7 @@ const notification1 = {
 const actionItem1 = {
   type: 'DUPLICATE_INGESTION',
   dataset_id: 3,
-  metadata: { duplicate_dataset_id: 5 },
+  metadata: { original_dataset_id: 5 },
 };
 const checks1 = [{
   type: 'FILE_COUNT',
@@ -67,7 +67,7 @@ const notification2 = {
 const actionItem2 = {
   type: 'DUPLICATE_INGESTION',
   dataset_id: 10,
-  metadata: { duplicate_dataset_id: 11 },
+  metadata: { original_dataset_id: 11 },
 };
 const checks2 = [{
   type: 'FILE_COUNT',
@@ -157,7 +157,7 @@ const notification3 = {
 const actionItem3 = {
   type: 'DUPLICATE_INGESTION',
   dataset_id: 10,
-  metadata: { duplicate_dataset_id: 11 },
+  metadata: { original_dataset_id: 11 },
 };
 const checks3 = [{
   type: 'FILE_COUNT',
@@ -186,6 +186,7 @@ const checks3 = [{
 const duplicateDataset = {
   name: 'PCM230203',
   type: 'DUPLICATE',
+  is_inspected: true,
   num_directories: 35,
   num_files: 116,
   du_size: 160612542453,

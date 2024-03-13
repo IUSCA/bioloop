@@ -1,23 +1,38 @@
 <template>
   <va-card>
+    <va-card-title>
+      <div class="mt-1">
+        <span class="text-lg">Info</span>
+      </div>
+    </va-card-title>
     <va-card-content>
-      <div class="flex flex-col gap-3">
-        <div>
-          Original Dataset:
-          <router-link
-            :to="`/datasets/${props.actionItem.metadata.original_dataset_id}`"
-            class="va-link"
-            >#{{ props.actionItem.metadata.original_dataset_id }}</router-link
-          >
-        </div>
-        <div>
-          Incoming Duplicate:
-          <router-link
-            :to="`/datasets/${props.actionItem.dataset_id}`"
-            class="va-link"
-            >#{{ props.actionItem.dataset_id }}</router-link
-          >
-        </div>
+      <div class="va-table-responsive">
+        <table class="va-table">
+          <tbody>
+            <tr>
+              <td>Original Dataset</td>
+              <td>
+                <router-link
+                  :to="`/datasets/${props.actionItem.metadata.original_dataset_id}`"
+                  class="va-link"
+                >
+                  #{{ props.actionItem.metadata.original_dataset_id }}
+                </router-link>
+              </td>
+            </tr>
+            <tr>
+              <td>Duplicate Dataset</td>
+              <td>
+                <router-link
+                  :to="`/datasets/${props.actionItem.dataset_id}`"
+                  class="va-link"
+                >
+                  #{{ props.actionItem.dataset_id }}
+                </router-link>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </va-card-content>
   </va-card>
