@@ -1,5 +1,6 @@
 from __future__ import annotations  # type unions by | are only available in versions >= 3
 
+import json
 import itertools
 import hashlib
 import shutil
@@ -29,19 +30,21 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
 
     matching_datasets = api.get_all_datasets(name=incoming_duplicate_dataset['name'], bundle=True)
-    original_dataset = list(filter(lambda d: d['id'] != incoming_duplicate_dataset['id'], matching_datasets))[0]
+    filtered_datasets = list(filter(lambda d: d['id'] != incoming_duplicate_dataset['id'], matching_datasets)) 
 
+    original_dataset = filtered_datasets[0]
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
-    original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve()
+    if original_dataset['bundle'] is not None:
+        original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve()
 
     accepted_incoming_dataset = api.accept_duplicate_dataset(
         dataset_id=incoming_duplicate_dataset['id'],
     )
     # Once original dataset has been removed from the database, remove it
     # from the filesystem (`staged_path` and the corresponding bundle's path).
-    if original_dataset_staged_path:
+    if original_dataset_staged_path.exists():
         shutil.rmtree(original_dataset_staged_path)
-    if original_dataset_bundle_path:
+    if original_dataset_bundle_path.exists():
         shutil.rmtree(original_dataset_bundle_path)
 
     return accepted_incoming_dataset['id'],
