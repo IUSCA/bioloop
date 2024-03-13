@@ -23,7 +23,10 @@ logger = get_task_logger(__name__)
 
 NOTIFICATION_TYPE = "DATASET"
 NOTIFICATION_LABEL = "Duplicate Dataset"
-NOTIFICATION_TEXT = "Ingestion has been attempted on a duplicate dataset. Click here to resolve."
+
+
+def notification_text(dataset_name):
+    return f"Ingestion has been attempted for a duplicate dataset named {dataset_name}. Click here to resolve."
 
 
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
@@ -60,7 +63,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     api.post_dataset_notification({
         "type": NOTIFICATION_TYPE,
         "label": NOTIFICATION_LABEL,
-        "text": NOTIFICATION_TEXT,
+        "text": notification_text(original_dataset['name']),
         "dataset_action_items": [{
             "type": "DUPLICATE_INGESTION",
             "dataset_id": original_dataset['id'],
