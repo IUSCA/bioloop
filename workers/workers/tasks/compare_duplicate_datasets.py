@@ -83,7 +83,8 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 # to determine whether files are same:
 #    1. Comparing number of files in both datasets
 #    2. Comparing checksums of files in both datasets
-#    3. Verifying if each file from the original dataset is present in the duplicate.
+#    3. Verifying if any files from the original dataset are missing from the incoming duplicate.
+#    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
 #
 # Returns a tuple, the first element of which is a bool indicating whether both sets of files
 # are same, with the second element being a detailed comparison report containing the results
@@ -118,8 +119,21 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #       }],
 #     },
 #   }, {
-#     type: 'NO_MISSING_FILES',
-#     label: 'All Original Files Found',
+#     type: 'FILES_MISSING_FROM_DUPLICATE',
+#     label: 'Original dataset\'s files missing from incoming duplicate',
+#     passed: False,
+#     report: {
+#       missing_files: [{
+#         name: 'missing_file_1',
+#         path: '/path/to/missing_file_1',
+#       }, {
+#         name: 'missing_file_2',
+#         path: '/path/to/missing_file_1',
+#       }],
+#     },
+#   }, {
+#     type: 'FILES_MISSING_FROM_ORIGINAL',
+#     label: 'Incoming duplicate dataset\'s files missing from original',
 #     passed: False,
 #     report: {
 #       missing_files: [{
@@ -149,7 +163,9 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
 
     common_files: set[str] = original_files_set.intersection(duplicate_files_set)
 
-    conflicting_checksum_files = []
+    logger.info(f"len(common_files): {len(common_files)}")
+
+    conflicting_checksum_files: list[dict] = []
     for file_path in common_files:
         original_file = [f for f in original_dataset_files if f['path'] == file_path][0]
         original_file_checksum = original_file['md5']
@@ -162,6 +178,8 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
                 'original_md5': original_file_checksum,
                 'duplicate_md5': duplicate_file_checksum,
             })
+    
+    logger.info(json.dumps(conflicting_checksum_files, indent=2))
 
     # Files that are present in the original dataset and missing from the duplicate
     original_only_files: set[str] = original_files_set.difference(duplicate_files_set)
@@ -203,7 +221,7 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
     })
     comparison_checks.append({
         'type': 'FILES_MISSING_FROM_ORIGINAL',
-        'label': 'Incoming duplicate dataset\'s files missing from original dataset',
+        'label': 'Incoming duplicate dataset\'s files missing from original',
         'passed': len(duplicate_only_files) == 0,
         'report': {
             'missing_files': missing_duplicate_files
@@ -211,26 +229,3 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
     })
 
     return comparison_checks
-
-
-# Given two lists of files, returns the list of files from the file_list_1 that
-# are missing from file_list_2. Acts like a set difference.
-# def find_missing_files(file_list_1: list, file_list_2: list) -> list:
-#     missing_files = []
-#     for file_1 in file_list_1:
-#         # logger.info(f"processing file_1: {file_1['name']}")
-#         found_file_1 = False
-#         for file_2 in file_list_2:
-#             # logger.info(f"processing file_2: - {file_2['name']}")
-#             if file_1['path'] != file_2['path']:
-#                 # logger.info("names not same --- continue to next file_2")
-#                 continue
-#             else:
-#                 found_file_1 = True
-#                 # Once file_1 file has been found, end the loop.
-#                 break
-#         if not found_file_1:
-#             # logger.info(f"find_missing_files(): file_1 file {file_1['name']} not found in list_2")
-#             missing_files.append(file_1)
-#
-#     return missing_files
