@@ -2,6 +2,7 @@ from __future__ import annotations  # type unions by | are only available in ver
 
 import itertools
 import hashlib
+import json
 from pathlib import Path
 
 from celery import Celery
@@ -142,6 +143,17 @@ def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
             'duplicate_files_count': len(duplicate_files)
         }
     }]
+
+    original_files_set = set(original_files)
+    duplicate_files_set = set(duplicate_files)
+
+    logger.info("original_files_set:")
+    logger.info(json.dumps(original_files_set, indent=2))
+    logger.info("duplicate_files_set:")
+    logger.info(json.dumps(duplicate_files_set, indent=2))
+
+    missing_original_files = original_files_set.difference(duplicate_files_set)
+
 
     # maybe_same = True
     conflicting_checksum_files = []
