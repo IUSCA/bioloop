@@ -5,8 +5,7 @@
 
   <div v-else>
     <va-alert color="warning">
-      The following files in the original dataset were not found in the incoming
-      duplicate
+      {{ props.alertLabel }}
     </va-alert>
 
     <va-scroll-container class="max-h-52" vertical>
@@ -31,6 +30,10 @@ const props = defineProps({
   missingFiles: {
     type: Array,
   },
+  alertLabel: {
+    type: String,
+    required: true
+  } 
 });
 
 const columns = [
