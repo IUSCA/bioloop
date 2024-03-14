@@ -50,13 +50,13 @@ const columns = [
   },
   {
     key: "original_md5",
-    label: "Original File Checksum",
+    label: "Original Checksum",
     thAlign: "center",
     tdAlign: "center",
   },
   {
     key: "duplicate_md5",
-    label: "Incoming Duplicate Checksum",
+    label: "Incoming File Checksum",
     thAlign: "right",
     tdAlign: "right",
   },

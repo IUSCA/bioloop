@@ -52,8 +52,8 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
             "filetype": "file"
         })
 
-    are_files_same, comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
-    logger.info(f"are_files_same: {are_files_same}")
+    comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
+    # logger.info(f"are_files_same: {are_files_same}")
     logger.info('comparison_checks_report')
     logger.info(comparison_checks_report)
 
@@ -132,67 +132,58 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #     },
 #   }
 # ]
-def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
-    num_files_same = len(original_files) == len(duplicate_files)
+def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list:
+    num_files_same = len(original_dataset_files) == len(duplicate_dataset_files)
     comparison_checks = [{
         'type': 'FILE_COUNT',
         'label': 'Number of Files Match',
         'passed': num_files_same,
         'report': {
-            'original_files_count': len(original_files),
-            'duplicate_files_count': len(duplicate_files)
+            'original_files_count': len(original_dataset_files),
+            'duplicate_files_count': len(duplicate_dataset_files)
         }
     }]
 
-    original_files_set = set(original_files)
-    duplicate_files_set = set(duplicate_files)
+    original_files_set: set[str] = set(map(lambda f: f['path'], original_dataset_files))
+    duplicate_files_set: set[str] = set(map(lambda f: f['path'], duplicate_dataset_files))
 
-    logger.info("original_files_set:")
-    logger.info(json.dumps(original_files_set, indent=2))
-    logger.info("duplicate_files_set:")
-    logger.info(json.dumps(duplicate_files_set, indent=2))
+    common_files: set[str] = original_files_set.intersection(duplicate_files_set)
 
-    missing_original_files = original_files_set.difference(duplicate_files_set)
-
-
-    # maybe_same = True
     conflicting_checksum_files = []
-    missing_files = []
-    for original in original_files:
-        # logger.info(f"processing original: {original['name']}")
-        found_file = False
-        for duplicate in duplicate_files:
-            # logger.info(f"processing duplicate: - {duplicate['name']}")
-            if original['path'] != duplicate['path']:
-                # logger.info("names not same --- continue to next duplicate")
-                continue
-            else:
-                found_file = True
-                checksum_validated = original['md5'] == duplicate['md5']
-                # logger.info(f"checksum_validated: {checksum_validated}")
-                # logger.info(f"maybe_same: {maybe_same}")
-                # maybe_same = maybe_same and checksum_validated
-                if not checksum_validated:
-                    #     logger.info(f"original['md5']: {original['md5']}")
-                    #     logger.info(f"duplicate['md5']: {duplicate['md5']}")
-                    conflicting_checksum_files.append({
-                        'name': original['name'],
-                        'path': original['path'],
-                        'original_md5': original['md5'],
-                        'duplicate_md5': duplicate['md5'],
-                    })
-                # Once original file has been found, end the loop.
-                break
-        if not found_file:
-            logger.info(f"original file {original['name']} not found in list_2")
-            missing_files.append({
-                'name': original['name'],
-                'path': original['path'],
+    for file_path in common_files:
+        original_file = [f for f in original_dataset_files if f['path'] == file_path][0]
+        original_file_checksum = original_file['md5']
+        duplicate_file_checksum = [f for f in duplicate_dataset_files if f['path'] == file_path][0]['md5']
+
+        if original_file_checksum != duplicate_file_checksum:
+            conflicting_checksum_files.append({
+                'name': original_file['name'],
+                'path': original_file['path'],
+                'original_md5': original_file_checksum,
+                'duplicate_md5': duplicate_file_checksum,
             })
 
-    passed_checksum_validation = len(conflicting_checksum_files) == 0
-    passed_missing_files_check = len(missing_files) == 0
+    # Files that are present in the original dataset and missing from the duplicate
+    original_only_files: set[str] = original_files_set.difference(duplicate_files_set)
+    # Files that are present in the duplicate dataset and missing from the original
+    duplicate_only_files: set[str] = duplicate_files_set.difference(original_files_set)
 
+    missing_original_files = []
+    for file_path in original_only_files:
+        file = [f for f in original_dataset_files if f['path'] == file_path][0]
+        missing_original_files.append({
+            'name': file['name'],
+            'path': file['path']
+        })
+    missing_duplicate_files = []
+    for file_path in duplicate_only_files:
+        file = [f for f in duplicate_dataset_files if f['path'] == file_path][0]
+        missing_duplicate_files.append({
+            'name': file['name'],
+            'path': file['path']
+        })
+
+    passed_checksum_validation = len(conflicting_checksum_files) == 0
     comparison_checks.append({
         'type': 'CHECKSUMS_MATCH',
         'label': 'Checksums Validated',
@@ -201,33 +192,45 @@ def compare_dataset_files(original_files: list, duplicate_files: list) -> tuple:
             'conflicting_checksum_files': conflicting_checksum_files
         }
     })
+
     comparison_checks.append({
-        'type': 'NO_MISSING_FILES',
-        'label': 'All Original Files Found',
-        'passed': passed_missing_files_check,
+        'type': 'FILES_MISSING_FROM_DUPLICATE',
+        'label': 'Original dataset\'s files missing from incoming duplicate',
+        'passed': len(original_only_files) == 0,
         'report': {
-            'missing_files': missing_files
+            'missing_files': missing_original_files
+        }
+    })
+    comparison_checks.append({
+        'type': 'FILES_MISSING_FROM_ORIGINAL',
+        'label': 'Incoming duplicate dataset\'s files missing from original dataset',
+        'passed': len(duplicate_only_files) == 0,
+        'report': {
+            'missing_files': missing_duplicate_files
         }
     })
 
-    are_files_same = num_files_same and passed_missing_files_check and passed_missing_files_check
-    return are_files_same, comparison_checks
+    return comparison_checks
 
 
-# def update_directory_md5(directory, computed_hash):
-#     assert Path(directory).is_dir()
-#     for path in sorted(Path(directory).iterdir(), key=lambda p: str(p).lower()):
-#         computed_hash.update(path.name.encode())
-#         if path.is_file():
-#             with open(path, "rb") as f:
-#                 for chunk in iter(lambda: f.read(4096), b""):
-#                     computed_hash.update(chunk)
-#         elif path.is_dir():
-#             computed_hash = update_directory_md5(path, computed_hash)
-#     return computed_hash
+# Given two lists of files, returns the list of files from the file_list_1 that
+# are missing from file_list_2. Acts like a set difference.
+# def find_missing_files(file_list_1: list, file_list_2: list) -> list:
+#     missing_files = []
+#     for file_1 in file_list_1:
+#         # logger.info(f"processing file_1: {file_1['name']}")
+#         found_file_1 = False
+#         for file_2 in file_list_2:
+#             # logger.info(f"processing file_2: - {file_2['name']}")
+#             if file_1['path'] != file_2['path']:
+#                 # logger.info("names not same --- continue to next file_2")
+#                 continue
+#             else:
+#                 found_file_1 = True
+#                 # Once file_1 file has been found, end the loop.
+#                 break
+#         if not found_file_1:
+#             # logger.info(f"find_missing_files(): file_1 file {file_1['name']} not found in list_2")
+#             missing_files.append(file_1)
 #
-#
-# def directory_checksum(directory):
-#     return update_directory_md5(directory, hashlib.md5()).hexdigest()
-
-
+#     return missing_files
