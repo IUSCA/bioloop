@@ -36,13 +36,13 @@ model dataset {
   bundle           bundle?
   action_items     dataset_action_item[]
   duplicated_from  duplicate_dataset?   @relation("duplicated_from")
-  duplicated_by    duplicate_dataset[]  @relation("duplicated_by")
+  duplicated_by    duplicate_dataset?  @relation("duplicated_by")
 
   @@unique([name, type, is_deleted])
 }
 
 model duplicate_dataset {
-  original_dataset_id  Int
+  original_dataset_id  Int      @unique
   original_dataset     dataset  @relation(name: "duplicated_by", fields: [original_dataset_id], references: [id])
   duplicate_dataset_id Int      @unique
   duplicate_dataset    dataset  @relation(name: "duplicated_from", fields: [duplicate_dataset_id], references: [id])
