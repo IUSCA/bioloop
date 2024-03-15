@@ -58,6 +58,7 @@ router.get(
       },
       include: {
         ingestion_checks: true,
+        dataset: true
       },
     });
 
