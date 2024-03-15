@@ -1,6 +1,6 @@
-import { defineStore } from "pinia";
 import notificationService from "@/services/notification";
 import { dayjs } from "@/services/utils";
+import { defineStore } from "pinia";
 
 export const useNotificationStore = defineStore("notification", () => {
   const loading = ref(false);
@@ -8,7 +8,7 @@ export const useNotificationStore = defineStore("notification", () => {
   // expose sorted notifications
   const notifications = computed(() => {
     return appNotifications.value.sort((n1, n2) =>
-      dayjs(n1.created_at).diff(dayjs(n2.created_at)),
+      dayjs(n2.created_at).diff(dayjs(n1.created_at)),
     );
   });
 

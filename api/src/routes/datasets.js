@@ -797,7 +797,7 @@ router.patch(
     console.dir(originalDataset, { depth: null });
     console.log(`originalDataset id: ${originalDataset.id}`);
 
-    const [acceptedDataset] = await prisma.$transaction([
+    const [_, acceptedDataset] = await prisma.$transaction([
       prisma.dataset.delete({
         where: {
           id: originalDataset.id,
