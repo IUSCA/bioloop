@@ -126,9 +126,7 @@
 
         <!-- Accept/Reject button for DUPLICATE type datasets -->
         <div v-else-if="rowData.type === 'DUPLICATE'">
-          <va-popover
-            message="Accept/Reject"
-          >
+          <va-popover message="Accept/Reject">
             <va-button
               class="flex-initial"
               size="small"
@@ -138,7 +136,7 @@
                   router.push(actionItemURL(rowData));
                 }
               "
-              :disabled="rowData.is_deleted || !rowData.is_inspected"
+              :disabled="rowData.is_deleted || isInspected(!rowData)"
             >
               <i-mdi-compare-horizontal />
             </va-button>
@@ -219,7 +217,7 @@ import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import { formatBytes } from "@/services/utils";
+import { dayjs, formatBytes } from "@/services/utils";
 import _ from "lodash";
 
 const router = useRouter();
@@ -390,7 +388,10 @@ function fetch_datasets(query = {}, updatePageCount = true) {
   return DatasetService.getAll({
     ...datasets_retrieval_query.value,
     ...query,
-    ...(props.dtype === "DUPLICATE" && { include_action_items: true }),
+    ...(props.dtype === "DUPLICATE" && {
+      include_action_items: true,
+      include_states: true,
+    }),
   })
     .then((res) => {
       datasets.value = res.data.datasets;
@@ -448,6 +449,17 @@ const actionItemURL = (dataset) => {
   return actionItem.type === "DUPLICATE_INGESTION"
     ? `/duplicateDatasets/resolveDuplicates/${actionItem.id}`
     : "#";
+};
+
+const isInspected = (dataset) => {
+  // sort states by timestamp (descending).
+  const datasetStates = dataset.states
+    .sort((state1, state2) => {
+      dayjs(state2.timestamp).diff(dayjs(state1.timestamp));
+    })
+    .map((state) => state.state);
+  // Verify that latest state is INSPECTED.
+  return datasetStates[datasetStates.length - 1] === "INSPECTED";
 };
 
 onMounted(() => {

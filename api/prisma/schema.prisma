@@ -21,7 +21,6 @@ model dataset {
   origin_path      String?
   archive_path     String?
   staged_path      String?
-  is_inspected     Boolean               @default(false)
   is_deleted       Boolean               @default(false)
   is_staged        Boolean               @default(false)
   metadata         Json?
@@ -36,8 +35,20 @@ model dataset {
   stage_requests   stage_request_log[]
   bundle           bundle?
   action_items     dataset_action_item[]
+  duplicated_from  duplicate_dataset?   @relation("duplicated_from")
+  duplicated_by    duplicate_dataset[]  @relation("duplicated_by")
 
   @@unique([name, type, is_deleted])
+}
+
+model duplicate_dataset {
+  original_dataset_id  Int
+  original_dataset     dataset  @relation(name: "duplicated_by", fields: [original_dataset_id], references: [id])
+  duplicate_dataset_id Int      @unique
+  duplicate_dataset    dataset  @relation(name: "duplicated_from", fields: [duplicate_dataset_id], references: [id])
+  created_at           DateTime @default(now()) @db.Timestamp(6)
+
+  @@id([original_dataset_id, duplicate_dataset_id])
 }
 
 model dataset_hierarchy {

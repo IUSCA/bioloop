@@ -76,7 +76,6 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         'size': size,
         'num_files': num_files,
         'num_directories': num_directories,
-        'is_inspected': True,
         'metadata': {
             'num_genome_files': num_genome_files,
         }
@@ -84,5 +83,6 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_files_to_dataset(dataset_id=dataset_id, files=metadata)
+    api.add_state_to_dataset(dataset_id=dataset_id, state='INSPECTED')
 
     return dataset_id,

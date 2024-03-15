@@ -8,7 +8,16 @@ CREATE TYPE "NOTIFICATION_STATUS" AS ENUM ('CREATED', 'ACKNOWLEDGED', 'RESOLVED'
 CREATE TYPE "NOTIFICATION_TYPE" AS ENUM ('DATASET');
 
 -- CreateEnum
-CREATE TYPE "DATASET_INGESTION_CHECK_TYPE" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MATCH', 'NO_MISSING_FILES');
+CREATE TYPE "DATASET_INGESTION_CHECK_TYPE" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MATCH', 'FILES_MISSING_FROM_DUPLICATE', 'FILES_MISSING_FROM_ORIGINAL');
+
+-- CreateTable
+CREATE TABLE "duplicate_dataset" (
+    "original_dataset_id" INTEGER NOT NULL,
+    "duplicate_dataset_id" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "duplicate_dataset_pkey" PRIMARY KEY ("original_dataset_id","duplicate_dataset_id")
+);
 
 -- CreateTable
 CREATE TABLE "notification" (
@@ -29,6 +38,7 @@ CREATE TABLE "dataset_action_item" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "type" "DATASET_ACTION_ITEM_TYPE" NOT NULL,
+    "active" BOOLEAN NOT NULL DEFAULT true,
     "notification_id" INTEGER,
     "dataset_id" INTEGER,
     "metadata" JSONB,
@@ -49,14 +59,23 @@ CREATE TABLE "dataset_ingestion_check" (
     CONSTRAINT "dataset_ingestion_check_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateIndex
+CREATE UNIQUE INDEX "duplicate_dataset_duplicate_dataset_id_key" ON "duplicate_dataset"("duplicate_dataset_id");
+
+-- AddForeignKey
+ALTER TABLE "duplicate_dataset" ADD CONSTRAINT "duplicate_dataset_original_dataset_id_fkey" FOREIGN KEY ("original_dataset_id") REFERENCES "dataset"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "duplicate_dataset" ADD CONSTRAINT "duplicate_dataset_duplicate_dataset_id_fkey" FOREIGN KEY ("duplicate_dataset_id") REFERENCES "dataset"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
 -- AddForeignKey
 ALTER TABLE "notification" ADD CONSTRAINT "notification_acknowledged_by_id_fkey" FOREIGN KEY ("acknowledged_by_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "notification"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "notification"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "dataset_ingestion_check" ADD CONSTRAINT "dataset_ingestion_check_action_item_id_fkey" FOREIGN KEY ("action_item_id") REFERENCES "dataset_action_item"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "dataset_ingestion_check" ADD CONSTRAINT "dataset_ingestion_check_action_item_id_fkey" FOREIGN KEY ("action_item_id") REFERENCES "dataset_action_item"("id") ON DELETE CASCADE ON UPDATE CASCADE;

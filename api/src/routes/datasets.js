@@ -245,6 +245,7 @@ router.get(
     query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
     query('include_action_items').optional().toBoolean(),
+    query('include_states').isBoolean().toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -273,6 +274,7 @@ router.get(
         derived_datasets: true,
         bundle: req.query.bundle || false,
         action_items: req.query.include_action_items || false,
+        states: req.query.include_states,
       },
     };
 
@@ -355,7 +357,7 @@ router.post(
     const { workflow_id, state, ...data } = req.body;
 
     // create workflow association
-    if (workflow_id && data.dataset_type !== 'DUPLICATE') {
+    if (workflow_id) {
       data.workflows = {
         create: [
           {
@@ -373,6 +375,21 @@ router.post(
         },
       ],
     };
+
+    if (data.type === 'DUPLICATE') {
+      const originalDataset = await prisma.dataset.findFirst({
+        where: {
+          name: data.name,
+          is_deleted: false,
+        },
+      });
+      data.duplicated_from = {
+        create: {
+          original_dataset_id: originalDataset.id,
+          // duplicate_dataset_id:
+        },
+      };
+    }
 
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
@@ -791,15 +808,39 @@ router.patch(
     }
 
     const originalDataset = matchingDatasets.find((d) => d.id !== req.params.id);
+    // const originalDatasetId = originalDataset.id;
 
     console.log('originalDatsset');
     console.dir(originalDataset, { depth: null });
     console.log(`originalDataset id: ${originalDataset.id}`);
 
-    const [_, acceptedDataset] = await prisma.$transaction([
-      prisma.dataset.delete({
+    // eslint-disable-next-line no-unused-vars
+    const [deleteCount, acceptedDataset] = await prisma.$transaction([
+      // todo - refactor this into a service method
+      // todo - soft delete will fail because of this
+
+      // if ids are swapped, soft delete cannot be done on original dataset
+      //   soft delete can be done in this transaction
+
+      //   once new dataset is accepted and original dataset reaches soft delete state,
+      //   a second attempt to ingest a duplicate with this name will cause problems
+      //   with trying to soft-delete the dataset that was previously ingested as a
+      //   duplicate
+
+      // if ids are swapped, original dataset is obliterated
+      prisma.dataset.update({
         where: {
           id: originalDataset.id,
+        },
+        data: {
+          // perform a soft_delete on original dataset
+          is_deleted: true,
+          name: `${originalDataset.name}-${originalDataset.id}`,
+          states: {
+            create: {
+              state: 'DELETED',
+            },
+          },
         },
       }),
       prisma.dataset.update({
@@ -810,7 +851,14 @@ router.patch(
           type: originalDataset.type,
         },
       }),
-      
+      // todo - is the duplicate dataset assigned a parent dataset at this point,
+      //  if the original dataset had a parent?
+      // prisma.dataset_hierarchy.update({
+      //   where: {
+      //     source_id: originalDataset.id,
+      //   },
+      // }),
+
     ]);
 
     res.json(acceptedDataset);

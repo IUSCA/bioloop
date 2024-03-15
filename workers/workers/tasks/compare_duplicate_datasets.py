@@ -41,8 +41,8 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
         })
 
     matching_datasets = api.get_all_datasets(name=duplicate_dataset['name'])
-    if len(matching_datasets) > 2:
-        raise InspectionFailed(f"Expected 2 datasets named {duplicate_dataset['name']} (original and duplicate), "
+    if len(matching_datasets) != 2:
+        raise InspectionFailed(f"Expected 2 datasets named {duplicate_dataset['name']} (the original, and the duplicate), "
                                f"but found more.")
 
     original_dataset = list(filter(lambda d: d['id'] != duplicate_dataset['id'], matching_datasets))[0]
