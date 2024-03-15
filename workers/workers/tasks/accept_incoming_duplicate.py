@@ -32,6 +32,8 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     matching_datasets = api.get_all_datasets(name=incoming_duplicate_dataset['name'], bundle=True)
     filtered_datasets = list(filter(lambda d: d['id'] != incoming_duplicate_dataset['id'], matching_datasets)) 
 
+    logger.info(json.dumps(filtered_datasets, indent=2))
+
     original_dataset = filtered_datasets[0]
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
     original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if\

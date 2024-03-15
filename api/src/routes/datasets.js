@@ -792,12 +792,26 @@ router.patch(
     }
 
     const originalDataset = matchingDatasets.find((d) => d.id !== req.params.id);
+    // const originalDatasetId = originalDataset.id;
 
     console.log('originalDatsset');
     console.dir(originalDataset, { depth: null });
     console.log(`originalDataset id: ${originalDataset.id}`);
 
-    const [_, acceptedDataset] = await prisma.$transaction([
+    // eslint-disable-next-line no-unused-vars
+    const [deleteCount, acceptedDataset] = await prisma.$transaction([
+      // todo - refactor this into a service method
+      // todo - soft delete will fail because of this
+
+      // if ids are swapped, soft delete cannot be done on original dataset
+      //   soft delete can be done in this transaction
+
+      //   once new dataset is accepted and original dataset reaches soft delete state,
+      //   a second attempt to ingest a duplicate with this name will cause problems
+      //   with trying to soft-delete the dataset that was previously ingested as a
+      //   duplicate
+
+      // if ids are swapped, original dataset is obliterated
       prisma.dataset.delete({
         where: {
           id: originalDataset.id,
@@ -811,7 +825,14 @@ router.patch(
           type: originalDataset.type,
         },
       }),
-      
+      // todo - is the duplicate dataset assigned a parent dataset at this point,
+      //  if the original dataset had a parent?
+      // prisma.dataset_hierarchy.update({
+      //   where: {
+      //     source_id: originalDataset.id,
+      //   },
+      // }),
+
     ]);
 
     res.json(acceptedDataset);
