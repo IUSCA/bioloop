@@ -153,10 +153,11 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, bundle: bool = False):
+def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
     with APIServerSession() as s:
         payload = {
-            'bundle': bundle
+            'bundle': bundle,
+            'files': files,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 
