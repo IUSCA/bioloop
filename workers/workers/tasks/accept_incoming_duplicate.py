@@ -34,8 +34,9 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
 
     original_dataset = filtered_datasets[0]
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
-    if original_dataset['bundle'] is not None:
-        original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve()
+    original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if\
+        original_dataset['bundle'] is not None\
+        else None
 
     accepted_incoming_dataset = api.accept_duplicate_dataset(
         dataset_id=incoming_duplicate_dataset['id'],
@@ -44,7 +45,7 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     # from the filesystem (`staged_path` and the corresponding bundle's path).
     if original_dataset_staged_path.exists():
         shutil.rmtree(original_dataset_staged_path)
-    if original_dataset_bundle_path.exists():
+    if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
         shutil.rmtree(original_dataset_bundle_path)
 
     return accepted_incoming_dataset['id'],
