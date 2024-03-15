@@ -358,7 +358,7 @@ router.post(
     const { workflow_id, state, ...data } = req.body;
 
     // create workflow association
-    if (workflow_id && data.dataset_type !== 'DUPLICATE') {
+    if (workflow_id) {
       data.workflows = {
         create: [
           {
@@ -376,6 +376,21 @@ router.post(
         },
       ],
     };
+
+    if (data.type === 'DUPLICATE') {
+      const originalDataset = await prisma.dataset.findFirst({
+        where: {
+          name: data.name,
+          is_deleted: false,
+        },
+      });
+      data.duplicated_from = {
+        create: {
+          original_dataset_id: originalDataset.id,
+          // duplicate_dataset_id:
+        },
+      };
+    }
 
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
@@ -814,9 +829,19 @@ router.patch(
       //   duplicate
 
       // if ids are swapped, original dataset is obliterated
-      prisma.dataset.delete({
+      prisma.dataset.update({
         where: {
           id: originalDataset.id,
+        },
+        data: {
+          // perform a soft_delete on original dataset
+          is_deleted: true,
+          name: `${originalDataset.name}-${originalDataset.id}`,
+          states: {
+            create: {
+              state: 'DELETED',
+            },
+          },
         },
       }),
       prisma.dataset.update({
