@@ -789,7 +789,7 @@ router.patch(
     // #swagger.tags = ['datasets']
     // #swagger.summary = Replace an existing dataset with its duplicate dataset
 
-    const duplicateDataset = await prisma.dataset.findFirst({
+    const duplicateDataset = await prisma.dataset.findUnique({
       where: {
         id: req.params.id,
       },
@@ -833,12 +833,19 @@ router.patch(
           id: originalDataset.id,
         },
         data: {
-          // perform a soft_delete on original dataset
           is_deleted: true,
+          // The database table has a unique constraint on fields `name`, `type`, and `is_deleted`,
+          // so we need to change the name of the original dataset (by appending its id to
+          // its name) before marking it as deleted. This way, if another duplication
+          // attempt is made in the future on a dataset that has this name, this unique
+          // constraint won't fail when the current query is executed, since each rejected
+          // dataset is being given a unique name.
           name: `${originalDataset.name}-${originalDataset.id}`,
+          // add state DUPLICATED to the original dataset, to differentiate datasets that were
+          // duplicated and then overwritten from datasets that are soft-deleted.
           states: {
             create: {
-              state: 'DELETED',
+              state: 'DUPLICATED',
             },
           },
         },
@@ -851,14 +858,78 @@ router.patch(
           type: originalDataset.type,
         },
       }),
-      // todo - is the duplicate dataset assigned a parent dataset at this point,
-      //  if the original dataset had a parent?
-      // prisma.dataset_hierarchy.update({
-      //   where: {
-      //     source_id: originalDataset.id,
-      //   },
-      // }),
-
+      prisma.dataset_hierarchy.updateMany({
+        where: {
+          source_id: originalDataset.id,
+        },
+        data: {
+          source_id: duplicateDataset.id,
+        },
+      }),
+      prisma.dataset_hierarchy.updateMany({
+        where: {
+          derived_id: originalDataset.id,
+        },
+        data: {
+          derived_id: duplicateDataset.id,
+        },
+      }),
+      prisma.dataset_file.updateMany({
+        where: {
+          dataset_id: originalDataset.id,
+        },
+        data: {
+          dataset_id: duplicateDataset.id,
+        },
+      }),
+      prisma.dataset_audit.updateMany({
+        where: {
+          dataset_id: originalDataset.id,
+        },
+        data: {
+          dataset_id: duplicateDataset.id,
+        },
+      }),
+      prisma.dataset_state.updateMany({
+        where: {
+          dataset_id: originalDataset.id,
+        },
+        data: {
+          dataset_id: duplicateDataset.id,
+        },
+      }),
+      prisma.data_access_log.updateMany({
+        where: {
+          dataset_id: originalDataset.id,
+        },
+        data: {
+          dataset_id: duplicateDataset.id,
+        },
+      }),
+      prisma.stage_request_log.updateMany({
+        where: {
+          dataset_id: originalDataset.id,
+        },
+        data: {
+          dataset_id: duplicateDataset.id,
+        },
+      }),
+      prisma.workflow.updateMany({
+        where: {
+          dataset_id: originalDataset.id,
+        },
+        data: {
+          dataset_id: duplicateDataset.id,
+        },
+      }),
+      prisma.project_dataset.updateMany({
+        where: {
+          dataset_id: originalDataset.id,
+        },
+        data: {
+          dataset_id: duplicateDataset.id,
+        },
+      }),
     ]);
 
     res.json(acceptedDataset);
