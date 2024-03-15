@@ -771,7 +771,7 @@ router.patch(
   isPermittedTo('delete'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Accept an incoming duplicate dataset
+    // #swagger.summary = Replace an existing dataset with its duplicate dataset
 
     const duplicateDataset = await prisma.dataset.findFirst({
       where: {
@@ -798,6 +798,11 @@ router.patch(
     console.log(`originalDataset id: ${originalDataset.id}`);
 
     const [acceptedDataset] = await prisma.$transaction([
+      prisma.dataset.delete({
+        where: {
+          id: originalDataset.id,
+        },
+      }),
       prisma.dataset.update({
         where: {
           id: duplicateDataset.id,
@@ -806,11 +811,7 @@ router.patch(
           type: originalDataset.type,
         },
       }),
-      prisma.dataset.delete({
-        where: {
-          id: originalDataset.id,
-        },
-      }),
+      
     ]);
 
     res.json(acceptedDataset);
