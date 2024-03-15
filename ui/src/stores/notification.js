@@ -32,50 +32,12 @@ export const useNotificationStore = defineStore("notification", () => {
   }
 
   function fetchActiveNotifications() {
-    let activeNotifications = [
-      // {
-      //   type: "OTHER_NOTIFICATION",
-      //   label: "Other Notification",
-      //   text: "Some other notification.",
-      //   to: "/rawdata",
-      //   acknowledged: false,
-      //   created_at: "2024-03-14T00:39:46.437Z",
-      // },
-    ];
-    loadNotifications().then((notificationsList) => {
-      activeNotifications = activeNotifications.concat(notificationsList);
-      setNotifications(notificationsList);
-      loading.value = false;
-    });
-  }
-
-  async function loadNotifications() {
     // todo - get notifications whose status is CREATED || ACK, and whose corresponding
     //  action item has not been resolved.
     return notificationService.getNotifications().then((res) => {
-      return res.data.map((notification) => {
-        if (notification.type === "DATASET") {
-          return configureDatasetNotification(notification);
-        }
-        /**
-         * configure other notification types here
-         */
-      });
+      setNotifications(res.data);
+      loading.value = false;
     });
-  }
-
-  function configureDatasetNotification(notification) {
-    return {
-      ...notification,
-      to: `/duplicateDatasets/resolveDuplicates/${notification.dataset_action_items[0].id}`,
-      onClick: () => {
-        // change status of notification to ACK'd
-        return notificationService.updateNotificationStatus({
-          notification_id: notification.id,
-          status: "ACKNOWLEDGED",
-        });
-      },
-    };
   }
 
   return {
