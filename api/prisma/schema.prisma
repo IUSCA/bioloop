@@ -21,7 +21,6 @@ model dataset {
   origin_path      String?
   archive_path     String?
   staged_path      String?
-  is_inspected     Boolean               @default(false)
   is_deleted       Boolean               @default(false)
   is_staged        Boolean               @default(false)
   metadata         Json?

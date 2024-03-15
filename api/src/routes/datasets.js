@@ -245,6 +245,7 @@ router.get(
     query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
     query('include_action_items').optional().toBoolean(),
+    query('include_states').isBoolean().toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -273,6 +274,7 @@ router.get(
         derived_datasets: true,
         bundle: req.query.bundle || false,
         action_items: req.query.include_action_items || false,
+        states: req.query.include_states,
       },
     };
 

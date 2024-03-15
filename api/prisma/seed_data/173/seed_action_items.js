@@ -186,7 +186,6 @@ const checks3 = [{
 const duplicateDataset = {
   name: 'PCM230203',
   type: 'DUPLICATE',
-  is_inspected: true,
   num_directories: 35,
   num_files: 116,
   du_size: 160612542453,
