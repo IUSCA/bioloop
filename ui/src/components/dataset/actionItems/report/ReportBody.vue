@@ -49,7 +49,7 @@
             <missing-files-diff
               v-if="rowData.type === 'FILES_MISSING_FROM_ORIGINAL' || rowData.type === 'FILES_MISSING_FROM_DUPLICATE'"
               :missing-files="rowData.report.missing_files"
-              :alert-label="rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ? 'The following files in the original dataset were not found in the incoming duplicate dataset' : 'The following files in the incoming duplicate dataset were not found in the original dataset'"
+              :check-type="rowData.type"
             >
             </missing-files-diff>
           </div>
