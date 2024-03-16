@@ -364,7 +364,7 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
-      include_duplications: req.query.include_duplications
+      include_duplications: req.query.include_duplications || false
     });
     res.json(dataset);
   }),

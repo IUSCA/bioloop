@@ -23,12 +23,12 @@ const alertConfig = computed(() => {
   let text = ""
   if (dataset.type === 'DUPLICATE') {
     color = "warning"
-    text = `This dataset was duplicated from ${dataset.duplicated_from.id}, and is currently pending acceptance.`
+    text = `This dataset was duplicated from ${dataset.duplicated_from.original_dataset_id}, and is currently pending acceptance.`
   } else {
     if (!dataset.is_deleted) {
       if (dataset.duplicated_by) {
         color = "warning"
-        text = `This dataset was duplicated by ${dataset.duplicated_by.id}, which is currently pending acceptance.`
+        text = `This dataset was duplicated by ${dataset.duplicated_by.duplicate_dataset_id}, which is currently pending acceptance.`
       }
     } else {
       const datasetState = getCurrentState(dataset)
@@ -37,10 +37,10 @@ const alertConfig = computed(() => {
         text = "You are viewing an inactive (deleted) dataset."
       } else if (datasetState === 'REJECTED_DUPLICATE') {
         color = "warning"
-        text = `This dataset was duplicated from ${dataset.duplicated_from.id}, and then rejected.`
+        text = `This dataset was duplicated from ${dataset.duplicated_from.original_dataset_id}, and then rejected.`
       } else if (datasetState === 'OVERWRITTEN') {
         color = "warning"
-        text = `This dataset has been overwritten by ${dataset.duplicated_by.id}.`
+        text = `This dataset has been overwritten by ${dataset.duplicated_by.duplicate_dataset_id}.`
       }
     }
   }
