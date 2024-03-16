@@ -832,6 +832,7 @@ router.patch(
     const matchingDatasets = await prisma.dataset.findMany({
       where: {
         name: duplicateDataset.name,
+        is_deleted: false
       },
     });
 
@@ -839,12 +840,12 @@ router.patch(
     console.dir(matchingDatasets, { depth: null });
 
     if (matchingDatasets.length !== 2) {
-      next(createError.BadRequest(`Expected to find two datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
+      next(createError.BadRequest(`Expected to find two active (not deleted) datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
     }
 
     const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
-    if (originalDataset.type === 'DUPLICATE') {
-      next(createError.BadRequest(`Original dataset ${originalDataset.id} is of type DUPLICATE.`));
+    if (originalDataset.type !== 'RAW_DATA' && originalDataset.type !== 'DATA_PRODUCT') {
+      next(createError.BadRequest(`Original dataset ${originalDataset.id} must be RAW_DATA or DATA_PRODUCT.`));
     }
     // const originalDatasetId = originalDataset.id;
     // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
@@ -873,7 +874,6 @@ router.patch(
         },
         data: {
           is_deleted: true,
-          version: originalDataset.version + 1,
           // The database table has a unique constraint on fields `name`, `type`, and `is_deleted`,
           // so we need to change the name of the original dataset (by appending its id to
           // its name) before marking it as deleted. This way, if another duplication
@@ -896,6 +896,7 @@ router.patch(
         },
         data: {
           type: originalDataset.type,
+          version: originalDataset.version + 1,
         },
       }),
       // prisma.dataset_file.updateMany({
