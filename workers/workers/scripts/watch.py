@@ -151,6 +151,12 @@ class Register:
             'type': dataset_type,
             'origin_path': str(candidate.resolve()),
         }
+
+        if is_duplicate:
+            # DUPLICATE datasets are assigned version 0 until they are accpeted or rejected
+            # by the system, at which point their version is updated.
+            dataset['version'] = 0
+
         created_dataset = api.create_dataset(dataset)
 
         self.run_workflows(

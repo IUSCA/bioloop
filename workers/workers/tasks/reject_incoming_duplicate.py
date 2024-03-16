@@ -25,6 +25,6 @@ logger = get_task_logger(__name__)
 # Handles the rejection of an incoming duplicate dataset, by deleting the
 # duplicate dataset from the database.
 def handle_rejection(celery_task, duplicate_dataset_id, **kwargs):
-    api.delete_dataset(dataset_id=duplicate_dataset_id)
+    api.reject_incoming_dataset(dataset_id=duplicate_dataset_id)
     return duplicate_dataset_id,
 
