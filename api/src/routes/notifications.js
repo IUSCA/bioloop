@@ -30,7 +30,9 @@ router.get(
       where: filterQuery,
       include: {
         dataset_action_items: {
-          dataset: true
+          include: {
+            dataset: true
+          }
         },
       },
       orderBy: {
