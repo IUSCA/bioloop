@@ -48,7 +48,7 @@ const prisma = new PrismaClient(
 //   prisma.$on(level, async (e) => {
 //     console.log(`QUERY: ${e.query}`)
 //     console.log(`PARAMS: ${e.params}`)
-//   });  
+//   });
 // })
 
 router.get(
@@ -85,7 +85,7 @@ router.get(
       },
       include: {
         ingestion_checks: true,
-        dataset: true
+        dataset: true,
       },
     });
 
@@ -826,7 +826,7 @@ router.patch(
     // todo -  check if dataset is not already accepted
 
     if (duplicateDataset.type !== 'DUPLICATE') {
-      next(createError.BadRequest(`Dataset ${dataset.id} is not of type DUPLICATE.`)); 
+      next(createError.BadRequest(`Dataset ${duplicateDataset.id} is not of type DUPLICATE.`));
     }
 
     const matchingDatasets = await prisma.dataset.findMany({
@@ -843,6 +843,10 @@ router.patch(
     }
 
     const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
+    if (originalDataset.type === 'DUPLICATE') {
+      next(createError.BadRequest(`Original dataset ${originalDataset.id} is of type DUPLICATE.`));
+    }
+
     // const originalDatasetId = originalDataset.id;
     // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
 
@@ -870,6 +874,7 @@ router.patch(
         },
         data: {
           is_deleted: true,
+          version: originalDataset.version + 1,
           // The database table has a unique constraint on fields `name`, `type`, and `is_deleted`,
           // so we need to change the name of the original dataset (by appending its id to
           // its name) before marking it as deleted. This way, if another duplication
@@ -902,7 +907,7 @@ router.patch(
       //     dataset_id: duplicateDataset.id,
       //   },
       // }),
-      
+
       prisma.dataset_hierarchy.updateMany({
         where: {
           source_id: originalDataset.id,
@@ -924,14 +929,14 @@ router.patch(
           action: 'accepted',
           user_id: req.user.id,
           dataset_id: duplicateDataset.id,
-        }
+        },
       }),
       prisma.dataset_audit.create({
         data: {
           action: 'overwritten',
           user_id: req.user.id,
           dataset_id: originalDataset.id,
-        }
+        },
       }),
       // prisma.dataset_state.updateMany({
       //   where: {
@@ -944,7 +949,7 @@ router.patch(
 
       // Operators will likely be more interested in seeing the access statistics for
       // this dataset across all of its duplicates. Therefore, any previous access attempts
-      // associated with the original dataset's id can be overwritten with the incoming 
+      // associated with the original dataset's id can be overwritten with the incoming
       // duplicate dataset's id.
       // prisma.data_access_log.updateMany({
       //   where: {
