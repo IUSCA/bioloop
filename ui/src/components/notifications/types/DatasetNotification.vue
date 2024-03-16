@@ -19,9 +19,13 @@ const props = defineProps({
   },
 });
 
+const actionItem = computed(() => {
+  return props.notification.dataset_action_items[0]
+})
+
 const _notification = computed(() => ({
   ...props.notification,
-  to: `/datasets/actionItems/${props.notification.dataset_action_items[0].id}`,
+  to: `/datasets/${actionItem.dataset_id}/actionItems/${actionItem.id}`,
   onClick: () => {
     // change status of notification to ACK'd
     return notificationService.updateNotificationStatus({

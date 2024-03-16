@@ -29,7 +29,9 @@ router.get(
     const notifications = await prisma.notification.findMany({
       where: filterQuery,
       include: {
-        dataset_action_items: true,
+        dataset_action_items: {
+          dataset: true
+        },
       },
       orderBy: {
         created_at: 'desc'
