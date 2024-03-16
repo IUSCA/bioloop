@@ -7,8 +7,6 @@
 </template>
 
 <script setup>
-import dataset from '@/services/dataset';
-
 const props = defineProps({
   dataset: {
     type: Object,
@@ -16,10 +14,13 @@ const props = defineProps({
   }
 })
 
+console.dir(props.dataset, {depth: null})
+
 const alertConfig = computed(() => {
   const dataset = props.dataset
 
-  let color
+  let color = ""
+  let text = ""
   if (dataset.type === 'DUPLICATE') {
     color = "warning"
     text = `This dataset was duplicated from ${dataset.duplicated_from.id}, and is currently pending acceptance.`
