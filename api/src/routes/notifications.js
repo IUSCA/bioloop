@@ -31,6 +31,9 @@ router.get(
       include: {
         dataset_action_items: true,
       },
+      orderBy: {
+        created_at: 'desc'
+      }
     });
 
     // console.dir(notifications, { depth: null });

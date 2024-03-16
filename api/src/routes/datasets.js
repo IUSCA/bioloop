@@ -349,6 +349,7 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
+    query('include_duplications').isBoolean().toBoolean().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -363,6 +364,7 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
+      include_duplications: req.query.include_duplications
     });
     res.json(dataset);
   }),
@@ -826,7 +828,7 @@ router.patch(
     // todo -  check if dataset is not already accepted
 
     if (duplicateDataset.type !== 'DUPLICATE') {
-      next(createError.BadRequest(`Dataset ${duplicateDataset.id} is not of type DUPLICATE.`));
+      next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be of type DUPLICATE, but actual type if ${duplicateDataset.type}`));
     }
 
     const matchingDatasets = await prisma.dataset.findMany({
@@ -845,7 +847,7 @@ router.patch(
 
     const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
     if (originalDataset.type !== 'RAW_DATA' && originalDataset.type !== 'DATA_PRODUCT') {
-      next(createError.BadRequest(`Original dataset ${originalDataset.id} must be RAW_DATA or DATA_PRODUCT.`));
+      next(createError.BadRequest(`Expected original dataset ${originalDataset.id} to be of type RAW_DATA or DATA_PRODUCT, but actual type is ${originalDataset.type}.`));
     }
     // const originalDatasetId = originalDataset.id;
     // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
@@ -981,6 +983,76 @@ router.patch(
         },
         data: {
           dataset_id: duplicateDataset.id,
+        },
+      }),
+    ]);
+
+    res.json(acceptedDataset);
+  }),
+);
+
+router.patch(
+  '/duplicates/reject/:duplicate_id',
+  validate([
+    param('duplicate_id').isInt().toInt(),
+  ]),
+  isPermittedTo('delete'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Replace an existing dataset with its duplicate dataset
+
+    const duplicateDataset = await prisma.dataset.findUnique({
+      where: {
+        id: req.params.duplicate_id,
+      },
+    });
+
+    // todo -  check if dataset is not already accepted
+
+    if (duplicateDataset.type !== 'DUPLICATE') {
+      next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be of type DUPLICATE, but actual type if ${duplicateDataset.type}`));
+    }
+
+    const matchingDatasets = await prisma.dataset.findMany({
+      where: {
+        name: duplicateDataset.name,
+        is_deleted: false
+      },
+    });
+
+    console.log('matchingDatsets:');
+    console.dir(matchingDatasets, { depth: null });
+
+    if (matchingDatasets.length !== 2) {
+      next(createError.BadRequest(`Expected to find two active (not deleted) datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
+    }
+
+    const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
+    if (originalDataset.type !== 'RAW_DATA' && originalDataset.type !== 'DATA_PRODUCT') {
+      next(createError.BadRequest(`Expected original dataset ${originalDataset.id} to be of type RAW_DATA or DATA_PRODUCT, but actual type is ${originalDataset.type}.`));
+    }
+    // const originalDatasetId = originalDataset.id;
+    // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
+
+    console.log('originalDatsset');
+    console.dir(originalDataset, { depth: null });
+    console.log(`originalDataset id: ${originalDataset.id}`);
+
+    // eslint-disable-next-line no-unused-vars
+    const [deleteCount, acceptedDataset] = await prisma.$transaction([
+      prisma.dataset.update({
+        where: {
+          id: duplicateDataset.id,
+        },
+        data: {
+          is_deleted: true,
+          type: originalDataset.type,
+          version: duplicateDataset.version + 1,
+          states: {
+            createMany: {
+              data: [{ state: 'REJECTED_DUPLICATE' }],
+            },
+          },
         },
       }),
     ]);
