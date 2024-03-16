@@ -11,6 +11,12 @@
         <table class="va-table">
           <tbody>
             <tr>
+              <td>Dataset Name</td>
+              <td>
+                {{ props.actionItem.dataset.name }}
+              </td>
+            </tr>
+            <tr>
               <td>Original Dataset</td>
               <td>
                 <router-link

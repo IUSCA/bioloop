@@ -36,9 +36,10 @@ model dataset {
   bundle           bundle?
   action_items     dataset_action_item[]
   duplicated_from  duplicate_dataset?   @relation("duplicated_from")
-  duplicated_by    duplicate_dataset?  @relation("duplicated_by")
+  duplicated_by    duplicate_dataset?   @relation("duplicated_by")
+  version          Int                  @default(1)
 
-  @@unique([name, type, is_deleted])
+  @@unique([name, type, is_deleted, version])
 }
 
 model duplicate_dataset {
