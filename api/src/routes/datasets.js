@@ -843,6 +843,10 @@ router.patch(
     }
 
     const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
+    if (originalDataset.type === 'DUPLICATE') {
+      next(createError.BadRequest(`Original dataset ${originalDataset.id} is of type DUPLICATE.`));
+    }
+    
     // const originalDatasetId = originalDataset.id;
     // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
 
@@ -870,6 +874,7 @@ router.patch(
         },
         data: {
           is_deleted: true,
+          version: originalDataset.version + 1,
           // The database table has a unique constraint on fields `name`, `type`, and `is_deleted`,
           // so we need to change the name of the original dataset (by appending its id to
           // its name) before marking it as deleted. This way, if another duplication
