@@ -1,6 +1,6 @@
 <template>
   <DatasetNotification
-    v-if="props.notification.type === 'DATASET'"
+    v-if="props.notification.type === 'INCOMING_DUPLICATE_DATASET'"
     :notification="props.notification"
   />
 </template>

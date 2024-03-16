@@ -1,8 +1,6 @@
 <template>
-  <va-alert
-    :color="alertConfig.color"
-  >
-  {{ alertConfig.text }}
+  <va-alert :color="alertConfig.color">
+    {{ alertConfig.text }}
   </va-alert>
 </template>
 
@@ -10,14 +8,12 @@
 const props = defineProps({
   dataset: {
     type: Object,
-    required: true
-  }
-})
-
-console.dir(props.dataset, {depth: null})
+    required: true,
+  },
+});
 
 const alertConfig = computed(() => {
-  const dataset = props.dataset
+  const dataset = props.dataset;
 
   let color = ""
   let text = ""

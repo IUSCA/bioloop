@@ -22,7 +22,7 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-NOTIFICATION_TYPE = "DATASET"
+NOTIFICATION_TYPE = "INCOMING_DUPLICATE_DATASET"
 NOTIFICATION_LABEL = "Duplicate Dataset"
 
 

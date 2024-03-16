@@ -6,7 +6,7 @@ export const useNotificationStore = defineStore("notification", () => {
   const appNotifications = ref([]);
   // expose sorted notifications
   const notifications = computed(() => {
-    return appNotifications.value
+    return appNotifications.value;
     // .sort((n1, n2) =>
     //   dayjs(n2.created_at).diff(dayjs(n1.created_at)),
     // );

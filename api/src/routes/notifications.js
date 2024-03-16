@@ -31,13 +31,13 @@ router.get(
       include: {
         dataset_action_items: {
           include: {
-            dataset: true
-          }
+            dataset: true,
+          },
         },
       },
       orderBy: {
-        created_at: 'desc'
-      }
+        created_at: 'desc',
+      },
     });
 
     // console.dir(notifications, { depth: null });
@@ -100,8 +100,8 @@ router.post(
         text,
         ...createActionItemsQuery,
       },
-    }
-    
+    };
+
     const notification = await prisma.notification.create(createQuery);
     res.json(notification);
   }),

@@ -10,7 +10,7 @@ if (['production'].includes(config.get('mode'))) {
 }
 
 const notification1 = {
-  type: 'DATASET',
+  type: 'INCOMING_DUPLICATE_DATASET',
   label: 'Duplicate Ingestion',
   acknowledged_by_id: null,
 };
@@ -60,7 +60,7 @@ const checks1 = [{
 }];
 
 const notification2 = {
-  type: 'DATASET',
+  type: 'INCOMING_DUPLICATE_DATASET',
   label: 'Duplicate Ingestion',
   acknowledged_by_id: null,
 };
@@ -150,7 +150,7 @@ const checks2 = [{
 }];
 
 const notification3 = {
-  type: 'DATASET',
+  type: 'INCOMING_DUPLICATE_DATASET',
   label: 'Duplicate Ingestion',
   acknowledged_by_id: null,
 };
