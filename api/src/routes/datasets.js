@@ -21,35 +21,35 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient(
-  // {
-  // // log: ['query', 'info', 'warn', 'error'],
-  // log: [
-  //   {
-  //     emit: "event",
-  //     level: "query",
-  //   },
-  //   {
-  //     emit: "event",
-  //     level: "info",
-  //   },
-  //   {
-  //     emit: "event",
-  //     level: "warn",
-  //   },
-  //   {
-  //     emit: "event",
-  //     level: "error",
-  //   },
-  // ]
-// }
+  {
+  // log: ['query', 'info', 'warn', 'error'],
+  log: [
+    {
+      emit: "event",
+      level: "query",
+    },
+    {
+      emit: "event",
+      level: "info",
+    },
+    {
+      emit: "event",
+      level: "warn",
+    },
+    {
+      emit: "event",
+      level: "error",
+    },
+  ]
+}
 );
 
-// ["query", "info", "warn", "error"].forEach((level) => {
-//   prisma.$on(level, async (e) => {
-//     console.log(`QUERY: ${e.query}`)
-//     console.log(`PARAMS: ${e.params}`)
-//   });
-// })
+["query", "info", "warn", "error"].forEach((level) => {
+  prisma.$on(level, async (e) => {
+    console.log(`QUERY: ${e.query}`)
+    console.log(`PARAMS: ${e.params}`)
+  });
+})
 
 router.get(
   '/action-items',
@@ -810,7 +810,7 @@ router.get(
 router.patch(
   '/duplicates/accept/:duplicate_id',
   validate([
-    param('id').isInt().toInt(),
+    param('duplicate_id').isInt().toInt(),
   ]),
   isPermittedTo('delete'),
   asyncHandler(async (req, res, next) => {
