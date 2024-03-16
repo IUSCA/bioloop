@@ -28,13 +28,22 @@ logger = get_task_logger(__name__)
 # original dataset from the database and the filesystem.
 def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
-
     matching_datasets = api.get_all_datasets(name=incoming_duplicate_dataset['name'], bundle=True)
     filtered_datasets = list(filter(lambda d: d['id'] != incoming_duplicate_dataset['id'], matching_datasets)) 
-
-    logger.info(json.dumps(filtered_datasets, indent=2))
-
     original_dataset = filtered_datasets[0]
+    
+    if incoming_duplicate_dataset['type'] != 'DUPLICATE':
+        raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not of type DUPLICATE")
+    if len(matching_datasets) != 2:
+        raise InspectionFailed(f"Expected 2 datasets named {incoming_duplicate_dataset['name']} (the original, and the duplicate), "
+                               f"but found more.")
+
+        # check if datasets with this name are 2. If so, dataset is already accepted. Make step pass.
+
+
+    filtered_dataset_names = [d['name'] for d in filtered_datasets]
+    logger.info(json.dumps(filtered_dataset_names, indent=2))
+
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
     original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if\
         original_dataset['bundle'] is not None\
