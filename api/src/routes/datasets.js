@@ -20,9 +20,36 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-});
+const prisma = new PrismaClient(
+  // {
+  // // log: ['query', 'info', 'warn', 'error'],
+  // log: [
+  //   {
+  //     emit: "event",
+  //     level: "query",
+  //   },
+  //   {
+  //     emit: "event",
+  //     level: "info",
+  //   },
+  //   {
+  //     emit: "event",
+  //     level: "warn",
+  //   },
+  //   {
+  //     emit: "event",
+  //     level: "error",
+  //   },
+  // ]
+// }
+);
+
+// ["query", "info", "warn", "error"].forEach((level) => {
+//   prisma.$on(level, async (e) => {
+//     console.log(`QUERY: ${e.query}`)
+//     console.log(`PARAMS: ${e.params}`)
+//   });  
+// })
 
 router.get(
   '/action-items',
@@ -781,7 +808,7 @@ router.get(
 );
 
 router.patch(
-  '/duplicates/accept/:id',
+  '/duplicates/accept/:duplicate_id',
   validate([
     param('id').isInt().toInt(),
   ]),
@@ -792,9 +819,16 @@ router.patch(
 
     const duplicateDataset = await prisma.dataset.findUnique({
       where: {
-        id: req.params.id,
+        id: req.params.duplicate_id,
       },
     });
+
+    // todo -  check if dataset is not already accepted
+
+    if (duplicateDataset.type !== 'DUPLICATE') {
+      next(createError.BadRequest(`Dataset ${dataset.id} is not of type DUPLICATE.`)); 
+    }
+
     const matchingDatasets = await prisma.dataset.findMany({
       where: {
         name: duplicateDataset.name,
@@ -808,8 +842,9 @@ router.patch(
       next(createError.BadRequest(`Expected to find two datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
     }
 
-    const originalDataset = matchingDatasets.find((d) => d.id !== req.params.id);
+    const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
     // const originalDatasetId = originalDataset.id;
+    // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
 
     console.log('originalDatsset');
     console.dir(originalDataset, { depth: null });
@@ -840,13 +875,13 @@ router.patch(
           // its name) before marking it as deleted. This way, if another duplication
           // attempt is made in the future on a dataset that has this name, this unique
           // constraint won't fail when the current query is executed, since each rejected
-          // dataset is being given a unique name.
-          name: `${originalDataset.name}-${originalDataset.id}`,
-          // add state DUPLICATED to the original dataset, to differentiate datasets that were
+          // dataset will always have a unique name.
+          // name: overwrittenDatasetName,
+          // add state OVERWRITTEN to the original dataset, to differentiate datasets that were
           // duplicated and then overwritten from datasets that are soft-deleted.
           states: {
-            create: {
-              state: 'DUPLICATED',
+            createMany: {
+              data: [{ state: 'OVERWRITTEN' }],
             },
           },
         },
@@ -859,6 +894,15 @@ router.patch(
           type: originalDataset.type,
         },
       }),
+      // prisma.dataset_file.updateMany({
+      //   where: {
+      //     dataset_id: originalDataset.id,
+      //   },
+      //   data: {
+      //     dataset_id: duplicateDataset.id,
+      //   },
+      // }),
+      
       prisma.dataset_hierarchy.updateMany({
         where: {
           source_id: originalDataset.id,
@@ -875,54 +919,57 @@ router.patch(
           derived_id: duplicateDataset.id,
         },
       }),
-      prisma.dataset_file.updateMany({
-        where: {
-          dataset_id: originalDataset.id,
-        },
+      prisma.dataset_audit.create({
         data: {
+          action: 'accepted',
+          user_id: req.user.id,
           dataset_id: duplicateDataset.id,
-        },
+        }
       }),
-      prisma.dataset_audit.updateMany({
-        where: {
-          dataset_id: originalDataset.id,
-        },
+      prisma.dataset_audit.create({
         data: {
-          dataset_id: duplicateDataset.id,
-        },
-      }),
-      prisma.dataset_state.updateMany({
-        where: {
+          action: 'overwritten',
+          user_id: req.user.id,
           dataset_id: originalDataset.id,
-        },
-        data: {
-          dataset_id: duplicateDataset.id,
-        },
+        }
       }),
-      prisma.data_access_log.updateMany({
-        where: {
-          dataset_id: originalDataset.id,
-        },
-        data: {
-          dataset_id: duplicateDataset.id,
-        },
-      }),
-      prisma.stage_request_log.updateMany({
-        where: {
-          dataset_id: originalDataset.id,
-        },
-        data: {
-          dataset_id: duplicateDataset.id,
-        },
-      }),
-      prisma.workflow.updateMany({
-        where: {
-          dataset_id: originalDataset.id,
-        },
-        data: {
-          dataset_id: duplicateDataset.id,
-        },
-      }),
+      // prisma.dataset_state.updateMany({
+      //   where: {
+      //     dataset_id: originalDataset.id,
+      //   },
+      //   data: {
+      //     dataset_id: duplicateDataset.id,
+      //   },
+      // }),
+
+      // Operators will likely be more interested in seeing the access statistics for
+      // this dataset across all of its duplicates. Therefore, any previous access attempts
+      // associated with the original dataset's id can be overwritten with the incoming 
+      // duplicate dataset's id.
+      // prisma.data_access_log.updateMany({
+      //   where: {
+      //     dataset_id: originalDataset.id,
+      //   },
+      //   data: {
+      //     dataset_id: duplicateDataset.id,
+      //   },
+      // }),
+      // prisma.stage_request_log.updateMany({
+      //   where: {
+      //     dataset_id: originalDataset.id,
+      //   },
+      //   data: {
+      //     dataset_id: duplicateDataset.id,
+      //   },
+      // }),
+      // prisma.workflow.updateMany({
+      //   where: {
+      //     dataset_id: originalDataset.id,
+      //   },
+      //   data: {
+      //     dataset_id: duplicateDataset.id,
+      //   },
+      // }),
       prisma.project_dataset.updateMany({
         where: {
           dataset_id: originalDataset.id,

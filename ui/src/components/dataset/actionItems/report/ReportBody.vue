@@ -11,7 +11,9 @@
         :items="props.actionItem.ingestion_checks"
       >
         <template #cell(check)="{ rowData }">
-          {{ rowData.label }}
+          <va-chip outline size="small">
+            {{ rowData.label }}
+          </va-chip>
         </template>
 
         <!-- The current check's passed / failed status -->

@@ -136,7 +136,7 @@
                   router.push(actionItemURL(rowData));
                 }
               "
-              :disabled="rowData.is_deleted || isInspected(!rowData)"
+              :disabled="rowData.is_deleted || !isInspected(rowData)"
             >
               <i-mdi-compare-horizontal />
             </va-button>
