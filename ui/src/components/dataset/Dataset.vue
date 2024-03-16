@@ -1,7 +1,7 @@
 <template>
   <va-inner-loading :loading="loading">
     <DatasetDuplucationInfo :dataset="dataset" />
-    
+
     <!-- Content -->
     <div class="flex flex-col gap-3">
       <!-- Dataset Info + Status Cards -->
@@ -345,7 +345,12 @@ const polling_interval = computed(() => {
 
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  DatasetService.getById({ id: props.datasetId, bundle: true, include_duplications: true, include_states: true })
+  DatasetService.getById({
+    id: props.datasetId,
+    bundle: true,
+    include_duplications: true,
+    include_states: true,
+  })
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
