@@ -26,7 +26,7 @@
       <!-- The current dataset is a duplicate of another dataset.  -->
       <div v-if="alertConfig.alertType === 'IS_DUPLICATE'">
         <span
-          >Duplicate From:
+          >Duplicated From:
           <a href="#"> #{{ alertConfig.duplicated_from_id }} </a></span
         >
       </div>
@@ -42,7 +42,7 @@
       <!-- The current dataset is a rejected duplicate of an another dataset -->
       <div v-if="alertConfig.alertType === 'REJECTED_DUPLICATE'">
         <span
-          >Duplicate From:
+          >Duplicated From:
           <a href="#"> #{{ alertConfig.duplicated_from_id }} </a></span
         >
       </div>
