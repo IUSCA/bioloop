@@ -19,6 +19,10 @@ const actionItem1 = {
   dataset_id: 3,
   metadata: { original_dataset_id: 5 },
 };
+// const duplicateEntry1 = {
+//   original_dataset_id: 5,
+//   duplicate_dataset_id: 3,
+// };
 const checks1 = [{
   type: 'FILE_COUNT',
   passed: false,
@@ -45,7 +49,20 @@ const checks1 = [{
     }],
   },
 }, {
-  type: 'NO_MISSING_FILES',
+  type: 'FILES_MISSING_FROM_DUPLICATE',
+  label: 'All Original Files Found',
+  passed: false,
+  report: {
+    missing_files: [{
+      name: 'missing_file_1',
+      path: '/path/to/missing_file_1',
+    }, {
+      name: 'missing_file_2',
+      path: '/path/to/missing_file_1',
+    }],
+  },
+}, {
+  type: 'FILES_MISSING_FROM_ORIGINAL',
   label: 'All Original Files Found',
   passed: false,
   report: {
@@ -68,6 +85,10 @@ const actionItem2 = {
   type: 'DUPLICATE_INGESTION',
   dataset_id: 10,
   metadata: { original_dataset_id: 11 },
+};
+const duplicateEntry2 = {
+  original_dataset_id: 11,
+  duplicate_dataset_id: 10,
 };
 const checks2 = [{
   type: 'FILE_COUNT',
@@ -135,7 +156,20 @@ const checks2 = [{
     }],
   },
 }, {
-  type: 'NO_MISSING_FILES',
+  type: 'FILES_MISSING_FROM_ORIGINAL',
+  label: 'All Original Files Found',
+  passed: false,
+  report: {
+    missing_files: [{
+      name: 'missing_file_1',
+      path: '/path/to/missing_file_1',
+    }, {
+      name: 'missing_file_2',
+      path: '/path/to/missing_file_1',
+    }],
+  },
+}, {
+  type: 'FILES_MISSING_FROM_DUPLICATE',
   label: 'All Original Files Found',
   passed: false,
   report: {
@@ -175,7 +209,14 @@ const checks3 = [{
     conflicting_checksum_files: [],
   },
 }, {
-  type: 'NO_MISSING_FILES',
+  type: 'FILES_MISSING_FROM_ORIGINAL',
+  label: 'All Original Files Found',
+  passed: true,
+  report: {
+    missing_files: [],
+  },
+}, {
+  type: 'FILES_MISSING_FROM_DUPLICATE',
   label: 'All Original Files Found',
   passed: true,
   report: {
@@ -184,7 +225,7 @@ const checks3 = [{
 }];
 
 const duplicateDataset = {
-  name: 'PCM230203',
+  name: 'PCM230306',
   type: 'DUPLICATE',
   num_directories: 35,
   num_files: 116,
@@ -192,8 +233,8 @@ const duplicateDataset = {
   size: 160612394997,
   description: null,
   is_staged: true,
-  origin_path: '/origin/path/PCM230203',
-  archive_path: 'archive/2023/PCM230203.tar',
+  origin_path: '/origin/path/PCM230306',
+  archive_path: 'archive/2023/PCM230306.tar',
   metadata: {
     num_genome_files: 60,
     report_id: 'a577cb75-bb5c-4b1b-94ed-c4bd96de1188',
@@ -205,16 +246,36 @@ async function main() {
   await prisma.dataset.deleteMany({
     where: {
       type: 'DUPLICATE',
-      name: 'PCM230203',
+      name: 'PCM230306',
     },
   });
+
   const createdDuplicate = await prisma.dataset.create({
     data: duplicateDataset,
   });
 
+  const matchingDatasets = await prisma.dataset.findMany({
+    where: {
+      name: createdDuplicate.name,
+      is_deleted: false,
+    },
+  });
+
+  if (matchingDatasets.length !== 2) {
+    throw new Error('Invalid state');
+  }
+
+  const originalDataset = matchingDatasets.find((dataset) => dataset.id !== createdDuplicate.id);
+
+  const duplicateEntry1 = {
+    original_dataset_id: originalDataset.id,
+    duplicate_dataset_id: createdDuplicate.id,
+  };
+
   await prisma.notification.deleteMany({});
   await prisma.dataset_action_item.deleteMany({});
   await prisma.dataset_ingestion_check.deleteMany({});
+  await prisma.duplicate_dataset.deleteMany({});
 
   await prisma.notification.create({
     data: {
@@ -228,28 +289,38 @@ async function main() {
       },
     },
   });
-  await prisma.notification.create({
-    data: {
-      ...notification2,
-      dataset_action_items: {
-        create: {
-          ...actionItem2,
-          ingestion_checks: { create: checks2 },
-        },
-      },
-    },
+  await prisma.duplicate_dataset.create({
+    data: duplicateEntry1,
   });
-  await prisma.notification.create({
-    data: {
-      ...notification3,
-      dataset_action_items: {
-        create: {
-          ...actionItem3,
-          ingestion_checks: { create: checks3 },
-        },
-      },
-    },
-  });
+
+  console.log(createdDuplicate.id);
+
+  // await prisma.notification.create({
+  //   data: {
+  //     ...notification2,
+  //     dataset_action_items: {
+  //       create: {
+  //         ...actionItem2,
+  //         ingestion_checks: { create: checks2 },
+  //       },
+  //     },
+  //   },
+  // });
+  // await prisma.duplicate_dataset.create({
+  //   data: duplicateEntry2,
+  // });
+  //
+  // await prisma.notification.create({
+  //   data: {
+  //     ...notification3,
+  //     dataset_action_items: {
+  //       create: {
+  //         ...actionItem3,
+  //         ingestion_checks: { create: checks3 },
+  //       },
+  //     },
+  //   },
+  // });
 }
 
 main()

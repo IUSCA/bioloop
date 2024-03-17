@@ -69,11 +69,6 @@ onMounted(() => {
 //   console.log(`notifications:`);
 //   console.dir(state.notifications, { depth: null });
 // });
-
-watch(notifications, () => {
-  console.log("watch");
-  console.log(notifications);
-});
 </script>
 
 <style lang="scss" scoped>

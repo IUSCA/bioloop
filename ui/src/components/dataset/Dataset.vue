@@ -1,6 +1,6 @@
 <template>
   <va-inner-loading :loading="loading">
-    <DatasetDuplicationInfo :dataset="dataset" />
+    <DatasetStateAlert :dataset="dataset" />
 
     <!-- Content -->
     <div class="flex flex-col gap-3">
