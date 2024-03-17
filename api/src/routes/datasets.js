@@ -23,33 +23,33 @@ const router = express.Router();
 const prisma = new PrismaClient(
   {
   // log: ['query', 'info', 'warn', 'error'],
-  log: [
-    {
-      emit: "event",
-      level: "query",
-    },
-    {
-      emit: "event",
-      level: "info",
-    },
-    {
-      emit: "event",
-      level: "warn",
-    },
-    {
-      emit: "event",
-      level: "error",
-    },
-  ]
-}
+    log: [
+      {
+        emit: 'event',
+        level: 'query',
+      },
+      {
+        emit: 'event',
+        level: 'info',
+      },
+      {
+        emit: 'event',
+        level: 'warn',
+      },
+      {
+        emit: 'event',
+        level: 'error',
+      },
+    ],
+  },
 );
 
-["query", "info", "warn", "error"].forEach((level) => {
+['query', 'info', 'warn', 'error'].forEach((level) => {
   prisma.$on(level, async (e) => {
-    console.log(`QUERY: ${e.query}`)
-    console.log(`PARAMS: ${e.params}`)
+    console.log(`QUERY: ${e.query}`);
+    console.log(`PARAMS: ${e.params}`);
   });
-})
+});
 
 router.get(
   '/action-items',
@@ -364,7 +364,7 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
-      include_duplications: req.query.include_duplications || false
+      include_duplications: req.query.include_duplications || false,
     });
     res.json(dataset);
   }),
@@ -407,7 +407,7 @@ router.post(
     };
 
     if (data.type === 'DUPLICATE') {
-      const originalDataset = await prisma.dataset.findFirst({
+      const originalDataset = await prisma.dataset.findUnique({
         where: {
           name: data.name,
           is_deleted: false,
@@ -834,21 +834,24 @@ router.patch(
     const matchingDatasets = await prisma.dataset.findMany({
       where: {
         name: duplicateDataset.name,
-        is_deleted: false
+        is_deleted: false,
+        NOT: {
+          type: 'DUPLICATE',
+        },
       },
     });
 
     console.log('matchingDatsets:');
     console.dir(matchingDatasets, { depth: null });
 
-    if (matchingDatasets.length !== 2) {
-      next(createError.BadRequest(`Expected to find two active (not deleted) datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
+    if (matchingDatasets.length !== 1) {
+      next(createError.BadRequest(`Expected to find one active dataset named ${duplicateDataset.name} (the original dataset), but found ${matchingDatasets.length}`));
     }
 
-    const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
-    if (originalDataset.type !== 'RAW_DATA' && originalDataset.type !== 'DATA_PRODUCT') {
-      next(createError.BadRequest(`Expected original dataset ${originalDataset.id} to be of type RAW_DATA or DATA_PRODUCT, but actual type is ${originalDataset.type}.`));
-    }
+    const originalDataset = matchingDatasets[0];
+    // if (originalDataset.type !== 'RAW_DATA' && originalDataset.type !== 'DATA_PRODUCT') {
+    //   next(createError.BadRequest(`Expected original dataset ${originalDataset.id} to be of type RAW_DATA or DATA_PRODUCT, but actual type is ${originalDataset.type}.`));
+    // }
     // const originalDatasetId = originalDataset.id;
     // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
 
@@ -857,7 +860,7 @@ router.patch(
     console.log(`originalDataset id: ${originalDataset.id}`);
 
     // eslint-disable-next-line no-unused-vars
-    const [deleteCount, acceptedDataset] = await prisma.$transaction([
+    const [acceptedDataset] = await prisma.$transaction([
       // todo - refactor this into a service method
       // todo - soft delete will fail because of this
 
@@ -870,6 +873,15 @@ router.patch(
       //   duplicate
 
       // if ids are swapped, original dataset is obliterated
+      prisma.dataset.update({
+        where: {
+          id: duplicateDataset.id,
+        },
+        data: {
+          type: originalDataset.type,
+          version: originalDataset.version + 1,
+        },
+      }),
       prisma.dataset.update({
         where: {
           id: originalDataset.id,
@@ -892,15 +904,25 @@ router.patch(
           },
         },
       }),
-      prisma.dataset.update({
-        where: {
-          id: duplicateDataset.id,
-        },
-        data: {
-          type: originalDataset.type,
-          version: originalDataset.version + 1,
-        },
-      }),
+      // reject any other duplicates that have this name
+      // todo - update version of rejected duplicates
+      // prisma.dataset.updateMany({
+      //   where: {
+      //     name: duplicateDataset.name,
+      //     type: 'DUPLICATE',
+      //     NOT: { id: duplicateDataset.id },
+      //   },
+      //   data: {
+      //     is_deleted: true,
+      //     type: originalDataset.type,
+      //     version:
+      //     states: {
+      //       createMany: {
+      //         data: [{ state: 'REJECTED_DUPLICATE' }],
+      //       },
+      //     },
+      //   },
+      // }),
       // prisma.dataset_file.updateMany({
       //   where: {
       //     dataset_id: originalDataset.id,
@@ -985,6 +1007,11 @@ router.patch(
           dataset_id: duplicateDataset.id,
         },
       }),
+      // prisma.dataset_action_item.update({
+      //   where: {
+      //     dataset_id:
+      //   }
+      // })
     ]);
 
     res.json(acceptedDataset);
@@ -1016,21 +1043,25 @@ router.patch(
     const matchingDatasets = await prisma.dataset.findMany({
       where: {
         name: duplicateDataset.name,
-        is_deleted: false
+        is_deleted: false,
+        NOT: {
+          type: 'DUPLICATE',
+        },
       },
     });
 
     console.log('matchingDatsets:');
     console.dir(matchingDatasets, { depth: null });
 
-    if (matchingDatasets.length !== 2) {
-      next(createError.BadRequest(`Expected to find two active (not deleted) datasets named ${duplicateDataset.name} (the original, and the duplicate), but found ${matchingDatasets.length}`));
+    if (matchingDatasets.length !== 1) {
+      next(createError.BadRequest(`Expected to find one active dataset named ${duplicateDataset.name} (the original dataset), but found ${matchingDatasets.length}`));
     }
 
-    const originalDataset = matchingDatasets.find((d) => d.id !== duplicateDataset.id);
-    if (originalDataset.type !== 'RAW_DATA' && originalDataset.type !== 'DATA_PRODUCT') {
-      next(createError.BadRequest(`Expected original dataset ${originalDataset.id} to be of type RAW_DATA or DATA_PRODUCT, but actual type is ${originalDataset.type}.`));
-    }
+    const originalDataset = matchingDatasets[0];
+
+    // if (originalDataset.type !== 'RAW_DATA' && originalDataset.type !== 'DATA_PRODUCT') {
+    //   next(createError.BadRequest(`Expected original dataset ${originalDataset.id} to be of type RAW_DATA or DATA_PRODUCT, but actual type is ${originalDataset.type}.`));
+    // }
     // const originalDatasetId = originalDataset.id;
     // const overwrittenDatasetName = `${originalDataset.name}-${originalDataset.id}`
 
@@ -1039,24 +1070,21 @@ router.patch(
     console.log(`originalDataset id: ${originalDataset.id}`);
 
     // eslint-disable-next-line no-unused-vars
-    const [deleteCount, acceptedDataset] = await prisma.$transaction([
-      prisma.dataset.update({
-        where: {
-          id: duplicateDataset.id,
-        },
-        data: {
-          is_deleted: true,
-          type: originalDataset.type,
-          version: duplicateDataset.version + 1,
-          states: {
-            createMany: {
-              data: [{ state: 'REJECTED_DUPLICATE' }],
-            },
+    const acceptedDataset = await prisma.dataset.update({
+      where: {
+        id: duplicateDataset.id,
+      },
+      data: {
+        is_deleted: true,
+        type: originalDataset.type,
+        version: duplicateDataset.version + 1,
+        states: {
+          createMany: {
+            data: [{ state: 'REJECTED_DUPLICATE' }],
           },
         },
-      }),
-    ]);
-
+      },
+    });
     res.json(acceptedDataset);
   }),
 );
