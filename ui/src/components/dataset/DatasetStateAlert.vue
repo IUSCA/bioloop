@@ -77,40 +77,38 @@ const alertConfig = computed(() => {
   let alertType = "";
 
   if (dataset.type === "DUPLICATE") {
-    // Dataset is of type "DUPLICATE"
+    // if dataset is a duplicate of another,
     alertType = "IS_DUPLICATE";
     alertColor = "warning";
     title = "Duplicate Dataset";
     text = `This dataset has been duplicated from another, and is currently pending acceptance.`;
   } else {
-    // Dataset is of type "RAW_DATA" or "DATA_PRODUCT"
     if (!dataset.is_deleted) {
-      // Dataset is active in the system
+      // if dataset is active in the system,
       if (dataset.duplicated_by) {
-        // Dataset has been duplicated by another dataset
+        // and it has been duplicated by another dataset.
         alertType = "INCOMING_DUPLICATE";
         alertColor = "warning";
         title = "Incoming Duplicate";
         text = `This dataset has been duplicated by another, which is currently pending acceptance.`;
       }
     } else {
-      // Dataset has reached one of 3 potential deleted states
+      // dataset has reached one of 3 potential deleted states:
       const datasetState = currentState(dataset);
       if (datasetState === "DELETED") {
-        // Dataset has been soft-deleted
+        // either dataset has been soft-deleted,
         alertType = "INACTIVE_DATASET";
         alertColor = "danger";
         title = "Inactive Dataset";
         text = "You are viewing an inactive (deleted) dataset.";
       } else if (datasetState === "REJECTED_DUPLICATE") {
-        // Dataset is a duplicate which has been rejected from being ingested into the system
+        // or, dataset is a duplicate which has been rejected from being ingested into the system
         alertType = "REJECTED_DUPLICATE";
         alertColor = "warning";
         title = "Rejected Duplicate";
         text = `This dataset is a duplicate, and has been rejected from being ingested into the system.`;
       } else if (datasetState === "OVERWRITTEN") {
-        // Dataset has been overwritten by another dataset (a dataset reaches this state once it's
-        // duplicate dataset has been accepted into the system).
+        // or, dataset has been overwritten by another dataset.
         alertType = "OVERWRITTEN";
         alertColor = "warning";
         title = "Overwritten";
