@@ -1,5 +1,17 @@
 <template>
-  <va-alert :color="alertConfig.color">
+  <!--
+   Shows important alerts regarding the dataset's state.
+
+   Alerts are generated if this dataset is in either of the following states:
+   1. Dataset has been deleted.
+   2. Dataset has been duplicated by another dataset.
+   3. Dataset is a duplicate of another dataset, and is currently pending acceptance into the system.
+   4. Dataset is a rejected duplicate of an another dataset.
+   5. Dataset has been overwritten by another dataset (a dataset reaches this state once it's
+      duplicate dataset has been accepted into the system).
+  -->
+
+  <va-alert :color="alertConfig.alertColor">
     <template #title>
       <div class="va-title">
         {{ alertConfig.title }}
@@ -10,10 +22,36 @@
       <div>
         {{ alertConfig.text }}
       </div>
-      <div>
+
+      <!-- The current dataset is a duplicate of another dataset.  -->
+      <div v-if="alertConfig.alertType === 'IS_DUPLICATE'">
         <span
-          >Duplicated From:
+          >Duplicate From:
           <a href="#"> #{{ alertConfig.duplicated_from_id }} </a></span
+        >
+      </div>
+
+      <!-- The current dataset has been duplicated by another dataset -->
+      <div v-if="alertConfig.alertType === 'INCOMING_DUPLICATE'">
+        <span
+          >Duplicated By:
+          <a href="#"> #{{ alertConfig.duplicated_by_id }} </a></span
+        >
+      </div>
+
+      <!-- The current dataset is a rejected duplicate of an another dataset -->
+      <div v-if="alertConfig.alertType === 'REJECTED_DUPLICATE'">
+        <span
+          >Duplicate From:
+          <a href="#"> #{{ alertConfig.duplicated_from_id }} </a></span
+        >
+      </div>
+
+      <!-- The current dataset has been overwritten by another dataset -->
+      <div v-if="alertConfig.alertType === 'OVERWRITTEN'">
+        <span
+          >Overwritten by:
+          <a href="#"> #{{ alertConfig.duplicated_by_id }} </a></span
         >
       </div>
     </div>
@@ -28,59 +66,70 @@ const props = defineProps({
   },
 });
 
-const _dataset = toRef(() => props.dataset);
-
-console.log("LOADED");
-
 const alertConfig = computed(() => {
   const dataset = props.dataset;
 
   let duplicated_from_id = dataset.duplicated_from?.original_dataset_id;
   let duplicated_by_id = dataset.duplicated_by?.duplicate_dataset_id;
-  let color = "";
-  let text = "";
   let title = "";
+  let alertColor = "";
+  let text = "";
+  let alertType = "";
 
   if (dataset.type === "DUPLICATE") {
-    color = "warning";
-    title = "DUPLICATE DATASET";
-    text = `This dataset was duplicated from another, and is currently pending acceptance.`;
+    // Dataset is of type "DUPLICATE"
+    alertType = "IS_DUPLICATE";
+    alertColor = "warning";
+    title = "Duplicate Dataset";
+    text = `This dataset has been duplicated from another, and is currently pending acceptance.`;
   } else {
+    // Dataset is of type "RAW_DATA" or "DATA_PRODUCT"
     if (!dataset.is_deleted) {
+      // Dataset is active in the system
       if (dataset.duplicated_by) {
-        color = "warning";
-        title = "INCOMING DUPLICATE";
-        text = `This dataset was duplicated, which is currently pending acceptance.`;
+        // Dataset has been duplicated by another dataset
+        alertType = "INCOMING_DUPLICATE";
+        alertColor = "warning";
+        title = "Incoming Duplicate";
+        text = `This dataset has been duplicated by another, which is currently pending acceptance.`;
       }
     } else {
-      const datasetState = getCurrentState(dataset);
+      // Dataset has reached one of 3 potential deleted states
+      const datasetState = currentState(dataset);
       if (datasetState === "DELETED") {
-        color = "danger";
+        // Dataset has been soft-deleted
+        alertType = "INACTIVE_DATASET";
+        alertColor = "danger";
+        title = "Inactive Dataset";
         text = "You are viewing an inactive (deleted) dataset.";
-        title = "INACTIVE DATASET";
       } else if (datasetState === "REJECTED_DUPLICATE") {
-        color = "warning";
-        title = "REJECTED DUPLICATE";
-        text = `This dataset was duplicated from ${dataset.duplicated_from.original_dataset_id}, and then rejected.`;
+        // Dataset is a duplicate which has been rejected from being ingested into the system
+        alertType = "REJECTED_DUPLICATE";
+        alertColor = "warning";
+        title = "Rejected Duplicate";
+        text = `This dataset is a duplicate, and has been rejected from being ingested into the system.`;
       } else if (datasetState === "OVERWRITTEN") {
-        color = "warning";
-        title = "OVERWRITTEN";
-        text = `This dataset has been overwritten by ${dataset.duplicated_by.duplicate_dataset_id}.`;
+        // Dataset has been overwritten by another dataset (a dataset reaches this state once it's
+        // duplicate dataset has been accepted into the system).
+        alertType = "OVERWRITTEN";
+        alertColor = "warning";
+        title = "Overwritten";
+        text = `This dataset has been overwritten by another.`;
       }
     }
   }
 
   return {
-    color,
+    alertColor,
     text,
     title,
+    alertType,
     duplicated_from_id,
     duplicated_by_id,
   };
-  // const dataset = props.dataset.type === 'DUPLICATE'
 });
 
-const getCurrentState = (dataset) => {
+const currentState = (dataset) => {
   const latestState = dataset.states[dataset.states.length - 1];
   return latestState.state;
 };
