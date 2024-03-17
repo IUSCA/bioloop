@@ -98,7 +98,7 @@ router.get(
   '/stats',
   isPermittedTo('read'),
   validate([
-    query('type').isIn(config.dataset_types.filter((type) => type !== 'DUPLICATE')).optional(),
+    query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']
@@ -179,12 +179,13 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, processed, archived, staged, type, name, days_since_last_staged,
+  deleted, processed, archived, staged, is_duplicate, type, name, days_since_last_staged,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
+    is_duplicate,
     type,
     name: name ? {
       contains: name,
@@ -263,6 +264,7 @@ router.get(
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
+    query('is_duplicate').isBoolean().toBoolean().optional(),
     query('type')
       .isIn(config.dataset_types)
       .optional(),
@@ -285,6 +287,7 @@ router.get(
       processed: req.query.processed,
       archived: req.query.archived,
       staged: req.query.staged,
+      is_duplicate: req.query.is_duplicate || false,
       type: req.query.type,
       name: req.query.name,
       days_since_last_staged: req.query.days_since_last_staged,
@@ -406,19 +409,32 @@ router.post(
       ],
     };
 
-    if (data.type === 'DUPLICATE') {
-      const originalDataset = await prisma.dataset.findUnique({
+    if (data.is_duplicate) {
+      const matchingDatasets = await prisma.dataset.findMany({
         where: {
           name: data.name,
           is_deleted: false,
         },
       });
+      // check if there are other duplicates for this dataset exist in the system already
+      const existingDuplicates = matchingDatasets.filter((d) => d.is_duplicate);
+      // if so, find the most recent duplicate (the one with the highest version), to determine the
+      // version to be assigned to the current duplicate dataset
+      let latestDuplicateVersion;
+      if (existingDuplicates.length > 0) {
+        // sort by version - descending
+        existingDuplicates.sort((d1, d2) => (d2.version - d1.version));
+        latestDuplicateVersion = existingDuplicates[existingDuplicates.length - 1].version;
+      }
+      const originalDataset = matchingDatasets.filter((d) => !d.is_duplicate)[0];
+
       data.duplicated_from = {
         create: {
           original_dataset_id: originalDataset.id,
-          // duplicate_dataset_id:
         },
       };
+      // Defaulting version to `undefined` allows Prisma to auto-increment it
+      data.version = typeof latestDuplicateVersion === 'number' ? latestDuplicateVersion + 1 : undefined;
     }
 
     // create dataset along with associations
@@ -827,17 +843,15 @@ router.patch(
 
     // todo -  check if dataset is not already accepted
 
-    if (duplicateDataset.type !== 'DUPLICATE') {
-      next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be of type DUPLICATE, but actual type if ${duplicateDataset.type}`));
+    if (!duplicateDataset.is_duplicate) {
+      next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be a duplicate, but dataset is not a duplicate.`));
     }
 
     const matchingDatasets = await prisma.dataset.findMany({
       where: {
         name: duplicateDataset.name,
         is_deleted: false,
-        NOT: {
-          type: 'DUPLICATE',
-        },
+        is_duplicate: false,
       },
     });
 
@@ -845,7 +859,7 @@ router.patch(
     console.dir(matchingDatasets, { depth: null });
 
     if (matchingDatasets.length !== 1) {
-      next(createError.BadRequest(`Expected to find one active dataset named ${duplicateDataset.name} (the original dataset), but found ${matchingDatasets.length}`));
+      next(createError.BadRequest(`Expected to find one active (not deleted) dataset named ${duplicateDataset.name} (the original dataset), but found ${matchingDatasets.length}`));
     }
 
     const originalDataset = matchingDatasets[0];
@@ -859,27 +873,31 @@ router.patch(
     console.dir(originalDataset, { depth: null });
     console.log(`originalDataset id: ${originalDataset.id}`);
 
-    // eslint-disable-next-line no-unused-vars
     const [acceptedDataset] = await prisma.$transaction([
       // todo - refactor this into a service method
-      // todo - soft delete will fail because of this
-
-      // if ids are swapped, soft delete cannot be done on original dataset
-      //   soft delete can be done in this transaction
 
       //   once new dataset is accepted and original dataset reaches soft delete state,
       //   a second attempt to ingest a duplicate with this name will cause problems
       //   with trying to soft-delete the dataset that was previously ingested as a
       //   duplicate
-
-      // if ids are swapped, original dataset is obliterated
       prisma.dataset.update({
         where: {
           id: duplicateDataset.id,
         },
         data: {
-          type: originalDataset.type,
+          // type: originalDataset.type,
+          is_duplicate: false,
           version: originalDataset.version + 1,
+          audit_logs: {
+            createMany: {
+              data: [
+                {
+                  action: 'duplicate_accepted',
+                  user_id: req.user.id,
+                },
+              ],
+            },
+          },
         },
       }),
       prisma.dataset.update({
@@ -888,6 +906,16 @@ router.patch(
         },
         data: {
           is_deleted: true,
+          audit_logs: {
+            createMany: {
+              data: [
+                {
+                  action: 'overwritten_by_duplicate',
+                  user_id: req.user.id,
+                },
+              ],
+            },
+          },
           // The database table has a unique constraint on fields `name`, `type`, and `is_deleted`,
           // so we need to change the name of the original dataset (by appending its id to
           // its name) before marking it as deleted. This way, if another duplication
@@ -905,33 +933,31 @@ router.patch(
         },
       }),
       // reject any other duplicates that have this name
-      // todo - update version of rejected duplicates
-      // prisma.dataset.updateMany({
-      //   where: {
-      //     name: duplicateDataset.name,
-      //     type: 'DUPLICATE',
-      //     NOT: { id: duplicateDataset.id },
-      //   },
-      //   data: {
-      //     is_deleted: true,
-      //     type: originalDataset.type,
-      //     version:
-      //     states: {
-      //       createMany: {
-      //         data: [{ state: 'REJECTED_DUPLICATE' }],
-      //       },
-      //     },
-      //   },
-      // }),
-      // prisma.dataset_file.updateMany({
-      //   where: {
-      //     dataset_id: originalDataset.id,
-      //   },
-      //   data: {
-      //     dataset_id: duplicateDataset.id,
-      //   },
-      // }),
-
+      prisma.dataset.updateMany({
+        where: {
+          name: duplicateDataset.name,
+          is_duplicate: true,
+          NOT: { id: duplicateDataset.id },
+        },
+        data: {
+          is_deleted: true,
+          audit_logs: {
+            createMany: {
+              data: [
+                {
+                  action: 'duplicate_rejected',
+                  user_id: req.user.id,
+                },
+              ],
+            },
+          },
+          states: {
+            createMany: {
+              data: [{ state: 'REJECTED_DUPLICATE' }],
+            },
+          },
+        },
+      }),
       prisma.dataset_hierarchy.updateMany({
         where: {
           source_id: originalDataset.id,
@@ -948,29 +974,6 @@ router.patch(
           derived_id: duplicateDataset.id,
         },
       }),
-      prisma.dataset_audit.create({
-        data: {
-          action: 'accepted',
-          user_id: req.user.id,
-          dataset_id: duplicateDataset.id,
-        },
-      }),
-      prisma.dataset_audit.create({
-        data: {
-          action: 'overwritten',
-          user_id: req.user.id,
-          dataset_id: originalDataset.id,
-        },
-      }),
-      // prisma.dataset_state.updateMany({
-      //   where: {
-      //     dataset_id: originalDataset.id,
-      //   },
-      //   data: {
-      //     dataset_id: duplicateDataset.id,
-      //   },
-      // }),
-
       // Operators will likely be more interested in seeing the access statistics for
       // this dataset across all of its duplicates. Therefore, any previous access attempts
       // associated with the original dataset's id can be overwritten with the incoming
@@ -991,14 +994,6 @@ router.patch(
       //     dataset_id: duplicateDataset.id,
       //   },
       // }),
-      // prisma.workflow.updateMany({
-      //   where: {
-      //     dataset_id: originalDataset.id,
-      //   },
-      //   data: {
-      //     dataset_id: duplicateDataset.id,
-      //   },
-      // }),
       prisma.project_dataset.updateMany({
         where: {
           dataset_id: originalDataset.id,
@@ -1007,11 +1002,6 @@ router.patch(
           dataset_id: duplicateDataset.id,
         },
       }),
-      // prisma.dataset_action_item.update({
-      //   where: {
-      //     dataset_id:
-      //   }
-      // })
     ]);
 
     res.json(acceptedDataset);
@@ -1036,17 +1026,15 @@ router.patch(
 
     // todo -  check if dataset is not already accepted
 
-    if (duplicateDataset.type !== 'DUPLICATE') {
-      next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be of type DUPLICATE, but actual type if ${duplicateDataset.type}`));
+    if (!duplicateDataset.is_duplicate) {
+      next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be a duplicate, but dataset is not a duplicate.`));
     }
 
     const matchingDatasets = await prisma.dataset.findMany({
       where: {
         name: duplicateDataset.name,
         is_deleted: false,
-        NOT: {
-          type: 'DUPLICATE',
-        },
+        is_duplicate: false,
       },
     });
 
@@ -1070,14 +1058,23 @@ router.patch(
     console.log(`originalDataset id: ${originalDataset.id}`);
 
     // eslint-disable-next-line no-unused-vars
-    const acceptedDataset = await prisma.dataset.update({
+    const rejectedDataset = await prisma.dataset.update({
       where: {
         id: duplicateDataset.id,
       },
       data: {
         is_deleted: true,
-        type: originalDataset.type,
-        version: duplicateDataset.version + 1,
+        // version: duplicateDataset.version + 1,
+        audit_logs: {
+          createMany: {
+            data: [
+              {
+                action: 'duplicate_rejected',
+                user_id: req.user.id,
+              },
+            ],
+          },
+        },
         states: {
           createMany: {
             data: [{ state: 'REJECTED_DUPLICATE' }],
@@ -1085,7 +1082,7 @@ router.patch(
         },
       },
     });
-    res.json(acceptedDataset);
+    res.json(rejectedDataset);
   }),
 );
 

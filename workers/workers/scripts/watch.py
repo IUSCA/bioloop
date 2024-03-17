@@ -96,15 +96,18 @@ class Register:
         self.dataset_type = dataset_type
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
-        self.completed: set[str] = set(self.get_registered_dataset_names(self.dataset_type))  # HTTP GET
-        self.duplicates: set[str] = set(self.get_registered_dataset_names(config['dataset_types']['DUPLICATE']))  # HTTP GET
+        self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
+        self.duplicates: set[str] = set(self.get_registered_dataset_names({
+            'is_duplicate': True
+        }))  # HTTP GET
         self.default_wf_name = default_wf_name
 
     def is_a_reject(self, name):
         return any([fnmatch.fnmatchcase(name, pat) for pat in self.rejects])
 
-    def get_registered_dataset_names(self, type):
-        datasets = api.get_all_datasets(dataset_type=type)
+    def get_registered_dataset_names(self, filters: dict = None) -> list[str]:
+        is_duplicate = filters['is_duplicate'] if filters is not None else False
+        datasets = api.get_all_datasets(is_duplicate=is_duplicate)
         return [b['name'] for b in datasets]
 
     def register(self, event: str, updated_dirs: list[Path]) -> None:
@@ -120,7 +123,7 @@ class Register:
             ])
         ]
         # If a candidate's name is in self.completed, it could potentially be a duplicate.
-        # In such cases, we create a dataset of type DUPLICATE, which is later accepted or
+        # In such cases, we create a dataset of duplicate dataset, which is later accepted or
         # rejected by an end user.
         duplicate_candidates: list[Path] = [p for p in updated_dirs if slugify_(p.name) in self.completed]
 
@@ -130,12 +133,13 @@ class Register:
             self.completed.add(candidate.name)
 
         for candidate in duplicate_candidates:
-            if slugify_(candidate.name) not in self.duplicates: # some duplicates might already be under processing when this script is started
-                  self.register_candidate(candidate, True)
-                  self.duplicates.add(candidate.name)
+            # some duplicates might already be under processing when this script is run
+            if slugify_(candidate.name) not in self.duplicates:
+                self.register_candidate(candidate, True)
+                self.duplicates.add(candidate.name)
             else:
-                logger.warning(f'Attempted to process another DUPLICATE candidate'
-                            f' named {str(candidate.name)} when a DUPLICATE candidate'
+                logger.warning(f'Attempted to process another duplicate candidate'
+                            f' named {str(candidate.name)} when a duplicate candidate'
                             f' named {str(candidate.name)} is already being processed.')
                 pass
             # todos:
@@ -143,19 +147,16 @@ class Register:
 
     def register_candidate(self, candidate: Path, is_duplicate: bool = False):
         logger.info(candidate.__class__)
-        dataset_type = config['dataset_types']['DUPLICATE'] \
-            if is_duplicate else self.dataset_type
-        logger.info(f'registering {dataset_type} dataset - {candidate.name}')
+        logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
         dataset = {
             'name': slugify_(candidate.name),
-            'type': dataset_type,
+            'type': self.dataset_type,
+            'is_duplicate': is_duplicate,
             'origin_path': str(candidate.resolve()),
         }
 
         if is_duplicate:
-            # DUPLICATE datasets are assigned version 0 until they are accpeted or rejected
-            # by the system, at which point their version is updated.
-            dataset['version'] = 0
+            dataset['is_duplicate'] = True
 
         created_dataset = api.create_dataset(dataset)
 

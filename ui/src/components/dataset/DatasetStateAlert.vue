@@ -88,7 +88,7 @@ const alertConfig = computed(() => {
   let text = "";
   let alertType = "";
 
-  if (dataset.type === "DUPLICATE") {
+  if (dataset.is_duplicate) {
     // if dataset is a duplicate of another,
     alertType = "IS_DUPLICATE";
     alertColor = "warning";

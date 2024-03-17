@@ -137,6 +137,7 @@ def get_all_datasets(
         days_since_last_staged=None,
         deleted=False,
         archived=False,
+        is_duplicate=False,
         bundle=False):
     with APIServerSession() as s:
         payload = {
@@ -145,6 +146,7 @@ def get_all_datasets(
             'days_since_last_staged': days_since_last_staged,
             'deleted': deleted,
             'archived': archived,
+            'is_duplicate': is_duplicate,
             'bundle': bundle,
         }
         r = s.get('datasets', params=payload)

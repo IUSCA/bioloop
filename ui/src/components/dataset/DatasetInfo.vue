@@ -76,8 +76,8 @@ const props = defineProps({ dataset: Object });
 
 const is_processed_duplicate = (dataset) => {
   // Once a dataset has been processed (accepted or rejected by the system), it is no
-  // longer of type DUPLICATE.
-  return dataset.duplicated_from && dataset.type !== "DUPLICATE";
+  // longer of a duplicate.
+  return dataset.duplicated_from && dataset.is_duplicate;
 };
 </script>
 

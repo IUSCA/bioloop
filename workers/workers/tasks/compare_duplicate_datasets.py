@@ -26,27 +26,32 @@ NOTIFICATION_TYPE = "INCOMING_DUPLICATE_DATASET"
 NOTIFICATION_LABEL = "Duplicate Dataset"
 
 
-def notification_text(dataset_name):
+def notification_text(dataset_name: str) -> str:
     return f"Ingestion has been attempted for a duplicate dataset named {dataset_name}. Click here to resolve."
 
 
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
 
-    duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
-    duplicate_files = api.get_dataset_files(
+    duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id)
+    duplicate_files: list[dict] = api.get_dataset_files(
         dataset_id=duplicate_dataset['id'],
         filters={
             "filetype": "file"
         })
 
-    matching_datasets = api.get_all_datasets(name=duplicate_dataset['name'])
-    if len(matching_datasets) != 2:
-        raise InspectionFailed(f"Expected 2 datasets named {duplicate_dataset['name']} (the original, and the duplicate), "
-                               f"but found more.")
+    if not duplicate_dataset['is_duplicate']:
+        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
 
-    original_dataset = list(filter(lambda d: d['id'] != duplicate_dataset['id'], matching_datasets))[0]
-    original_files = api.get_dataset_files(
+    matching_datasets: list[dict] = api.get_all_datasets(name=duplicate_dataset['name'])
+    matching_non_duplicate_datasets = [d for d in matching_datasets if not d['is_duplicate']]
+
+    if len(matching_non_duplicate_datasets) != 1:
+        raise InspectionFailed(f"Expected to find one active (not deleted) dataset named {duplicate_dataset['name']},"
+                               f" but found {len(matching_non_duplicate_datasets)}.")
+
+    original_dataset: dict = list(filter(lambda d: d['id'] != duplicate_dataset['id'], matching_non_duplicate_datasets))[0]
+    original_files: list[dict] = api.get_dataset_files(
         dataset_id=original_dataset['id'],
         filters={
             "filetype": "file"
@@ -146,9 +151,9 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #     },
 #   }
 # ]
-def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list:
-    num_files_same = len(original_dataset_files) == len(duplicate_dataset_files)
-    comparison_checks = [{
+def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list[dict]:
+    num_files_same: bool = len(original_dataset_files) == len(duplicate_dataset_files)
+    comparison_checks: list[dict] = [{
         'type': 'FILE_COUNT',
         'label': 'Number of Files Match',
         'passed': num_files_same,

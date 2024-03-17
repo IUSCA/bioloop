@@ -35,11 +35,16 @@ model dataset {
   stage_requests   stage_request_log[]
   bundle           bundle?
   action_items     dataset_action_item[]
+  is_duplicate     Boolean              @default(false)
   duplicated_from  duplicate_dataset?   @relation("duplicated_from")
   duplicated_by    duplicate_dataset[]  @relation("duplicated_by")
   version          Int                  @default(1)
 
-  @@unique([name, type, is_deleted, version])
+  // [is_duplicate, version] allows for more than one copies of a dataset to:
+  // - exist in the system, in states:
+  //   - rejected
+  //   - duplicate
+  @@unique([name, type, is_deleted, is_duplicate, version])
 }
 
 model duplicate_dataset {
