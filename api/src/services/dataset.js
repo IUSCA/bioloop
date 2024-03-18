@@ -162,6 +162,7 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   include_duplications = false,
+  include_action_items = false,
 }) {
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
@@ -174,6 +175,11 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       ...(include_duplications && INCLUDE_DUPLICATIONS),
+      action_items: include_action_items ? {
+        where: {
+          active: true
+        }
+      } : undefined
     },
   });
 

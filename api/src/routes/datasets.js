@@ -352,7 +352,8 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
-    query('include_duplications').isBoolean().toBoolean().optional(),
+    query('include_duplications').toBoolean().optional(),
+    query('include_action_items').toBoolean().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -368,6 +369,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       include_duplications: req.query.include_duplications || false,
+      include_action_items: req.query.include_action_items || false
     });
     res.json(dataset);
   }),

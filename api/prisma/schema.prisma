@@ -134,6 +134,9 @@ model notification {
 model dataset_action_item {
   id               Int                       @id @default(autoincrement())
   created_at       DateTime                  @default(now()) @db.Timestamp(6)
+  title            String?
+  text             String?
+  to               String?
   type             DATASET_ACTION_ITEM_TYPE
   active           Boolean                   @default(true)
   notification_id  Int?
