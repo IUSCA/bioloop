@@ -44,7 +44,6 @@
         v-for="(duplicateDataset, index) in datasetDuplicates(props.dataset) ||
         []"
         color="warning"
-        icon="warning"
         :key="index"
       >
         <div class="flex items-center">
@@ -96,7 +95,6 @@
 
 <script setup>
 const router = useRouter();
-import dayjs from "dayjs";
 
 const props = defineProps({
   dataset: {
@@ -115,7 +113,7 @@ const datasetDuplicates = (dataset) =>
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) =>
-      dayjs(duplicate2.version).diff(dayjs(duplicate1.version)),
+      duplicate2.version - duplicate1.version,
     );
 
 const alertConfig = computed(() => {
