@@ -41,10 +41,10 @@
 
     <div v-if="alertConfig.alertType === 'DUPLICATES_INCOMING'">
       <va-alert
-        v-for="(duplicateDataset, index) in datasetDuplicates(props.dataset) ||
-        []"
+        v-for="(duplicateDataset, index) in duplicateDatasets"
         color="warning"
         :key="index"
+        :class="index < duplicateDatasets.length ? 'mb-2' : ''"
       >
         <div class="flex items-center">
           <div class="flex-auto">
@@ -108,13 +108,15 @@ const overwrittenBy = (dataset) => {
   (dataset.duplicated_by || []).find((d) => !d.is_duplicate);
 };
 
-const datasetDuplicates = (dataset) =>
+const gatherDatasetDuplicates = (dataset) =>
   (dataset.duplicated_by || [])
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) =>
       duplicate2.version - duplicate1.version,
     );
+
+const duplicateDatasets = computed(() => gatherDatasetDuplicates(props.dataset))
 
 const alertConfig = computed(() => {
   const dataset = props.dataset;
