@@ -72,8 +72,8 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
         "text": notification_text(original_dataset['name']),
         "dataset_action_items": [{
             "type": "DUPLICATE_DATASET_INGESTION",
-            "title": "Duplicate Ingestion",
-            "text": "Accept/Reject Duplicate",
+            # "title": "Duplicate Ingestion",
+            "text": "This dataset is a duplicate which will need to be accepted or rejected",
             # "to": f"/datasets/{duplicate_dataset['id']}/actionItems",
             "dataset_id": duplicate_dataset['id'],
             "ingestion_checks": comparison_checks_report,
