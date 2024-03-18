@@ -1,6 +1,7 @@
 <template>
   <va-inner-loading :loading="loading">
     <DatasetStateAlert :dataset="dataset" />
+    <DatasetActionsItemAlert :dataset="dataset" />
 
     <!-- Content -->
     <div class="flex flex-col gap-3">
@@ -311,6 +312,7 @@ import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import workflowService from "@/services/workflow";
+import DatasetActionsItemAlert from "@/components/dataset/actionItems/ActionItemsAlert.vue";
 
 const downloadModal = ref(null);
 
