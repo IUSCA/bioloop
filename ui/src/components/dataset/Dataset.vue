@@ -1,7 +1,7 @@
 <template>
   <va-inner-loading :loading="loading">
     <DatasetStateAlert :dataset="dataset" class="mb-2" />
-    <DatasetActionsItemAlert :dataset="dataset" class="mb-2" />
+    <!--    <DatasetActionsItemAlert :dataset="dataset" class="mb-2" />-->
 
     <!-- Content -->
     <div class="flex flex-col gap-3">
