@@ -136,7 +136,7 @@ model dataset_action_item {
   created_at       DateTime                  @default(now()) @db.Timestamp(6)
   title            String?
   text             String?
-  to               String?
+  redirect_url     String?
   type             DATASET_ACTION_ITEM_TYPE
   active           Boolean                   @default(true)
   notification_id  Int?
