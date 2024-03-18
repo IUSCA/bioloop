@@ -17,6 +17,7 @@ const roles = [{
 
 const admins = [
   {
+    id: 1,
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
