@@ -55,7 +55,7 @@ router.get(
   '/action-items',
   isPermittedTo('update'),
   validate([
-    query('type').escape().notEmpty().isIn([config.DATASET_ACTION_ITEM_TYPES.DUPLICATE_INGESTION]),
+    query('type').escape().notEmpty().isIn([config.DATASET_ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION]),
     query('active').optional().isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {

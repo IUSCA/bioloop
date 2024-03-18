@@ -15,7 +15,7 @@ const notification1 = {
   acknowledged_by_id: null,
 };
 const actionItem1 = {
-  type: 'DUPLICATE_INGESTION',
+  type: 'DUPLICATE_DATASET_INGESTION',
   dataset_id: 3,
   metadata: { original_dataset_id: 5 },
 };
@@ -82,7 +82,7 @@ const notification2 = {
   acknowledged_by_id: null,
 };
 const actionItem2 = {
-  type: 'DUPLICATE_INGESTION',
+  type: 'DUPLICATE_DATASET_INGESTION',
   dataset_id: 10,
   metadata: { original_dataset_id: 11 },
 };
@@ -189,7 +189,7 @@ const notification3 = {
   acknowledged_by_id: null,
 };
 const actionItem3 = {
-  type: 'DUPLICATE_INGESTION',
+  type: 'DUPLICATE_DATASET_INGESTION',
   dataset_id: 10,
   metadata: { original_dataset_id: 11 },
 };

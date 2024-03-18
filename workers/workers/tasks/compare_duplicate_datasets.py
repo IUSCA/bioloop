@@ -71,7 +71,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
         "label": NOTIFICATION_LABEL,
         "text": notification_text(original_dataset['name']),
         "dataset_action_items": [{
-            "type": "DUPLICATE_INGESTION",
+            "type": "DUPLICATE_DATASET_INGESTION",
             "dataset_id": duplicate_dataset['id'],
             "ingestion_checks": comparison_checks_report,
             "metadata": {
