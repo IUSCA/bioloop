@@ -60,7 +60,8 @@ class DatasetService {
     only_active = false,
     bundle = false,
     include_duplications = false,
-    include_states = false
+    include_states = false,
+    include_action_items = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -71,7 +72,8 @@ class DatasetService {
         only_active,
         bundle,
         include_duplications,
-        include_states
+        include_states,
+        include_action_items
       },
     });
   }

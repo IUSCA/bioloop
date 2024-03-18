@@ -350,6 +350,7 @@ function fetch_dataset(show_loading = false) {
     bundle: true,
     include_duplications: true,
     include_states: true,
+    include_action_items: true,
   })
     .then((res) => {
       const _dataset = res.data;
