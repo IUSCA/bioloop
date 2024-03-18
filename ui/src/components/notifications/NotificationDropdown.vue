@@ -16,18 +16,20 @@
 </template>
 
 <script setup>
-import { storeToRefs } from "pinia";
 import { useNotificationStore } from "@/stores/notification";
+import { storeToRefs } from "pinia";
 
 const notificationStore = useNotificationStore();
 
 const { notifications } = storeToRefs(notificationStore);
 const { fetchActiveNotifications } = notificationStore;
 
+const { resume } = useIntervalFn(fetchActiveNotifications, 5000, {
+  immediateCallback: true,
+});
+
 onMounted(() => {
-  setInterval(() => {
-    fetchActiveNotifications();
-  }, 5000);
+  resume();
 });
 </script>
 
