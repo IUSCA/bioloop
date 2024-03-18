@@ -446,7 +446,7 @@ const updateFiltersGroupQuery = (newVal) => {
 
 const actionItemURL = (dataset) => {
   const actionItem = dataset.action_items[0];
-  return actionItem.type === "DUPLICATE_INGESTION"
+  return actionItem.type === "DUPLICATE_DATASET_INGESTION"
     ? `/datasets/${dataset.id}/actionItems/${actionItem.id}`
     : "#";
 };
