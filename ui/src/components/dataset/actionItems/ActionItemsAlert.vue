@@ -1,27 +1,41 @@
 <template>
-  <va-alert
-    v-for="(item, i) in pendingActionItems"
-    :key="i"
-    color="warning"
-    :title="item.title"
-  >
-    {{ item.text }} -
-    <a :href="`/datasets/${props.dataset.id}/actionItems/${item.id}`"
-      >#{{ item.id }}</a
+  <div>
+    <va-alert
+      v-for="(item, i) in props.dataset.action_items"
+      :key="i"
+      color="warning"
+      icon="warning"
     >
-  </va-alert>
+      <template #title>
+        <div v-if="item.title" class="va-title">
+          {{ item.title }}
+        </div>
+      </template>
+
+      <div class="flex items-center">
+        <div class="flex-auto">
+          {{ item.text }}
+        </div>
+        <va-button
+          @click="
+            router.push(`/datasets/${props.dataset.id}/actionItems/${item.id}`)
+          "
+        >
+          Accept/Reject duplicate <i-mdi-arrow-right-bold-box-outline />
+        </va-button>
+      </div>
+    </va-alert>
+  </div>
 </template>
 
 <script setup>
+const router = useRouter();
+
 const props = defineProps({
   dataset: {
     type: Object,
     required: true,
   },
-});
-
-const pendingActionItems = computed(() => {
-  return props.dataset.actionItems;
 });
 </script>
 

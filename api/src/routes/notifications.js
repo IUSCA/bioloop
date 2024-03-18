@@ -83,6 +83,9 @@ router.post(
             dataset_action_items: {
               create: dataset_action_items.map((actionItem) => ({
                 type: actionItem.type,
+                title: actionItem.title,
+                text: actionItem.text,
+                to: actionItem.to,
                 dataset_id: actionItem.dataset_id,
                 metadata: actionItem.metadata,
                 ingestion_checks: {
