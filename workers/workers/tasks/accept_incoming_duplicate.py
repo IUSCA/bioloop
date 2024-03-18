@@ -30,29 +30,24 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
     
     if not incoming_duplicate_dataset['is_duplicate']:
-        raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not of type duplicate")
+        raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not a duplicate")
     
-    matching_datasets = api.get_all_datasets(name=incoming_duplicate_dataset['name'], bundle=True)
-    if len(matching_datasets) != 2:
-        raise InspectionFailed(f"Expected to find 2 active (not deleted) datasets named {incoming_duplicate_dataset['name']} (the original, and the duplicate), "
-                               f"but found more.")
+    matching_datasets = api.get_all_datasets(
+        name=incoming_duplicate_dataset['name'],
+        dataset_type=incoming_duplicate_dataset['type'],
+        is_duplicate=False,
+        deleted=False,
+        bundle=True
+    )
+    if len(matching_datasets) != 1:
+        raise InspectionFailed(f"Expected to one active (not deleted) dataset named {incoming_duplicate_dataset['name']} (the original), "
+                               f"but found {len(matching_datasets)}.")
 
-    filtered_datasets = list(filter(lambda d: d['id'] != incoming_duplicate_dataset['id'], matching_datasets)) 
-    original_dataset = filtered_datasets[0]
-
-    if original_dataset['type'] != 'RAW_DATA' and original_dataset['type'] != 'DATA_PRODUCT':
-        raise InspectionFailed(f"Expected to find original dataset ${original_dataset['id']} with a type of RAW_DATA or DATA_PRODUCT,"
-                               f" but found more.")
-        
+    original_dataset = matching_datasets[0]        
     
     logger.info("FILTERED:")
     matching_dataset_names = [d['id'] for d in matching_datasets]
     logger.info(json.dumps(matching_dataset_names, indent=2))
-
-    
-
-        # check if datasets with this name are 2. If so, dataset is already accepted. Make step pass.
-
 
     # filtered_dataset_names = [d['name'] for d in filtered_datasets]
     # logger.info(json.dumps(filtered_dataset_names, indent=2))

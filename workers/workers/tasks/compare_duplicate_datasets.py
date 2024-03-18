@@ -43,14 +43,19 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     if not duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
 
+    matching_datasets = api.get_all_datasets(
+        name=duplicate_dataset['name'],
+        dataset_type=duplicate_dataset['type'],
+        is_duplicate=False,
+        deleted=False,
+    )
+
     matching_datasets: list[dict] = api.get_all_datasets(name=duplicate_dataset['name'])
-    matching_non_duplicate_datasets = [d for d in matching_datasets if not d['is_duplicate']]
-
-    if len(matching_non_duplicate_datasets) != 1:
+    if len(matching_datasets) != 1:
         raise InspectionFailed(f"Expected to find one active (not deleted) dataset named {duplicate_dataset['name']},"
-                               f" but found {len(matching_non_duplicate_datasets)}.")
+                               f" but found {len(matching_datasets)}.")
 
-    original_dataset: dict = list(filter(lambda d: d['id'] != duplicate_dataset['id'], matching_non_duplicate_datasets))[0]
+    original_dataset: dict = matching_datasets[0]
     original_files: list[dict] = api.get_dataset_files(
         dataset_id=original_dataset['id'],
         filters={
@@ -72,9 +77,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
         "text": notification_text(original_dataset['name']),
         "dataset_action_items": [{
             "type": "DUPLICATE_DATASET_INGESTION",
-            # "title": "Duplicate Ingestion",
             "text": "This dataset is a duplicate which will need to be accepted or rejected",
-            # "to": f"/datasets/{duplicate_dataset['id']}/actionItems",
             "dataset_id": duplicate_dataset['id'],
             "ingestion_checks": comparison_checks_report,
             "metadata": {
