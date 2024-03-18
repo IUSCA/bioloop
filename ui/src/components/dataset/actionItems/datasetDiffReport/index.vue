@@ -22,7 +22,7 @@
             duplicate_dataset_id: props.actionItem.dataset_id,
           })
         "
-        >Accept Incoming</va-button
+        >Accept Duplicate</va-button
       >
 
       <va-button
@@ -31,7 +31,7 @@
             duplicate_dataset_id: props.actionItem.dataset_id,
           })
         "
-        >Reject Incoming</va-button
+        >Reject Duplicate</va-button
       >
     </div>
   </div>
