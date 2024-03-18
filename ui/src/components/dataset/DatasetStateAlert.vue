@@ -1,5 +1,6 @@
 <template>
-  <!--
+  <div>
+    <!--
    Shows important alerts regarding the dataset's state.
 
    Alerts are generated if this dataset is in either of the following states:
@@ -11,58 +12,90 @@
       duplicate dataset has been accepted into the system).
   -->
 
-  <va-alert :color="alertConfig.alertColor">
-    <!-- <template #title>
-      <div class="text-lg">
-        {{ alertConfig.title }}
-      </div>
-    </template> -->
-
-    <div class="flex flex-col">
-      <div>
-        {{ alertConfig.text }}
-      </div>
-
-      <!-- The current dataset is a duplicate of another dataset.  -->
-      <div v-if="alertConfig.alertType === 'IS_DUPLICATE'">
-        <div
-          >Duplicated From:
-          <a :href="`/datasets/${alertConfig.duplicatedFromId}`"> #{{ alertConfig.duplicatedFromId }} </a></div
-        >
-      </div>
-
-      <!-- The current dataset has been duplicated by other datasets -->
-      <div v-if="alertConfig.alertType === 'DUPLICATE_INCOMING'">
-        <div
-          v-for="(duplicated_by_id, index) in (alertConfig.duplicatedByIds || [])"
-          :key="index"
-        >
-          <span
-            >Duplicated By: <a :href="`/datasets/${duplicated_by_id}`"> #{{ duplicated_by_id }} </a></span
-          >
+    <va-alert v-if="alertConfig.alertType === 'IS_DUPLICATE'" color="warning">
+      <div class="flex items-center">
+        <div class="flex-auto">
+          <div>
+            This dataset has been duplicated from
+            <a
+              :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
+            >
+              #{{ props.dataset.duplicated_from?.original_dataset_id }}
+            </a>
+          </div>
         </div>
-      </div>
 
-      <!-- The current dataset is a rejected duplicate of an another dataset -->
-      <div v-if="alertConfig.alertType === 'REJECTED_DUPLICATE'">
-        <span
-          >Duplicated From:
-          <a :href="`/datasets/${alertConfig.duplicatedFromId}`"> #{{ alertConfig.duplicatedFromId }} </a></span
+        <!-- Allow users to see any active action items for this duplication -->
+        <va-button
+          v-if="props.dataset.action_items.length > 0"
+          @click="
+            router.push(
+              `/datasets/${props.dataset.id}/actionItems/${props.dataset.action_items[0].id}`,
+            )
+          "
         >
+          Accept/Reject duplicate <i-mdi-arrow-right-bold-box-outline />
+        </va-button>
       </div>
+    </va-alert>
 
-      <!-- The current dataset has been overwritten by another dataset -->
-      <div v-if="alertConfig.alertType === 'OVERWRITTEN'">
-        <span
-          >Overwritten by:
-          <a :href="`/datasets/${alertConfig.duplicated_by_id}`"> #{{ alertConfig.duplicated_by_id }} </a></span
-        >
-      </div>
+    <div v-if="alertConfig.alertType === 'DUPLICATES_INCOMING'">
+      <va-alert
+        v-for="(duplicateDataset, index) in datasetDuplicates(props.dataset) ||
+        []"
+        color="warning"
+        icon="warning"
+        :key="index"
+      >
+        <div class="flex items-center">
+          <div class="flex-auto">
+            <div>
+              This dataset has been duplicated by
+              <a :href="`/datasets/${duplicateDataset.id}`">
+                #{{ duplicateDataset.id }}
+              </a>
+            </div>
+          </div>
+
+          <!-- Allow users to see any active action items for this duplication -->
+          <va-button
+            v-if="duplicateDataset.action_items.length > 0"
+            @click="
+              router.push(
+                `/datasets/${duplicateDataset.id}/actionItems/${duplicateDataset.action_items[0].id}`,
+              )
+            "
+          >
+            Accept/Reject duplicate <i-mdi-arrow-right-bold-box-outline />
+          </va-button>
+        </div>
+      </va-alert>
     </div>
-  </va-alert>
+
+    <va-alert
+      v-if="alertConfig.alertType === 'REJECTED_DUPLICATE'"
+      color="danger"
+    >
+      This dataset is a rejected duplicate of
+      <a
+        :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
+      >
+        #{{ props.dataset.duplicated_from?.original_dataset_id }}
+      </a>
+    </va-alert>
+
+    <!-- The current dataset has been overwritten by another dataset -->
+    <va-alert v-if="alertConfig.alertType === 'OVERWRITTEN'" color="warning">
+      This dataset has been overwritten by duplicate
+      <a :href="`/datasets/${overwrittenBy(props.dataset).id}`">
+        #{{ overwrittenBy(props.dataset).id }}
+      </a>
+    </va-alert>
+  </div>
 </template>
 
 <script setup>
+const router = useRouter();
 import dayjs from "dayjs";
 
 const props = defineProps({
@@ -72,47 +105,51 @@ const props = defineProps({
   },
 });
 
+const overwrittenBy = (dataset) => {
+  // When a dataset overwrites another, it's `is_duplicate` is changed from `true` to `false`
+  (dataset.duplicated_by || []).find((d) => !d.is_duplicate);
+};
+
+const datasetDuplicates = (dataset) =>
+  (dataset.duplicated_by || [])
+    .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
+    // sort duplicates by version - most recent version first
+    .sort((duplicate1, duplicate2) =>
+      dayjs(duplicate2.version).diff(dayjs(duplicate1.version)),
+    );
+
 const alertConfig = computed(() => {
   const dataset = props.dataset;
 
   if (Object.values(dataset).length === 0) {
-    return {}
+    return {};
   }
 
-  let duplicatedFromId = dataset.duplicated_from?.original_dataset_id;
-  let duplicatedByIds = (dataset.duplicated_by || [])
-    .map(duplicationRecord => duplicationRecord.duplicate_dataset)
-    // sort duplicates by version - most recent version first
-    .sort((duplicate1, duplicate2) =>
-      dayjs(duplicate2.version).diff(dayjs(duplicate1.version)),
-    )
-    .map((duplicate) => duplicate.id);
-
-  let title = "";
-  let alertColor = "";
-  let text = "";
+  // let duplicatedFromId = dataset.duplicated_from?.original_dataset_id;
+  // let duplicates = (dataset.duplicated_by || [])
+  //   .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
+  //   // sort duplicates by version - most recent version first
+  //   .sort((duplicate1, duplicate2) =>
+  //     dayjs(duplicate2.version).diff(dayjs(duplicate1.version)),
+  //   );
+  //
+  // let title = "";
+  // let alertColor = "";
+  // let text = "";
   let alertType = "";
 
-  console.log("determining alertConfig")
-  console.dir(dataset, {depth: null})
+  console.log("determining alertConfig");
+  console.dir(dataset, { depth: null });
 
   if (dataset.is_duplicate) {
     // if dataset is a duplicate of another,
     alertType = "IS_DUPLICATE";
-    alertColor = "warning";
-    title = "Duplicate Dataset";
-    text = `This dataset has been duplicated from another, and is currently pending acceptance.`;
   } else {
     if (!dataset.is_deleted) {
       // if dataset is active in the system,
       if (dataset.duplicated_by?.length > 0) {
         // and it has been duplicated by other datasets.
-        alertType = "DUPLICATE_INCOMING";
-        alertColor = "warning";
-        title = "Duplicate Dataset Incoming";
-        text =
-          `This dataset has been duplicated by ${duplicatedByIds.length === 1 ? "another" : "others"},` +
-          ` which ${duplicatedByIds.length === 1 ? "is" : "are"} currently pending acceptance.`;
+        alertType = "DUPLICATES_INCOMING";
       }
     } else {
       // dataset has reached one of 3 potential deleted states:
@@ -120,33 +157,18 @@ const alertConfig = computed(() => {
       if (datasetState === "DELETED") {
         // either dataset has been soft-deleted,
         alertType = "INACTIVE_DATASET";
-        alertColor = "danger";
-        title = "Inactive Dataset";
-        text = "You are viewing an inactive (deleted) dataset.";
       } else if (datasetState === "REJECTED_DUPLICATE") {
         // or, dataset is a duplicate which has been rejected from being ingested into the system
         alertType = "REJECTED_DUPLICATE";
-        alertColor = "warning";
-        title = "Rejected Duplicate";
-        text = `This dataset is a duplicate, and has been rejected from being ingested into the system.`;
       } else if (datasetState === "OVERWRITTEN") {
         // or, dataset has been overwritten by another dataset.
         alertType = "OVERWRITTEN";
-        alertColor = "warning";
-        title = "Overwritten";
-        text = `This dataset has been overwritten by another.`;
       }
     }
   }
 
   return {
-    alertColor,
-    text,
-    title,
     alertType,
-    duplicatedFromId,
-    duplicatedByIds,
-    overwrittenById: "",
   };
 });
 

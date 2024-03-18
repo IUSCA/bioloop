@@ -15,17 +15,25 @@ const prisma = new PrismaClient();
 const INCLUDE_DUPLICATIONS = {
   duplicated_from: {
     include: {
-      duplicate_dataset: true,
-      original_dataset: true
-    }
+      duplicate_dataset: {
+        include: {
+          action_items: true,
+        },
+      },
+      original_dataset: true,
+    },
   },
   duplicated_by: {
     include: {
-      duplicate_dataset: true,
-      original_dataset: true
-    }
-  }
-}
+      duplicate_dataset: {
+        include: {
+          action_items: true,
+        },
+      },
+      original_dataset: true,
+    },
+  },
+};
 
 const INCLUDE_STATES = {
   states: {
@@ -177,9 +185,9 @@ async function get_dataset({
       ...(include_duplications && INCLUDE_DUPLICATIONS),
       action_items: include_action_items ? {
         where: {
-          active: true
-        }
-      } : undefined
+          active: true,
+        },
+      } : undefined,
     },
   });
 

@@ -369,7 +369,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       include_duplications: req.query.include_duplications || false,
-      include_action_items: req.query.include_action_items || false
+      include_action_items: req.query.include_action_items || false,
     });
     res.json(dataset);
   }),
@@ -1004,6 +1004,16 @@ router.patch(
           dataset_id: duplicateDataset.id,
         },
       }),
+      // resolve corresponding action item
+      prisma.dataset_action_item.updateMany({
+        where: {
+          dataset_id: duplicateDataset.id,
+          type: 'DUPLICATE_DATASET_INGESTION',
+        },
+        data: {
+          active: false,
+        },
+      }),
     ]);
 
     res.json(acceptedDataset);
@@ -1060,30 +1070,42 @@ router.patch(
     console.log(`originalDataset id: ${originalDataset.id}`);
 
     // eslint-disable-next-line no-unused-vars
-    const rejectedDataset = await prisma.dataset.update({
-      where: {
-        id: duplicateDataset.id,
-      },
-      data: {
-        is_deleted: true,
-        // version: duplicateDataset.version + 1,
-        audit_logs: {
-          createMany: {
-            data: [
-              {
-                action: 'duplicate_rejected',
-                user_id: req.user.id,
-              },
-            ],
+    const [rejectedDataset] = await prisma.$transaction([
+      prisma.dataset.update({
+        where: {
+          id: duplicateDataset.id,
+        },
+        data: {
+          is_deleted: true,
+          // version: duplicateDataset.version + 1,
+          audit_logs: {
+            createMany: {
+              data: [
+                {
+                  action: 'duplicate_rejected',
+                  user_id: req.user.id,
+                },
+              ],
+            },
+          },
+          states: {
+            createMany: {
+              data: [{ state: 'REJECTED_DUPLICATE' }],
+            },
           },
         },
-        states: {
-          createMany: {
-            data: [{ state: 'REJECTED_DUPLICATE' }],
-          },
+      }),
+      // resolve corresponding action item
+      prisma.dataset_action_item.updateMany({
+        where: {
+          dataset_id: duplicateDataset.id,
+          type: 'DUPLICATE_DATASET_INGESTION',
         },
-      },
-    });
+        data: {
+          active: false,
+        },
+      }),
+    ]);
     res.json(rejectedDataset);
   }),
 );
