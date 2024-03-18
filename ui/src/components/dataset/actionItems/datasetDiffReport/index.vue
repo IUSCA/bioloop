@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import ReportBody from "@/components/dataset/actionItems/report/ReportBody.vue";
+import ReportBody from "@/components/dataset/actionItems/datasetDiffReport/ReportBody.vue";
 import datasetService from "@/services/dataset";
 
 const props = defineProps({

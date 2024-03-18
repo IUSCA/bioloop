@@ -7,7 +7,7 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import ActionItemReport from "@/components/dataset/actionItems/report/index.vue";
+import ActionItemReport from "@/components/dataset/actionItems/datasetDiffReport/index.vue";
 
 const props = defineProps({
   actionItemId: {
