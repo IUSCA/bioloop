@@ -412,31 +412,38 @@ router.post(
     };
 
     if (data.is_duplicate) {
-      const matchingDatasets = await prisma.dataset.findMany({
+      // check if other duplicates for this dataset exist in the system already
+      const existingDuplicates = await prisma.dataset.findMany({
         where: {
           name: data.name,
+          type: data.type,
           is_deleted: false,
+          is_duplicate: true,
         },
+        orderBy: {
+          verion: 'desc'
+        }
       });
-      // check if there are other duplicates for this dataset exist in the system already
-      const existingDuplicates = matchingDatasets.filter((d) => d.is_duplicate);
       // if so, find the most recent duplicate (the one with the highest version), to determine the
       // version to be assigned to the current duplicate dataset
-      let latestDuplicateVersion;
-      if (existingDuplicates.length > 0) {
-        // sort by version - descending
-        existingDuplicates.sort((d1, d2) => (d2.version - d1.version));
-        latestDuplicateVersion = existingDuplicates[existingDuplicates.length - 1].version;
-      }
-      const originalDataset = matchingDatasets.filter((d) => !d.is_duplicate)[0];
+      let latestDuplicateVersion = existingDuplicates[0].version;
+
+      const originalDataset = await prisma.dataset.findUnique({
+        where: {
+          name: data.name,
+          type: data.type,
+          is_deleted: false,
+          is_duplicate: false,
+        }
+      });
 
       data.duplicated_from = {
         create: {
           original_dataset_id: originalDataset.id,
         },
       };
-      // Defaulting version to `undefined` allows Prisma to auto-increment it
-      data.version = typeof latestDuplicateVersion === 'number' ? latestDuplicateVersion + 1 : undefined;
+      // Defaulting version to `undefined` allows Prisma to default it to 1
+      data.version = existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined;
     }
 
     // create dataset along with associations
@@ -883,20 +890,19 @@ router.patch(
         is_duplicate: true,
       },
     });
-    // const otherDuplicateIds = ;
-    // query to create audit_log and dataset_state records for other duplicates
+    // query to create audit_log for other duplicates that will be rejected
     const rejectedDuplicatesCreateAuditLogs = otherDuplicates.map((d) => d.id).map((id) => prisma.dataset_audit.create({
       action: 'duplicate_rejected',
       user_id: req.user.id,
       dataset_id: id,
     }));
+    // query to update states of other duplicates that will be rejected
     const rejectedDuplicatesUpdateState = otherDuplicates.map((d) => d.id).map((id) => prisma.dataset_audit.create({
       state: 'REJECTED_DUPLICATE',
       dataset_id: id,
     }));
 
     const [acceptedDataset] = await prisma.$transaction([
-      // todo - refactor this into a service method
       prisma.dataset.update({
         where: {
           id: duplicateDataset.id,
@@ -904,16 +910,16 @@ router.patch(
         data: {
           is_duplicate: false,
           version: originalDataset.version + 1,
-          audit_logs: {
-            createMany: {
-              data: [
-                {
-                  action: 'duplicate_accepted',
-                  user_id: req.user.id,
-                },
-              ],
-            },
-          },
+          // audit_logs: {
+          //   createMany: {
+          //     data: [
+          //       {
+          //         action: 'duplicate_accepted',
+          //         user_id: req.user.id,
+          //       },
+          //     ],
+          //   },
+          // },
         },
       }),
       prisma.dataset.update({
