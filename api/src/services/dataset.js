@@ -12,6 +12,21 @@ const FileGraph = require('./fileGraph');
 
 const prisma = new PrismaClient();
 
+const INCLUDE_DUPLICATIONS = {
+  duplicated_from: {
+    include: {
+      duplicate_dataset: true,
+      original_dataset: true
+    }
+  },
+  duplicated_by: {
+    include: {
+      duplicate_dataset: true,
+      original_dataset: true
+    }
+  }
+}
+
 const INCLUDE_STATES = {
   states: {
     select: {
@@ -158,8 +173,7 @@ async function get_dataset({
       bundle,
       source_datasets: true,
       derived_datasets: true,
-      duplicated_from: include_duplications || false,
-      duplicated_by: include_duplications || false,
+      ...(include_duplications && INCLUDE_DUPLICATIONS),
     },
   });
 

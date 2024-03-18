@@ -264,7 +264,7 @@ router.get(
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
-    query('is_duplicate').isBoolean().toBoolean().optional(),
+    query('is_duplicate').toBoolean().optional(),
     query('type')
       .isIn(config.dataset_types)
       .optional(),
@@ -275,7 +275,7 @@ router.get(
     query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
     query('include_action_items').optional().toBoolean(),
-    query('include_states').isBoolean().toBoolean().optional(),
+    query('include_states').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']

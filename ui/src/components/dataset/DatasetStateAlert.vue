@@ -27,18 +27,18 @@
       <div v-if="alertConfig.alertType === 'IS_DUPLICATE'">
         <span
           >Duplicated From:
-          <a href="#"> #{{ alertConfig.duplicatedFromId }} </a></span
+          <a :href="`/datasets/${alertConfig.duplicatedFromId}`"> #{{ alertConfig.duplicatedFromId }} </a></span
         >
       </div>
 
       <!-- The current dataset has been duplicated by other datasets -->
-      <div v-if="alertConfig.alertType === 'INCOMING_DUPLICATE'">
+      <div v-if="alertConfig.alertType === 'DUPLICATE_INCOMING'">
         <div
-          v-for="(duplicated_by_id, index) in alertConfig.duplicatedByIds"
+          v-for="(duplicated_by_id, index) in (alertConfig.duplicatedByIds || [])"
           :key="index"
         >
           <span
-            >Duplicated By: <a href="#"> #{{ duplicated_by_id }} </a></span
+            >Duplicated By: <a :href="`/datasets/${duplicated_by_id}`"> #{{ duplicated_by_id }} </a></span
           >
         </div>
       </div>
@@ -47,7 +47,7 @@
       <div v-if="alertConfig.alertType === 'REJECTED_DUPLICATE'">
         <span
           >Duplicated From:
-          <a href="#"> #{{ alertConfig.duplicatedFromId }} </a></span
+          <a :href="`/datasets/${alertConfig.duplicatedFromId}`"> #{{ alertConfig.duplicatedFromId }} </a></span
         >
       </div>
 
@@ -55,7 +55,7 @@
       <div v-if="alertConfig.alertType === 'OVERWRITTEN'">
         <span
           >Overwritten by:
-          <a href="#"> #{{ alertConfig.duplicated_by_id }} </a></span
+          <a :href="`/datasets/${alertConfig.duplicated_by_id}`"> #{{ alertConfig.duplicated_by_id }} </a></span
         >
       </div>
     </div>
@@ -75,8 +75,13 @@ const props = defineProps({
 const alertConfig = computed(() => {
   const dataset = props.dataset;
 
+  if (Object.values(dataset).length === 0) {
+    return {}
+  }
+
   let duplicatedFromId = dataset.duplicated_from?.original_dataset_id;
   let duplicatedByIds = (dataset.duplicated_by || [])
+    .map(duplicationRecord => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) =>
       dayjs(duplicate2.version).diff(dayjs(duplicate1.version)),
@@ -88,6 +93,9 @@ const alertConfig = computed(() => {
   let text = "";
   let alertType = "";
 
+  console.log("determining alertConfig")
+  console.dir(dataset, {depth: null})
+
   if (dataset.is_duplicate) {
     // if dataset is a duplicate of another,
     alertType = "IS_DUPLICATE";
@@ -97,11 +105,11 @@ const alertConfig = computed(() => {
   } else {
     if (!dataset.is_deleted) {
       // if dataset is active in the system,
-      if (dataset.duplicated_by.length > 0) {
+      if (dataset.duplicated_by?.length > 0) {
         // and it has been duplicated by other datasets.
-        alertType = "INCOMING_DUPLICATE";
+        alertType = "DUPLICATE_INCOMING";
         alertColor = "warning";
-        title = "Incoming Duplicate";
+        title = "Duplicate Dataset Incoming";
         text =
           `This dataset has been duplicated by ${duplicatedByIds.length === 1 ? "another" : "others"},` +
           ` which ${duplicatedByIds.length === 1 ? "is" : "are"} currently pending acceptance.`;
