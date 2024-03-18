@@ -24,51 +24,11 @@ const notificationStore = useNotificationStore();
 const { notifications } = storeToRefs(notificationStore);
 const { fetchActiveNotifications } = notificationStore;
 
-// const loading = ref(false);
-
-// debugger;
-
-// subscribe to notification store, so that the list of notifications shown to the user
-// automatically updates when a notification is added to the store by an external component.
-
-// onMounted(() => {
-//   setInterval(() => {
-//     testStore.increment();
-//   }, 1000);
-// });
-//
-// testStore.$subscribe((mutation, state) => {
-//   console.log("inside testStore $subscribe");
-//   console.log(state.count);
-// });
-
 onMounted(() => {
-  // setTimeout(() => {
-  //   notificationStore.addNotification({
-  //     type: "CUSTOM_NOTIFICATION",
-  //     label: "Custom Notification",
-  //     text: "Some other notification.",
-  //     to: "/rawdata",
-  //     acknowledged: false,
-  //     created_at: "2024-03-14T00:39:46.437Z",
-  //   });
-  //
-  //   // notificationStore.increment();
-  //   // notificationStore.appendToList({
-  //   //   key: "value",
-  //   // });
-  // }, 1000);
-  fetchActiveNotifications();
+  setInterval(() => {
+    fetchActiveNotifications();
+  }, 5000);
 });
-
-// notificationStore.$subscribe((mutation, state) => {
-//   console.log("inside notificationStore $subscribe");
-//   notifications.value = state.notifications;
-//   // loading.value = state.loading;
-//   // console.log(`loading: ${state.loading}`);
-//   console.log(`notifications:`);
-//   console.dir(state.notifications, { depth: null });
-// });
 </script>
 
 <style lang="scss" scoped>
