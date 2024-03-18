@@ -12,11 +12,11 @@
   -->
 
   <va-alert :color="alertConfig.alertColor">
-    <template #title>
-      <div class="va-title">
+    <!-- <template #title>
+      <div class="text-lg">
         {{ alertConfig.title }}
       </div>
-    </template>
+    </template> -->
 
     <div class="flex flex-col">
       <div>
@@ -25,9 +25,9 @@
 
       <!-- The current dataset is a duplicate of another dataset.  -->
       <div v-if="alertConfig.alertType === 'IS_DUPLICATE'">
-        <span
+        <div
           >Duplicated From:
-          <a :href="`/datasets/${alertConfig.duplicatedFromId}`"> #{{ alertConfig.duplicatedFromId }} </a></span
+          <a :href="`/datasets/${alertConfig.duplicatedFromId}`"> #{{ alertConfig.duplicatedFromId }} </a></div
         >
       </div>
 
