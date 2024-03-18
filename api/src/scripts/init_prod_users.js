@@ -50,16 +50,33 @@ async function main() {
   // Create default admins
   const _admins = [
     {
+      id: 1,
       name: 'svc_tasks',
       username: 'svc_tasks',
       email: 'svc_tasks@iu.edu',
     },
   ];
 
+  await Promise.all(_admins
+    .map((user) => prisma.user.upsert({
+      where: { email: user.email },
+      update: {},
+      create: {
+        ...user,
+        cas_id: user.username,
+        user_role: {
+          create: [{ role_id: 1 }],
+        },
+      },
+    })));
+
+  const tables = ['user', 'role'];
+  await Promise.all(tables.map(update_seq));
+
+  // Create users from json files
   const additional_admins = readUsersFromJSON('admins.json');
 
-  const admins = _admins
-    .concat(additional_admins)
+  const admins = additional_admins
     .map((user) => ({
       ...user,
       cas_id: user.username,
@@ -76,7 +93,7 @@ async function main() {
       create: [{ role_id: 3 }],
     },
   }));
-  
+
   const operators_read = readUsersFromJSON('operators.json');
   const operators = operators_read.map((user) => ({
     ...user,
@@ -96,13 +113,11 @@ async function main() {
     }));
 
   await Promise.all(promises);
+  await Promise.all(tables.map(update_seq));
 
   console.log(`created ${admins.length} adminstrators`);
   console.log(`created ${operators.length} operators`);
   console.log(`created ${users.length} users`);
-
-  const tables = ['user', 'role'];
-  await Promise.all(tables.map(update_seq));
 }
 
 main()

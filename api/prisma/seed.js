@@ -97,9 +97,27 @@ async function main() {
     update: role,
   })));
 
-  // Create default admins
+  // create non user admins
+  // these have set ids
+  const nu_admin_promises = data.admins.map((admin) => prisma.user.upsert({
+    where: { email: `${admin.username}@iu.edu` },
+    update: {},
+    create: {
+      username: admin.username,
+      email: `${admin.username}@iu.edu`,
+      cas_id: admin.username,
+      name: admin.name,
+      user_role: {
+        create: [{ role_id: 1 }],
+      },
+    },
+  }));
+  await Promise.all(nu_admin_promises);
+  await Promise.all(['role', 'user'].map(update_seq));
+
+  // Create admins
   const additional_admins = readUsersFromJSON('admins.json');
-  const admin_data = insert_random_dates(data.admins.concat(additional_admins));
+  const admin_data = insert_random_dates(additional_admins);
   const admin_promises = admin_data.map((admin) => prisma.user.upsert({
     where: { email: `${admin.username}@iu.edu` },
     update: {},
