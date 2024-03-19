@@ -13,9 +13,9 @@ class NotificationService {
     });
   }
 
-  updateNotificationStatus({ notification_id, status } = {}) {
-    return api.patch(`/notifications/${notification_id}/${status}}`);
-  }
+  // updateNotificationStatus({ notification_id, status } = {}) {
+  //   return api.patch(`/notifications/${notification_id}/${status}}`);
+  // }
 }
 
 export default new NotificationService();
