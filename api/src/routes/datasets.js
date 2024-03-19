@@ -419,16 +419,17 @@ router.post(
           type: data.type,
           is_deleted: false,
           is_duplicate: true,
+          // version:
         },
         orderBy: {
-          verion: 'desc'
+          version: 'desc'
         }
       });
       // if so, find the most recent duplicate (the one with the highest version), to determine the
       // version to be assigned to the current duplicate dataset
-      let latestDuplicateVersion = existingDuplicates[0].version;
+      let latestDuplicateVersion = existingDuplicates[0]?.version;
 
-      const originalDataset = await prisma.dataset.findUnique({
+      const matchingDatasets = await prisma.dataset.findMany({
         where: {
           name: data.name,
           type: data.type,
@@ -436,6 +437,12 @@ router.post(
           is_duplicate: false,
         }
       });
+
+      if (matchingDatasets.length > 1) {
+        return next(createError.NotFound('Expected one matching original dataset, but found multiple.'))
+      }
+
+      const originalDataset = matchingDatasets[0]
 
       data.duplicated_from = {
         create: {
@@ -891,16 +898,33 @@ router.patch(
       },
     });
     // query to create audit_log for other duplicates that will be rejected
-    const rejectedDuplicatesCreateAuditLogs = otherDuplicates.map((d) => d.id).map((id) => prisma.dataset_audit.create({
-      action: 'duplicate_rejected',
-      user_id: req.user.id,
-      dataset_id: id,
+    const rejectedDuplicatesCreateAuditLogs = otherDuplicates.map((d) => prisma.dataset_audit.create({
+      data: {
+        action: 'duplicate_rejected',
+        user_id: req.user.id,
+        dataset_id: d.id,
+      }
     }));
     // query to update states of other duplicates that will be rejected
-    const rejectedDuplicatesUpdateState = otherDuplicates.map((d) => d.id).map((id) => prisma.dataset_audit.create({
-      state: 'REJECTED_DUPLICATE',
-      dataset_id: id,
+    const rejectedDuplicatesUpdateState = otherDuplicates.map((d) => prisma.dataset_state.create({
+      data: {
+        state: 'REJECTED_DUPLICATE',
+        dataset_id: d.id,
+      }
     }));
+    // query to resolve any action items pertaininig to duplication these datasets
+    const rejectedDuplicatesResolveActionItems = otherDuplicates.map((d) => prisma.dataset_action_item.updateMany({
+      where: {
+        dataset_id: d.id,
+        type: 'DUPLICATE_DATASET_INGESTION',
+      },
+      data: {
+        active: false,
+      },
+    }));
+
+    console.log("query:")
+    console.dir(rejectedDuplicatesCreateAuditLogs, {depth: null})
 
     const [acceptedDataset] = await prisma.$transaction([
       prisma.dataset.update({
@@ -910,16 +934,16 @@ router.patch(
         data: {
           is_duplicate: false,
           version: originalDataset.version + 1,
-          // audit_logs: {
-          //   createMany: {
-          //     data: [
-          //       {
-          //         action: 'duplicate_accepted',
-          //         user_id: req.user.id,
-          //       },
-          //     ],
-          //   },
-          // },
+          audit_logs: {
+            createMany: {
+              data: [
+                {
+                  action: 'duplicate_accepted',
+                  user_id: req.user.id,
+                },
+              ],
+            },
+          },
         },
       }),
       prisma.dataset.update({
@@ -950,7 +974,9 @@ router.patch(
       ...rejectedDuplicatesCreateAuditLogs,
       // 2. now, update state of these datasets
       ...rejectedDuplicatesUpdateState,
-      // 3. finally, reject these datasets.
+      // 3. resolve any action items linked to these datasets that pertain to duplication
+      ...rejectedDuplicatesResolveActionItems,
+      // 4. finally, reject these datasets.
       prisma.dataset.updateMany({
         where: {
           name: duplicateDataset.name,
@@ -961,6 +987,7 @@ router.patch(
           is_deleted: true,
         },
       }),
+      // transfer hierarchies from original to incoming duplicate dataset
       prisma.dataset_hierarchy.updateMany({
         where: {
           source_id: originalDataset.id,
@@ -997,6 +1024,7 @@ router.patch(
           dataset_id: duplicateDataset.id,
         },
       }),
+      // Update project-dataset relations
       prisma.project_dataset.updateMany({
         where: {
           dataset_id: originalDataset.id,
