@@ -86,8 +86,8 @@
     <!-- The current dataset has been overwritten by another dataset -->
     <va-alert v-if="alertConfig.alertType === 'OVERWRITTEN'" color="warning">
       This dataset has been overwritten by duplicate
-      <a :href="`/datasets/${overwrittenBy(props.dataset).id}`">
-        #{{ overwrittenBy(props.dataset).id }}
+      <a :href="`/datasets/${overwrittenBy(props.dataset)?.id}`">
+        #{{ overwrittenBy(props.dataset)?.id }}
       </a>
     </va-alert>
   </div>
@@ -105,18 +105,20 @@ const props = defineProps({
 
 const overwrittenBy = (dataset) => {
   // When a dataset overwrites another, it's `is_duplicate` is changed from `true` to `false`
-  (dataset.duplicated_by || []).find((d) => !d.is_duplicate);
+  return (dataset?.duplicated_by || []).find(
+    (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_duplicate,
+  ).duplicate_dataset;
 };
 
 const gatherDatasetDuplicates = (dataset) =>
-  (dataset.duplicated_by || [])
+  (dataset?.duplicated_by || [])
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
-    .sort((duplicate1, duplicate2) =>
-      duplicate2.version - duplicate1.version,
-    );
+    .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
 
-const duplicateDatasets = computed(() => gatherDatasetDuplicates(props.dataset))
+const duplicateDatasets = computed(() =>
+  gatherDatasetDuplicates(props.dataset),
+);
 
 const alertConfig = computed(() => {
   const dataset = props.dataset;
@@ -167,13 +169,16 @@ const alertConfig = computed(() => {
     }
   }
 
+  console.log(alertType);
+
   return {
     alertType,
   };
 });
 
 const currentState = (dataset) => {
-  const latestState = dataset.states[dataset.states.length - 1];
+  // assumes states are sorted by descending timestamp
+  const latestState = dataset.states[0];
   return latestState.state;
 };
 </script>
