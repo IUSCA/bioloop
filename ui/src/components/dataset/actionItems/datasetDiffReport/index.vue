@@ -15,7 +15,11 @@
         This action item is no longer active.
       </va-alert>
 
-      <va-alert v-if="isActionItemLocked" color="warning" class="mx-0">
+      <va-alert v-else-if="isActionItemAcknowledged" color="success" class="mx-0">
+        This action item has been acknowledged.
+      </va-alert>
+
+      <va-alert v-else-if="isActionItemLocked" color="warning" class="mx-0">
         This action item is currently locked.
       </va-alert>
 
@@ -155,9 +159,14 @@ const isActionItemLocked = computed(() => {
   return actionItem.value.status === "LOCKED";
 });
 
+const isActionItemAcknowledged = computed(() => {
+  return actionItem.value.status === "ACKNOWLEDGED";
+});
+
 const areControlsDisabled = computed(() => {
   return (
     isActionItemLocked.value ||
+    isActionItemAcknowledged.value ||
     !isActionItemActive.value ||
     !isDuplicateReadyForProcessing.value
   );

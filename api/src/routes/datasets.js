@@ -23,34 +23,34 @@ const router = express.Router();
 const prisma = new PrismaClient(
   // {log: ['query', 'info', 'warn', 'error']},
 
-  // {
-  //   log: [
-  //     {
-  //       emit: 'event',
-  //       level: 'query',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'info',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'warn',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'error',
-  //     },
-  //   ],
-  // },
+  {
+    log: [
+      {
+        emit: 'event',
+        level: 'query',
+      },
+      {
+        emit: 'event',
+        level: 'info',
+      },
+      {
+        emit: 'event',
+        level: 'warn',
+      },
+      {
+        emit: 'event',
+        level: 'error',
+      },
+    ],
+  },
 );
 
-// ['query', 'info', 'warn', 'error'].forEach((level) => {
-//   prisma.$on(level, async (e) => {
-//     console.log(`QUERY: ${e.query}`);
-//     console.log(`PARAMS: ${e.params}`);
-//   });
-// });
+['query', 'info', 'warn', 'error'].forEach((level) => {
+  prisma.$on(level, async (e) => {
+    console.log(`QUERY: ${e.query}`);
+    console.log(`PARAMS: ${e.params}`);
+  });
+});
 
 router.post(
   '/action-items',
@@ -583,7 +583,8 @@ router.post(
     };
     // Defaulting version to `undefined` allows Prisma to default it to 1
     data.version = existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined;
-
+    data.is_duplicate = true
+    
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
       data,
@@ -811,34 +812,49 @@ router.post(
       workflows: true,
     });
 
+    // write queries to be run in a single transaction
     const updateQueries = [];
 
-    // update the status of the corresponding action item to ACKNOWLEDGED,
-    // if it's not already ACKNOWLEDGED.
-    updateQueries.push(prisma.dataset_action_item.update({
+    // get the action item corresponding to this duplication attempt. Each dataset has a
+    // unique action item 
+    const actionItem = prisma.dataset_action_item.findFirst({
       where: {
         dataset_id: req.params.duplicate_dataset_id,
         type: 'DUPLICATE_DATASET_INGESTION',
-        status: 'CREATED',
-        active: true,
       },
-      data: {
-        status: 'ACKNOWLEDGED',
-      },
-    }));
+    })
 
-    // check if other duplicates for this dataset exist in the system already
+    // update the status of the corresponding action item to ACKNOWLEDGED,
+    // if it's not already ACKNOWLEDGED.
+    if (actionItem.status !== 'ACKNOWLEDGED') {
+      updateQueries.push(prisma.dataset_action_item.updateMany({
+        where: {
+          dataset_id: req.params.duplicate_dataset_id,
+          type: 'DUPLICATE_DATASET_INGESTION',
+          status: 'CREATED',
+          active: true,
+        },
+        data: {
+          status: 'ACKNOWLEDGED',
+        },
+      }));
+    }
+
+    // check if other duplicates for this dataset exist in the system
     const existingDuplicates = await prisma.dataset.findMany({
       where: {
         name: duplicate_dataset.name,
         type: duplicate_dataset.type,
         is_deleted: false,
         is_duplicate: true,
+        NOT: { id: req.params.duplicate_dataset_id }, 
       },
     });
-    // lock the action items on all other existing duplicates that have this name
+    // lock the action items associated with other existing duplicates that have
+    // this name
     existingDuplicates.forEach((d) => {
-      updateQueries.push(prisma.dataset_action_item.update({
+      // updates one action item per duplicate dataset
+      updateQueries.push(prisma.dataset_action_item.updateMany({
         where: {
           dataset_id: d.id,
           type: 'DUPLICATE_DATASET_INGESTION',
