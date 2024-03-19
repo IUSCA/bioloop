@@ -5,6 +5,7 @@ import itertools
 import hashlib
 import shutil
 from pathlib import Path
+import time
 
 from celery import Celery
 from celery.utils.log import get_task_logger
@@ -67,7 +68,7 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     if original_dataset_staged_path.exists():
         shutil.rmtree(original_dataset_staged_path)
     if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
-        shutil.rmtree(original_dataset_bundle_path)
+        original_dataset_bundle_path.unlink()
 
     return accepted_incoming_dataset['id'],
 
