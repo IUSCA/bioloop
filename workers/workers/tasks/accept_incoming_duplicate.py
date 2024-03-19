@@ -29,6 +29,8 @@ logger = get_task_logger(__name__)
 def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
     
+    logger.info(f"duplicate dataset id: {duplicate_dataset_id}")
+
     if not incoming_duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not a duplicate")
     
