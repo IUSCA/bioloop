@@ -10,6 +10,11 @@
    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
   -->
   <div class="flex flex-col gap-3">
+    <va-alert v-if="!isDuplicateReadyForProcessing" color="warning">
+      Duplicate dataset needs to reach a state of DUPLICATE_READY before it can
+      be accepted or rejected. Current state is {{ associatedDatasetState }}.
+    </va-alert>
+
     <report-header :action-item="props.actionItem" />
 
     <report-body :action-item="props.actionItem" />
@@ -22,7 +27,8 @@
             duplicate_dataset_id: props.actionItem.dataset_id,
           })
         "
-        >Accept Incoming</va-button
+        :disabled="!isDuplicateReadyForProcessing"
+        >Accept Duplicate</va-button
       >
 
       <va-button
@@ -31,7 +37,8 @@
             duplicate_dataset_id: props.actionItem.dataset_id,
           })
         "
-        >Reject Incoming</va-button
+        :disabled="!isDuplicateReadyForProcessing"
+        >Reject Duplicate</va-button
       >
     </div>
   </div>
@@ -46,5 +53,16 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+});
+
+// the current state of the dataset associated with this action item
+const associatedDatasetState = computed(() => {
+  // assumes states are sorted by descending timestamp
+  const latestState = props.actionItem.dataset.states[0];
+  return latestState.state;
+});
+
+const isDuplicateReadyForProcessing = computed(() => {
+  return associatedDatasetState.value === "DUPLICATE_READY";
 });
 </script>

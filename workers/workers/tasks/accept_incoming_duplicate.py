@@ -5,6 +5,7 @@ import itertools
 import hashlib
 import shutil
 from pathlib import Path
+import time
 
 from celery import Celery
 from celery.utils.log import get_task_logger
@@ -33,7 +34,14 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
 
     if not incoming_duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not a duplicate")
-    
+
+    # assumes states are sorted in descending order by timestamp
+    latest_state = incoming_duplicate_dataset['states'][0]['state']
+    if latest_state != 'DUPLICATE_READY':
+        raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} needs to reach state"
+                               f" DUPLICATE_READY before it can be"
+                               f" accepted. Current state is {latest_state}.")
+
     matching_datasets = api.get_all_datasets(
         name=incoming_duplicate_dataset['name'],
         dataset_type=incoming_duplicate_dataset['type'],
@@ -67,7 +75,7 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     if original_dataset_staged_path.exists():
         shutil.rmtree(original_dataset_staged_path)
     if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
-        shutil.rmtree(original_dataset_bundle_path)
+        original_dataset_bundle_path.unlink()
 
     return accepted_incoming_dataset['id'],
 

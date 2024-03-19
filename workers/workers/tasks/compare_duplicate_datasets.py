@@ -32,16 +32,16 @@ def notification_text(dataset_name: str) -> str:
 
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
-
     duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id)
-    duplicate_files: list[dict] = api.get_dataset_files(
-        dataset_id=duplicate_dataset['id'],
-        filters={
-            "filetype": "file"
-        })
 
     if not duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
+
+    # assumes states are sorted in descending order by timestamp
+    latest_state = duplicate_dataset['states'][0]['state']
+    if latest_state != 'INSPECTED':
+        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} needs to reach state INSPECTED before it can be"
+                               f" compared for duplication. Current state is {latest_state}.")
 
     matching_datasets = api.get_all_datasets(
         name=duplicate_dataset['name'],
@@ -50,12 +50,17 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
         deleted=False,
     )
 
-    matching_datasets: list[dict] = api.get_all_datasets(name=duplicate_dataset['name'])
     if len(matching_datasets) != 1:
         raise InspectionFailed(f"Expected to find one active (not deleted) dataset named {duplicate_dataset['name']},"
                                f" but found {len(matching_datasets)}.")
 
     original_dataset: dict = matching_datasets[0]
+
+    duplicate_files: list[dict] = api.get_dataset_files(
+        dataset_id=duplicate_dataset['id'],
+        filters={
+            "filetype": "file"
+        })
     original_files: list[dict] = api.get_dataset_files(
         dataset_id=original_dataset['id'],
         filters={
@@ -70,21 +75,26 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
     # create an action item for operators to review later. This way, in case our comparison process
     # mistakenly assumes the incoming dataset to be a duplicate, operators will still have a chance
-    # to review the incoming dataset before it is rejected.
-    api.post_dataset_notification({
+    # to review the incoming dataset before it is rejected.    
+
+    action_item: dict = {
+        "type": "DUPLICATE_DATASET_INGESTION",
+        "text": "This dataset is a duplicate which will need to be accepted or rejected",
+        "dataset_id": duplicate_dataset['id'],
+        "ingestion_checks": comparison_checks_report,
+        "metadata": {
+            "original_dataset_id": original_dataset['id'],
+        }
+    }
+    notification: dict = {
         "type": NOTIFICATION_TYPE,
         "label": NOTIFICATION_LABEL,
         "text": notification_text(original_dataset['name']),
-        "dataset_action_items": [{
-            "type": "DUPLICATE_DATASET_INGESTION",
-            "text": "This dataset is a duplicate which will need to be accepted or rejected",
-            "dataset_id": duplicate_dataset['id'],
-            "ingestion_checks": comparison_checks_report,
-            "metadata": {
-                "original_dataset_id": original_dataset['id'],
-            }
-        }],
-    })
+    }
+
+    api.post_dataset_action_item(action_item=action_item,
+                                 notification=notification,
+                                 next_state='DUPLICATE_READY')
 
     logger.info(f"Processed dataset {duplicate_dataset_id}")
     return duplicate_dataset_id,
