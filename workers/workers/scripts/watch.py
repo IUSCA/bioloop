@@ -152,14 +152,11 @@ class Register:
         dataset = {
             'name': slugify_(candidate.name),
             'type': self.dataset_type,
-            'is_duplicate': is_duplicate,
             'origin_path': str(candidate.resolve()),
         }
-
-        if is_duplicate:
-            dataset['is_duplicate'] = True
-
-        created_dataset = api.create_dataset(dataset)
+        created_dataset = api.create_dataset(dataset) if\
+            not is_duplicate else\
+            api.create_duplicate_dataset(dataset)
 
         self.run_workflows(
             created_dataset,

@@ -150,7 +150,7 @@ router.get(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const actionItem = await prisma.dataset_action_item.findFirst({
+    const actionItem = await prisma.dataset_action_item.findUnique({
       where: {
         id: req.params.id,
       },
@@ -160,10 +160,10 @@ router.get(
           include: {
             states: {
               orderBy: {
-                timestamp: 'desc'
-              }
-            }
-          }
+                timestamp: 'desc',
+              },
+            },
+          },
         },
       },
     });
@@ -420,6 +420,28 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
   next();
 });
 
+const duplicate_dataset_access_check = asyncHandler(async (req, res, next) => {
+  // assumes req.params.id is the dataset id user is requesting
+  // access check
+  const permission = getPermission({
+    resource: 'datasets',
+    action: 'read',
+    requester_roles: req?.user?.roles,
+  });
+  if (!permission.granted) {
+    // check if user has an association with the original dataset that this duplicate
+    // was created from
+    const user_dataset_assoc = await datasetService.has_dataset_assoc({
+      username: req.user.username,
+      dataset_id: req.params.duplicate_dataset_id,
+    });
+    if (!user_dataset_assoc) {
+      return next(createError.Forbidden());
+    }
+  }
+  next();
+});
+
 // get by id - worker + UI
 router.get(
   '/:id',
@@ -490,54 +512,77 @@ router.post(
       ],
     };
 
-    if (data.is_duplicate) {
-      // check if other duplicates for this dataset exist in the system already
-      const existingDuplicates = await prisma.dataset.findMany({
-        where: {
-          name: data.name,
-          type: data.type,
-          is_deleted: false,
-          is_duplicate: true,
-          // version:
+    // create dataset along with associations
+    const dataset = await prisma.dataset.create({
+      data,
+      include: {
+        ...datasetService.INCLUDE_WORKFLOWS,
+      },
+    });
+    res.json(dataset);
+  }),
+);
+
+router.post(
+  '/duplicate',
+  isPermittedTo('create'),
+  validate([
+    body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
+    body('size').optional().notEmpty().customSanitizer(BigInt),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Create a duplicate dataset.'
+
+    const { state, ...data } = req.body;
+
+    // add a state
+    data.states = {
+      create: [
+        {
+          state: state || 'REGISTERED',
         },
-        orderBy: {
-          version: 'desc',
-        },
-      });
+      ],
+    };
+
+    // check if other duplicates for this dataset exist in the system already
+    const existingDuplicates = await prisma.dataset.findMany({
+      where: {
+        name: data.name,
+        type: data.type,
+        is_deleted: false,
+        is_duplicate: true,
+      },
+      orderBy: {
+        version: 'desc',
+      },
+    });
       // if so, find the most recent duplicate (the one with the highest version), to determine the
       // version to be assigned to the current duplicate dataset
-      const latestDuplicateVersion = existingDuplicates[0]?.version;
+    const latestDuplicateVersion = existingDuplicates[0]?.version;
 
-      const matchingDatasets = await prisma.dataset.findMany({
-        where: {
-          name: data.name,
-          type: data.type,
-          is_deleted: false,
-          is_duplicate: false,
-        },
-      });
+    const matchingDatasets = await prisma.dataset.findMany({
+      where: {
+        name: data.name,
+        type: data.type,
+        is_deleted: false,
+        is_duplicate: false,
+      },
+    });
 
-      if (matchingDatasets.length > 1) {
-        return next(createError.NotFound('Expected one matching original dataset, but found multiple.'));
-      }
-
-      const originalDataset = matchingDatasets[0];
-
-      data.duplicated_from = {
-        create: {
-          original_dataset_id: originalDataset.id,
-        },
-      };
-      // Defaulting version to `undefined` allows Prisma to default it to 1
-      data.version = existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined;
-      // data.states = {
-      //   createMany: {
-      //     data: [{
-      //       state: 'DUPLICATE_READY',
-      //     }],
-      //   },
-      // };
+    if (matchingDatasets.length !== 1) {
+      return next(createError.NotFound(`Expected to find one active (not deleted) original ${data.type} named ${data.name}, but found ${matchingDatasets.length}.`));
     }
+
+    const originalDataset = matchingDatasets[0];
+
+    data.duplicated_from = {
+      create: {
+        original_dataset_id: originalDataset.id,
+      },
+    };
+    // Defaulting version to `undefined` allows Prisma to default it to 1
+    data.version = existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined;
 
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
@@ -694,27 +739,28 @@ router.delete(
   }),
 );
 
+const workflow_access_check = (req, res, next) => {
+  // The workflows that a user is allowed to run depends on their role
+  // allowed_wfs is an object with keys as workflow names and values as true
+  // filter only works on objects not arrays, so we use an object with true value
+
+  // user role can only run wf on the datasets they can access through project associations
+  const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
+  if (allowed_wfs[req.params.wf]) {
+    return next();
+  }
+  next(createError.Forbidden());
+};
+
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
-    param('wf').isIn(['stage', 'integrated', 'accept_duplicate_dataset', 'reject_duplicate_dataset']),
+    param('wf').isIn(['stage', 'integrated']),
   ]),
-  (req, res, next) => {
-    // admin and operator roles can run stage and integrated workflows
-    // user role can only run stage workflows
-
-    // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true value
-    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
-    if (allowed_wfs[req.params.wf]) {
-      return next();
-    }
-    next(createError.Forbidden());
-  },
-  // user role can only run wf on the datasets they can access through project associations
+  workflow_access_check,
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -742,6 +788,72 @@ router.post(
 
     const wf_name = req.params.wf;
     const wf = await datasetService.create_workflow(dataset, wf_name);
+    return res.json(wf);
+  }),
+);
+
+router.post(
+  '/duplicates/:duplicate_dataset_id/workflow/:wf',
+  accessControl('workflow')('create'),
+  validate([
+    param('duplicate_dataset_id').isInt().toInt(),
+    param('wf').isIn(['accept_duplicate_dataset', 'reject_duplicate_dataset']),
+  ]),
+  workflow_access_check,
+  duplicate_dataset_access_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Create and start a workflow to accept or reject a duplicate dataset.
+    // Allowed names are accept_duplicate_dataset, reject_duplicate_dataset
+
+    const duplicate_dataset = await datasetService.get_dataset({
+      id: req.params.duplicate_dataset_id,
+      workflows: true,
+    });
+
+    const updateQueries = [];
+
+    // update the status of the corresponding action item to ACKNOWLEDGED,
+    // if it's not already ACKNOWLEDGED.
+    updateQueries.push(prisma.dataset_action_item.update({
+      where: {
+        dataset_id: req.params.duplicate_dataset_id,
+        type: 'DUPLICATE_DATASET_INGESTION',
+        status: 'CREATED',
+        active: true,
+      },
+      data: {
+        status: 'ACKNOWLEDGED',
+      },
+    }));
+
+    // check if other duplicates for this dataset exist in the system already
+    const existingDuplicates = await prisma.dataset.findMany({
+      where: {
+        name: duplicate_dataset.name,
+        type: duplicate_dataset.type,
+        is_deleted: false,
+        is_duplicate: true,
+      },
+    });
+    // lock the action items on all other existing duplicates that have this name
+    existingDuplicates.forEach((d) => {
+      updateQueries.push(prisma.dataset_action_item.update({
+        where: {
+          dataset_id: d.id,
+          type: 'DUPLICATE_DATASET_INGESTION',
+          active: true,
+        },
+        data: {
+          status: 'LOCKED',
+        },
+      }));
+    });
+
+    await prisma.$transaction(updateQueries);
+
+    const wf_name = req.params.wf;
+    const wf = await datasetService.create_workflow(duplicate_dataset, wf_name);
     return res.json(wf);
   }),
 );
@@ -973,7 +1085,7 @@ router.patch(
     console.dir(matchingDatasets, { depth: null });
 
     if (matchingDatasets.length !== 1) {
-      next(createError.BadRequest(`Expected to find one active (not deleted) dataset named ${duplicateDataset.name} (the original dataset), but found ${matchingDatasets.length}`));
+      return next(createError.NotFound(`Expected to find one active (not deleted) original ${duplicateDataset.type} named ${duplicateDataset.name}, but found ${matchingDatasets.length}.`));
     }
 
     const originalDataset = matchingDatasets[0];
@@ -1016,7 +1128,7 @@ router.patch(
         },
       }),
     );
-    // query to resolve any action items pertaininig to duplication these datasets
+    // query to resolve any action items pertaining to other duplicates that will be rejected
     const rejectedDuplicatesResolveActionItems = otherDuplicates.map(
       (d) => prisma.dataset_action_item.updateMany({
         where: {
@@ -1025,6 +1137,7 @@ router.patch(
         },
         data: {
           active: false,
+          status: 'RESOLVED',
         },
       }),
     );
@@ -1144,6 +1257,7 @@ router.patch(
         },
         data: {
           active: false,
+          status: 'RESOLVED',
         },
       }),
     ]);
@@ -1201,7 +1315,7 @@ router.patch(
     console.dir(matchingDatasets, { depth: null });
 
     if (matchingDatasets.length !== 1) {
-      next(createError.BadRequest(`Expected to find one active dataset named ${duplicateDataset.name} (the original dataset), but found ${matchingDatasets.length}`));
+      return next(createError.NotFound(`Expected to find one active (not deleted) original ${duplicateDataset.type} named ${duplicateDataset.name}, but found ${matchingDatasets.length}.`));
     }
 
     const originalDataset = matchingDatasets[0];
@@ -1250,6 +1364,7 @@ router.patch(
         },
         data: {
           active: false,
+          status: 'RESOLVED',
         },
       }),
     ]);

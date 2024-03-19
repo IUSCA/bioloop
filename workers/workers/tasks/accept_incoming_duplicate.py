@@ -50,8 +50,8 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
         bundle=True
     )
     if len(matching_datasets) != 1:
-        raise InspectionFailed(f"Expected to one active (not deleted) dataset named {incoming_duplicate_dataset['name']} (the original), "
-                               f"but found {len(matching_datasets)}.")
+        raise InspectionFailed(f"Expected to find one active (not deleted) original {incoming_duplicate_dataset['type']} named {incoming_duplicate_dataset['name']},"
+                               f" but found {len(matching_datasets)}.")
 
     original_dataset = matching_datasets[0]        
     

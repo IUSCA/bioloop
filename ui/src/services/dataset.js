@@ -73,7 +73,7 @@ class DatasetService {
         bundle,
         include_duplications,
         include_states,
-        include_action_items
+        include_action_items,
       },
     });
   }
@@ -105,13 +105,13 @@ class DatasetService {
 
   accept_duplicate_dataset({ duplicate_dataset_id }) {
     return api.post(
-      `/datasets/${duplicate_dataset_id}/workflow/accept_duplicate_dataset`,
+      `/datasets/duplicates/${duplicate_dataset_id}/workflow/accept_duplicate_dataset`,
     );
   }
 
   reject_duplicate_dataset({ duplicate_dataset_id }) {
     return api.post(
-      `/datasets/${duplicate_dataset_id}/workflow/reject_duplicate_dataset`,
+      `/datasets/duplicates/${duplicate_dataset_id}/workflow/reject_duplicate_dataset`,
     );
   }
 

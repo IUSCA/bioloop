@@ -51,7 +51,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     )
 
     if len(matching_datasets) != 1:
-        raise InspectionFailed(f"Expected to find one active (not deleted) dataset named {duplicate_dataset['name']},"
+        raise InspectionFailed(f"Expected to find one active (not deleted) original {duplicate_dataset['type']} named {duplicate_dataset['name']},"
                                f" but found {len(matching_datasets)}.")
 
     original_dataset: dict = matching_datasets[0]

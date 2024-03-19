@@ -174,6 +174,13 @@ def create_dataset(dataset):
         return r.json()
 
 
+def create_duplicate_dataset(dataset):
+    with APIServerSession() as s:
+        r = s.post('datasets/duplicate', json=dataset_setter(dataset))
+        r.raise_for_status()
+        return r.json()
+
+
 def update_dataset(dataset_id, update_data):
     with APIServerSession() as s:
         r = s.patch(f'datasets/{dataset_id}', json=dataset_setter(update_data))
