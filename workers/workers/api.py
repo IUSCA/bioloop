@@ -234,9 +234,13 @@ def add_state_to_dataset(dataset_id, state, metadata=None):
         r.raise_for_status()
 
 
-def post_dataset_notification(notification: dict):
+def post_dataset_action_item(action_item: dict, notification: dict = None, next_state: str = None):
     with APIServerSession() as s:
-        r = s.post(f'notifications', json=notification)
+        r = s.post(f'datasets/action-items', json={
+            'action_item': action_item,
+            'notification': notification,
+            'next_state': next_state
+        })
         r.raise_for_status()
 
 

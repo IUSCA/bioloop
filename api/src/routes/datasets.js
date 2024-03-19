@@ -51,12 +51,53 @@ const prisma = new PrismaClient(
   });
 });
 
+router.post(
+  '/action-items',
+  isPermittedTo('update'),
+  validate([
+    query('action_item').isObject(),
+    query('notification').isObject(),
+    query('next_state').escape().notEmpty().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // next_state - optional param provided if dataset's state needs to be updated as
+    // part of the action item's creation
+    const { action_item, notification, next_state } = req.body;
+
+    const created_action_item = await prisma.dataset_action_item.create({
+      data: {
+        action_item,
+        ingestion_checks: {
+          createMany: { data: [action_item.ingestion_checks] },
+        },
+        notification: {
+          create: notification,
+        },
+        // update dataset's state if next_state is provided
+        ...(next_state && {
+          dataset: {
+            states: {
+              createMany: {
+                data: [{
+                  state: next_state,
+                }],
+              },
+            },
+          },
+        }),
+      },
+    });
+
+    res.json(created_action_item);
+  }),
+);
+
 router.get(
   '/action-items',
   isPermittedTo('update'),
   validate([
     query('type').escape().notEmpty().isIn([config.DATASET_ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION]),
-    query('active').optional().isBoolean().toBoolean(),
+    query('active').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     const filterQuery = _.omitBy(_.isUndefined)({
@@ -66,6 +107,17 @@ router.get(
 
     const actionItems = await prisma.dataset_action_item.findMany({
       where: filterQuery,
+      include: {
+        dataset: {
+          include: {
+            states: {
+              orderBy: {
+                timestamp: 'desc',
+              },
+            },
+          },
+        },
+      },
     });
 
     res.json(actionItems);
@@ -422,12 +474,12 @@ router.post(
           // version:
         },
         orderBy: {
-          version: 'desc'
-        }
+          version: 'desc',
+        },
       });
       // if so, find the most recent duplicate (the one with the highest version), to determine the
       // version to be assigned to the current duplicate dataset
-      let latestDuplicateVersion = existingDuplicates[0]?.version;
+      const latestDuplicateVersion = existingDuplicates[0]?.version;
 
       const matchingDatasets = await prisma.dataset.findMany({
         where: {
@@ -435,14 +487,14 @@ router.post(
           type: data.type,
           is_deleted: false,
           is_duplicate: false,
-        }
+        },
       });
 
       if (matchingDatasets.length > 1) {
-        return next(createError.NotFound('Expected one matching original dataset, but found multiple.'))
+        return next(createError.NotFound('Expected one matching original dataset, but found multiple.'));
       }
 
-      const originalDataset = matchingDatasets[0]
+      const originalDataset = matchingDatasets[0];
 
       data.duplicated_from = {
         create: {
@@ -451,6 +503,13 @@ router.post(
       };
       // Defaulting version to `undefined` allows Prisma to default it to 1
       data.version = existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined;
+      // data.states = {
+      //   createMany: {
+      //     data: [{
+      //       state: 'DUPLICATE_READY',
+      //     }],
+      //   },
+      // };
     }
 
     // create dataset along with associations
@@ -855,9 +914,23 @@ router.patch(
       where: {
         id: req.params.duplicate_id,
       },
+      include: {
+        states: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+        },
+      },
     });
     if (!duplicateDataset.is_duplicate) {
       next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be a duplicate, but dataset is not a duplicate.`));
+    }
+
+    // throw error if this dataset is not ready for acceptance or rejection yet (i.e. the
+    // duplicate comparison process is still running)
+    const latestState = duplicateDataset.states[0];
+    if (latestState.state !== 'DUPLICATE_READY') {
+      next(createError.BadRequest(`Dataset ${duplicateDataset.id} cannot be accepted or rejected before it reaches state DUPLICATE_READY. Current state is ${latestState.state}.`));
     }
 
     const matchingDatasets = await prisma.dataset.findMany({
@@ -898,33 +971,36 @@ router.patch(
       },
     });
     // query to create audit_log for other duplicates that will be rejected
-    const rejectedDuplicatesCreateAuditLogs = otherDuplicates.map((d) => prisma.dataset_audit.create({
-      data: {
-        action: 'duplicate_rejected',
-        user_id: req.user.id,
-        dataset_id: d.id,
-      }
-    }));
+    const rejectedDuplicatesCreateAuditLogs = otherDuplicates.map(
+      (d) => prisma.dataset_audit.create({
+        data: {
+          action: 'duplicate_rejected',
+          user_id: req.user.id,
+          dataset_id: d.id,
+        },
+      }),
+    );
     // query to update states of other duplicates that will be rejected
-    const rejectedDuplicatesUpdateState = otherDuplicates.map((d) => prisma.dataset_state.create({
-      data: {
-        state: 'REJECTED_DUPLICATE',
-        dataset_id: d.id,
-      }
-    }));
+    const rejectedDuplicatesUpdateState = otherDuplicates.map(
+      (d) => prisma.dataset_state.create({
+        data: {
+          state: 'REJECTED_DUPLICATE',
+          dataset_id: d.id,
+        },
+      }),
+    );
     // query to resolve any action items pertaininig to duplication these datasets
-    const rejectedDuplicatesResolveActionItems = otherDuplicates.map((d) => prisma.dataset_action_item.updateMany({
-      where: {
-        dataset_id: d.id,
-        type: 'DUPLICATE_DATASET_INGESTION',
-      },
-      data: {
-        active: false,
-      },
-    }));
-
-    console.log("query:")
-    console.dir(rejectedDuplicatesCreateAuditLogs, {depth: null})
+    const rejectedDuplicatesResolveActionItems = otherDuplicates.map(
+      (d) => prisma.dataset_action_item.updateMany({
+        where: {
+          dataset_id: d.id,
+          type: 'DUPLICATE_DATASET_INGESTION',
+        },
+        data: {
+          active: false,
+        },
+      }),
+    );
 
     const [acceptedDataset] = await prisma.$transaction([
       prisma.dataset.update({
@@ -1063,12 +1139,26 @@ router.patch(
       where: {
         id: req.params.duplicate_id,
       },
+      include: {
+        states: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+        },
+      },
     });
 
     // todo -  check if dataset is not already accepted
 
     if (!duplicateDataset.is_duplicate) {
       next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be a duplicate, but dataset is not a duplicate.`));
+    }
+
+    // throw error if this dataset is not ready for acceptance or rejection yet (i.e. the
+    // duplicate comparison process is still running)
+    const latestState = duplicateDataset.states[0];
+    if (latestState.state !== 'DUPLICATE_READY') {
+      next(createError.BadRequest(`Dataset ${duplicateDataset.id} cannot be accepted or rejected before it reaches state DUPLICATE_READY. Current state is ${latestState.state}.`));
     }
 
     const matchingDatasets = await prisma.dataset.findMany({

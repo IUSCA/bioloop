@@ -34,7 +34,14 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
 
     if not incoming_duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not a duplicate")
-    
+
+    # assumes states are sorted in descending order by timestamp
+    latest_state = incoming_duplicate_dataset['states'][0]['state']
+    if latest_state != 'DUPLICATE_READY':
+        raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} needs to reach state"
+                               f" DUPLICATE_READY before it can be"
+                               f" accepted. Current state is {latest_state}.")
+
     matching_datasets = api.get_all_datasets(
         name=incoming_duplicate_dataset['name'],
         dataset_type=incoming_duplicate_dataset['type'],
