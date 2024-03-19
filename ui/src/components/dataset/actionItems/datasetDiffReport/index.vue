@@ -10,7 +10,7 @@
    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
   -->
   <div class="flex flex-col gap-3">
-    <va-alert v-if="!isDuplicateReadyForProcessing" color="warning">
+    <va-alert v-if="!isDuplicateReadyForProcessing" color="warning" class="mx-0">
       Duplicate dataset needs to reach a state of DUPLICATE_READY before it can
       be accepted or rejected. Current state is {{ associatedDatasetState }}.
     </va-alert>
