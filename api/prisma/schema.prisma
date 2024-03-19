@@ -49,8 +49,6 @@ model duplicate_dataset {
   original_dataset_id  Int
   original_dataset     dataset  @relation(name: "duplicated_by", fields: [original_dataset_id], references: [id], onDelete: Cascade)
   created_at           DateTime @default(now()) @db.Timestamp(6)
-
-  // @@id([original_dataset_id, duplicate_dataset_id])
 }
 
 model dataset_hierarchy {

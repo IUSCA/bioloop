@@ -21,8 +21,9 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient(
+    // {log: ['query', 'info', 'warn', 'error']},
+
   {
-  // log: ['query', 'info', 'warn', 'error'],
     log: [
       {
         emit: 'event',
@@ -850,7 +851,7 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Replace an existing dataset with its duplicate dataset
-
+  
     const duplicateDataset = await prisma.dataset.findUnique({
       where: {
         id: req.params.duplicate_id,
