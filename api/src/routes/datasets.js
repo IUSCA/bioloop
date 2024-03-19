@@ -21,73 +21,91 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient(
-    // {log: ['query', 'info', 'warn', 'error']},
+  // {log: ['query', 'info', 'warn', 'error']},
 
-  {
-    log: [
-      {
-        emit: 'event',
-        level: 'query',
-      },
-      {
-        emit: 'event',
-        level: 'info',
-      },
-      {
-        emit: 'event',
-        level: 'warn',
-      },
-      {
-        emit: 'event',
-        level: 'error',
-      },
-    ],
-  },
+  // {
+  //   log: [
+  //     {
+  //       emit: 'event',
+  //       level: 'query',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'info',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'warn',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'error',
+  //     },
+  //   ],
+  // },
 );
 
-['query', 'info', 'warn', 'error'].forEach((level) => {
-  prisma.$on(level, async (e) => {
-    console.log(`QUERY: ${e.query}`);
-    console.log(`PARAMS: ${e.params}`);
-  });
-});
+// ['query', 'info', 'warn', 'error'].forEach((level) => {
+//   prisma.$on(level, async (e) => {
+//     console.log(`QUERY: ${e.query}`);
+//     console.log(`PARAMS: ${e.params}`);
+//   });
+// });
 
 router.post(
   '/action-items',
   isPermittedTo('update'),
   validate([
-    query('action_item').isObject(),
-    query('notification').isObject(),
-    query('next_state').escape().notEmpty().optional(),
+    body('action_item').isObject(),
+    body('notification').isObject(),
+    body('next_state').escape().notEmpty().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // next_state - optional param provided if dataset's state needs to be updated as
     // part of the action item's creation
     const { action_item, notification, next_state } = req.body;
 
-    const created_action_item = await prisma.dataset_action_item.create({
-      data: {
-        action_item,
-        ingestion_checks: {
-          createMany: { data: [action_item.ingestion_checks] },
-        },
-        notification: {
-          create: notification,
-        },
-        // update dataset's state if next_state is provided
-        ...(next_state && {
+    console.dir(req.body, { depth: null });
+
+    const createQueries = [
+      prisma.dataset_action_item.create({
+        data: {
+          type: action_item.type,
+          title: action_item.title,
+          text: action_item.text,
+          to: action_item.to,
+          metadata: action_item.metadata,
           dataset: {
-            states: {
-              createMany: {
-                data: [{
-                  state: next_state,
-                }],
-              },
+            connect: {
+              id: action_item.dataset_id,
             },
           },
-        }),
-      },
-    });
+          ingestion_checks: {
+            createMany: { data: action_item.ingestion_checks },
+          },
+          notification: {
+            create: notification,
+          },
+        },
+      }),
+    ];
+
+    if (next_state) {
+      // update dataset's state if dataset is supposed to reach another state
+      // // after this action item is created
+      createQueries.push(prisma.dataset_state.create({
+        data: {
+          state: next_state,
+          dataset: {
+            connect: {
+              id: action_item.dataset_id,
+            },
+          },
+        },
+      }));
+    }
+
+    const [created_action_item] = await prisma.$transaction(createQueries);
 
     res.json(created_action_item);
   }),
@@ -138,7 +156,15 @@ router.get(
       },
       include: {
         ingestion_checks: true,
-        dataset: true,
+        dataset: {
+          include: {
+            states: {
+              orderBy: {
+                timestamp: 'desc'
+              }
+            }
+          }
+        },
       },
     });
 
@@ -910,7 +936,7 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Replace an existing dataset with its duplicate dataset
-  
+
     const duplicateDataset = await prisma.dataset.findUnique({
       where: {
         id: req.params.duplicate_id,
