@@ -10,7 +10,6 @@
 </template>
 
 <script setup>
-import notificationService from "@/services/notification";
 
 const props = defineProps({
   notification: {
@@ -25,14 +24,7 @@ const actionItem = computed(() => {
 
 const _notification = computed(() => ({
   ...props.notification,
-  to: `/datasets/${actionItem.dataset_id}/actionItems/${actionItem.id}`,
-  onClick: () => {
-    // change status of notification to ACK'd
-    return notificationService.updateNotificationStatus({
-      notification_id: props.notification.id,
-      status: "ACKNOWLEDGED",
-    });
-  },
+  to: `/datasets/${actionItem.value.dataset_id}/actionItems/${actionItem.value.id}`,
 }));
 </script>
 
