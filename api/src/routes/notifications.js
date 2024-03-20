@@ -19,15 +19,25 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('active').optional().isBoolean().toBoolean(),
+    query('by_active_action_items').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Filter notifications
+
+    // by_active_action_items - fetch notifications whose action items have not been acknowledged
     const filterQuery = _.omitBy(_.isUndefined)({
-      active: req.query.active || true,
+      dataset_action_items: req.query.by_active_action_items ? {
+        some: {
+          status: 'CREATED',
+        },
+      } : undefined,
     });
 
     const notifications = await prisma.notification.findMany({
-      where: filterQuery,
+      where: {
+        filterQuery,
+      },
       include: {
         dataset_action_items: {
           include: {
@@ -40,75 +50,9 @@ router.get(
       },
     });
 
-    // console.dir(notifications, { depth: null });
     res.json(notifications);
   }),
 );
-
-router.put(
-  '/:id/:status',
-  isPermittedTo('update'),
-  validate([
-    param('id').isInt().toInt(),
-    param('status').escape().notEmpty().isIn(['ACKNOWLEDGED', 'RESOLVED']),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const notification = await prisma.notification.update({
-      where: { id: req.params.id },
-      data: {
-        status: req.params.status,
-      },
-    });
-    res.json(notification);
-  }),
-);
-
-// router.post(
-//   '/',
-//   isPermittedTo('update'),
-//   validate([
-//     body('type').escape().notEmpty(),
-//     body('label').optional().escape().notEmpty(),
-//     body('text').optional().escape().notEmpty(),
-//     body('dataset_action_items').optional().isArray(),
-//   ]),
-//   asyncHandler(async (req, res, next) => {
-//     const {
-//       type, label, text, dataset_action_items,
-//     } = req.body;
-//
-//     const createActionItemsQuery = {
-//       ...(dataset_action_items
-//           && {
-//             dataset_action_items: {
-//               create: dataset_action_items.map((actionItem) => ({
-//                 type: actionItem.type,
-//                 title: actionItem.title,
-//                 text: actionItem.text,
-//                 to: actionItem.to,
-//                 dataset_id: actionItem.dataset_id,
-//                 metadata: actionItem.metadata,
-//                 ingestion_checks: {
-//                   create: actionItem.ingestion_checks,
-//                 },
-//               })),
-//             },
-//           }),
-//     };
-//
-//     const createQuery = {
-//       data: {
-//         type,
-//         label,
-//         text,
-//         ...createActionItemsQuery,
-//       },
-//     };
-//
-//     const notification = await prisma.notification.create(createQuery);
-//     res.json(notification);
-//   }),
-// );
 
 router.get(
   '/notifications/:id',
@@ -117,6 +61,9 @@ router.get(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Get notification by id
+
     const notifications = await prisma.notification.findFirst({
       where: {
         id: req.params.id,

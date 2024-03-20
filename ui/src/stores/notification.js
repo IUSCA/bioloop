@@ -7,18 +7,10 @@ export const useNotificationStore = defineStore("notification", () => {
   // expose sorted notifications
   const notifications = computed(() => {
     return appNotifications.value;
-    // .sort((n1, n2) =>
-    //   dayjs(n2.created_at).diff(dayjs(n1.created_at)),
-    // );
   });
 
   function addNotification(notification) {
-    // console.log("add notification");
-    // console.log("before add notification");
-    // console.log(appNotifications.value);
     appNotifications.value.push(notification);
-    // console.log("after add notification");
-    // console.log(appNotifications.value);
   }
 
   function removeNotification(index) {
@@ -26,8 +18,6 @@ export const useNotificationStore = defineStore("notification", () => {
   }
 
   function setNotifications(notificationList) {
-    // console.log("set notifications");
-    // console.log(notificationList);
     appNotifications.value = notificationList;
   }
 
