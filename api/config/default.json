@@ -93,16 +93,16 @@
         {
           "name": "accept incoming duplicate",
           "task": "accept_incoming_duplicate"
-        },         {
+        }, {
           "name": "archive",
           "task": "archive_dataset"
-        },         {
+        }, {
           "name": "stage",
           "task": "stage_dataset"
-        },         {
+        }, {
           "name": "validate",
           "task": "validate_dataset"
-        },         {
+        }, {
           "name": "setup_download",
           "task": "setup_dataset_download"
         }
@@ -112,20 +112,8 @@
       "description": "Rejects an incoming duplicate dataset by prohibiting its ingestion.",
       "steps": [
         {
-          "name": "accept incoming duplicate",
-          "task": "accept_incoming_duplicate"
-        },         {
-          "name": "archive",
-          "task": "archive_dataset"
-        },         {
-          "name": "stage",
-          "task": "stage_dataset"
-        },         {
-          "name": "validate",
-          "task": "validate_dataset"
-        },         {
-          "name": "setup_download",
-          "task": "setup_dataset_download"
+          "name": "reject incoming duplicate",
+          "task": "reject_incoming_duplicate"
         }
       ]
     }
