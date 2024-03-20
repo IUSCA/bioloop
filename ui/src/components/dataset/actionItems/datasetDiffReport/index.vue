@@ -10,12 +10,16 @@
    3. Verifying if any files from the original dataset are missing from the incoming duplicate.
    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
   -->
-    <div class="flex flex-col gap-3" v-if="actionItem">
+    <div class="flex flex-col gap-3">
       <va-alert v-if="!isActionItemActive" color="warning" class="mx-0">
         This action item is no longer active.
       </va-alert>
 
-      <va-alert v-else-if="isActionItemAcknowledged" color="success" class="mx-0">
+      <va-alert
+        v-else-if="isActionItemAcknowledged"
+        color="success"
+        class="mx-0"
+      >
         This action item has been acknowledged.
       </va-alert>
 
@@ -33,20 +37,20 @@
         {{ associatedDatasetState }}.
       </va-alert>
 
-      <report-header :action-item="actionItem" />
+      <report-header :action-item="props.actionItem" />
 
-      <report-body :action-item="actionItem" />
+      <report-body :action-item="props.actionItem" />
 
       <!-- Accept / Reject buttons -->
       <div class="flex gap-2 mt-5">
         <va-button
-          @click="acceptDuplicate(actionItem.dataset_id)"
+          @click="acceptDuplicate(props.actionItem.dataset_id)"
           :disabled="areControlsDisabled"
           >Accept Duplicate</va-button
         >
 
         <va-button
-          @click="rejectDuplicate(actionItem.dataset_id)"
+          @click="rejectDuplicate(props.actionItem.dataset_id)"
           :disabled="areControlsDisabled"
           >Reject Duplicate</va-button
         >
@@ -61,46 +65,27 @@ import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 
 const props = defineProps({
-  actionItemId: {
-    type: String,
+  actionItem: {
+    type: Object,
     required: true,
+  },
+  loadingResources: {
+    type: Boolean,
+    default: false,
   },
 });
 
-// boolean to indicate if the action item is being retrieved
-const retrievingActionItem = ref(false);
+// initiated-resolution - emitted once a workflow has been successfully launched to either
+// accept or reject a duplicate dataset
+const emit = defineEmits(["initiated-resolution"]);
+
 // boolean to indicate if a request to trigger the acceptance or rejection of the duplicate dataset
 // is currently in progress.
 const initiatingResolution = ref(false);
 // aggregate loading indicator for the component
 const loading = computed(
-  () => retrievingActionItem.value || initiatingResolution.value,
+  () => props.loadingResources || initiatingResolution.value,
 );
-
-const reTriggerActionItemRetrieval = ref(false);
-const actionItem = ref(null);
-
-const fetchActionItemDetails = ({
-  actionItemId,
-  updateRetrievalTrigger = false,
-} = {}) => {
-  retrievingActionItem.value = true;
-  return datasetService
-    .getActionItem({ action_item_id: actionItemId })
-    .then((res) => {
-      actionItem.value = res.data;
-    })
-    .catch((err) => {
-      toast.error("Failed to fetch action item details");
-      toast.error(err);
-    })
-    .finally(() => {
-      retrievingActionItem.value = false;
-      if (updateRetrievalTrigger) {
-        reTriggerActionItemRetrieval.value = false;
-      }
-    });
-};
 
 function acceptDuplicate(duplicate_dataset_id) {
   initiatingResolution.value = true;
@@ -109,7 +94,7 @@ function acceptDuplicate(duplicate_dataset_id) {
       duplicate_dataset_id: duplicate_dataset_id,
     })
     .then(() => {
-      reTriggerActionItemRetrieval.value = true;
+      emit("initiated-resolution");
       toast.success("Acceptance of duplicate dataset has been initiated");
     })
     .catch((err) => {
@@ -128,7 +113,7 @@ function rejectDuplicate(duplicate_dataset_id) {
       duplicate_dataset_id: duplicate_dataset_id,
     })
     .then(() => {
-      reTriggerActionItemRetrieval.value = true;
+      emit("initiated-resolution");
       toast.success("Rejection of duplicate dataset has been initiated");
     })
     .catch((err) => {
@@ -143,7 +128,7 @@ function rejectDuplicate(duplicate_dataset_id) {
 // the current state of the dataset associated with this action item
 const associatedDatasetState = computed(() => {
   // assumes states are sorted by descending timestamp
-  const latestState = actionItem.value.dataset.states[0];
+  const latestState = props.actionItem.dataset.states[0];
   return latestState.state;
 });
 
@@ -152,15 +137,15 @@ const isDuplicateReadyForProcessing = computed(() => {
 });
 
 const isActionItemActive = computed(() => {
-  return actionItem.value.active;
+  return props.actionItem.active;
 });
 
 const isActionItemLocked = computed(() => {
-  return actionItem.value.status === "LOCKED";
+  return props.actionItem.status === "LOCKED";
 });
 
 const isActionItemAcknowledged = computed(() => {
-  return actionItem.value.status === "ACKNOWLEDGED";
+  return props.actionItem.status === "ACKNOWLEDGED";
 });
 
 const areControlsDisabled = computed(() => {
@@ -170,18 +155,5 @@ const areControlsDisabled = computed(() => {
     !isActionItemActive.value ||
     !isDuplicateReadyForProcessing.value
   );
-});
-
-watch(reTriggerActionItemRetrieval, () => {
-  if (reTriggerActionItemRetrieval.value) {
-    fetchActionItemDetails({
-      actionItemId: props.actionItemId,
-      updateRetrievalTrigger: true,
-    });
-  }
-});
-
-onMounted(() => {
-  fetchActionItemDetails({ actionItemId: props.actionItemId });
 });
 </script>
