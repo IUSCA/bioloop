@@ -12,11 +12,22 @@
       </va-badge>
     </template>
 
-    <va-menu-item v-for="(notification, index) in notifications" :key="index">
-      <notification :notification="notification"></notification>
-      <va-divider />
-    </va-menu-item>
+    <div class="max-w-md">
+      <va-menu-item v-if="notifications.length === 0">
+        No pending notifications
+      </va-menu-item>
+
+      <va-menu-item
+        v-else
+        v-for="(notification, index) in notifications"
+        :key="index"
+      >
+        <notification :notification="notification"></notification>
+        <va-divider />
+      </va-menu-item>
+    </div>
   </va-menu>
+  <!-- </div> -->
 </template>
 
 <script setup>
