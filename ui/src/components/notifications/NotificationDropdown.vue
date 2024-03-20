@@ -1,7 +1,11 @@
 <template>
   <va-menu placement="left-bottom">
     <template #anchor>
-      <va-badge :offset="[-3, 10]" :text="`${notifications.length}`" overlap>
+      <va-badge
+        :offset="[-3, 10]"
+        :text="`${notifications.length > 0 ? notifications.length : ''}`"
+        overlap
+      >
         <va-button class="notification-bell" plain>
           <Icon icon="mdi-bell-outline" height="36px" width="36px" />
         </va-button>
@@ -24,6 +28,7 @@ const notificationStore = useNotificationStore();
 const { notifications } = storeToRefs(notificationStore);
 const { fetchActiveNotifications } = notificationStore;
 
+// retrieve notifications every 5 seconds
 const { resume } = useIntervalFn(fetchActiveNotifications, 5000, {
   immediateCallback: true,
 });

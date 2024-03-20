@@ -36,7 +36,7 @@ router.get(
 
     const notifications = await prisma.notification.findMany({
       where: {
-        filterQuery,
+        ...filterQuery,
       },
       include: {
         dataset_action_items: {

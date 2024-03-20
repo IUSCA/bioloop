@@ -63,6 +63,7 @@
 import ReportBody from "@/components/dataset/actionItems/datasetDiffReport/ReportBody.vue";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
+import { useNotificationStore } from "@/stores/notification";
 
 const props = defineProps({
   actionItem: {
@@ -74,6 +75,10 @@ const props = defineProps({
     default: false,
   },
 });
+
+const notificationStore = useNotificationStore();
+
+const { fetchActiveNotifications } = notificationStore;
 
 // initiated-resolution - emitted once a workflow has been successfully launched to either
 // accept or reject a duplicate dataset
@@ -103,6 +108,7 @@ function acceptDuplicate(duplicate_dataset_id) {
     })
     .finally(() => {
       initiatingResolution.value = false;
+      fetchActiveNotifications()
     });
 }
 
@@ -122,6 +128,7 @@ function rejectDuplicate(duplicate_dataset_id) {
     })
     .finally(() => {
       initiatingResolution.value = false;
+      fetchActiveNotifications()
     });
 }
 
