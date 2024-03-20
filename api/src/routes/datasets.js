@@ -583,8 +583,8 @@ router.post(
     };
     // Defaulting version to `undefined` allows Prisma to default it to 1
     data.version = existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined;
-    data.is_duplicate = true
-    
+    data.is_duplicate = true;
+
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
       data,
@@ -816,13 +816,13 @@ router.post(
     const updateQueries = [];
 
     // get the action item corresponding to this duplication attempt. Each dataset has a
-    // unique action item 
+    // unique action item
     const actionItem = prisma.dataset_action_item.findFirst({
       where: {
         dataset_id: req.params.duplicate_dataset_id,
         type: 'DUPLICATE_DATASET_INGESTION',
       },
-    })
+    });
 
     // update the status of the corresponding action item to ACKNOWLEDGED,
     // if it's not already ACKNOWLEDGED.
@@ -847,7 +847,7 @@ router.post(
         type: duplicate_dataset.type,
         is_deleted: false,
         is_duplicate: true,
-        NOT: { id: req.params.duplicate_dataset_id }, 
+        NOT: { id: req.params.duplicate_dataset_id },
       },
     });
     // lock the action items associated with other existing duplicates that have
@@ -1106,16 +1106,11 @@ router.patch(
 
     const originalDataset = matchingDatasets[0];
 
-    // get ids of any other duplicates that match this name
-
-    // create query for any other duplicates
-    // const createQuery =
-
     console.log('originalDatsset');
     console.dir(originalDataset, { depth: null });
     console.log(`originalDataset id: ${originalDataset.id}`);
 
-    // Multiple datasets may exist in the system at one time
+    // Multiple duplicate datasets may exist in the system at one time
     const otherDuplicates = await prisma.dataset.findMany({
       where: {
         NOT: { id: duplicateDataset.id },
@@ -1154,6 +1149,40 @@ router.patch(
         data: {
           active: false,
           status: 'RESOLVED',
+        },
+      }),
+    );
+    // the duplicates that will be rejected will need their `is_deleted` and `version` updated.
+    // For this, first, find the max version of previously-rejected duplicates having this name
+    const previouslyRejectedDuplicates = await prisma.dataset.findMany({
+      where: {
+        name: duplicateDataset.name,
+        type: duplicateDataset.type,
+        is_deleted: true,
+        is_duplicate: true,
+      },
+      orderBy: {
+        version: 'desc',
+      },
+    });
+    const latestRejectedDuplicateVersion = previouslyRejectedDuplicates.length > 0
+      ? previouslyRejectedDuplicates[0].version
+      : 0;
+
+    console.log('previouslyRejectedDuplicates');
+    console.dir(previouslyRejectedDuplicates, { depth: null });
+    console.log('otherDuplicates');
+    console.dir(otherDuplicates, { depth: null });
+
+    // query to update `version` and `is_deleted`
+    const rejectedDuplicatesUpdates = otherDuplicates.map(
+      (d, i) => prisma.dataset.update({
+        where: {
+          id: d.id,
+        },
+        data: {
+          is_deleted: true,
+          version: latestRejectedDuplicateVersion + i + 1,
         },
       }),
     );
@@ -1201,24 +1230,15 @@ router.patch(
           },
         },
       }),
-      // for any other duplicates that have this name:
-      // 1. first, create audit logs to indicate that these datasets are going to be rejected.
+      // Any other active duplicates that have this name and type will be rejected. For this:
+      // 1. first, create audit logs to indicate that these datasets were rejected.
       ...rejectedDuplicatesCreateAuditLogs,
-      // 2. now, update state of these datasets
+      // 2. next, update the state of these datasets
       ...rejectedDuplicatesUpdateState,
-      // 3. resolve any action items linked to these datasets that pertain to duplication
+      // 3. next, resolve any action items (that pertain to duplication) linked to these datasets
       ...rejectedDuplicatesResolveActionItems,
       // 4. finally, reject these datasets.
-      prisma.dataset.updateMany({
-        where: {
-          name: duplicateDataset.name,
-          is_duplicate: true,
-          NOT: { id: duplicateDataset.id },
-        },
-        data: {
-          is_deleted: true,
-        },
-      }),
+      ...rejectedDuplicatesUpdates,
       // transfer hierarchies from original to incoming duplicate dataset
       prisma.dataset_hierarchy.updateMany({
         where: {
