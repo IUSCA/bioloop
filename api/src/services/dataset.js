@@ -676,16 +676,12 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
       audit_logs: {
         // if an audit log hasn't been created to indicate that the duplicate
         // dataset is going be accepted, create one.
-        connectOrCreate: {
-          where: {
+        createMany: {
+          data: [{
             action: 'duplicate_accepted',
             user_id: accepted_by_id,
-            dataset_id: duplicate_dataset.id,
-          },
-          create: {
-            action: 'duplicate_accepted',
-            user_id: accepted_by_id,
-          },
+          }],
+          skipDuplicates: true,
         },
       },
       action_items: {
@@ -715,29 +711,22 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
       audit_logs: {
         // if an audit log hasn't been created to indicate that the original
         // dataset is going be overwritten, create one.
-        connectOrCreate: {
-          where: {
+        createMany: {
+          data: [{
             action: 'overwritten_by_duplicate',
             user_id: accepted_by_id,
-            dataset_id: original_dataset.id,
-          },
-          create: {
-            action: 'overwritten_by_duplicate',
-            user_id: accepted_by_id,
-          },
+          }],
+          skipDuplicates: true,
         },
       },
       states: {
-        // If a state update record hasn't been created for this overwrite,
-        // create one
-        connectOrCreate: {
-          where: {
+      // If a state update record hasn't been created for this overwrite,
+      // create one
+        createMany: {
+          data: [{
             state: 'OVERWRITTEN',
-            dataset_id: original_dataset.id,
-          },
-          create: {
-            state: 'OVERWRITTEN',
-          },
+          }],
+          skipDuplicates: true,
         },
       },
     },
@@ -795,29 +784,22 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
         audit_logs: {
           // If audit log hasn't been created for this rejection,
           // create one
-          connectOrCreate: {
-            where: {
+          createMany: {
+            data: [{
               action: 'duplicate_rejected',
               user_id: accepted_by_id,
-              dataset_id: d.id,
-            },
-            create: {
-              action: 'duplicate_rejected',
-              user_id: accepted_by_id,
-            },
+            }],
+            skipDuplicates: true,
           },
         },
         states: {
           // If a state update record hasn't been created for this rejection,
           // create one
-          connectOrCreate: {
-            where: {
+          createMany: {
+            data: [{
               state: 'REJECTED_DUPLICATE',
-              dataset_id: d.id,
-            },
-            create: {
-              state: 'REJECTED_DUPLICATE',
-            },
+            }],
+            skipDuplicates: true,
           },
         },
         action_items: {
@@ -1001,11 +983,12 @@ async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
                 user_id: rejected_by_id,
               },
             ],
+            skipDuplicates: true,
           },
         },
         states: {
           createMany: {
-            data: [{ state: 'REJECTED_DUPLICATE' }],
+            data: [{ state: 'REJECTED_DUPLICATE' }], skipDuplicates: true,
           },
         },
       },
