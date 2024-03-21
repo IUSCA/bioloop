@@ -53,7 +53,7 @@ const prisma = new PrismaClient(
 });
 
 router.post(
-  '/action-items',
+  '/action-item',
   isPermittedTo('update'),
   validate([
     body('action_item').isObject(),
@@ -61,8 +61,8 @@ router.post(
     body('next_state').escape().notEmpty().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // next_state - optional param provided if dataset's state needs to be updated as
-    // part of the action item's creation
+    // next_state - optional param provided if dataset's state needs to be
+    // updated as part of the action item's creation
     const { action_item, notification, next_state } = req.body;
 
     console.dir(req.body, { depth: null });
@@ -332,9 +332,8 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
-// the criteria specified.
-// Used by workers + UI.
+// Get all datasets, and the count of datasets. Results can optionally be
+// filtered and sorted by the criteria specified. Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -452,7 +451,8 @@ router.get(
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the dataset_file table if files is true
+    // only select path and md5 columns from the dataset_file table if files is
+    // true
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -480,7 +480,9 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
+    /*
+    * #swagger.description = 'workflow_id is optional. If the request body has
+    * workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
     const { workflow_id, state, ...data } = req.body;
@@ -550,8 +552,9 @@ router.post(
         version: 'desc',
       },
     });
-      // if so, find the most recent duplicate (the one with the highest version), to determine the
-      // version to be assigned to the current duplicate dataset
+      // if so, find the most recent duplicate (the one with the highest
+      // version), to determine the version to be assigned to the current
+      // duplicate dataset
     const latestDuplicateVersion = existingDuplicates[0]?.version;
 
     const matchingDatasets = await prisma.dataset.findMany({
@@ -736,9 +739,11 @@ router.delete(
 const workflow_access_check = (req, res, next) => {
   // The workflows that a user is allowed to run depends on their role
   // allowed_wfs is an object with keys as workflow names and values as true
-  // filter only works on objects not arrays, so we use an object with true value
+  // filter only works on objects not arrays, so we use an object with true
+  // value
 
-  // user role can only run wf on the datasets they can access through project associations
+  // user role can only run wf on the datasets they can access through project
+  // associations
   const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
   if (allowed_wfs[req.params.wf]) {
     return next();
@@ -797,74 +802,36 @@ router.post(
   dataset_delete_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Replace an existing dataset with its duplicate dataset, and create and
-    // start a workflow to accept or reject a duplicate dataset.
+    // #swagger.summary = Replace an existing dataset with its duplicate
+    // dataset, and create and start a workflow to accept or reject a duplicate
+    // dataset.
 
-    const duplicateDataset = await prisma.dataset.findUnique({
-      where: {
-        id: req.params.duplicate_id,
-      },
-      include: {
-        duplicated_from: true,
-        states: {
-          orderBy: {
-            timestamp: 'desc',
-          },
-        },
-      },
-    });
-    if (!duplicateDataset.is_duplicate) {
-      next(createError.BadRequest(`Expected dataset ${duplicateDataset.id} to be a duplicate, but it is not.`));
-    }
-
-    // throw error if this dataset is not ready for acceptance or rejection yet (i.e. the
-    // duplicate comparison process is still running)
-    const latestState = duplicateDataset.states[0];
-    if (latestState.state !== 'DUPLICATE_READY') {
-      next(createError.BadRequest(`Dataset ${duplicateDataset.id} cannot be accepted or rejected before it reaches state DUPLICATE_READY. Current state is ${latestState.state}.`));
-    }
-
-    const matchingDatasets = await prisma.dataset.findMany({
-      where: {
-        name: duplicateDataset.name,
-        type: duplicateDataset.type,
-        is_deleted: false,
-        is_duplicate: false,
-      },
-    });
-
-    console.log('matchingDatsets:');
-    console.dir(matchingDatasets, { depth: null });
-
-    // Ensure that there is exactly one active (not deleted) original dataset before accepting
-    // the duplicate. If more than one original datasets are found, the system is in an invalid
-    // state and should not proceed.
-    if (matchingDatasets.length !== 1) {
-      return next(createError.BadRequest(`Expected to find one active (not deleted) original ${duplicateDataset.type} named ${duplicateDataset.name}, but found ${matchingDatasets.length}.`));
-    }
-
-    // Ensure that the matching original dataset's id is the same as the
-    // `original_dataset_id` linked to the duplicate dataset. If not, the system is in an
-    // invalid state and should not proceed.
-    if (duplicateDataset.duplicated_from.original_dataset_id !== matchingDatasets[0].id) {
-      return next(createError.BadRequest(`Expected original dataset to have id
-       ${duplicateDataset.duplicated_from.original_dataset_id}, but matching original
-        dataset has id ${matchingDatasets[0].id}.`));
-    }
+    let updatedDataset;
 
     if (req.params.wf === 'accept_duplicate_dataset') {
-      await datasetService.accept_duplicate({
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
-        accepted_by_id: req.user.id,
-      });
+      // get accepted dataset
+      try {
+        updatedDataset = await datasetService.accept_duplicate({
+          duplicate_dataset_id: req.params.duplicate_dataset_id,
+          accepted_by_id: req.user.id,
+        });
+      } catch (e) {
+        return next(createError.BadRequest(e.message));
+      }
     } else if (req.params.wf === 'reject_duplicate_dataset') {
-      await datasetService.reject_duplicate({
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
-        rejected_by_id: req.user.id,
-      });
+      // get rejected dataset
+      try {
+        updatedDataset = await datasetService.reject_duplicate({
+          duplicate_dataset_id: req.params.duplicate_dataset_id,
+          rejected_by_id: req.user.id,
+        });
+      } catch (e) {
+        return next(createError.BadRequest(e.message));
+      }
     }
+
     const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(duplicateDataset, wf_name);
+    const wf = await datasetService.create_workflow(updatedDataset, wf_name);
     return res.json(wf);
   }),
 );
@@ -931,7 +898,8 @@ router.get(
       base: req.query.basepath,
     });
     // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+    // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -971,7 +939,8 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of a token being returned.
+    // Catch errors to ensure that logging does not get in the way of a token
+    // being returned.
     try {
       await prisma.data_access_log.create({
         data: {
