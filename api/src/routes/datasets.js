@@ -791,51 +791,6 @@ router.post(
   }),
 );
 
-router.post(
-  '/duplicates/:duplicate_dataset_id/workflow/:wf',
-  accessControl('workflow')('create'),
-  validate([
-    param('duplicate_dataset_id').isInt().toInt(),
-    param('wf').isIn(['accept_duplicate_dataset', 'reject_duplicate_dataset']),
-  ]),
-  workflow_access_check,
-  dataset_delete_check,
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = Replace an existing dataset with its duplicate
-    // dataset, and create and start a workflow to accept or reject a duplicate
-    // dataset.
-
-    let updatedDataset;
-
-    if (req.params.wf === 'accept_duplicate_dataset') {
-      // get accepted dataset
-      try {
-        updatedDataset = await datasetService.accept_duplicate({
-          duplicate_dataset_id: req.params.duplicate_dataset_id,
-          accepted_by_id: req.user.id,
-        });
-      } catch (e) {
-        return next(createError.BadRequest(e.message));
-      }
-    } else if (req.params.wf === 'reject_duplicate_dataset') {
-      // get rejected dataset
-      try {
-        updatedDataset = await datasetService.reject_duplicate({
-          duplicate_dataset_id: req.params.duplicate_dataset_id,
-          rejected_by_id: req.user.id,
-        });
-      } catch (e) {
-        return next(createError.BadRequest(e.message));
-      }
-    }
-
-    const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(updatedDataset, wf_name);
-    return res.json(wf);
-  }),
-);
-
 const report_storage = multer.diskStorage({
   async destination(req, file, cb) {
     try {
@@ -1016,6 +971,130 @@ router.get(
       ...req.query,
     });
     res.json(files);
+  }),
+);
+
+router.post(
+  '/duplicates/:duplicate_dataset_id/workflow/:wf',
+  accessControl('workflow')('create'),
+  validate([
+    param('duplicate_dataset_id').isInt().toInt(),
+    param('wf').isIn(['accept_duplicate_dataset', 'reject_duplicate_dataset']),
+  ]),
+  workflow_access_check,
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Replace an existing dataset with its duplicate
+    // dataset, and create and start a workflow to accept or reject a duplicate
+    // dataset.
+
+    // let updatedDataset;
+    //
+    // if (req.params.wf === 'accept_duplicate_dataset') {
+    //   // get accepted dataset
+    //   try {
+    //     updatedDataset = await datasetService.accept_duplicate({
+    //       duplicate_dataset_id: req.params.duplicate_dataset_id,
+    //       accepted_by_id: req.user.id,
+    //     });
+    //   } catch (e) {
+    //     return next(createError.BadRequest(e.message));
+    //   }
+    // } else if (req.params.wf === 'reject_duplicate_dataset') {
+    //   // get rejected dataset
+    //   try {
+    //     updatedDataset = await datasetService.reject_duplicate({
+    //       duplicate_dataset_id: req.params.duplicate_dataset_id,
+    //       rejected_by_id: req.user.id,
+    //     });
+    //   } catch (e) {
+    //     return next(createError.BadRequest(e.message));
+    //   }
+    // }
+
+    // console.log('updatedDataset');
+    // console.dir(updatedDataset, { depth: null });
+
+    const duplicate_dataset = await datasetService.get_dataset({
+      id: req.params.duplicate_dataset_id,
+      workflows: true,
+    });
+
+    // This kicks off a workflow, which then makes another call to the API to
+    // accept/reject the duplicate dataset. This second call to the API is where
+    // the states of the original and the duplicates datasets are validated,
+    // after which the duplicate is either accepted or rejected. The workflow
+    // is launched first to allow a failed acceptance/rejection to be resumed
+    // from the UI.
+    const wf_name = req.params.wf;
+    const wf = await datasetService.create_workflow(duplicate_dataset, wf_name);
+    return res.json(wf);
+  }),
+);
+
+router.patch(
+  '/duplicates/:duplicate_dataset_id/accept/initiate',
+  validate([
+    param('duplicate_dataset_id').isInt().toInt(),
+  ]),
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    // todo - put locks
+    let duplicateBeingAccepted;
+    try {
+      duplicateBeingAccepted = await datasetService.initiate_duplicate_acceptance({
+        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        accepted_by_id: req.user.id,
+      });
+    } catch (e) {
+      return next(createError.BadRequest(e.message));
+    }
+
+    res.json(duplicateBeingAccepted);
+  }),
+);
+
+router.patch(
+  '/duplicates/:duplicate_dataset_id/accept/complete',
+  validate([
+    param('duplicate_dataset_id').isInt().toInt(),
+  ]),
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    let updatedDataset;
+    try {
+      updatedDataset = await datasetService.complete_duplicate_acceptance({
+        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        accepted_by_id: req.user.id,
+      });
+    } catch (e) {
+      return next(createError.BadRequest(e.message));
+    }
+
+    res.json(updatedDataset);
+  }),
+);
+
+router.patch(
+  '/duplicates/:duplicate_dataset_id/reject/initiate',
+  validate([
+    param('duplicate_dataset_id').isInt().toInt(),
+  ]),
+  dataset_access_check,
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    let updatedDataset;
+    try {
+      updatedDataset = await datasetService.reject_duplicate({
+        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        accepted_by_id: req.user.id,
+      });
+    } catch (e) {
+      return next(createError.BadRequest(e.message));
+    }
+
+    res.json(updatedDataset);
   }),
 );
 

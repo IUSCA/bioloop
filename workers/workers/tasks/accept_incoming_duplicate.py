@@ -28,48 +28,62 @@ logger = get_task_logger(__name__)
 # of the incoming duplicate to match the original dataset's `type`, and removing the
 # original dataset from the database and the filesystem.
 def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
-    incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
-    
-    logger.info(f"duplicate dataset id: {duplicate_dataset_id}")
+    # incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
+    #
+    # logger.info(f"duplicate dataset id: {duplicate_dataset_id}")
+    #
+    # if not incoming_duplicate_dataset['is_duplicate']:
+    #     raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not a duplicate")
+    #
+    # # assumes states are sorted in descending order by timestamp
+    # latest_state = incoming_duplicate_dataset['states'][0]['state']
+    # if latest_state != 'DUPLICATE_READY':
+    #     raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} needs to reach state"
+    #                            f" DUPLICATE_READY before it can be"
+    #                            f" accepted. Current state is {latest_state}.")
+    #
+    # matching_datasets = api.get_all_datasets(
+    #     name=incoming_duplicate_dataset['name'],
+    #     dataset_type=incoming_duplicate_dataset['type'],
+    #     is_duplicate=False,
+    #     deleted=False,
+    #     bundle=True
+    # )
+    # if len(matching_datasets) != 1:
+    #     raise InspectionFailed(f"Expected to find one active (not deleted) original {incoming_duplicate_dataset['type']} named {incoming_duplicate_dataset['name']},"
+    #                            f" but found {len(matching_datasets)}.")
+    #
+    # original_dataset = matching_datasets[0]
+    #
+    # logger.info("FILTERED:")
+    # matching_dataset_names = [d['id'] for d in matching_datasets]
+    # logger.info(json.dumps(matching_dataset_names, indent=2))
+    #
+    # # filtered_dataset_names = [d['name'] for d in filtered_datasets]
+    # # logger.info(json.dumps(filtered_dataset_names, indent=2))
+    #
+    # original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
+    # original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if\
+    #     original_dataset['bundle'] is not None\
+    #     else None
 
-    if not incoming_duplicate_dataset['is_duplicate']:
-        raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} is not a duplicate")
 
-    # assumes states are sorted in descending order by timestamp
-    latest_state = incoming_duplicate_dataset['states'][0]['state']
-    if latest_state != 'DUPLICATE_READY':
-        raise InspectionFailed(f"Dataset {incoming_duplicate_dataset['id']} needs to reach state"
-                               f" DUPLICATE_READY before it can be"
-                               f" accepted. Current state is {latest_state}.")
-
-    matching_datasets = api.get_all_datasets(
-        name=incoming_duplicate_dataset['name'],
-        dataset_type=incoming_duplicate_dataset['type'],
-        is_duplicate=False,
-        deleted=False,
-        bundle=True
+    # This call to the API validates the states of the incoming duplicate dataset and the original
+    # dataset. If the states are correct, it puts a lock on the original and the duplicate datasets
+    # , and initiates the duplicate dataset's acceptance into the system by updating the datasets'
+    # state in the database.
+    duplicate_being_accepted = api.initiate_duplicate_dataset_acceptance(
+        duplicate_dataset_id=duplicate_dataset_id,
     )
-    if len(matching_datasets) != 1:
-        raise InspectionFailed(f"Expected to find one active (not deleted) original {incoming_duplicate_dataset['type']} named {incoming_duplicate_dataset['name']},"
-                               f" but found {len(matching_datasets)}.")
 
-    original_dataset = matching_datasets[0]        
-    
-    logger.info("FILTERED:")
-    matching_dataset_names = [d['id'] for d in matching_datasets]
-    logger.info(json.dumps(matching_dataset_names, indent=2))
-
-    # filtered_dataset_names = [d['name'] for d in filtered_datasets]
-    # logger.info(json.dumps(filtered_dataset_names, indent=2))
+    original_dataset_id = duplicate_being_accepted['duplicated_from']['original_dataset_id']
+    original_dataset = api.get_dataset(dataset_id=original_dataset_id, bundle=True)
 
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
     original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if\
         original_dataset['bundle'] is not None\
         else None
 
-    accepted_incoming_dataset = api.accept_duplicate_dataset(
-        dataset_id=incoming_duplicate_dataset['id'],
-    )
     # Once original dataset has been removed from the database, remove it
     # from the filesystem (`staged_path` and the corresponding bundle's path).
     if original_dataset_staged_path.exists():
@@ -77,5 +91,9 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
         original_dataset_bundle_path.unlink()
 
-    return accepted_incoming_dataset['id'],
+    # once the filesystem resources associated with the original dataset have been cleaned up,
+    # the original and the duplicate dataset's statues can be updated.
+    api.complete_duplicate_dataset_acceptance(duplicate_dataset_id=duplicate_dataset_id)
+
+    return duplicate_being_accepted['id'],
 

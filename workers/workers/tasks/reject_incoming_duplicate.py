@@ -50,6 +50,6 @@ def handle_rejection(celery_task, duplicate_dataset_id, **kwargs):
 
     # todo - cleanup origin path of rejected dataset
 
-    api.reject_duplicate_dataset(dataset_id=duplicate_dataset_id)
+    api.initiate_duplicate_dataset_rejection(duplicate_dataset_id=duplicate_dataset_id)
     return duplicate_dataset_id,
 

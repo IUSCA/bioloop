@@ -251,16 +251,29 @@ def post_dataset_action_item(action_item: dict, notification: dict = None, next_
         r.raise_for_status()
 
 
-def accept_duplicate_dataset(dataset_id: str):
+def initiate_duplicate_dataset_acceptance(duplicate_dataset_id: str):
     with APIServerSession() as s:
-        r = s.patch(f'datasets/duplicates/accept/{dataset_id}')
+        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept/initiate')
+        r.raise_for_status()
+        return r.json()
+
+def complete_duplicate_dataset_acceptance(duplicate_dataset_id: str):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept/complete')
         r.raise_for_status()
         return r.json()
 
 
-def reject_duplicate_dataset(dataset_id: str):
+def initiate_duplicate_dataset_rejection(duplicate_dataset_id: str):
     with APIServerSession() as s:
-        r = s.patch(f'datasets/duplicates/reject/{dataset_id}')
+        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/reject/accept')
+        r.raise_for_status()
+        return r.json()
+
+
+def complete_duplicate_dataset_rejection(duplicate_dataset_id: str):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/reject/complete')
         r.raise_for_status()
         return r.json()
 

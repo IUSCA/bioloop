@@ -526,7 +526,7 @@ async function add_files({ dataset_id, data }) {
  * @param is_duplicate
  * @returns {Promise<number|number>}
  */
-async function get_latest_version({
+async function get_dataset_latest_version({
   dataset_name, dataset_type, is_deleted, is_duplicate,
 }) {
   const matching_datasets = await prisma.dataset.findMany({
@@ -552,10 +552,13 @@ async function get_latest_version({
  *
  * Returns an object containing the original and the duplicate datasets, if they
  * are in their expected states. Throws errors otherwise.
- * @param duplicate_dataset_id
+ * @param {Number} duplicate_dataset_id The duplicate dataset which is to be accepted
+ * into the system.
+ * @param {Boolean} preflight Whether this validation is being done before the duplicate
+ * dataset's acceptance is initiated
  * @returns Object
  */
-async function validate_duplicate_state(duplicate_dataset_id) {
+async function validate_duplicate_state(duplicate_dataset_id, preflight = false) {
   const duplicate_dataset = await prisma.dataset.findUnique({
     where: {
       id: duplicate_dataset_id,
@@ -607,8 +610,13 @@ async function validate_duplicate_state(duplicate_dataset_id) {
   // throw error if this dataset is not ready for acceptance or rejection yet
   // (i.e. the duplicate comparison process is still running)
   const latestState = duplicate_dataset.states[0];
-  if (latestState.state !== 'DUPLICATE_READY') {
-    throw new Error(`Dataset ${duplicate_dataset.id} cannot be accepted or rejected before it reaches state DUPLICATE_READY. Current state is ${latestState.state}.`);
+  if (preflight && latestState.state !== 'DUPLICATE_READY') {
+    // eslint-disable-next-line no-useless-concat
+    throw new Error(`Dataset ${duplicate_dataset.id} cannot be accepted or rejected`
+        + ` before it reaches state DUPLICATE_READY. Current state is ${latestState.state}.`);
+  } else if (!preflight && latestState.state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
+    throw new Error(`Expected to find dataset ${duplicate_dataset.id} in state`
+        + ` DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is ${latestState}.`);
   }
 
   return {
@@ -618,9 +626,21 @@ async function validate_duplicate_state(duplicate_dataset_id) {
 }
 
 /**
- * Performs the database write operations needed to overwrite an existing
+ * Initiates the replacement of a dataset by its incoming duplicate,
+ * by performing the database write operations needed to overwrite an existing
  * dataset with its duplicate.
- * Returns accepted dataset.
+ *
+ * The following write operations are performed:
+ *
+ * Returns the dataset that was previously a duplicate and has now replaced
+ * the dataset that it was duplicated from. Upon successful execution,
+ * both datasets are left in a state of DUPLICATE_ACCEPTANCE_IN_PROGRESS,
+ * and their action items are locked. This is done because these the process of
+ * overwriting a dataset with a duplicate also involves cleaning filesystem
+ * resources, which is an async process. Once the resources have been cleaned
+ * up, another API call updates the state of the dataset and their
+ * corresponding action items. This is the point when the replacement of the
+ * original dataset with its incoming duplicate is considered complete.
  *
  * This method is expected to be idempotent (the resultant end state
  * should be the same every time this method is called).
@@ -628,9 +648,10 @@ async function validate_duplicate_state(duplicate_dataset_id) {
  * @param {Number} duplicate_dataset_id - The duplicate dataset to be accepted.
  * @param {Number} accepted_by_id - id of the user who is accepting the duplicate dataset.
  */
-async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
+async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by_id }) {
   const { original_dataset, duplicate_dataset } = await validate_duplicate_state(
     duplicate_dataset_id,
+    true,
   );
 
   // write queries to be run in a single transaction, before a workflow is
@@ -671,19 +692,6 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
       id: duplicate_dataset.id,
     },
     data: {
-      is_duplicate: false,
-      version: original_dataset.version + 1,
-      audit_logs: {
-        // if an audit log hasn't been created to indicate that the duplicate
-        // dataset is going be accepted, create one.
-        createMany: {
-          data: [{
-            action: 'duplicate_accepted',
-            user_id: accepted_by_id,
-          }],
-          skipDuplicates: true,
-        },
-      },
       action_items: {
         updateMany: {
           where: {
@@ -694,10 +702,32 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
             active: true,
           },
           data: {
-            status: 'LOCKED',
+            status: 'ACKNOWLEDGED',
           },
         },
       },
+      states: {
+        createMany: {
+          data: [{
+            state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
+          }],
+          skipDuplicates: true,
+        },
+      },
+      audit_logs: {
+        // if an audit log hasn't been created to indicate that the duplicate
+        // dataset is going be accepted, create one.
+        createMany: {
+          data: [{
+            action: 'duplicate_acceptance_initiated',
+            user_id: accepted_by_id,
+          }],
+          skipDuplicates: true,
+        },
+      },
+    },
+    include: {
+      duplicated_from: true,
     },
   }));
 
@@ -707,13 +737,12 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
       id: original_dataset.id,
     },
     data: {
-      is_deleted: true,
       audit_logs: {
         // if an audit log hasn't been created to indicate that the original
         // dataset is going be overwritten, create one.
         createMany: {
           data: [{
-            action: 'overwritten_by_duplicate',
+            action: 'overwrite_initiated',
             user_id: accepted_by_id,
           }],
           skipDuplicates: true,
@@ -724,7 +753,7 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
       // create one
         createMany: {
           data: [{
-            state: 'OVERWRITTEN',
+            state: 'OVERWRITE_IN_PROGRESS',
           }],
           skipDuplicates: true,
         },
@@ -750,7 +779,8 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
   // 4. Finally, the duplicates that will be rejected will need their
   // `is_deleted` and `version` updated. For this, first, find the max version
   // of previously-rejected duplicates having this name
-  const latest_rejected_duplicate_version = await get_latest_version({
+
+  const latest_rejected_duplicate_version = await get_dataset_latest_version({
     dataset_name: duplicate_dataset.name,
     dataset_type: duplicate_dataset.type,
     is_deleted: true,
@@ -809,7 +839,8 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
               active: true,
             },
             data: {
-              status: 'LOCKED',
+              status: 'RESOLVED',
+              active: false,
             },
           },
         },
@@ -876,7 +907,117 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
   //   })),
   // );
 
-  // queries to transfer hierarchies from original to incoming duplicate dataset
+  // // queries to resolve the action item that was created for this duplication
+  // update_queries.push(prisma.dataset_action_item.updateMany({
+  //   where: {
+  //     dataset_id: duplicate_dataset.id,
+  //     type: 'DUPLICATE_DATASET_INGESTION',
+  //   },
+  //   data: {
+  //     active: false,
+  //     status: 'LOCKED',
+  //   },
+  // }));
+
+  // At this point, both the original and the incoming duplicate datasets are
+  // considered "locked", and write operations on either of them should be
+  // forbidden, until the lock is removed by another process.
+  const [dataset_being_accepted] = await prisma.$transaction(update_queries);
+  return dataset_being_accepted;
+}
+
+async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
+  const { original_dataset, duplicate_dataset } = await validate_duplicate_state(duplicate_dataset_id, false);
+
+  const update_queries = [];
+
+  update_queries.push(prisma.dataset.update({
+    where: {
+      id: duplicate_dataset.id,
+    },
+    data: {
+      is_duplicate: false,
+      version: original_dataset.version + 1,
+      action_items: {
+        // Update the action item.
+        // This updateMany is expected to update exactly one action item.
+        updateMany: {
+          where: {
+            type: 'DUPLICATE_DATASET_INGESTION',
+            active: true,
+          },
+          data: {
+            status: 'RESOLVED',
+            active: false,
+          },
+        },
+      },
+      states: {
+        // Update the state log.
+        // This updateMany is expected to update exactly one state record.
+        updateMany: {
+          where: {
+            state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
+          },
+          data: {
+            state: 'DUPLICATE_ACCEPTED',
+          },
+        },
+      },
+      audit_logs: {
+        // Update the audit log.
+        // This updateMany is expected to update exactly one audit_log, since
+        // only one audit log should be created per action.
+        updateMany: {
+          where: {
+            action: 'duplicate_acceptance_initiated',
+          },
+          data: {
+            action: 'duplicate_accepted',
+          },
+        },
+      },
+      //
+    },
+  }));
+
+  update_queries.push(prisma.dataset.update({
+    where: {
+      id: original_dataset.id,
+    },
+    data: {
+      is_deleted: true,
+      audit_logs: {
+        // Update the audit log.
+        // This updateMany is expected to update exactly one audit_log, since
+        // only one audit log should be created per action.
+        updateMany: {
+          where: {
+            action: 'overwrite_initiated',
+          },
+          data: {
+            action: 'overwritten',
+          },
+        },
+      },
+      states: {
+      // If a state update record hasn't been created for this overwrite,
+      // create one
+        // Update the state log.
+        // This updateMany is expected to update exactly one state record.
+        updateMany: {
+          where: {
+            state: 'OVERWRITE_IN_PROGRESS',
+          },
+          data: {
+            state: 'OVERWRITTEN',
+          },
+        },
+      },
+    },
+  }));
+
+  // transfer dataset hierarchies from original to incoming duplicate dataset
   update_queries.push(prisma.dataset_hierarchy.updateMany({
     where: {
       source_id: original_dataset.id,
@@ -919,7 +1060,7 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
     }),
   );
 
-  // queries to update the project-dataset relationships
+  // update the project-dataset relationship
   update_queries.push(prisma.project_dataset.updateMany({
     where: {
       dataset_id: original_dataset.id,
@@ -929,20 +1070,8 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
     },
   }));
 
-  // // queries to resolve the action item that was created for this duplication
-  // update_queries.push(prisma.dataset_action_item.updateMany({
-  //   where: {
-  //     dataset_id: duplicate_dataset.id,
-  //     type: 'DUPLICATE_DATASET_INGESTION',
-  //   },
-  //   data: {
-  //     active: false,
-  //     status: 'LOCKED',
-  //   },
-  // }));
-
-  const [acceptedDataset] = await prisma.$transaction(update_queries);
-  return acceptedDataset;
+  const [accepted_dataset] = await prisma.$transaction(update_queries);
+  return accepted_dataset;
 }
 
 /**
@@ -958,9 +1087,10 @@ async function accept_duplicate({ duplicate_dataset_id, accepted_by_id }) {
 async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
   const { original_dataset, duplicate_dataset } = await validate_duplicate_state(
     duplicate_dataset_id,
+    true,
   );
 
-  const latest_rejected_duplicate_version = await get_latest_version({
+  const latest_rejected_duplicate_version = await get_dataset_latest_version({
     dataset_name: duplicate_dataset.name,
     dataset_type: duplicate_dataset.type,
     is_deleted: true,
@@ -1021,6 +1151,7 @@ module.exports = {
   files_ls,
   search_files,
   add_files,
-  accept_duplicate,
+  initiate_duplicate_acceptance,
+  complete_duplicate_acceptance,
   reject_duplicate,
 };
