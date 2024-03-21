@@ -48,6 +48,8 @@ def handle_rejection(celery_task, duplicate_dataset_id, **kwargs):
         raise InspectionFailed(f"Expected to find one active (not deleted) original {incoming_duplicate_dataset['type']} named {incoming_duplicate_dataset['name']},"
                                f" but found {len(matching_datasets)}.")
 
-    api.reject_incoming_dataset(dataset_id=duplicate_dataset_id)
+    # todo - cleanup origin path of rejected dataset
+
+    api.reject_duplicate_dataset(dataset_id=duplicate_dataset_id)
     return duplicate_dataset_id,
 
