@@ -174,9 +174,16 @@ def create_dataset(dataset):
         return r.json()
 
 
-def create_duplicate_dataset(dataset):
+def create_duplicate_dataset(original_dataset_id: int,
+                             action_item: dict = None,
+                             notification: dict = None,
+                             next_state: str = None):
     with APIServerSession() as s:
-        r = s.post('datasets/duplicate', json=dataset_setter(dataset))
+        r = s.post(f'datasets/duplicate/{original_dataset_id}', json={
+            'action_item': action_item,
+            'notification': notification,
+            'next_state': next_state,
+        })
         r.raise_for_status()
         return r.json()
 
@@ -241,9 +248,12 @@ def add_state_to_dataset(dataset_id, state, metadata=None):
         r.raise_for_status()
 
 
-def post_dataset_action_item(action_item: dict, notification: dict = None, next_state: str = None):
+def post_dataset_action_item(dataset_id: int,
+                             action_item: dict,
+                             notification: dict = None,
+                             next_state: str = None):
     with APIServerSession() as s:
-        r = s.post(f'datasets/action-item', json={
+        r = s.post(f'datasets/{dataset_id}/action-item', json={
             'action_item': action_item,
             'notification': notification,
             'next_state': next_state

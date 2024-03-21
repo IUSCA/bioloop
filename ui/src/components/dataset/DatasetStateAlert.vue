@@ -234,4 +234,18 @@ const gatherDatasetDuplicates = (dataset) =>
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
+
+onMounted(() => {
+  console.log("onMounted");
+  console.log("dataset");
+  console.dir(props.dataset, { depth: null });
+});
+
+const datasetWatcher = toRef(() => props.dataset);
+
+watch(datasetWatcher, () => {
+  console.log("watch");
+  console.log("dataset");
+  console.dir(datasetWatcher, { depth: null });
+});
 </script>

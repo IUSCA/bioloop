@@ -53,9 +53,10 @@ const prisma = new PrismaClient(
 });
 
 router.post(
-  '/action-item',
+  '/:id/action-item',
   isPermittedTo('update'),
   validate([
+    param('id').isInt().toInt(),
     body('action_item').isObject(),
     body('notification').isObject(),
     body('next_state').escape().notEmpty().optional(),
@@ -77,7 +78,7 @@ router.post(
           metadata: action_item.metadata,
           dataset: {
             connect: {
-              id: action_item.dataset_id,
+              id: req.params.id,
             },
           },
           ingestion_checks: {
@@ -519,32 +520,34 @@ router.post(
 );
 
 router.post(
-  '/duplicate',
+  '/:id/duplicate',
   isPermittedTo('create'),
   validate([
-    body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
-    body('size').optional().notEmpty().customSanitizer(BigInt),
+    body('action_item').optional().isObject(),
+    body('notification').optional().isObject(),
+    body('next_state').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a duplicate dataset.'
 
-    const { state, ...data } = req.body;
+    const {
+      action_item, notification, next_state,
+    } = req.body;
 
-    // add a state
-    data.states = {
-      create: [
-        {
-          state: state || 'REGISTERED',
-        },
-      ],
-    };
+    const originalDataset = await prisma.dataset.findUnique({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    // const createQuery = {}
 
     // check if other duplicates for this dataset exist in the system already
     const existingDuplicates = await prisma.dataset.findMany({
       where: {
-        name: data.name,
-        type: data.type,
+        name: originalDataset.name,
+        type: originalDataset.type,
         is_deleted: false,
         is_duplicate: true,
       },
@@ -552,43 +555,95 @@ router.post(
         version: 'desc',
       },
     });
-      // if so, find the most recent duplicate (the one with the highest
-      // version), to determine the version to be assigned to the current
-      // duplicate dataset
+    // if so, find the most recent duplicate (the one with the highest
+    // version), to determine the version to be assigned to the current
+    // duplicate dataset
     const latestDuplicateVersion = existingDuplicates[0]?.version;
 
-    const matchingDatasets = await prisma.dataset.findMany({
-      where: {
-        name: data.name,
-        type: data.type,
-        is_deleted: false,
-        is_duplicate: false,
-      },
-    });
+    // const matchingDatasets = await prisma.dataset.findMany({
+    //   where: {
+    //     name: dataset.name,
+    //     type: dataset.type,
+    //     is_deleted: false,
+    //     is_duplicate: false,
+    //   },
+    // });
 
-    if (matchingDatasets.length !== 1) {
-      return next(createError.NotFound(`Expected to find one active (not deleted) original ${data.type} named ${data.name}, but found ${matchingDatasets.length}.`));
-    }
+    // if (matchingDatasets.length !== 1) {
+    // return next(createError.NotFound(`Expected to find one active (not
+    // deleted) original ${dataset.type} named ${dataset.name}, but found
+    // ${matchingDatasets.length}.`)); }
 
-    const originalDataset = matchingDatasets[0];
+    // const originalDataset = matchingDatasets[0];
 
-    data.duplicated_from = {
-      create: {
-        original_dataset_id: originalDataset.id,
-      },
-    };
     // Defaulting version to `undefined` allows Prisma to default it to 1
-    data.version = existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined;
-    data.is_duplicate = true;
 
-    // create dataset along with associations
-    const dataset = await prisma.dataset.create({
-      data,
+    const createQueries = {};
+
+    createQueries.push(prisma.dataset.create({
+      dataset: {
+        name: originalDataset.name,
+        type: originalDataset.type,
+        description: originalDataset.description,
+        origin_path: originalDataset.origin_path,
+        is_duplicate: true,
+        version: existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined,
+        duplicated_from: {
+          create: {
+            original_dataset_id: req.params.id,
+          },
+        },
+        states: {
+          create: [
+            {
+              state: next_state || 'DUPLICATE_REGISTERED',
+            },
+          ],
+        },
+        action_items: {
+          create: [
+            {
+              type: action_item.type,
+              title: action_item.title,
+              text: action_item.text,
+              to: action_item.to,
+              metadata: action_item.metadata,
+              notification: {
+                create: notification,
+              },
+            },
+          ],
+        },
+      },
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
       },
-    });
-    res.json(dataset);
+    }));
+
+    // createQueries.push(prisma.dataset_action_item.create({
+    //   data: {
+    //     type: action_item.type,
+    //     title: action_item.title,
+    //     text: action_item.text,
+    //     to: action_item.to,
+    //     metadata: action_item.metadata,
+    //     // dataset: {
+    //     //   connect: {
+    //     //     id: req.params.id,
+    //     //   },
+    //     // },
+    //     ingestion_checks: {
+    //       createMany: { data: action_item.ingestion_checks },
+    //     },
+    //     notification: {
+    //       create: notification,
+    //     },
+    //   },
+    // }));
+
+    const [createdDuplicate] = await prisma.$transaction(createQueries);
+
+    res.json(createdDuplicate);
   }),
 );
 

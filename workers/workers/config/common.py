@@ -186,13 +186,17 @@ config = {
             'uri': f'mongodb://{MONGO_USER}:{urllib.parse.quote(MONGO_PASSWORD)}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}',
         }
     },
-
     'workflow': {
         'purge': {
             'types': ['integrated', 'stage', 'delete'],
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
+    },
+    'notifications': {
+        "INCOMING_DUPLICATE_DATASET": {
+            'NOTIFICATION_TYPE': "INCOMING_DUPLICATE_DATASET",
+            'NOTIFICATION_LABEL': "Duplicate Dataset",
+        }
     }
-
 }

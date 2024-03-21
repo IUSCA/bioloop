@@ -136,7 +136,7 @@ class Register:
             # some duplicates might already be under processing when this script is run
             if slugify_(candidate.name) == 'sub-fsm23qf':
                 # if slugify_(candidate.name) not in self.duplicates:
-                self.register_candidate(candidate, True)
+                self.register_duplicate_candidate(candidate)
                 self.duplicates.add(candidate.name)
             else:
                 logger.warning(f'Attempted to process another duplicate candidate'
@@ -162,6 +162,43 @@ class Register:
             created_dataset,
             'handle_duplicate_dataset' if is_duplicate else self.default_wf_name
         )
+
+    def register_duplicate_candidate(self, candidate: Path):
+        logger.info(candidate.__class__)
+        logger.info(f'registering duplicate {self.dataset_type} dataset - {candidate.name}')
+
+        matching_datasets = api.get_all_datasets(dataset_type=self.dataset_type,
+                                                 name=candidate.name,
+                                                 is_duplicate=False)
+
+        if len(matching_datasets) != 1:
+            logger.error(f'Expected one, buy found {len(matching_datasets)} datasets with name {candidate.name}'
+                         f' and {self.dataset_type}. The system is in an invalid state, and a'
+                         f' duplicate will not be created.')
+            return
+
+        original_dataset = matching_datasets[0]
+
+        action_item: dict = {
+            "type": "DUPLICATE_DATASET_INGESTION",
+            "text": "This dataset is a duplicate which will need to be accepted or rejected",
+            "metadata": {
+                "original_dataset_id": original_dataset['id'],
+            }
+        }
+        notification: dict = {
+            "type": NOTIFICATION_TYPE,
+            "label": NOTIFICATION_LABEL,
+            "text": notification_text(original_dataset['name']),
+        }
+
+        created_dataset = api.create_duplicate_dataset(dataset=dataset, )
+
+        self.run_workflows(
+            created_dataset,
+            'handle_duplicate_dataset'
+        )
+
 
     def run_workflows(self, dataset, workflow_name=None):
         logger.info(f"started workflow {workflow_name} for {dataset['id']}")
