@@ -607,15 +607,20 @@ async function validate_duplicate_state(duplicate_dataset_id, preflight = false)
 
   const original_dataset = matching_datasets[0];
 
-  // throw error if this dataset is not ready for acceptance or rejection yet
+  // throw error if this dataset is not ready for acceptance or rejection yet,
+  // or if it is not already undergoing accetance.
   // (i.e. the duplicate comparison process is still running)
   const latestState = duplicate_dataset.states[0];
-  if (preflight && latestState.state !== 'DUPLICATE_READY') {
+  if (preflight
+      && !(latestState.state === 'DUPLICATE_READY'
+          || latestState.state === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS')
+  ) {
     // eslint-disable-next-line no-useless-concat
-    throw new Error(`Dataset ${duplicate_dataset.id} cannot be accepted or rejected`
-        + ` before it reaches state DUPLICATE_READY. Current state is ${latestState.state}.`);
+    throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
+        + 'DUPLICATE_READY or DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is '
+        + `${latestState.state}.`);
   } else if (!preflight && latestState.state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
-    throw new Error(`Expected to find dataset ${duplicate_dataset.id} in state`
+    throw new Error(`Expected dataset ${duplicate_dataset.id} to be in state`
         + ` DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is ${latestState}.`);
   }
 
