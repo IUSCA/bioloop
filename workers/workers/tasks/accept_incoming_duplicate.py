@@ -79,9 +79,11 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     original_dataset_id = duplicate_being_accepted['duplicated_from']['original_dataset_id']
     original_dataset = api.get_dataset(dataset_id=original_dataset_id, bundle=True)
 
-    original_dataset_staged_path = Path(original_dataset['staged_path']).resolve()
-    original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if\
-        original_dataset['bundle'] is not None\
+    original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
+        original_dataset['staged_path'] is not None else None
+    original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if \
+            (original_dataset['bundle'] is not None and
+             original_dataset['bundle']['path'] is not None)\
         else None
 
     # Once original dataset has been removed from the database, remove it
