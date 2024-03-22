@@ -81,11 +81,14 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     duplication_action_item: dict = [item for item in duplicate_dataset['action_items']
                                      if item['type'] == 'DUPLICATE_DATASET_INGESTION'][0]
 
+    action_item_data: dict = {
+       "ingestion_checks": comparison_checks_report,
+        "next_state": "DUPLICATE_READY",
+    }
+
     api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],
                                    action_item_id=duplication_action_item['id'],
-                                   data={
-                                       "ingestion_checks": comparison_checks_report,
-                                   })
+                                   data=action_item_data)
 
     logger.info(f"Processed dataset {duplicate_dataset_id}")
     return duplicate_dataset_id,

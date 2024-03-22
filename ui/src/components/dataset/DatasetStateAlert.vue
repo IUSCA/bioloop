@@ -156,7 +156,10 @@ const isActiveDuplicatePendingAction = computed(
   () =>
     props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
-    datasetState.value === "DUPLICATE_REGISTERED",
+    (datasetState.value === "DUPLICATE_REGISTERED" ||
+      datasetState.value === "INSPECTED" ||
+      datasetState.value === "READY" ||
+      datasetState.value === "DUPLICATE_READY"),
 );
 
 // whether this dataset is an active duplicate of another, and is currently
@@ -246,6 +249,6 @@ const datasetWatcher = toRef(() => props.dataset);
 watch(datasetWatcher, () => {
   console.log("watch");
   console.log("dataset");
-  console.dir(datasetWatcher, { depth: null });
+  console.dir(datasetWatcher.value, { depth: null });
 });
 </script>

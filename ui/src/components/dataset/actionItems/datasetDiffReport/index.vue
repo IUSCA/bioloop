@@ -80,12 +80,12 @@ const notificationStore = useNotificationStore();
 
 const { fetchActiveNotifications } = notificationStore;
 
-// initiated-resolution - emitted once a workflow has been successfully launched to either
-// accept or reject a duplicate dataset
+// initiated-resolution - emitted once a workflow has been successfully
+// launched to either accept or reject a duplicate dataset
 const emit = defineEmits(["initiated-resolution"]);
 
-// boolean to indicate if a request to trigger the acceptance or rejection of the duplicate dataset
-// is currently in progress.
+// boolean to indicate if a request to trigger the acceptance or rejection of
+// the duplicate dataset is currently in progress.
 const initiatingResolution = ref(false);
 // aggregate loading indicator for the component
 const loading = computed(
@@ -108,7 +108,7 @@ function acceptDuplicate(duplicate_dataset_id) {
     })
     .finally(() => {
       initiatingResolution.value = false;
-      fetchActiveNotifications()
+      fetchActiveNotifications();
     });
 }
 
@@ -128,7 +128,7 @@ function rejectDuplicate(duplicate_dataset_id) {
     })
     .finally(() => {
       initiatingResolution.value = false;
-      fetchActiveNotifications()
+      fetchActiveNotifications();
     });
 }
 

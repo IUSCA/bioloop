@@ -118,34 +118,44 @@ router.patch(
   validate([
     param('id').isInt().toInt(),
     param('action_item_id').isInt().toInt(),
-    body('ingestion_checks').isArray(),
+    body('ingestion_checks').optional().isArray(),
     body('next_state').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // next_state - optional param provided if dataset's state needs to be
     // updated as part of the action item's creation
-    const { ingestion_checks } = req.body;
+    const { ingestion_checks = [] } = req.body;
 
-    const action_item = await prisma.dataset_action_item.findUnique({
+    const updatedDataset = await prisma.dataset.update({
       where: {
-        id: req.params.action_item_id,
+        id: req.params.id,
       },
-    });
-
-    if (action_item.dataset_id !== req.params.id) {
-      return next(createError.BadRequest(`Action item ${req.params.action_item_id} is not associated with dataset ${req.params.id}`));
-    }
-
-    const updated_action_item = await prisma.dataset_action_item.update({
-      where: { id: req.params.action_item_id },
       data: {
-        ingestion_checks: {
-          createMany: { data: ingestion_checks },
+        action_items: {
+          update: {
+            where: {
+              id: req.params.action_item_id,
+            },
+            data: {
+              ingestion_checks: {
+                createMany: { data: ingestion_checks },
+              },
+            },
+          },
         },
+        states: req.body.next_state ? {
+          createMany: {
+            data: [
+              {
+                state: req.body.next_state,
+              },
+            ],
+          },
+        } : undefined,
       },
     });
 
-    res.json(updated_action_item);
+    res.json(updatedDataset);
   }),
 );
 
@@ -218,8 +228,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -730,7 +740,9 @@ router.patch(
         id: req.params.id,
       },
     });
-    if (!datasetToUpdate) { return next(createError(404)); }
+    if (!datasetToUpdate) {
+      return next(createError(404));
+    }
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
@@ -889,7 +901,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
