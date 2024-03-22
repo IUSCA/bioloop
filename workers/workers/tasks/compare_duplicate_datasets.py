@@ -25,7 +25,8 @@ logger = get_task_logger(__name__)
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
     duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
-                                              include_duplications=True)
+                                              include_duplications=True,
+                                              include_action_items=True)
 
     if not duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
