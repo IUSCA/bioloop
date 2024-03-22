@@ -21,7 +21,7 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient(
-  {log: ['query', 'info', 'warn', 'error']},
+  { log: ['query', 'info', 'warn', 'error'] },
 
   // {
   //   log: [
@@ -587,7 +587,7 @@ router.post(
       action_item, notification,
     } = req.body;
 
-    console.dir(req.body, {depth:null})
+    console.dir(req.body, { depth: null });
 
     const originalDataset = await prisma.dataset.findUnique({
       where: {
@@ -1147,6 +1147,17 @@ router.post(
     const duplicate_dataset = await datasetService.get_dataset({
       id: req.params.duplicate_dataset_id,
       workflows: true,
+      include_action_items: true,
+    });
+
+    const duplication_action_item = duplicate_dataset.action_items.find((item) => item.type === 'DUPLICATE_DATASET_INGESTION');
+    await prisma.dataset_action_item.update({
+      where: {
+        id: duplication_action_item.id,
+      },
+      data: {
+        status: 'ACKNOWLEDGED',
+      },
     });
 
     // This kicks off a workflow, which then makes another call to the API to
