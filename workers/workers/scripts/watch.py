@@ -176,7 +176,7 @@ class Register:
             return
 
         original_dataset = matching_datasets[0]
-        created_duplicate_dataset = api.create_duplicate_dataset(original_dataset_id=original_dataset['id'])
+        created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=original_dataset['id'])
 
         self.run_workflows(
             created_duplicate_dataset,
