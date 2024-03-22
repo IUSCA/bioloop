@@ -82,6 +82,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
     action_item_data: dict = {
        "ingestion_checks": comparison_checks_report,
+        "next_state": "DUPLICATE_READY",
     }
 
     api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],
