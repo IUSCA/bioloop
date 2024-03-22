@@ -182,7 +182,7 @@ def create_duplicate_dataset(original_dataset_id: int,
                              notification: dict = None,
                              next_state: str = None):
     with APIServerSession() as s:
-        r = s.post(f'datasets/duplicate/{original_dataset_id}', json={
+        r = s.post(f'datasets/{original_dataset_id}/duplicate', json={
             'action_item': action_item,
             'notification': notification,
             'next_state': next_state,

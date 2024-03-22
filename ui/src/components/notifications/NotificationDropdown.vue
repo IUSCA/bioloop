@@ -12,7 +12,7 @@
       </va-badge>
     </template>
 
-    <div class="max-w-md">
+    <div class="max-w-md max-h-60">
       <va-menu-item v-if="notifications.length === 0">
         No pending notifications
       </va-menu-item>
