@@ -21,36 +21,36 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient(
-  // {log: ['query', 'info', 'warn', 'error']},
+  {log: ['query', 'info', 'warn', 'error']},
 
-  {
-    log: [
-      {
-        emit: 'event',
-        level: 'query',
-      },
-      {
-        emit: 'event',
-        level: 'info',
-      },
-      {
-        emit: 'event',
-        level: 'warn',
-      },
-      {
-        emit: 'event',
-        level: 'error',
-      },
-    ],
-  },
+  // {
+  //   log: [
+  //     {
+  //       emit: 'event',
+  //       level: 'query',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'info',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'warn',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'error',
+  //     },
+  //   ],
+  // },
 );
 
-['query', 'info', 'warn', 'error'].forEach((level) => {
-  prisma.$on(level, async (e) => {
-    console.log(`QUERY: ${e.query}`);
-    console.log(`PARAMS: ${e.params}`);
-  });
-});
+// ['query', 'info', 'warn', 'error'].forEach((level) => {
+//   prisma.$on(level, async (e) => {
+//     console.log(`QUERY: ${e.query}`);
+//     console.log(`PARAMS: ${e.params}`);
+//   });
+// });
 
 router.post(
   '/:id/action-item',
@@ -562,6 +562,7 @@ router.post(
   '/:id/duplicate',
   isPermittedTo('create'),
   validate([
+    param('id').isInt().toInt(),
     body('action_item').optional().isObject(),
     body('notification').optional().isObject(),
     body('next_state').optional().escape().notEmpty(),
@@ -575,6 +576,8 @@ router.post(
     let {
       action_item, notification,
     } = req.body;
+
+    console.dir(req.body, {depth:null})
 
     const originalDataset = await prisma.dataset.findUnique({
       where: {
@@ -636,10 +639,10 @@ router.post(
 
     // Defaulting version to `undefined` allows Prisma to default it to 1
 
-    const createQueries = {};
+    const createQueries = [];
 
     createQueries.push(prisma.dataset.create({
-      dataset: {
+      data: {
         name: originalDataset.name,
         type: originalDataset.type,
         description: originalDataset.description,
