@@ -146,7 +146,7 @@ class Register:
             # todos:
             #  what happens when a second duplicate comes in, while first duplicate is being processed?
 
-    def register_candidate(self, candidate: Path, is_duplicate: bool = False):
+    def register_candidate(self, candidate: Path):
         logger.info(candidate.__class__)
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
         dataset = {
@@ -154,48 +154,32 @@ class Register:
             'type': self.dataset_type,
             'origin_path': str(candidate.resolve()),
         }
-        created_dataset = api.create_dataset(dataset) if\
-            not is_duplicate else\
-            api.create_duplicate_dataset(dataset)
+        created_dataset = api.create_dataset(dataset)
 
-        self.run_workflows(
-            created_dataset,
-            'handle_duplicate_dataset' if is_duplicate else self.default_wf_name
-        )
+        self.run_workflows(created_dataset, self.default_wf_name)
+
 
     def register_duplicate_candidate(self, candidate: Path):
         logger.info(candidate.__class__)
         logger.info(f'registering duplicate {self.dataset_type} dataset - {candidate.name}')
 
+        # Get any active datasets with the same name and type
         matching_datasets = api.get_all_datasets(dataset_type=self.dataset_type,
                                                  name=candidate.name,
                                                  is_duplicate=False)
-
         if len(matching_datasets) != 1:
-            logger.error(f'Expected one, buy found {len(matching_datasets)} datasets with name {candidate.name}'
-                         f' and {self.dataset_type}. The system is in an invalid state, and a'
-                         f' duplicate will not be created.')
+            logger.error(f'Expected one, but found {len(matching_datasets)} active '
+                         f'original datasets having name {candidate.name} '
+                         f'and type {self.dataset_type} that are eligible for '
+                         f'duplication. The system is in an invalid'
+                         f' state, and a duplicate dataset will not be created.')
             return
 
         original_dataset = matching_datasets[0]
-
-        action_item: dict = {
-            "type": "DUPLICATE_DATASET_INGESTION",
-            "text": "This dataset is a duplicate which will need to be accepted or rejected",
-            "metadata": {
-                "original_dataset_id": original_dataset['id'],
-            }
-        }
-        notification: dict = {
-            "type": NOTIFICATION_TYPE,
-            "label": NOTIFICATION_LABEL,
-            "text": notification_text(original_dataset['name']),
-        }
-
-        created_dataset = api.create_duplicate_dataset(dataset=dataset, )
+        created_duplicate_dataset = api.create_duplicate_dataset(original_dataset_id=original_dataset['id'])
 
         self.run_workflows(
-            created_dataset,
+            created_duplicate_dataset,
             'handle_duplicate_dataset'
         )
 

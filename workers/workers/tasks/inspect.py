@@ -79,7 +79,6 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         'metadata': {
             'num_genome_files': num_genome_files,
         }
-
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_files_to_dataset(dataset_id=dataset_id, files=metadata)

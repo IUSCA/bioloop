@@ -156,7 +156,7 @@ const isActiveDuplicatePendingAction = computed(
   () =>
     props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
-    datasetState.value !== "DUPLICATE_ACCEPTANCE_IN_PROGRESS",
+    datasetState.value === "DUPLICATE_REGISTERED",
 );
 
 // whether this dataset is an active duplicate of another, and is currently

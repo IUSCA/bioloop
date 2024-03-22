@@ -138,7 +138,8 @@ def get_all_datasets(
         deleted=False,
         archived=False,
         is_duplicate=False,
-        bundle=False):
+        bundle=False,
+        include_duplications=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -148,6 +149,7 @@ def get_all_datasets(
             'archived': archived,
             'is_duplicate': is_duplicate,
             'bundle': bundle,
+            'include_duplications': include_duplications,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -155,11 +157,12 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
+def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False, include_duplications: bool = False):
     with APIServerSession() as s:
         payload = {
             'bundle': bundle,
             'files': files,
+            'include_duplications': include_duplications,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 
@@ -261,17 +264,26 @@ def post_dataset_action_item(dataset_id: int,
         r.raise_for_status()
 
 
+def update_dataset_action_item(dataset_id: int, action_item_id: int, data: dict):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/{dataset_id}/action-item/{action_item_id}', json=data)
+        r.raise_for_status()
+        return r.json()
+
+
 def initiate_duplicate_dataset_acceptance(duplicate_dataset_id: str):
     with APIServerSession() as s:
         r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept/initiate')
         r.raise_for_status()
         return r.json()
 
+
 def complete_duplicate_dataset_acceptance(duplicate_dataset_id: str):
     with APIServerSession() as s:
         r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept/complete')
         r.raise_for_status()
         return r.json()
+
 
 
 def initiate_duplicate_dataset_rejection(duplicate_dataset_id: str):

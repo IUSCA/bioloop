@@ -67,11 +67,11 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
     #     original_dataset['bundle'] is not None\
     #     else None
 
-
-    # This call to the API validates the states of the incoming duplicate dataset and the original
-    # dataset. If the states are correct, it puts a lock on the original and the duplicate datasets
-    # , and initiates the duplicate dataset's acceptance into the system by updating the datasets'
-    # state in the database.
+    # This call to the API validates the states of the incoming duplicate
+    # dataset and the original dataset. If the states are correct, it puts
+    # a lock on the original and the duplicate datasets, and initiates the
+    # duplicate dataset's acceptance into the system by updating the
+    # datasets state in the database.
     duplicate_being_accepted = api.initiate_duplicate_dataset_acceptance(
         duplicate_dataset_id=duplicate_dataset_id,
     )

@@ -22,17 +22,10 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-NOTIFICATION_TYPE = "INCOMING_DUPLICATE_DATASET"
-NOTIFICATION_LABEL = "Duplicate Dataset"
-
-
-def notification_text(dataset_name: str) -> str:
-    return f"Ingestion has been attempted for a duplicate dataset named {dataset_name}. Click here to resolve."
-
-
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
-    duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id)
+    duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
+                                              include_duplications=True)
 
     if not duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
@@ -56,6 +49,12 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
     original_dataset: dict = matching_datasets[0]
 
+    if original_dataset['id'] != duplicate_dataset['duplicated_from']['original_dataset_id']:
+        raise InspectionFailed(f"Expected dataset {duplicate_dataset['id']} to have "
+                               f"been duplicated from dataset "
+                               f"{duplicate_dataset['duplicated_from']['original_dataset_id']}, "
+                               f"but matching dataset has id {original_dataset['id']}.")
+
     duplicate_files: list[dict] = api.get_dataset_files(
         dataset_id=duplicate_dataset['id'],
         filters={
@@ -77,24 +76,15 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     # mistakenly assumes the incoming dataset to be a duplicate, operators will still have a chance
     # to review the incoming dataset before it is rejected.    
 
-    action_item: dict = {
-        "type": "DUPLICATE_DATASET_INGESTION",
-        "text": "This dataset is a duplicate which will need to be accepted or rejected",
-        "dataset_id": duplicate_dataset['id'],
-        "ingestion_checks": comparison_checks_report,
-        "metadata": {
-            "original_dataset_id": original_dataset['id'],
-        }
-    }
-    notification: dict = {
-        "type": NOTIFICATION_TYPE,
-        "label": NOTIFICATION_LABEL,
-        "text": notification_text(original_dataset['name']),
-    }
+    # Exactly one action item of type DUPLICATE_DATASET_INGESTION is created for a duplicate dataset.
+    duplication_action_item: dict = [item for item in duplicate_dataset['action_items']
+                                     if item['type'] == 'DUPLICATE_DATASET_INGESTION'][0]
 
-    api.post_dataset_action_item(action_item=action_item,
-                                 notification=notification,
-                                 next_state='DUPLICATE_READY')
+    api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],
+                                   action_item_id=duplication_action_item['id'],
+                                   data={
+                                       "ingestion_checks": comparison_checks_report,
+                                   })
 
     logger.info(f"Processed dataset {duplicate_dataset_id}")
     return duplicate_dataset_id,

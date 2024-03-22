@@ -112,6 +112,43 @@ router.post(
   }),
 );
 
+router.patch(
+  '/:id/action-item/:action_item_id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    param('action_item_id').isInt().toInt(),
+    body('ingestion_checks').isArray(),
+    body('next_state').optional().escape().notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // next_state - optional param provided if dataset's state needs to be
+    // updated as part of the action item's creation
+    const { ingestion_checks } = req.body;
+
+    const action_item = await prisma.dataset_action_item.findUnique({
+      where: {
+        id: req.params.action_item_id,
+      },
+    });
+
+    if (action_item.dataset_id !== req.params.id) {
+      return next(createError.BadRequest(`Action item ${req.params.action_item_id} is not associated with dataset ${req.params.id}`));
+    }
+
+    const updated_action_item = await prisma.dataset_action_item.update({
+      where: { id: req.params.action_item_id },
+      data: {
+        ingestion_checks: {
+          createMany: { data: ingestion_checks },
+        },
+      },
+    });
+
+    res.json(updated_action_item);
+  }),
+);
+
 router.get(
   '/action-items',
   isPermittedTo('update'),
@@ -354,6 +391,7 @@ router.get(
     query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
     query('include_action_items').optional().toBoolean(),
+    query('include_duplications').optional().toBoolean(),
     query('include_states').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -385,6 +423,7 @@ router.get(
         bundle: req.query.bundle || false,
         action_items: req.query.include_action_items || false,
         states: req.query.include_states || false,
+        ...(req.query.include_duplications && { ...datasetService.INCLUDE_DUPLICATIONS }),
       },
     };
 
@@ -531,8 +570,10 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a duplicate dataset.'
 
-    const {
-      action_item, notification, next_state,
+    const { next_state } = req.body;
+
+    let {
+      action_item, notification,
     } = req.body;
 
     const originalDataset = await prisma.dataset.findUnique({
@@ -540,6 +581,23 @@ router.post(
         id: req.params.id,
       },
     });
+
+    if (!action_item) {
+      action_item = {
+        type: 'DUPLICATE_DATASET_INGESTION',
+        metadata: {
+          original_dataset_id: req.params.id,
+        },
+      };
+    }
+
+    if (!notification) {
+      notification = {
+        type: 'INCOMING_DUPLICATE_DATASET',
+        label: 'Duplicate Dataset Created',
+        text: `Dataset ${originalDataset.name} has been duplicated. Click here to review.`,
+      };
+    }
 
     // const createQuery = {}
 
