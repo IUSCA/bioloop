@@ -27,7 +27,7 @@ logger = get_task_logger(__name__)
 # Handles the acceptance of an incoming duplicate dataset, by updating the `type`
 # of the incoming duplicate to match the original dataset's `type`, and removing the
 # original dataset from the database and the filesystem.
-def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
+def initiate(celery_task, duplicate_dataset_id, **kwargs):
     # incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id)
     #
     # logger.info(f"duplicate dataset id: {duplicate_dataset_id}")
@@ -76,26 +76,9 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
         duplicate_dataset_id=duplicate_dataset_id,
     )
 
-    original_dataset_id = duplicate_being_accepted['duplicated_from']['original_dataset_id']
-    original_dataset = api.get_dataset(dataset_id=original_dataset_id, bundle=True)
-
-    original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
-        original_dataset['staged_path'] is not None else None
-    original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if \
-            (original_dataset['bundle'] is not None and
-             original_dataset['bundle']['path'] is not None)\
-        else None
-
-    # Once original dataset has been removed from the database, remove it
-    # from the filesystem (`staged_path` and the corresponding bundle's path).
-    if original_dataset_staged_path is not None and original_dataset_staged_path.exists():
-        shutil.rmtree(original_dataset_staged_path)
-    if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
-        original_dataset_bundle_path.unlink()
 
     # once the filesystem resources associated with the original dataset have been cleaned up,
     # the original and the duplicate dataset's statues can be updated.
-    api.complete_duplicate_dataset_acceptance(duplicate_dataset_id=duplicate_dataset_id)
 
     return duplicate_being_accepted['id'],
 
