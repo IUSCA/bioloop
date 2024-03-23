@@ -1186,14 +1186,14 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // todo - put locks
     let duplicateBeingAccepted;
-    // try {
-    duplicateBeingAccepted = await datasetService.initiate_duplicate_acceptance({
-      duplicate_dataset_id: req.params.duplicate_dataset_id,
-      accepted_by_id: req.user.id,
-    });
-    // } catch (e) {
-    //   return next(createError.BadRequest(e.message));
-    // }
+    try {
+      duplicateBeingAccepted = await datasetService.initiate_duplicate_acceptance({
+        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        accepted_by_id: req.user.id,
+      });
+    } catch (e) {
+      return next(createError.BadRequest(e.message));
+    }
 
     res.json(duplicateBeingAccepted);
   }),
