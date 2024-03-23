@@ -156,10 +156,11 @@ const isActiveDuplicatePendingAction = computed(
   () =>
     props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
-    (datasetState.value === "DUPLICATE_REGISTERED" ||
-      datasetState.value === "INSPECTED" ||
-      datasetState.value === "READY" ||
-      datasetState.value === "DUPLICATE_READY"),
+    (datasetState.value === "DUPLICATE_REGISTERED" || // state of duplicate upon registration
+      datasetState.value === "READY" || // state of duplicate after `await_stability` step
+      datasetState.value === "INSPECTED" || // state of duplicate after `inspect` step
+      datasetState.value === "DUPLICATE_READY"), // state of duplicate after running a comparison of
+  // duplicate dataset with the original dataset.
 );
 
 // whether this dataset is an active duplicate of another, and is currently
@@ -186,9 +187,8 @@ const isActiveDatasetWithIncomingDuplicates = computed(
 // the process of being replaced by its duplicate.
 const isActiveDatasetBeingOverwritten = computed(() => {
   return (
-    !props.dataset.is_duplicate &&
-    !props.dataset.is_deleted &&
-    datasetState.value === "OVERWRITE_IN_PROGRESS"
+    datasetState.value === "OVERWRITE_IN_PROGRESS" ||
+    datasetState.value === "RESOURCES_PURGED"
   );
 });
 
