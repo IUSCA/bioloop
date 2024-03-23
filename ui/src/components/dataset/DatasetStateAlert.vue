@@ -234,7 +234,7 @@ const currentState = (dataset) => {
 const overwrittenBy = (dataset) => {
   // When a dataset overwrites another, it's `is_duplicate` is changed from
   // `true` to `false`
-  return (dataset?.duplicated_by || []).find(
+  return (dataset.duplicated_by || []).find(
     (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_duplicate,
   ).duplicate_dataset;
 };
