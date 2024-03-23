@@ -1192,10 +1192,12 @@ router.patch(
         accepted_by_id: req.user.id,
       });
     } catch (e) {
+      console.log('endpoint caught error ');
       console.log(e);
       return next(createError.BadRequest(e.message));
     }
 
+    console.log('endpoint will return');
     res.json(duplicateBeingAccepted);
   }),
 );

@@ -932,6 +932,9 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   console.log('made it to the end before transaction');
 
   const [dataset_being_accepted] = await prisma.$transaction(update_queries);
+
+  console.log('made it to the end after transaction');
+
   return dataset_being_accepted;
 }
 
