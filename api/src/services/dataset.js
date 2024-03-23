@@ -712,12 +712,23 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
         },
       },
       states: {
-        createMany: {
-          data: [{
+        upsert: {
+          create: {
             state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
-          }],
-          skipDuplicates: true,
+          },
+          update: {
+            state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
+          },
+          where: {
+            state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
+          },
         },
+        // createMany: {
+        //   data: [{
+        //     state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
+        //   }],
+        //   skipDuplicates: true,
+        // },
       },
       audit_logs: {
         // if an audit log hasn't been created to indicate that the duplicate
