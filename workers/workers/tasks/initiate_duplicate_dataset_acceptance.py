@@ -76,6 +76,7 @@ def initiate(celery_task, duplicate_dataset_id, **kwargs):
         duplicate_dataset_id=duplicate_dataset_id,
     )
 
+    logger.info(f"duplicate_being_accepted id: {duplicate_being_accepted['id']}")
 
     # once the filesystem resources associated with the original dataset have been cleaned up,
     # the original and the duplicate dataset's statues can be updated.

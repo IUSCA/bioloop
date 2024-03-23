@@ -24,6 +24,8 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 def purge(celery_task, duplicate_dataset_id, **kwargs):
+    logger.info(f"Purging dataset {duplicate_dataset_id}")
+
     incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id, include_duplications=True)
     matching_datasets = api.get_all_datasets(
         name=incoming_duplicate_dataset['name'],
