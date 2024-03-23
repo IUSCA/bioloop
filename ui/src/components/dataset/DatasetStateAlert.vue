@@ -239,8 +239,12 @@ const overwrittenByDatasetId = (dataset) => {
   // When a dataset overwrites another, it's `is_duplicate` is changed from
   // `true` to `false`
   const duplicationLog = (dataset.duplicated_by || []).find(
-    (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_duplicate,
+    (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
   );
+
+  console.log(`duplicationLog.duplicate_dataset:`);
+  console.dir(duplicationLog.duplicate_dataset, { depth: null });
+
   return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
 };
 
