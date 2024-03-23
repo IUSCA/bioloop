@@ -561,7 +561,7 @@ async function validate_after_accept_initiation(duplicate_dataset_id) {
   });
 
   // (i.e. the duplicate comparison process is still running)
-  const duplicate_dataset_latest_state = duplicate_dataset.states[0];
+  const duplicate_dataset_latest_state = duplicate_dataset.states[0].state;
 
   if (duplicate_dataset_latest_state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' && duplicate_dataset_latest_state !== 'DUPLICATE_ACCEPTED') {
     throw new Error(`Expected duplicate dataset ${duplicate_dataset.id} to be in one of states `
@@ -582,7 +582,7 @@ async function validate_after_accept_initiation(duplicate_dataset_id) {
     },
   });
 
-  const original_dataset_latest_state = original_dataset.states[0];
+  const original_dataset_latest_state = original_dataset.states[0].state;
   if (original_dataset_latest_state !== 'RESOURCES_PURGED' && original_dataset_latest_state !== 'OVERWRITTEN') {
     throw new Error(`Expected original dataset ${original_dataset.id} to be in one of states `
         + `RESOURCES_PURGED, but current state is ${original_dataset_latest_state}`);
@@ -665,13 +665,13 @@ async function validate_duplicates_pre_resource_purge(duplicate_dataset_id) {
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing accetance.
   // (i.e. the duplicate comparison process is still running)
-  const latestState = duplicate_dataset.states[0];
-  if (latestState.state !== 'DUPLICATE_READY'
-      && latestState.state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
+  const latestState = duplicate_dataset.states[0].state;
+  if (latestState !== 'DUPLICATE_READY'
+      && latestState !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
         + 'DUPLICATE_READY or DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is '
-        + `${latestState.state}.`);
+        + `${latestState}.`);
   }
 
   return {
