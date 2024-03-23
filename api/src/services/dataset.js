@@ -624,6 +624,8 @@ async function validate_duplicate_state(duplicate_dataset_id, preflight = false)
         + ` DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is ${latestState}.`);
   }
 
+  console.log('made it past validation');
+
   return {
     original_dataset,
     duplicate_dataset,
@@ -786,24 +788,22 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   // `is_deleted` and `version` updated. For this, first, find the max version
   // of previously-rejected duplicates having this name
 
-  const latest_rejected_duplicate_version = await get_dataset_latest_version({
-    dataset_name: duplicate_dataset.name,
-    dataset_type: duplicate_dataset.type,
-    is_deleted: true,
-    is_duplicate: true,
-  });
+  // const latest_rejected_duplicate_version = await
+  // get_dataset_latest_version({ dataset_name: duplicate_dataset.name,
+  // dataset_type: duplicate_dataset.type, is_deleted: true, is_duplicate: true,
+  // });
 
   // Check if other duplicates having this name and type are active in the
   // system. These will be rejected.
-  const other_duplicates = await prisma.dataset.findMany({
-    where: {
-      name: duplicate_dataset.name,
-      type: duplicate_dataset.type,
-      is_deleted: false,
-      is_duplicate: true,
-      NOT: { id: duplicate_dataset_id },
-    },
-  });
+  // const other_duplicates = await prisma.dataset.findMany({
+  //   where: {
+  //     name: duplicate_dataset.name,
+  //     type: duplicate_dataset.type,
+  //     is_deleted: false,
+  //     is_duplicate: true,
+  //     NOT: { id: duplicate_dataset_id },
+  //   },
+  // });
   // For the duplicates that are about to be rejected:
   // 1. lock the action items associated with them.
   // 2. create audit logs to indicate that these datasets were
