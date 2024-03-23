@@ -28,7 +28,7 @@
       </va-alert>
 
       <va-alert
-        v-else-if="!isDuplicateReadyForProcessing"
+        v-else-if="!isDuplicateDatasetReadyForProcessing"
         color="warning"
         class="mx-0"
       >
@@ -139,7 +139,7 @@ const associatedDatasetState = computed(() => {
   return latestState.state;
 });
 
-const isDuplicateReadyForProcessing = computed(() => {
+const isDuplicateDatasetReadyForProcessing = computed(() => {
   return associatedDatasetState.value === "DUPLICATE_READY";
 });
 
@@ -160,7 +160,7 @@ const areControlsDisabled = computed(() => {
     isActionItemLocked.value ||
     isActionItemAcknowledged.value ||
     !isActionItemActive.value ||
-    !isDuplicateReadyForProcessing.value
+    !isDuplicateDatasetReadyForProcessing.value
   );
 });
 </script>
