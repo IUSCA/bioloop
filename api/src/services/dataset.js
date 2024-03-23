@@ -701,7 +701,11 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     update_queries.push(prisma.dataset_audit.create({
       data: {
         action: 'duplicate_acceptance_initiated',
-        user_id: accepted_by_id,
+        user: {
+          connect: {
+            id: accepted_by_id,
+          },
+        },
         dataset: {
           connect: {
             id: duplicate_dataset.id,
@@ -744,7 +748,11 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     update_queries.push(prisma.dataset_audit.create({
       data: {
         action: 'overwrite_initiated',
-        user_id: accepted_by_id,
+        user: {
+          connect: {
+            id: accepted_by_id,
+          },
+        },
         dataset: {
           connect: {
             id: original_dataset.id,
@@ -803,8 +811,8 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   let i = 0;
   // eslint-disable-next-line no-restricted-syntax
   for (const d of other_duplicates) {
-    // eslint-disable-next-line no-await-in-loop
     i += 1;
+    // eslint-disable-next-line no-await-in-loop
     const rejection_audit_logs = await prisma.dataset_audit.findMany({
       where: {
         action: 'duplicate_rejected',
@@ -816,7 +824,11 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
       update_queries.push(prisma.dataset_audit.create({
         data: {
           action: 'duplicate_rejected',
-          user_id: accepted_by_id,
+          user: {
+            connect: {
+              id: accepted_by_id,
+            },
+          },
           dataset: {
             connect: {
               id: d.id,
@@ -1079,7 +1091,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
  * @param {Number} rejected_by_id - id of the user who is rejecting the duplicate dataset.
  */
 async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
-  const { original_dataset, duplicate_dataset } = await validate_duplicate_state(
+  const { duplicate_dataset } = await validate_duplicate_state(
     duplicate_dataset_id,
     true,
   );
@@ -1091,45 +1103,93 @@ async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
     is_duplicate: true,
   });
 
-  const [rejected_dataset] = await prisma.$transaction([
-    prisma.dataset.update({
-      where: {
-        id: duplicate_dataset_id,
-      },
-      data: {
-        is_deleted: true,
-        version: latest_rejected_duplicate_version + 1,
-        audit_logs: {
-          createMany: {
-            data: [
-              {
-                action: 'duplicate_rejected',
-                user_id: rejected_by_id,
-              },
-            ],
-            skipDuplicates: true,
-          },
-        },
-        states: {
-          createMany: {
-            data: [{ state: 'REJECTED_DUPLICATE' }], skipDuplicates: true,
-          },
-        },
-      },
-    }),
-    // resolve corresponding action item
-    prisma.dataset_action_item.updateMany({
-      where: {
-        dataset_id: duplicate_dataset_id,
-        type: 'DUPLICATE_DATASET_INGESTION',
-      },
-      data: {
-        active: false,
-        status: 'RESOLVED',
-      },
-    }),
-  ]);
+  const update_queries = [];
 
+  update_queries.push(prisma.dataset.update({
+    where: {
+      id: duplicate_dataset_id,
+    },
+    data: {
+      is_deleted: true,
+      version: latest_rejected_duplicate_version + 1,
+      audit_logs: {
+        createMany: {
+          data: [
+            {
+              action: 'duplicate_rejected',
+              user_id: rejected_by_id,
+            },
+          ],
+          skipDuplicates: true,
+        },
+      },
+      states: {
+        createMany: {
+          data: [{ state: 'REJECTED_DUPLICATE' }], skipDuplicates: true,
+        },
+      },
+    },
+  }));
+
+  const rejection_audit_logs = await prisma.dataset_audit.findMany({
+    where: {
+      action: 'duplicate_rejected',
+      user_id: rejected_by_id,
+      dataset_id: duplicate_dataset.id,
+    },
+  });
+  if (rejection_audit_logs.length < 1) {
+    update_queries.push(prisma.dataset_audit.create({
+      data: {
+        action: 'duplicate_rejected',
+        user: {
+          connect: {
+            id: rejected_by_id,
+          },
+        },
+        dataset: {
+          connect: {
+            id: duplicate_dataset.id,
+          },
+        },
+      },
+    }));
+  }
+
+  // if a state update record hasn't been created for the overwrite of the
+  // original dataset, create one.
+  // eslint-disable-next-line no-await-in-loop
+  const rejection_state_logs = await prisma.dataset_state.findMany({
+    where: {
+      state: 'REJECTED_DUPLICATE',
+      dataset_id: duplicate_dataset.id,
+    },
+  });
+  if (rejection_state_logs.length < 1) {
+    update_queries.push(prisma.dataset_state.create({
+      data: {
+        state: 'REJECTED_DUPLICATE',
+        dataset: {
+          connect: {
+            id: duplicate_dataset.id,
+          },
+        },
+      },
+    }));
+  }
+
+  update_queries.push(prisma.dataset_action_item.updateMany({
+    where: {
+      dataset_id: duplicate_dataset_id,
+      type: 'DUPLICATE_DATASET_INGESTION',
+    },
+    data: {
+      active: false,
+      status: 'RESOLVED',
+    },
+  }));
+
+  const [rejected_dataset] = await prisma.$transaction(update_queries);
   return rejected_dataset;
 }
 
