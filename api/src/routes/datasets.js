@@ -1157,6 +1157,11 @@ router.post(
       },
       data: {
         status: 'ACKNOWLEDGED',
+        notification: {
+          update: {
+            status: 'ACKNOWLEDGED',
+          },
+        },
       },
     });
 

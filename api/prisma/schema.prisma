@@ -136,8 +136,8 @@ model dataset_action_item {
   active           Boolean                    @default(true)
   notification_id  Int?
   notification     notification?              @relation(fields: [notification_id], references: [id], onDelete: Cascade)
-  dataset_id       Int?
-  dataset          dataset?                   @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  dataset_id       Int
+  dataset          dataset                    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   ingestion_checks dataset_ingestion_check[]
   metadata         Json?
 }
