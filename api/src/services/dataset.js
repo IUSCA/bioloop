@@ -545,20 +545,7 @@ async function get_dataset_latest_version({
     : 0;
 }
 
-/**
- * Can be used to perform sanity checks regarding the states of the duplicate
- * dataset and the dataset that it was duplicated from,
- * before accepting or rejecting the duplicate dataset.
- *
- * Returns an object containing the original and the duplicate datasets, if they
- * are in their expected states. Throws errors otherwise.
- * @param {Number} duplicate_dataset_id The duplicate dataset which is to be accepted
- * into the system.
- * @param {Boolean} preflight Whether this validation is being done before the duplicate
- * dataset's acceptance is initiated
- * @returns Object
- */
-async function validate_duplicate_state(duplicate_dataset_id, preflight = false) {
+async function validate_after_accept_initiation(duplicate_dataset_id) {
   const duplicate_dataset = await prisma.dataset.findUnique({
     where: {
       id: duplicate_dataset_id,
@@ -573,7 +560,70 @@ async function validate_duplicate_state(duplicate_dataset_id, preflight = false)
     },
   });
 
-  if (preflight && !duplicate_dataset.is_duplicate) {
+  // (i.e. the duplicate comparison process is still running)
+  const duplicateDatasetLatestState = duplicate_dataset.states[0];
+
+  if (duplicateDatasetLatestState !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' && duplicateDatasetLatestState !== 'DUPLICATE_ACCEPTED') {
+    throw new Error(`Expected duplicate dataset ${duplicate_dataset.id} to be in one of states `
+        + 'DUPLICATE_ACCEPTANCE_IN_PROGRESS or DUPLICATE_ACCEPTED, but current state '
+        + `is ${duplicateDatasetLatestState}.`);
+  }
+
+  const original_dataset = await prisma.dataset.findUnique({
+    where: {
+      id: duplicate_dataset.duplicated_from.original_dataset_id,
+    },
+    include: {
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+    },
+  });
+
+  const originalDatasetLatestState = original_dataset.states[0];
+  if (originalDatasetLatestState !== 'OVERWRITE_IN_PROGRESS' && originalDatasetLatestState !== 'OVERWRITTEN') {
+    throw new Error(`Expected original dataset ${original_dataset.id} to be in one of states `
+        + 'OVERWRITE_IN_PROGRESS or OVERWRITTEN, but current state is '
+        + `${originalDatasetLatestState}`);
+  }
+
+  return {
+    original_dataset,
+    duplicate_dataset,
+  };
+}
+
+/**
+ * Can be used to perform sanity checks regarding the states of the duplicate
+ * dataset and the dataset that it was duplicated from,
+ * before accepting or rejecting the duplicate dataset.
+ *
+ * Returns an object containing the original and the duplicate datasets, if they
+ * are in their expected states. Throws errors otherwise.
+ * @param {Number} duplicate_dataset_id The duplicate dataset which is to be accepted
+ * into the system.
+ * @param {Boolean} preflight Whether this validation is being done before the duplicate
+ * dataset's acceptance is initiated
+ * @returns Object
+ */
+async function validate_before_accept_initiation(duplicate_dataset_id) {
+  const duplicate_dataset = await prisma.dataset.findUnique({
+    where: {
+      id: duplicate_dataset_id,
+    },
+    include: {
+      duplicated_from: true,
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+    },
+  });
+
+  if (!duplicate_dataset.is_duplicate) {
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be a duplicate, but it is not.`);
   }
 
@@ -581,7 +631,7 @@ async function validate_duplicate_state(duplicate_dataset_id, preflight = false)
     where: {
       name: duplicate_dataset.name,
       type: duplicate_dataset.type,
-      is_deleted: !preflight, // dataset is marked as deleted after the filesystem cleanup (when preflight == false)
+      is_deleted: false, // dataset is marked as deleted after the filesystem cleanup (when preflight == false)
       is_duplicate: false,
     },
   });
@@ -593,43 +643,36 @@ async function validate_duplicate_state(duplicate_dataset_id, preflight = false)
   // dataset of this type before replacing it with the incoming duplicate
   // dataset. If not, the system is in an invalid state and should not
   // proceed.
-  if (preflight && matching_original_datasets.length !== 1) {
+  if (matching_original_datasets.length !== 1) {
     throw new Error(`Expected to find one active (not deleted) original ${duplicate_dataset.type} named ${duplicate_dataset.name}, but found ${matching_original_datasets.length}.`);
   }
 
   // Ensure that the matching original dataset's id is the same as the
   // `original_dataset_id` to linked to the duplicate dataset. If not, the
   // system is in an invalid state and should not proceed.
-  if (preflight && duplicate_dataset.duplicated_from.original_dataset_id !== matching_original_datasets[0].id) {
+  if (duplicate_dataset.duplicated_from.original_dataset_id !== matching_original_datasets[0].id) {
     throw new Error(`Expected original dataset to have id
        ${duplicate_dataset.duplicated_from.original_dataset_id}, but matching original
         dataset has id ${matching_original_datasets[0].id}.`);
   }
 
-  let original_dataset;
-  if (preflight) {
-    original_dataset = matching_original_datasets[0];
-  } else {
-    original_dataset = await prisma.dataset.findUnique({
-      where: {
-        id: duplicate_dataset.duplicated_from.original_dataset_id,
-      },
-    });
-  }
+  const original_dataset = await prisma.dataset.findUnique({
+    where: {
+      id: duplicate_dataset.duplicated_from.original_dataset_id,
+    },
+  });
 
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing accetance.
   // (i.e. the duplicate comparison process is still running)
   const latestState = duplicate_dataset.states[0];
-  if (preflight
-      && !(latestState.state === 'DUPLICATE_READY'
-          || latestState.state === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS')
-  ) {
+  if (latestState.state !== 'DUPLICATE_READY'
+      && latestState.state === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
         + 'DUPLICATE_READY or DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is '
         + `${latestState.state}.`);
-  } else if (!preflight && latestState.state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
+  } else if (latestState.state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in state`
         + ` DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is ${latestState}.`);
   }
@@ -664,9 +707,8 @@ async function validate_duplicate_state(duplicate_dataset_id, preflight = false)
  * @param {Number} accepted_by_id - id of the user who is accepting the duplicate dataset.
  */
 async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by_id }) {
-  const { original_dataset, duplicate_dataset } = await validate_duplicate_state(
+  const { original_dataset, duplicate_dataset } = await validate_before_accept_initiation(
     duplicate_dataset_id,
-    true,
   );
 
   // write queries to be run in a single transaction, before a workflow is
@@ -949,7 +991,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
 }
 
 async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
-  const { original_dataset, duplicate_dataset } = await validate_duplicate_state(duplicate_dataset_id, false);
+  const { original_dataset, duplicate_dataset } = await validate_after_accept_initiation(duplicate_dataset_id);
 
   const update_queries = [];
 
@@ -1112,7 +1154,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
  * @param {Number} rejected_by_id - id of the user who is rejecting the duplicate dataset.
  */
 async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
-  const { duplicate_dataset } = await validate_duplicate_state(
+  const { duplicate_dataset } = await validate_before_accept_initiation(
     duplicate_dataset_id,
     true,
   );
