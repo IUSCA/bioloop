@@ -21,28 +21,28 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient(
-  { log: ['query', 'info', 'warn', 'error'] },
+  // { log: ['query', 'info', 'warn', 'error'] },
 
-  // {
-  //   log: [
-  //     {
-  //       emit: 'event',
-  //       level: 'query',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'info',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'warn',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'error',
-  //     },
-  //   ],
-  // },
+  {
+    log: [
+      {
+        emit: 'event',
+        level: 'query',
+      },
+      {
+        emit: 'event',
+        level: 'info',
+      },
+      {
+        emit: 'event',
+        level: 'warn',
+      },
+      {
+        emit: 'event',
+        level: 'error',
+      },
+    ],
+  },
 );
 
 // ['query', 'info', 'warn', 'error'].forEach((level) => {
@@ -1186,14 +1186,14 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // todo - put locks
     let duplicateBeingAccepted;
-    try {
-      duplicateBeingAccepted = await datasetService.initiate_duplicate_acceptance({
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
-        accepted_by_id: req.user.id,
-      });
-    } catch (e) {
-      return next(createError.BadRequest(e.message));
-    }
+    // try {
+    duplicateBeingAccepted = await datasetService.initiate_duplicate_acceptance({
+      duplicate_dataset_id: req.params.duplicate_dataset_id,
+      accepted_by_id: req.user.id,
+    });
+    // } catch (e) {
+    //   return next(createError.BadRequest(e.message));
+    // }
 
     res.json(duplicateBeingAccepted);
   }),
