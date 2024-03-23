@@ -572,40 +572,50 @@ async function validate_duplicate_state(duplicate_dataset_id, preflight = false)
       },
     },
   });
-  if (!duplicate_dataset.is_duplicate) {
+
+  if (preflight && !duplicate_dataset.is_duplicate) {
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be a duplicate, but it is not.`);
   }
 
-  const matching_datasets = await prisma.dataset.findMany({
+  const matching_original_datasets = await prisma.dataset.findMany({
     where: {
       name: duplicate_dataset.name,
       type: duplicate_dataset.type,
-      is_deleted: false,
+      is_deleted: !preflight, // dataset is marked as deleted after the filesystem cleanup (when preflight == false)
       is_duplicate: false,
     },
   });
 
   console.log('matchingDatsets:');
-  console.dir(matching_datasets, { depth: null });
+  console.dir(matching_original_datasets, { depth: null });
 
   // Do a sanity check to ensure that there is exactly one matching original
   // dataset of this type before replacing it with the incoming duplicate
   // dataset. If not, the system is in an invalid state and should not
   // proceed.
-  if (matching_datasets.length !== 1) {
-    throw new Error(`Expected to find one active (not deleted) original ${duplicate_dataset.type} named ${duplicate_dataset.name}, but found ${matching_datasets.length}.`);
+  if (preflight && matching_original_datasets.length !== 1) {
+    throw new Error(`Expected to find one active (not deleted) original ${duplicate_dataset.type} named ${duplicate_dataset.name}, but found ${matching_original_datasets.length}.`);
   }
 
   // Ensure that the matching original dataset's id is the same as the
   // `original_dataset_id` to linked to the duplicate dataset. If not, the
   // system is in an invalid state and should not proceed.
-  if (duplicate_dataset.duplicated_from.original_dataset_id !== matching_datasets[0].id) {
+  if (preflight && duplicate_dataset.duplicated_from.original_dataset_id !== matching_original_datasets[0].id) {
     throw new Error(`Expected original dataset to have id
        ${duplicate_dataset.duplicated_from.original_dataset_id}, but matching original
-        dataset has id ${matching_datasets[0].id}.`);
+        dataset has id ${matching_original_datasets[0].id}.`);
   }
 
-  const original_dataset = matching_datasets[0];
+  let original_dataset;
+  if (preflight) {
+    original_dataset = matching_original_datasets[0];
+  } else {
+    original_dataset = await prisma.dataset.findUnique({
+      where: {
+        id: duplicate_dataset.duplicated_from.original_dataset_id,
+      },
+    });
+  }
 
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing accetance.
