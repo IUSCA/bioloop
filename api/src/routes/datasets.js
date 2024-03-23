@@ -21,28 +21,28 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient(
-  // { log: ['query', 'info', 'warn', 'error'] },
+  { log: ['query', 'info', 'warn', 'error'] },
 
-  {
-    log: [
-      {
-        emit: 'event',
-        level: 'query',
-      },
-      {
-        emit: 'event',
-        level: 'info',
-      },
-      {
-        emit: 'event',
-        level: 'warn',
-      },
-      {
-        emit: 'event',
-        level: 'error',
-      },
-    ],
-  },
+  // {
+  //   log: [
+  //     {
+  //       emit: 'event',
+  //       level: 'query',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'info',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'warn',
+  //     },
+  //     {
+  //       emit: 'event',
+  //       level: 'error',
+  //     },
+  //   ],
+  // },
 );
 
 // ['query', 'info', 'warn', 'error'].forEach((level) => {

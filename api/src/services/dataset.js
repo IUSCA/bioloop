@@ -808,80 +808,80 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   // 1. lock the action items associated with them.
   // 2. create audit logs to indicate that these datasets were
   // rejected.
-  const i = 0;
+  let i = 0;
   // eslint-disable-next-line no-restricted-syntax
-  // for (const d of other_duplicates) {
-  //   i += 1;
-  //   // eslint-disable-next-line no-await-in-loop
-  //   const rejection_audit_logs = await prisma.dataset_audit.findMany({
-  //     where: {
-  //       action: 'duplicate_rejected',
-  //       user_id: accepted_by_id,
-  //       dataset_id: d.id,
-  //     },
-  //   });
-  //   if (rejection_audit_logs.length < 1) {
-  //     update_queries.push(prisma.dataset_audit.create({
-  //       data: {
-  //         action: 'duplicate_rejected',
-  //         user: {
-  //           connect: {
-  //             id: accepted_by_id,
-  //           },
-  //         },
-  //         dataset: {
-  //           connect: {
-  //             id: d.id,
-  //           },
-  //         },
-  //       },
-  //     }));
-  //   }
-  //
-  //   // if a state update record hasn't been created for the overwrite of the
-  //   // original dataset, create one.
-  //   // eslint-disable-next-line no-await-in-loop
-  //   const rejection_state_logs = await prisma.dataset_state.findMany({
-  //     where: {
-  //       state: 'REJECTED_DUPLICATE',
-  //       dataset_id: d.id,
-  //     },
-  //   });
-  //   if (rejection_state_logs.length < 1) {
-  //     update_queries.push(prisma.dataset_state.create({
-  //       data: {
-  //         state: 'REJECTED_DUPLICATE',
-  //         dataset: {
-  //           connect: {
-  //             id: d.id,
-  //           },
-  //         },
-  //       },
-  //     }));
-  //   }
-  //
-  //   update_queries.push(prisma.dataset.update({
-  //     where: {
-  //       id: d.id,
-  //     },
-  //     data: {
-  //       is_deleted: true,
-  //       version: latest_rejected_duplicate_version + i,
-  //       action_items: {
-  //         updateMany: {
-  //           where: {
-  //             type: 'DUPLICATE_DATASET_INGESTION',
-  //             active: true,
-  //           },
-  //           data: {
-  //             status: 'RESOLVED',
-  //             active: false,
-  //           },
-  //         },
-  //       },
-  //     },
-  //   }));
-  // }
+  for (const d of other_duplicates) {
+    i += 1;
+    // eslint-disable-next-line no-await-in-loop
+    const rejection_audit_logs = await prisma.dataset_audit.findMany({
+      where: {
+        action: 'duplicate_rejected',
+        user_id: accepted_by_id,
+        dataset_id: d.id,
+      },
+    });
+    if (rejection_audit_logs.length < 1) {
+      update_queries.push(prisma.dataset_audit.create({
+        data: {
+          action: 'duplicate_rejected',
+          user: {
+            connect: {
+              id: accepted_by_id,
+            },
+          },
+          dataset: {
+            connect: {
+              id: d.id,
+            },
+          },
+        },
+      }));
+    }
+
+    // if a state update record hasn't been created for the overwrite of the
+    // original dataset, create one.
+    // eslint-disable-next-line no-await-in-loop
+    const rejection_state_logs = await prisma.dataset_state.findMany({
+      where: {
+        state: 'REJECTED_DUPLICATE',
+        dataset_id: d.id,
+      },
+    });
+    if (rejection_state_logs.length < 1) {
+      update_queries.push(prisma.dataset_state.create({
+        data: {
+          state: 'REJECTED_DUPLICATE',
+          dataset: {
+            connect: {
+              id: d.id,
+            },
+          },
+        },
+      }));
+    }
+
+    update_queries.push(prisma.dataset.update({
+      where: {
+        id: d.id,
+      },
+      data: {
+        is_deleted: true,
+        version: latest_rejected_duplicate_version + i,
+        action_items: {
+          updateMany: {
+            where: {
+              type: 'DUPLICATE_DATASET_INGESTION',
+              active: true,
+            },
+            data: {
+              status: 'RESOLVED',
+              active: false,
+            },
+          },
+        },
+      },
+    }));
+  }
   // 2. next, update the state of these datasets
   //      queries to update states of other duplicates that will be rejected:
   // other_duplicates.map(
