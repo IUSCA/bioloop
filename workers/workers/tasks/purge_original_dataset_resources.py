@@ -70,3 +70,5 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
         original_dataset_bundle_path.unlink()
 
     api.add_state_to_dataset(dataset_id=original_dataset['id'], state='RESOURCES_PURGED')
+
+    return duplicate_dataset_id,
