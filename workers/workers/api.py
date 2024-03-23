@@ -281,7 +281,7 @@ def complete_duplicate_dataset_acceptance(duplicate_dataset_id: str):
 
 def initiate_duplicate_dataset_rejection(duplicate_dataset_id: str):
     with APIServerSession() as s:
-        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/reject/accept')
+        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/reject/initiate')
         r.raise_for_status()
         return r.json()
 
