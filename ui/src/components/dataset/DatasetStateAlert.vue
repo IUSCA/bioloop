@@ -99,16 +99,16 @@
     <!-- The current dataset is an active dataset which is currently being overwritten by its duplicate. -->
     <va-alert v-else-if="isActiveDatasetBeingOverwritten" color="warning">
       This dataset is currently being overwritten by duplicate
-      <a :href="`/datasets/${overwrittenBy(props.dataset)?.id}`">
-        #{{ overwrittenBy(props.dataset)?.id }}
+      <a :href="`/datasets/${overwrittenByDatasetId(props.dataset)}`">
+        #{{ overwrittenByDatasetId(props.dataset) }}
       </a>
     </va-alert>
 
     <!-- The current dataset has been overwritten by another dataset -->
     <va-alert v-else-if="isInactiveOverwrittenDataset" color="danger">
       This dataset has been overwritten by duplicate
-      <a :href="`/datasets/${overwrittenBy(props.dataset)?.id}`">
-        #{{ overwrittenBy(props.dataset)?.id }}
+      <a :href="`/datasets/${overwrittenByDatasetId(props.dataset)}`">
+        #{{ overwrittenByDatasetId(props.dataset) }}
       </a>
     </va-alert>
 
@@ -231,12 +231,17 @@ const currentState = (dataset) => {
 
 // Returns the dataset that overwrote the current
 // dataset (via acceptance of a duplicate into the system)
-const overwrittenBy = (dataset) => {
+const overwrittenByDatasetId = (dataset) => {
+  if (!dataset || !dataset.duplicated_by) {
+    return undefined;
+  }
+
   // When a dataset overwrites another, it's `is_duplicate` is changed from
   // `true` to `false`
-  return (dataset.duplicated_by || []).find(
+  const duplicationLog = (dataset.duplicated_by || []).find(
     (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_duplicate,
-  ).duplicate_dataset;
+  );
+  return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
 };
 
 const gatherDatasetDuplicates = (dataset) =>
