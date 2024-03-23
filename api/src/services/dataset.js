@@ -1161,9 +1161,9 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
 
   const [accepted_dataset] = await prisma.$transaction(update_queries);
 
-  if (true) {
-    throw new Error('error after DB writes');
-  }
+  // if (true) {
+  //   throw new Error('error after DB writes');
+  // }
 
   return accepted_dataset;
 }
