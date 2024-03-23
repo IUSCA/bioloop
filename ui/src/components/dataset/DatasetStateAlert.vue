@@ -180,7 +180,14 @@ const isActiveDatasetWithIncomingDuplicates = computed(
     !props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
     props.dataset.duplicated_by?.length > 0 &&
-    datasetState.value !== "OVERWRITE_IN_PROGRESS",
+    [
+      "REGISTERED",
+      "READY",
+      "INSPECTED",
+      "ARCHIVED",
+      "FETCHED",
+      "STAGED",
+    ].includes(datasetState.value),
 );
 
 // whether this dataset was duplicated by another, and is currently undergoing
