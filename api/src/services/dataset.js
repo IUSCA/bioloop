@@ -1023,18 +1023,6 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
           },
         },
       },
-      states: {
-        // Update the state log.
-        // This updateMany is expected to update exactly one state record.
-        updateMany: {
-          where: {
-            state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
-          },
-          data: {
-            state: 'DUPLICATE_ACCEPTED',
-          },
-        },
-      },
       audit_logs: {
         // Update the audit log.
         // This updateMany is expected to update exactly one audit_log, since
@@ -1051,6 +1039,28 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
       //
     },
   }));
+
+  // if a state update record hasn't been created for the overwrite of the
+  // original dataset, create one.
+  // eslint-disable-next-line no-await-in-loop
+  const acceptance_state_logs = await prisma.dataset_state.findMany({
+    where: {
+      state: 'DUPLICATE_ACCEPTED',
+      dataset_id: duplicate_dataset_id,
+    },
+  });
+  if (acceptance_state_logs.length < 1) {
+    update_queries.push(prisma.dataset_state.create({
+      data: {
+        state: 'DUPLICATE_ACCEPTED',
+        dataset: {
+          connect: {
+            id: duplicate_dataset_id,
+          },
+        },
+      },
+    }));
+  }
 
   update_queries.push(prisma.dataset.update({
     where: {
@@ -1071,22 +1081,30 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
           },
         },
       },
-      states: {
-      // If a state update record hasn't been created for this overwrite,
-      // create one
-        // Update the state log.
-        // This updateMany is expected to update exactly one state record.
-        updateMany: {
-          where: {
-            state: 'RESOURCES_PURGED',
-          },
-          data: {
-            state: 'OVERWRITTEN',
+    },
+  }));
+
+  // if a state update record hasn't been created for the overwrite of the
+  // original dataset, create one.
+  // eslint-disable-next-line no-await-in-loop
+  const overwrite_state_logs = await prisma.dataset_state.findMany({
+    where: {
+      state: 'OVERWRITTEN',
+      dataset_id: original_dataset.id,
+    },
+  });
+  if (overwrite_state_logs.length < 1) {
+    update_queries.push(prisma.dataset_state.create({
+      data: {
+        state: 'OVERWRITTEN',
+        dataset: {
+          connect: {
+            id: original_dataset.id,
           },
         },
       },
-    },
-  }));
+    }));
+  }
 
   // transfer dataset hierarchies from original to incoming duplicate dataset
   update_queries.push(prisma.dataset_hierarchy.updateMany({
