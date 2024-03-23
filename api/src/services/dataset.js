@@ -1078,7 +1078,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
         // This updateMany is expected to update exactly one state record.
         updateMany: {
           where: {
-            state: 'OVERWRITE_IN_PROGRESS',
+            state: 'RESOURCES_PURGED',
           },
           data: {
             state: 'OVERWRITTEN',
