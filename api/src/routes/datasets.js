@@ -1192,6 +1192,7 @@ router.patch(
         accepted_by_id: req.user.id,
       });
     } catch (e) {
+      console.log(e);
       return next(createError.BadRequest(e.message));
     }
 

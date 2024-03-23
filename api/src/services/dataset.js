@@ -928,6 +928,9 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   // At this point, both the original and the incoming duplicate datasets are
   // considered "locked", and write operations on either of them should be
   // forbidden, until the lock is removed by another process.
+
+  console.log('made it to the end before transaction');
+
   const [dataset_being_accepted] = await prisma.$transaction(update_queries);
   return dataset_being_accepted;
 }
