@@ -88,7 +88,7 @@ def handle_acceptance(celery_task, duplicate_dataset_id, **kwargs):
 
     # Once original dataset has been removed from the database, remove it
     # from the filesystem (`staged_path` and the corresponding bundle's path).
-    if original_dataset_staged_path.exists():
+    if original_dataset_staged_path is not None and original_dataset_staged_path.exists():
         shutil.rmtree(original_dataset_staged_path)
     if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
         original_dataset_bundle_path.unlink()
