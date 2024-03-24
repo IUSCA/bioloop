@@ -128,7 +128,7 @@
     </va-alert>
     <!-- Now, handle cases where current dataset has been deleted. -->
 
-    <!-- Any of the following states (REJECTED_DUPLICATE, DELETED, OVERWRITTEN) will only be reached once
+    <!-- Any of the following states (DUPLICATE_REJECTED, DELETED, OVERWRITTEN) will only be reached once
     the current dataset has been deleted. -->
   </div>
 </template>
@@ -220,7 +220,7 @@ const isInactiveRejectedDuplicate = computed(() => {
   return (
     props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
-    datasetState.value === "REJECTED_DUPLICATE"
+    datasetState.value === "DUPLICATE_REJECTED"
   );
 });
 

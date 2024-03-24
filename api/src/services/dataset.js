@@ -973,14 +973,14 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     // eslint-disable-next-line no-await-in-loop
     const rejection_state_logs = await prisma.dataset_state.findMany({
       where: {
-        state: 'REJECTED_DUPLICATE',
+        state: 'DUPLICATE_REJECTED',
         dataset_id: d.id,
       },
     });
     if (rejection_state_logs.length < 1) {
       update_queries.push(prisma.dataset_state.create({
         data: {
-          state: 'REJECTED_DUPLICATE',
+          state: 'DUPLICATE_REJECTED',
           dataset: {
             connect: {
               id: d.id,
@@ -998,7 +998,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
       },
       data: {
         is_deleted: true,
-        version: duplicate_latest_state !== 'REJECTED_DUPLICATE'
+        version: duplicate_latest_state !== 'DUPLICATE_REJECTED'
           ? latest_rejected_duplicate_version + i
           : undefined,
         action_items: {
