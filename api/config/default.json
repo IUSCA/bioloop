@@ -115,11 +115,19 @@
       ]
     },
     "reject_duplicate_dataset": {
-      "description": "Rejects an incoming duplicate dataset by prohibiting its ingestion.",
+      "description": "Rejects an incoming duplicate dataset by prohibiting its ingestion into the system.",
       "steps": [
         {
-          "name": "reject incoming duplicate",
-          "task": "reject_incoming_duplicate"
+          "name": "initiate rejection",
+          "task": "initiate_duplicate_dataset_rejection"
+        },
+        {
+          "name": "purge resources",
+          "task": "purge_duplicate_dataset_resources"
+        },
+        {
+          "name": "reject",
+          "task": "reject_duplicate"
         }
       ]
     }

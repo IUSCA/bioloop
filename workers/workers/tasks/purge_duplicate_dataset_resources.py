@@ -34,8 +34,8 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
         dataset_type=incoming_duplicate_dataset['type'],
         is_duplicate=False,
         deleted=False,
-        bundle=True,
     )
+    # ensure system is not in an invalid state
     if len(matching_datasets) != 1:
         raise InspectionFailed(f"Expected to find one active (not deleted) original {incoming_duplicate_dataset['type']} named {incoming_duplicate_dataset['name']},"
                                f" but found {len(matching_datasets)}.")
