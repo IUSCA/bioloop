@@ -619,6 +619,9 @@ async function validate_duplication_state(duplicate_dataset_id) {
 async function validate_state_before_original_dataset_resource_purge(duplicate_dataset_id) {
   const returned = validate_duplication_state(duplicate_dataset_id);
 
+  console.log('returned:');
+  console.dir(returned, { depth: null });
+
   const { original_dataset, duplicate_dataset } = returned;
 
   console.log('duplicate_dataset:');
