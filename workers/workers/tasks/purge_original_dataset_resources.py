@@ -56,7 +56,6 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
                               f" OVERWRITE_IN_PROGRESS or RESOURCES_PURGED, but current state is "
                               f"{original_dataset_latest_state}.")
 
-
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
         original_dataset['staged_path'] is not None else None
     original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if \
@@ -64,14 +63,12 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
              original_dataset['bundle']['path'] is not None)\
         else None
 
-    # Once original dataset has been removed from the database, remove it
-    # from the filesystem (`staged_path` and the corresponding bundle's path).
-    if original_dataset_staged_path is not None and original_dataset_staged_path.exists():
-        shutil.rmtree(original_dataset_staged_path)
-    if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
-        original_dataset_bundle_path.unlink()
+    if original_dataset_latest_state == 'OVERWRITE_IN_PROGRESS':
+        if original_dataset_staged_path is not None and original_dataset_staged_path.exists():
+            shutil.rmtree(original_dataset_staged_path)
+        if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
+            original_dataset_bundle_path.unlink()
 
-    # in case step is being resumed after this database write
     if original_dataset_latest_state != 'RESOURCES_PURGED':
         api.add_state_to_dataset(dataset_id=original_dataset['id'], state='RESOURCES_PURGED')
 
