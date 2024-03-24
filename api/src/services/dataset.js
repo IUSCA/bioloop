@@ -617,7 +617,7 @@ async function validate_duplication_state(duplicate_dataset_id) {
  * @returns Object
  */
 async function validate_state_before_original_dataset_resource_purge(duplicate_dataset_id) {
-  const returned = validate_duplication_state(duplicate_dataset_id);
+  const returned = await validate_duplication_state(duplicate_dataset_id);
 
   console.log('returned:');
   console.dir(returned, { depth: null });
@@ -698,7 +698,10 @@ async function validate_state_after_original_dataset_resource_purge(duplicate_da
 }
 
 async function validate_state_before_rejected_dataset_resource_purge(duplicate_dataset_id) {
-  const { duplicate_dataset, original_dataset } = validate_duplication_state(duplicate_dataset_id);
+  const {
+    duplicate_dataset,
+    original_dataset,
+  } = await validate_duplication_state(duplicate_dataset_id);
 
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing accetance.
@@ -719,7 +722,10 @@ async function validate_state_before_rejected_dataset_resource_purge(duplicate_d
 }
 
 async function validate_state_after_rejected_dataset_resource_purge(duplicate_dataset_id) {
-  const { duplicate_dataset, original_dataset } = validate_duplication_state(duplicate_dataset_id);
+  const {
+    duplicate_dataset,
+    original_dataset,
+  } = await validate_duplication_state(duplicate_dataset_id);
 
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing accetance.
@@ -763,7 +769,10 @@ async function validate_state_after_rejected_dataset_resource_purge(duplicate_da
  * @param {Number} accepted_by_id - id of the user who is accepting the duplicate dataset.
  */
 async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by_id }) {
-  const { original_dataset, duplicate_dataset } = await
+  const {
+    original_dataset,
+    duplicate_dataset,
+  } = await
   validate_state_before_original_dataset_resource_purge(duplicate_dataset_id);
 
   // write queries to be run in a single transaction, before a workflow is
