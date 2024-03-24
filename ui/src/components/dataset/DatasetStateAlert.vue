@@ -188,7 +188,7 @@ const isActiveDatasetWithIncomingDuplicates = computed(
   () =>
     !props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
-    props.dataset.duplicated_by?.length > 0 &&
+    hasActiveDuplicates(props.dataset) &&
     [
       "REGISTERED",
       "READY",
@@ -272,6 +272,15 @@ const gatherDatasetDuplicates = (dataset) =>
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
+
+const hasActiveDuplicates = (dataset) => {
+  return (
+    props.dataset.duplicated_by?.length > 0 &&
+    dataset.duplicated_by.some(
+      (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
+    )
+  );
+};
 
 onMounted(() => {
   console.log("onMounted");
