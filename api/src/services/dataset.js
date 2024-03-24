@@ -560,9 +560,6 @@ async function validate_duplication_state(duplicate_dataset_id) {
     },
   });
 
-  console.log('duplicate_dataset:');
-  console.dir(duplicate_dataset, { depth: null });
-
   if (!duplicate_dataset.is_duplicate) {
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be a duplicate, but it is not.`);
   }
@@ -602,6 +599,9 @@ async function validate_duplication_state(duplicate_dataset_id) {
     },
   });
 
+  console.log('validate_duplication_state: duplicate_dataset:');
+  console.dir(duplicate_dataset, { depth: null });
+
   return { original_dataset, duplicate_dataset };
 }
 
@@ -621,6 +621,9 @@ async function validate_state_before_original_dataset_resource_purge(duplicate_d
 
   console.log('duplicate_dataset:');
   console.dir(duplicate_dataset, { depth: null });
+
+  console.log('original_dataset:');
+  console.dir(original_dataset, { depth: null });
 
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing accetance.
