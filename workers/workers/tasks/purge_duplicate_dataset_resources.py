@@ -25,7 +25,10 @@ logger = get_task_logger(__name__)
 
 
 def purge(celery_task, duplicate_dataset_id, **kwargs):
-    incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id, include_duplications=True)
+    logger.info(f"Purging for duplicate dataset {duplicate_dataset_id}")
+
+    incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id,
+                                                 include_duplications=True)
     matching_datasets = api.get_all_datasets(
         name=incoming_duplicate_dataset['name'],
         dataset_type=incoming_duplicate_dataset['type'],
@@ -50,29 +53,23 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
     original_dataset_latest_state = original_dataset['states'][0]['state']
     # check for state RESOURCES_PURGED as well, in case this step failed after
     # the database write that updates the state to RESOURCES_PURGED.
-    if (original_dataset_latest_state != 'OVERWRITE_IN_PROGRESS'
+    if (original_dataset_latest_state != 'DUPLICATE_REJECTION_IN_PROGRESS'
             and original_dataset_latest_state != 'RESOURCES_PURGED'):
         raise InspectionFailed(f"Expected dataset {original_dataset['id']} to be in one of states "
-                              f" OVERWRITE_IN_PROGRESS or RESOURCES_PURGED, but current state is "
+                              f"DUPLICATE_REJECTION_IN_PROGRESS or RESOURCES_PURGED, but current state is "
                               f"{original_dataset_latest_state}.")
 
-
-    original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
-        original_dataset['staged_path'] is not None else None
-    original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if \
-            (original_dataset['bundle'] is not None and
-             original_dataset['bundle']['path'] is not None)\
-        else None
+    duplicate_dataset_origin_path = Path(incoming_duplicate_dataset['origin_path']).resolve() if \
+        original_dataset['origin_path'] is not None else None
 
     # Once original dataset has been removed from the database, remove it
     # from the filesystem (`staged_path` and the corresponding bundle's path).
-    if original_dataset_staged_path is not None and original_dataset_staged_path.exists():
-        shutil.rmtree(original_dataset_staged_path)
-    if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
-        original_dataset_bundle_path.unlink()
+    if duplicate_dataset_origin_path is not None and duplicate_dataset_origin_path.exists():
+        shutil.rmtree(duplicate_dataset_origin_path)
 
+    duplicate_dataset_latest_state = original_dataset['states'][0]['state']
     # in case step is being resumed after this database write
-    if original_dataset_latest_state != 'RESOURCES_PURGED':
-        api.add_state_to_dataset(dataset_id=original_dataset['id'], state='RESOURCES_PURGED')
+    if duplicate_dataset_latest_state != 'RESOURCES_PURGED':
+        api.add_state_to_dataset(dataset_id=duplicate_dataset_id, state='RESOURCES_PURGED')
 
     return duplicate_dataset_id,

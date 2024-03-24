@@ -134,9 +134,17 @@ config = {
         'reject_duplicate_dataset': {
             'steps': [
                 {
-                    'name': 'reject incoming duplicate',
-                    'task': 'reject_incoming_duplicate'
+                    'name': 'initiate rejection',
+                    'task': 'initiate_duplicate_dataset_rejection'
                 },
+                {
+                    'name': 'purge resources',
+                    'task': 'purge_duplicate_dataset_resources'
+                },
+                {
+                    'name': 'reject',
+                    'task': 'reject_duplicate'
+                }
             ]
         },
         'handle_duplicate_dataset': {

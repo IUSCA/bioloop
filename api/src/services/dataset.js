@@ -594,21 +594,7 @@ async function validate_after_accept_initiation(duplicate_dataset_id) {
   };
 }
 
-/**
- * Can be used to perform sanity checks regarding the states of the duplicate
- * dataset and the dataset that it was duplicated from,
- * before accepting or rejecting the duplicate dataset.
- *
- * Returns an object containing the original and the duplicate datasets, if they
- * are in their expected states. Throws errors otherwise.
- * @param {Number} duplicate_dataset_id The duplicate dataset which is to be accepted
- * into the system.
- * @param {Boolean} preflight Whether this validation is being done before the duplicate
- * dataset's acceptance is initiated
- * @returns Object
- */
-// todo - break this into 3 separate resumable and idempotent workflow steps
-async function validate_duplicates_pre_resource_purge(duplicate_dataset_id) {
+async function validate_duplication_state(duplicate_dataset_id) {
   const duplicate_dataset = await prisma.dataset.findUnique({
     where: {
       id: duplicate_dataset_id,
@@ -662,6 +648,23 @@ async function validate_duplicates_pre_resource_purge(duplicate_dataset_id) {
     },
   });
 
+  return { original_dataset, duplicate_dataset };
+}
+
+/**
+ * Can be used to perform sanity checks regarding the states of the duplicate
+ * dataset and the dataset that it was duplicated from,
+ * before accepting or rejecting the duplicate dataset.
+ *
+ * Returns an object containing the original and the duplicate datasets, if they
+ * are in their expected states. Throws errors otherwise.
+ * @param {Number} duplicate_dataset_id The duplicate dataset which is to be accepted
+ * into the system.
+ * @returns Object
+ */
+async function validate_state_before_original_dataset_purge(duplicate_dataset_id) {
+  const { duplicate_dataset, original_dataset } = validate_duplication_state(duplicate_dataset_id);
+
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing accetance.
   // (i.e. the duplicate comparison process is still running)
@@ -672,6 +675,49 @@ async function validate_duplicates_pre_resource_purge(duplicate_dataset_id) {
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
         + 'DUPLICATE_READY or DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is '
         + `${latestState}.`);
+  }
+
+  return {
+    original_dataset,
+    duplicate_dataset,
+  };
+}
+
+// todo - break this into 3 separate resumable and idempotent workflow steps
+async function validate_state_before_rejected_dataset_purge(duplicate_dataset_id) {
+  const { duplicate_dataset, original_dataset } = validate_duplication_state(duplicate_dataset_id);
+
+  // throw error if this dataset is not ready for acceptance or rejection yet,
+  // or if it is not already undergoing accetance.
+  // (i.e. the duplicate comparison process is still running)
+  const latest_state = duplicate_dataset.states[0].state;
+  if (latest_state !== 'DUPLICATE_READY'
+      && latest_state !== 'DUPLICATE_REJECTION_IN_PROGRESS') {
+    // eslint-disable-next-line no-useless-concat
+    throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
+        + 'DUPLICATE_READY or DUPLICATE_REJECTION_IN_PROGRESS, but current state is '
+        + `${latest_state}.`);
+  }
+
+  return {
+    original_dataset,
+    duplicate_dataset,
+  };
+}
+
+async function validate_state_after_rejected_dataset_purge(duplicate_dataset_id) {
+  const { duplicate_dataset, original_dataset } = validate_duplication_state(duplicate_dataset_id);
+
+  // throw error if this dataset is not ready for acceptance or rejection yet,
+  // or if it is not already undergoing accetance.
+  // (i.e. the duplicate comparison process is still running)
+  const latest_state = duplicate_dataset.states[0].state;
+  if (latest_state !== 'RESOURCES_PURGED'
+      && latest_state !== 'DUPLICATE_REJECTION_IN_PROGRESS') {
+    // eslint-disable-next-line no-useless-concat
+    throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
+        + 'DUPLICATE_READY or DUPLICATE_REJECTION_IN_PROGRESS, but current state is '
+        + `${latest_state}.`);
   }
 
   return {
@@ -705,7 +751,7 @@ async function validate_duplicates_pre_resource_purge(duplicate_dataset_id) {
  */
 async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by_id }) {
   const { original_dataset, duplicate_dataset } = await
-  validate_duplicates_pre_resource_purge(duplicate_dataset_id);
+  validate_state_before_original_dataset_purge(duplicate_dataset_id);
 
   // write queries to be run in a single transaction, before a workflow is
   // launched to handle the acceptance/rejection on the worker-end.
@@ -861,6 +907,19 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   for (const d of other_duplicates) {
     i += 1;
     // eslint-disable-next-line no-await-in-loop
+    const current_duplicate = await prisma.dataset.findUnique({
+      where: {
+        id: d.id,
+      },
+      include: {
+        states: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+        },
+      },
+    });
+
     const rejection_audit_logs = await prisma.dataset_audit.findMany({
       where: {
         action: 'duplicate_rejected',
@@ -908,13 +967,17 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
       }));
     }
 
+    const duplicate_latest_state = current_duplicate.states[0].state;
+
     update_queries.push(prisma.dataset.update({
       where: {
         id: d.id,
       },
       data: {
         is_deleted: true,
-        version: latest_rejected_duplicate_version + i,
+        version: duplicate_latest_state !== 'DUPLICATE_DATASET_INGESTION'
+          ? latest_rejected_duplicate_version + i
+          : undefined,
         action_items: {
           updateMany: {
             where: {
@@ -930,48 +993,6 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
       },
     }));
   }
-  // 2. next, update the state of these datasets
-  //      queries to update states of other duplicates that will be rejected:
-  // other_duplicates.map(
-  //   (d) => update_queries.push(prisma.dataset_state.create({
-  //     data: {
-  //       state: 'REJECTED_DUPLICATE',
-  //       dataset_id: d.id,
-  //     },
-  //   })),
-  // );
-  // 3. next, resolve any action items (that pertain to duplication) linked to
-  // these datasets queries to resolve any action items pertaining to other
-  // duplicates that will be rejected
-  // other_duplicates.map(
-  //   (d) => update_queries.push(prisma.dataset_action_item.updateMany({
-  //     where: {
-  //       dataset_id: d.id,
-  //       type: 'DUPLICATE_DATASET_INGESTION',
-  //     },
-  //     data: {
-  //       active: false,
-  //       status: 'LOCKED',
-  //     },
-  //   })),
-  // );
-
-  // console.log('previously_rejected_duplicates');
-  // console.dir(previously_rejected_duplicates, { depth: null });
-  // console.log('other_duplicates');
-  // console.dir(other_duplicates, { depth: null });
-  //    queries to update `version` and `is_deleted`
-  // other_duplicates.map(
-  //   (d, i) => update_queries.push(prisma.dataset.update({
-  //     where: {
-  //       id: d.id,
-  //     },
-  //     data: {
-  //       is_deleted: true,
-  //       version: latest_rejected_duplicate_version + i + 1,
-  //     },
-  //   })),
-  // );
 
   // At this point, both the original and the incoming duplicate datasets are
   // considered "locked", and write operations on either of them should be
@@ -1168,21 +1189,13 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
   return accepted_dataset;
 }
 
-/**
- * Performs the database write operations needed to reject an incoming
- * duplicate dataset.
- *
- * This method is expected to be idempotent (the resultant end state
- * should be the same every time this method is called).
- *
- * @param {Number} duplicate_dataset_id - The duplicate dataset to be rejected.
- * @param {Number} rejected_by_id - id of the user who is rejecting the duplicate dataset.
- */
-async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
-  const { duplicate_dataset } = await validate_duplicates_pre_resource_purge(
+async function complete_duplicate_rejection({ duplicate_dataset_id }) {
+  const { duplicate_dataset } = await validate_state_after_rejected_dataset_purge(
     duplicate_dataset_id,
-    true,
   );
+
+  // assumes states are sorted descending by timestamp
+  const rejected_dataset_latest_state = duplicate_dataset.states[0].state;
 
   const latest_rejected_duplicate_version = await get_dataset_latest_version({
     dataset_name: duplicate_dataset.name,
@@ -1199,25 +1212,66 @@ async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
     },
     data: {
       is_deleted: true,
-      version: latest_rejected_duplicate_version + 1,
-      audit_logs: {
-        createMany: {
-          data: [
-            {
-              action: 'duplicate_rejected',
-              user_id: rejected_by_id,
-            },
-          ],
-          skipDuplicates: true,
-        },
-      },
-      states: {
-        createMany: {
-          data: [{ state: 'REJECTED_DUPLICATE' }], skipDuplicates: true,
+      version: rejected_dataset_latest_state === 'DUPLICATE_READY' ? latest_rejected_duplicate_version + 1 : undefined,
+      action_items: {
+        // Update the action item.
+        // This updateMany is expected to update exactly one action item.
+        updateMany: {
+          where: {
+            type: 'DUPLICATE_DATASET_INGESTION',
+            active: true,
+          },
+          data: {
+            status: 'RESOLVED',
+            active: false,
+          },
         },
       },
     },
   }));
+
+  // if a state update record hasn't been created for the overwrite of the
+  // original dataset, create one.
+  // eslint-disable-next-line no-await-in-loop
+  const rejection_state_logs = await prisma.dataset_state.findMany({
+    where: {
+      state: 'DUPLICATE_REJECTED',
+      dataset_id: duplicate_dataset.id,
+    },
+  });
+  if (rejection_state_logs.length < 1) {
+    update_queries.push(prisma.dataset_state.create({
+      data: {
+        state: 'DUPLICATE_REJECTED',
+        dataset: {
+          connect: {
+            id: duplicate_dataset.id,
+          },
+        },
+      },
+    }));
+  }
+
+  const [rejected_dataset] = await prisma.$transaction(update_queries);
+  return rejected_dataset;
+}
+
+/**
+ * Performs the database write operations needed to reject an incoming
+ * duplicate dataset.
+ *
+ * This method is expected to be idempotent (the resultant end state
+ * should be the same every time this method is called).
+ *
+ * @param {Number} duplicate_dataset_id - The duplicate dataset to be rejected.
+ * @param {Number} rejected_by_id - id of the user who is rejecting the duplicate dataset.
+ */
+async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_id }) {
+  const { duplicate_dataset } = await validate_state_before_rejected_dataset_purge(
+    duplicate_dataset_id,
+  );
+
+  const update_queries = [];
 
   const rejection_audit_logs = await prisma.dataset_audit.findMany({
     where: {
@@ -1249,14 +1303,14 @@ async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
   // eslint-disable-next-line no-await-in-loop
   const rejection_state_logs = await prisma.dataset_state.findMany({
     where: {
-      state: 'REJECTED_DUPLICATE',
+      state: 'DUPLICATE_REJECTION_IN_PROGRESS',
       dataset_id: duplicate_dataset.id,
     },
   });
   if (rejection_state_logs.length < 1) {
     update_queries.push(prisma.dataset_state.create({
       data: {
-        state: 'REJECTED_DUPLICATE',
+        state: 'DUPLICATE_REJECTION_IN_PROGRESS',
         dataset: {
           connect: {
             id: duplicate_dataset.id,
@@ -1266,19 +1320,14 @@ async function reject_duplicate({ duplicate_dataset_id, rejected_by_id }) {
     }));
   }
 
-  update_queries.push(prisma.dataset_action_item.updateMany({
-    where: {
-      dataset_id: duplicate_dataset_id,
-      type: 'DUPLICATE_DATASET_INGESTION',
-    },
-    data: {
-      active: false,
-      status: 'RESOLVED',
-    },
-  }));
+  await prisma.$transaction(update_queries);
 
-  const [rejected_dataset] = await prisma.$transaction(update_queries);
-  return rejected_dataset;
+  const dataset_being_rejected = await prisma.dataset.findUnique({
+    where: {
+      id: duplicate_dataset.id,
+    },
+  });
+  return dataset_being_rejected;
 }
 
 module.exports = {
@@ -1295,5 +1344,6 @@ module.exports = {
   add_files,
   initiate_duplicate_acceptance,
   complete_duplicate_acceptance,
-  reject_duplicate,
+  initiate_duplicate_rejection,
+  complete_duplicate_rejection,
 };

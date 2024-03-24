@@ -1117,33 +1117,6 @@ router.post(
     // dataset, and create and start a workflow to accept or reject a duplicate
     // dataset.
 
-    // let updatedDataset;
-    //
-    // if (req.params.wf === 'accept_duplicate_dataset') {
-    //   // get accepted dataset
-    //   try {
-    //     updatedDataset = await datasetService.accept_duplicate({
-    //       duplicate_dataset_id: req.params.duplicate_dataset_id,
-    //       accepted_by_id: req.user.id,
-    //     });
-    //   } catch (e) {
-    //     return next(createError.BadRequest(e.message));
-    //   }
-    // } else if (req.params.wf === 'reject_duplicate_dataset') {
-    //   // get rejected dataset
-    //   try {
-    //     updatedDataset = await datasetService.reject_duplicate({
-    //       duplicate_dataset_id: req.params.duplicate_dataset_id,
-    //       rejected_by_id: req.user.id,
-    //     });
-    //   } catch (e) {
-    //     return next(createError.BadRequest(e.message));
-    //   }
-    // }
-
-    // console.log('updatedDataset');
-    // console.dir(updatedDataset, { depth: null });
-
     const duplicate_dataset = await datasetService.get_dataset({
       id: req.params.duplicate_dataset_id,
       workflows: true,
@@ -1231,9 +1204,30 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     let updatedDataset;
     try {
-      updatedDataset = await datasetService.reject_duplicate({
+      updatedDataset = await datasetService.initiate_duplicate_rejection({
         duplicate_dataset_id: req.params.duplicate_dataset_id,
-        accepted_by_id: req.user.id,
+        rejected_by_id: req.user.id,
+      });
+    } catch (e) {
+      console.log(e);
+      return next(createError.BadRequest(e.message));
+    }
+
+    res.json(updatedDataset);
+  }),
+);
+
+router.patch(
+  '/duplicates/:duplicate_dataset_id/reject/complete',
+  validate([
+    param('duplicate_dataset_id').isInt().toInt(),
+  ]),
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    let updatedDataset;
+    try {
+      updatedDataset = await datasetService.complete_duplicate_rejection({
+        duplicate_dataset_id: req.params.duplicate_dataset_id,
       });
     } catch (e) {
       return next(createError.BadRequest(e.message));
@@ -1242,5 +1236,4 @@ router.patch(
     res.json(updatedDataset);
   }),
 );
-
 module.exports = router;

@@ -73,12 +73,48 @@ def purge_original_dataset_resources(celery_task, duplicate_dataset_id, **kwargs
         raise exc.RetryableException(e)
 
 
+@app.task(base=WorkflowTask, bind=True, name='initiate_duplicate_dataset_rejection',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def initiate_duplicate_dataset_rejection(celery_task, duplicate_dataset_id, **kwargs):
+    from workers.tasks.initiate_duplicate_dataset_rejection import initiate as task_body
+    try:
+        return task_body(celery_task, duplicate_dataset_id, **kwargs)
+    except Exception as e:
+        raise exc.RetryableException(e)
+
+
+@app.task(base=WorkflowTask, bind=True, name='purge_duplicate_dataset_resources',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def purge_duplicate_dataset_resources(celery_task, duplicate_dataset_id, **kwargs):
+    from workers.tasks.purge_duplicate_dataset_resources import purge as task_body
+    try:
+        return task_body(celery_task, duplicate_dataset_id, **kwargs)
+    except Exception as e:
+        raise exc.RetryableException(e)
+
+
 @app.task(base=WorkflowTask, bind=True, name='accept_duplicate',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
 def accept_duplicate(celery_task, duplicate_dataset_id, **kwargs):
     from workers.tasks.accept_duplicate import accept as task_body
+    try:
+        return task_body(celery_task, duplicate_dataset_id, **kwargs)
+    except Exception as e:
+        raise exc.RetryableException(e)
+
+
+@app.task(base=WorkflowTask, bind=True, name='reject_duplicate',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def reject_duplicate(celery_task, duplicate_dataset_id, **kwargs):
+    from workers.tasks.reject_duplicate import reject as task_body
     try:
         return task_body(celery_task, duplicate_dataset_id, **kwargs)
     except Exception as e:
