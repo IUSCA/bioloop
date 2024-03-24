@@ -72,6 +72,8 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
     if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
         original_dataset_bundle_path.unlink()
 
-    api.add_state_to_dataset(dataset_id=original_dataset['id'], state='RESOURCES_PURGED')
+    # in case step is being resumed after the database write
+    if original_dataset_latest_state != 'RESOURCES_PURGED':
+        api.add_state_to_dataset(dataset_id=original_dataset['id'], state='RESOURCES_PURGED')
 
     return duplicate_dataset_id,
