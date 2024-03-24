@@ -49,9 +49,12 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
     original_dataset = api.get_dataset(dataset_id=matching_original_dataset['id'], bundle=True)
 
     original_dataset_latest_state = original_dataset['states'][0]['state']
-    if original_dataset_latest_state != 'OVERWRITE_IN_PROGRESS':
-        raise InspectionFailed(f"Expected dataset {original_dataset['id']} to be in state "
-                              f" OVERWRITE_IN_PROGRESS, but current state is "
+    # check for state RESOURCES_PURGED as well, in case this step failed after
+    # the database write that updates the state to RESOURCES_PURGED.
+    if (original_dataset_latest_state != 'OVERWRITE_IN_PROGRESS'
+            and original_dataset_latest_state != 'RESOURCES_PURGED'):
+        raise InspectionFailed(f"Expected dataset {original_dataset['id']} to be in one of states "
+                              f" OVERWRITE_IN_PROGRESS or RESOURCES_PURGED, but current state is "
                               f"{original_dataset_latest_state}.")
 
 
