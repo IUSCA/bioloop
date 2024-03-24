@@ -686,9 +686,9 @@ async function validate_state_after_original_dataset_resource_purge(duplicate_da
   });
 
   const original_dataset_latest_state = original_dataset.states[0].state;
-  if (original_dataset_latest_state !== 'RESOURCES_PURGED' && original_dataset_latest_state !== 'OVERWRITTEN') {
+  if (original_dataset_latest_state !== 'ORIGINAL_DATASET_RESOURCES_PURGED' && original_dataset_latest_state !== 'OVERWRITTEN') {
     throw new Error(`Expected original dataset ${original_dataset.id} to be in one of states `
-        + `RESOURCES_PURGED, but current state is ${original_dataset_latest_state}`);
+        + `ORIGINAL_DATASET_RESOURCES_PURGED or OVERWRITTEN, but current state is ${original_dataset_latest_state}`);
   }
 
   return {
@@ -731,11 +731,11 @@ async function validate_state_after_rejected_dataset_resource_purge(duplicate_da
   // or if it is not already undergoing accetance.
   // (i.e. the duplicate comparison process is still running)
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== 'RESOURCES_PURGED'
+  if (latest_state !== 'DUPLICATE_DATASET_RESOURCES_PURGED'
       && latest_state !== 'DUPLICATE_REJECTION_IN_PROGRESS') {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
-        + 'DUPLICATE_READY or DUPLICATE_REJECTION_IN_PROGRESS, but current state is '
+        + 'DUPLICATE_DATASET_RESOURCES_PURGED or DUPLICATE_REJECTION_IN_PROGRESS, but current state is '
         + `${latest_state}.`);
   }
 
@@ -1309,7 +1309,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
     },
     data: {
       is_deleted: true,
-      version: (!duplicate_dataset.is_deleted && duplicate_dataset_latest_state === 'RESOURCES_PURGED')
+      version: (!duplicate_dataset.is_deleted && duplicate_dataset_latest_state === 'DUPLICATE_DATASET_RESOURCES_PURGED')
         ? latest_rejected_duplicate_version + 1
         : undefined,
       action_items: {

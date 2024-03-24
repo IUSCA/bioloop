@@ -38,10 +38,10 @@ def accept(celery_task, duplicate_dataset_id, **kwargs):
 
     original_dataset_latest_state = original_dataset['states'][0]['state']
 
-    if (original_dataset_latest_state != 'RESOURCES_PURGED'
+    if (original_dataset_latest_state != 'ORIGINAL_DATASET_RESOURCES_PURGED'
             and original_dataset_latest_state != 'OVERWRITTEN'):
         raise InspectionFailed(f"Expected original dataset {original_dataset['id']} to be in "
-                               f"one of states RESOURCES_PURGED or OVERWRITTEN, but current "
+                               f"one of states ORIGINAL_DATASET_RESOURCES_PURGED or OVERWRITTEN, but current "
                                f"state is {original_dataset_latest_state}.")
 
     api.complete_duplicate_dataset_acceptance(duplicate_dataset_id=duplicate_dataset_id)

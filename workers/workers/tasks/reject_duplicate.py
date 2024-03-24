@@ -36,10 +36,10 @@ def reject(celery_task, duplicate_dataset_id, **kwargs):
 
     # allow step to be resumed after even if it has already reached the next
     # state (DUPLICATE_REJECTED)
-    if (duplicate_dataset_latest_state != 'RESOURCES_PURGED' and
+    if (duplicate_dataset_latest_state != 'DUPLICATE_DATASET_RESOURCES_PURGED' and
             duplicate_dataset_latest_state != 'DUPLICATE_REJECTED'):
         raise InspectionFailed(f"Expected dataset {duplicate_dataset['id']} to be in one of "
-                               f"states DUPLICATE_REJECTED or RESOURCES_PURGED, "
+                               f"states DUPLICATE_REJECTED or DUPLICATE_DATASET_RESOURCES_PURGED, "
                                f"but current state is {duplicate_dataset_latest_state}.")
 
     api.complete_duplicate_dataset_rejection(duplicate_dataset_id=duplicate_dataset_id)

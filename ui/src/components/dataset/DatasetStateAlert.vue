@@ -195,16 +195,7 @@ const isActiveDatasetWithIncomingDuplicates = computed(
 const isActiveDatasetBeingOverwritten = computed(() => {
   return (
     datasetState.value === "OVERWRITE_IN_PROGRESS" ||
-    datasetState.value === "RESOURCES_PURGED"
-  );
-});
-
-// dataset has been soft-deleted
-const isInactiveDataset = computed(() => {
-  return (
-    !props.dataset.is_duplicate &&
-    props.dataset.is_deleted &&
-    datasetState.value === "DELETED"
+    datasetState.value === "ORIGINAL_DATASET_RESOURCES_PURGED"
   );
 });
 
@@ -216,11 +207,29 @@ const isInactiveOverwrittenDataset = computed(() => {
   );
 });
 
+// whether this dataset was duplicated by another, and is currently undergoing
+// the process of being replaced by its duplicate.
+const isActiveDuplicateBeingRejected = computed(() => {
+  return (
+    datasetState.value === "DUPLICATE_REJECTION_IN_PROGRESS" ||
+    datasetState.value === "DUPLICATE_DATASET_RESOURCES_PURGED"
+  );
+});
+
 const isInactiveRejectedDuplicate = computed(() => {
   return (
     props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
     datasetState.value === "DUPLICATE_REJECTED"
+  );
+});
+
+// dataset has been soft-deleted
+const isInactiveDataset = computed(() => {
+  return (
+    !props.dataset.is_duplicate &&
+    props.dataset.is_deleted &&
+    datasetState.value === "DELETED"
   );
 });
 

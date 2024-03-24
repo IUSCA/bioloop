@@ -48,12 +48,12 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
     original_dataset = api.get_dataset(dataset_id=matching_original_dataset['id'], bundle=True)
 
     original_dataset_latest_state = original_dataset['states'][0]['state']
-    # check for state RESOURCES_PURGED as well, in case this step failed after
-    # the database write that updates the state to RESOURCES_PURGED.
+    # check for state ORIGINAL_DATASET_RESOURCES_PURGED as well, in case this step failed after
+    # the database write that updates the state to ORIGINAL_DATASET_RESOURCES_PURGED.
     if (original_dataset_latest_state != 'OVERWRITE_IN_PROGRESS'
-            and original_dataset_latest_state != 'RESOURCES_PURGED'):
+            and original_dataset_latest_state != 'ORIGINAL_DATASET_RESOURCES_PURGED'):
         raise InspectionFailed(f"Expected dataset {original_dataset['id']} to be in one of states "
-                              f" OVERWRITE_IN_PROGRESS or RESOURCES_PURGED, but current state is "
+                              f" OVERWRITE_IN_PROGRESS or ORIGINAL_DATASET_RESOURCES_PURGED, but current state is "
                               f"{original_dataset_latest_state}.")
 
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
@@ -69,7 +69,7 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
         if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
             original_dataset_bundle_path.unlink()
 
-    if original_dataset_latest_state != 'RESOURCES_PURGED':
-        api.add_state_to_dataset(dataset_id=original_dataset['id'], state='RESOURCES_PURGED')
+    if original_dataset_latest_state != 'ORIGINAL_DATASET_RESOURCES_PURGED':
+        api.add_state_to_dataset(dataset_id=original_dataset['id'], state='ORIGINAL_DATASET_RESOURCES_PURGED')
 
     return duplicate_dataset_id,

@@ -49,15 +49,13 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
                                f"{incoming_duplicate_dataset['duplicated_from']['original_dataset_id']}, "
                                f"but matching dataset has id {matching_original_dataset['id']}.")
 
-    original_dataset = api.get_dataset(dataset_id=matching_original_dataset['id'], bundle=True)
-
     rejected_dataset_latest_state = incoming_duplicate_dataset['states'][0]['state']
-    # check for state RESOURCES_PURGED as well, in case this step failed after
-    # the database write that updates the state to RESOURCES_PURGED.
+    # check for state DUPLICATE_DATASET_RESOURCES_PURGED as well, in case this step failed after
+    # the database write that updates the state to DUPLICATE_DATASET_RESOURCES_PURGED.
     if (rejected_dataset_latest_state != 'DUPLICATE_REJECTION_IN_PROGRESS'
-            and rejected_dataset_latest_state != 'RESOURCES_PURGED'):
+            and rejected_dataset_latest_state != 'DUPLICATE_DATASET_RESOURCES_PURGED'):
         raise InspectionFailed(f"Expected dataset {incoming_duplicate_dataset['id']} to be in one of states "
-                               f"DUPLICATE_REJECTION_IN_PROGRESS or RESOURCES_PURGED, but current state is "
+                               f"DUPLICATE_REJECTION_IN_PROGRESS or DUPLICATE_DATASET_RESOURCES_PURGED, but current state is "
                                f"{rejected_dataset_latest_state}.")
 
     duplicate_dataset_origin_path = Path(incoming_duplicate_dataset['origin_path']).resolve() if \
@@ -69,7 +67,7 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
                 duplicate_dataset_origin_path.exists()):
             shutil.rmtree(duplicate_dataset_origin_path)
 
-    if rejected_dataset_latest_state != 'RESOURCES_PURGED':
-        api.add_state_to_dataset(dataset_id=duplicate_dataset_id, state='RESOURCES_PURGED')
+    if rejected_dataset_latest_state != 'DUPLICATE_DATASET_RESOURCES_PURGED':
+        api.add_state_to_dataset(dataset_id=duplicate_dataset_id, state='DUPLICATE_DATASET_RESOURCES_PURGED')
 
     return duplicate_dataset_id,
