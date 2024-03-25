@@ -557,6 +557,7 @@ async function validate_duplication_state(duplicate_dataset_id) {
           timestamp: 'desc',
         },
       },
+      workflows: true,
     },
   });
 
@@ -661,6 +662,7 @@ async function validate_state_after_original_dataset_resource_purge(duplicate_da
         },
       },
       action_items: true,
+      workflows: true,
     },
   });
 
@@ -1030,13 +1032,24 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
 
   await prisma.$transaction(update_queries);
 
-  // if (true) {
-  //   throw new Error('error before DB writes');
-  // }
+  const dataset_being_accepted = await prisma.dataset.findUnique({
+    where: {
+      id: duplicate_dataset_id,
+    },
+    include: {
+      duplicated_from: true,
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+      workflows: true,
+    },
+  });
 
   console.log('made it to the end after transaction');
 
-  return duplicate_dataset;
+  return dataset_being_accepted;
 }
 
 async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
@@ -1325,12 +1338,21 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
 
   await prisma.$transaction(update_queries);
 
-  prisma.dataset.findUnique({
+  const dataset_being_rejected = await prisma.dataset.findUnique({
     where: {
-      id: duplicate_dataset.id,
+      id: duplicate_dataset_id,
+    },
+    include: {
+      duplicated_from: true,
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+      workflows: true,
     },
   });
-  return duplicate_dataset;
+  return dataset_being_rejected;
 }
 
 async function complete_duplicate_rejection({ duplicate_dataset_id }) {
