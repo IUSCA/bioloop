@@ -20,18 +20,21 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('by_active_action_items').optional().toBoolean(),
+    query('include_inactive').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
     // #swagger.summary = Filter notifications
 
-    // by_active_action_items - fetch notifications whose action items have not been acknowledged
+    // by_active_action_items - fetch notifications whose action items have not
+    // been acknowledged
     const filterQuery = _.omitBy(_.isUndefined)({
       dataset_action_items: req.query.by_active_action_items ? {
         some: {
           status: 'CREATED',
         },
       } : undefined,
+      active: req.query.include_inactive || true,
     });
 
     const notifications = await prisma.notification.findMany({
