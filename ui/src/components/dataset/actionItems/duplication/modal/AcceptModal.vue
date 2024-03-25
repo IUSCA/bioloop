@@ -22,7 +22,10 @@
           {{ originalDataset.origin_path }} </span
         >. Any active or pending workflows will be stopped.
       </li>
-      <li>This operation is <span class="va-text-bold">irreversible</span>.</li>
+      <li>
+        This operation is
+        <span class="va-text-bold va-text-primary">irreversible</span>.
+      </li>
     </ul>
 
     <va-divider class="my-4" />

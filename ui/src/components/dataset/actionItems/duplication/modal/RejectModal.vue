@@ -11,7 +11,10 @@
           {{ associatedDataset.origin_path }} </span
         >.
       </li>
-      <li>This operation is <span class="va-text-bold">irreversible</span>.</li>
+      <li>
+        This operation is
+        <span class="va-text-bold va-text-primary">irreversible</span>.
+      </li>
     </ul>
 
     <va-divider class="my-4" />
