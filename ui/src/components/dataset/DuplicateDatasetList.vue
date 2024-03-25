@@ -68,23 +68,22 @@
         <!-- Archive / Delete buttons for RAW_DATA and DATA_PRODUCTS type datasets -->
 
         <!-- Accept/Reject button for duplicate datasets -->
-        <div v-else>
-          <va-popover message="Accept/Reject">
-            <va-button
-              class="flex-initial"
-              size="small"
-              preset="primary"
-              @click="
-                () => {
-                  router.push(actionItemURL(rowData));
-                }
-              "
-              :disabled="!isProcessed(rowData)"
-            >
-              <i-mdi-compare-horizontal />
-            </va-button>
-          </va-popover>
-        </div>
+
+        <va-popover message="Accept/Reject">
+          <va-button
+            class="flex-initial"
+            size="small"
+            preset="primary"
+            @click="
+              () => {
+                router.push(actionItemURL(rowData));
+              }
+            "
+            :disabled="!isProcessed(rowData)"
+          >
+            <i-mdi-compare-horizontal />
+          </va-button>
+        </va-popover>
       </template>
     </va-data-table>
 
@@ -105,7 +104,7 @@ import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import { dayjs, formatBytes } from "@/services/utils";
+import { formatBytes } from "@/services/utils";
 import _ from "lodash";
 
 const router = useRouter();
