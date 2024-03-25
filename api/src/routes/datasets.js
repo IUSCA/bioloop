@@ -864,7 +864,11 @@ router.delete(
     // mark the dataset as deleted on success.
     const _dataset = await datasetService.get_dataset({
       id: req.params.id,
-      workflows: true,
+      workflows: {
+        select: {
+          id: true,
+        },
+      },
     });
 
     if (_dataset) {
@@ -1128,12 +1132,18 @@ router.post(
     // dataset, and create and start a workflow to accept or reject a duplicate
     // dataset.
 
-    const { duplicate_dataset } = await datasetService.initiate_duplicate_acceptance(
-      {
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
-        accepted_by_id: req.user.id,
-      },
-    );
+    let duplicate_dataset;
+    try {
+      duplicate_dataset = await datasetService.initiate_duplicate_acceptance(
+        {
+          duplicate_dataset_id: req.params.duplicate_dataset_id,
+          accepted_by_id: req.user.id,
+        },
+      );
+    } catch (err) {
+      console.log(err);
+      return next(createError.BadRequest(err.message));
+    }
 
     // This kicks off a workflow, which then makes another call to the API to
     // accept/reject the duplicate dataset. This second call to the API is where
@@ -1160,12 +1170,18 @@ router.post(
     // dataset, and create and start a workflow to accept or reject a duplicate
     // dataset.
 
-    const { duplicate_dataset } = await datasetService.initiate_duplicate_rejection(
-      {
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
-        rejected_by_id: req.user.id,
-      },
-    );
+    let duplicate_dataset;
+    try {
+      duplicate_dataset = await datasetService.initiate_duplicate_rejection(
+        {
+          duplicate_dataset_id: req.params.duplicate_dataset_id,
+          rejected_by_id: req.user.id,
+        },
+      ).duplicate_dataset;
+    } catch (err) {
+      console.log(err);
+      return next(createError.BadRequest(err.message));
+    }
 
     // This kicks off a workflow, which then makes another call to the API to
     // accept/reject the duplicate dataset. This second call to the API is where
@@ -1175,30 +1191,6 @@ router.post(
     // from the UI.
     const wf = await datasetService.create_workflow(duplicate_dataset, 'reject_duplicate_dataset');
     return res.json(wf);
-  }),
-);
-
-router.patch(
-  '/duplicates/:duplicate_dataset_id/accept/initiate',
-  validate([
-    param('duplicate_dataset_id').isInt().toInt(),
-  ]),
-  dataset_delete_check,
-  asyncHandler(async (req, res, next) => {
-    let duplicateBeingAccepted;
-    try {
-      duplicateBeingAccepted = await datasetService.initiate_duplicate_acceptance({
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
-        accepted_by_id: req.user.id,
-      });
-    } catch (e) {
-      console.log('endpoint caught error ');
-      console.log(e);
-      return next(createError.BadRequest(e.message));
-    }
-
-    console.log('endpoint will return');
-    res.json(duplicateBeingAccepted);
   }),
 );
 
