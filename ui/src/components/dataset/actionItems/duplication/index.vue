@@ -43,24 +43,36 @@
 
       <!-- Accept / Reject buttons -->
       <div class="flex gap-2 mt-5">
-        <va-button
-          @click="acceptDuplicate(props.actionItem.dataset_id)"
-          :disabled="areControlsDisabled"
+        <va-button @click="onAcceptClick" :disabled="areControlsDisabled"
           >Accept Duplicate</va-button
         >
 
-        <va-button
-          @click="rejectDuplicate(props.actionItem.dataset_id)"
-          :disabled="areControlsDisabled"
+        <va-button @click="onRejectClick" :disabled="areControlsDisabled"
           >Reject Duplicate</va-button
         >
       </div>
     </div>
+
+    <accept-modal
+      v-model:show-modal="showAcceptModal"
+      :action-item="props.actionItem"
+      :are-controls-disabled="areControlsDisabled"
+      @confirm="acceptDuplicate(props.actionItem.dataset_id)"
+    />
+    <reject-modal
+      v-model:show-modal="showRejectModal"
+      :action-item="props.actionItem"
+      :are-controls-disabled="areControlsDisabled"
+      @confirm="acceptDuplicate(props.actionItem.dataset_id)"
+    />
+
+    <!-- add modals with v-model   -->
   </va-inner-loading>
 </template>
 
 <script setup>
-import ReportBody from "@/components/dataset/actionItems/datasetDiffReport/ReportBody.vue";
+import ReportHeader from "@/components/dataset/actionItems/duplication/report/ReportHeader.vue";
+import ReportBody from "@/components/dataset/actionItems/duplication/report/ReportBody.vue";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useNotificationStore } from "@/stores/notification";
@@ -91,6 +103,17 @@ const initiatingResolution = ref(false);
 const loading = computed(
   () => props.loadingResources || initiatingResolution.value,
 );
+
+const showAcceptModal = ref(false);
+const showRejectModal = ref(false);
+
+function onAcceptClick() {
+  showAcceptModal.value = true;
+}
+
+function onRejectClick() {
+  showRejectModal.value = true;
+}
 
 function acceptDuplicate(duplicate_dataset_id) {
   initiatingResolution.value = true;
@@ -132,11 +155,17 @@ function rejectDuplicate(duplicate_dataset_id) {
     });
 }
 
+const associatedDataset = computed(() => props.actionItem.dataset);
+
 // the current state of the dataset associated with this action item
 const associatedDatasetState = computed(() => {
   // assumes states are sorted by descending timestamp
   const latestState = props.actionItem.dataset.states[0];
   return latestState.state;
+});
+
+const originalDataset = computed(() => {
+  return props.actionItem.dataset.duplicated_from.original_dataset;
 });
 
 const isDuplicateDatasetReadyForProcessing = computed(() => {

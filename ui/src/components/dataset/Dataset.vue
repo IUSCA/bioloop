@@ -307,7 +307,6 @@
 </template>
 
 <script setup>
-import DatasetActionsItemAlert from "@/components/dataset/actionItems/ActionItemsAlert.vue";
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
@@ -395,8 +394,9 @@ watch(
 
 /**
  * providing the interval directly will kick of the polling immediately
- * provide a ref which will resolve to null when there are no active workflows and to 10s otherwise
- * now it can be controlled by resume and pause whenever active_wf changes
+ * provide a ref which will resolve to null when there are no active workflows
+ * and to 10s otherwise now it can be controlled by resume and pause whenever
+ * active_wf changes
  */
 const poll = useIntervalFn(fetch_dataset, polling_interval);
 

@@ -211,6 +211,18 @@ router.get(
                 timestamp: 'desc',
               },
             },
+            duplicated_from: {
+              include: {
+                original_dataset: true,
+                duplicate_dataset: true,
+              },
+            },
+            duplicated_by: {
+              include: {
+                duplicate_dataset: true,
+                original_dataset: true,
+              },
+            },
           },
         },
       },

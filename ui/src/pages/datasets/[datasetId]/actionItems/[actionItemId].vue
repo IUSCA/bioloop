@@ -8,7 +8,7 @@
 </template>
 
 <script setup>
-import ActionItemReport from "@/components/dataset/actionItems/datasetDiffReport/index.vue";
+import ActionItemReport from "@/components/dataset/actionItems/duplication/index.vue";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 
