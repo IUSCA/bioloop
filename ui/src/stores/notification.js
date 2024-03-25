@@ -22,12 +22,16 @@ export const useNotificationStore = defineStore("notification", () => {
   }
 
   function fetchActiveNotifications() {
-    // todo - get notifications whose status is CREATED || ACK, and whose corresponding
-    //  action item has not been resolved.
-    return notificationService.getNotifications().then((res) => {
-      setNotifications(res.data);
-      loading.value = false;
-    });
+    // todo - get notifications whose status is CREATED || ACK, and whose
+    // corresponding action item has not been resolved.
+    return notificationService
+      .getNotifications({
+        status: "CREATED",
+      })
+      .then((res) => {
+        setNotifications(res.data);
+        loading.value = false;
+      });
   }
 
   return {
