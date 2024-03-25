@@ -11,11 +11,8 @@
           {{ associatedDataset.origin_path }} </span
         >.
       </li>
+      <li>This operation is <span class="va-text-bold">irreversible</span>.</li>
     </ul>
-
-    <va-divider class="my-4" />
-
-    <p>This operation is irreversible.</p>
 
     <va-divider class="my-4" />
 
@@ -59,6 +56,8 @@ const props = defineProps({
 
 const emit = defineEmits(["confirm", "update:showModal"]);
 
+const modalInput = ref("");
+
 const associatedDataset = computed(() => props.actionItem.dataset);
 
 const showModal = computed({
@@ -68,6 +67,10 @@ const showModal = computed({
   set(newValue) {
     emit("update:showModal", newValue);
   },
+});
+
+onBeforeUnmount(() => {
+  modalInput.value = "";
 });
 </script>
 

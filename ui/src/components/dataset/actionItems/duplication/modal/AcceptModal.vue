@@ -22,11 +22,8 @@
           {{ originalDataset.origin_path }} </span
         >. Any active or pending workflows will be stopped.
       </li>
+      <li>This operation is <span class="va-text-bold">irreversible</span>.</li>
     </ul>
-
-    <va-divider class="my-4" />
-
-    <p>This operation is irreversible.</p>
 
     <va-divider class="my-4" />
 
@@ -85,6 +82,10 @@ const showModal = computed({
   set(newValue) {
     emit("update:showModal", newValue);
   },
+});
+
+onBeforeUnmount(() => {
+  modalInput.value = "";
 });
 </script>
 
