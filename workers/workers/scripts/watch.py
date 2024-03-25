@@ -134,7 +134,7 @@ class Register:
 
         for candidate in duplicate_candidates:
             # some duplicates might already be under processing when this script is run
-            if slugify_(candidate.name) == 'sub-fsm23qf':
+            if slugify_(candidate.name) == 'sub-fsm02cd':
                 # if slugify_(candidate.name) not in self.duplicates:
                 self.register_duplicate_candidate(candidate)
                 self.duplicates.add(candidate.name)
