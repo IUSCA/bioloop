@@ -1177,7 +1177,7 @@ router.post(
           duplicate_dataset_id: req.params.duplicate_dataset_id,
           rejected_by_id: req.user.id,
         },
-      ).duplicate_dataset;
+      );
     } catch (err) {
       console.log(err);
       return next(createError.BadRequest(err.message));
@@ -1207,6 +1207,7 @@ router.patch(
         duplicate_dataset_id: req.params.duplicate_dataset_id,
       });
     } catch (e) {
+      console.log(e);
       return next(createError.BadRequest(e.message));
     }
 
@@ -1250,6 +1251,7 @@ router.patch(
         duplicate_dataset_id: req.params.duplicate_dataset_id,
       });
     } catch (e) {
+      console.log(e);
       return next(createError.BadRequest(e.message));
     }
 

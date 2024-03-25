@@ -247,6 +247,7 @@ const currPage = ref(1);
 const total_results = ref(0);
 const pageSize = ref(20);
 // Criteria for group of true/false fields that results can be filtered by
+// Deleted, not deleted
 const filters_group_query = ref({});
 
 /**

@@ -1346,6 +1346,10 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
       ...INCLUDE_WORKFLOWS,
     },
   });
+
+  console.log('dataset_being_rejected');
+  console.dir(dataset_being_rejected, { depth: null });
+
   return dataset_being_rejected;
 }
 
