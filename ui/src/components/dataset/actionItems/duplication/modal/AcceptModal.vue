@@ -24,7 +24,7 @@
       </li>
       <li>
         This operation is
-        <span class="va-text-bold va-text-primary">irreversible</span>.
+        <span class="va-text-bold va-text-danger">irreversible</span>.
       </li>
     </ul>
 
