@@ -36,7 +36,12 @@
         :disabled="
           modalInput !== associatedDataset.name || props.areControlsDisabled
         "
-        @click="emit('confirm')"
+        @click="
+          () => {
+            emit('confirm');
+            emit('update:showModal', false);
+          }
+        "
       >
         Reject duplicate dataset
       </va-button>

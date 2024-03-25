@@ -47,7 +47,12 @@
         :disabled="
           modalInput !== originalDataset.name || props.areControlsDisabled
         "
-        @click="emit('confirm')"
+        @click="
+          () => {
+            emit('confirm');
+            emit('update:showModal', false);
+          }
+        "
       >
         Overwrite this dataset
       </va-button>
