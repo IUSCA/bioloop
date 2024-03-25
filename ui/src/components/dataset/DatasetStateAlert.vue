@@ -271,6 +271,9 @@ const overwrittenByDatasetId = (dataset) => {
 
 const gatherDatasetDuplicates = (dataset) =>
   (dataset?.duplicated_by || [])
+    .filter(
+      (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
+    )
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
