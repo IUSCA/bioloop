@@ -1183,6 +1183,9 @@ router.post(
       return next(createError.BadRequest(err.message));
     }
 
+    console.log('duplicate_dataset');
+    console.dir(duplicate_dataset, { depth: null });
+
     // This kicks off a workflow, which then makes another call to the API to
     // accept/reject the duplicate dataset. This second call to the API is where
     // the states of the original and the duplicates datasets are validated,
