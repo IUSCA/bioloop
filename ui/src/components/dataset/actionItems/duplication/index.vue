@@ -67,7 +67,7 @@
       v-model:show-modal="showRejectModal"
       :action-item="props.actionItem"
       :are-controls-disabled="areControlsDisabled"
-      @confirm="acceptDuplicate(props.actionItem.dataset_id)"
+      @confirm="rejectDuplicate(props.actionItem.dataset_id)"
     />
 
     <!-- add modals with v-model   -->

@@ -286,7 +286,10 @@ const columns = [
     sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "150px",
   },
-  // { key: "status", sortable: false },
+  {
+    key: "version",
+    width: "80px",
+  },
   {
     key: "num_genome_files",
     label: "data files",
@@ -316,7 +319,7 @@ const search_query = computed(() => {
 // configuring number of pages for pagination.
 const datasets_filter_query = computed(() => {
   return {
-    type: props.dtype,
+    ...(props.dtype && { type: props.dtype }),
     ...filters_group_query.value,
     ...(!!search_query.value && { ...search_query.value }),
   };
