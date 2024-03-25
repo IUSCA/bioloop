@@ -16,19 +16,23 @@
       </va-alert>
 
       <va-alert
-        v-else-if="isActionItemAcknowledged"
+        v-if="isActionItemAcknowledged && isActionItemActive"
         color="success"
         class="mx-0"
       >
         This action item has been acknowledged.
       </va-alert>
 
-      <va-alert v-else-if="isActionItemLocked" color="warning" class="mx-0">
+      <va-alert
+        v-if="isActionItemLocked && isActionItemActive"
+        color="warning"
+        class="mx-0"
+      >
         This action item is currently locked.
       </va-alert>
 
       <va-alert
-        v-else-if="!isDuplicateDatasetReadyForProcessing"
+        v-if="!isDuplicateDatasetReadyForProcessing && isActionItemActive"
         color="warning"
         class="mx-0"
       >
