@@ -1,5 +1,5 @@
 <template>
-  <va-modal blur v-model="showModal">
+  <va-modal blur v-model="showModal" @before-close="clearModalInput">
     <modal-header :dataset="associatedDataset"></modal-header>
 
     <va-divider class="my-4" />
@@ -69,9 +69,9 @@ const showModal = computed({
   },
 });
 
-onBeforeUnmount(() => {
+const clearModalInput = () => {
   modalInput.value = "";
-});
+};
 </script>
 
 <style scoped></style>
