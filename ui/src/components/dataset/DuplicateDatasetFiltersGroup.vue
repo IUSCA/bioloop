@@ -16,8 +16,6 @@
 </template>
 
 <script setup>
-import { lxor } from "@/services/utils";
-
 const props = defineProps({
   filters: {
     type: Array,
@@ -32,27 +30,6 @@ const filtersConfig = [
     field: "deleted",
     label: "Deleted",
   },
-  {
-    field: "saved",
-    label: "Saved",
-  },
-  {
-    field: "archived",
-    label: "Archived",
-  },
-
-  {
-    field: "staged",
-    label: "Staged",
-  },
-  {
-    field: "processed",
-    label: "Processed",
-  },
-  {
-    field: "unprocessed",
-    label: "Unprocessed",
-  },
 ];
 
 const checkboxFilters = computed(() => {
@@ -66,11 +43,6 @@ const checkboxFilters = computed(() => {
 
 const checkboxes = ref({
   deleted: false,
-  saved: false,
-  archived: false,
-  staged: false,
-  unprocessed: false,
-  processed: false,
 });
 
 const activeCountText = computed(() => {
@@ -84,10 +56,7 @@ const activeCountText = computed(() => {
 function handle_filters() {
   const opts = checkboxes.value;
   const query = {
-    deleted: lxor(opts.deleted, opts.saved) ? opts.deleted : null,
-    processed: lxor(opts.unprocessed, opts.processed) ? opts.processed : null,
-    staged: opts.staged ? opts.staged : null,
-    archived: opts.archived ? opts.archived : null,
+    deleted: opts.deleted,
   };
   emit("update", query);
 }

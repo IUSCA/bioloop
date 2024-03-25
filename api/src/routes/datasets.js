@@ -444,7 +444,7 @@ router.get(
         derived_datasets: true,
         bundle: req.query.bundle || false,
         action_items: req.query.include_action_items || false,
-        states: req.query.include_states || false,
+        ...(req.query.include_states && { ...datasetService.INCLUDE_STATES }),
         ...(req.query.include_duplications && { ...datasetService.INCLUDE_DUPLICATIONS }),
       },
     };

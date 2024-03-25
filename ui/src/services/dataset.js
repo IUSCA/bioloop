@@ -17,6 +17,7 @@ class DatasetService {
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
+   * @param is_duplicate
    * @param include_action_items Includes any active action items on the dataset in the result
    * @param include_states Include dataset's state history
    * @returns          Object containing matching datasets, and count of matching datasets

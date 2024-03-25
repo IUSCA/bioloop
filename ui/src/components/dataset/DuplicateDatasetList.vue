@@ -20,7 +20,7 @@
 
       <!-- filter -->
       <div class="flex-none flex items-center justify-center">
-        <DatasetFiltersGroup @update="updateFiltersGroupQuery" />
+        <DuplicateDatasetFiltersGroup @update="updateFiltersGroupQuery" />
       </div>
     </div>
 
@@ -44,20 +44,12 @@
         }}</router-link>
       </template>
 
+      <template #cell(version)="{ value }">
+        <span>{{ value }}</span>
+      </template>
+
       <template #cell(created_at)="{ value }">
         <span>{{ datetime.date(value) }}</span>
-      </template>
-
-      <template #cell(archived)="{ source }">
-        <span v-if="source" class="flex justify-center">
-          <i-mdi-check-circle-outline class="text-green-700" />
-        </span>
-      </template>
-
-      <template #cell(staged)="{ source }">
-        <span v-if="source" class="flex justify-center">
-          <i-mdi-check-circle-outline class="text-green-700" />
-        </span>
       </template>
 
       <template #cell(num_genome_files)="{ rowData }">
@@ -72,57 +64,8 @@
         <span>{{ source != null ? formatBytes(source) : "" }}</span>
       </template>
 
-      <template #cell(workflows)="{ source }">
-        <span>{{ source?.length || 0 }}</span>
-      </template>
-
       <template #cell(actions)="{ rowData }">
         <!-- Archive / Delete buttons for RAW_DATA and DATA_PRODUCTS type datasets -->
-        <div class="flex gap-2" v-if="!rowData.is_duplicate">
-          <!-- Archive Button -->
-          <va-popover
-            message="Archive"
-            placement="left"
-            v-if="(rowData?.workflows?.length || 0) == 0 && !rowData.is_deleted"
-          >
-            <va-button
-              class="flex-initial"
-              size="small"
-              preset="primary"
-              @click="
-                launch_modal.visible = true;
-                launch_modal.selected = rowData;
-              "
-            >
-              <i-mdi-rocket-launch />
-            </va-button>
-          </va-popover>
-
-          <!-- Delete button -->
-          <!-- Only show when the dataset has no workflows, is not archived, and is not deleted -->
-          <va-popover
-            message="Delete entry"
-            placement="left"
-            v-if="
-              (rowData?.workflows?.length || 0) == 0 &&
-              !rowData.is_deleted &&
-              !rowData.is_archived
-            "
-          >
-            <va-button
-              size="small"
-              preset="primary"
-              color="danger"
-              class="flex-initial"
-              @click="
-                delete_modal.visible = true;
-                delete_modal.selected = rowData;
-              "
-            >
-              <i-mdi-delete />
-            </va-button>
-          </va-popover>
-        </div>
 
         <!-- Accept/Reject button for duplicate datasets -->
         <div v-else>
@@ -136,7 +79,7 @@
                   router.push(actionItemURL(rowData));
                 }
               "
-              :disabled="rowData.is_deleted || !isInspected(rowData)"
+              :disabled="!isProcessed(rowData)"
             >
               <i-mdi-compare-horizontal />
             </va-button>
@@ -154,61 +97,6 @@
       :curr_items="datasets.length"
       :page_size_options="PAGE_SIZE_OPTIONS"
     />
-
-    <!-- launch modal -->
-    <va-modal
-      :title="`Archive ${props.label} ${launch_modal.selected?.name}`"
-      :model-value="launch_modal.visible"
-      size="small"
-      okText="Archive"
-      @ok="
-        launch_modal.visible = false;
-        launch_wf(launch_modal.selected?.id);
-        launch_modal.selected = null;
-      "
-      @cancel="
-        launch_modal.visible = false;
-        launch_modal.selected = null;
-      "
-    >
-      <div class="flex flex-col gap-3">
-        <p>
-          By clicking the "Archive" button, a workflow will be initiated to
-          archive the {{ props.label.toLowerCase() }} to the SDA (Secure Data
-          Archive).
-        </p>
-        <p>
-          Please be aware that the time it takes to complete this process
-          depends on the size of the directory and the amount of data being
-          archived. To monitor the progress of the workflow, you can view the
-          dataset's details page.
-        </p>
-      </div>
-    </va-modal>
-
-    <!-- delete modal -->
-    <va-modal
-      :title="`Delete ${delete_modal.selected?.name}?`"
-      :model-value="delete_modal.visible"
-      size="small"
-      okText="Delete"
-      @ok="
-        delete_modal.visible = false;
-        delete_dataset(delete_modal.selected?.id);
-        delete_modal.selected = null;
-      "
-      @cancel="
-        delete_modal.visible = false;
-        delete_modal.selected = null;
-      "
-    >
-      <div class="flex flex-col gap-3">
-        <p>
-          Please note that this action will delete the database entry and will
-          not delete any associated files.
-        </p>
-      </div>
-    </va-modal>
   </div>
 </template>
 
@@ -233,14 +121,6 @@ const PAGE_SIZE_OPTIONS = [20, 50, 100];
 const datasets = ref([]);
 const filterInput = ref("");
 const data_loading = ref(false);
-// const launch_modal = ref({
-//   visible: false,
-//   selected: null,
-// });
-// const delete_modal = ref({
-//   visible: false,
-//   selected: null,
-// });
 const defaultSortField = ref("updated_at");
 const defaultSortOrder = ref("desc");
 const currPage = ref(1);
@@ -363,11 +243,9 @@ function fetch_datasets(query = {}, updatePageCount = true) {
   return DatasetService.getAll({
     ...datasets_retrieval_query.value,
     ...query,
-    ...(props.dtype === "DUPLICATE" && {
-      include_action_items: true,
-      include_states: true,
-      is_duplicate: props.duplicatesOnly,
-    }),
+    is_duplicate: true,
+    include_action_items: true,
+    include_states: true,
   })
     .then((res) => {
       datasets.value = res.data.datasets;
@@ -378,38 +256,6 @@ function fetch_datasets(query = {}, updatePageCount = true) {
     .catch((err) => {
       console.error(err);
       toast.error("Unable to fetch data");
-    })
-    .finally(() => {
-      data_loading.value = false;
-    });
-}
-
-function launch_wf(id) {
-  data_loading.value = true;
-  DatasetService.archive_dataset(id)
-    .then(() => {
-      toast.success(`Launched a workflow to archive the dataset: ${id}`);
-      fetch_datasets();
-    })
-    .catch((err) => {
-      console.error(err);
-      toast.error("Unable to archive the dataset");
-    })
-    .finally(() => {
-      data_loading.value = false;
-    });
-}
-
-function delete_dataset(id) {
-  data_loading.value = true;
-  DatasetService.delete_dataset({ id, soft_delete: false })
-    .then(() => {
-      toast.success(`Deleted dataset: ${id}`);
-      fetch_datasets();
-    })
-    .catch((err) => {
-      console.error(err);
-      toast.error("Unable to delete dataset");
     })
     .finally(() => {
       data_loading.value = false;
@@ -427,15 +273,10 @@ const actionItemURL = (dataset) => {
     : "#";
 };
 
-const isInspected = (dataset) => {
+const isProcessed = (dataset) => {
   // sort states by timestamp (descending).
-  const datasetStates = dataset.states
-    .sort((state1, state2) => {
-      dayjs(state2.timestamp).diff(dayjs(state1.timestamp));
-    })
-    .map((state) => state.state);
-  // Verify that latest state is INSPECTED.
-  return datasetStates[datasetStates.length - 1] === "INSPECTED";
+  const datasetLatestState = dataset.states[0].state;
+  return datasetLatestState === "DUPLICATE_READY";
 };
 
 onMounted(() => {
