@@ -173,7 +173,7 @@ const columns = [
     width: "150px",
   },
   {
-    key: "deleted",
+    key: "is_deleted",
     width: "80px",
   },
   {
