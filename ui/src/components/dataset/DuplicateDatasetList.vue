@@ -174,6 +174,7 @@ const columns = [
   },
   {
     key: "is_deleted",
+    label: "Deleted",
     width: "80px",
   },
   {
