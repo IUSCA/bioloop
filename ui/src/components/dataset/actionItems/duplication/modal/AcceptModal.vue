@@ -11,9 +11,11 @@
         <span class="path bg-slate-200 dark:bg-slate-800">
           {{ originalDataset.archive_path }}
         </span>
-        , as well as he dataset currently staged at
-        <span class="path bg-slate-200 dark:bg-slate-800">
-          {{ originalDataset.staged_path }}
+        <span v-if="originalDataset.staged_path">
+          , as well as he dataset currently staged at
+          <span class="path bg-slate-200 dark:bg-slate-800">
+            {{ originalDataset.staged_path }}
+          </span>
         </span>
         with the current contents of
         <span class="path bg-slate-200 dark:bg-slate-800">
