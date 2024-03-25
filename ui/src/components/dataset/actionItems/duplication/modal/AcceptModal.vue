@@ -1,5 +1,10 @@
 <template>
-  <va-modal blur v-model="showModal" @before-close="clearModalInput">
+  <va-modal
+    blur
+    v-model="showModal"
+    @before-close="clearModalInput"
+    hide-default-actions
+  >
     <modal-header :dataset="associatedDataset"></modal-header>
 
     <va-divider class="my-4" />
