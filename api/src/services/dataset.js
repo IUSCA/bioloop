@@ -660,6 +660,7 @@ async function validate_state_after_original_dataset_resource_purge(duplicate_da
           timestamp: 'desc',
         },
       },
+      action_items: true,
     },
   });
 
@@ -779,36 +780,25 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   // launched to handle the acceptance/rejection on the worker-end.
   const update_queries = [];
 
-  // accept the duplicate dataset
-  update_queries.push(prisma.dataset.update({
-    where: {
-      id: duplicate_dataset.id,
-    },
-    data: {
-      action_items: {
-        updateMany: {
-          where: {
-            // updateMany works here because exactly one
-            // action item of type DUPLICATE_DATASET_INGESTION is created for a
-            // dataset when it is duplicated from another.
-            type: 'DUPLICATE_DATASET_INGESTION',
-            active: true,
-          },
-          data: {
+  // acknowledge notification
+  const duplication_action_item = (duplicate_dataset.action_items || [])
+    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
+  if (duplication_action_item) {
+    update_queries.push(prisma.dataset_action_item.update({
+      where: {
+        id: duplication_action_item.id,
+      },
+      data: {
+        status: 'ACKNOWLEDGED',
+        notification: {
+          update: {
             status: 'ACKNOWLEDGED',
-            notification: {
-              update: {
-                status: 'ACKNOWLEDGED',
-              },
-            },
           },
         },
       },
-    },
-    include: {
-      duplicated_from: true,
-    },
-  }));
+    }));
+  }
+
   // if an audit log hasn't been created for the acceptance of the incoming
   // duplicate, create one.
   const acceptance_audit_logs = await prisma.dataset_audit.findMany({
@@ -944,6 +934,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
             timestamp: 'desc',
           },
         },
+        action_items: true,
       },
     });
 
@@ -1006,26 +997,29 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
         version: duplicate_latest_state !== 'DUPLICATE_REJECTED'
           ? latest_rejected_duplicate_version + i
           : undefined,
-        action_items: {
-          updateMany: {
-            where: {
-              type: 'DUPLICATE_DATASET_INGESTION',
-              active: true,
-            },
-            data: {
+      },
+    }));
+
+    // acknowledge notification
+    const rejected_duplicate_action_item = (current_duplicate.action_items || [])
+      .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
+    if (rejected_duplicate_action_item) {
+      update_queries.push(prisma.dataset_action_item.update({
+        where: {
+          id: rejected_duplicate_action_item.id,
+        },
+        data: {
+          status: 'RESOLVED',
+          active: false,
+          notification: {
+            update: {
               status: 'RESOLVED',
               active: false,
-              notification: {
-                update: {
-                  status: 'RESOLVED',
-                  active: false,
-                },
-              },
             },
           },
         },
-      },
-    }));
+      }));
+    }
   }
 
   // At this point, both the original and the incoming duplicate datasets are
@@ -1034,7 +1028,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
 
   console.log('made it to the end before transaction');
 
-  const [dataset_being_accepted] = await prisma.$transaction(update_queries);
+  await prisma.$transaction(update_queries);
 
   // if (true) {
   //   throw new Error('error before DB writes');
@@ -1042,7 +1036,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
 
   console.log('made it to the end after transaction');
 
-  return dataset_being_accepted;
+  return duplicate_dataset;
 }
 
 async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
@@ -1100,6 +1094,27 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
       //
     },
   }));
+
+  // acknowledge notification
+  const accepted_duplicate_action_item = (duplicate_dataset.action_items || [])
+    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
+  if (accepted_duplicate_action_item) {
+    update_queries.push(prisma.dataset_action_item.update({
+      where: {
+        id: accepted_duplicate_action_item.id,
+      },
+      data: {
+        status: 'RESOLVED',
+        active: false,
+        notification: {
+          update: {
+            status: 'RESOLVED',
+            active: false,
+          },
+        },
+      },
+    }));
+  }
 
   // if a state update record hasn't been created for the overwrite of the
   // original dataset, create one.
@@ -1242,31 +1257,24 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
 
   const update_queries = [];
 
-  update_queries.push(prisma.dataset.update({
-    where: {
-      id: duplicate_dataset_id,
-    },
-    data: {
-      action_items: {
-        // Update the action item.
-        // This updateMany is expected to update exactly one action item.
-        updateMany: {
-          where: {
-            type: 'DUPLICATE_DATASET_INGESTION',
-            active: true,
-          },
-          data: {
+  // acknowledge notification
+  const rejected_duplicate_action_item = (duplicate_dataset.action_items || [])
+    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
+  if (rejected_duplicate_action_item) {
+    update_queries.push(prisma.dataset_action_item.update({
+      where: {
+        id: rejected_duplicate_action_item.id,
+      },
+      data: {
+        status: 'ACKNOWLEDGED',
+        notification: {
+          update: {
             status: 'ACKNOWLEDGED',
-            notification: {
-              update: {
-                status: 'ACKNOWLEDGED',
-              },
-            },
           },
         },
       },
-    },
-  }));
+    }));
+  }
 
   const rejection_audit_logs = await prisma.dataset_audit.findMany({
     where: {
@@ -1317,12 +1325,12 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
 
   await prisma.$transaction(update_queries);
 
-  const dataset_being_rejected = await prisma.dataset.findUnique({
+  prisma.dataset.findUnique({
     where: {
       id: duplicate_dataset.id,
     },
   });
-  return dataset_being_rejected;
+  return duplicate_dataset;
 }
 
 async function complete_duplicate_rejection({ duplicate_dataset_id }) {
@@ -1351,28 +1359,29 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
       version: (!duplicate_dataset.is_deleted && duplicate_dataset_latest_state === 'DUPLICATE_DATASET_RESOURCES_PURGED')
         ? latest_rejected_duplicate_version + 1
         : undefined,
-      action_items: {
-        // Update the action item.
-        // This updateMany is expected to update exactly one action item.
-        updateMany: {
-          where: {
-            type: 'DUPLICATE_DATASET_INGESTION',
-            active: true,
-          },
-          data: {
+    },
+  }));
+
+  // acknowledge notification
+  const rejected_duplicate_action_item = (duplicate_dataset.action_items || [])
+    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
+  if (rejected_duplicate_action_item) {
+    update_queries.push(prisma.dataset_action_item.update({
+      where: {
+        id: rejected_duplicate_action_item.id,
+      },
+      data: {
+        status: 'RESOLVED',
+        active: false,
+        notification: {
+          update: {
             status: 'RESOLVED',
             active: false,
-            notification: {
-              update: {
-                status: 'RESOLVED',
-                active: false,
-              },
-            },
           },
         },
       },
-    },
-  }));
+    }));
+  }
 
   // if a state update record hasn't been created for the overwrite of the
   // original dataset, create one.
