@@ -1,5 +1,5 @@
 <template>
-  <dataset-list dtype="DUPLICATE" label="Duplicate Datasets"></dataset-list>
+  <duplicate-dataset-list label="Duplicate Datasets"></duplicate-dataset-list>
 </template>
 
 <route lang="yaml">
