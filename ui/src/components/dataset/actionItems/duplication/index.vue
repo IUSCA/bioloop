@@ -32,7 +32,11 @@
       </va-alert>
 
       <va-alert
-        v-if="!isDuplicateDatasetReadyForProcessing && isActionItemActive"
+        v-if="
+          !isDuplicateDatasetReadyForProcessing &&
+          !isActionItemAcknowledged &&
+          isActionItemActive
+        "
         color="warning"
         class="mx-0"
       >
@@ -159,7 +163,7 @@ function rejectDuplicate(duplicate_dataset_id) {
     });
 }
 
-const associatedDataset = computed(() => props.actionItem.dataset);
+// const associatedDataset = computed(() => props.actionItem.dataset);
 
 // the current state of the dataset associated with this action item
 const associatedDatasetState = computed(() => {
@@ -168,9 +172,9 @@ const associatedDatasetState = computed(() => {
   return latestState.state;
 });
 
-const originalDataset = computed(() => {
-  return props.actionItem.dataset.duplicated_from.original_dataset;
-});
+// const originalDataset = computed(() => {
+//   return props.actionItem.dataset.duplicated_from.original_dataset;
+// });
 
 const isDuplicateDatasetReadyForProcessing = computed(() => {
   return associatedDatasetState.value === "DUPLICATE_READY";
