@@ -102,10 +102,6 @@ config = {
         'accept_duplicate_dataset': {
             'steps': [
                 {
-                    'name': 'initiate acceptance',
-                    'task': 'initiate_duplicate_dataset_acceptance'
-                },
-                {
                     'name': 'purge resources',
                     'task': 'purge_original_dataset_resources'
                 },
@@ -133,10 +129,6 @@ config = {
         },
         'reject_duplicate_dataset': {
             'steps': [
-                {
-                    'name': 'initiate rejection',
-                    'task': 'initiate_duplicate_dataset_rejection'
-                },
                 {
                     'name': 'purge resources',
                     'task': 'purge_duplicate_dataset_resources'

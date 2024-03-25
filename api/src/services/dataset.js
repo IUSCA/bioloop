@@ -796,6 +796,11 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
           },
           data: {
             status: 'ACKNOWLEDGED',
+            notification: {
+              update: {
+                status: 'ACKNOWLEDGED',
+              },
+            },
           },
         },
       },
@@ -1010,6 +1015,12 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
             data: {
               status: 'RESOLVED',
               active: false,
+              notification: {
+                update: {
+                  status: 'RESOLVED',
+                  active: false,
+                },
+              },
             },
           },
         },
@@ -1064,6 +1075,12 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
           data: {
             status: 'RESOLVED',
             active: false,
+            notification: {
+              update: {
+                status: 'RESOLVED',
+                active: false,
+              },
+            },
           },
         },
       },
@@ -1225,6 +1242,32 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
 
   const update_queries = [];
 
+  update_queries.push(prisma.dataset.update({
+    where: {
+      id: duplicate_dataset_id,
+    },
+    data: {
+      action_items: {
+        // Update the action item.
+        // This updateMany is expected to update exactly one action item.
+        updateMany: {
+          where: {
+            type: 'DUPLICATE_DATASET_INGESTION',
+            active: true,
+          },
+          data: {
+            status: 'ACKNOWLEDGED',
+            notification: {
+              update: {
+                status: 'ACKNOWLEDGED',
+              },
+            },
+          },
+        },
+      },
+    },
+  }));
+
   const rejection_audit_logs = await prisma.dataset_audit.findMany({
     where: {
       action: 'duplicate_rejected',
@@ -1319,6 +1362,12 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
           data: {
             status: 'RESOLVED',
             active: false,
+            notification: {
+              update: {
+                status: 'RESOLVED',
+                active: false,
+              },
+            },
           },
         },
       },

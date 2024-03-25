@@ -1115,11 +1115,10 @@ router.get(
 );
 
 router.post(
-  '/duplicates/:duplicate_dataset_id/workflow/:wf',
+  '/duplicates/:duplicate_dataset_id/workflow/accept_duplicate_dataset',
   accessControl('workflow')('create'),
   validate([
     param('duplicate_dataset_id').isInt().toInt(),
-    param('wf').isIn(['accept_duplicate_dataset', 'reject_duplicate_dataset']),
   ]),
   workflow_access_check,
   dataset_delete_check,
@@ -1129,26 +1128,12 @@ router.post(
     // dataset, and create and start a workflow to accept or reject a duplicate
     // dataset.
 
-    const duplicate_dataset = await datasetService.get_dataset({
-      id: req.params.duplicate_dataset_id,
-      workflows: true,
-      include_action_items: true,
-    });
-
-    const duplication_action_item = duplicate_dataset.action_items.find((item) => item.type === 'DUPLICATE_DATASET_INGESTION');
-    await prisma.dataset_action_item.update({
-      where: {
-        id: duplication_action_item.id,
+    const { duplicate_dataset } = await datasetService.initiate_duplicate_acceptance(
+      {
+        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        accepted_by_id: req.user.id,
       },
-      data: {
-        status: 'ACKNOWLEDGED',
-        notification: {
-          update: {
-            status: 'ACKNOWLEDGED',
-          },
-        },
-      },
-    });
+    );
 
     // This kicks off a workflow, which then makes another call to the API to
     // accept/reject the duplicate dataset. This second call to the API is where
@@ -1156,8 +1141,39 @@ router.post(
     // after which the duplicate is either accepted or rejected. The workflow
     // is launched first to allow a failed acceptance/rejection to be resumed
     // from the UI.
-    const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(duplicate_dataset, wf_name);
+    const wf = await datasetService.create_workflow(duplicate_dataset, 'accept_duplicate_dataset');
+    return res.json(wf);
+  }),
+);
+
+router.post(
+  '/duplicates/:duplicate_dataset_id/workflow/reject_duplicate_dataset',
+  accessControl('workflow')('create'),
+  validate([
+    param('duplicate_dataset_id').isInt().toInt(),
+  ]),
+  workflow_access_check,
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Replace an existing dataset with its duplicate
+    // dataset, and create and start a workflow to accept or reject a duplicate
+    // dataset.
+
+    const { duplicate_dataset } = await datasetService.initiate_duplicate_rejection(
+      {
+        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        rejected_by_id: req.user.id,
+      },
+    );
+
+    // This kicks off a workflow, which then makes another call to the API to
+    // accept/reject the duplicate dataset. This second call to the API is where
+    // the states of the original and the duplicates datasets are validated,
+    // after which the duplicate is either accepted or rejected. The workflow
+    // is launched first to allow a failed acceptance/rejection to be resumed
+    // from the UI.
+    const wf = await datasetService.create_workflow(duplicate_dataset, 'reject_duplicate_dataset');
     return res.json(wf);
   }),
 );

@@ -31,6 +31,7 @@ class DatasetService {
     limit = null,
     offset = null,
     sortBy = null,
+    is_duplicate = false,
     include_action_items = false,
     include_states = false,
   } = {}) {
@@ -45,6 +46,7 @@ class DatasetService {
         limit,
         offset,
         sortBy,
+        is_duplicate,
         include_action_items,
         include_states,
       },
