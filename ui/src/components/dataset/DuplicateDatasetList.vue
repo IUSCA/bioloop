@@ -60,6 +60,12 @@
         <span>{{ datetime.fromNow(value) }}</span>
       </template>
 
+      <template #cell(is_deleted)="{ source }">
+        <span v-if="source" class="flex justify-center">
+          <i-mdi-check-circle-outline class="text-green-700" />
+        </span>
+      </template>
+
       <template #cell(du_size)="{ source }">
         <span>{{ source != null ? formatBytes(source) : "" }}</span>
       </template>
@@ -165,6 +171,10 @@ const columns = [
     sortingOptions: ["desc", "asc", null],
     sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "150px",
+  },
+  {
+    key: "deleted",
+    width: "80px",
   },
   {
     key: "version",
