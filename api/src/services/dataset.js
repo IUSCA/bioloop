@@ -552,6 +552,7 @@ async function validate_duplication_state(duplicate_dataset_id) {
     },
     include: {
       duplicated_from: true,
+      action_items: true,
       states: {
         orderBy: {
           timestamp: 'desc',

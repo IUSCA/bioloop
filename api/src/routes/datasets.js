@@ -1219,29 +1219,6 @@ router.patch(
 );
 
 router.patch(
-  '/duplicates/:duplicate_dataset_id/reject/initiate',
-  validate([
-    param('duplicate_dataset_id').isInt().toInt(),
-  ]),
-  dataset_access_check,
-  dataset_delete_check,
-  asyncHandler(async (req, res, next) => {
-    let updatedDataset;
-    try {
-      updatedDataset = await datasetService.initiate_duplicate_rejection({
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
-        rejected_by_id: req.user.id,
-      });
-    } catch (e) {
-      console.log(e);
-      return next(createError.BadRequest(e.message));
-    }
-
-    res.json(updatedDataset);
-  }),
-);
-
-router.patch(
   '/duplicates/:duplicate_dataset_id/reject/complete',
   validate([
     param('duplicate_dataset_id').isInt().toInt(),
