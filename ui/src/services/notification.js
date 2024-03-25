@@ -5,10 +5,16 @@ class NotificationService {
     return api.get(`/notifications/${notification_id}`);
   }
 
-  getNotifications({ by_active_action_items = true } = {}) {
+  getNotifications({
+    by_active_action_items = true,
+    active = true,
+    status = null,
+  } = {}) {
     return api.get("/notifications", {
       params: {
         by_active_action_items,
+        active,
+        status,
       },
     });
   }

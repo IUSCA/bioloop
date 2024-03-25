@@ -20,7 +20,8 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('by_active_action_items').optional().toBoolean(),
-    query('include_inactive').optional().toBoolean(),
+    query('active').optional().toBoolean(),
+    query('status').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
@@ -34,7 +35,8 @@ router.get(
           status: 'CREATED',
         },
       } : undefined,
-      active: req.query.include_inactive || true,
+      active: req.query.active || true,
+      status: req.query.status || 'CREATED',
     });
 
     const notifications = await prisma.notification.findMany({

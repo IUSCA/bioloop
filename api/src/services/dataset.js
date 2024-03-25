@@ -996,7 +996,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
       },
       data: {
         is_deleted: true,
-        version: duplicate_latest_state !== 'DUPLICATE_REJECTED'
+        version: duplicate_latest_state === 'DUPLICATE_READY'
           ? latest_rejected_duplicate_version + i
           : undefined,
       },
@@ -1070,7 +1070,9 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     data: {
       is_duplicate: false,
       // if incoming duplicate's version is not already updated, update it
-      version: (!original_dataset.is_deleted && original_dataset_state !== 'OVERWRITTEN') ? original_dataset.version + 1 : undefined,
+      version: (!original_dataset.is_deleted && original_dataset_state === 'ORIGINAL_DATASET_RESOURCES_PURGED')
+        ? original_dataset.version + 1
+        : undefined,
       audit_logs: {
         // Update the audit log.
         // This updateMany is expected to update exactly one audit_log, since
