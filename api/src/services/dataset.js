@@ -1266,10 +1266,13 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
 
   const update_queries = [];
 
+  console.log('initiated rejection');
   // acknowledge notification
   const rejected_duplicate_action_item = (duplicate_dataset.action_items || [])
     .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
   if (rejected_duplicate_action_item) {
+    console.log(`will update notification for dataset ${rejected_duplicate_action_item}`);
+
     update_queries.push(prisma.dataset_action_item.update({
       where: {
         id: rejected_duplicate_action_item.id,
