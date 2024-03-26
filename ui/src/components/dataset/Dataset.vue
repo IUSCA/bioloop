@@ -18,6 +18,7 @@
                   class="flex-none"
                   edit
                   @click="openModalToEditDataset"
+                  :disabled="isDatasetLocked"
                 />
               </div>
             </va-card-title>
@@ -27,9 +28,13 @@
                 <!-- file browser -->
 
                 <!-- Download Modal -->
-                <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
+                <DatasetDownloadModal
+                  ref="downloadModal"
+                  :dataset="dataset"
+                  :controls-disabled="isDatasetLocked"
+                />
                 <va-button
-                  :disabled="!dataset.is_staged"
+                  :disabled="!dataset.is_staged || isDatasetLocked"
                   class="flex-initial"
                   color="primary"
                   border-color="primary"
@@ -310,7 +315,7 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import { formatBytes } from "@/services/utils";
+import { formatBytes, isDatasetLockedForWrite } from "@/services/utils";
 import workflowService from "@/services/workflow";
 
 const downloadModal = ref(null);
@@ -461,6 +466,10 @@ function openModalToEditDataset() {
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
+
+const isDatasetLocked = computed(() => {
+  return isDatasetLockedForWrite(props.data);
+});
 </script>
 
 <route lang="yaml">

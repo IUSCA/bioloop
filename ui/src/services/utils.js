@@ -180,12 +180,13 @@ function groupBy(key) {
 }
 
 /**
- * Given an array, groups the elements of the array based on the grouping function provided,
- * aggregates values from the grouped elements by calling the aggregation function provided
- * on the collection of grouped elements, and returns an array, every element of which contains
- * the aggregated values produced from each grouping as well as the value used for producing
- * said groupings. The order of grouped values is determined by the order they occur in the array
- * provided.
+ * Given an array, groups the elements of the array based on the grouping
+ * function provided, aggregates values from the grouped elements by calling
+ * the aggregation function provided on the collection of grouped elements,
+ * and returns an array, every element of which contains the aggregated values
+ * produced from each grouping as well as the value used for producing said
+ * groupings. The order of grouped values is determined by the order they occur
+ * in the array provided.
  *
  * Example usage:
  * groupByAndAggregate(
@@ -202,20 +203,26 @@ function groupBy(key) {
  * @param {[*]} arr                                    The array whose elements are to be grouped
  *                                                     and aggregated
  * @param {string} groupedByKey                        The key used for representing the values
- *                                                     (in the returned array) by which elements
- *                                                     in arr will be grouped
+ *                                                     (in the returned array)
+ *                                                     by which elements in arr
+ *                                                     will be grouped
  * @param {string} aggregatedResultKey                 The key used for representing the aggregation
- *                                                     results (in the returned array) per grouping
+ *                                                     results (in the returned
+ *                                                     array) per grouping
  * @param {Function} aggregationFn                     Callback used for aggregating the results in
  *                                                     each grouping
  * @param {Function} [groupByFn = (e) => e]            Optional callback used to group the elements
  *                                                     of arr
  * @param {Function} [groupedByValFormatFn = (e) => e] Optional callback used to format the values
- *                                                     (in the returned array) by which groupings
- *                                                     are produced
+ *                                                     (in the returned array)
+ *                                                     by which groupings are
+ *                                                     produced
  * @returns                                            An array, every element of which contains the
- *                                                     aggregated values produced from each grouping
- *                                                     as well as the values used for producing said
+ *                                                     aggregated values
+ *                                                     produced from each
+ *                                                     grouping as well as the
+ *                                                     values used for
+ *                                                     producing said
  *                                                     groupings.
  */
 function groupByAndAggregate(
@@ -235,6 +242,28 @@ function groupByAndAggregate(
     });
   });
   return ret;
+}
+
+function isDatasetLockedForWrite(dataset) {
+  // assumes states are sorted in descending order by timestamp
+  const datasetLatestState =
+    dataset.states && dataset.states.length > 0
+      ? dataset.states[0].state
+      : undefined;
+
+  let isLocked;
+  if (!dataset.is_duplicate) {
+    isLocked =
+      datasetLatestState === "OVERWRITE_IN_PROGRESS" ||
+      datasetLatestState === "ORIGINAL_DATASET_RESOURCES_PURGED";
+  } else {
+    isLocked =
+      datasetLatestState === "DUPLICATE_ACCEPTANCE_IN_PROGRESS" ||
+      datasetLatestState === "DUPLICATE_REJECTION_IN_PROGRESS" ||
+      datasetLatestState === "DUPLICATE_DATASET_RESOURCES_PURGED";
+  }
+
+  return datasetLatestState ? isLocked : undefined;
 }
 
 export {
@@ -257,4 +286,5 @@ export {
   setIntersection,
   union,
   validateEmail,
+  isDatasetLockedForWrite,
 };

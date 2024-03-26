@@ -49,6 +49,7 @@
                 color="primary"
                 round
                 class="self-end"
+                :disabled="props.controlsDisabled"
               />
             </a>
           </va-list-item-section>
@@ -82,6 +83,7 @@
               round
               class="self-end"
               @click="initiate_dataset_download"
+              :disabled="props.controlsDisabled"
             />
           </va-list-item-section>
         </va-list-item>
@@ -143,6 +145,10 @@ const props = defineProps({
   dataset: {
     type: Object,
     default: () => ({}),
+  },
+  controlsDisabled: {
+    type: Boolean,
+    default: false,
   },
 });
 // const emit = defineEmits(["update"]);
