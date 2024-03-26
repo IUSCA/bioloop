@@ -92,6 +92,7 @@
               launch_modal.visible = true;
               launch_modal.selected = rowData;
             "
+            :disabled="isDatasetLockedForWrite(rowData)"
           >
             <i-mdi-rocket-launch />
           </va-button>
@@ -117,6 +118,7 @@
               delete_modal.visible = true;
               delete_modal.selected = rowData;
             "
+            :disabled="isDatasetLockedForWrite(rowData)"
           >
             <i-mdi-delete />
           </va-button>
@@ -196,7 +198,7 @@ import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import { dayjs, formatBytes } from "@/services/utils";
+import { dayjs, formatBytes, isDatasetLockedForWrite } from "@/services/utils";
 import _ from "lodash";
 
 const router = useRouter();
@@ -373,10 +375,8 @@ function fetch_datasets(query = {}, updatePageCount = true) {
   return DatasetService.getAll({
     ...datasets_retrieval_query.value,
     ...query,
-    ...(props.dtype === "DUPLICATE" && {
-      include_action_items: true,
-      include_states: true,
-    }),
+    include_action_items: true,
+    include_states: true,
   })
     .then((res) => {
       datasets.value = res.data.datasets;

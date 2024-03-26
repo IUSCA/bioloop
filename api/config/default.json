@@ -125,7 +125,7 @@
       ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT", "DUPLICATE"],
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
   "DATASET_ACTION_ITEM_TYPES": {
     "DUPLICATE_DATASET_INGESTION": "DUPLICATE_DATASET_INGESTION"
   }

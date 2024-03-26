@@ -66,16 +66,18 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
     },
   });
 
+  const locked_error = 'Dataset is locked and cannot be written to';
+
   const latestState = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
   if (!dataset.is_deleted) {
     if (!dataset.is_duplicate) {
       if (latestState === 'OVERWRITE_IN_PROGRESS' || latestState === 'ORIGINAL_DATASET_RESOURCES_PURGED') {
-        return next(createError.InternalServerError('Dataset is locked and cannot be written to'));
+        return next(createError.InternalServerError(locked_error));
       }
     } else if (latestState === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS'
         || latestState === 'DUPLICATE_REJECTION_IN_PROGRESS'
         || latestState === 'DUPLICATE_DATASET_RESOURCES_PURGED') {
-      return next(createError.InternalServerError('Dataset is locked and cannot be written to'));
+      return next(createError.InternalServerError(locked_error));
     }
   }
 

@@ -123,7 +123,9 @@
                   <!-- Stage Action Button-->
                   <va-button
                     v-if="dataset.archive_path"
-                    :disabled="is_stage_pending || dataset.is_staged"
+                    :disabled="
+                      is_stage_pending || dataset.is_staged || isDatasetLocked
+                    "
                     color="primary"
                     border-color="primary"
                     preset="secondary"
@@ -136,7 +138,10 @@
 
                   <!-- Delete Action Button-->
                   <va-button
-                    v-if="config.enable_delete_archive && dataset.archive_path"
+                    v-if="
+                      (config.enable_delete_archive && dataset.archive_path) ||
+                      isDatasetLocked
+                    "
                     :disabled="is_delete_pending"
                     color="danger"
                     border-color="danger"
@@ -173,6 +178,7 @@
                   class="flex-initial"
                   preset="plain"
                   @click="delete_archive_modal.visible = false"
+                  :disabled="isDatasetLocked"
                 >
                   <i-mdi-close />
                 </va-button>
@@ -238,7 +244,10 @@
                 />
                 <va-button
                   color="danger"
-                  :disabled="delete_archive_modal.input !== dataset.name"
+                  :disabled="
+                    delete_archive_modal.input !== dataset.name ||
+                    isDatasetLocked
+                  "
                   @click="delete_archive"
                 >
                   Delete this dataset

@@ -20,7 +20,10 @@
 
       <!-- filter -->
       <div class="flex-none flex items-center justify-center">
-        <DuplicateDatasetFiltersGroup @update="updateFiltersGroupQuery" />
+        <DatasetFiltersGroup
+          :filters="['deleted']"
+          @update="updateFiltersGroupQuery"
+        />
       </div>
     </div>
 

@@ -38,7 +38,6 @@ config = {
     'dataset_types': {
         'RAW_DATA': 'RAW_DATA',
         'DATA_PRODUCT': 'DATA_PRODUCT',
-        'DUPLICATE': 'DUPLICATE'
     },
     'paths': {
         'scratch': '/path/to/scratch',

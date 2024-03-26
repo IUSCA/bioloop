@@ -226,7 +226,6 @@ const checks3 = [{
 
 const duplicateDataset = {
   name: 'PCM230306',
-  type: 'DUPLICATE',
   num_directories: 35,
   num_files: 116,
   du_size: 160612542453,
@@ -245,7 +244,6 @@ const duplicateDataset = {
 async function main() {
   await prisma.dataset.deleteMany({
     where: {
-      type: 'DUPLICATE',
       name: 'PCM230306',
     },
   });
