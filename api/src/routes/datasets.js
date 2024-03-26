@@ -1197,7 +1197,7 @@ router.post(
     try {
       duplicate_dataset = await datasetService.initiate_duplicate_rejection(
         {
-          id: req.params.id,
+          duplicate_dataset_id: req.params.id,
           rejected_by_id: req.user.id,
         },
       );
