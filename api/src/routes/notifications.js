@@ -1,7 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const {
-  query, param, body,
+  query, param,
 } = require('express-validator');
 const _ = require('lodash/fp');
 

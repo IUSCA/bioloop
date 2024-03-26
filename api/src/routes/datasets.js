@@ -52,6 +52,34 @@ const prisma = new PrismaClient(
 //   });
 // });
 
+const dataset_state_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: req.params.id,
+    },
+    include: {
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+    },
+  });
+
+  const latestState = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  if (!dataset.is_deleted) {
+    if (!dataset.is_duplicate) {
+      if (latestState === 'OVERWRITE_IN_PROGRESS' || latestState === 'ORIGINAL_DATASET_RESOURCES_PURGED') {
+        return next(createError.InternalServerError('Dataset is locked and cannot be written to'));
+      }
+    } else if (latestState === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' || latestState === 'DUPLICATE_DATASET_RESOURCES_PURGED') {
+      return next(createError.InternalServerError('Dataset is locked and cannot be written to'));
+    }
+  }
+
+  next();
+});
+
 router.post(
   '/:id/action-item',
   isPermittedTo('update'),
@@ -61,6 +89,7 @@ router.post(
     body('notification').isObject(),
     body('next_state').escape().notEmpty().optional(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // next_state - optional param provided if dataset's state needs to be
     // updated as part of the action item's creation
@@ -121,6 +150,7 @@ router.patch(
     body('ingestion_checks').optional().isArray(),
     body('next_state').optional().escape().notEmpty(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // next_state - optional param provided if dataset's state needs to be
     // updated as part of the action item's creation
@@ -589,6 +619,7 @@ router.post(
     body('notification').optional().isObject(),
     body('next_state').optional().escape().notEmpty(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a duplicate dataset.'
@@ -601,11 +632,15 @@ router.post(
 
     console.dir(req.body, { depth: null });
 
-    const originalDataset = await prisma.dataset.findUnique({
+    const dataset = await prisma.dataset.findUnique({
       where: {
         id: req.params.id,
       },
     });
+
+    if (dataset.is_duplicate) {
+      return next(createError.BadRequest(`Dataset ${dataset.name} is a duplicate of another dataset.`));
+    }
 
     if (!action_item) {
       action_item = {
@@ -620,7 +655,7 @@ router.post(
       notification = {
         type: 'INCOMING_DUPLICATE_DATASET',
         label: 'Duplicate Dataset Created',
-        text: `Dataset ${originalDataset.name} has been duplicated. Click here to review.`,
+        text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
       };
     }
 
@@ -629,8 +664,8 @@ router.post(
     // check if other duplicates for this dataset exist in the system already
     const existingDuplicates = await prisma.dataset.findMany({
       where: {
-        name: originalDataset.name,
-        type: originalDataset.type,
+        name: dataset.name,
+        type: dataset.type,
         is_deleted: false,
         is_duplicate: true,
       },
@@ -665,10 +700,10 @@ router.post(
 
     createQueries.push(prisma.dataset.create({
       data: {
-        name: originalDataset.name,
-        type: originalDataset.type,
-        description: originalDataset.description,
-        origin_path: originalDataset.origin_path,
+        name: dataset.name,
+        type: dataset.type,
+        description: dataset.description,
+        origin_path: dataset.origin_path,
         is_duplicate: true,
         version: existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined,
         duplicated_from: {
@@ -703,29 +738,7 @@ router.post(
       },
     }));
 
-    // createQueries.push(prisma.dataset_action_item.create({
-    //   data: {
-    //     type: action_item.type,
-    //     title: action_item.title,
-    //     text: action_item.text,
-    //     to: action_item.to,
-    //     metadata: action_item.metadata,
-    //     // dataset: {
-    //     //   connect: {
-    //     //     id: req.params.id,
-    //     //   },
-    //     // },
-    //     ingestion_checks: {
-    //       createMany: { data: action_item.ingestion_checks },
-    //     },
-    //     notification: {
-    //       create: notification,
-    //     },
-    //   },
-    // }));
-
     const [createdDuplicate] = await prisma.$transaction(createQueries);
-
     res.json(createdDuplicate);
   }),
 );
@@ -742,6 +755,7 @@ router.patch(
       .customSanitizer(BigInt),
     body('bundle').optional().isObject(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Modify dataset.'
@@ -793,6 +807,7 @@ router.post(
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
@@ -816,6 +831,7 @@ router.post(
     param('id').isInt().toInt(),
     body('workflow_id').notEmpty(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate workflow_id to a dataset
@@ -837,6 +853,7 @@ router.post(
     param('id').isInt().toInt(),
     body('state').notEmpty(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Add new state to a dataset
@@ -858,6 +875,7 @@ router.delete(
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = starts a delete archive workflow which will
@@ -905,6 +923,7 @@ router.post(
   ]),
   workflow_access_check,
   dataset_access_check,
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
@@ -971,6 +990,7 @@ router.put(
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_state_check,
   multer({ storage: report_storage }).single('report'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -1031,6 +1051,7 @@ router.get(
     query('file_id').isInt().toInt().optional(),
   ]),
   dataset_access_check,
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
@@ -1119,13 +1140,14 @@ router.get(
 );
 
 router.post(
-  '/duplicates/:duplicate_dataset_id/workflow/accept_duplicate_dataset',
+  '/duplicates/:id/workflow/accept_duplicate_dataset',
   accessControl('workflow')('create'),
   validate([
-    param('duplicate_dataset_id').isInt().toInt(),
+    param('id').isInt().toInt(),
   ]),
   workflow_access_check,
   dataset_delete_check,
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Replace an existing dataset with its duplicate
@@ -1136,7 +1158,7 @@ router.post(
     try {
       duplicate_dataset = await datasetService.initiate_duplicate_acceptance(
         {
-          duplicate_dataset_id: req.params.duplicate_dataset_id,
+          duplicate_dataset_id: req.params.id,
           accepted_by_id: req.user.id,
         },
       );
@@ -1157,13 +1179,14 @@ router.post(
 );
 
 router.post(
-  '/duplicates/:duplicate_dataset_id/workflow/reject_duplicate_dataset',
+  '/duplicates/:id/workflow/reject_duplicate_dataset',
   accessControl('workflow')('create'),
   validate([
-    param('duplicate_dataset_id').isInt().toInt(),
+    param('id').isInt().toInt(),
   ]),
   workflow_access_check,
   dataset_delete_check,
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Replace an existing dataset with its duplicate
@@ -1174,7 +1197,7 @@ router.post(
     try {
       duplicate_dataset = await datasetService.initiate_duplicate_rejection(
         {
-          duplicate_dataset_id: req.params.duplicate_dataset_id,
+          id: req.params.id,
           rejected_by_id: req.user.id,
         },
       );
@@ -1198,16 +1221,17 @@ router.post(
 );
 
 router.patch(
-  '/duplicates/:duplicate_dataset_id/accept/complete',
+  '/duplicates/:id/accept/complete',
   validate([
-    param('duplicate_dataset_id').isInt().toInt(),
+    param('id').isInt().toInt(),
   ]),
   dataset_delete_check,
+  // state middleware is omitted here - the service method validates state
   asyncHandler(async (req, res, next) => {
     let updatedDataset;
     try {
       updatedDataset = await datasetService.complete_duplicate_acceptance({
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        duplicate_dataset_id: req.params.id,
       });
     } catch (e) {
       console.log(e);
@@ -1224,6 +1248,7 @@ router.patch(
     param('duplicate_dataset_id').isInt().toInt(),
   ]),
   dataset_delete_check,
+  // state middleware is omitted here - the service method validates state
   asyncHandler(async (req, res, next) => {
     let updatedDataset;
     try {
