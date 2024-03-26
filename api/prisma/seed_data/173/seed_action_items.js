@@ -37,7 +37,7 @@ const checks1 = [{
   label: 'Checksums Validated',
   report: {
     conflicting_checksum_files: [{
-      name: 'checksum_error_file_1',
+      name: 'Bliss-v11.14--OFFICIAL-20210507-2246_x86_64_k-google-5.10.32-lts-pledge-xanmod_m-20.1.10_pie-x86_dgc-p9.0-11.13_ld-p9.0-x86_dg-_dh-blueprint_pie-x86_w45_2020_mg-p9.0-x86.iso',
       path: '/path/to/checksum_error_file_1',
       original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
       duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
@@ -54,10 +54,10 @@ const checks1 = [{
   passed: false,
   report: {
     missing_files: [{
-      name: 'missing_file_1',
-      path: '/path/to/missing_file_1',
+      name: 'Bliss-v11.14--OFFICIAL-20210507-2246_x86_64_k-google-5.10.32-lts-pledge-xanmod_m-20.1.10_pie-x86_dgc-p9.0-11.13_ld-p9.0-x86_dg-_dh-blueprint_pie-x86_w45_2020_mg-p9.0-x86.iso',
+      path: '/path/to/Bliss-v11.14--OFFICIAL-20210507-2246_x86_64_k-google-5.10.32-lts-pledge-xanmod_m-20.1.10_pie-x86_dgc-p9.0-11.13_ld-p9.0-x86_dg-_dh-blueprint_pie-x86_w45_2020_mg-p9.0-x86.iso',
     }, {
-      name: 'missing_file_2',
+      name: 'Bliss-v11.14--OFFICIAL-20210507-2246_x86_64_k-google-5.10.32-lts-pledge-xanmod_m-20.1.10_pie-x86_dgc-p9.0-11.13_ld-p9.0-x86_dg-_dh-blueprint_pie-x86_w45_2020_mg-p9.0-x86.iso',
       path: '/path/to/missing_file_1',
     }],
   },
@@ -67,11 +67,11 @@ const checks1 = [{
   passed: false,
   report: {
     missing_files: [{
-      name: 'missing_file_1',
+      name: 'Bliss-v11.14--OFFICIAL-20210507-2246_x86_64_k-google-5.10.32-lts-pledge-xanmod_m-20.1.10_pie-x86_dgc-p9.0-11.13_ld-p9.0-x86_dg-_dh-blueprint_pie-x86_w45_2020_mg-p9.0-x86.iso',
       path: '/path/to/missing_file_1',
     }, {
-      name: 'missing_file_2',
-      path: '/path/to/missing_file_1',
+      name: 'Bliss-v11.14--OFFICIAL-20210507-2246_x86_64_k-google-5.10.32-lts-pledge-xanmod_m-20.1.10_pie-x86_dgc-p9.0-11.13_ld-p9.0-x86_dg-_dh-blueprint_pie-x86_w45_2020_mg-p9.0-x86.iso',
+      path: '/path/to/Bliss-v11.14--OFFICIAL-20210507-2246_x86_64_k-google-5.10.32-lts-pledge-xanmod_m-20.1.10_pie-x86_dgc-p9.0-11.13_ld-p9.0-x86_dg-_dh-blueprint_pie-x86_w45_2020_mg-p9.0-x86.iso',
     }],
   },
 }];

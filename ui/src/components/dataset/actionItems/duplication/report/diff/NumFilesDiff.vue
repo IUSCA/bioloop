@@ -1,5 +1,5 @@
 <template>
-  <va-alert :color="alertColor" class="mb-3">
+  <va-alert :color="alertColor" class="mb-2">
     {{ alertText }}
   </va-alert>
   <!--  <va-card>-->

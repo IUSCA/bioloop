@@ -81,7 +81,12 @@ const columns = ref([
     key: "check",
     label: "Check",
   },
-  { key: "passed", label: "Status", thAlign: "center", tdAlign: "center" },
+  {
+    key: "passed",
+    label: "Status",
+    thAlign: "right",
+    tdAlign: "right",
+  },
   { key: "actions", thAlign: "right", tdAlign: "right" },
 ]);
 
