@@ -130,7 +130,6 @@ function acceptDuplicate(duplicate_dataset_id) {
       duplicate_dataset_id: duplicate_dataset_id,
     })
     .then(() => {
-      emit("initiated-resolution");
       toast.success("Acceptance of duplicate dataset has been initiated");
     })
     .catch((err) => {
@@ -138,6 +137,7 @@ function acceptDuplicate(duplicate_dataset_id) {
       toast.error(err);
     })
     .finally(() => {
+      emit("initiated-resolution");
       initiatingResolution.value = false;
       fetchActiveNotifications();
     });
@@ -150,7 +150,6 @@ function rejectDuplicate(duplicate_dataset_id) {
       duplicate_dataset_id: duplicate_dataset_id,
     })
     .then(() => {
-      emit("initiated-resolution");
       toast.success("Rejection of duplicate dataset has been initiated");
     })
     .catch((err) => {
@@ -158,6 +157,7 @@ function rejectDuplicate(duplicate_dataset_id) {
       toast.error(err);
     })
     .finally(() => {
+      emit("initiated-resolution");
       initiatingResolution.value = false;
       fetchActiveNotifications();
     });
