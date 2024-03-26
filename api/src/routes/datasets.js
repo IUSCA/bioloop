@@ -72,7 +72,9 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
       if (latestState === 'OVERWRITE_IN_PROGRESS' || latestState === 'ORIGINAL_DATASET_RESOURCES_PURGED') {
         return next(createError.InternalServerError('Dataset is locked and cannot be written to'));
       }
-    } else if (latestState === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' || latestState === 'DUPLICATE_DATASET_RESOURCES_PURGED') {
+    } else if (latestState === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS'
+        || latestState === 'DUPLICATE_REJECTION_IN_PROGRESS'
+        || latestState === 'DUPLICATE_DATASET_RESOURCES_PURGED') {
       return next(createError.InternalServerError('Dataset is locked and cannot be written to'));
     }
   }
@@ -853,7 +855,6 @@ router.post(
     param('id').isInt().toInt(),
     body('state').notEmpty(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Add new state to a dataset
