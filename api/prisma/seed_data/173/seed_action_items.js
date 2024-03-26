@@ -39,13 +39,13 @@ const checks1 = [{
     conflicting_checksum_files: [{
       name: 'checksum_error_file_1',
       path: '/path/to/checksum_error_file_1',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_file_2',
       path: '/path/to/checksum_error_file_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }],
   },
 }, {
@@ -106,53 +106,53 @@ const checks2 = [{
     conflicting_checksum_files: [{
       name: 'checksum_error_file_1',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2.json',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }, {
       name: 'checksum_error_2',
       path: '/path/to/checksum_error_2',
-      original_md5: 'original_md5',
-      duplicate_md5: 'duplicate_md5',
+      original_md5: 'e5a58cee317f5b726869bb0293ca09e1',
+      duplicate_md5: 'bd866bf5f85a1052d14a12a7780dadc9',
     }],
   },
 }, {
@@ -251,7 +251,16 @@ async function main() {
   });
 
   const createdDuplicate = await prisma.dataset.create({
-    data: duplicateDataset,
+    data: {
+      ...duplicateDataset,
+      states: {
+        createMany: {
+          data: [
+            { state: 'DUPLICATE_READY' },
+          ],
+        },
+      },
+    },
   });
 
   const matchingDatasets = await prisma.dataset.findMany({

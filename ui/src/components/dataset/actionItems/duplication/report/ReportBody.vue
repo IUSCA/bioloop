@@ -1,7 +1,7 @@
 <template>
   <va-card>
     <va-card-title class="mt-1">
-      <span class="text-lg">Duplicate Analysis Report</span>
+      <span class="text-lg">{{ breakpoint.current }}</span>
     </va-card-title>
 
     <va-card-content>
@@ -49,7 +49,10 @@
             />
 
             <missing-files-diff
-              v-if="rowData.type === 'FILES_MISSING_FROM_ORIGINAL' || rowData.type === 'FILES_MISSING_FROM_DUPLICATE'"
+              v-if="
+                rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
+                rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
+              "
               :missing-files="rowData.report.missing_files"
               :check-type="rowData.type"
             >
@@ -62,6 +65,10 @@
 </template>
 
 <script setup>
+import { useBreakpoint } from "vuestic-ui";
+
+const breakpoint = useBreakpoint();
+
 const props = defineProps({
   actionItem: {
     type: Object,
