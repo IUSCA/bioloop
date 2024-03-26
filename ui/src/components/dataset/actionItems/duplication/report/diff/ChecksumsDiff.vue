@@ -18,6 +18,14 @@
             <span>{{ value }}</span>
           </div>
         </template>
+
+        <template #cell(original_md5)="{ value }">
+          <span class="text-sm">{{ value }}</span>
+        </template>
+
+        <template #cell(duplicate_md5)="{ value }">
+          <span class="text-sm">{{ value }}</span>
+        </template>
       </va-data-table>
     </va-scroll-container>
   </div>
@@ -53,14 +61,12 @@ const columns = [
     label: "Original Checksum",
     thAlign: "center",
     tdAlign: "center",
-    tdStyle: "text-sm",
   },
   {
     key: "duplicate_md5",
     label: "Incoming File Checksum",
     thAlign: "right",
     tdAlign: "right",
-    tdStyle: "text-sm",
   },
 ];
 </script>
