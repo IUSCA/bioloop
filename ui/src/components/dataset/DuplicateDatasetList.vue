@@ -85,7 +85,7 @@
                 router.push(actionItemURL(rowData));
               }
             "
-            :disabled="!isProcessed(rowData)"
+            :disabled="!isDuplicateReadyForProcessing(rowData)"
           >
             <i-mdi-compare-horizontal />
           </va-button>
@@ -283,10 +283,15 @@ const actionItemURL = (dataset) => {
     : "#";
 };
 
-const isProcessed = (dataset) => {
+const isDuplicateReadyForProcessing = (dataset) => {
   // sort states by timestamp (descending).
   const datasetLatestState = dataset.states[0].state;
-  return datasetLatestState === "DUPLICATE_READY";
+  const actionItem = dataset.action_items[0];
+  return (
+    actionItem.status === "CREATED" &&
+    actionItem.active &&
+    datasetLatestState === "DUPLICATE_READY"
+  );
 };
 
 onMounted(() => {
