@@ -5,6 +5,10 @@
     fixed-layout
     hide-default-actions
   >
+    <!-- The current dataset is an active dataset which has incoming duplicates,
+     or one that is currently being overwritten by a duplicate. -->
+    <DatasetOverwriteStateAlert :dataset="props.dataset" />
+
     <!-- The current dataset is being overwritten by another dataset -->
     <DatasetOverwriteInProgressStateAlert :dataset="props.dataset" />
 
@@ -34,7 +38,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of all files will use
-                {{ formatBytes(dataset.du_size) }} of bandwidth
+                {{ formatBytes(props.dataset.du_size) }} of bandwidth
               </span>
             </va-list-item-label>
 
@@ -69,9 +73,9 @@
             <va-list-item-label>
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
-              <span v-if="Object.keys(dataset.bundle) > 0">
+              <span>
                 Transfer of file will use
-                {{ formatBytes(dataset.bundle.size) }} of bandwidth
+                {{ formatBytes(props.dataset.bundle?.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>
@@ -142,6 +146,7 @@ import statisticsService from "@/services/statistics";
 import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";
 import DatasetOverwriteInProgressStateAlert from "@/components/dataset/stateAlerts/DatasetOverwriteInProgressStateAlert.vue";
+import DatasetOverwriteStateAlert from "@/components/dataset/DatasetOverwriteStateAlert.vue";
 
 const props = defineProps({
   dataset: {
