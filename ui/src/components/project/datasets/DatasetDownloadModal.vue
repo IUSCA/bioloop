@@ -69,7 +69,7 @@
             <va-list-item-label>
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
-              <span class="">
+              <span v-if="Object.keys(dataset.bundle) > 0">
                 Transfer of file will use
                 {{ formatBytes(dataset.bundle.size) }} of bandwidth
               </span>
@@ -178,6 +178,8 @@ const log_data_access = () => {
     });
 };
 
+const retrigger_dataset_download = ref(false);
+
 const initiate_dataset_download = () => {
   datasetService
     .get_file_download_data({
@@ -194,6 +196,7 @@ const initiate_dataset_download = () => {
     .catch((err) => {
       console.error(err);
       toast.error("Unable to initiate dataset download");
+      retrigger_dataset_download.value = true;
     });
 };
 

@@ -146,7 +146,6 @@ def is_dataset_locked_for_writes(dataset: dict) -> tuple:
         (dataset['states'] is not None and len(dataset['states']) > 0) else \
         None
 
-    locked = None
     if dataset['is_deleted']:
         locked = True
     else:
