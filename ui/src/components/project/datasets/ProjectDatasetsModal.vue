@@ -75,6 +75,24 @@ const projectFormStore = useProjectFormStore();
 
 const visible = ref(false);
 
+const log = (state) => {
+  console.log(state);
+
+  console.log(`datasetsToAdd.length: ${datasetsToAdd.value.length}`);
+  console.log(`datasetsToRemove.length: ${datasetsToRemove.value.length}`);
+
+  console.log(`datasetsToAdd:`);
+  datasetsToAdd.value.forEach((ds) => {
+    console.dir(ds, { depth: null });
+  });
+  console.log(`datasetsToRemove:`);
+  datasetsToRemove.value.forEach((ds) => {
+    console.dir(ds, { depth: null });
+  });
+
+  console.log(`----------`);
+};
+
 const updateDatasetsToAdd = (datasets) => {
   datasets.forEach((d) => {
     // filter out datasets that are already associated with the project, or are already selected for a new association
@@ -85,7 +103,13 @@ const updateDatasetsToAdd = (datasets) => {
       datasetsToAdd.value.push(d);
     }
 
-    datasetsToRemove.value.splice(datasetsToRemove.value.indexOf(d), 1);
+    const removeIndex = datasetsToRemove.value.findIndex(
+      (ds) => ds.id === d.id,
+    );
+
+    if (removeIndex >= 0) {
+      datasetsToRemove.value.splice(removeIndex, 1);
+    }
   });
 };
 
@@ -94,7 +118,14 @@ const updateDatasetsToRemove = (datasets) => {
     if (!datasetsToRemove.value.find((ds) => ds.id === d.id)) {
       datasetsToRemove.value.push(d);
     }
-    datasetsToAdd.value.splice(datasetsToAdd.value.indexOf(d), 1);
+
+    const removeIndex = datasetsToAdd.value.findIndex((ds) => ds.id === d.id);
+    console.log(`removeIndex`);
+    console.log(removeIndex);
+
+    if (removeIndex >= 0) {
+      datasetsToAdd.value.splice(removeIndex, 1);
+    }
   });
 };
 
