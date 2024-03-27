@@ -14,7 +14,6 @@ from sca_rhythm.progress import Progress
 import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
-import workers.utils as utils
 from workers.exceptions import InspectionFailed
 from workers import exceptions as exc
 from workers.config import config
@@ -32,12 +31,25 @@ def accept(celery_task, duplicate_dataset_id, **kwargs):
         dataset_id=duplicate_dataset_id,
         include_duplications=True
     )
+
+    if not duplicate_being_accepted['is_duplicate']:
+        raise InspectionFailed(f"Dataset {duplicate_being_accepted['id']} is not a duplicate")
+    if duplicate_being_accepted['is_deleted']:
+        raise InspectionFailed(f"Dataset {duplicate_being_accepted['id']} is deleted")
+
     original_dataset = api.get_dataset(
         dataset_id=duplicate_being_accepted['duplicated_from']['original_dataset_id'],
     )
 
-    original_dataset_latest_state = original_dataset['states'][0]['state']
+    duplicate_dataset_latest_state = duplicate_being_accepted['states'][0]['state']
+    if (duplicate_dataset_latest_state != 'DUPLICATE_ACCEPTANCE_IN_PROGRESS'
+            and duplicate_dataset_latest_state != 'DUPLICATE_ACCEPTED'):
+        raise InspectionFailed(f"Expected duplicate dataset {duplicate_dataset_id} to be in "
+                               f"one of states DUPLICATE_ACCEPTANCE_IN_PROGRESS or "
+                               f"DUPLICATE_ACCEPTED, but current "
+                               f"state is {duplicate_dataset_latest_state}.")
 
+    original_dataset_latest_state = original_dataset['states'][0]['state']
     if (original_dataset_latest_state != 'ORIGINAL_DATASET_RESOURCES_PURGED'
             and original_dataset_latest_state != 'OVERWRITTEN'):
         raise InspectionFailed(f"Expected original dataset {original_dataset['id']} to be in "

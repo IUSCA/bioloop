@@ -57,6 +57,8 @@ def purge_original_dataset_resources(celery_task, duplicate_dataset_id, **kwargs
     from workers.tasks.purge_original_dataset_resources import purge as task_body
     try:
         return task_body(celery_task, duplicate_dataset_id, **kwargs)
+    except exc.InspectionFailed:
+        raise
     except Exception as e:
         raise exc.RetryableException(e)
 
@@ -69,6 +71,8 @@ def purge_duplicate_dataset_resources(celery_task, duplicate_dataset_id, **kwarg
     from workers.tasks.purge_duplicate_dataset_resources import purge as task_body
     try:
         return task_body(celery_task, duplicate_dataset_id, **kwargs)
+    except exc.InspectionFailed:
+        raise
     except Exception as e:
         raise exc.RetryableException(e)
 
@@ -81,6 +85,8 @@ def accept_duplicate(celery_task, duplicate_dataset_id, **kwargs):
     from workers.tasks.accept_duplicate import accept as task_body
     try:
         return task_body(celery_task, duplicate_dataset_id, **kwargs)
+    except exc.InspectionFailed:
+        raise
     except Exception as e:
         raise exc.RetryableException(e)
 
@@ -91,32 +97,6 @@ def accept_duplicate(celery_task, duplicate_dataset_id, **kwargs):
           default_retry_delay=5)
 def reject_duplicate(celery_task, duplicate_dataset_id, **kwargs):
     from workers.tasks.reject_duplicate import reject as task_body
-    try:
-        return task_body(celery_task, duplicate_dataset_id, **kwargs)
-    except Exception as e:
-        raise exc.RetryableException(e)
-
-
-@app.task(base=WorkflowTask, bind=True, name='reject_incoming_duplicate',
-          autoretry_for=(exc.RetryableException,),
-          max_retries=3,
-          default_retry_delay=5)
-def compare_duplicate_datasets(celery_task, duplicate_dataset_id, **kwargs):
-    from workers.tasks.reject_incoming_duplicate import handle_rejection as task_body
-    try:
-        return task_body(celery_task, duplicate_dataset_id, **kwargs)
-    except exc.InspectionFailed:
-        raise
-    except Exception as e:
-        raise exc.RetryableException(e)
-
-
-@app.task(base=WorkflowTask, bind=True, name='compare_duplicate_datasets',
-          autoretry_for=(exc.RetryableException,),
-          max_retries=3,
-          default_retry_delay=5)
-def compare_duplicate_datasets(celery_task, duplicate_dataset_id, **kwargs):
-    from workers.tasks.compare_duplicate_datasets import compare_datasets as task_body
     try:
         return task_body(celery_task, duplicate_dataset_id, **kwargs)
     except exc.InspectionFailed:

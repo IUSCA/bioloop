@@ -47,6 +47,11 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
 
     original_dataset = api.get_dataset(dataset_id=matching_original_dataset['id'], bundle=True)
 
+    if original_dataset['is_duplicate']:
+        raise InspectionFailed(f"Dataset {original_dataset['id']} is a duplicate.")
+    if original_dataset['is_deleted']:
+        raise InspectionFailed(f"Dataset {original_dataset['id']} is deleted.")
+
     original_dataset_latest_state = original_dataset['states'][0]['state']
     # check for state ORIGINAL_DATASET_RESOURCES_PURGED as well, in case this step failed after
     # the database write that updates the state to ORIGINAL_DATASET_RESOURCES_PURGED.

@@ -32,6 +32,11 @@ def reject(celery_task, duplicate_dataset_id, **kwargs):
         dataset_id=duplicate_dataset_id,
     )
 
+    if not duplicate_dataset['is_duplicate']:
+        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
+    if duplicate_dataset['is_deleted']:
+        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is deleted")
+
     duplicate_dataset_latest_state = duplicate_dataset['states'][0]['state']
 
     # allow step to be resumed after even if it has already reached the next

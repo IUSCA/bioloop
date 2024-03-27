@@ -97,6 +97,12 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+
+    locked, latest_state = utils.is_dataset_locked_for_writes(dataset)
+    if locked:
+        raise Exception(f"Dataset {dataset['id']} is locked for writes. Dataset's current "
+                        f"state is {latest_state}.")
+
     staged_path, alias, bundle_alias = stage(celery_task, dataset)
 
     update_data = {

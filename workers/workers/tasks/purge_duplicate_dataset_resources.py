@@ -29,6 +29,12 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
 
     incoming_duplicate_dataset = api.get_dataset(dataset_id=duplicate_dataset_id,
                                                  include_duplications=True)
+
+    if not incoming_duplicate_dataset['is_duplicate']:
+        raise InspectionFailed(f"Dataset {duplicate_dataset_id} is not a duplicate")
+    if incoming_duplicate_dataset['is_deleted']:
+        raise InspectionFailed(f"Dataset {duplicate_dataset_id} is deleted")
+
     matching_datasets = api.get_all_datasets(
         name=incoming_duplicate_dataset['name'],
         dataset_type=incoming_duplicate_dataset['type'],
