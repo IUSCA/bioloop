@@ -245,17 +245,18 @@ function groupByAndAggregate(
 }
 
 function isDatasetLockedForWrite(dataset) {
-  // assumes states are sorted in descending order by timestamp
+  if (!dataset) {
+    return undefined;
+  }
+
   const datasetLatestState =
-    dataset.states && dataset.states.length > 0
+    dataset.states && dataset.states?.length > 0
       ? dataset.states[0].state
       : undefined;
 
   let isLocked;
   if (!dataset.is_duplicate) {
-    isLocked =
-      datasetLatestState === "OVERWRITE_IN_PROGRESS" ||
-      datasetLatestState === "ORIGINAL_DATASET_RESOURCES_PURGED";
+    isLocked = isDatasetBeingOverwritten(dataset);
   } else {
     isLocked =
       datasetLatestState === "DUPLICATE_ACCEPTANCE_IN_PROGRESS" ||
@@ -264,6 +265,23 @@ function isDatasetLockedForWrite(dataset) {
   }
 
   return datasetLatestState ? isLocked : undefined;
+}
+
+function isDatasetBeingOverwritten(dataset) {
+  if (!dataset) {
+    return undefined;
+  }
+
+  // assumes states are sorted in descending order by timestamp
+  const datasetLatestState =
+    dataset.states && dataset.states?.length > 0
+      ? dataset.states[0].state
+      : undefined;
+
+  return (
+    datasetLatestState === "OVERWRITE_IN_PROGRESS" ||
+    datasetLatestState === "ORIGINAL_DATASET_RESOURCES_PURGED"
+  );
 }
 
 export {
@@ -287,4 +305,5 @@ export {
   union,
   validateEmail,
   isDatasetLockedForWrite,
+  isDatasetBeingOverwritten,
 };

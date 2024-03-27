@@ -84,6 +84,7 @@
           color="info"
           icon="cloud_sync"
           @click="openModalToStageProject(rowData)"
+          :disabled="isDatasetLockedForWrite(rowData)"
         />
       </div>
     </template>
@@ -150,7 +151,7 @@ import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
-import { formatBytes } from "@/services/utils";
+import { formatBytes, isDatasetLockedForWrite } from "@/services/utils";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { HalfCircleSpinner } from "epic-spinners";
@@ -248,7 +249,10 @@ const fetch_project_datasets = () => {
   projectService
     .getDatasets({
       id: props.project.id,
-      params: datasets_retrieval_query.value,
+      params: {
+        ...datasets_retrieval_query.value,
+        include_dataset_states: true,
+      },
     })
     .then((res) => {
       projectDatasets.value = res.data.datasets;

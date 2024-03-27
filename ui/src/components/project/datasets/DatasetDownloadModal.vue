@@ -5,6 +5,9 @@
     fixed-layout
     hide-default-actions
   >
+    <!-- The current dataset is being overwritten by another dataset -->
+    <DatasetOverwriteInProgressStateAlert :dataset="props.dataset" />
+
     <div class="">
       <!-- sm:w-full -->
       <span class="va-text-secondary">
@@ -49,7 +52,6 @@
                 color="primary"
                 round
                 class="self-end"
-                :disabled="props.controlsDisabled"
               />
             </a>
           </va-list-item-section>
@@ -83,7 +85,6 @@
               round
               class="self-end"
               @click="initiate_dataset_download"
-              :disabled="props.controlsDisabled"
             />
           </va-list-item-section>
         </va-list-item>
@@ -140,15 +141,12 @@ import datasetService from "@/services/dataset";
 import statisticsService from "@/services/statistics";
 import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";
+import DatasetOverwriteInProgressStateAlert from "@/components/dataset/stateAlerts/DatasetOverwriteInProgressStateAlert.vue";
 
 const props = defineProps({
   dataset: {
     type: Object,
     default: () => ({}),
-  },
-  controlsDisabled: {
-    type: Boolean,
-    default: false,
   },
 });
 // const emit = defineEmits(["update"]);

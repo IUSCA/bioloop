@@ -5,6 +5,15 @@
         <!-- BreadCrumbs Navigation / Search Filters -->
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
         <div class="h-[40px] flex items-center">
+          <!--
+          The current dataset is an active dataset which has incoming duplicates,
+          or one that is currently being overwritten by a duplicate.
+          -->
+          <DatasetOverwriteStateAlert :dataset="dataset" />
+
+          <!-- The current dataset is being overwritten by another dataset -->
+          <DatasetOverwriteInProgressStateAlert :dataset="dataset" />
+
           <FileBrowserSearchFilters
             v-if="isInSearchMode"
             class="flex-none"
@@ -39,6 +48,7 @@ import datasetService from "@/services/dataset";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
 import { filterByValues } from "@/services/utils";
+import DatasetOverwriteStateAlert from "@/components/dataset/DatasetOverwriteStateAlert.vue";
 
 const store = useFileBrowserStore();
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
@@ -48,6 +58,7 @@ const props = defineProps({
   showDownload: Boolean,
 });
 
+const dataset = ref(null);
 const data_loading = ref(false);
 const fileList = ref([]);
 const searchResults = ref([]);
@@ -57,10 +68,18 @@ const files = computed(() => {
 
 function get_file_list(path) {
   data_loading.value = true;
-  datasetService
-    .list_files({ id: props.datasetId, basepath: path })
-    .then((res) => {
-      fileList.value = res.data;
+  Promise.all([
+    datasetService.getById({
+      id: props.datasetId,
+      include_duplications: true,
+      include_states: true,
+      include_action_items: true,
+    }),
+    datasetService.list_files({ id: props.datasetId, basepath: path }),
+  ])
+    .then((responses) => {
+      dataset.value = responses[0].data;
+      fileList.value = responses[1].data;
     })
     .catch((err) => {
       console.error(err);

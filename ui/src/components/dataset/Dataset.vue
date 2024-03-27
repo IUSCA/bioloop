@@ -28,11 +28,7 @@
                 <!-- file browser -->
 
                 <!-- Download Modal -->
-                <DatasetDownloadModal
-                  ref="downloadModal"
-                  :dataset="dataset"
-                  :controls-disabled="isDatasetLocked"
-                />
+                <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
                   :disabled="!dataset.is_staged || isDatasetLocked"
                   class="flex-initial"
