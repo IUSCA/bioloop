@@ -71,7 +71,8 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
     if rejected_dataset_latest_state == 'DUPLICATE_REJECTION_IN_PROGRESS':
         if (duplicate_dataset_origin_path is not None and
                 duplicate_dataset_origin_path.exists()):
-            shutil.rmtree(duplicate_dataset_origin_path)
+            pass
+            # shutil.rmtree(duplicate_dataset_origin_path)
 
     if rejected_dataset_latest_state != 'DUPLICATE_DATASET_RESOURCES_PURGED':
         api.add_state_to_dataset(dataset_id=duplicate_dataset_id, state='DUPLICATE_DATASET_RESOURCES_PURGED')

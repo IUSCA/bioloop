@@ -72,7 +72,8 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
         if original_dataset_staged_path is not None and original_dataset_staged_path.exists():
             shutil.rmtree(original_dataset_staged_path)
         if original_dataset_bundle_path is not None and original_dataset_bundle_path.exists():
-            original_dataset_bundle_path.unlink()
+            pass
+            # original_dataset_bundle_path.unlink()
 
     if original_dataset_latest_state != 'ORIGINAL_DATASET_RESOURCES_PURGED':
         api.add_state_to_dataset(dataset_id=original_dataset['id'], state='ORIGINAL_DATASET_RESOURCES_PURGED')
