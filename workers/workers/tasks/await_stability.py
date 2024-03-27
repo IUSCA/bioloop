@@ -6,10 +6,10 @@ from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 
-import utils
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
+from workers.utils import is_dataset_locked_for_writes
 
 logger = get_task_logger(__name__)
 
@@ -45,7 +45,7 @@ def update_progress(celery_task, mod_time, delta):
 def await_stability(celery_task, dataset_id, wait_seconds: int = None, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
 
-    locked, latest_state = utils.is_dataset_locked_for_writes(dataset)
+    locked, latest_state = is_dataset_locked_for_writes(dataset)
     if locked:
         raise Exception(f"Dataset {dataset['id']} is locked for writes. Dataset's current "
                         f"state is {latest_state}.")
