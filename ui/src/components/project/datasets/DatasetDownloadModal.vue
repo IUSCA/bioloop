@@ -38,7 +38,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of all files will use
-                {{ formatBytes(dataset.du_size) }} of bandwidth
+                {{ formatBytes(props.dataset.du_size) }} of bandwidth
               </span>
             </va-list-item-label>
 
@@ -73,9 +73,9 @@
             <va-list-item-label>
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
-              <span v-if="Object.keys(dataset.bundle) > 0">
+              <span>
                 Transfer of file will use
-                {{ formatBytes(dataset.bundle.size) }} of bandwidth
+                {{ formatBytes(props.dataset.bundle?.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>
