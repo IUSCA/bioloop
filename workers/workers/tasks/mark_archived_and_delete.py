@@ -2,13 +2,13 @@ import shutil
 from pathlib import Path
 
 from workers import api
-from workers.utils import is_dataset_locked_for_writes
+import workers.utils as utils
 
 
 def mark_archived_and_delete(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
 
-    locked, latest_state = is_dataset_locked_for_writes(dataset)
+    locked, latest_state = utils.is_dataset_locked_for_writes(dataset)
     if locked:
         raise Exception(f"Dataset {dataset['id']} is locked for writes. Dataset's current "
                         f"state is {latest_state}.")
