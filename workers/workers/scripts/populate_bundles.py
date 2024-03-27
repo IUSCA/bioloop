@@ -14,8 +14,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def download_and_validate(dataset: dict) -> bool:
+def download_and_validate(dataset: dict, reevaluate_bundle_metadata: bool = False) -> bool:
     logger.info(f'processing dataset {dataset["id"]}')
+
+    if not reevaluate_bundle_metadata:
+        logger.info(f'dataset {dataset["id"]} won"t be overwritten')
+        return True
 
     bundle_download_path = Path(f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar')
     # delete pre-existing bundles to force reevaluation of bundle metadata in the archive step
@@ -35,7 +39,6 @@ def download_and_validate(dataset: dict) -> bool:
 
     logger.info(f'downloaded dataset {dataset["id"]}')
 
-    sda_archive_checksum = None
     try:
         sda_archive_checksum = sda.get_hash(dataset['archive_path'])
         logger.info(f'sda_archive_checksum: {sda_archive_checksum}')
@@ -55,14 +58,17 @@ def download_and_validate(dataset: dict) -> bool:
 
 
 def main():
-    archived_datasets = api.get_all_datasets(archived=True)
+    archived_datasets = api.get_all_datasets(archived=True, bundle=True)
 
     unprocessed = []
     for dataset in archived_datasets:
         download_validated = False
 
         try:
-            download_validated = download_and_validate(dataset)
+            download_validated = download_and_validate(
+                dataset,
+                reevaluate_bundle_metadata=dataset['bundle'] is None
+            )
             logger.info(f'download_validated for {dataset["id"]}: {download_validated}')
         except Exception as err:
             logger.info(f'failed to download or validate dataset {dataset["id"]}')
