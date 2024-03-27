@@ -29,6 +29,7 @@ def download_and_validate(dataset: dict, reevaluate_bundle_metadata: bool = Fals
 
     sda_archive_path = dataset['archive_path']
     try:
+        logger.info(f'downloading dataset {dataset["id"]}')
         wf_utils.download_file_from_sda(sda_file_path=sda_archive_path,
                                         local_file_path=bundle_download_path,
                                         celery_task=None)
