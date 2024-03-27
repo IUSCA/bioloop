@@ -75,24 +75,6 @@ const projectFormStore = useProjectFormStore();
 
 const visible = ref(false);
 
-const log = (state) => {
-  console.log(state);
-
-  console.log(`datasetsToAdd.length: ${datasetsToAdd.value.length}`);
-  console.log(`datasetsToRemove.length: ${datasetsToRemove.value.length}`);
-
-  console.log(`datasetsToAdd:`);
-  datasetsToAdd.value.forEach((ds) => {
-    console.dir(ds, { depth: null });
-  });
-  console.log(`datasetsToRemove:`);
-  datasetsToRemove.value.forEach((ds) => {
-    console.dir(ds, { depth: null });
-  });
-
-  console.log(`----------`);
-};
-
 const updateDatasetsToAdd = (datasets) => {
   datasets.forEach((d) => {
     // filter out datasets that are already associated with the project, or are already selected for a new association
