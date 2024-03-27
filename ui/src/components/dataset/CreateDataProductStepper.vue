@@ -524,6 +524,9 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
+  // persist token in store
+  await auth.onFileUpload(fileDetails.name);
+
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
   const fileLogId = uploadLog.value.files.find((e) => e.md5 === checksum)?.id;
@@ -534,6 +537,9 @@ const uploadFile = async (fileDetails) => {
   } else {
     console.log(`Upload of file ${fileDetails.name} failed`);
   }
+
+  // clear token from store
+  auth.postFileUpload();
 
   fileDetails.uploadStatus = uploaded
     ? config.upload_status.UPLOADED
@@ -664,16 +670,8 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  const tokenResponse = await uploadService.getToken(dataProductName);
+  const tokenResponse = await auth.onUpload(dataProductName);
   const uploadToken = tokenResponse.data.accessToken;
-
-  console.log(`tokenResponse.data`);
-  console.log(tokenResponse.data);
-  // debugger;
-  console.log("uploadToken");
-  console.dir(uploadToken, { depth: null });
-
-  auth.setUploadToken(uploadToken);
 
   await evaluateChecksums(filesNotUploaded.value);
 

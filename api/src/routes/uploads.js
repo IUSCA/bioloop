@@ -7,7 +7,7 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 
-router.get(
+router.post(
   '/token/:file_name',
   isPermittedTo('create'),
   asyncHandler(async (req, res) => {

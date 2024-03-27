@@ -8,7 +8,7 @@ import uploadService from "@/services/uploads";
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
-  const uploadTokens = ref(useLocalStorage("uploadTokens", {}));
+  const uploadToken = ref(useLocalStorage("uploadToken", {}));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
@@ -35,37 +35,15 @@ export const useAuthStore = defineStore("auth", () => {
     refreshTokenBeforeExpiry();
   }
 
-  async function onUpload(fileName) {
-    const tokenResponse = await uploadService.getToken(fileName);
-    uploadTokens.value = tokenResponse.data.accessToken;
+  function onUploadTokenRefresh({ data, filename }) {
+    console.log("onUploadTokenRefresh:");
 
-    refreshUploadTokenBeforeExpiry();
-  }
+    uploadToken.value = data.accessToken;
 
-  function refreshUploadTokenBeforeExpiry() {
-    // idempotent method - will not create a timeout if one already exists
-    if (!refreshUploadTokenTimer) {
-      // timer is not running
-      try {
-        const payload = jwtDecode(uploadTokens.value);
-        const expiresAt = new Date(payload.exp * 1000);
-        const now = new Date();
-        if (now < expiresAt) {
-          // token is still alive
-          const delay =
-            expiresAt - now - config.refreshTMinusSeconds.uploadToken * 1000;
-          console.log(
-            "auth store: refreshUploadTokenBeforeExpiry: trigerring refreshToken in ",
-            delay / 1000,
-            "seconds",
-          );
-          refreshUploadTokenTimer = setTimeout(refreshToken, delay);
-        }
-        // else - do nothing, navigation guard will redirect to /auth
-      } catch (err) {
-        console.error("Errored trying to decode access token", err);
-      }
-    }
+    console.log("uploadToken");
+    console.dir(uploadToken, { depth: null });
+    console.log("--------------");
+    refreshUploadTokenBeforeExpiry(filename);
   }
 
   function onLogout() {
@@ -119,6 +97,43 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  function refreshUploadTokenBeforeExpiry(filename) {
+    // idempotent method - will not create a timeout if one already exists
+    console.log("refreshUploadTokenBeforeExpiry:");
+    if (!refreshUploadTokenTimer) {
+      console.log(
+        "auth store: refreshUploadTokenBeforeExpiry: trigerring refreshToken",
+      );
+      // timer is not running
+      try {
+        console.log("auth store: refreshUploadTokenBeforeExpiry: uploadTOken");
+        console.dir(uploadToken, { depth: null });
+
+        const payload = jwtDecode(uploadToken.value);
+        const expiresAt = new Date(payload.exp * 1000);
+        const now = new Date();
+        if (now < expiresAt) {
+          // token is still alive
+          const delay =
+            expiresAt - now - config.refreshTMinusSeconds.uploadToken * 1000;
+          console.log(
+            "auth store: refreshUploadTokenBeforeExpiry: trigerring refreshToken in ",
+            delay / 1000,
+            "seconds",
+          );
+          // todo - will this cause uploads to fail while the token is being refreshed?
+          refreshUploadTokenTimer = setTimeout(() => {
+            refreshUploadToken(filename);
+          }, delay);
+        }
+        // else - do nothing, navigation guard will redirect to /auth
+      } catch (err) {
+        console.error("Errored trying to decode access token", err);
+      }
+    }
+    console.log("--------------");
+  }
+
   function refreshToken() {
     console.log("refreshing token");
     refreshTokenTimer = null; // reset timer state
@@ -132,17 +147,35 @@ export const useAuthStore = defineStore("auth", () => {
       });
   }
 
-  function refreshUploadToken() {
+  function refreshUploadToken(filename) {
     console.log("refreshing upload token");
-    refreshTokenTimer = null; // reset timer state
-    authService
-      .refreshToken()
+    refreshUploadTokenTimer = null; // reset timer state
+    uploadService
+      .getToken(filename)
       .then((res) => {
-        if (res.data) onLogin(res.data);
+        if (res.data) onUploadTokenRefresh({ filename, data: res.data });
       })
       .catch((err) => {
-        console.error("Unable to refresh token", err);
+        console.error("Unable to refresh upload token", err);
       });
+  }
+
+  async function onFileUpload(filename) {
+    const tokenResponse = await uploadService.getToken(filename);
+    uploadToken.value = tokenResponse.data.accessToken;
+
+    console.log(`tokenResponse.data`);
+    console.log(tokenResponse.data);
+    // debugger;
+    console.log("uploadToken");
+    console.dir(uploadToken, { depth: null });
+
+    refreshUploadTokenBeforeExpiry(filename);
+    console.log("--------------");
+  }
+
+  function postFileUpload() {
+    uploadToken.value = {};
   }
 
   // Check for roles
@@ -187,7 +220,8 @@ export const useAuthStore = defineStore("auth", () => {
     canAdmin,
     setTheme,
     getTheme,
-    setUploadToken,
+    onFileUpload,
+    postFileUpload,
   };
 });
 
