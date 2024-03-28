@@ -245,8 +245,9 @@ function groupByAndAggregate(
 }
 
 function isDatasetLockedForWrite(dataset) {
+  // Assume dataset is locked if it's current state can't be determined
   if (!dataset) {
-    return undefined;
+    return true;
   }
 
   const datasetLatestState =
@@ -264,7 +265,6 @@ function isDatasetLockedForWrite(dataset) {
       datasetLatestState === "DUPLICATE_DATASET_RESOURCES_PURGED";
   }
 
-  // Assume dataset is locked if it's current state can't be determined
   return datasetLatestState ? isLocked : true;
 }
 
@@ -297,14 +297,12 @@ export {
   formatBytes,
   groupBy,
   groupByAndAggregate,
-  initials,
-  isLiveToken,
+  initials, isDatasetBeingOverwritten, isDatasetLockedForWrite, isLiveToken,
   lxor,
   mapValues,
   maybePluralize,
   setIntersection,
   union,
-  validateEmail,
-  isDatasetLockedForWrite,
-  isDatasetBeingOverwritten,
+  validateEmail
 };
+
