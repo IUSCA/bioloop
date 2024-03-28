@@ -1,7 +1,7 @@
 <template>
   <va-modal
     v-model="visible"
-    title="Data Access Options"
+    :title="breakpoint.current"
     fixed-layout
     hide-default-actions
   >
@@ -144,6 +144,9 @@ import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";
 import DatasetOverwriteInProgressStateAlert from "@/components/dataset/alerts/OverwriteInProgressAlert.vue";
 import DatasetOverwriteStateAlert from "@/components/dataset/alerts/DuplicatedByAlerts.vue";
+import { useBreakpoint } from "vuestic-ui";
+
+const breakpoint = useBreakpoints();
 
 const props = defineProps({
   dataset: {

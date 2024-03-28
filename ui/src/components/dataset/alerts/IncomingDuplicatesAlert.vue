@@ -5,17 +5,19 @@
   >
     <div class="flex items-center">
       <div class="flex-auto">This dataset has incoming duplicates.</div>
-    </div>
 
-    <va-button
-      @click="
-        () => {
-          router.push(`/datasets/${dataset.id}`);
-        }
-      "
-    >
-      Review
-    </va-button>
+      <div class="flex-none">
+        <va-button
+          @click="
+            () => {
+              router.push(`/datasets/${dataset.id}`);
+            }
+          "
+        >
+          Review
+        </va-button>
+      </div>
+    </div>
   </va-alert>
 
   <OverwriteInProgressAlert :dataset="dataset" />

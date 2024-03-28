@@ -40,7 +40,7 @@
             }
           "
         >
-          Accept/Reject duplicate <i-mdi-arrow-right-bold-box-outline />
+          Accept/Reject duplicate
         </va-button>
       </div>
     </va-alert>
