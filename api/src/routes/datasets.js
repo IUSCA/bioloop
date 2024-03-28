@@ -1165,10 +1165,6 @@ router.post(
           accepted_by_id: req.user.id,
         },
       );
-
-      if (true) {
-        throw new Error('test error');
-      }
     } catch (err) {
       console.log(err);
       return next(createError.BadRequest(err.message));
