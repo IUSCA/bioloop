@@ -4,6 +4,7 @@
     @select="handleSelect"
     @remove="handleRemove"
     :column-widths="props.columnWidths"
+    :selection-limit="props.selectionLimit"
   />
 </template>
 
@@ -18,6 +19,10 @@ const props = defineProps({
   columnWidths: {
     type: Object,
     required: true,
+  },
+  datasetSelectionLimit: {
+    type: Number,
+    required: false,
   },
 });
 

@@ -47,7 +47,11 @@
                     resetSearchSelections();
                   }
                 "
-                :disabled="searchResultSelections.length === 0 || props.loading"
+                :disabled="
+                  searchResultSelections.length === 0 ||
+                  props.loading ||
+                  !canSelectMoreResults
+                "
               >
                 Add
                 {{
@@ -82,9 +86,19 @@
                 v-model="searchResultSelections"
                 :items="props.searchResults"
                 :columns="_searchResultColumns"
-                selectable
+                :selectable="!props.selectionLimit || props.selectionLimit > 1"
                 select-mode="multiple"
               >
+                <template #headerPrepend>
+                  <tr v-if="props.selectionLimit">
+                    <th colspan="6">
+                      <span
+                        >Select upto {{ props.selectionLimit }} dataset</span
+                      >
+                    </th>
+                  </tr>
+                </template>
+
                 <!-- dynamically generated templates for displaying columns of the search results table -->
                 <template
                   v-for="(templateName, colIndex) in _searchResultColumns
@@ -119,7 +133,9 @@
                     preset="primary"
                     @click="addOrRemove(rowData)"
                     :disabled="
-                      searchResultSelections.length > 0 || props.loading
+                      searchResultSelections.length > 0 ||
+                      props.loading ||
+                      !canSelectMoreResults
                     "
                   >
                   </va-button>
@@ -170,7 +186,7 @@
             </div>
 
             <va-chip outline>
-              {{ props.selectedResults.length }} results
+              {{ maybePluralize(props.selectedResults.length, "selection") }}
             </va-chip>
           </div>
         </div>
@@ -185,9 +201,16 @@
               :items="props.selectedResults"
               :columns="_selectedResultColumns"
               virtual-scroller
-              selectable
+              :selectable="!props.selectionLimit || props.selectionLimit > 1"
               select-mode="multiple"
             >
+              <template #headerPrepend>
+                <!-- h-6 makes sure that both tables are vertically aligned if `props.selectionLimit` is true -->
+                <tr v-if="props.selectionLimit" class="h-6">
+                  <th colspan="6"></th>
+                </tr>
+              </template>
+
               <!-- dynamically generated templates for displaying columns of the selected results table  -->
               <template
                 v-for="(templateName, colIndex) in _selectedResultColumns
@@ -237,11 +260,16 @@
 
 <script setup>
 import _ from "lodash";
+import { maybePluralize } from "@/services/utils";
 
 const props = defineProps({
   placeholder: {
     type: String,
     default: () => "Type to search",
+  },
+  selectionLimit: {
+    type: Number,
+    required: false,
   },
   searchResults: {
     type: Array,
@@ -308,6 +336,12 @@ const emit = defineEmits([
   "update:searchTerm",
   "scroll-end",
 ]);
+
+const canSelectMoreResults = computed(() => {
+  return props.selectionLimit
+    ? (props.selectedResults?.length || 0) < props.selectionLimit
+    : true;
+});
 
 const infiniteScrollTarget_search = ref(null);
 

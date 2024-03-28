@@ -5,7 +5,10 @@
     :selected-results="props.selectedResults"
     :search-result-count="totalResultCount"
     placeholder="Search Datasets by name"
-    selected-label="Datasets to assign"
+    :selected-label="
+      `${maybePluralize(props.selectionLimit, 'Dataset', undefined, false)}` +
+      ' to assign'
+    "
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
@@ -18,6 +21,7 @@
         checkboxes.dataProduct = false;
       }
     "
+    :selection-limit="props.selectionLimit"
   >
     <template #filters>
       <va-button-dropdown
@@ -43,7 +47,7 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
-import { formatBytes, lxor } from "@/services/utils";
+import { formatBytes, lxor, maybePluralize } from "@/services/utils";
 import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
 import _ from "lodash";
@@ -55,6 +59,10 @@ const props = defineProps({
   selectedResults: {
     type: Array,
     default: () => [],
+  },
+  selectionLimit: {
+    type: Number,
+    required: false,
   },
   columnWidths: {
     type: Object,

@@ -37,6 +37,7 @@
         <ProjectDatasetsForm
           :selected-results="selectedDatasets"
           :column-widths="columnWidths"
+          :selection-limit="1"
         />
       </template>
 
