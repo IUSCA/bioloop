@@ -138,7 +138,7 @@
                       (config.enable_delete_archive && dataset.archive_path) ||
                       isDatasetLocked
                     "
-                    :disabled="is_delete_pending"
+                    :disabled="is_delete_pending || isDatasetLocked"
                     color="danger"
                     border-color="danger"
                     class="flex-initial"
