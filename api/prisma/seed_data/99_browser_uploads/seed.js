@@ -15,7 +15,7 @@ if (['production'].includes(config.get('mode'))) {
 }
 
 async function main() {
-  console.log('Creating dataset file types...');
+  console.log('Creating dataset file ');
 
   await prisma.dataset_file_type.createMany({
     data: [
