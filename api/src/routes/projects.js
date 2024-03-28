@@ -145,6 +145,7 @@ router.get(
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
     query('include_dataset_states').toBoolean().optional(),
+    query('include_dataset_duplications').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -201,6 +202,7 @@ router.get(
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...(req.query.include_dataset_states && datasetService.INCLUDE_STATES),
+        ...(req.query.include_duplications && datasetService.DUPLICATION_PROCESSING_INCLUSIONS),
         bundle: true,
       },
     };

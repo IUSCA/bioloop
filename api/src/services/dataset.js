@@ -745,13 +745,19 @@ async function validate_state_after_rejected_dataset_resource_purge(duplicate_da
 }
 
 const DUPLICATION_PROCESSING_INCLUSIONS = {
-  duplicated_from: true,
+  duplicated_from: {
+    original_dataset: true,
+    duplicate_dataset: true,
+  },
+  duplicated_by: {
+    original_dataset: true,
+    duplicate_dataset: true,
+  },
   states: {
     orderBy: {
       timestamp: 'desc',
     },
   },
-  ...INCLUDE_WORKFLOWS,
 };
 
 /**
@@ -792,7 +798,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     where: {
       id: duplicate_dataset_id,
     },
-    include: DUPLICATION_PROCESSING_INCLUSIONS,
+    include: { ...DUPLICATION_PROCESSING_INCLUSIONS, ...INCLUDE_WORKFLOWS },
   }));
 
   // acknowledge notification
@@ -1085,7 +1091,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
         },
       },
     },
-    include: DUPLICATION_PROCESSING_INCLUSIONS,
+    include: { ...DUPLICATION_PROCESSING_INCLUSIONS, ...INCLUDE_WORKFLOWS },
   }));
 
   // acknowledge notification
@@ -1254,7 +1260,7 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
     where: {
       id: duplicate_dataset_id,
     },
-    include: DUPLICATION_PROCESSING_INCLUSIONS,
+    include: { ...DUPLICATION_PROCESSING_INCLUSIONS, ...INCLUDE_WORKFLOWS },
   }));
 
   console.log('initiated rejection');
@@ -1361,7 +1367,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
         ? latest_rejected_duplicate_version + 1
         : undefined,
     },
-    include: DUPLICATION_PROCESSING_INCLUSIONS,
+    include: { ...DUPLICATION_PROCESSING_INCLUSIONS, ...INCLUDE_WORKFLOWS },
   }));
 
   // acknowledge notification
@@ -1416,6 +1422,7 @@ module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
+  DUPLICATION_PROCESSING_INCLUSIONS,
   get_dataset,
   create_workflow,
   create_filetree,
