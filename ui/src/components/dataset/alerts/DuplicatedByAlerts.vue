@@ -10,7 +10,7 @@
     <!-- First, handle cases where current dataset is active (not deleted) -->
 
     <!-- The current dataset is an active dataset which has incoming duplicates -->
-    <div v-if="isActiveDatasetWithIncomingDuplicates">
+    <div v-if="isActiveDatasetWithIncomingDuplicates(props.dataset)">
       <va-alert
         v-for="(duplicateDataset, index) in duplicateDatasets"
         color="warning"
@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { isDatasetBeingOverwritten } from "@/services/utils";
+import { isActiveDatasetWithIncomingDuplicates } from "@/services/utils";
 
 const router = useRouter();
 
@@ -63,55 +63,6 @@ const duplicateDatasets = computed(() =>
   gatherDatasetDuplicates(props.dataset),
 );
 
-const datasetState = computed(() => currentState(props.dataset));
-
-// whether this dataset has incoming duplicates which have not been accepted or
-// rejected by the system yet.
-const isActiveDatasetWithIncomingDuplicates = computed(
-  () =>
-    !props.dataset.is_duplicate &&
-    !props.dataset.is_deleted &&
-    hasActiveDuplicates(props.dataset) &&
-    [
-      "REGISTERED",
-      "READY",
-      "INSPECTED",
-      "ARCHIVED",
-      "FETCHED",
-      "STAGED",
-    ].includes(datasetState.value),
-);
-
-// whether this dataset was duplicated by another, and is currently undergoing
-// the process of being replaced by its duplicate.
-const isActiveDatasetBeingOverwritten = computed(() => {
-  return isDatasetBeingOverwritten(props.dataset);
-});
-
-const currentState = (dataset) => {
-  // assumes states are sorted by descending timestamp
-  return (dataset.states || []).length > 0 ? dataset.states[0].state : null;
-};
-
-// Returns the dataset that overwrote the current
-// dataset (via acceptance of a duplicate into the system)
-const overwrittenByDatasetId = (dataset) => {
-  if (!dataset || !dataset.duplicated_by) {
-    return undefined;
-  }
-
-  // When a dataset overwrites another, it's `is_duplicate` is changed from
-  // `true` to `false`
-  const duplicationLog = (dataset.duplicated_by || []).find(
-    (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
-  );
-
-  console.log(`duplicationLog.duplicate_dataset:`);
-  console.dir(duplicationLog.duplicate_dataset, { depth: null });
-
-  return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
-};
-
 const gatherDatasetDuplicates = (dataset) =>
   (dataset?.duplicated_by || [])
     .filter(
@@ -120,15 +71,6 @@ const gatherDatasetDuplicates = (dataset) =>
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
-
-const hasActiveDuplicates = (dataset) => {
-  return (
-    dataset.duplicated_by?.length > 0 &&
-    dataset.duplicated_by.some(
-      (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
-    )
-  );
-};
 
 // onMounted(() => {
 //   console.log("onMounted");

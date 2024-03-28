@@ -285,6 +285,44 @@ function isDatasetBeingOverwritten(dataset) {
   );
 }
 
+function datasetHasActiveDuplicates(dataset) {
+  return (
+    dataset?.duplicated_by?.length > 0 &&
+    dataset.duplicated_by.some(
+      (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
+    )
+  );
+}
+
+// whether this dataset has incoming duplicates which have not been accepted or
+// rejected by the system yet.
+function isActiveDatasetWithIncomingDuplicates(dataset) {
+  if (!dataset) {
+    return undefined;
+  }
+  const datasetState = datasetCurrentState(dataset);
+  return (
+    !dataset.is_duplicate &&
+    !dataset.is_deleted &&
+    datasetHasActiveDuplicates(dataset) &&
+    [
+      "REGISTERED",
+      "READY",
+      "INSPECTED",
+      "ARCHIVED",
+      "FETCHED",
+      "STAGED",
+    ].includes(datasetState)
+  );
+}
+
+function datasetCurrentState(dataset) {
+  // assumes states are sorted by descending timestamp
+  return (dataset?.states || []).length > 0
+    ? dataset.states[0].state
+    : undefined;
+}
+
 export {
   arrayEquals,
   capitalize,
@@ -297,12 +335,17 @@ export {
   formatBytes,
   groupBy,
   groupByAndAggregate,
-  initials, isDatasetBeingOverwritten, isDatasetLockedForWrite, isLiveToken,
+  initials,
+  isLiveToken,
   lxor,
   mapValues,
   maybePluralize,
   setIntersection,
   union,
-  validateEmail
+  validateEmail,
+  isDatasetBeingOverwritten,
+  isDatasetLockedForWrite,
+  isActiveDatasetWithIncomingDuplicates,
+  datasetHasActiveDuplicates,
+  datasetCurrentState,
 };
-

@@ -63,10 +63,10 @@
 
     <!-- The current dataset is an active dataset which has incoming duplicates,
      or one that is currently being overwritten by a duplicate. -->
-    <DatasetOverwriteStateAlert :dataset="props.dataset" />
+    <DuplicatedByAlerts :dataset="props.dataset" />
 
     <!-- The current dataset is being overwritten by another dataset -->
-    <DatasetOverwriteInProgressStateAlert :dataset="props.dataset" />
+    <OverwriteInProgressAlert :dataset="props.dataset" />
 
     <!-- The current dataset has been overwritten by another dataset -->
     <va-alert v-if="isInactiveOverwrittenDataset" color="danger">
@@ -109,8 +109,7 @@
 </template>
 
 <script setup>
-import DatasetOverwriteStateAlert from "@/components/dataset/DatasetOverwriteStateAlert.vue";
-import DatasetOverwriteInProgressStateAlert from "@/components/dataset/stateAlerts/DatasetOverwriteInProgressStateAlert.vue";
+import { datasetCurrentState } from "@/services/utils";
 
 const router = useRouter();
 
@@ -121,12 +120,7 @@ const props = defineProps({
   },
 });
 
-// Gather and sort all duplicates of the current dataset
-const duplicateDatasets = computed(() =>
-  gatherDatasetDuplicates(props.dataset),
-);
-
-const datasetState = computed(() => currentState(props.dataset));
+const datasetState = computed(() => datasetCurrentState(props.dataset));
 
 // whether this dataset is an active (not deleted) duplicate of another, whose
 // acceptance or rejection has not yet been initiated.
@@ -151,23 +145,6 @@ const isActiveDuplicateBeingAccepted = computed(() => {
   );
 });
 
-// whether this dataset has incoming duplicates which have not been accepted or
-// rejected by the system yet.
-const isActiveDatasetWithIncomingDuplicates = computed(
-  () =>
-    !props.dataset.is_duplicate &&
-    !props.dataset.is_deleted &&
-    hasActiveDuplicates(props.dataset) &&
-    [
-      "REGISTERED",
-      "READY",
-      "INSPECTED",
-      "ARCHIVED",
-      "FETCHED",
-      "STAGED",
-    ].includes(datasetState.value),
-);
-
 const isInactiveOverwrittenDataset = computed(() => {
   return (
     !props.dataset.is_duplicate &&
@@ -176,9 +153,6 @@ const isInactiveOverwrittenDataset = computed(() => {
   );
 });
 
-// todo change state DUPLICATE_REJECTION_IN_PROGRESS to
-// DUPLICATE_REJECTION_INITIATED whether this dataset was duplicated by another,
-// and is currently undergoing the process of being replaced by its duplicate.
 const isActiveDuplicateBeingRejected = computed(() => {
   return (
     datasetState.value === "DUPLICATE_REJECTION_IN_PROGRESS" ||
@@ -203,11 +177,6 @@ const isInactiveDataset = computed(() => {
   );
 });
 
-const currentState = (dataset) => {
-  // assumes states are sorted by descending timestamp
-  return (dataset.states || []).length > 0 ? dataset.states[0].state : null;
-};
-
 // Returns the dataset that overwrote the current
 // dataset (via acceptance of a duplicate into the system)
 const overwrittenByDatasetId = (dataset) => {
@@ -225,24 +194,6 @@ const overwrittenByDatasetId = (dataset) => {
   console.dir(duplicationLog.duplicate_dataset, { depth: null });
 
   return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
-};
-
-const gatherDatasetDuplicates = (dataset) =>
-  (dataset?.duplicated_by || [])
-    .filter(
-      (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
-    )
-    .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
-    // sort duplicates by version - most recent version first
-    .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
-
-const hasActiveDuplicates = (dataset) => {
-  return (
-    dataset.duplicated_by?.length > 0 &&
-    dataset.duplicated_by.some(
-      (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
-    )
-  );
 };
 
 onMounted(() => {

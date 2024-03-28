@@ -1,27 +1,22 @@
 <template>
-  <div>
-    <!--
+  <!--
    Shows important alerts regarding the dataset's state.
 
    Alerts are generated if this dataset is in either of the following states:
    1. Dataset is active and has been duplicated by another dataset.
    -->
 
-    <!-- First, handle cases where current dataset is active (not deleted) -->
+  <!-- First, handle cases where current dataset is active (not deleted) -->
 
-    <!-- The current dataset is an active dataset which has incoming duplicates -->
+  <!-- The current dataset is an active dataset which has incoming duplicates -->
 
-    <!-- The current dataset is an active dataset which is currently being overwritten by its duplicate. -->
-    <va-alert v-if="isActiveDatasetBeingOverwritten" color="warning">
-      This dataset is currently being overwritten by duplicate
-      <a :href="`/datasets/${overwrittenByDatasetId(props.dataset)}`">
-        #{{ overwrittenByDatasetId(props.dataset) }}
-      </a>
-    </va-alert>
-
-    <!-- Any of the following states (DUPLICATE_REJECTED, DELETED, OVERWRITTEN) will only be reached once
-    the current dataset has been deleted. -->
-  </div>
+  <!-- The current dataset is an active dataset which is currently being overwritten by its duplicate. -->
+  <va-alert v-if="isActiveDatasetBeingOverwritten" color="warning">
+    This dataset is currently being overwritten by duplicate
+    <a :href="`/datasets/${overwrittenByDatasetId(props.dataset)}`">
+      #{{ overwrittenByDatasetId(props.dataset) }}
+    </a>
+  </va-alert>
 </template>
 
 <script setup>

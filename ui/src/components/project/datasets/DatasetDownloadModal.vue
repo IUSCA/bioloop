@@ -7,10 +7,7 @@
   >
     <!-- The current dataset is an active dataset which has incoming duplicates,
      or one that is currently being overwritten by a duplicate. -->
-    <DatasetOverwriteStateAlert :dataset="props.dataset" />
-
-    <!-- The current dataset is being overwritten by another dataset -->
-    <DatasetOverwriteInProgressStateAlert :dataset="props.dataset" />
+    <IncomingDuplicatesAlert :dataset="props.dataset" />
 
     <div class="">
       <!-- sm:w-full -->
@@ -145,8 +142,8 @@ import datasetService from "@/services/dataset";
 import statisticsService from "@/services/statistics";
 import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";
-import DatasetOverwriteInProgressStateAlert from "@/components/dataset/stateAlerts/DatasetOverwriteInProgressStateAlert.vue";
-import DatasetOverwriteStateAlert from "@/components/dataset/DatasetOverwriteStateAlert.vue";
+import DatasetOverwriteInProgressStateAlert from "@/components/dataset/alerts/OverwriteInProgressAlert.vue";
+import DatasetOverwriteStateAlert from "@/components/dataset/alerts/DuplicatedByAlerts.vue";
 
 const props = defineProps({
   dataset: {
