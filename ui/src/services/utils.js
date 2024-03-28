@@ -264,7 +264,8 @@ function isDatasetLockedForWrite(dataset) {
       datasetLatestState === "DUPLICATE_DATASET_RESOURCES_PURGED";
   }
 
-  return datasetLatestState ? isLocked : undefined;
+  // Assume dataset is locked if it's current state can't be determined
+  return datasetLatestState ? isLocked : true;
 }
 
 function isDatasetBeingOverwritten(dataset) {
