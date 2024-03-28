@@ -186,7 +186,7 @@
             </div>
 
             <va-chip outline>
-              {{ maybePluralize(props.selectedResults.length, "selection") }}
+              {{ maybePluralize(props.selectedResults.length, "result") }}
             </va-chip>
           </div>
         </div>

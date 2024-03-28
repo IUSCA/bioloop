@@ -137,7 +137,7 @@ const selectedDatasets = computed(() => projectFormStore.datasets);
 
 const columnWidths = computed(() => {
   return {
-    name: breakpoint.xs || breakpoint.sm ? "230px" : "190px",
+    name: breakpoint.xs || breakpoint.sm ? "230px" : "243px",
     type: "130px",
     size: "100px",
     created_at: "105px",
