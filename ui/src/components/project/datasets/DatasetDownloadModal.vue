@@ -146,7 +146,7 @@ import DatasetOverwriteInProgressStateAlert from "@/components/dataset/alerts/Ov
 import DatasetOverwriteStateAlert from "@/components/dataset/alerts/DuplicatedByAlerts.vue";
 import { useBreakpoint } from "vuestic-ui";
 
-const breakpoint = useBreakpoints();
+const breakpoint = useBreakpoint();
 
 const props = defineProps({
   dataset: {
