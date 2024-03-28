@@ -252,6 +252,7 @@ const fetch_project_datasets = () => {
       params: {
         ...datasets_retrieval_query.value,
         include_dataset_states: true,
+        include_dataset_duplications: true,
       },
     })
     .then((res) => {
