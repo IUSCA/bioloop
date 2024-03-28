@@ -14,7 +14,7 @@
         }
       "
     >
-      Accept/Reject duplicate <i-mdi-arrow-right-bold-box-outline />
+      Review
     </va-button>
   </va-alert>
 
