@@ -4,6 +4,7 @@
     v-model="showModal"
     @before-close="clearModalInput"
     hide-default-actions
+    no-dismiss
   >
     <modal-header :dataset="associatedDataset"></modal-header>
 
