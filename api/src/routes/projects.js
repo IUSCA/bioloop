@@ -202,7 +202,7 @@ router.get(
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...(req.query.include_dataset_states && datasetService.INCLUDE_STATES),
-        ...(req.query.include_duplications && datasetService.DUPLICATION_PROCESSING_INCLUSIONS),
+        ...(req.query.include_dataset_duplications && datasetService.DUPLICATION_PROCESSING_INCLUSIONS),
         bundle: true,
       },
     };
