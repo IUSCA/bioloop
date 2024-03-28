@@ -142,8 +142,6 @@ import datasetService from "@/services/dataset";
 import statisticsService from "@/services/statistics";
 import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";
-import DatasetOverwriteInProgressStateAlert from "@/components/dataset/alerts/OverwriteInProgressAlert.vue";
-import DatasetOverwriteStateAlert from "@/components/dataset/alerts/DuplicatedByAlerts.vue";
 import { useBreakpoint } from "vuestic-ui";
 
 const breakpoint = useBreakpoint();

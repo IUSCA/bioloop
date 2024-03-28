@@ -35,4 +35,8 @@ const props = defineProps({
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.va-alert__content span {
+  width: 100%;
+}
+</style>
