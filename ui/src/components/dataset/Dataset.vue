@@ -1,6 +1,6 @@
 <template>
   <va-inner-loading :loading="loading">
-    <DuplicatedByAlerts :dataset="dataset" class="mb-2" />
+    <DuplicationAlerts :dataset="dataset" class="mb-2" />
     <!--    <DatasetActionsItemAlert :dataset="dataset" class="mb-2" />-->
 
     <!-- Content -->

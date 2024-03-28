@@ -9,10 +9,7 @@
           The current dataset is an active dataset which has incoming duplicates,
           or one that is currently being overwritten by a duplicate.
           -->
-          <DuplicatedByAlerts :dataset="dataset" />
-
-          <!-- The current dataset is being overwritten by another dataset -->
-          <OverwriteInProgressAlert :dataset="dataset" />
+          <DuplicationAlerts :dataset="dataset" />
 
           <FileBrowserSearchFilters
             v-if="isInSearchMode"
@@ -48,7 +45,6 @@ import datasetService from "@/services/dataset";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
 import { filterByValues } from "@/services/utils";
-import DatasetOverwriteStateAlert from "@/components/dataset/alerts/DuplicatedByAlerts.vue";
 
 const store = useFileBrowserStore();
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
