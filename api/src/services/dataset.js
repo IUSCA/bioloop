@@ -746,12 +746,16 @@ async function validate_state_after_rejected_dataset_resource_purge(duplicate_da
 
 const DUPLICATION_PROCESSING_INCLUSIONS = {
   duplicated_from: {
-    original_dataset: true,
-    duplicate_dataset: true,
+    include: {
+      original_dataset: true,
+      duplicate_dataset: true,
+    },
   },
   duplicated_by: {
-    original_dataset: true,
-    duplicate_dataset: true,
+    include: {
+      original_dataset: true,
+      duplicate_dataset: true,
+    },
   },
   states: {
     orderBy: {
