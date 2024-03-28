@@ -71,7 +71,7 @@ class DatasetService {
   }
 
   getDatasetFileTypes() {
-    return api.get("/datasets/dataset-file-types");
+    return api.get("/datasets/file-types");
   }
 
   getUploadLogs({ status = null, dataset_name = null } = {}) {
