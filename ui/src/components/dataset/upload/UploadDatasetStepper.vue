@@ -31,9 +31,9 @@
       </template>
 
       <template #step-content-0>
-        <va-input
-          label="Data Product Name"
-          placeholder="Name"
+        <DatasetNameInput
+          label="Dataset Name"
+          placeholder="Dataset Name"
           v-model="datasetName"
           class="w-full"
           :rules="[
@@ -61,9 +61,11 @@
           @file-type-created="
             (newFileType) => {
               // if a new File Type has already been created, remove it
-              const currentNewFileType = fileTypeList.find((e) => !e.id);
-              if (currentNewFileType) {
-                fileTypeList.pop();
+              const currentNewFileTypeIndex = fileTypeList.findIndex(
+                (e) => !e.id,
+              );
+              if (currentNewFileTypeIndex) {
+                fileTypeList.splice(currentNewFileTypeIndex, 1);
               }
               fileTypeList.push(newFileType);
             }
@@ -270,11 +272,13 @@ import { formatBytes } from "@/services/utils";
 import { useForm } from "vuestic-ui";
 import config from "@/config";
 import { useDatasetUploadFormStore } from "@/stores/datasetUploadForm";
+import { storeToRefs } from "pinia";
 
 const auth = useAuthStore();
 const formStore = useDatasetUploadFormStore();
 
 const { datasetName, fileType, sourceRawData } = formStore;
+const { validate } = storeToRefs(formStore);
 
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -354,10 +358,13 @@ const isSubmitEnabled = computed(() => {
   );
 });
 
-const { isValid, validate } = useForm("dataProductUploadForm");
+const {
+  isValid,
+  // , validate
+} = useForm("dataProductUploadForm");
 
 const isFormValid = () => {
-  validate();
+  // validate();
   return isValid.value;
 };
 

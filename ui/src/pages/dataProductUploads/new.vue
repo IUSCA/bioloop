@@ -10,7 +10,7 @@
 
 <script setup>
 import { useNavStore } from "@/stores/nav";
-import UploadDatasetStepper from "@/components/dataset/UploadDatasetStepper.vue";
+import UploadDatasetStepper from "@/components/dataset/upload/UploadDatasetStepper.vue";
 
 const nav = useNavStore();
 
