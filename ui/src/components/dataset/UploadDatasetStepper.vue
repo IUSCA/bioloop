@@ -34,7 +34,7 @@
         <va-input
           label="Data Product Name"
           placeholder="Name"
-          v-model="dataProductName"
+          v-model="datasetName"
           class="w-full"
           :rules="[
             (value) => {
@@ -56,7 +56,7 @@
 
       <template #step-content-1>
         <FileTypeSelect
-          v-model="fileTypeSelected"
+          v-model="fileType"
           :file-type-list="fileTypeList"
           @file-type-created="
             (newFileType) => {
@@ -74,7 +74,7 @@
       <template #step-content-2>
         <va-select
           name="raw_data"
-          v-model="rawDataSelected"
+          v-model="sourceRawData"
           v-model:search="rawDataSelected_search"
           autocomplete
           class="w-full raw_data_select"
@@ -193,17 +193,15 @@
                   </tr>
                   <tr>
                     <td>Data Product Name</td>
-                    <td>{{ dataProductName }}</td>
+                    <td>{{ datasetName }}</td>
                   </tr>
                   <tr>
                     <td>File Type</td>
                     <td>
                       <va-chip outline small class="mr-2">{{
-                        fileTypeSelected.name
+                        fileType.name
                       }}</va-chip>
-                      <va-chip outline small>{{
-                        fileTypeSelected.extension
-                      }}</va-chip>
+                      <va-chip outline small>{{ fileType.extension }}</va-chip>
                     </td>
                   </tr>
                   <tr>
@@ -211,10 +209,10 @@
                     <td>
                       <span>
                         <router-link
-                          :to="`/datasets/${rawDataSelected.id}`"
+                          :to="`/datasets/${sourceRawData.id}`"
                           target="_blank"
                         >
-                          {{ rawDataSelected.name }}
+                          {{ sourceRawData.name }}
                         </router-link>
                       </span>
                     </td>
@@ -271,8 +269,12 @@ import { useAuthStore } from "@/stores/auth";
 import { formatBytes } from "@/services/utils";
 import { useForm } from "vuestic-ui";
 import config from "@/config";
+import { useDatasetUploadFormStore } from "@/stores/datasetUploadForm";
 
 const auth = useAuthStore();
+const formStore = useDatasetUploadFormStore();
+
+const { datasetName, fileType, sourceRawData } = formStore;
 
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -307,10 +309,10 @@ const SUBMISSION_STATES = {
   UPLOADED: "Uploaded",
 };
 
-const dataProductName = ref("");
-const fileTypeSelected = ref();
+// const dataProductName = ref("");
+// const fileTypeSelected = ref();
 const fileTypeList = ref([]);
-const rawDataSelected = ref();
+// const rawDataSelected = ref();
 const rawDataSelected_search = ref("");
 const uploadLog = ref();
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
@@ -339,9 +341,9 @@ const noFilesSelected = computed(() => {
 const uploadCancelled = ref(false);
 const formData = computed(() => {
   return {
-    data_product_name: dataProductName.value,
-    source_dataset_id: rawDataSelected.value.id,
-    file_type: fileTypeSelected.value,
+    data_product_name: datasetName.value,
+    source_dataset_id: sourceRawData.value.id,
+    file_type: fileType.value,
   };
 });
 const isSubmitEnabled = computed(() => {
@@ -506,7 +508,7 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("total", blockCount);
     chunkData.append("index", i);
     chunkData.append("size", file.size);
-    chunkData.append("data_product_name", dataProductName.value);
+    chunkData.append("data_product_name", datasetName.value);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append("file", fileData);
 
@@ -669,7 +671,7 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  const tokenResponse = await auth.onUpload(dataProductName);
+  const tokenResponse = await auth.onUpload(datasetName);
   const uploadToken = tokenResponse.data.accessToken;
 
   await evaluateChecksums(filesNotUploaded.value);

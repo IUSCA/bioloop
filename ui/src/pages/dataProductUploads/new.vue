@@ -2,7 +2,7 @@
   <div class="w-full flex justify-center">
     <va-card class="md:max-w-2xl md:h-[calc(85vh)]">
       <va-card-content class="h-full">
-        <CreateDataProductStepper />
+        <UploadDatasetStepper />
       </va-card-content>
     </va-card>
   </div>
@@ -10,6 +10,7 @@
 
 <script setup>
 import { useNavStore } from "@/stores/nav";
+import UploadDatasetStepper from "@/components/dataset/UploadDatasetStepper.vue";
 
 const nav = useNavStore();
 
