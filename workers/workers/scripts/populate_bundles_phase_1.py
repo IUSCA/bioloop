@@ -81,13 +81,13 @@ class BundlePopulationManager:
         logger.info(f'found {len(matching_workflows)} matching workflows')
 
         for wf in matching_workflows:
-            logger.info(f'other matching wf created_at: {wf["created_at"]}')
+            logger.info(f"other matching wf: {wf['id']} : {wf['created_at']}")
 
         # assumes workflows are sorted descending by created_at
         current_workflow = matching_workflows[0] if len(matching_workflows) > 0 else None
 
-        logger.info('most recent workflow:')
-        logger.info(json.dumps(current_workflow, indent=4))
+        logger.info(f"most recent workflow: {current_workflow['id']} : {current_workflow['created_at']}")
+        # logger.info(json.dumps(current_workflow, indent=4))
 
         if current_workflow is None:
             logger.info(f'creating workflow for {dataset["id"]}')
