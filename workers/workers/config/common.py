@@ -77,10 +77,6 @@ config = {
         'sync_archived_bundles': {
             'steps': [
                 {
-                    'name': 'archive',
-                    'task': 'archive_dataset'
-                },
-                {
                     'name': 'stage',
                     'task': 'stage_dataset'
                 },
