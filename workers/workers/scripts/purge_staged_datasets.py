@@ -13,7 +13,7 @@ MAX_PURGES = config['stage']['purge']['max_purges']
 
 
 def main():
-    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'])
+    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'], bundle=True)
 
     if len(datasets) > MAX_PURGES:
         logger.warning(
@@ -26,9 +26,8 @@ def main():
     }
     for dataset in datasets[:MAX_PURGES]:
         try:
-            # staged_dataset_path.parent = the alias sub-directory
             staged_path = Path(dataset['staged_path'])
-            bundle_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
+            bundle_path = Path(f'{dataset["bundle"]["path"]}')
 
             if staged_path.exists():
                 shutil.rmtree(staged_path)

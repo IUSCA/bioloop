@@ -17,7 +17,6 @@ model dataset {
   num_files        Int?
   du_size          BigInt?
   size             BigInt?
-  bundle_size      BigInt?
   description      String?
   created_at       DateTime            @default(now()) @db.Timestamp(6)
   updated_at       DateTime            @default(now()) @updatedAt @db.Timestamp(6)
@@ -36,6 +35,7 @@ model dataset {
   projects         project_dataset[]
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
+  bundle           bundle?
   upload_log       upload_log?
 
   @@unique([name, type, is_deleted])
@@ -133,6 +133,17 @@ model dataset_state {
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 
   @@id([timestamp, dataset_id, state])
+}
+
+model bundle {
+  id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  name       String
+  path       String
+  size       BigInt?
+  md5        String
+  dataset_id Int      @unique
+  dataset    dataset  @relation(fields: [dataset_id], references: [id])
 }
 
 model data_access_log {

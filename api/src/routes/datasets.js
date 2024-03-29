@@ -10,6 +10,7 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 
 const config = require('config');
+
 // const logger = require('../services/logger');
 const path = require('path');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -200,6 +201,7 @@ router.get(
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
+    query('bundle').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -229,6 +231,7 @@ router.get(
         file_type: true,
         source_datasets: true,
         derived_datasets: true,
+        bundle: req.query.bundle || false,
       },
     };
 
@@ -310,6 +313,7 @@ router.get(
     query('last_task_run').toBoolean().default(false),
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
+    query('bundle').optional().toBoolean(),
     query('fetch_uploading_data_products').toBoolean().default(false),
     query('upload_log').toBoolean().default(false),
   ]),
@@ -325,6 +329,7 @@ router.get(
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
+      bundle: req.query.bundle || false,
       fetch_uploading_data_products: req.query.fetch_uploading_data_products,
       upload_log: req.query.upload_log,
     });
@@ -339,7 +344,6 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -391,8 +395,7 @@ router.patch(
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().bail()
-      .customSanitizer(BigInt),
+    body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -411,6 +414,15 @@ router.patch(
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
+
+    if (req.body.bundle) {
+      data.bundle = {
+        upsert: {
+          create: req.body.bundle,
+          update: req.body.bundle,
+        },
+      };
+    }
 
     const dataset = await prisma.dataset.update({
       where: {
@@ -699,12 +711,16 @@ router.get(
       where: {
         id: req.params.id,
       },
+      include: {
+        bundle: true,
+      },
     });
 
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${dataset.metadata.stage_alias}/${dataset.name}.tar`;
+        : `${dataset.metadata.bundle_alias}`;
+
       const download_token = await authService.get_download_token(download_file_path);
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));

@@ -40,11 +40,13 @@ config = {
         'RAW_DATA': {
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
+            'bundle': '/path/to/bundle/raw_data',
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
+            'bundle': '/path/to/bundle/data_products',
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
@@ -86,6 +88,26 @@ config = {
         'SUCCESS': 'SUCCESS'
     },
     'workflow_registry': {
+        'sync_archived_bundles': {
+            'steps': [
+                {
+                    'name': 'archive',
+                    'task': 'archive_dataset'
+                },
+                {
+                    'name': 'stage',
+                    'task': 'stage_dataset'
+                },
+                {
+                    'name': 'validate',
+                    'task': 'validate_dataset'
+                },
+                {
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download'
+                }
+            ]
+        },
         'integrated': {
             'steps': [
                 {
