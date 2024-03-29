@@ -90,7 +90,7 @@ class BundlePopulationManager:
         logger.info(f'found {len(matching_workflows)} matching workflows')
 
         for wf in matching_workflows:
-            logger.info(f'found workflow: {wf["_id"]} : {wf["created_at"]}')
+            logger.info(f'pausing workflow: {wf["_id"]} : {wf["created_at"]}')
             workflow = Workflow(celery_app=celery_app, workflow_id=wf['_id'])
             workflow.pause()
         #     logger.info(f"other matching wf: {wf['_id']} : {wf['created_at']}")
