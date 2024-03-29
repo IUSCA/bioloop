@@ -42,10 +42,10 @@ class BundlePopulationManager:
                     logger.info(f'failed to populate bundle for dataset {dataset["id"]}')
                     logger.info(err)
 
-            if bundle_metadata_populated:
-                self.run_or_resume_workflow(dataset)
-            else:
+            if not bundle_metadata_populated:
                 unprocessed_datasets.append(dataset['id'])
+
+        self.run_workflows(archived_datasets)
 
         logger.info(f'unpopulated datasets: {unprocessed_datasets}')
 
@@ -69,40 +69,53 @@ class BundlePopulationManager:
         logger.info(f'successfully finished populating dataset {dataset["id"]}')
         return True
 
-    def run_or_resume_workflow(self,
-                               dataset: dict,
-                               app_id: str = config['app_id']):
+    def run_workflows(self,
+                      datasets=None,
+                      app_id: str = config['app_id']):
+        if datasets is None:
+            datasets = []
+
         cursor = self.workflow_collection.find({
             'app_id': app_id,
             'name': 'sync_archived_bundles',
-        }).sort('created_at', DESCENDING)
+            'status': {
+                '$not': {
+                    '$in': ['SUCCESS']
+                }
+            }
+        })
+        # .sort('created_at', DESCENDING)
 
         matching_workflows = list(cursor)
         logger.info(f'found {len(matching_workflows)} matching workflows')
 
         for wf in matching_workflows:
-            logger.info(f"other matching wf: {wf['_id']} : {wf['created_at']}")
+            logger.info(f'found workflow: {wf["_id"]} : {wf["created_at"]}')
+            workflow = Workflow(celery_app=celery_app, workflow_id=wf['_id'])
+            workflow.pause()
+        #     logger.info(f"other matching wf: {wf['_id']} : {wf['created_at']}")
 
         # assumes workflows are sorted descending by created_at
-        current_workflow = matching_workflows[0] if len(matching_workflows) > 0 else None
+        # current_workflow = matching_workflows[0] if len(matching_workflows) > 0 else None
 
-        logger.info(f"most recent workflow: {current_workflow['_id']} : {current_workflow['created_at']}")
+        # logger.info(f"most recent workflow: {current_workflow['_id']} : {current_workflow['created_at']}")
         # logger.info(json.dumps(current_workflow, indent=4))
 
-        if current_workflow is None:
-            logger.info(f'creating workflow for {dataset["id"]}')
-            self.run_sync_bundle_workflow(dataset)
-        else:
-            logger.info(f'found running workflow for {dataset["id"]}')
-            wf_id = current_workflow['_id']
-            logger.info(f'wf_id: {wf_id}')
-            logger.info(f"status: {current_workflow['_status']}")
-            if wf_id is not None:
-                # check if status is FAILED/RUNNING
-                # order wfs by desc created_at, kill old ones?
-                wf = Workflow(celery_app=celery_app, workflow_id=wf_id)
-                logger.info(f'workflow {wf_id} can be resumed')
-                # wf.resume()
+        for ds in datasets:
+            logger.info(f'creating workflow for dataset {ds["id"]}')
+            self.run_sync_bundle_workflow(ds)
+
+        # else:
+        #     logger.info(f'found running workflow for {dataset["id"]}')
+        #     wf_id = current_workflow['_id']
+        #     logger.info(f'wf_id: {wf_id}')
+        #     logger.info(f"status: {current_workflow['_status']}")
+        #     if wf_id is not None:
+        #         # check if status is FAILED/RUNNING
+        #         # order wfs by desc created_at, kill old ones?
+        #         wf = Workflow(celery_app=celery_app, workflow_id=wf_id)
+        #         logger.info(f'workflow {wf_id} can be resumed')
+        #         wf.resume()
 
     def run_sync_bundle_workflow(self, dataset):
         dataset_id = dataset['id']
