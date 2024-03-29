@@ -8,7 +8,7 @@ import uploadService from "@/services/uploads";
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
-  const uploadToken = ref(useLocalStorage("uploadToken", {}));
+  const uploadToken = ref(useLocalStorage("uploadToken", ""));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;

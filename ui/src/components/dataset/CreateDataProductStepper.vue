@@ -55,11 +55,10 @@
       </template>
 
       <template #step-content-1>
-        <DataProductFileTypeSelect
+        <FileTypeSelect
           v-model="fileTypeSelected"
           :file-type-list="fileTypeList"
-          class="w-full"
-          @new-file-type-created="
+          @file-type-created="
             (newFileType) => {
               // if a new File Type has already been created, remove it
               const currentNewFileType = fileTypeList.find((e) => !e.id);

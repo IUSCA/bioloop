@@ -1,18 +1,14 @@
 <template>
+  <!--    :class="props.class"-->
   <va-select
-    :class="props.class"
-    :model-value="props.modelValue"
-    @update:model-value="(newVal) => $emit('update:modelValue', newVal)"
+    class="w-full"
+    v-model="_modelValue"
     label="File Type"
     placeholder="Select File Type"
     :options="props.fileTypeList"
     :text-by="(option) => option.name"
     :track-by="(option) => option"
-    :rules="[
-      (value) => {
-        return (value && value.name.length > 0) || 'File Type is required';
-      },
-    ]"
+    :rules="props.rules || defaultValidationRules"
   >
     <template #content="{ value }">
       <va-chip class="mr-2" key="name" size="small">
@@ -98,12 +94,28 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  class: {
-    type: String,
+  rules: {
+    type: Array,
+    required: false,
   },
 });
 
-const emit = defineEmits(["update:modelValue", "newFileTypeCreated"]);
+const defaultValidationRules = [
+  (value) => {
+    return (value && value.name?.length > 0) || "File Type is required";
+  },
+];
+
+const _modelValue = computed({
+  get() {
+    return props.modelValue;
+  },
+  set(newValue) {
+    emit("update:modelValue", newValue);
+  },
+});
+
+const emit = defineEmits(["update:modelValue", "fileTypeCreated"]);
 
 const { isValid, validate, reset } = useForm("createNewFileTypeForm");
 
@@ -151,7 +163,7 @@ const onModalOk = () => {
     extension: newFileTypeExtension.value,
   };
   emit("update:modelValue", newFileType);
-  emit("newFileTypeCreated", newFileType);
+  emit("fileTypeCreated", newFileType);
   // reset form
   resetModalFormState();
 };
