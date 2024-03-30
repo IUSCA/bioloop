@@ -55,7 +55,7 @@ class BundlePopulationManager:
             else:
                 processed_datasets.append(dataset)
 
-        raise Exception('test error')
+        # raise Exception('test error')
 
         self.run_workflows(processed_datasets)
 
