@@ -52,37 +52,17 @@ class BundlePopulationManager:
 
             if dataset['bundle'] is None and not bundle_metadata_populated:
                 unprocessed_datasets.append(dataset)
-            # else:
-            #     processed_datasets.append(dataset)
+            else:
+                processed_datasets.append(dataset)
 
         # raise Exception('test error')
 
         self.run_workflows(processed_datasets)
 
         unprocessed_datasets_ids = [dataset['id'] for dataset in unprocessed_datasets]
-        # processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
         logger.info(f'unpopulated datasets: {unprocessed_datasets_ids}')
-        # logger.info(f'processed datasets: {processed_datasets_ids}')
-
-    def populate_bundle_metadata(self, dataset: dict) -> bool:
-        logger.info(f'populating dataset {dataset["id"]}')
-
-        bundle_md5 = sda.get_hash(dataset['archive_path'])
-
-        bundle_metadata = {
-            'name': f'{dataset["name"]}.tar',
-            'path': f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar',
-            'size': dataset['bundle_size'],
-            'md5': bundle_md5,
-        }
-
-        update_data = {
-            'bundle': bundle_metadata
-        }
-        api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
-
-        logger.info(f'successfully finished populating dataset {dataset["id"]}')
-        return True
+        processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
+        logger.info(f'processed datasets: {processed_datasets_ids}')
 
     def run_workflows(self,
                       datasets=None,
@@ -128,6 +108,25 @@ class BundlePopulationManager:
         wf.start(dataset_id)
         logger.info(f'started sync_archived_bundles for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
 
+    def populate_bundle_metadata(self, dataset: dict) -> bool:
+        logger.info(f'populating dataset {dataset["id"]}')
+
+        bundle_md5 = sda.get_hash(dataset['archive_path'])
+
+        bundle_metadata = {
+            'name': f'{dataset["name"]}.tar',
+            'path': f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar',
+            'size': dataset['bundle_size'],
+            'md5': bundle_md5,
+        }
+
+        update_data = {
+            'bundle': bundle_metadata
+        }
+        api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
+
+        logger.info(f'successfully finished populating dataset {dataset["id"]}')
+        return True
 
 def main():
     manager = BundlePopulationManager()
