@@ -19,17 +19,20 @@ logger = logging.getLogger(__name__)
 
 class BundlePopulationManager:
     WORKFLOW_COLLECTION_NAME = 'workflow_meta'
+    TASK_COLLECTION_NAME = 'celery_taskmeta'
 
     def __init__(self):
         self.mongo_client = MongoClient(result_backend)
         self.celery_db = self.mongo_client.get_default_database()
         self.workflow_collection = self.celery_db[self.WORKFLOW_COLLECTION_NAME]
+        self.task_collection = self.celery_db[self.TASK_COLLECTION_NAME]
 
     def populate_bundles(self):
         archived_datasets = api.get_all_datasets(archived=True, bundle=True)
 
         processed_datasets = []
         unprocessed_datasets = []
+
         for dataset in archived_datasets:
             logger.info(f'processing dataset {dataset["id"]}')
 
@@ -38,12 +41,11 @@ class BundlePopulationManager:
                 'staged_path': None,
             }
             api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
-            logger.info("updated dataset to not staged")
+            logger.info("unstaged dataset")
 
             bundle_metadata_populated = False
             if dataset['bundle'] is None:
                 try:
-                    logger.info(f'will populate bundle for {dataset["id"]}')
                     bundle_metadata_populated = self.populate_bundle_metadata(dataset)
                     logger.info(f'bundle_metadata_populated for {dataset["id"]}: {bundle_metadata_populated}')
                 except Exception as err:
@@ -55,48 +57,19 @@ class BundlePopulationManager:
             else:
                 processed_datasets.append(dataset)
 
-        # raise Exception('test error')
-
         self.run_workflows(processed_datasets)
 
         unprocessed_datasets_ids = [dataset['id'] for dataset in unprocessed_datasets]
-        logger.info(f'unpopulated datasets: {unprocessed_datasets_ids}')
+        logger.info(f'unprocessed datasets: {unprocessed_datasets_ids}')
         processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
         logger.info(f'processed datasets: {processed_datasets_ids}')
 
-    def run_workflows(self,
-                      datasets=None,
-                      app_id: str = config['app_id']):
+    def run_workflows(self, datasets=None):
         logger.info(f'running workflows for {len(datasets)} datasets')
         if datasets is None:
             return
 
-        cursor = self.workflow_collection.find({
-            'app_id': app_id,
-            'name': 'sync_archived_bundles',
-            '_status': {
-                '$ne': 'SUCCESS'
-            }
-        })
-        # .sort('created_at', DESCENDING)
-
-        matching_workflows = list(cursor)
-        logger.info(f'found {len(matching_workflows)} matching workflows')
-
-        for wf in matching_workflows:
-            logger.info(f'pausing workflow {wf["_id"]},STATUS: {wf["_status"]}')
-            workflow = Workflow(celery_app=celery_app, workflow_id=wf['_id'])
-            workflow.pause()
-            logger.info(f'deleting workflow {wf["_id"]},STATUS: {wf["_status"]}')
-            self.workflow_collection.delete_one({'_id': wf['_id']})
-
-        #     logger.info(f"other matching wf: {wf['_id']} : {wf['created_at']}")
-
-        # assumes workflows are sorted descending by created_at
-        # current_workflow = matching_workflows[0] if len(matching_workflows) > 0 else None
-
-        # logger.info(f"most recent workflow: {current_workflow['_id']} : {current_workflow['created_at']}")
-        # logger.info(json.dumps(current_workflow, indent=4))
+        self.delete_pending_workflows(dry_run=True)
 
         for ds in datasets:
             logger.info(f'creating workflow for dataset {ds["id"]}')
@@ -111,18 +84,53 @@ class BundlePopulationManager:
         wf.start(dataset_id)
         logger.info(f'started sync_archived_bundles for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
 
+    def delete_pending_workflows(self, app_id: str = config['app_id'], dry_run=False):
+        cursor = self.workflow_collection.find({
+            'app_id': app_id,
+            'name': 'sync_archived_bundles',
+            '_status': {
+                '$ne': 'SUCCESS'
+            }
+        })
+
+        matching_workflows = list(cursor)
+        logger.info(f'found {len(matching_workflows)} matching workflows')
+
+        workflow_ids = [wf['_id'] for wf in matching_workflows]
+
+        logger.info(f'will delete {len(workflow_ids)} matching workflows')
+        if len(workflow_ids) and not dry_run:
+            self.workflow_collection.delete_many({'_id': {
+                '$in': workflow_ids
+            }})
+
+        # delete associated tasks
+        _task_ids = [task_run.get('task_id', None)
+                     for wf in matching_workflows
+                     for step in wf.get('steps', [])
+                     for task_run in step.get('task_runs', [])
+                     ]
+        task_ids = [t for t in _task_ids if t is not None]
+
+        logger.info(f'will delete {len(task_ids)} matching tasks')
+        if len(task_ids) and not dry_run:
+            res = self.task_collection.delete_many({
+                '_id': {
+                    '$in': task_ids
+                }
+            })
+            logger.warning(f'Deleted {res.deleted_count} tasks')
+
     def populate_bundle_metadata(self, dataset: dict) -> bool:
         logger.info(f'populating dataset {dataset["id"]}')
 
         bundle_md5 = sda.get_hash(dataset['archive_path'])
-
         bundle_metadata = {
             'name': f'{dataset["name"]}.tar',
             'path': f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar',
             'size': dataset['bundle_size'],
             'md5': bundle_md5,
         }
-
         update_data = {
             'bundle': bundle_metadata
         }
