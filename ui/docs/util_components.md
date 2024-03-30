@@ -600,6 +600,8 @@ the string is looked up in the target argument, and returned.
 - `pageSizeSearch`: Number - the number of results to be fetched in one batch. Defaults to 10.
 - `controlsMargin`: String - margin between the controls and the tables
 - `controlsHeight`: String - height of the controls container element
+- `selectionLimit`: Number - the maximum number of results that can be selected
+- `resourceName`: String - the name of the resource that is being searched/selected. Defaults to 'result'.
 
 ### Slots
 
