@@ -3,8 +3,9 @@ import logging
 from pathlib import Path
 from sca_rhythm import Workflow
 from pymongo import MongoClient, DESCENDING
-from workers.config.celeryconfig import result_backend
+import fire
 
+from workers.config.celeryconfig import result_backend
 from workers.celery_app import app as celery_app
 import workers.sda as sda
 import workers.api as api
@@ -21,11 +22,14 @@ class BundlePopulationManager:
     WORKFLOW_COLLECTION_NAME = 'workflow_meta'
     TASK_COLLECTION_NAME = 'celery_taskmeta'
 
-    def __init__(self):
+    def __init__(self, dry_run=False, app_id=config['app_id']):
         self.mongo_client = MongoClient(result_backend)
         self.celery_db = self.mongo_client.get_default_database()
         self.workflow_collection = self.celery_db[self.WORKFLOW_COLLECTION_NAME]
         self.task_collection = self.celery_db[self.TASK_COLLECTION_NAME]
+        self.dry_run = dry_run
+        self.app_id = app_id
+
 
     def populate_bundles(self):
         archived_datasets = api.get_all_datasets(archived=True, bundle=True)
@@ -41,10 +45,10 @@ class BundlePopulationManager:
                 'staged_path': None,
             }
             api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
-            logger.info("unstaged dataset")
+            logger.info(f"unstaged dataset {dataset['id']}")
 
-            bundle_metadata_populated = False
-            if dataset['bundle'] is None:
+            bundle_metadata_populated = dataset['bundle'] is not None
+            if not bundle_metadata_populated:
                 try:
                     bundle_metadata_populated = self.populate_bundle_metadata(dataset)
                     logger.info(f'bundle_metadata_populated for {dataset["id"]}: {bundle_metadata_populated}')
@@ -52,24 +56,24 @@ class BundlePopulationManager:
                     logger.info(f'failed to populate bundle for dataset {dataset["id"]}')
                     logger.info(err)
 
-            if dataset['bundle'] is None and not bundle_metadata_populated:
+            if not bundle_metadata_populated:
                 unprocessed_datasets.append(dataset)
             else:
                 processed_datasets.append(dataset)
-
-        self.run_workflows(processed_datasets)
 
         unprocessed_datasets_ids = [dataset['id'] for dataset in unprocessed_datasets]
         logger.info(f'unprocessed datasets: {unprocessed_datasets_ids}')
         processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
         logger.info(f'processed datasets: {processed_datasets_ids}')
 
+        self.run_workflows(processed_datasets)
+
     def run_workflows(self, datasets=None):
         logger.info(f'running workflows for {len(datasets)} datasets')
         if datasets is None:
             return
 
-        self.delete_pending_workflows(dry_run=True)
+        self.delete_pending_workflows()
 
         for ds in datasets:
             logger.info(f'creating workflow for dataset {ds["id"]}')
@@ -84,9 +88,10 @@ class BundlePopulationManager:
         wf.start(dataset_id)
         logger.info(f'started sync_archived_bundles for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
 
-    def delete_pending_workflows(self, app_id: str = config['app_id'], dry_run=False):
+
+    def delete_pending_workflows(self):
         cursor = self.workflow_collection.find({
-            'app_id': app_id,
+            'app_id': self.app_id,
             'name': 'sync_archived_bundles',
             '_status': {
                 '$ne': 'SUCCESS'
@@ -99,10 +104,11 @@ class BundlePopulationManager:
         workflow_ids = [wf['_id'] for wf in matching_workflows]
 
         logger.info(f'will delete {len(workflow_ids)} matching workflows')
-        if len(workflow_ids) and not dry_run:
-            self.workflow_collection.delete_many({'_id': {
+        if len(workflow_ids) and not self.dry_run:
+            res = self.workflow_collection.delete_many({'_id': {
                 '$in': workflow_ids
             }})
+            logger.info(f'Deleted {res.deleted_count} workflows')
 
         # delete associated tasks
         _task_ids = [task_run.get('task_id', None)
@@ -113,13 +119,14 @@ class BundlePopulationManager:
         task_ids = [t for t in _task_ids if t is not None]
 
         logger.info(f'will delete {len(task_ids)} matching tasks')
-        if len(task_ids) and not dry_run:
+        if len(task_ids) and not self.dry_run:
             res = self.task_collection.delete_many({
                 '_id': {
                     '$in': task_ids
                 }
             })
             logger.warning(f'Deleted {res.deleted_count} tasks')
+
 
     def populate_bundle_metadata(self, dataset: dict) -> bool:
         logger.info(f'populating dataset {dataset["id"]}')
@@ -139,9 +146,6 @@ class BundlePopulationManager:
         logger.info(f'successfully finished populating dataset {dataset["id"]}')
         return True
 
-def main():
-    manager = BundlePopulationManager()
-    manager.populate_bundles()
 
 if __name__ == '__main__':
-    main()
+    fire.Fire(BundlePopulationManager).populate_bundles()
