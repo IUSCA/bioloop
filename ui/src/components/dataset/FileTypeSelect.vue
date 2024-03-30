@@ -8,7 +8,11 @@
     :options="props.fileTypeList"
     :text-by="(option) => option.name"
     :track-by="(option) => option"
-    :rules="props.rules || defaultValidationRules"
+    :rules="props.rules"
+    :messages="nativeValidation ? undefined : props.messages"
+    :success="nativeValidation ? undefined : messageVariant.success"
+    :errror="nativeValidation ? undefined : messageVariant.error"
+    @update:dirty="(newValue) => emit('update:dirty', newValue)"
   >
     <template #content="{ value }">
       <va-chip class="mr-2" key="name" size="small">
@@ -98,13 +102,42 @@ const props = defineProps({
     type: Array,
     required: false,
   },
+  messages: {
+    type: Array,
+    required: false,
+  },
+  messageVariant: {
+    type: String,
+    required: false,
+  },
+  showError: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const defaultValidationRules = [
-  (value) => {
-    return (value && value.name?.length > 0) || "File Type is required";
-  },
-];
+const emit = defineEmits([
+  "update:dirty",
+  "update:modelValue",
+  "fileTypeCreated",
+]);
+
+const messageVariant = computed(() => {
+  return {
+    success: props.messageVariant === "success",
+    error: props.messageVariant === "error",
+  };
+});
+
+// const defaultValidationRules = [
+//   (value) => {
+//     return (value && value.name?.length > 0) || "File Type is required";
+//   },
+// ];
+
+const nativeValidation = computed(() => {
+  return (props.rules || []).length > 0;
+});
 
 const _modelValue = computed({
   get() {
@@ -114,8 +147,6 @@ const _modelValue = computed({
     emit("update:modelValue", newValue);
   },
 });
-
-const emit = defineEmits(["update:modelValue", "fileTypeCreated"]);
 
 const { isValid, validate, reset } = useForm("createNewFileTypeForm");
 

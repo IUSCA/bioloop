@@ -1,4 +1,5 @@
 <template>
+  <!--  todo - use update:v-model to determine when to show errors -->
   <va-form ref="dataProductUploadForm" class="h-full">
     <va-stepper
       v-model="step"
@@ -19,9 +20,9 @@
             'step-button--completed': isCompleted,
           }"
           role="button"
-          @keydown.enter="isFormValid() && setStep(i)"
+          @keydown.enter="isFormValid(i, 'stepButton') && setStep(i)"
           tabindex="0"
-          @click="isFormValid() && setStep(i)"
+          @click="isFormValid(i, 'stepButton') && setStep(i)"
         >
           <div class="flex flex-col items-center">
             <Icon :icon="step.icon" />
@@ -51,6 +52,11 @@
             },
             validateNotExists,
           ]"
+          @dirty="
+            (val) => {
+              console.log('dirty is: ', val);
+            }
+          "
         />
       </template>
 
@@ -70,7 +76,20 @@
               fileTypeList.push(newFileType);
             }
           "
+          :messages="!isFormValid(1, 'FileTypeSelect') ? [errors.fileType] : []"
+          :message-variant="
+            !isFormValid(1, 'FileTypeSelect') && errors.fileType
+              ? 'error'
+              : undefined
+          "
+          @update:dirty="
+            (newVal) => {
+              console.log('dirty is: ', newVal);
+            }
+          "
         />
+
+        <!--        <va-button @click="reset">Reset Form</va-button>-->
       </template>
 
       <template #step-content-2>
@@ -244,7 +263,7 @@
           </va-button>
           <va-button
             class="flex-none"
-            @click="isFormValid() && onNextClick(nextStep)"
+            @click="isFormValid(step, 'Next') && onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="!isSubmitEnabled"
           >
@@ -277,8 +296,14 @@ import { storeToRefs } from "pinia";
 const auth = useAuthStore();
 const formStore = useDatasetUploadFormStore();
 
-const { datasetName, fileType, sourceRawData } = formStore;
-const { validate } = storeToRefs(formStore);
+const { formData } = useForm("dataProductUploadForm");
+watch(formData, () => {
+  console.log("formData changed");
+  console.log(formData.value);
+});
+
+const { validate } = formStore;
+const { datasetName, fileType, sourceRawData, errors } = storeToRefs(formStore);
 
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -343,7 +368,7 @@ const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
 const uploadCancelled = ref(false);
-const formData = computed(() => {
+const uploadFormData = computed(() => {
   return {
     data_product_name: datasetName.value,
     source_dataset_id: sourceRawData.value.id,
@@ -359,13 +384,15 @@ const isSubmitEnabled = computed(() => {
 });
 
 const {
-  isValid,
+  reset,
   // , validate
 } = useForm("dataProductUploadForm");
 
-const isFormValid = () => {
-  // validate();
-  return isValid.value;
+const isFormValid = (stepIndex, caller) => {
+  console.log("isFormValid caller: ", caller);
+
+  const ret = validate(stepIndex);
+  return ret;
 };
 
 // Returns the file's and individual chunks' checksums
@@ -689,7 +716,7 @@ const preUpload = async () => {
         increment_processing_count: false,
       }
     : {
-        ...formData.value,
+        ...uploadFormData.value,
         files_metadata: dataProductFiles.value.map((e) => {
           return {
             name: e.name,
