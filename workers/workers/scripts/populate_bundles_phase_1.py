@@ -92,7 +92,7 @@ class BundlePopulationManager:
         cursor = self.workflow_collection.find({
             'app_id': app_id,
             'name': 'sync_archived_bundles',
-            'status': {
+            '_status': {
                 '$ne': 'SUCCESS'
             }
         })
