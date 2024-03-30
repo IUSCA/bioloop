@@ -34,7 +34,7 @@
 
           <div class="flex gap-2 flex-wrap">
             <!-- Add Selected -->
-            <div class="flex gap-2 items-center">
+            <div class="flex gap-2 items-center" v-if="selectableTables">
               <va-button
                 class="flex-none"
                 preset="secondary"
@@ -86,14 +86,17 @@
                 v-model="searchResultSelections"
                 :items="props.searchResults"
                 :columns="_searchResultColumns"
-                :selectable="!props.selectionLimit || props.selectionLimit > 1"
+                :selectable="selectableTables"
                 select-mode="multiple"
               >
                 <template #headerPrepend>
                   <tr v-if="props.selectionLimit">
                     <th colspan="6">
                       <span
-                        >Select upto {{ props.selectionLimit }} dataset</span
+                        >Select upto {{ props.selectionLimit }}
+                        {{
+                          maybePluralize(props.selectionLimit, "dataset")
+                        }}</span
                       >
                     </th>
                   </tr>
@@ -159,7 +162,7 @@
           </div>
 
           <div class="flex gap-2 flex-wrap">
-            <div class="flex gap-2 items-center">
+            <div class="flex gap-2 items-center" v-if="selectableTables">
               <va-button
                 class="flex-none"
                 preset="secondary"
@@ -201,7 +204,7 @@
               :items="props.selectedResults"
               :columns="_selectedResultColumns"
               virtual-scroller
-              :selectable="!props.selectionLimit || props.selectionLimit > 1"
+              :selectable="selectableTables"
               select-mode="multiple"
             >
               <template #headerPrepend>
@@ -317,6 +320,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+});
+
+const selectableTables = computed(() => {
+  return !props.selectionLimit || props.selectionLimit > 1;
 });
 
 const _controlsMargin = toRef(() => props.controlsMargin);
