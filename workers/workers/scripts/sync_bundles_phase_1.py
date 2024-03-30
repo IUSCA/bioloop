@@ -18,11 +18,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class BundlePopulationManager:
+class BundleSyncManager:
     WORKFLOW_COLLECTION_NAME = 'workflow_meta'
     TASK_COLLECTION_NAME = 'celery_taskmeta'
 
-    def __init__(self, dry_run=False, app_id=config['app_id']):
+    def __init__(self, dry_run, app_id):
         self.mongo_client = MongoClient(result_backend)
         self.celery_db = self.mongo_client.get_default_database()
         self.workflow_collection = self.celery_db[self.WORKFLOW_COLLECTION_NAME]
@@ -68,6 +68,7 @@ class BundlePopulationManager:
 
         self.run_workflows(processed_datasets)
 
+
     def run_workflows(self, datasets=None):
         logger.info(f'running workflows for {len(datasets)} datasets')
         if datasets is None:
@@ -77,22 +78,22 @@ class BundlePopulationManager:
 
         for ds in datasets:
             logger.info(f'creating workflow for dataset {ds["id"]}')
-            self.run_sync_bundle_workflow(ds)
+            self.initiate_download_workflow(ds)
 
 
-    def run_sync_bundle_workflow(self, dataset):
+    def initiate_download_workflow(self, dataset):
         dataset_id = dataset['id']
-        wf_body = wf_utils.get_wf_body(wf_name='sync_archived_bundles')
+        wf_body = wf_utils.get_wf_body(wf_name='prepare_bundle_downloads')
         wf = Workflow(celery_app=celery_app, **wf_body)
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
         wf.start(dataset_id)
-        logger.info(f'started sync_archived_bundles for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
+        logger.info(f'started prepare_bundle_downloads for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
 
 
     def delete_pending_workflows(self):
         cursor = self.workflow_collection.find({
             'app_id': self.app_id,
-            'name': 'sync_archived_bundles',
+            'name': 'prepare_bundle_downloads',
             '_status': {
                 '$ne': 'SUCCESS'
             }
@@ -147,5 +148,23 @@ class BundlePopulationManager:
         return True
 
 
+def initiate_bundle_sync(app_id=config['app_id'], dry_run=False):
+    """
+    For the given app_id, creates the bundle metadata for previously-archived datasets, and
+    launches a workflow which sets up the bundles for download. Any existing instances of
+    the `prepare_bundle_downloads` workflow that are pending will be deleted.
+
+    :param app_id:  app_id to prepare bundle downloads for
+    :param dry_run: if True, do not delete pending workflows
+    :return:
+
+    example usage:
+
+    python -m workers.scripts.sync_bundles_phase1 --app_id='bioloop-dev.sca.iu.edu' --dry_run
+    """
+
+    BundleSyncManager(dry_run=dry_run, app_id=app_id).populate_bundles()
+
+
 if __name__ == '__main__':
-    fire.Fire(BundlePopulationManager).populate_bundles()
+    fire.Fire(initiate_bundle_sync)
