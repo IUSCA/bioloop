@@ -55,6 +55,8 @@ class BundlePopulationManager:
             else:
                 processed_datasets.append(dataset)
 
+        raise Exception('test error')
+
         self.run_workflows(processed_datasets)
 
         unprocessed_datasets_ids = [dataset['id'] for dataset in unprocessed_datasets]
