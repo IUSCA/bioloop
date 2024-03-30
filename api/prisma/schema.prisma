@@ -108,7 +108,7 @@ model bundle {
   size       BigInt?
   md5        String
   dataset_id Int      @unique
-  dataset    dataset  @relation(fields: [dataset_id], references: [id])
+  dataset    dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 }
 
 model data_access_log {

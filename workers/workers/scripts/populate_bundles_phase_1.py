@@ -28,12 +28,20 @@ class BundlePopulationManager:
     def populate_bundles(self):
         archived_datasets = api.get_all_datasets(archived=True, bundle=True)
 
+        processed_datasets = []
         unprocessed_datasets = []
         for dataset in archived_datasets:
             logger.info(f'processing dataset {dataset["id"]}')
-            bundle_metadata_populated = dataset['bundle'] is not None
 
-            if not bundle_metadata_populated:
+            update_data = {
+                'is_staged': False,
+                'staged_path': None,
+            }
+            api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
+            logger.info("updated dataset to not staged")
+
+            bundle_metadata_populated = None
+            if dataset['bundle'] is None:
                 try:
                     logger.info(f'will populate bundle for {dataset["id"]}')
                     bundle_metadata_populated = self.populate_bundle_metadata(dataset)
@@ -43,11 +51,14 @@ class BundlePopulationManager:
                     logger.info(err)
 
             if not bundle_metadata_populated:
-                unprocessed_datasets.append(dataset['id'])
+                unprocessed_datasets.append(dataset)
+            else:
+                processed_datasets.append(dataset)
 
-        self.run_workflows(archived_datasets)
+        self.run_workflows(processed_datasets)
 
-        logger.info(f'unpopulated datasets: {unprocessed_datasets}')
+        unprocessed_datasets_ids = [dataset['id'] for dataset in unprocessed_datasets]
+        logger.info(f'unpopulated datasets: {unprocessed_datasets_ids}')
 
     def populate_bundle_metadata(self, dataset: dict) -> bool:
         logger.info(f'populating dataset {dataset["id"]}')
@@ -72,16 +83,15 @@ class BundlePopulationManager:
     def run_workflows(self,
                       datasets=None,
                       app_id: str = config['app_id']):
+        logger.info(f'running workflows for {len(datasets)} datasets')
         if datasets is None:
-            datasets = []
+            return
 
         cursor = self.workflow_collection.find({
             'app_id': app_id,
             'name': 'sync_archived_bundles',
             'status': {
-                '$not': {
-                    '$in': ['SUCCESS']
-                }
+                '$ne': 'SUCCESS'
             }
         })
         # .sort('created_at', DESCENDING)
@@ -90,7 +100,7 @@ class BundlePopulationManager:
         logger.info(f'found {len(matching_workflows)} matching workflows')
 
         for wf in matching_workflows:
-            logger.info(f'pausing workflow: {wf["_id"]} : {wf["created_at"]}')
+            logger.info(f'pausing workflow: {wf["_id"]} : {wf["_status"]} : {wf["created_at"]}')
             workflow = Workflow(celery_app=celery_app, workflow_id=wf['_id'])
             workflow.pause()
         #     logger.info(f"other matching wf: {wf['_id']} : {wf['created_at']}")
@@ -105,17 +115,6 @@ class BundlePopulationManager:
             logger.info(f'creating workflow for dataset {ds["id"]}')
             self.run_sync_bundle_workflow(ds)
 
-        # else:
-        #     logger.info(f'found running workflow for {dataset["id"]}')
-        #     wf_id = current_workflow['_id']
-        #     logger.info(f'wf_id: {wf_id}')
-        #     logger.info(f"status: {current_workflow['_status']}")
-        #     if wf_id is not None:
-        #         # check if status is FAILED/RUNNING
-        #         # order wfs by desc created_at, kill old ones?
-        #         wf = Workflow(celery_app=celery_app, workflow_id=wf_id)
-        #         logger.info(f'workflow {wf_id} can be resumed')
-        #         wf.resume()
 
     def run_sync_bundle_workflow(self, dataset):
         dataset_id = dataset['id']

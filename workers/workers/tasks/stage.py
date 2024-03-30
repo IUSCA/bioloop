@@ -65,7 +65,9 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     input: dataset['name'], dataset['archive_path'] should exist
     returns: stage_path
     """
-    raise Exception("stage test error")
+
+    if dataset['name'] != 'sub-fsm02cd':
+        raise Exception("stage test error")
 
     staging_dir, alias = compute_staging_path(dataset)
     bundle_alias = compute_bundle_path(dataset)
