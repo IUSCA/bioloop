@@ -93,9 +93,12 @@
                   <tr v-if="props.selectionLimit">
                     <th colspan="6">
                       <span
-                        >Select upto {{ props.selectionLimit }}
+                        >Select upto
                         {{
-                          maybePluralize(props.selectionLimit, "dataset")
+                          maybePluralize(
+                            props.selectionLimit,
+                            props.resourceName,
+                          )
                         }}</span
                       >
                     </th>
@@ -269,6 +272,10 @@ const props = defineProps({
   placeholder: {
     type: String,
     default: () => "Type to search",
+  },
+  resourceName: {
+    type: String,
+    default: () => "result",
   },
   selectionLimit: {
     type: Number,
