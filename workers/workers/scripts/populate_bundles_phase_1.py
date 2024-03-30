@@ -40,7 +40,7 @@ class BundlePopulationManager:
             api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
             logger.info("updated dataset to not staged")
 
-            bundle_metadata_populated = None
+            bundle_metadata_populated = False
             if dataset['bundle'] is None:
                 try:
                     logger.info(f'will populate bundle for {dataset["id"]}')
@@ -50,17 +50,19 @@ class BundlePopulationManager:
                     logger.info(f'failed to populate bundle for dataset {dataset["id"]}')
                     logger.info(err)
 
-            if not bundle_metadata_populated:
+            if dataset['bundle'] is None and not bundle_metadata_populated:
                 unprocessed_datasets.append(dataset)
-            else:
-                processed_datasets.append(dataset)
+            # else:
+            #     processed_datasets.append(dataset)
 
         # raise Exception('test error')
 
         self.run_workflows(processed_datasets)
 
         unprocessed_datasets_ids = [dataset['id'] for dataset in unprocessed_datasets]
+        # processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
         logger.info(f'unpopulated datasets: {unprocessed_datasets_ids}')
+        # logger.info(f'processed datasets: {processed_datasets_ids}')
 
     def populate_bundle_metadata(self, dataset: dict) -> bool:
         logger.info(f'populating dataset {dataset["id"]}')
