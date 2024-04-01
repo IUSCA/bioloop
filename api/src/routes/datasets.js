@@ -22,7 +22,39 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
+
+const prisma = new PrismaClient(
+  // { log: ['query', 'info', 'warn', 'error'] },
+
+  {
+    log: [
+      {
+        emit: 'event',
+        level: 'query',
+      },
+      {
+        emit: 'event',
+        level: 'info',
+      },
+      {
+        emit: 'event',
+        level: 'warn',
+      },
+      {
+        emit: 'event',
+        level: 'error',
+      },
+    ],
+  },
+);
+
+['query', 'info', 'warn', 'error'].forEach((level) => {
+  prisma.$on(level, async (e) => {
+    console.log(`QUERY: ${e.query}`);
+    console.log(`PARAMS: ${e.params}`);
+  });
+});
 
 // stats - UI
 router.get(
