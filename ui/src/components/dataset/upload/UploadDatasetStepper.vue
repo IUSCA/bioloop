@@ -31,88 +31,88 @@
         </div>
       </template>
 
-      <template #step-content-0>
-        <DatasetNameInput
-          label="Dataset Name"
-          placeholder="Dataset Name"
-          v-model="datasetName"
-          class="w-full"
-          :rules="[
-            (value) => {
-              return (value && value.length > 0) || 'Name is required';
-            },
-            (value) => {
-              return (
-                (value && value.length > 2) ||
-                'Name must be 3 or more characters'
-              );
-            },
-            (value) => {
-              return value.indexOf(' ') === -1 || 'Name cannot contain spaces';
-            },
-            validateNotExists,
-          ]"
-          @dirty="
-            (val) => {
-              console.log('dirty is: ', val);
-            }
-          "
-        />
-      </template>
+      <!--      <template #step-content-0>-->
+      <!--        <DatasetNameInput-->
+      <!--          label="Dataset Name"-->
+      <!--          placeholder="Dataset Name"-->
+      <!--          v-model="datasetName"-->
+      <!--          class="w-full"-->
+      <!--          :rules="[-->
+      <!--            (value) => {-->
+      <!--              return (value && value.length > 0) || 'Name is required';-->
+      <!--            },-->
+      <!--            (value) => {-->
+      <!--              return (-->
+      <!--                (value && value.length > 2) ||-->
+      <!--                'Name must be 3 or more characters'-->
+      <!--              );-->
+      <!--            },-->
+      <!--            (value) => {-->
+      <!--              return value.indexOf(' ') === -1 || 'Name cannot contain spaces';-->
+      <!--            },-->
+      <!--            validateNotExists,-->
+      <!--          ]"-->
+      <!--          @dirty="-->
+      <!--            (val) => {-->
+      <!--              console.log('dirty is: ', val);-->
+      <!--            }-->
+      <!--          "-->
+      <!--        />-->
+      <!--      </template>-->
 
-      <template #step-content-1>
-        <FileTypeSelect
-          v-model="fileType"
-          :file-type-list="fileTypeList"
-          @file-type-created="
-            (newFileType) => {
-              // if a new File Type has already been created, remove it
-              const currentNewFileTypeIndex = fileTypeList.findIndex(
-                (e) => !e.id,
-              );
-              if (currentNewFileTypeIndex) {
-                fileTypeList.splice(currentNewFileTypeIndex, 1);
-              }
-              fileTypeList.push(newFileType);
-            }
-          "
-          :messages="!isFormValid(1, 'FileTypeSelect') ? [errors.fileType] : []"
-          :message-variant="
-            !isFormValid(1, 'FileTypeSelect') && errors.fileType
-              ? 'error'
-              : undefined
-          "
-          @update:dirty="
-            (newVal) => {
-              console.log('dirty is: ', newVal);
-            }
-          "
-        />
+      <!--      <template #step-content-1>-->
+      <!--        <FileTypeSelect-->
+      <!--          v-model="fileType"-->
+      <!--          :file-type-list="fileTypeList"-->
+      <!--          @file-type-created="-->
+      <!--            (newFileType) => {-->
+      <!--              // if a new File Type has already been created, remove it-->
+      <!--              const currentNewFileTypeIndex = fileTypeList.findIndex(-->
+      <!--                (e) => !e.id,-->
+      <!--              );-->
+      <!--              if (currentNewFileTypeIndex) {-->
+      <!--                fileTypeList.splice(currentNewFileTypeIndex, 1);-->
+      <!--              }-->
+      <!--              fileTypeList.push(newFileType);-->
+      <!--            }-->
+      <!--          "-->
+      <!--          :messages="!isFormValid(1, 'FileTypeSelect') ? [errors.fileType] : []"-->
+      <!--          :message-variant="-->
+      <!--            !isFormValid(1, 'FileTypeSelect') && errors.fileType-->
+      <!--              ? 'error'-->
+      <!--              : undefined-->
+      <!--          "-->
+      <!--          @update:dirty="-->
+      <!--            (newVal) => {-->
+      <!--              console.log('dirty is: ', newVal);-->
+      <!--            }-->
+      <!--          "-->
+      <!--        />-->
 
-        <!--        <va-button @click="reset">Reset Form</va-button>-->
-      </template>
+      <!--        &lt;!&ndash;        <va-button @click="reset">Reset Form</va-button>&ndash;&gt;-->
+      <!--      </template>-->
 
-      <template #step-content-2>
-        <va-select
-          name="raw_data"
-          v-model="sourceRawData"
-          v-model:search="rawDataSelected_search"
-          autocomplete
-          class="w-full raw_data_select"
-          label="Source Raw Data"
-          placeholder="Raw Data"
-          :options="rawDataList"
-          :text-by="(option) => option.name"
-          :rules="[
-            (value) => {
-              return (
-                (value && value.name.length > 0) ||
-                'Source Raw Data is required'
-              );
-            },
-          ]"
-        />
-      </template>
+      <!--      <template #step-content-2>-->
+      <!--        <va-select-->
+      <!--          name="raw_data"-->
+      <!--          v-model="sourceRawData"-->
+      <!--          v-model:search="rawDataSelected_search"-->
+      <!--          autocomplete-->
+      <!--          class="w-full raw_data_select"-->
+      <!--          label="Source Raw Data"-->
+      <!--          placeholder="Raw Data"-->
+      <!--          :options="rawDataList"-->
+      <!--          :text-by="(option) => option.name"-->
+      <!--          :rules="[-->
+      <!--            (value) => {-->
+      <!--              return (-->
+      <!--                (value && value.name.length > 0) ||-->
+      <!--                'Source Raw Data is required'-->
+      <!--              );-->
+      <!--            },-->
+      <!--          ]"-->
+      <!--        />-->
+      <!--      </template>-->
 
       <!-- File upload tool and selected files table -->
       <template #step-content-3>
