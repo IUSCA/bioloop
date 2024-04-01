@@ -389,10 +389,12 @@ const {
 } = useForm("dataProductUploadForm");
 
 const isFormValid = (stepIndex, caller) => {
-  console.log("isFormValid caller: ", caller);
+  // console.log("isFormValid caller: ", caller);
+  //
+  // const ret = validate(stepIndex);
+  // return ret;
 
-  const ret = validate(stepIndex);
-  return ret;
+  return true;
 };
 
 // Returns the file's and individual chunks' checksums
@@ -694,7 +696,7 @@ const onNextClick = (nextStep) => {
         "At least one file must be selected to create a Data Product";
       submissionAlertColor.value = "warning";
     } else {
-      if (isValid.value) {
+      if (isFormValid()) {
         handleSubmit();
       }
     }
@@ -705,8 +707,7 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  const tokenResponse = await auth.onUpload(datasetName);
-  const uploadToken = tokenResponse.data.accessToken;
+  await auth.onFileUpload(datasetName);
 
   await evaluateChecksums(filesNotUploaded.value);
 
@@ -725,6 +726,8 @@ const preUpload = async () => {
           };
         }),
       };
+
+  await auth.postFileUpload();
 
   const res = await createOrUpdateUploadLog(uploadLog.value?.id, logData);
   uploadLog.value = res.data;

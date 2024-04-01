@@ -175,7 +175,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function postFileUpload() {
-    uploadToken.value = {};
+    uploadToken.value = "";
   }
 
   // Check for roles
