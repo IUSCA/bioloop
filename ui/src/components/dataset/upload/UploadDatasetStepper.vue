@@ -693,20 +693,20 @@ const handleSubmit = () => {
 };
 
 const onNextClick = (nextStep) => {
-  if (isLastStep.value) {
-    if (noFilesSelected.value) {
-      isSubmissionAlertVisible.value = true;
-      submissionAlert.value =
-        "At least one file must be selected to create a Data Product";
-      submissionAlertColor.value = "warning";
-    } else {
-      if (isFormValid()) {
-        handleSubmit();
-      }
-    }
-  } else {
-    nextStep();
-  }
+  // if (isLastStep.value) {
+  //   if (noFilesSelected.value) {
+  //     isSubmissionAlertVisible.value = true;
+  //     submissionAlert.value =
+  //       "At least one file must be selected to create a Data Product";
+  //     submissionAlertColor.value = "warning";
+  //   } else {
+  //     if (isFormValid()) {
+  handleSubmit();
+  // }
+  //   }
+  // } else {
+  //   nextStep();
+  // }
 };
 
 // Evaluates selected file checksums, logs the upload
