@@ -115,7 +115,7 @@
       <!--      </template>-->
 
       <!-- File upload tool and selected files table -->
-      <template #step-content-3>
+      <template #step-content-0>
         <div class="flex-none">
           <va-file-upload
             class="w-full"
