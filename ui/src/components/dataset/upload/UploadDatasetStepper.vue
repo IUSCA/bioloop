@@ -561,6 +561,10 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
+  console.log(`Beginning upload of file`);
+  console.log("fileDetails");
+  console.dir(fileDetails, { depth: null });
+
   // persist token in store
   await auth.onFileUpload(fileDetails.name);
 

@@ -3,12 +3,12 @@ import uploadApi from "./uploadApi";
 
 class UploadService {
   getToken(filename) {
-    return api.post(`/uploads/token/${filename}`, { filename });
+    return api.post(`/uploads/token/`, { file_name: filename });
   }
 
-  refreshToken(filename) {
-    return api.post(`/uploads/refresh_token/`, { filename });
-  }
+  // refreshToken(filename) {
+  //   return api.post(`/uploads/refresh_token/`, { filename });
+  // }
 
   uploadFileChunk(data) {
     return uploadApi.post("/file-chunk", data);
