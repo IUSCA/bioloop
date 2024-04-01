@@ -45,7 +45,7 @@ function checkJWT(token) {
     const decoded = jsonwt.verify(token, pub);
     return decoded;
   } catch (err) {
-    logger.error('Failed to verify JWT', err);
+    console.log('Failed to verify JWT', err);
     return null;
   }
 }
