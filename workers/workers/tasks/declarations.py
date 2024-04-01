@@ -58,11 +58,10 @@ def generate_qc(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='stage_dataset')
-# ,
-#           autoretry_for=(Exception,),
-#           max_retries=3,
-#           default_retry_delay=5)
+@app.task(base=WorkflowTask, bind=True, name='stage_dataset',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
 def stage_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.stage import stage_dataset as task_body
     return task_body(celery_task, dataset_id, **kwargs)
