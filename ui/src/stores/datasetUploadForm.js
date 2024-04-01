@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 export const useDatasetUploadFormStore = defineStore(
   "datasetUploadForm",
   () => {
-    const datasetName = ref("rishi");
+    const datasetName = ref("");
     const fileType = ref();
     const sourceRawData = ref();
 
@@ -23,41 +23,54 @@ export const useDatasetUploadFormStore = defineStore(
       isSourceRawDataValid.value,
     ]);
 
-    const errors = computed(() => {
-      return {
-        datasetName: !isDatasetNameValid.value
-          ? "Dataset name is required"
-          : undefined,
-        fileType: !isFileTypeValid.value ? "File Type is required" : undefined,
-        sourceRawData: !isSourceRawDataValid.value
-          ? "Source dataset is required"
-          : undefined,
-      };
-    });
+    const evaluateErrors = (stepIndex) => {
+      const errors = [
+        {
+          datasetName: !isDatasetNameValid.value
+            ? "Dataset name is required"
+            : undefined,
+        },
+        {
+          fileType: !isFileTypeValid.value
+            ? "File Type is required"
+            : undefined,
+        },
+        {
+          sourceRawData: !isSourceRawDataValid.value
+            ? "Source dataset is required"
+            : undefined,
+        },
+      ];
+      const slicedErrors = stepIndex ? errors.slice(0, stepIndex + 1) : errors;
+
+      return Object.assign({}, ...slicedErrors);
+
+      // return errors.slice(0, stepIndex + 1);
+    };
 
     // validates any steps upto stepIndex
-    const validate = (stepIndex) => {
+    const isValid = (stepIndex) => {
       console.log("store: validating step: " + stepIndex);
       let _stepIndex =
         !stepIndex && stepIndex !== 0
           ? stepValidations.value.length - 1
           : stepIndex;
 
-      let validated = true;
+      let isValid = true;
       for (let i = 0; i <= _stepIndex; i++) {
-        validated = validated && stepValidations.value[i];
+        isValid = isValid && stepValidations.value[i];
       }
 
-      console.log("store: validated: ", validated);
-      return validated;
+      console.log("store: validated: ", isValid);
+      return isValid;
     };
 
     return {
       datasetName,
       fileType,
       sourceRawData,
-      validate,
-      errors,
+      isValid,
+      evaluateErrors,
     };
   },
 );

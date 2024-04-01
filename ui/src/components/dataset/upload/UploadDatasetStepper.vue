@@ -1,5 +1,4 @@
 <template>
-  <!--  todo - use update:v-model to determine when to show errors -->
   <va-form ref="dataProductUploadForm" class="h-full">
     <va-stepper
       v-model="step"
@@ -31,91 +30,87 @@
         </div>
       </template>
 
-      <!--      <template #step-content-0>-->
-      <!--        <DatasetNameInput-->
-      <!--          label="Dataset Name"-->
-      <!--          placeholder="Dataset Name"-->
-      <!--          v-model="datasetName"-->
-      <!--          class="w-full"-->
-      <!--          :rules="[-->
-      <!--            (value) => {-->
-      <!--              return (value && value.length > 0) || 'Name is required';-->
-      <!--            },-->
-      <!--            (value) => {-->
-      <!--              return (-->
-      <!--                (value && value.length > 2) ||-->
-      <!--                'Name must be 3 or more characters'-->
-      <!--              );-->
-      <!--            },-->
-      <!--            (value) => {-->
-      <!--              return value.indexOf(' ') === -1 || 'Name cannot contain spaces';-->
-      <!--            },-->
-      <!--            validateNotExists,-->
-      <!--          ]"-->
-      <!--          @dirty="-->
-      <!--            (val) => {-->
-      <!--              console.log('dirty is: ', val);-->
-      <!--            }-->
-      <!--          "-->
-      <!--        />-->
-      <!--      </template>-->
+      <template #step-content-0>
+        <DatasetNameInput
+          label="Dataset Name"
+          placeholder="Dataset Name"
+          v-model="datasetName"
+          class="w-full"
+          :messages="
+            !isFormValid(0, 'FileTypeSelect') ? [stepErrors.datasetName] : []
+          "
+          :message-variant="
+            !isFormValid(0, 'FileTypeSelect') ? 'error' : undefined
+          "
+        />
+        <!--                  :rules="[-->
+        <!--            (value) => {-->
+        <!--              return (value && value.length > 0) || 'Name is required';-->
+        <!--            },-->
+        <!--            (value) => {-->
+        <!--              return (-->
+        <!--                (value && value.length > 2) ||-->
+        <!--                'Name must be 3 or more characters'-->
+        <!--              );-->
+        <!--            },-->
+        <!--            (value) => {-->
+        <!--              return value.indexOf(' ') === -1 || 'Name cannot contain spaces';-->
+        <!--            },-->
+        <!--            validateNotExists,-->
+        <!--          ]"-->
+      </template>
 
-      <!--      <template #step-content-1>-->
-      <!--        <FileTypeSelect-->
-      <!--          v-model="fileType"-->
-      <!--          :file-type-list="fileTypeList"-->
-      <!--          @file-type-created="-->
-      <!--            (newFileType) => {-->
-      <!--              // if a new File Type has already been created, remove it-->
-      <!--              const currentNewFileTypeIndex = fileTypeList.findIndex(-->
-      <!--                (e) => !e.id,-->
-      <!--              );-->
-      <!--              if (currentNewFileTypeIndex) {-->
-      <!--                fileTypeList.splice(currentNewFileTypeIndex, 1);-->
-      <!--              }-->
-      <!--              fileTypeList.push(newFileType);-->
-      <!--            }-->
-      <!--          "-->
-      <!--          :messages="!isFormValid(1, 'FileTypeSelect') ? [errors.fileType] : []"-->
-      <!--          :message-variant="-->
-      <!--            !isFormValid(1, 'FileTypeSelect') && errors.fileType-->
-      <!--              ? 'error'-->
-      <!--              : undefined-->
-      <!--          "-->
-      <!--          @update:dirty="-->
-      <!--            (newVal) => {-->
-      <!--              console.log('dirty is: ', newVal);-->
-      <!--            }-->
-      <!--          "-->
-      <!--        />-->
+      <template #step-content-1>
+        <FileTypeSelect
+          v-model="fileType"
+          :file-type-list="fileTypeList"
+          @file-type-created="
+            (newFileType) => {
+              // if a new File Type has already been created, remove it
+              const currentNewFileTypeIndex = fileTypeList.findIndex(
+                (e) => !e.id,
+              );
+              if (currentNewFileTypeIndex) {
+                fileTypeList.splice(currentNewFileTypeIndex, 1);
+              }
+              fileTypeList.push(newFileType);
+            }
+          "
+          :messages="
+            !isFormValid(1, 'FileTypeSelect') ? [stepErrors.fileType] : []
+          "
+          :message-variant="
+            !stepErrors(1, 'FileTypeSelect') ? 'error' : undefined
+          "
+        />
 
-      <!--        &lt;!&ndash;        <va-button @click="reset">Reset Form</va-button>&ndash;&gt;-->
-      <!--      </template>-->
+        <!--        <va-button @click="reset">Reset Form</va-button>-->
+      </template>
 
-      <!--      <template #step-content-2>-->
-      <!--        <va-select-->
-      <!--          name="raw_data"-->
-      <!--          v-model="sourceRawData"-->
-      <!--          v-model:search="rawDataSelected_search"-->
-      <!--          autocomplete-->
-      <!--          class="w-full raw_data_select"-->
-      <!--          label="Source Raw Data"-->
-      <!--          placeholder="Raw Data"-->
-      <!--          :options="rawDataList"-->
-      <!--          :text-by="(option) => option.name"-->
-      <!--          :rules="[-->
-      <!--            (value) => {-->
-      <!--              return (-->
-      <!--                (value && value.name.length > 0) ||-->
-      <!--                'Source Raw Data is required'-->
-      <!--              );-->
-      <!--            },-->
-      <!--          ]"-->
-      <!--        />-->
-      <!--      </template>-->
+      <template #step-content-2>
+        <va-select
+          name="raw_data"
+          v-model="sourceRawData"
+          v-model:search="rawDataSelected_search"
+          autocomplete
+          class="w-full raw_data_select"
+          label="Source Raw Data"
+          placeholder="Raw Data"
+          :options="rawDataList"
+          :text-by="(option) => option.name"
+          :rules="[
+            (value) => {
+              return (
+                (value && value.name.length > 0) ||
+                'Source Raw Data is required'
+              );
+            },
+          ]"
+        />
+      </template>
 
       <!-- File upload tool and selected files table -->
-      <template #step-content-0>
+      <template #step-content-3>
         <div class="flex-none">
           <va-file-upload
             class="w-full"
@@ -302,9 +297,6 @@ watch(formData, () => {
   console.log(formData.value);
 });
 
-const { validate } = formStore;
-const { datasetName, fileType, sourceRawData, errors } = storeToRefs(formStore);
-
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // Blob.slice method is used to segment files.
@@ -383,19 +375,35 @@ const isSubmitEnabled = computed(() => {
   );
 });
 
-const {
-  reset,
-  // , validate
-} = useForm("dataProductUploadForm");
+// const {
+//   // reset,
+//   // , validate
+// } = useForm("dataProductUploadForm");
+
+// todo:
+//  update pristine when:
+//    v-model changes
+//    next is clicked
+//      if step is validated, and widget can move to next step, set pristine to true again
+const pristine = ref(true);
+
+const { isValid, evaluateErrors } = formStore;
+const { datasetName, fileType, sourceRawData } = storeToRefs(formStore);
 
 const isFormValid = (stepIndex, caller) => {
-  // console.log("isFormValid caller: ", caller);
+  console.log("isFormValid caller: ", caller);
   //
-  // const ret = validate(stepIndex);
-  // return ret;
+  const ret = isValid(stepIndex);
+  console.log("isFormValid ret: ", ret);
 
-  return true;
+  return ret;
+
+  // return true;
 };
+
+const stepErrors = computed(() => {
+  return evaluateErrors(step.value);
+});
 
 // Returns the file's and individual chunks' checksums
 const evaluateFileChecksums = (file) => {
@@ -693,20 +701,21 @@ const handleSubmit = () => {
 };
 
 const onNextClick = (nextStep) => {
-  // if (isLastStep.value) {
-  //   if (noFilesSelected.value) {
-  //     isSubmissionAlertVisible.value = true;
-  //     submissionAlert.value =
-  //       "At least one file must be selected to create a Data Product";
-  //     submissionAlertColor.value = "warning";
-  //   } else {
-  //     if (isFormValid()) {
-  handleSubmit();
-  // }
-  //   }
-  // } else {
-  //   nextStep();
-  // }
+  console.log("onNextClick", nextStep);
+  if (isLastStep.value) {
+    if (noFilesSelected.value) {
+      isSubmissionAlertVisible.value = true;
+      submissionAlert.value =
+        "At least one file must be selected to create a Data Product";
+      submissionAlertColor.value = "warning";
+    } else {
+      if (isFormValid()) {
+        handleSubmit();
+      }
+    }
+  } else {
+    nextStep();
+  }
 };
 
 // Evaluates selected file checksums, logs the upload
