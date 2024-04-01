@@ -70,14 +70,14 @@ module.exports = {
       max_restarts: 3,
     },
     {
-      name: "sync_bundles_phase_1",
+      name: "populate_bundles",
       script: "python",
-      args: "-u -m workers.scripts.sync_bundles_phase_1",
+      args: "-u -m workers.scripts.populate_bundles",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "../logs/workers/sync_bundles_phase_1.err",
-      out_file: "../logs/workers/sync_bundles_phase_1.log",
+      error_file: "../logs/workers/populate_bundles.err",
+      out_file: "../logs/workers/populate_bundles.log",
       autorestart: false,
     }
   ]
