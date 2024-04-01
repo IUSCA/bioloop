@@ -711,8 +711,6 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  await auth.onFileUpload(datasetName);
-
   await evaluateChecksums(filesNotUploaded.value);
 
   const logData = uploadLog.value?.id
