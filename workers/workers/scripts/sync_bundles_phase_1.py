@@ -23,10 +23,6 @@ class BundleSyncManager:
     TASK_COLLECTION_NAME = 'celery_taskmeta'
 
     def __init__(self, dry_run, app_id):
-        self.mongo_client = MongoClient(result_backend)
-        self.celery_db = self.mongo_client.get_default_database()
-        self.workflow_collection = self.celery_db[self.WORKFLOW_COLLECTION_NAME]
-        self.task_collection = self.celery_db[self.TASK_COLLECTION_NAME]
         self.dry_run = dry_run
         self.app_id = app_id
 
@@ -65,68 +61,6 @@ class BundleSyncManager:
         logger.info(f'unprocessed datasets: {unprocessed_datasets_ids}')
         processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
         logger.info(f'processed datasets: {processed_datasets_ids}')
-
-        self.run_workflows(processed_datasets)
-
-
-    def run_workflows(self, datasets=None):
-        logger.info(f'running workflows for {len(datasets)} datasets')
-        if datasets is None:
-            return
-
-        self.delete_pending_workflows()
-
-        for ds in datasets:
-            logger.info(f'creating workflow for dataset {ds["id"]}')
-            self.initiate_download_workflow(ds)
-
-
-    def initiate_download_workflow(self, dataset):
-        dataset_id = dataset['id']
-        wf_body = wf_utils.get_wf_body(wf_name='prepare_bundle_downloads')
-        wf = Workflow(celery_app=celery_app, **wf_body)
-        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
-        wf.start(dataset_id)
-        logger.info(f'started prepare_bundle_downloads for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
-
-
-    def delete_pending_workflows(self):
-        cursor = self.workflow_collection.find({
-            'app_id': self.app_id,
-            'name': 'prepare_bundle_downloads',
-            '_status': {
-                '$ne': 'SUCCESS'
-            }
-        })
-
-        matching_workflows = list(cursor)
-        logger.info(f'found {len(matching_workflows)} matching workflows')
-
-        workflow_ids = [wf['_id'] for wf in matching_workflows]
-
-        logger.info(f'will delete {len(workflow_ids)} matching workflows')
-        if len(workflow_ids) and not self.dry_run:
-            res = self.workflow_collection.delete_many({'_id': {
-                '$in': workflow_ids
-            }})
-            logger.info(f'Deleted {res.deleted_count} workflows')
-
-        # delete associated tasks
-        _task_ids = [task_run.get('task_id', None)
-                     for wf in matching_workflows
-                     for step in wf.get('steps', [])
-                     for task_run in step.get('task_runs', [])
-                     ]
-        task_ids = [t for t in _task_ids if t is not None]
-
-        logger.info(f'will delete {len(task_ids)} matching tasks')
-        if len(task_ids) and not self.dry_run:
-            res = self.task_collection.delete_many({
-                '_id': {
-                    '$in': task_ids
-                }
-            })
-            logger.warning(f'Deleted {res.deleted_count} tasks')
 
 
     def populate_bundle_metadata(self, dataset: dict) -> bool:
