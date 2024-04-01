@@ -3,7 +3,7 @@ import uploadApi from "./uploadApi";
 
 class UploadService {
   getToken(filename) {
-    return api.post(`/uploads/token/`, { filename });
+    return api.post(`/uploads/token/${filename}`, { filename });
   }
 
   refreshToken(filename) {
