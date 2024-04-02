@@ -144,7 +144,7 @@
                     preset="secondary"
                     @click="openModalToDownloadDataset"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" /> Downlaod
+                    <i-mdi-download class="pr-2 text-2xl" /> Download
                   </va-button>
                 </div>
               </va-card-content>

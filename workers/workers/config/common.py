@@ -74,12 +74,8 @@ config = {
         'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
-        'sync_archived_bundles': {
+        'prepare_bundle_downloads': {
             'steps': [
-                {
-                    'name': 'archive',
-                    'task': 'archive_dataset'
-                },
                 {
                     'name': 'stage',
                     'task': 'stage_dataset'

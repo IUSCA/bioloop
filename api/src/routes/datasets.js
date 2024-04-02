@@ -298,7 +298,7 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle').optional().isObject(),
+    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -348,6 +348,8 @@ router.patch(
     body('du_size').optional().notEmpty().bail()
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
+      .customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
     body('bundle').optional().isObject(),
   ]),
