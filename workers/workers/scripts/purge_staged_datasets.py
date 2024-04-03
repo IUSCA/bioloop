@@ -2,6 +2,7 @@ import logging
 import shutil
 from pathlib import Path
 
+import workers.utils as utils
 import workers.api as api
 from workers.config import config
 
@@ -25,6 +26,11 @@ def main():
         'staged_path': None
     }
     for dataset in datasets[:MAX_PURGES]:
+        locked, latest_state = utils.is_dataset_locked_for_writes(dataset)
+        if locked:
+            logger.warning(f"Dataset {dataset['id']} is locked for writes. Dataset will not be purged.'")
+            continue
+
         try:
             staged_path = Path(dataset['staged_path'])
             bundle_path = Path(f'{dataset["bundle"]["path"]}')
