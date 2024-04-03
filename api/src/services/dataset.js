@@ -1053,7 +1053,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
 
   console.log('made it to the end before transaction');
 
-  const dataset_being_accepted = await prisma.$transaction(update_queries);
+  const [dataset_being_accepted] = await prisma.$transaction(update_queries);
 
   console.log('made it to the end after transaction');
 
@@ -1238,7 +1238,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     },
   }));
 
-  const accepted_dataset = await prisma.$transaction(update_queries);
+  const [accepted_dataset] = await prisma.$transaction(update_queries);
 
   if (true) {
     throw new Error('test error');
@@ -1340,7 +1340,7 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
     }));
   }
 
-  const dataset_being_rejected = await prisma.$transaction(update_queries);
+  const [dataset_being_rejected] = await prisma.$transaction(update_queries);
 
   console.log('dataset_being_rejected');
   console.dir(dataset_being_rejected, { depth: null });
@@ -1421,7 +1421,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
     }));
   }
 
-  const rejected_dataset = await prisma.$transaction(update_queries);
+  const [rejected_dataset] = await prisma.$transaction(update_queries);
   return rejected_dataset;
 }
 

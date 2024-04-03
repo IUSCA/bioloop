@@ -1176,6 +1176,9 @@ router.post(
     // after which the duplicate is either accepted or rejected. The workflow
     // is launched first to allow a failed acceptance/rejection to be resumed
     // from the UI.
+
+    console.dir(duplicate_dataset, { depth: null });
+
     const wf = await datasetService.create_workflow(duplicate_dataset, 'accept_duplicate_dataset');
     return res.json(wf);
   }),
