@@ -83,6 +83,9 @@ const INCLUDE_AUDIT_LOGS = {
         },
       },
     },
+    orderBy: {
+      timestamp: 'desc',
+    },
   },
 };
 
