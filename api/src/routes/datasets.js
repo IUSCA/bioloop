@@ -640,10 +640,13 @@ router.post(
       where: {
         id: req.params.id,
       },
+      include: {
+        projects: true,
+      },
     });
 
     if (dataset.is_duplicate) {
-      return next(createError.BadRequest(`Dataset ${dataset.name} is a duplicate of another dataset.`));
+      return next(createError.BadRequest(`Dataset ${dataset.name} cannot be duplicated, as it is a duplicate of another dataset.`));
     }
 
     if (!action_item) {
@@ -682,24 +685,6 @@ router.post(
     // duplicate dataset
     const latestDuplicateVersion = existingDuplicates[0]?.version;
 
-    // const matchingDatasets = await prisma.dataset.findMany({
-    //   where: {
-    //     name: dataset.name,
-    //     type: dataset.type,
-    //     is_deleted: false,
-    //     is_duplicate: false,
-    //   },
-    // });
-
-    // if (matchingDatasets.length !== 1) {
-    // return next(createError.NotFound(`Expected to find one active (not
-    // deleted) original ${dataset.type} named ${dataset.name}, but found
-    // ${matchingDatasets.length}.`)); }
-
-    // const originalDataset = matchingDatasets[0];
-
-    // Defaulting version to `undefined` allows Prisma to default it to 1
-
     const createQueries = [];
 
     createQueries.push(prisma.dataset.create({
@@ -735,6 +720,13 @@ router.post(
               },
             },
           ],
+        },
+        projects: {
+          createMany: {
+            data: dataset.projects.map((p) => ({
+              project_id: p.project_id,
+            })),
+          },
         },
       },
       include: {
