@@ -36,10 +36,13 @@
     </template>
 
     <template #right>
-      <va-navbar-item class="flex items-center" v-if="auth.user?.username">
+      <va-navbar-item class="flex items-center">
         <HeaderUserDropdown />
       </va-navbar-item>
-      <va-navbar-item class="flex items-center">
+      <va-navbar-item
+        class="flex items-center"
+        v-if="auth.canAdmin || auth.canOperate"
+      >
         <NotificationDropdown />
       </va-navbar-item>
       <va-navbar-item class="flex items-center">
