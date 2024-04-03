@@ -77,7 +77,8 @@ const visible = ref(false);
 
 const updateDatasetsToAdd = (datasets) => {
   datasets.forEach((d) => {
-    // filter out datasets that are already associated with the project, or are already selected for a new association
+    // filter out datasets that are already associated with the project, or are
+    // already selected for a new association
     if (
       !persistedDatasetAssociations.value.find((ds) => ds.id === d.id) &&
       !datasetsToAdd.value.find((ds) => ds.id === d.id)
@@ -131,7 +132,7 @@ function handleOk() {
 const fetchAssociatedDatasets = () => {
   loading.value = true;
   projectService
-    .getDatasets({ id: props.id })
+    .getDatasets({ id: props.id, params: { is_duplicate: false } })
     .then((res) => {
       persistedDatasetAssociations.value = res.data.datasets;
     })

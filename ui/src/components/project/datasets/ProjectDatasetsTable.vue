@@ -250,6 +250,7 @@ const fetch_project_datasets = () => {
     .getDatasets({
       id: props.project.id,
       params: {
+        is_duplicate: false,
         ...datasets_retrieval_query.value,
         include_dataset_states: true,
         include_dataset_duplications: true,
