@@ -132,7 +132,7 @@ function handleOk() {
 const fetchAssociatedDatasets = () => {
   loading.value = true;
   projectService
-    .getDatasets({ id: props.id, params: { is_duplicate: false } })
+    .getDatasets({ id: props.id, params: { include_duplicates: false } })
     .then((res) => {
       persistedDatasetAssociations.value = res.data.datasets;
     })
