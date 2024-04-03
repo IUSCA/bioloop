@@ -1228,16 +1228,6 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     }),
   );
 
-  // update the project-dataset relationship
-  update_queries.push(prisma.project_dataset.updateMany({
-    where: {
-      dataset_id: original_dataset.id,
-    },
-    data: {
-      dataset_id: duplicate_dataset.id,
-    },
-  }));
-
   const [accepted_dataset] = await prisma.$transaction(update_queries);
 
   // if (true) {
