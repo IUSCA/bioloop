@@ -32,6 +32,8 @@ def accept(celery_task, duplicate_dataset_id, **kwargs):
         include_duplications=True
     )
 
+    raise Exception("test error")
+
     if not duplicate_being_accepted['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_being_accepted['id']} is not a duplicate")
     if duplicate_being_accepted['is_deleted']:
