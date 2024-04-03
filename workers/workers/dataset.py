@@ -43,3 +43,7 @@ def bundle_alias(bundle: dict) -> str:
 def compute_bundle_path(dataset: dict) -> str:
     alias = glom(dataset, 'metadata.bundle_alias', default=bundle_alias(dataset['bundle']))
     return alias
+
+
+def get_bundle_staged_path(dataset: dict) -> str:
+    Path(f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{dataset["bundle"]["name"]}')

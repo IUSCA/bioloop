@@ -9,6 +9,7 @@ from enum import Enum, unique
 from itertools import islice
 from pathlib import Path
 
+from workers.config import config
 
 def str_func_call(func, args, kwargs):
     args_list = [repr(arg) for arg in args] + [f"{key}={repr(val)}" for key, val in kwargs.items()]
