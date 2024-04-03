@@ -196,6 +196,10 @@ router.get(
     });
 
     const filterQuery = { where: query_obj };
+
+    console.log('filterQuery');
+    console.dir(filterQuery, { depth: null });
+
     const datasetRetrievalQuery = {
       skip: req.query.offset,
       take: req.query.limit,
