@@ -4,6 +4,7 @@ import stat
 from pathlib import Path
 
 from celery import Celery
+from celery.utils.log import get_task_logger
 from glom import glom
 
 import workers.api as api
@@ -14,6 +15,7 @@ from workers.dataset import get_bundle_staged_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
+logger = get_task_logger(__name__)
 
 
 def rm(p: Path):
@@ -46,7 +48,8 @@ def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     staged_path, alias = Path(dataset['staged_path']), glom(dataset, 'metadata.stage_alias')
 
-    bundle_path = Path(get_bundle_staged_path(dataset=dataset)
+    bundle_path = Path(get_bundle_staged_path(dataset=dataset))
+
     bundle_alias = dataset['metadata']['bundle_alias']
 
     if not staged_path.exists():

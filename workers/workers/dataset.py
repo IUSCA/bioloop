@@ -46,4 +46,4 @@ def compute_bundle_path(dataset: dict) -> str:
 
 
 def get_bundle_staged_path(dataset: dict) -> str:
-    Path(f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{dataset["bundle"]["name"]}')
+    return f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{dataset["bundle"]["name"]}'
