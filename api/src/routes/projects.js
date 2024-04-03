@@ -145,6 +145,7 @@ router.get(
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
     query('include_duplicates').toBoolean().optional(),
+    query('include_deleted').toBoolean().optional(),
     query('include_dataset_states').toBoolean().optional(),
     query('include_dataset_duplications').toBoolean().optional(),
   ]),
@@ -193,6 +194,7 @@ router.get(
       } : undefined,
       is_staged: req.query.staged,
       is_duplicate: req.query.include_duplicates || false,
+      is_deleted: req.query.include_deleted || false,
     });
 
     const filterQuery = { where: query_obj };
