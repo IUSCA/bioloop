@@ -55,7 +55,9 @@ router.get(
       },
     });
 
-    res.json(notifications);
+    setTimeout(() => {
+      res.json(notifications);
+    }, 5000);
   }),
 );
 

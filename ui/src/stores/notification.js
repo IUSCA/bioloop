@@ -1,5 +1,6 @@
 import notificationService from "@/services/notification";
 import { defineStore } from "pinia";
+import toast from "@/services/toast";
 
 export const useNotificationStore = defineStore("notification", () => {
   const loading = ref(false);
@@ -22,14 +23,18 @@ export const useNotificationStore = defineStore("notification", () => {
   }
 
   function fetchActiveNotifications() {
-    // todo - get notifications whose status is CREATED || ACK, and whose
-    // corresponding action item has not been resolved.
+    loading.value = true;
     return notificationService
       .getNotifications({
         status: "CREATED",
       })
       .then((res) => {
         setNotifications(res.data);
+      })
+      .catch(() => {
+        toast.error("Could not fetch notifications.");
+      })
+      .finally(() => {
         loading.value = false;
       });
   }
