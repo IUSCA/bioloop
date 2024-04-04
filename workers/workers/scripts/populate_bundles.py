@@ -69,7 +69,6 @@ class BundleSyncManager:
         bundle_md5 = sda.get_hash(dataset['archive_path'])
         bundle_metadata = {
             'name': f'{dataset["name"]}.tar',
-            'path': f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar',
             'size': dataset['bundle_size'],
             'md5': bundle_md5,
         }
