@@ -34,7 +34,7 @@ def main():
 
         try:
             staged_path = Path(dataset['staged_path'])
-            bundle_path = Path(get_bundle_staged_path(dataset=dataset)
+            bundle_path = Path(get_bundle_staged_path(dataset=dataset))
 
             if staged_path.exists():
                 shutil.rmtree(staged_path)
