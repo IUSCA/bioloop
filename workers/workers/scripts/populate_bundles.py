@@ -1,7 +1,11 @@
+import json
 import logging
 from pathlib import Path
 from sca_rhythm import Workflow
+from pymongo import MongoClient, DESCENDING
+import fire
 
+from workers.config.celeryconfig import result_backend
 from workers.celery_app import app as celery_app
 import workers.sda as sda
 import workers.api as api
@@ -14,76 +18,87 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def download_and_validate(dataset: dict) -> bool:
-    logger.info(f'processing dataset {dataset["id"]}')
+class BundleSyncManager:
+    WORKFLOW_COLLECTION_NAME = 'workflow_meta'
+    TASK_COLLECTION_NAME = 'celery_taskmeta'
 
-    bundle_download_path = Path(f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar')
-    # delete pre-existing bundles to force reevaluation of bundle metadata in the archive step
-    if bundle_download_path.exists():
-        logger.info(f'deleting pre-existing bundle {bundle_download_path}')
-        bundle_download_path.unlink()
-
-    sda_archive_path = dataset['archive_path']
-    try:
-        wf_utils.download_file_from_sda(sda_file_path=sda_archive_path,
-                                        local_file_path=bundle_download_path,
-                                        celery_task=None)
-    except Exception as err:
-        logger.info(f'Encountered exception while downloading dataset {dataset["id"]}:')
-        logger.info(err)
-        return False
-
-    logger.info(f'downloaded dataset {dataset["id"]}')
-
-    sda_archive_checksum = None
-    try:
-        sda_archive_checksum = sda.get_hash(dataset['archive_path'])
-        logger.info(f'sda_archive_checksum: {sda_archive_checksum}')
-    except cmd.SubprocessError as err:
-        logger.info(f'Encountered exception while retrieving SDA checksum of dataset {dataset["id"]}:')
-        logger.info(err)
-        return False
-
-    calculated_checksum = utils.checksum(Path(bundle_download_path))
-    logger.info(f'calculated_checksum: {calculated_checksum}')
-    if sda_archive_checksum != calculated_checksum:
-        logger.info('SDA checksum mismatch for dataset %s', dataset['id'])
-        return False
-
-    logger.info(f'successfully finished processing dataset {dataset["id"]}')
-    return True
+    def __init__(self, dry_run, app_id):
+        self.dry_run = dry_run
+        self.app_id = app_id
 
 
-def main():
-    archived_datasets = api.get_all_datasets(archived=True)
+    def populate_bundles(self):
+        archived_datasets = api.get_all_datasets(archived=True, bundle=True)
 
-    unprocessed = []
-    for dataset in archived_datasets:
-        download_validated = False
+        processed_datasets = []
+        unprocessed_datasets = []
 
-        try:
-            download_validated = download_and_validate(dataset)
-            logger.info(f'download_validated for {dataset["id"]}: {download_validated}')
-        except Exception as err:
-            logger.info(f'failed to download or validate dataset {dataset["id"]}')
-            logger.info(err)
+        for dataset in archived_datasets:
+            logger.info(f'processing dataset {dataset["id"]}')
 
-        if download_validated:
-            run_workflows(dataset)
-        else:
-            unprocessed.append(dataset['id'])
+            update_data = {
+                'is_staged': False,
+                'staged_path': None,
+            }
+            api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
+            logger.info(f"unstaged dataset {dataset['id']}")
 
-    logger.info(f'unprocessed datasets: {unprocessed}')
+            bundle_metadata_populated = dataset['bundle'] is not None
+            if not bundle_metadata_populated:
+                try:
+                    bundle_metadata_populated = self.populate_bundle_metadata(dataset)
+                    logger.info(f'bundle_metadata_populated for {dataset["id"]}: {bundle_metadata_populated}')
+                except Exception as err:
+                    logger.info(f'failed to populate bundle for dataset {dataset["id"]}')
+                    logger.info(err)
+
+            if not bundle_metadata_populated:
+                unprocessed_datasets.append(dataset)
+            else:
+                processed_datasets.append(dataset)
+
+        unprocessed_datasets_ids = [dataset['id'] for dataset in unprocessed_datasets]
+        logger.info(f'unprocessed datasets: {unprocessed_datasets_ids}')
+        processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
+        logger.info(f'processed datasets: {processed_datasets_ids}')
 
 
-def run_workflows(dataset):
-    dataset_id = dataset['id']
-    wf_body = wf_utils.get_wf_body(wf_name='sync_archived_bundles')
-    wf = Workflow(celery_app=celery_app, **wf_body)
-    api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
-    wf.start(dataset_id)
-    logger.info(f'started sync_archived_bundles for {dataset["id"]}, workflow_id: {wf.workflow["_id"]}')
+    def populate_bundle_metadata(self, dataset: dict) -> bool:
+        logger.info(f'populating dataset {dataset["id"]}')
+
+        bundle_md5 = sda.get_hash(dataset['archive_path'])
+        bundle_metadata = {
+            'name': f'{dataset["name"]}.tar',
+            'path': f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar',
+            'size': dataset['bundle_size'],
+            'md5': bundle_md5,
+        }
+        update_data = {
+            'bundle': bundle_metadata
+        }
+        api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
+
+        logger.info(f'successfully finished populating dataset {dataset["id"]}')
+        return True
+
+
+def initiate_bundle_sync(app_id=config['app_id'], dry_run=False):
+    """
+    For the given app_id, creates the bundle metadata for previously-archived datasets, and
+    launches a workflow which sets up the bundles for download. Any existing instances of
+    the `prepare_bundle_downloads` workflow that are pending will be deleted.
+
+    :param app_id:  app_id to prepare bundle downloads for
+    :param dry_run: if True, do not delete pending workflows
+    :return:
+
+    example usage:
+
+    python -m workers.scripts.sync_bundles_phase1 --app_id='bioloop-dev.sca.iu.edu' --dry_run
+    """
+
+    BundleSyncManager(dry_run=dry_run, app_id=app_id).populate_bundles()
 
 
 if __name__ == '__main__':
-    main()
+    fire.Fire(initiate_bundle_sync)

@@ -5,6 +5,7 @@ from pathlib import Path
 import workers.utils as utils
 import workers.api as api
 from workers.config import config
+from workers.dataset import get_bundle_staged_path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def main():
 
         try:
             staged_path = Path(dataset['staged_path'])
-            bundle_path = Path(f'{dataset["bundle"]["path"]}')
+            bundle_path = Path(get_bundle_staged_path(dataset=dataset)
 
             if staged_path.exists():
                 shutil.rmtree(staged_path)

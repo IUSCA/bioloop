@@ -1,7 +1,7 @@
 <template>
   <va-modal
     v-model="visible"
-    :title="breakpoint.current"
+    title="Data Access Options"
     fixed-layout
     hide-default-actions
   >
@@ -59,7 +59,7 @@
         </va-list-item>
 
         <!-- Direct Download -->
-        <va-list-item>
+        <va-list-item v-if="props.dataset?.metadata?.bundle_alias">
           <!-- icon -->
           <va-list-item-section avatar>
             <i-mdi:folder-zip-outline class="text-2xl" />

@@ -44,13 +44,19 @@ config = {
         'RAW_DATA': {
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
-            'bundle': '/path/to/staged/raw_data/bundles',
+            'bundle': {
+                'generate': '/path/for/raw_data/bundle/generation',
+                'stage': '/path/for/raw_data/bundle/staging',
+            },
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
-            'bundle': '/path/to/staged/data_products/bundles',
+            'bundle': {
+                'generate': '/path/for/data_products/bundle/generation',
+                'stage': '/path/for/data_products/bundle/staging',
+            },
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
@@ -78,12 +84,8 @@ config = {
         'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
-        'sync_archived_bundles': {
+        'prepare_bundle_downloads': {
             'steps': [
-                {
-                    'name': 'archive',
-                    'task': 'archive_dataset'
-                },
                 {
                     'name': 'stage',
                     'task': 'stage_dataset'

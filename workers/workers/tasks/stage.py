@@ -14,7 +14,7 @@ from workers.config import config
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.dataset import compute_staging_path
-from workers.dataset import compute_bundle_path
+from workers.dataset import compute_bundle_path, get_bundle_staged_path
 from workers import exceptions as exc
 
 app = Celery("tasks")
@@ -76,7 +76,7 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 
     bundle = dataset["bundle"]
     bundle_md5 = bundle["md5"]
-    bundle_download_path = Path(bundle["path"])
+    bundle_download_path = Path(get_bundle_staged_path(dataset=dataset))
 
     wf_utils.download_file_from_sda(sda_file_path=sda_bundle_path,
                                     local_file_path=bundle_download_path,

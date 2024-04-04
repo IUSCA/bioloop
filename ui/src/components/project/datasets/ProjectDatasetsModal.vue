@@ -86,7 +86,10 @@ const updateDatasetsToAdd = (datasets) => {
       datasetsToAdd.value.push(d);
     }
 
-    datasetsToRemove.value.splice(datasetsToRemove.value.indexOf(d), 1);
+    const index = datasetsToRemove.value.findIndex((ds) => ds.id === d.id);
+    if (index >= 0) {
+      datasetsToRemove.value.splice(index, 1);
+    }
   });
 };
 
@@ -95,7 +98,10 @@ const updateDatasetsToRemove = (datasets) => {
     if (!datasetsToRemove.value.find((ds) => ds.id === d.id)) {
       datasetsToRemove.value.push(d);
     }
-    datasetsToAdd.value.splice(datasetsToAdd.value.indexOf(d), 1);
+    const index = datasetsToAdd.value.findIndex((ds) => ds.id === d.id);
+    if (index >= 0) {
+      datasetsToAdd.value.splice(index, 1);
+    }
   });
 };
 

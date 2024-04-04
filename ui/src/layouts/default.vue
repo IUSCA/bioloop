@@ -12,7 +12,7 @@
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
     <main id="main" class="w-full overflow-y-scroll">
-      <div class="px-6 pb-10 pt-4 min-h-screen">
+      <div class="px-2 md:px-6 pb-10 pt-4 min-h-screen">
         <LeaveBreadcrumbs class="mb-2" />
         <router-view></router-view>
       </div>
