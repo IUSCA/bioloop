@@ -65,9 +65,7 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
         original_dataset['staged_path'] is not None else None
     original_dataset_bundle_path = Path(get_bundle_staged_path(dataset=original_dataset)).resolve() if \
-            (original_dataset['bundle'] is not None and
-             original_dataset['bundle']['path'] is not None)\
-        else None
+            original_dataset['bundle'] is not None else None
 
     if original_dataset_latest_state == 'OVERWRITE_IN_PROGRESS':
         if original_dataset_staged_path is not None and original_dataset_staged_path.exists():
