@@ -57,7 +57,7 @@ router.get(
 
     setTimeout(() => {
       res.json(notifications);
-    }, 5000);
+    }, 0);
   }),
 );
 
