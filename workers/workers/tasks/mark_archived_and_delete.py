@@ -8,7 +8,7 @@ from workers.dataset import get_bundle_staged_path
 def mark_archived_and_delete(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     source = Path(dataset['origin_path']).resolve()
-    bundle_path = Path(get_bundle_staged_path(dataset=dataset)
+    bundle_path = Path(get_bundle_staged_path(dataset=dataset))
 
     sda_tar_path = f'archive/2023/raw_data/{dataset["name"]}.tar'
     update_data = {
