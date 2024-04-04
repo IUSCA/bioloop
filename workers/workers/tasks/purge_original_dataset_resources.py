@@ -18,6 +18,7 @@ import workers.utils as utils
 from workers.exceptions import InspectionFailed
 from workers import exceptions as exc
 from workers.config import config
+from workers.dataset import get_bundle_staged_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -63,7 +64,7 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
 
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
         original_dataset['staged_path'] is not None else None
-    original_dataset_bundle_path = Path(original_dataset['bundle']['path']).resolve() if \
+    original_dataset_bundle_path = Path(get_bundle_staged_path(dataset=original_dataset)).resolve() if \
             (original_dataset['bundle'] is not None and
              original_dataset['bundle']['path'] is not None)\
         else None
