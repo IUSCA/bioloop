@@ -1,7 +1,7 @@
 <template>
   <va-card>
     <va-card-title class="mt-1">
-      <span class="text-lg">{{ breakpoint.current }}</span>
+      <span class="text-lg">Duplicate Analysis Report</span>
     </va-card-title>
 
     <va-card-content>
