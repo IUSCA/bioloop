@@ -311,7 +311,11 @@
       </div>
     </div>
     <!-- Download Modal -->
-    <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
+    <DatasetDownloadModal
+      ref="downloadModal"
+      :dataset="dataset"
+      @download-initiated="trigger_dataset_retrieval = true"
+    />
   </va-inner-loading>
 
   <EditDatasetModal
@@ -341,6 +345,9 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
+// Can be set to true to re-retrieve the dataset from the API without
+// refreshing the page.
+const trigger_dataset_retrieval = ref(false);
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
@@ -397,6 +404,7 @@ function fetch_dataset(show_loading = false) {
     })
     .finally(() => {
       loading.value = false;
+      trigger_dataset_retrieval.value = false;
     });
 }
 
@@ -490,6 +498,10 @@ function openModalToDownloadDataset() {
 
 const isDatasetLocked = computed(() => {
   return isDatasetLockedForWrite(dataset.value);
+});
+
+watch(trigger_dataset_retrieval, () => {
+  fetch_dataset(true);
 });
 </script>
 

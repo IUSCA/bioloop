@@ -152,7 +152,7 @@ const props = defineProps({
     default: () => ({}),
   },
 });
-// const emit = defineEmits(["update"]);
+const emit = defineEmits(["downloadInitiated"]);
 
 // parent component can invoke these methods through the template ref
 defineExpose({
@@ -181,8 +181,6 @@ const log_data_access = () => {
     });
 };
 
-const retrigger_dataset_download = ref(false);
-
 const initiate_dataset_download = () => {
   datasetService
     .get_file_download_data({
@@ -195,11 +193,11 @@ const initiate_dataset_download = () => {
         url: url.toString(),
         filename: props.dataset.name,
       });
+      emit("downloadInitiated");
     })
     .catch((err) => {
       console.error(err);
-      toast.error("Unable to initiate dataset download");
-      retrigger_dataset_download.value = true;
+      toast.error("Unable to download dataset");
     });
 };
 
