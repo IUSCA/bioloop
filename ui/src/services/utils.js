@@ -246,10 +246,6 @@ function groupByAndAggregate(
 
 function isDatasetLockedForWrite(dataset) {
   // Assume dataset is locked if it's current state can't be determined
-  if (!dataset) {
-    return true;
-  }
-
   const datasetLatestState =
     dataset.states && dataset.states?.length > 0
       ? dataset.states[0].state
@@ -269,10 +265,6 @@ function isDatasetLockedForWrite(dataset) {
 }
 
 function isDatasetBeingOverwritten(dataset) {
-  if (!dataset) {
-    return undefined;
-  }
-
   // assumes states are sorted in descending order by timestamp
   const datasetLatestState =
     dataset.states && dataset.states?.length > 0
@@ -297,9 +289,6 @@ function datasetHasActiveDuplicates(dataset) {
 // whether this dataset has incoming duplicates which have not been accepted or
 // rejected by the system yet.
 function isActiveDatasetWithIncomingDuplicates(dataset) {
-  if (!dataset) {
-    return undefined;
-  }
   const datasetState = datasetCurrentState(dataset);
   return (
     !dataset.is_duplicate &&
