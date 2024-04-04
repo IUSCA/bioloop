@@ -44,13 +44,13 @@ config = {
         'RAW_DATA': {
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
-            'bundle': '/path/to/bundle/raw_data',
+            'bundle': '/path/to/staged/raw_data/bundles',
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
-            'bundle': '/path/to/bundle/data_products',
+            'bundle': '/path/to/staged/data_products/bundles',
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
