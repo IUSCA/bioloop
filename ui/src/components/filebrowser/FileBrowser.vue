@@ -1,6 +1,8 @@
 <template>
   <div class="flex justify-center">
     <div class="w-full flex-none">
+      <DuplicationAlerts v-if="dataset" :dataset="dataset" />
+
       <va-inner-loading :loading="data_loading">
         <!-- BreadCrumbs Navigation / Search Filters -->
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
@@ -9,7 +11,6 @@
           The current dataset is an active dataset which has incoming duplicates,
           or one that is currently being overwritten by a duplicate.
           -->
-          <DuplicationAlerts :dataset="dataset" />
 
           <FileBrowserSearchFilters
             v-if="isInSearchMode"
