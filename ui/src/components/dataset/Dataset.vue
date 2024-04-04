@@ -130,10 +130,7 @@
 
                   <!-- Delete Action Button-->
                   <va-button
-                    v-if="
-                      (config.enable_delete_archive && dataset.archive_path) ||
-                      isDatasetLocked
-                    "
+                    v-if="config.enable_delete_archive && dataset.archive_path"
                     :disabled="is_delete_pending || isDatasetLocked"
                     color="danger"
                     border-color="danger"
@@ -492,7 +489,7 @@ function openModalToDownloadDataset() {
 }
 
 const isDatasetLocked = computed(() => {
-  return isDatasetLockedForWrite(props.data);
+  return isDatasetLockedForWrite(dataset.value);
 });
 </script>
 
