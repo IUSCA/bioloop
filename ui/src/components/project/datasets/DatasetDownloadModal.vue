@@ -213,4 +213,9 @@ function hide() {
 function show() {
   visible.value = true;
 }
+
+watch(props.dataset, () => {
+  console.log("DatasetDownloadModal: props.dataset updated");
+  console.dir(props.dataset, { depth: null });
+});
 </script>

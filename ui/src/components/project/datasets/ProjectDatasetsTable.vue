@@ -141,7 +141,7 @@
     :dataset="datasetToDownload"
     @download-initiated="
       (dataset_id) => {
-        console.log('DatasetDownloadModal: @download-initiated: ', dataset_id);
+        console.log('ProjectDatasetsTable: @download-initiated: ', dataset_id);
         emit('download-initiated', dataset_id);
       }
     "
