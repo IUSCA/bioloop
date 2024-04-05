@@ -81,6 +81,7 @@
                 }
               "
               :trigger-datasets-retrieval="triggerDatasetsRetrieval"
+              :refresh-dataset="refreshDataset"
               @download-initiated="
                 (dataset_id) => {
                   console.log(

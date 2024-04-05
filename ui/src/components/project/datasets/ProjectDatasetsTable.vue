@@ -247,7 +247,6 @@ const updateFiltersGroupQuery = (newVal) => {
 };
 
 const fetch_project_datasets = () => {
-  console.log("ProjectDatasetsTable: fetch_project_datasets");
   loading.value = true;
   if (!props.project.id) return [];
   projectService
@@ -270,7 +269,6 @@ const fetch_project_datasets = () => {
     })
     .finally(() => {
       loading.value = false;
-      console.log("ProjectDatasetsTable: datasets-retrieved emitted");
       emit("datasets-retrieved");
     });
 };
