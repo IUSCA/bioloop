@@ -136,7 +136,16 @@
   />
 
   <!-- Download Modal -->
-  <DatasetDownloadModal ref="downloadModal" :dataset="datasetToDownload" />
+  <DatasetDownloadModal
+    ref="downloadModal"
+    :dataset="datasetToDownload"
+    @download-initiated="
+      (dataset_id) => {
+        console.log('DatasetDownloadModal: @download-initiated: ', dataset_id);
+        emit('download-initiated', dataset_id);
+      }
+    "
+  />
 
   <!-- Stage Modal -->
   <StageDatasetModal
@@ -177,7 +186,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["datasets-retrieved"]);
+const emit = defineEmits(["datasetsRetrieved", "downloadInitiated"]);
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
