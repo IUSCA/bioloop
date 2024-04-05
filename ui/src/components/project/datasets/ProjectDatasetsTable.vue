@@ -450,6 +450,11 @@ const columns = [
 const downloadModal = ref(null);
 const datasetToDownload = ref(null);
 
+watch(datasetToDownload, () => {
+  console.log("ProjectDatasetsTable - watch - datasetToDownload");
+  console.dir(datasetToDownload.value, { depth: null });
+});
+
 function openModalToDownloadProject(dataset) {
   datasetToDownload.value = dataset;
   downloadModal.value.show();
