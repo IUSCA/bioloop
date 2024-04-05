@@ -13,6 +13,7 @@ const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
 const datasetService = require('../services/dataset');
+const datasetDuplicationService = require('../services/datasetDuplication');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -210,7 +211,7 @@ router.get(
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         ...(req.query.include_dataset_states && datasetService.INCLUDE_STATES),
-        ...(req.query.include_dataset_duplications && datasetService.DUPLICATION_PROCESSING_INCLUSIONS),
+        ...(req.query.include_dataset_duplications && datasetDuplicationService.DUPLICATION_PROCESSING_INCLUSIONS),
         bundle: true,
       },
     };
