@@ -1049,7 +1049,6 @@ router.get(
     query('file_id').isInt().toInt().optional(),
   ]),
   dataset_access_check,
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
