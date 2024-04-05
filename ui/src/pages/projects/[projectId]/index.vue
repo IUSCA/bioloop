@@ -87,6 +87,7 @@
                   console.log(
                     '[projectId]: download-initiated event triggered',
                   );
+                  console.log('dataset_id:', dataset_id);
                   refreshDataset = dataset_id;
                 }
               "

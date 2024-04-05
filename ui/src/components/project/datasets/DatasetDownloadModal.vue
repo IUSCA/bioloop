@@ -193,6 +193,9 @@ const initiate_dataset_download = () => {
         url: url.toString(),
         filename: props.dataset.name,
       });
+      console.log(
+        `DatasetDownloadModal: emitting download-initiated | dataset_id: ${props.dataset.id}`,
+      );
       emit("downloadInitiated", props.dataset.id);
     })
     .catch((err) => {
