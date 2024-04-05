@@ -82,11 +82,11 @@
               "
               :trigger-datasets-retrieval="triggerDatasetsRetrieval"
               @download-initiated="
-                () => {
+                (dataset_id) => {
                   console.log(
                     '[projectId]: download-initiated event triggered',
                   );
-                  triggerDatasetsRetrieval = true;
+                  refreshDataset = dataset_id;
                 }
               "
             />
@@ -196,6 +196,8 @@ const data_loading = ref(false);
 // datasets associated with this project needs to be refreshed without
 // refreshing the page.
 const triggerDatasetsRetrieval = ref(false);
+
+const refreshDataset = ref(null);
 
 watch(project, () => {
   nav.setNavItems([

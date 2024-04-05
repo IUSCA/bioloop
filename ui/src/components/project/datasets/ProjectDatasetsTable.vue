@@ -171,6 +171,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  refreshDataset: {
+    type: Number,
+    required: false,
+  },
 });
 
 const emit = defineEmits(["datasets-retrieved"]);
@@ -180,7 +184,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const pageSize = ref(10);
 const total_results = ref(0);
 
-const _triggerDatasetsRetrieval = toRef(() => props.triggerDatasetsRetrieval);
 const projectIdRef = toRef(() => props.project.id);
 const loading = ref(false);
 
@@ -259,17 +262,6 @@ const fetch_project_datasets = () => {
       },
     })
     .then((res) => {
-      console.log(
-        "ProjectDatasetsTable: fetch_project_datasets retrieved datasets",
-      );
-      const matching_datasets = res.data.datasets.filter(
-        (d) => d.name === "sub-fsm02cd",
-      );
-      console.log(`matching_datasets length: ${matching_datasets.length}`);
-
-      console.log("refreshed dataset:");
-      console.dir(matching_datasets[0], { depth: null });
-
       projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
     })
@@ -283,13 +275,36 @@ const fetch_project_datasets = () => {
     });
 };
 
-watch(_triggerDatasetsRetrieval, () => {
+const refresh_downloaded_dataset = (dataset_id) => {
+  console.log("ProjectDatasetsTable: refresh_downloaded_dataset", dataset_id);
+  DatasetService.getById({
+    id: dataset_id,
+    include_states: true,
+    include_duplications: true,
+  }).then((res) => {
+    console.log(
+      "ProjectDatasetsTable: refresh_downloaded_dataset refreshed dataset",
+    );
+    datasetToDownload.value = res.data;
+  });
+};
+
+watch(props.triggerDatasetsRetrieval, () => {
   console.log("ProjectDatasetsTable: triggerDatasetsRetrieval watch");
 
-  if (_triggerDatasetsRetrieval.value) {
+  if (props.triggerDatasetsRetrieval) {
     console.log("re-fetching project datasets");
     currentPageIndex.value = 1;
     fetch_project_datasets();
+  }
+});
+
+watch(props.refreshDataset, () => {
+  console.log("ProjectDatasetsTable: refreshDownloadedDataset watch");
+
+  if (props.refreshDataset) {
+    console.log("re-fetching project datasets");
+    refresh_downloaded_dataset(props.refreshDataset);
   }
 });
 
