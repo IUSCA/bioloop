@@ -15,7 +15,6 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
-const datasetDuplicationService = require('../services/datasetDuplication');
 const authService = require('../services/auth');
 
 const isPermittedTo = accessControl('datasets');
@@ -480,7 +479,7 @@ router.get(
         bundle: req.query.bundle || false,
         action_items: req.query.include_action_items || false,
         ...(req.query.include_states && { ...datasetService.INCLUDE_STATES }),
-        ...(req.query.include_duplications && { ...datasetDuplicationService.INCLUDE_DUPLICATIONS }),
+        ...(req.query.include_duplications && { ...datasetService.INCLUDE_DUPLICATIONS }),
       },
     };
 
@@ -1155,7 +1154,7 @@ router.post(
 
     let duplicate_dataset;
     try {
-      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_acceptance(
+      duplicate_dataset = await datasetService.initiate_duplicate_acceptance(
         {
           duplicate_dataset_id: req.params.id,
           accepted_by_id: req.user.id,
@@ -1197,7 +1196,7 @@ router.post(
 
     let duplicate_dataset;
     try {
-      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_rejection(
+      duplicate_dataset = await datasetService.initiate_duplicate_rejection(
         {
           duplicate_dataset_id: req.params.id,
           rejected_by_id: req.user.id,
@@ -1232,7 +1231,7 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     let updatedDataset;
     try {
-      updatedDataset = await datasetDuplicationService.complete_duplicate_acceptance({
+      updatedDataset = await datasetService.complete_duplicate_acceptance({
         duplicate_dataset_id: req.params.id,
       });
     } catch (e) {
@@ -1254,7 +1253,7 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     let updatedDataset;
     try {
-      updatedDataset = await datasetDuplicationService.complete_duplicate_rejection({
+      updatedDataset = await datasetService.complete_duplicate_rejection({
         duplicate_dataset_id: req.params.duplicate_dataset_id,
       });
     } catch (e) {
