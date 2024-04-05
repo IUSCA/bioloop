@@ -1,7 +1,7 @@
 <template>
   <div v-if="failed_task_run">
     <div
-      class="bg-red-100 border dark:bg-red-900 dark:bg-opacity-50 text-red-700 dark:text-red-100 px-4 py-3 rounded relative flex items-center"
+      class="bg-red-100 border dark:bg-red-900 dark:bg-opacity-50 text-red-700 dark:text-red-100 px-4 py-3 rounded relative flex items-center gap-3"
       role="alert"
     >
       <div>
@@ -19,7 +19,7 @@
       <!-- toggle traceback button -->
       <VaButton
         @click="showTraceback = !showTraceback"
-        class="ml-auto"
+        class="ml-auto w-[138px] flex-none"
         preset="secondary"
         color="danger"
         border-color="danger"
