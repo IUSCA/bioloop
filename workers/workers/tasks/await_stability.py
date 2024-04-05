@@ -9,7 +9,7 @@ from celery.utils.log import get_task_logger
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
-from workers.utils import is_dataset_locked_for_writes
+from workers.dataset import is_dataset_locked_for_writes
 
 logger = get_task_logger(__name__)
 

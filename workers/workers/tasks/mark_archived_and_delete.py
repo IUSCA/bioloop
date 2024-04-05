@@ -3,7 +3,8 @@ from pathlib import Path
 
 from workers import api
 from workers.dataset import get_bundle_staged_path
-from workers.utils import is_dataset_locked_for_writes
+from workers.dataset import is_dataset_locked_for_writes
+
 
 def mark_archived_and_delete(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)

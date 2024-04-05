@@ -12,7 +12,7 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
 from workers.exceptions import ValidationFailed
-from workers.dataset import get_bundle_staged_path
+from workers.dataset import get_bundle_staged_path, is_dataset_locked_for_writes
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -48,7 +48,7 @@ def grant_access_to_parent_chain(leaf: Path, root: Path):
 def setup_download(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
 
-    locked, latest_state = utils.is_dataset_locked_for_writes(dataset)
+    locked, latest_state = is_dataset_locked_for_writes(dataset)
     if locked:
         raise ValidationFailed(f"Dataset {dataset['id']} is locked for writes. Dataset's current "
                         f"state is {latest_state}.")

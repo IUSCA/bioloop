@@ -10,26 +10,6 @@ from itertools import islice
 from pathlib import Path
 
 
-def is_dataset_locked_for_writes(dataset: dict) -> tuple:
-    # assumes states are sorted by descending timestamp
-    latest_state = dataset['states'][0] if \
-        (dataset['states'] is not None and len(dataset['states']) > 0) else \
-        None
-
-    if dataset['is_deleted']:
-        locked = True
-    else:
-        if not dataset['is_duplicate']:
-            locked = (latest_state['state'] == 'OVERWRITE_IN_PROGRESS' or
-                      latest_state['state'] == 'ORIGINAL_DATASET_RESOURCES_PURGED')
-        else:
-            locked = (latest_state['state'] == 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' or
-                      latest_state['state'] == 'DUPLICATE_REJECTION_IN_PROGRESS' or
-                      latest_state['state'] == 'DUPLICATE_DATASET_RESOURCES_PURGED')
-
-    return locked, latest_state if latest_state is not None else None
-
-
 def str_func_call(func, args, kwargs):
     args_list = [repr(arg) for arg in args] + [f"{key}={repr(val)}" for key, val in kwargs.items()]
     args_str = ", ".join(args_list)
