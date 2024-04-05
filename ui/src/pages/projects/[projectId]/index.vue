@@ -74,9 +74,21 @@
           <va-card-content>
             <ProjectDatasetsTable
               :project="project"
-              @datasets-retrieved="triggerDatasetsRetrieval = false"
+              @datasets-retrieved="
+                () => {
+                  console.log('datasets-retrieved event triggered');
+                  triggerDatasetsRetrieval = false;
+                }
+              "
               :trigger-datasets-retrieval="triggerDatasetsRetrieval"
-              @download-initiated="triggerDatasetsRetrieval = true"
+              @download-initiated="
+                () => {
+                  console.log(
+                    '[projectId]: download-initiated event triggered',
+                  );
+                  triggerDatasetsRetrieval = true;
+                }
+              "
             />
           </va-card-content>
         </va-card>

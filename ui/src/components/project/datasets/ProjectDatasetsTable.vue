@@ -244,6 +244,7 @@ const updateFiltersGroupQuery = (newVal) => {
 };
 
 const fetch_project_datasets = () => {
+  console.log("ProjectDatasetsTable: fetch_project_datasets");
   loading.value = true;
   if (!props.project.id) return [];
   projectService
@@ -258,20 +259,35 @@ const fetch_project_datasets = () => {
       },
     })
     .then((res) => {
+      console.log(
+        "ProjectDatasetsTable: fetch_project_datasets retrieved datasets",
+      );
+      const matching_datasets = res.data.datasets.filter(
+        (d) => d.name === "sub-fsm02cd",
+      );
+      console.log(`matching_datasets length: ${matching_datasets.length}`);
+
+      console.log("refreshed dataset:");
+      console.dir(matching_datasets[0], { depth: null });
+
       projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
-      emit("datasets-retrieved");
     })
     .catch(() => {
       toast.error("Failed to retrieve datasets");
     })
     .finally(() => {
       loading.value = false;
+      console.log("ProjectDatasetsTable: datasets-retrieved emitted");
+      emit("datasets-retrieved");
     });
 };
 
 watch(_triggerDatasetsRetrieval, () => {
+  console.log("ProjectDatasetsTable: triggerDatasetsRetrieval watch");
+
   if (_triggerDatasetsRetrieval.value) {
+    console.log("re-fetching project datasets");
     currentPageIndex.value = 1;
     fetch_project_datasets();
   }
