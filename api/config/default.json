@@ -74,8 +74,8 @@
           "task": "validate_dataset"
         },
         {
-          "name": "generate_qc",
-          "task": "generate_qc"
+          "name": "setup_download",
+          "task": "setup_dataset_download"
         }
       ]
     },
