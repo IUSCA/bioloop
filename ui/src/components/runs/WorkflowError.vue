@@ -1,26 +1,31 @@
 <template>
   <div v-if="failed_task_run">
     <div
-      class="bg-red-100 border dark:bg-red-900 text-red-700 dark:text-red-100 px-4 py-3 rounded relative"
+      class="bg-red-100 border dark:bg-red-900 dark:bg-opacity-50 text-red-700 dark:text-red-100 px-4 py-3 rounded relative flex items-center"
       role="alert"
     >
-      <strong class="font-bold">{{ failed_task_run.result.exc_type }}</strong>
-      <ul class="list-disc pl-5">
-        <li
-          v-for="(message, index) in failed_task_run.result.exc_message"
-          :key="index"
-        >
-          {{ message }}
-        </li>
-      </ul>
+      <div>
+        <strong class="font-bold">{{ failed_task_run.result.exc_type }}</strong>
+        <ul class="list-disc pl-5">
+          <li
+            v-for="(message, index) in failed_task_run.result.exc_message"
+            :key="index"
+          >
+            {{ message }}
+          </li>
+        </ul>
+      </div>
 
       <!-- toggle traceback button -->
-      <button
+      <VaButton
         @click="showTraceback = !showTraceback"
-        class="absolute top-0 bottom-0 right-0 px-4 py-3 focus:outline-none text-red-700 dark:text-red-100"
+        class="ml-auto"
+        preset="secondary"
+        color="danger"
+        border-color="danger"
       >
         {{ showTraceback ? "Hide" : "Show" }} Traceback
-      </button>
+      </VaButton>
     </div>
 
     <div v-if="showTraceback" class="mt-2">
