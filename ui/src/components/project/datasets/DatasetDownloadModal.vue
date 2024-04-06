@@ -152,7 +152,7 @@ const props = defineProps({
     default: () => ({}),
   },
 });
-const emit = defineEmits(["downloadInitiated"]);
+const emit = defineEmits(["download-initiated"]);
 
 // parent component can invoke these methods through the template ref
 defineExpose({
@@ -196,7 +196,7 @@ const initiate_dataset_download = () => {
       console.log(
         `DatasetDownloadModal: emitting download-initiated | dataset_id: ${props.dataset.id}`,
       );
-      emit("downloadInitiated", props.dataset.id);
+      emit("download-initiated", props.dataset.id);
     })
     .catch((err) => {
       console.error(err);

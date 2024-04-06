@@ -33,6 +33,7 @@
           :show-download="props.showDownload"
           :files="files"
           :dataset-id="props.datasetId"
+          @download-initiated="fetch_files"
         />
       </va-inner-loading>
     </div>
@@ -62,6 +63,10 @@ const searchResults = ref([]);
 const files = computed(() => {
   return isInSearchMode.value ? searchResults.value : fileList.value;
 });
+
+const fetch_files = () => {
+  get_file_list(pwd.value);
+};
 
 function get_file_list(path) {
   data_loading.value = true;
@@ -123,7 +128,7 @@ watch(
     // navigating to a directory disables the search mode
     store.resetFilters();
     isInSearchMode.value = false;
-    get_file_list(pwd.value);
+    fetch_files();
   },
   { immediate: true },
 );

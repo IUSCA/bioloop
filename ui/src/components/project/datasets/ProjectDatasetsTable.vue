@@ -183,7 +183,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["datasetsRetrieved", "downloadInitiated"]);
+const emit = defineEmits(["datasets-retrieved", "download-initiated"]);
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
