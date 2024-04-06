@@ -8,10 +8,6 @@
 
       <div class="flex-none">
         <va-button
-          v-if="
-            props.dataset.action_items.length > 0 &&
-            (auth.canAdmin || auth.canOperate)
-          "
           @click="
             () => {
               router.push(`/datasets/${props.dataset.id}`);
