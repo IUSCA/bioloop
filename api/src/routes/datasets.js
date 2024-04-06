@@ -84,6 +84,34 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
   next();
 });
 
+const state_write_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: req.params.id,
+    },
+    include: {
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+    },
+  });
+
+  const latestState = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  if (
+    ((latestState === 'OVERWRITE_IN_PROGRESS' || latestState === 'ORIGINAL_DATASET_RESOURCES_PURGED')
+          && req.body.state !== 'ORIGINAL_DATASET_RESOURCES_PURGED')
+      || ((latestState === 'DUPLICATE_REJECTION_IN_PROGRESS' || latestState === 'DUPLICATE_DATASET_RESOURCES_PURGED')
+          && req.body.state !== 'DUPLICATE_DATASET_RESOURCES_PURGED')
+      || (latestState === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS')) {
+    return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
+        + `while its current state is ${latestState}`));
+  }
+
+  next();
+});
+
 router.post(
   '/:id/action-item',
   isPermittedTo('update'),
@@ -584,6 +612,10 @@ router.post(
     */
     const { workflow_id, state, ...data } = req.body;
 
+    if (data.is_duplicate) {
+      next(createError.BadRequest('Created datasets cannot be duplicate.'));
+    }
+
     // create workflow association
     if (workflow_id) {
       data.workflows = {
@@ -771,6 +803,9 @@ router.patch(
     if (!datasetToUpdate) {
       return next(createError(404));
     }
+    if (datasetToUpdate.is_duplicate) {
+      return next(createError.BadRequest(`Dataset ${req.params.id} is a duplicate, and cannot be written to.`));
+    }
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
@@ -810,6 +845,16 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
+
+    const datasetToUpdate = await prisma.dataset.findFirst({
+      where: {
+        id: req.params.id,
+      },
+    });
+    if (datasetToUpdate.is_duplicate) {
+      return next(createError.BadRequest(`Dataset ${req.params.id} is a duplicate, and cannot be written to.`));
+    }
+
     const data = req.body.map((f) => ({
       path: f.path,
       md5: f.md5,
@@ -847,6 +892,7 @@ router.post(
 // add state to dataset
 router.post(
   '/:id/states',
+  state_write_check,
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
@@ -886,6 +932,10 @@ router.delete(
         },
       },
     });
+
+    if (_dataset.is_duplicate) {
+      return next(createError.BadRequest(`Soft-deletion cannot be performed on an active duplicate dataset ${req.params.id}.`));
+    }
 
     if (_dataset) {
       await datasetService.soft_delete(_dataset, req.user?.id);
@@ -1243,9 +1293,9 @@ router.patch(
 );
 
 router.patch(
-  '/duplicates/:duplicate_dataset_id/reject/complete',
+  '/duplicates/:id/reject/complete',
   validate([
-    param('duplicate_dataset_id').isInt().toInt(),
+    param('id').isInt().toInt(),
   ]),
   dataset_delete_check,
   // state middleware is omitted here - the service method validates state
@@ -1253,7 +1303,7 @@ router.patch(
     let updatedDataset;
     try {
       updatedDataset = await datasetService.complete_duplicate_rejection({
-        duplicate_dataset_id: req.params.duplicate_dataset_id,
+        duplicate_dataset_id: req.params.id,
       });
     } catch (e) {
       console.log(e);

@@ -379,6 +379,19 @@ router.post(
       };
     }
 
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
+
     if ((dataset_ids || []).length > 0) {
       data.datasets = {
         create: dataset_ids.map((id) => ({
@@ -432,6 +445,19 @@ router.post(
     const target_dataset_ids = new Set(_.flatten(
       target_projects.map((p) => p.datasets.map((obj) => obj.dataset.id)),
     ));
+
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: target_dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
 
     // find dataset ids which are not already associated with the source project
     const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
@@ -596,6 +622,19 @@ router.patch(
 
     const add_dataset_ids = req.body.add_dataset_ids || [];
     const remove_dataset_ids = req.body.remove_dataset_ids || [];
+
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: add_dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
 
     const create_data = add_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
