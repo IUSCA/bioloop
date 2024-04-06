@@ -30,9 +30,13 @@
 
         <!-- Allow users to see any active action items for this duplication -->
         <va-button
+          v-if="
+            props.dataset?.action_items?.length > 0 &&
+            (auth.canAdmin || auth.canOperate)
+          "
           @click="
             () => {
-              // duplicateDataset.action_items[0] is sufficient because exactly one action item is created
+              // exactly one action item is created
               // for a dataset duplication
               router.push(
                 `/datasets/${props.dataset.id}/actionItems/${props.dataset.action_items[0].id}`,
@@ -110,8 +114,10 @@
 
 <script setup>
 import { datasetCurrentState } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
+const auth = useAuthStore();
 
 const props = defineProps({
   dataset: {

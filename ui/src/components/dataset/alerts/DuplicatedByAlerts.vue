@@ -27,7 +27,10 @@
 
           <!-- Allow users to see visit the action item for this duplication -->
           <va-button
-            v-if="duplicateDataset.action_items.length > 0"
+            v-if="
+              duplicateDataset.action_items.length > 0 &&
+              (auth.canAdmin || auth.canOperate)
+            "
             @click="
               () => {
                 // duplicateDataset.action_items[0] is sufficient because exactly one action item is created
@@ -48,6 +51,7 @@
 
 <script setup>
 import { isActiveDatasetWithIncomingDuplicates } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
 
@@ -57,6 +61,8 @@ const props = defineProps({
     required: true,
   },
 });
+
+const auth = useAuthStore();
 
 // Gather and sort all duplicates of the current dataset
 const duplicateDatasets = computed(() =>
@@ -71,18 +77,4 @@ const gatherDatasetDuplicates = (dataset) =>
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
     // sort duplicates by version - most recent version first
     .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
-
-// onMounted(() => {
-//   console.log("onMounted");
-//   console.log("dataset");
-//   console.dir(props.dataset, { depth: null });
-// });
-//
-// const datasetWatcher = toRef(() => props.dataset);
-//
-// watch(datasetWatcher, () => {
-//   console.log("watch");
-//   console.log("dataset");
-//   console.dir(datasetWatcher.value, { depth: null });
-// });
 </script>

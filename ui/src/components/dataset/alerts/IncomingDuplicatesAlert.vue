@@ -8,9 +8,13 @@
 
       <div class="flex-none">
         <va-button
+          v-if="
+            props.dataset.action_items.length > 0 &&
+            (auth.canAdmin || auth.canOperate)
+          "
           @click="
             () => {
-              router.push(`/datasets/${dataset.id}`);
+              router.push(`/datasets/${props.dataset.id}`);
             }
           "
         >
@@ -20,11 +24,12 @@
     </div>
   </va-alert>
 
-  <OverwriteInProgressAlert :dataset="dataset" />
+  <OverwriteInProgressAlert :dataset="props.dataset" />
 </template>
 
 <script setup>
 import { isActiveDatasetWithIncomingDuplicates } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
 const props = defineProps({
@@ -33,4 +38,6 @@ const props = defineProps({
     required: true,
   },
 });
+
+const auth = useAuthStore();
 </script>

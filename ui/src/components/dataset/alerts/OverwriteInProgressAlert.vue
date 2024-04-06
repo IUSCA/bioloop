@@ -52,18 +52,4 @@ const overwrittenByDatasetId = (dataset) => {
 
   return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
 };
-
-// onMounted(() => {
-//   console.log("onMounted");
-//   console.log("dataset");
-//   console.dir(props.dataset, { depth: null });
-// });
-//
-// const datasetWatcher = toRef(() => props.dataset);
-//
-// watch(datasetWatcher, () => {
-//   console.log("watch");
-//   console.log("dataset");
-//   console.dir(datasetWatcher.value, { depth: null });
-// });
 </script>
