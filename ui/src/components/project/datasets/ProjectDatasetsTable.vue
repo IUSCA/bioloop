@@ -142,7 +142,8 @@
     @download-initiated="
       (dataset_id) => {
         console.log('ProjectDatasetsTable: @download-initiated: ', dataset_id);
-        emit('download-initiated', dataset_id);
+        // emit('download-initiated', dataset_id);
+        refresh_downloaded_dataset();
       }
     "
   />
@@ -179,10 +180,6 @@ const props = defineProps({
     // If true, triggers datasets' re-retrieval
     type: Boolean,
     default: false,
-  },
-  refreshDataset: {
-    type: Number,
-    required: false,
   },
 });
 
@@ -284,10 +281,13 @@ const fetch_project_datasets = (caller) => {
     });
 };
 
-const refresh_downloaded_dataset = (dataset_id) => {
-  console.log("ProjectDatasetsTable: refresh_downloaded_dataset", dataset_id);
+const refresh_downloaded_dataset = () => {
+  console.log(
+    "ProjectDatasetsTable: refresh_downloaded_dataset",
+    datasetToDownload.value.id,
+  );
   DatasetService.getById({
-    id: dataset_id,
+    id: datasetToDownload.value.id,
     include_states: true,
     include_duplications: true,
   }).then((res) => {
@@ -305,15 +305,6 @@ watch(props.triggerDatasetsRetrieval, () => {
     console.log("re-fetching project datasets");
     currentPageIndex.value = 1;
     fetch_project_datasets("watch triggerDatasetsRetrieval");
-  }
-});
-
-watch(props.refreshDataset, () => {
-  console.log("ProjectDatasetsTable: refreshDownloadedDataset watch");
-
-  if (props.refreshDataset) {
-    console.log("re-fetching project datasets");
-    refresh_downloaded_dataset(props.refreshDataset);
   }
 });
 
@@ -451,6 +442,7 @@ const downloadModal = ref(null);
 const datasetToDownload = ref(null);
 
 watch(datasetToDownload, () => {
+  // todo - not being called
   console.log("ProjectDatasetsTable - watch - datasetToDownload");
   console.dir(datasetToDownload.value, { depth: null });
 });

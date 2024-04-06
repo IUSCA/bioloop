@@ -81,16 +81,6 @@
                 }
               "
               :trigger-datasets-retrieval="triggerDatasetsRetrieval"
-              :refresh-dataset="refreshDataset"
-              @download-initiated="
-                (dataset_id) => {
-                  console.log(
-                    '[projectId]: download-initiated event triggered',
-                  );
-                  console.log('dataset_id:', dataset_id);
-                  refreshDataset = dataset_id;
-                }
-              "
             />
           </va-card-content>
         </va-card>
@@ -198,8 +188,6 @@ const data_loading = ref(false);
 // datasets associated with this project needs to be refreshed without
 // refreshing the page.
 const triggerDatasetsRetrieval = ref(false);
-
-const refreshDataset = ref(null);
 
 watch(project, () => {
   nav.setNavItems([

@@ -190,9 +190,6 @@ const overwrittenByDatasetId = (dataset) => {
     (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
   );
 
-  console.log(`duplicationLog.duplicate_dataset:`);
-  console.dir(duplicationLog.duplicate_dataset, { depth: null });
-
   return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
 };
 
