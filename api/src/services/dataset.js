@@ -621,8 +621,11 @@ async function validate_duplication_state(duplicate_dataset_id) {
  * into the system.
  * @returns Object
  */
-async function validate_state_before_original_dataset_resource_purge(duplicate_dataset_id) {
-  const { original_dataset, duplicate_dataset } = await validate_duplication_state(duplicate_dataset_id);
+async function validate_state_pre_overwrite_resource_purge(duplicate_dataset_id) {
+  const {
+    original_dataset,
+    duplicate_dataset,
+  } = await validate_duplication_state(duplicate_dataset_id);
 
   console.log('duplicate_dataset:');
   console.dir(duplicate_dataset, { depth: null });
@@ -631,15 +634,14 @@ async function validate_state_before_original_dataset_resource_purge(duplicate_d
   console.dir(original_dataset, { depth: null });
 
   // throw error if this dataset is not ready for acceptance or rejection yet,
-  // or if it is not already undergoing accetance.
-  // (i.e. the duplicate comparison process is still running)
-  const latestState = duplicate_dataset.states[0].state;
-  if (latestState !== 'DUPLICATE_READY'
-      && latestState !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
+  // or if it is not already undergoing acceptance.
+  const latest_state = duplicate_dataset.states[0].state;
+  if (latest_state !== 'DUPLICATE_READY'
+      && latest_state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
         + 'DUPLICATE_READY or DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is '
-        + `${latestState}.`);
+        + `${latest_state}.`);
   }
 
   return {
@@ -648,7 +650,7 @@ async function validate_state_before_original_dataset_resource_purge(duplicate_d
   };
 }
 
-async function validate_state_after_original_dataset_resource_purge(duplicate_dataset_id) {
+async function validate_state_post_overwrite_resource_purge(duplicate_dataset_id) {
   const duplicate_dataset = await prisma.dataset.findUnique({
     where: {
       id: duplicate_dataset_id,
@@ -665,7 +667,6 @@ async function validate_state_after_original_dataset_resource_purge(duplicate_da
     },
   });
 
-  // (i.e. the duplicate comparison process is still running)
   const duplicate_dataset_latest_state = duplicate_dataset.states[0].state;
 
   if (duplicate_dataset_latest_state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' && duplicate_dataset_latest_state !== 'DUPLICATE_ACCEPTED') {
@@ -699,7 +700,7 @@ async function validate_state_after_original_dataset_resource_purge(duplicate_da
   };
 }
 
-async function validate_state_before_rejected_dataset_resource_purge(duplicate_dataset_id) {
+async function validate_state_pre_rejection_resource_purge(duplicate_dataset_id) {
   const {
     duplicate_dataset,
     original_dataset,
@@ -723,7 +724,7 @@ async function validate_state_before_rejected_dataset_resource_purge(duplicate_d
   };
 }
 
-async function validate_state_after_rejected_dataset_resource_purge(duplicate_dataset_id) {
+async function validate_state_post_rejection_resource_purge(duplicate_dataset_id) {
   const {
     duplicate_dataset,
     original_dataset,
@@ -795,7 +796,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     original_dataset,
     duplicate_dataset,
   } = await
-  validate_state_before_original_dataset_resource_purge(duplicate_dataset_id);
+  validate_state_pre_overwrite_resource_purge(duplicate_dataset_id);
 
   // write queries to be run in a single transaction, before a workflow is
   // launched to handle the acceptance/rejection on the worker-end.
@@ -1067,7 +1068,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
   const {
     original_dataset,
     duplicate_dataset,
-  } = await validate_state_after_original_dataset_resource_purge(duplicate_dataset_id);
+  } = await validate_state_post_overwrite_resource_purge(duplicate_dataset_id);
 
   // assumes states are sorted descending by timestamp
   const original_dataset_state = original_dataset.states[0].state;
@@ -1086,8 +1087,6 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
         : undefined,
       audit_logs: {
         // Update the audit log.
-        // This updateMany is expected to update exactly one audit_log, since
-        // only one audit log should be created per action.
         updateMany: {
           where: {
             action: 'duplicate_acceptance_initiated',
@@ -1251,7 +1250,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
  * @param {Number} rejected_by_id - id of the user who is rejecting the duplicate dataset.
  */
 async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_id }) {
-  const { duplicate_dataset } = await validate_state_before_rejected_dataset_resource_purge(
+  const { duplicate_dataset } = await validate_state_pre_rejection_resource_purge(
     duplicate_dataset_id,
   );
 
@@ -1342,7 +1341,7 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
 }
 
 async function complete_duplicate_rejection({ duplicate_dataset_id }) {
-  const { duplicate_dataset } = await validate_state_after_rejected_dataset_resource_purge(
+  const { duplicate_dataset } = await validate_state_post_rejection_resource_purge(
     duplicate_dataset_id,
   );
 

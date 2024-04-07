@@ -66,9 +66,9 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
     },
   });
 
-  const locked_error = 'Dataset is locked and cannot be written to';
-
   const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  const locked_error = `Dataset is locked and cannot be written to. Current state is ${latest_state}.`;
+
   if (!dataset.is_deleted) {
     if (!dataset.is_duplicate) {
       if (latest_state === 'OVERWRITE_IN_PROGRESS' || latest_state === 'ORIGINAL_DATASET_RESOURCES_PURGED') {
@@ -1194,7 +1194,6 @@ router.post(
   ]),
   workflow_access_check,
   dataset_delete_check,
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Replace an existing dataset with its duplicate
@@ -1236,7 +1235,6 @@ router.post(
   ]),
   workflow_access_check,
   dataset_delete_check,
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Replace an existing dataset with its duplicate
@@ -1259,12 +1257,6 @@ router.post(
     console.log('duplicate_dataset');
     console.dir(duplicate_dataset, { depth: null });
 
-    // This kicks off a workflow, which then makes another call to the API to
-    // accept/reject the duplicate dataset. This second call to the API is where
-    // the states of the original and the duplicates datasets are validated,
-    // after which the duplicate is either accepted or rejected. The workflow
-    // is launched first to allow a failed acceptance/rejection to be resumed
-    // from the UI.
     const wf = await datasetService.create_workflow(duplicate_dataset, 'reject_duplicate_dataset');
     return res.json(wf);
   }),
