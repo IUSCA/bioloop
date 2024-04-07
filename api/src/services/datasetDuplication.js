@@ -505,7 +505,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
   // assumes states are sorted descending by timestamp
   const original_dataset_state = original_dataset.states[0].state;
 
-  const update_queries = [];
+  let update_queries = [];
 
   update_queries.push(prisma.dataset.update({
     where: {
@@ -532,7 +532,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
 
-  update_queries.concat(await update_action_item_queries({
+  update_queries = update_queries.concat(await update_action_item_queries({
     dataset: duplicate_dataset,
     status: 'RESOLVED',
     active: false,
@@ -540,7 +540,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     notification_active: false,
   }));
 
-  update_queries.concat(await audit_and_update_state_queries({
+  update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: duplicate_dataset_id,
     state: 'DUPLICATE_ACCEPTED',
   }));
@@ -566,7 +566,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
 
   // if a state update record hasn't been created for the overwrite of the
   // original dataset, create one.
-  update_queries.concat(await audit_and_update_state_queries({
+  update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: original_dataset.id,
     state: 'OVERWRITTEN',
   }));
@@ -638,7 +638,7 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
     duplicate_dataset_id,
   );
 
-  const update_queries = [];
+  let update_queries = [];
 
   update_queries.push(prisma.dataset.findUnique({
     where: {
@@ -649,13 +649,13 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
 
   console.log('initiated rejection');
 
-  update_queries.concat(await update_action_item_queries({
+  update_queries = update_queries.concat(await update_action_item_queries({
     dataset: duplicate_dataset,
     status: 'ACKNOWLEDGED',
     notification_status: 'ACKNOWLEDGED',
   }));
 
-  update_queries.concat(await audit_and_update_state_queries({
+  update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: duplicate_dataset.id,
     user_id: rejected_by_id,
     action: 'duplicate_rejected',
@@ -685,7 +685,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
     is_duplicate: true,
   });
 
-  const update_queries = [];
+  let update_queries = [];
 
   update_queries.push(prisma.dataset.update({
     where: {
@@ -700,7 +700,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
 
-  update_queries.concat(await update_action_item_queries({
+  update_queries = update_queries.concat(await update_action_item_queries({
     dataset: duplicate_dataset,
     status: 'RESOLVED',
     active: false,
@@ -708,7 +708,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
     notification_active: false,
   }));
 
-  update_queries.concat(await audit_and_update_state_queries({
+  update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: duplicate_dataset.id,
     state: 'DUPLICATE_REJECTED',
   }));
