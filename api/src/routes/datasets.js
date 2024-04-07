@@ -1189,7 +1189,7 @@ router.get(
 );
 
 router.post(
-  '/duplicates/:id/workflow/accept_duplicate_dataset',
+  '/duplicates/:id/accept_duplicate_dataset',
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
@@ -1230,7 +1230,7 @@ router.post(
 );
 
 router.post(
-  '/duplicates/:id/workflow/reject_duplicate_dataset',
+  '/duplicates/:id/reject_duplicate_dataset',
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
@@ -1265,7 +1265,7 @@ router.post(
 );
 
 router.patch(
-  '/duplicates/:id/accept/complete',
+  '/duplicates/:id/accept_duplicate_dataset/complete',
   validate([
     param('id').isInt().toInt(),
   ]),
@@ -1287,7 +1287,7 @@ router.patch(
 );
 
 router.patch(
-  '/duplicates/:id/reject/complete',
+  '/duplicates/:id/reject_duplicate_dataset/complete',
   validate([
     param('id').isInt().toInt(),
   ]),
