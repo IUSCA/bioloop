@@ -89,7 +89,7 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
 const state_write_check = asyncHandler(async (req, res, next) => {
   const dataset = await prisma.dataset.findUnique({
     where: {
-      id: req.params.id,
+      id: parseInt(req.params.id),
     },
     include: {
       states: {
@@ -805,9 +805,6 @@ router.patch(
     if (!datasetToUpdate) {
       return next(createError(404));
     }
-    if (datasetToUpdate.is_duplicate) {
-      return next(createError.BadRequest(`Dataset ${req.params.id} is a duplicate, and cannot be written to.`));
-    }
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
@@ -848,22 +845,13 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
 
-    const datasetToUpdate = await prisma.dataset.findFirst({
-      where: {
-        id: req.params.id,
-      },
-    });
-    if (datasetToUpdate.is_duplicate) {
-      return next(createError.BadRequest(`Dataset ${req.params.id} is a duplicate, and cannot be written to.`));
-    }
-
     const data = req.body.map((f) => ({
       path: f.path,
       md5: f.md5,
       size: BigInt(f.size),
       filetype: f.type,
     }));
-    datasetService.add_files({ dataset_id: req.params.id, data });
+    await datasetService.add_files({ dataset_id: req.params.id, data });
 
     res.sendStatus(200);
   }),

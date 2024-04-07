@@ -26,6 +26,13 @@ const prisma = new PrismaClient(
   },
 );
 
+['query', 'info', 'warn', 'error'].forEach((level) => {
+  prisma.$on(level, async (e) => {
+    console.log(`QUERY: ${e.query}`);
+    console.log(`PARAMS: ${e.params}`);
+  });
+});
+
 /**
  * Returns the highest version for datasets that match a given criteria.
  * @param dataset_name
@@ -373,7 +380,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
 
   // write queries to be run in a single transaction, before a workflow is
   // launched to handle the acceptance/rejection on the worker-end.
-  const update_queries = [];
+  let update_queries = [];
 
   update_queries.push(prisma.dataset.findUnique({
     where: {
@@ -382,20 +389,20 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
 
-  update_queries.concat(await update_action_item_queries({
+  update_queries = update_queries.concat(await update_action_item_queries({
     dataset: duplicate_dataset,
     status: 'ACKNOWLEDGED',
     notification_status: 'ACKNOWLEDGED',
   }));
 
-  update_queries.concat(await audit_and_update_state_queries({
+  update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: duplicate_dataset.id,
     user_id: accepted_by_id,
     action: 'duplicate_acceptance_initiated',
     state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
   }));
 
-  update_queries.concat(await audit_and_update_state_queries({
+  update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: original_dataset.id,
     user_id: accepted_by_id,
     action: 'overwrite_initiated',
@@ -429,7 +436,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   for (const d of other_duplicates) {
     i += 1;
     // eslint-disable-next-line no-await-in-loop
-    update_queries.concat(await audit_and_update_state_queries({
+    update_queries = update_queries.concat(await audit_and_update_state_queries({
       dataset_id: d.id,
       user_id: accepted_by_id,
       action: 'duplicate_rejected',
@@ -465,7 +472,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     }));
 
     // eslint-disable-next-line no-await-in-loop
-    update_queries.concat(await update_action_item_queries({
+    update_queries = update_queries.concat(await update_action_item_queries({
       dataset: current_duplicate,
       status: 'RESOLVED',
       active: false,
@@ -479,6 +486,8 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   // forbidden, until the lock is removed by another process.
 
   console.log('made it to the end before transaction');
+
+  console.dir(update_queries, { depth: null });
 
   const [dataset_being_accepted] = await prisma.$transaction(update_queries);
 
