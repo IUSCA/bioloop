@@ -1,9 +1,7 @@
-import shutil
 from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
-import json
 
 import workers.api as api
 import workers.cmd as cmd

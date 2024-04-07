@@ -1,23 +1,13 @@
 from __future__ import annotations  # type unions by | are only available in versions >= 3
 
-import json
-import itertools
-import hashlib
-import shutil
 from pathlib import Path
-import time
 
 from celery import Celery
 from celery.utils.log import get_task_logger
-from sca_rhythm.progress import Progress
 
 import workers.api as api
-import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
-import workers.utils as utils
 from workers.exceptions import InspectionFailed
-from workers import exceptions as exc
-from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -47,18 +37,17 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
             f"Expected to find one active (not deleted) original {incoming_duplicate_dataset['type']} named {incoming_duplicate_dataset['name']},"
             f" but found {len(matching_datasets)}.")
 
-    matching_original_dataset = matching_datasets[0]
+    original_dataset = matching_datasets[0]
 
-    if matching_original_dataset['id'] != incoming_duplicate_dataset['duplicated_from']['original_dataset_id']:
+    if original_dataset['id'] != incoming_duplicate_dataset['duplicated_from']['original_dataset_id']:
         raise InspectionFailed(f"Expected dataset {duplicate_dataset_id} to have "
                                f"been duplicated from dataset "
                                f"{incoming_duplicate_dataset['duplicated_from']['original_dataset_id']}, "
-                               f"but matching dataset has id {matching_original_dataset['id']}.")
+                               f"but matching dataset has id {original_dataset['id']}.")
 
     rejected_dataset_latest_state = incoming_duplicate_dataset['states'][0]['state']
-    # check for state DUPLICATE_DATASET_RESOURCES_PURGED as well, in case this step failed after
-    # the database write that updates the state to DUPLICATE_DATASET_RESOURCES_PURGED.
     if (rejected_dataset_latest_state != 'DUPLICATE_REJECTION_IN_PROGRESS'
+            # check for state DUPLICATE_DATASET_RESOURCES_PURGED as well, so this step stays resumable.
             and rejected_dataset_latest_state != 'DUPLICATE_DATASET_RESOURCES_PURGED'):
         raise InspectionFailed(f"Expected dataset {incoming_duplicate_dataset['id']} to be in one of states "
                                f"DUPLICATE_REJECTION_IN_PROGRESS or DUPLICATE_DATASET_RESOURCES_PURGED, but current state is "
