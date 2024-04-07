@@ -1,7 +1,30 @@
 const { PrismaClient } = require('@prisma/client');
 const CONSTANTS = require('../constants');
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
+const prisma = new PrismaClient(
+  // { log: ['query', 'info', 'warn', 'error'] },
+  {
+    log: [
+      {
+        emit: 'event',
+        level: 'query',
+      },
+      {
+        emit: 'event',
+        level: 'info',
+      },
+      {
+        emit: 'event',
+        level: 'warn',
+      },
+      {
+        emit: 'event',
+        level: 'error',
+      },
+    ],
+  },
+);
 
 /**
  * Returns the highest version for datasets that match a given criteria.
