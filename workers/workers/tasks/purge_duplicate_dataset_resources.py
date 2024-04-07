@@ -1,11 +1,13 @@
 from __future__ import annotations  # type unions by | are only available in versions >= 3
 
 from pathlib import Path
+import shutil
 
 from celery import Celery
 from celery.utils.log import get_task_logger
 
 import workers.api as api
+from workers.config import config
 import workers.config.celeryconfig as celeryconfig
 from workers.exceptions import InspectionFailed
 
@@ -46,24 +48,25 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
                                f"but matching dataset has id {original_dataset['id']}.")
 
     rejected_dataset_latest_state = incoming_duplicate_dataset['states'][0]['state']
-    if (rejected_dataset_latest_state != 'DUPLICATE_REJECTION_IN_PROGRESS'
+    if (rejected_dataset_latest_state != config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS']
             # check for state DUPLICATE_DATASET_RESOURCES_PURGED as well, so this step stays resumable.
-            and rejected_dataset_latest_state != 'DUPLICATE_DATASET_RESOURCES_PURGED'):
+            and rejected_dataset_latest_state != config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED']):
         raise InspectionFailed(f"Expected dataset {incoming_duplicate_dataset['id']} to be in one of states "
-                               f"DUPLICATE_REJECTION_IN_PROGRESS or DUPLICATE_DATASET_RESOURCES_PURGED, but current state is "
+                               f"{config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS']} or {config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED']}, but current state is "
                                f"{rejected_dataset_latest_state}.")
 
     duplicate_dataset_origin_path = Path(incoming_duplicate_dataset['origin_path']).resolve() if \
         incoming_duplicate_dataset['origin_path'] is not None else None
 
     # in case step is being resumed after this database write
-    if rejected_dataset_latest_state == 'DUPLICATE_REJECTION_IN_PROGRESS':
+    if rejected_dataset_latest_state == config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS']:
         if (duplicate_dataset_origin_path is not None and
                 duplicate_dataset_origin_path.exists()):
             pass
             # shutil.rmtree(duplicate_dataset_origin_path)
 
-    if rejected_dataset_latest_state != 'DUPLICATE_DATASET_RESOURCES_PURGED':
-        api.add_state_to_dataset(dataset_id=duplicate_dataset_id, state='DUPLICATE_DATASET_RESOURCES_PURGED')
+    if rejected_dataset_latest_state != config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED']:
+        api.add_state_to_dataset(dataset_id=duplicate_dataset_id,
+                                 state=config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED'])
 
     return duplicate_dataset_id,

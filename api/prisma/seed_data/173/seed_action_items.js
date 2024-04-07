@@ -254,7 +254,7 @@ async function main() {
       states: {
         createMany: {
           data: [
-            { state: 'DUPLICATE_READY' },
+            { state: config.DATASET_STATES.DUPLICATE_READY },
           ],
         },
       },

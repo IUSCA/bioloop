@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
+import config from "@/config";
 
 function formatBytes(bytes, decimals = 2) {
   bytes = parseInt(bytes);
@@ -256,9 +257,12 @@ function isDatasetLockedForWrite(dataset) {
     isLocked = isDatasetBeingOverwritten(dataset);
   } else {
     isLocked =
-      datasetLatestState === "DUPLICATE_ACCEPTANCE_IN_PROGRESS" ||
-      datasetLatestState === "DUPLICATE_REJECTION_IN_PROGRESS" ||
-      datasetLatestState === "DUPLICATE_DATASET_RESOURCES_PURGED";
+      datasetLatestState ===
+        config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS ||
+      datasetLatestState ===
+        config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS ||
+      datasetLatestState ===
+        config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED;
   }
 
   return datasetLatestState ? isLocked : true;
@@ -272,8 +276,9 @@ function isDatasetBeingOverwritten(dataset) {
       : undefined;
 
   return (
-    datasetLatestState === "OVERWRITE_IN_PROGRESS" ||
-    datasetLatestState === "ORIGINAL_DATASET_RESOURCES_PURGED"
+    datasetLatestState === config.DATASET_STATES.OVERWRITE_IN_PROGRESS ||
+    datasetLatestState ===
+      config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED
   );
 }
 
@@ -295,12 +300,12 @@ function isActiveDatasetWithIncomingDuplicates(dataset) {
     !dataset.is_deleted &&
     datasetHasActiveDuplicates(dataset) &&
     [
-      "REGISTERED",
-      "READY",
-      "INSPECTED",
-      "ARCHIVED",
-      "FETCHED",
-      "STAGED",
+      config.DATASET_STATES.REGISTERED,
+      config.DATASET_STATES.READY,
+      config.DATASET_STATES.INSPECTED,
+      config.DATASET_STATES.ARCHIVED,
+      config.DATASET_STATES.FETCHED,
+      config.DATASET_STATES.STAGED,
     ].includes(datasetState)
   );
 }

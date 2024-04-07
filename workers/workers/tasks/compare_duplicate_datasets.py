@@ -1,20 +1,13 @@
 from __future__ import annotations  # type unions by | are only available in versions >= 3
 
-import itertools
-import hashlib
 import json
-from pathlib import Path
 
 from celery import Celery
 from celery.utils.log import get_task_logger
-from sca_rhythm.progress import Progress
 
 import workers.api as api
-import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
-import workers.utils as utils
 from workers.exceptions import InspectionFailed
-from workers import exceptions as exc
 from workers.config import config
 
 app = Celery("tasks")
@@ -33,7 +26,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
     # assumes states are sorted in descending order by timestamp
     latest_state = duplicate_dataset['states'][0]['state']
-    if latest_state != 'INSPECTED':
+    if latest_state != config['DATASET_STATES']['INSPECTED']:
         raise InspectionFailed(f"Dataset {duplicate_dataset['id']} needs to reach state INSPECTED before it can be"
                                f" compared for duplication. Current state is {latest_state}.")
 
@@ -83,7 +76,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
     action_item_data: dict = {
        "ingestion_checks": comparison_checks_report,
-        "next_state": "DUPLICATE_READY",
+        "next_state": config['DATASET_STATES']['DUPLICATE_READY'],
     }
 
     api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],

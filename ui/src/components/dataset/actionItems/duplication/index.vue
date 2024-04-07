@@ -40,9 +40,9 @@
         color="warning"
         class="mx-0"
       >
-        Duplicate dataset needs to reach a state of DUPLICATE_READY before it
-        can be accepted or rejected. Current state is
-        {{ associatedDatasetState }}.
+        Duplicate dataset needs to reach a state of
+        {{ config.DUPLICATE_READY }} before it can be accepted or rejected.
+        Current state is {{ associatedDatasetState }}.
       </va-alert>
 
       <report-header :action-item="props.actionItem" />
@@ -84,6 +84,7 @@ import ReportBody from "@/components/dataset/actionItems/duplication/report/Repo
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useNotificationStore } from "@/stores/notification";
+import config from "@/config";
 
 const props = defineProps({
   actionItem: {
@@ -177,7 +178,7 @@ const associatedDatasetState = computed(() => {
 // });
 
 const isDuplicateDatasetReadyForProcessing = computed(() => {
-  return associatedDatasetState.value === "DUPLICATE_READY";
+  return associatedDatasetState.value === config.DATASET_STATES.DUPLICATE_READY;
 });
 
 const isActionItemActive = computed(() => {

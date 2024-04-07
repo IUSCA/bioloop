@@ -115,6 +115,7 @@
 <script setup>
 import { datasetCurrentState } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import config from "@/config";
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -134,10 +135,10 @@ const isActiveDuplicatePendingAction = computed(
   () =>
     props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
-    (datasetState.value === "DUPLICATE_REGISTERED" || // state of duplicate upon registration
-      datasetState.value === "READY" || // state of duplicate after `await_stability` step
-      datasetState.value === "INSPECTED" || // state of duplicate after `inspect` step
-      datasetState.value === "DUPLICATE_READY"), // state of duplicate after running a comparison of
+    (datasetState.value === config.DATASET_STATES.DUPLICATE_REGISTERED || // state of duplicate upon registration
+      datasetState.value === config.DATASET_STATES.READY || // state of duplicate after `await_stability` step
+      datasetState.value === config.DATASET_STATES.INSPECTED || // state of duplicate after `inspect` step
+      datasetState.value === config.DATASET_STATES.DUPLICATE_READY), // state of duplicate after running a comparison of
   // duplicate dataset with the original dataset.
 );
 
@@ -147,7 +148,8 @@ const isActiveDuplicateBeingAccepted = computed(() => {
   return (
     props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
-    datasetState.value === "DUPLICATE_ACCEPTANCE_IN_PROGRESS"
+    datasetState.value ===
+      config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
   );
 });
 
@@ -155,14 +157,16 @@ const isInactiveOverwrittenDataset = computed(() => {
   return (
     !props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
-    datasetState.value === "OVERWRITTEN"
+    datasetState.value === config.DATASET_STATES.OVERWRITTEN
   );
 });
 
 const isActiveDuplicateBeingRejected = computed(() => {
   return (
-    datasetState.value === "DUPLICATE_REJECTION_IN_PROGRESS" ||
-    datasetState.value === "DUPLICATE_DATASET_RESOURCES_PURGED"
+    datasetState.value ===
+      config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS ||
+    datasetState.value ===
+      config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
   );
 });
 

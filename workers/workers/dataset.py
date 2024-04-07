@@ -3,7 +3,6 @@ from pathlib import Path
 
 from glom import glom
 
-from workers import api
 from workers.config import config
 
 
@@ -59,11 +58,11 @@ def is_dataset_locked_for_writes(dataset: dict) -> tuple:
         locked = True
     else:
         if not dataset['is_duplicate']:
-            locked = (latest_state['state'] == 'OVERWRITE_IN_PROGRESS' or
-                      latest_state['state'] == 'ORIGINAL_DATASET_RESOURCES_PURGED')
+            locked = (latest_state['state'] == config['DATASET_STATES']['OVERWRITE_IN_PROGRESS'] or
+                      latest_state['state'] == config['DATASET_STATES']['ORIGINAL_DATASET_RESOURCES_PURGED'])
         else:
-            locked = (latest_state['state'] == 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' or
-                      latest_state['state'] == 'DUPLICATE_REJECTION_IN_PROGRESS' or
-                      latest_state['state'] == 'DUPLICATE_DATASET_RESOURCES_PURGED')
+            locked = (latest_state['state'] == config['DATASET_STATES']['DUPLICATE_ACCEPTANCE_IN_PROGRESS'] or
+                      latest_state['state'] == config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS'] or
+                      latest_state['state'] == config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED'])
 
     return locked, latest_state if latest_state is not None else None

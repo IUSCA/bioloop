@@ -73,12 +73,13 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
 
   if (!dataset.is_deleted) {
     if (!dataset.is_duplicate) {
-      if (latest_state === 'OVERWRITE_IN_PROGRESS' || latest_state === 'ORIGINAL_DATASET_RESOURCES_PURGED') {
+      if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
+          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
         return next(createError.InternalServerError(locked_error));
       }
-    } else if (latest_state === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS'
-        || latest_state === 'DUPLICATE_REJECTION_IN_PROGRESS'
-        || latest_state === 'DUPLICATE_DATASET_RESOURCES_PURGED') {
+    } else if (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED) {
       return next(createError.InternalServerError(locked_error));
     }
   }
@@ -102,11 +103,14 @@ const state_write_check = asyncHandler(async (req, res, next) => {
 
   const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
   if (
-    ((latest_state === 'OVERWRITE_IN_PROGRESS' || latest_state === 'ORIGINAL_DATASET_RESOURCES_PURGED')
-          && req.body.state !== 'ORIGINAL_DATASET_RESOURCES_PURGED')
-      || ((latest_state === 'DUPLICATE_REJECTION_IN_PROGRESS' || latest_state === 'DUPLICATE_DATASET_RESOURCES_PURGED')
-          && req.body.state !== 'DUPLICATE_DATASET_RESOURCES_PURGED')
-      || (latest_state === 'DUPLICATE_ACCEPTANCE_IN_PROGRESS')) {
+    ((latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
+            || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+          && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+      || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+              || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+          && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+      || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
+  ) {
     return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
         + `while its current state is ${latest_state}`));
   }
@@ -738,7 +742,7 @@ router.post(
         states: {
           create: [
             {
-              state: next_state || 'DUPLICATE_REGISTERED',
+              state: next_state || config.DATASET_STATES.DUPLICATE_REGISTERED,
             },
           ],
         },

@@ -115,6 +115,7 @@ import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import _ from "lodash";
+import config from "@/config";
 
 const router = useRouter();
 useSearchKeyShortcut();
@@ -293,7 +294,7 @@ const isDuplicateReadyForProcessing = (dataset) => {
   return (
     actionItem.status === "CREATED" &&
     actionItem.active &&
-    datasetLatestState === "DUPLICATE_READY"
+    datasetLatestState === config.DATASET_STATES.DUPLICATE_READY
   );
 };
 

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const config = require('config');
 const CONSTANTS = require('../constants');
 
 // const prisma = new PrismaClient();
@@ -148,11 +149,11 @@ async function validate_state_pre_overwrite_resource_purge(duplicate_dataset_id)
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing acceptance.
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== 'DUPLICATE_READY'
-      && latest_state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS') {
+  if (latest_state !== config.DATASET_STATES.DUPLICATE_READY
+      && latest_state !== config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS) {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
-        + 'DUPLICATE_READY or DUPLICATE_ACCEPTANCE_IN_PROGRESS, but current state is '
+        + `${config.DATASET_STATES.DUPLICATE_READY} or ${config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS}, but current state is `
         + `${latest_state}.`);
   }
 
@@ -181,9 +182,10 @@ async function validate_state_post_overwrite_resource_purge(duplicate_dataset_id
 
   const duplicate_dataset_latest_state = duplicate_dataset.states[0].state;
 
-  if (duplicate_dataset_latest_state !== 'DUPLICATE_ACCEPTANCE_IN_PROGRESS' && duplicate_dataset_latest_state !== 'DUPLICATE_ACCEPTED') {
+  if (duplicate_dataset_latest_state !== config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
+      && duplicate_dataset_latest_state !== config.DATASET_STATES.DUPLICATE_ACCEPTED) {
     throw new Error(`Expected duplicate dataset ${duplicate_dataset.id} to be in one of states `
-        + 'DUPLICATE_ACCEPTANCE_IN_PROGRESS or DUPLICATE_ACCEPTED, but current state '
+        + `${config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS} or ${config.DATASET_STATES.DUPLICATE_ACCEPTED}, but current state `
         + `is ${duplicate_dataset_latest_state}.`);
   }
 
@@ -201,9 +203,10 @@ async function validate_state_post_overwrite_resource_purge(duplicate_dataset_id
   });
 
   const original_dataset_latest_state = original_dataset.states[0].state;
-  if (original_dataset_latest_state !== 'ORIGINAL_DATASET_RESOURCES_PURGED' && original_dataset_latest_state !== 'OVERWRITTEN') {
+  if (original_dataset_latest_state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED
+      && original_dataset_latest_state !== config.DATASET_STATES.OVERWRITTEN) {
     throw new Error(`Expected original dataset ${original_dataset.id} to be in one of states `
-        + `ORIGINAL_DATASET_RESOURCES_PURGED or OVERWRITTEN, but current state is ${original_dataset_latest_state}`);
+        + `${config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED} or ${config.DATASET_STATES.OVERWRITTEN}, but current state is ${original_dataset_latest_state}`);
   }
 
   return {
@@ -222,11 +225,11 @@ async function validate_state_pre_rejection_resource_purge(duplicate_dataset_id)
   // or if it is not already undergoing accetance.
   // (i.e. the duplicate comparison process is still running)
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== 'DUPLICATE_READY'
-      && latest_state !== 'DUPLICATE_REJECTION_IN_PROGRESS') {
+  if (latest_state !== config.DATASET_STATES.DUPLICATE_READY
+      && latest_state !== config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS) {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
-        + 'DUPLICATE_READY or DUPLICATE_REJECTION_IN_PROGRESS, but current state is '
+        + `${config.DATASET_STATES.DUPLICATE_READY} or ${config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS}, but current state is `
         + `${latest_state}.`);
   }
 
@@ -246,11 +249,11 @@ async function validate_state_post_rejection_resource_purge(duplicate_dataset_id
   // or if it is not already undergoing accetance.
   // (i.e. the duplicate comparison process is still running)
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== 'DUPLICATE_DATASET_RESOURCES_PURGED'
-      && latest_state !== 'DUPLICATE_REJECTION_IN_PROGRESS') {
+  if (latest_state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
+      && latest_state !== config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS) {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
-        + 'DUPLICATE_DATASET_RESOURCES_PURGED or DUPLICATE_REJECTION_IN_PROGRESS, but current state is '
+        + `${config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED} or ${config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS}, but current state is `
         + `${latest_state}.`);
   }
 
@@ -399,14 +402,14 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     dataset_id: duplicate_dataset.id,
     user_id: accepted_by_id,
     action: 'duplicate_acceptance_initiated',
-    state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
+    state: config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS,
   }));
 
   update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: original_dataset.id,
     user_id: accepted_by_id,
     action: 'overwrite_initiated',
-    state: 'OVERWRITE_IN_PROGRESS',
+    state: config.DATASET_STATES.OVERWRITE_IN_PROGRESS,
   }));
 
   const latest_rejected_duplicate_version = await get_dataset_latest_version({
@@ -465,7 +468,7 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
       },
       data: {
         is_deleted: true,
-        version: duplicate_latest_state === 'DUPLICATE_READY'
+        version: duplicate_latest_state === config.DATASET_STATES.DUPLICATE_READY
           ? latest_rejected_duplicate_version + i
           : undefined,
       },
@@ -514,9 +517,11 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     data: {
       is_duplicate: false,
       // if incoming duplicate's version is not already updated, update it
-      version: (!original_dataset.is_deleted && original_dataset_state === 'ORIGINAL_DATASET_RESOURCES_PURGED')
-        ? original_dataset.version + 1
-        : undefined,
+      version:
+          (!original_dataset.is_deleted
+              && original_dataset_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+            ? original_dataset.version + 1
+            : undefined,
       audit_logs: {
         // Update the audit log.
         updateMany: {
@@ -542,7 +547,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
 
   update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: duplicate_dataset_id,
-    state: 'DUPLICATE_ACCEPTED',
+    state: config.DATASET_STATES.DUPLICATE_ACCEPTED,
   }));
 
   update_queries.push(prisma.dataset.update({
@@ -568,7 +573,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
   // original dataset, create one.
   update_queries = update_queries.concat(await audit_and_update_state_queries({
     dataset_id: original_dataset.id,
-    state: 'OVERWRITTEN',
+    state: config.DATASET_STATES.OVERWRITTEN,
   }));
 
   // transfer dataset hierarchies from original to incoming duplicate dataset
@@ -659,7 +664,7 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
     dataset_id: duplicate_dataset.id,
     user_id: rejected_by_id,
     action: 'duplicate_rejected',
-    state: 'DUPLICATE_REJECTION_IN_PROGRESS',
+    state: config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS,
   }));
 
   const [dataset_being_rejected] = await prisma.$transaction(update_queries);
@@ -693,9 +698,12 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
     },
     data: {
       is_deleted: true,
-      version: (!duplicate_dataset.is_deleted && duplicate_dataset_latest_state === 'DUPLICATE_DATASET_RESOURCES_PURGED')
-        ? latest_rejected_duplicate_version + 1
-        : undefined,
+      version:
+          (!duplicate_dataset.is_deleted
+              && duplicate_dataset_latest_state
+              === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+            ? latest_rejected_duplicate_version + 1
+            : undefined,
     },
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
