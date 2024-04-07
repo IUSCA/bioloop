@@ -15,7 +15,9 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const datasetDuplicationService = require('../services/datasetDuplication');
 const authService = require('../services/auth');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -501,13 +503,13 @@ router.get(
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
         action_items: req.query.include_action_items || false,
-        ...(req.query.include_states && { ...datasetService.INCLUDE_STATES }),
-        ...(req.query.include_duplications && { ...datasetService.INCLUDE_DUPLICATIONS }),
+        ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
+        ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DUPLICATIONS }),
       },
     };
 
@@ -640,7 +642,7 @@ router.post(
     const dataset = await prisma.dataset.create({
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     });
     res.json(dataset);
@@ -763,7 +765,7 @@ router.post(
         },
       },
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     }));
 
@@ -825,7 +827,7 @@ router.patch(
       },
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
       },
@@ -1202,7 +1204,7 @@ router.post(
 
     let duplicate_dataset;
     try {
-      duplicate_dataset = await datasetService.initiate_duplicate_acceptance(
+      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_acceptance(
         {
           duplicate_dataset_id: req.params.id,
           accepted_by_id: req.user.id,
@@ -1243,7 +1245,7 @@ router.post(
 
     let duplicate_dataset;
     try {
-      duplicate_dataset = await datasetService.initiate_duplicate_rejection(
+      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_rejection(
         {
           duplicate_dataset_id: req.params.id,
           rejected_by_id: req.user.id,
@@ -1272,7 +1274,7 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     let updatedDataset;
     try {
-      updatedDataset = await datasetService.complete_duplicate_acceptance({
+      updatedDataset = await datasetDuplicationService.complete_duplicate_acceptance({
         duplicate_dataset_id: req.params.id,
       });
     } catch (e) {
@@ -1294,7 +1296,7 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     let updatedDataset;
     try {
-      updatedDataset = await datasetService.complete_duplicate_rejection({
+      updatedDataset = await datasetDuplicationService.complete_duplicate_rejection({
         duplicate_dataset_id: req.params.id,
       });
     } catch (e) {

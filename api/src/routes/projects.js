@@ -13,6 +13,7 @@ const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
 const datasetService = require('../services/dataset');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -208,9 +209,10 @@ router.get(
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
-        ...(req.query.include_dataset_states && datasetService.INCLUDE_STATES),
-        ...(req.query.include_dataset_duplications && datasetService.DUPLICATION_PROCESSING_INCLUSIONS),
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
+        ...(req.query.include_dataset_states && CONSTANTS.INCLUDE_STATES),
+        ...(req.query.include_dataset_duplications
+            && CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS),
         bundle: true,
       },
     };
