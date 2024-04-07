@@ -1,5 +1,4 @@
 const { PrismaClient } = require('@prisma/client');
-const constants = require('constants');
 const CONSTANTS = require('../constants');
 
 const prisma = new PrismaClient();
@@ -231,6 +230,94 @@ async function validate_state_post_rejection_resource_purge(duplicate_dataset_id
   };
 }
 
+const audit_and_update_state_queries = async ({
+  dataset_id, user_id, action, state,
+}) => {
+  const update_queries = [];
+
+  if (action) {
+    // if an audit log hasn't been created for the acceptance of the incoming
+    // duplicate, create one.
+    const audit_logs = await prisma.dataset_audit.findMany({
+      where: {
+        action,
+        user_id,
+        dataset_id,
+      },
+    });
+    if (audit_logs.length < 1) {
+      update_queries.push(prisma.dataset_audit.create({
+        data: {
+          action,
+          user: {
+            connect: {
+              id: user_id,
+            },
+          },
+          dataset: {
+            connect: {
+              id: dataset_id,
+            },
+          },
+        },
+      }));
+    }
+  }
+
+  if (state) {
+    // if a state update record hasn't been created for the acceptance of the
+    // incoming duplicate, create one.
+    const state_logs = await prisma.dataset_state.findMany({
+      where: {
+        state,
+        dataset_id,
+      },
+    });
+    if (state_logs.length < 1) {
+      update_queries.push(prisma.dataset_state.create({
+        data: {
+          state,
+          dataset: {
+            connect: {
+              id: dataset_id,
+            },
+          },
+        },
+      }));
+    }
+  }
+  return update_queries;
+};
+
+const update_action_item_queries = async ({
+  dataset, status, active, notification_status, notification_active,
+}) => {
+  const update_queries = [];
+
+  const action_item = (dataset.action_items || [])
+    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
+  if (action_item) {
+    update_queries.push(prisma.dataset_action_item.update({
+      where: {
+        id: action_item.id,
+      },
+      data: {
+        status,
+        active: typeof active === 'boolean' ? active : undefined,
+        notification: {
+          update: {
+            status: notification_status,
+            active: typeof notification_active === 'boolean'
+              ? notification_active : undefined,
+          },
+        },
+      },
+    }));
+  }
+
+  return update_queries;
+};
+
 /**
  * Initiates the replacement of a dataset by its incoming duplicate,
  * by performing the database write operations needed to overwrite an existing
@@ -272,122 +359,25 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
 
-  // acknowledge notification
-  const duplication_action_item = (duplicate_dataset.action_items || [])
-    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
-  if (duplication_action_item) {
-    update_queries.push(prisma.dataset_action_item.update({
-      where: {
-        id: duplication_action_item.id,
-      },
-      data: {
-        status: 'ACKNOWLEDGED',
-        notification: {
-          update: {
-            status: 'ACKNOWLEDGED',
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await update_action_item_queries({
+    dataset: duplicate_dataset,
+    status: 'ACKNOWLEDGED',
+    notification_status: 'ACKNOWLEDGED',
+  }));
 
-  // if an audit log hasn't been created for the acceptance of the incoming
-  // duplicate, create one.
-  const acceptance_audit_logs = await prisma.dataset_audit.findMany({
-    where: {
-      action: 'duplicate_acceptance_initiated',
-      user_id: accepted_by_id,
-      dataset_id: duplicate_dataset.id,
-    },
-  });
-  if (acceptance_audit_logs.length < 1) {
-    update_queries.push(prisma.dataset_audit.create({
-      data: {
-        action: 'duplicate_acceptance_initiated',
-        user: {
-          connect: {
-            id: accepted_by_id,
-          },
-        },
-        dataset: {
-          connect: {
-            id: duplicate_dataset.id,
-          },
-        },
-      },
-    }));
-  }
-  // if a state update record hasn't been created for the acceptance of the
-  // incoming duplicate, create one.
-  const acceptance_state_logs = await prisma.dataset_state.findMany({
-    where: {
-      state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
-      dataset_id: duplicate_dataset.id,
-    },
-  });
-  if (acceptance_state_logs.length < 1) {
-    update_queries.push(prisma.dataset_state.create({
-      data: {
-        state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
-        dataset: {
-          connect: {
-            id: duplicate_dataset.id,
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await audit_and_update_state_queries({
+    dataset_id: duplicate_dataset.id,
+    user_id: accepted_by_id,
+    action: 'duplicate_acceptance_initiated',
+    state: 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
+  }));
 
-  // if an audit log hasn't been created for the original dataset being
-  // overwritten , create one.
-  const overwrite_audit_logs = await prisma.dataset_audit.findMany({
-    where: {
-      action: 'overwrite_initiated',
-      user_id: accepted_by_id,
-      dataset_id: original_dataset.id,
-    },
-  });
-  if (overwrite_audit_logs.length < 1) {
-    update_queries.push(prisma.dataset_audit.create({
-      data: {
-        action: 'overwrite_initiated',
-        user: {
-          connect: {
-            id: accepted_by_id,
-          },
-        },
-        dataset: {
-          connect: {
-            id: original_dataset.id,
-          },
-        },
-      },
-    }));
-  }
-  // if a state update record hasn't been created for the overwrite of the
-  // original dataset, create one.
-  const overwrite_state_logs = await prisma.dataset_state.findMany({
-    where: {
-      state: 'OVERWRITE_IN_PROGRESS',
-      dataset_id: original_dataset.id,
-    },
-  });
-  if (overwrite_state_logs.length < 1) {
-    update_queries.push(prisma.dataset_state.create({
-      data: {
-        state: 'OVERWRITE_IN_PROGRESS',
-        dataset: {
-          connect: {
-            id: original_dataset.id,
-          },
-        },
-      },
-    }));
-  }
-
-  // 4. Finally, the duplicates that will be rejected will need their
-  // `is_deleted` and `version` updated. For this, first, find the max version
-  // of previously-rejected duplicates having this name
+  update_queries.concat(await audit_and_update_state_queries({
+    dataset_id: original_dataset.id,
+    user_id: accepted_by_id,
+    action: 'overwrite_initiated',
+    state: 'OVERWRITE_IN_PROGRESS',
+  }));
 
   const latest_rejected_duplicate_version = await get_dataset_latest_version({
     dataset_name: duplicate_dataset.name,
@@ -416,6 +406,14 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   for (const d of other_duplicates) {
     i += 1;
     // eslint-disable-next-line no-await-in-loop
+    update_queries.concat(await audit_and_update_state_queries({
+      dataset_id: d.id,
+      user_id: accepted_by_id,
+      action: 'duplicate_rejected',
+      state: 'DUPLICATE_REJECTED',
+    }));
+
+    // eslint-disable-next-line no-await-in-loop
     const current_duplicate = await prisma.dataset.findUnique({
       where: {
         id: d.id,
@@ -429,55 +427,6 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
         action_items: true,
       },
     });
-
-    // eslint-disable-next-line no-await-in-loop
-    const rejection_audit_logs = await prisma.dataset_audit.findMany({
-      where: {
-        action: 'duplicate_rejected',
-        user_id: accepted_by_id,
-        dataset_id: d.id,
-      },
-    });
-    if (rejection_audit_logs.length < 1) {
-      update_queries.push(prisma.dataset_audit.create({
-        data: {
-          action: 'duplicate_rejected',
-          user: {
-            connect: {
-              id: accepted_by_id,
-            },
-          },
-          dataset: {
-            connect: {
-              id: d.id,
-            },
-          },
-        },
-      }));
-    }
-
-    // if a state update record hasn't been created for the overwrite of the
-    // original dataset, create one.
-    // eslint-disable-next-line no-await-in-loop
-    const rejection_state_logs = await prisma.dataset_state.findMany({
-      where: {
-        state: 'DUPLICATE_REJECTED',
-        dataset_id: d.id,
-      },
-    });
-    if (rejection_state_logs.length < 1) {
-      update_queries.push(prisma.dataset_state.create({
-        data: {
-          state: 'DUPLICATE_REJECTED',
-          dataset: {
-            connect: {
-              id: d.id,
-            },
-          },
-        },
-      }));
-    }
-
     const duplicate_latest_state = current_duplicate.states[0].state;
 
     update_queries.push(prisma.dataset.update({
@@ -492,26 +441,14 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
       },
     }));
 
-    // acknowledge notification
-    const rejected_duplicate_action_item = (current_duplicate.action_items || [])
-      .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
-    if (rejected_duplicate_action_item) {
-      update_queries.push(prisma.dataset_action_item.update({
-        where: {
-          id: rejected_duplicate_action_item.id,
-        },
-        data: {
-          status: 'RESOLVED',
-          active: false,
-          notification: {
-            update: {
-              status: 'RESOLVED',
-              active: false,
-            },
-          },
-        },
-      }));
-    }
+    // eslint-disable-next-line no-await-in-loop
+    update_queries.concat(await update_action_item_queries({
+      dataset: current_duplicate,
+      status: 'RESOLVED',
+      active: false,
+      notification_status: 'RESOLVED',
+      notification_active: false,
+    }));
   }
 
   // At this point, both the original and the incoming duplicate datasets are
@@ -563,48 +500,18 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
 
-  // acknowledge notification
-  const accepted_duplicate_action_item = (duplicate_dataset.action_items || [])
-    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
-  if (accepted_duplicate_action_item) {
-    update_queries.push(prisma.dataset_action_item.update({
-      where: {
-        id: accepted_duplicate_action_item.id,
-      },
-      data: {
-        status: 'RESOLVED',
-        active: false,
-        notification: {
-          update: {
-            status: 'RESOLVED',
-            active: false,
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await update_action_item_queries({
+    dataset: duplicate_dataset,
+    status: 'RESOLVED',
+    active: false,
+    notification_status: 'RESOLVED',
+    notification_active: false,
+  }));
 
-  // if a state update record hasn't been created for the overwrite of the
-  // original dataset, create one.
-  // eslint-disable-next-line no-await-in-loop
-  const acceptance_state_logs = await prisma.dataset_state.findMany({
-    where: {
-      state: 'DUPLICATE_ACCEPTED',
-      dataset_id: duplicate_dataset_id,
-    },
-  });
-  if (acceptance_state_logs.length < 1) {
-    update_queries.push(prisma.dataset_state.create({
-      data: {
-        state: 'DUPLICATE_ACCEPTED',
-        dataset: {
-          connect: {
-            id: duplicate_dataset_id,
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await audit_and_update_state_queries({
+    dataset_id: duplicate_dataset_id,
+    state: 'DUPLICATE_ACCEPTED',
+  }));
 
   update_queries.push(prisma.dataset.update({
     where: {
@@ -613,9 +520,6 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     data: {
       is_deleted: true,
       audit_logs: {
-        // Update the audit log.
-        // This updateMany is expected to update exactly one audit_log, since
-        // only one audit log should be created per action.
         updateMany: {
           where: {
             action: 'overwrite_initiated',
@@ -630,25 +534,10 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
 
   // if a state update record hasn't been created for the overwrite of the
   // original dataset, create one.
-  // eslint-disable-next-line no-await-in-loop
-  const overwrite_state_logs = await prisma.dataset_state.findMany({
-    where: {
-      state: 'OVERWRITTEN',
-      dataset_id: original_dataset.id,
-    },
-  });
-  if (overwrite_state_logs.length < 1) {
-    update_queries.push(prisma.dataset_state.create({
-      data: {
-        state: 'OVERWRITTEN',
-        dataset: {
-          connect: {
-            id: original_dataset.id,
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await audit_and_update_state_queries({
+    dataset_id: original_dataset.id,
+    state: 'OVERWRITTEN',
+  }));
 
   // transfer dataset hierarchies from original to incoming duplicate dataset
   update_queries.push(prisma.dataset_hierarchy.updateMany({
@@ -727,73 +616,19 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
   }));
 
   console.log('initiated rejection');
-  // acknowledge notification
-  const rejected_duplicate_action_item = (duplicate_dataset.action_items || [])
-    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
-  if (rejected_duplicate_action_item) {
-    console.log(`will update notification for dataset ${rejected_duplicate_action_item}`);
 
-    update_queries.push(prisma.dataset_action_item.update({
-      where: {
-        id: rejected_duplicate_action_item.id,
-      },
-      data: {
-        status: 'ACKNOWLEDGED',
-        notification: {
-          update: {
-            status: 'ACKNOWLEDGED',
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await update_action_item_queries({
+    dataset: duplicate_dataset,
+    status: 'ACKNOWLEDGED',
+    notification_status: 'ACKNOWLEDGED',
+  }));
 
-  const rejection_audit_logs = await prisma.dataset_audit.findMany({
-    where: {
-      action: 'duplicate_rejected',
-      user_id: rejected_by_id,
-      dataset_id: duplicate_dataset.id,
-    },
-  });
-  if (rejection_audit_logs.length < 1) {
-    update_queries.push(prisma.dataset_audit.create({
-      data: {
-        action: 'duplicate_rejected',
-        user: {
-          connect: {
-            id: rejected_by_id,
-          },
-        },
-        dataset: {
-          connect: {
-            id: duplicate_dataset.id,
-          },
-        },
-      },
-    }));
-  }
-
-  // if a state update record hasn't been created for the overwrite of the
-  // original dataset, create one.
-  // eslint-disable-next-line no-await-in-loop
-  const rejection_state_logs = await prisma.dataset_state.findMany({
-    where: {
-      state: 'DUPLICATE_REJECTION_IN_PROGRESS',
-      dataset_id: duplicate_dataset.id,
-    },
-  });
-  if (rejection_state_logs.length < 1) {
-    update_queries.push(prisma.dataset_state.create({
-      data: {
-        state: 'DUPLICATE_REJECTION_IN_PROGRESS',
-        dataset: {
-          connect: {
-            id: duplicate_dataset.id,
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await audit_and_update_state_queries({
+    dataset_id: duplicate_dataset.id,
+    user_id: rejected_by_id,
+    action: 'duplicate_rejected',
+    state: 'DUPLICATE_REJECTION_IN_PROGRESS',
+  }));
 
   const [dataset_being_rejected] = await prisma.$transaction(update_queries);
 
@@ -833,48 +668,18 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
 
-  // acknowledge notification
-  const rejected_duplicate_action_item = (duplicate_dataset.action_items || [])
-    .filter((item) => item.type === 'DUPLICATE_DATASET_INGESTION' && item.active)[0];
-  if (rejected_duplicate_action_item) {
-    update_queries.push(prisma.dataset_action_item.update({
-      where: {
-        id: rejected_duplicate_action_item.id,
-      },
-      data: {
-        status: 'RESOLVED',
-        active: false,
-        notification: {
-          update: {
-            status: 'RESOLVED',
-            active: false,
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await update_action_item_queries({
+    dataset: duplicate_dataset,
+    status: 'RESOLVED',
+    active: false,
+    notification_status: 'RESOLVED',
+    notification_active: false,
+  }));
 
-  // if a state update record hasn't been created for the overwrite of the
-  // original dataset, create one.
-  // eslint-disable-next-line no-await-in-loop
-  const rejection_state_logs = await prisma.dataset_state.findMany({
-    where: {
-      state: 'DUPLICATE_REJECTED',
-      dataset_id: duplicate_dataset.id,
-    },
-  });
-  if (rejection_state_logs.length < 1) {
-    update_queries.push(prisma.dataset_state.create({
-      data: {
-        state: 'DUPLICATE_REJECTED',
-        dataset: {
-          connect: {
-            id: duplicate_dataset.id,
-          },
-        },
-      },
-    }));
-  }
+  update_queries.concat(await audit_and_update_state_queries({
+    dataset_id: duplicate_dataset.id,
+    state: 'DUPLICATE_REJECTED',
+  }));
 
   const [rejected_dataset] = await prisma.$transaction(update_queries);
   return rejected_dataset;
