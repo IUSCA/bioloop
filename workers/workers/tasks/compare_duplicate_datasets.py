@@ -102,14 +102,6 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
 # [
 #   {
-#     type: 'FILE_COUNT',
-#     label: 'Number of Files Match',
-#     passed: True,
-#     report: {
-#       original_files_count: 20,
-#       duplicate_files_count: 20,
-#     },
-#   }, {
 #     type: 'CHECKSUMS_MATCH',
 #     label: 'Checksums Validated',
 #     passed: False,
@@ -155,16 +147,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #   }
 # ]
 def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list[dict]:
-    num_files_same: bool = len(original_dataset_files) == len(duplicate_dataset_files)
-    comparison_checks: list[dict] = [{
-        'type': 'FILE_COUNT',
-        'label': 'Number of Files Match',
-        'passed': num_files_same,
-        'report': {
-            'original_files_count': len(original_dataset_files),
-            'duplicate_files_count': len(duplicate_dataset_files)
-        }
-    }]
+    comparison_checks: list[dict] = []
 
     original_files_set: set[str] = set(map(lambda f: f['path'], original_dataset_files))
     duplicate_files_set: set[str] = set(map(lambda f: f['path'], duplicate_dataset_files))
@@ -194,17 +177,17 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
     # Files that are present in the duplicate dataset and missing from the original
     duplicate_only_files: set[str] = duplicate_files_set.difference(original_files_set)
 
-    missing_original_files = []
+    files_missing_from_duplicate = []
     for file_path in original_only_files:
         file = [f for f in original_dataset_files if f['path'] == file_path][0]
-        missing_original_files.append({
+        files_missing_from_duplicate.append({
             'name': file['name'],
             'path': file['path']
         })
-    missing_duplicate_files = []
+    files_missing_from_original = []
     for file_path in duplicate_only_files:
         file = [f for f in duplicate_dataset_files if f['path'] == file_path][0]
-        missing_duplicate_files.append({
+        files_missing_from_original.append({
             'name': file['name'],
             'path': file['path']
         })
@@ -224,7 +207,7 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
         'label': 'Original dataset\'s files missing from incoming duplicate',
         'passed': len(original_only_files) == 0,
         'report': {
-            'missing_files': missing_original_files
+            'missing_files': files_missing_from_duplicate
         }
     })
     comparison_checks.append({
@@ -232,7 +215,7 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
         'label': 'Incoming duplicate dataset\'s files missing from original',
         'passed': len(duplicate_only_files) == 0,
         'report': {
-            'missing_files': missing_duplicate_files
+            'missing_files': files_missing_from_original
         }
     })
 
