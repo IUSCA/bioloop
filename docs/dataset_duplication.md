@@ -6,12 +6,12 @@ Bioloop allows for duplicate datasets to be registered in the system.
 
 Duplicate datasets are registered by the `watch.py` script, if it finds a dataset present in the `source_dir` directory which has the same name and type as an existing active dataset.
 
-The duplicate dataset is registered at the database level, and action items and notifications are created in the system, to allow operators/admins a chance to review the duplicate dataset.
+The duplicate dataset is registered at the database level, and action items and notifications are created in the system, to allow authorized users a chance to review the duplicate dataset.
 
 Upon registration, the `watch` script launches the `handle_duplicate_datasets` workflow that runs the `await_stability`, `inspect_dataset` and `compare_duplicate_datasets` steps on the duplicate dataset.
 - The `compare_duplicae_datasets` step compares the newly created duplicate dataset with the original dataset, and generates a comparison report which is persisted to Postgres.
 
-The results of the comparison analysis are shown to operators/admins in the UI, based on which they can either accept or reject a duplicate dataset.
+The results of the comparison analysis are shown to authorized users in the UI, based on which they can either accept or reject a duplicate dataset.
 
 ### Versioning
 
@@ -37,11 +37,14 @@ A dataset is compared with another based on 3 criteria:
 ---
 
 ## Actions
-Operators and Admins have the access to accept or reject an incoming duplicate dataset.
+Only Operator and Admin roles are authorized to accept or reject an incoming duplicate dataset.
 
 
 ### Acceptance
-When an operator/admin decides to accept a duplicate dataset into the system, the following steps take place:
+
+<img src="assets/accept_duplicate_steps.png" />
+
+When an authorized user decides to accept a duplicate dataset into the system, the following steps take place:
 1. State updates are made for both the original and duplicate datasets, which act as locks on the dataset.
    * The following state updates are made:
      * The Duplicate dataset's state is moved to `DUPLICATE_ACCEPTANCE_IN_PROGRESS`
@@ -65,7 +68,10 @@ When an operator/admin decides to accept a duplicate dataset into the system, th
 
 
 ### Rejection
-When an operator/admin decides to reject a duplicate dataset from the syste, the following steps take place:
+
+<img src="assets/reject_duplicate_steps.png" />
+
+When an authorized user decides to reject a duplicate dataset from the syste, the following steps take place:
 1. State updates are made on the duplicate dataset:
    * The duplicate dataset's state is moved to `DUPLICATE_REJECTION_IN_PROGRESS`.
    * This state lock ensures that any writes made on the duplicate dataset (or its state) via the API layer will fail while the state lock is in place.
@@ -88,10 +94,13 @@ On the API layer, the state locks are enforced by the use of the `dataset_state_
 ### Resumable
 - The steps outlined above for the acceptance/rejection of a duplicate dataset can be resumed in case of an error occurs in either the API layer or the workflow layer.
 
+### Irreversible
+Once an authorized user initiates the acceptance or rejection of a duplicate dataset, the operation cannot be reverted.
+
 ---
 
 ## UI
 
-- Operators/Admins sees a notification per dataset duplication. Users do not.
+- Authorized users sees a notification per dataset duplication.
 - The UI polls for any incoming notifications that haven't been acknowledged yet every 5 seconds.
-- Notification shows up in the UI until a duplicate dataset has been either accepted or rejected by an operator/admin.
+- Notification shows up in the UI until a duplicate dataset has been either accepted or rejected by an authorized user.
