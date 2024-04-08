@@ -37,14 +37,14 @@ model dataset {
   bundle           bundle?
   action_items     dataset_action_item[]
   is_duplicate     Boolean              @default(false)
-  duplicated_from  duplicate_dataset?   @relation("duplicated_from")
-  duplicated_by    duplicate_dataset[]  @relation("duplicated_by")
+  duplicated_from  dataset_duplication? @relation("duplicated_from")
+  duplicated_by    dataset_duplication[] @relation("duplicated_by")
   version          Int                  @default(1)
 
   @@unique([name, type, is_deleted, is_duplicate, version])
 }
 
-model duplicate_dataset {
+model dataset_duplication {
   duplicate_dataset_id Int      @id
   duplicate_dataset    dataset  @relation(name: "duplicated_from", fields: [duplicate_dataset_id], references: [id], onDelete: Cascade)
   original_dataset_id  Int
