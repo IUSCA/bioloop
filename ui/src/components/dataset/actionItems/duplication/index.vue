@@ -162,7 +162,10 @@ const isActionItemActive = computed(() => {
 });
 
 const isActionItemAcknowledged = computed(() => {
-  return props.actionItem.status === "ACKNOWLEDGED";
+  return (
+    props.actionItem.status === "ACKNOWLEDGED" ||
+    props.actionItem.status === "RESOLVED"
+  );
 });
 
 const areControlsDisabled = computed(() => {

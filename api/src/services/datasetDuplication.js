@@ -307,9 +307,9 @@ const update_action_item_queries = async ({
   const update_queries = [];
 
   const action_item = (dataset.action_items || [])
-    .filter((item) => item.type === (
-      config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active
-    ))[0];
+    .filter((item) => item.type
+      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
+
   if (action_item) {
     update_queries.push(prisma.dataset_action_item.update({
       where: {
