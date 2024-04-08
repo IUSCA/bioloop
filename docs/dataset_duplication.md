@@ -32,6 +32,8 @@ A dataset is compared with another based on 3 criteria:
 2. Original dataset has files that the duplicate dataset doesn't.
 3. Duplicate dataset has files that the original dataset doesn't.
 
+<img src="assets/duplication_er_diagram.png" />
+
 ---
 
 ## Actions
