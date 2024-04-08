@@ -47,9 +47,9 @@
         }}</router-link>
       </template>
 
-      <template #cell(version)="{ value }">
-        <span>{{ value }}</span>
-      </template>
+      <!--      <template #cell(version)="{ value }">-->
+      <!--        <span>{{ value }}</span>-->
+      <!--      </template>-->
 
       <template #cell(created_at)="{ value }">
         <span>{{ datetime.date(value) }}</span>
@@ -181,10 +181,10 @@ const columns = [
     label: "Deleted",
     width: "80px",
   },
-  {
-    key: "version",
-    width: "80px",
-  },
+  // {
+  //   key: "version",
+  //   width: "80px",
+  // },
   {
     key: "num_genome_files",
     label: "data files",
