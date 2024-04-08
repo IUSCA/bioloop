@@ -93,7 +93,7 @@ While a dataset has state locks:
 - The workers processing a dataset won't proceed. 
 - UI controls that can allow writing to a dataset will be disabled.
 
-On the API layer, the state locks are enforced by the use of the `dataset_state_check` layer within the `/datasets` route. Workers and UI have utility methods to achieve the same.
+In the API layer, the state locks are enforced by the use of the `dataset_state_check` middleware. Workers and UI have utility methods to determine the state of a dataset.
 
 ### Resumable
 - The steps outlined above for the acceptance/rejection of a duplicate dataset can be resumed in case of an error occurs in either the API layer or the workflow layer.
