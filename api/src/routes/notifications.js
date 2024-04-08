@@ -25,10 +25,10 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
-    // #swagger.summary = Filter notifications
+    // #swagger.summary = Get filtered notifications
 
-    // by_active_action_items - fetch notifications whose action items have not
-    // been acknowledged
+    // req.query.by_active_action_items: fetch notifications whose action items
+    // have not been acknowledged
     const filterQuery = _.omitBy(_.isUndefined)({
       dataset_action_items: req.query.by_active_action_items ? {
         some: {
@@ -52,28 +52,6 @@ router.get(
       },
       orderBy: {
         created_at: 'desc',
-      },
-    });
-
-    setTimeout(() => {
-      res.json(notifications);
-    }, 0);
-  }),
-);
-
-router.get(
-  '/notifications/:id',
-  isPermittedTo('read'),
-  validate([
-    param('id').isInt().toInt(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['notifications']
-    // #swagger.summary = Get notification by id
-
-    const notifications = await prisma.notification.findFirst({
-      where: {
-        id: req.params.id,
       },
     });
 

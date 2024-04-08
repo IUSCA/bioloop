@@ -36,16 +36,14 @@ const props = defineProps({
   },
 });
 
-const _checkType = toRef(() => props.checkType);
-
 const successAlertText = computed(() => {
-  return _checkType.value === "FILES_MISSING_FROM_ORIGINAL"
+  return props.checkType === "FILES_MISSING_FROM_ORIGINAL"
     ? "All files in the duplicate dataset were found in the original"
     : "All files in the original dataset were found in the duplicate";
 });
 
 const warningAlertText = computed(() => {
-  return _checkType.value === "FILES_MISSING_FROM_ORIGINAL"
+  return props.checkType === "FILES_MISSING_FROM_ORIGINAL"
     ? "The following files in the incoming duplicate dataset were not found in the original dataset"
     : "The following files in the original dataset were not found in the incoming duplicate dataset";
 });

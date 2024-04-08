@@ -26,7 +26,7 @@
   "files.associations": {
     "*.css": "postcss"
   },
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   "files.exclude": {
     "**/.git": true,
     "**/.DS_Store": true,
@@ -35,10 +35,5 @@
   },
   "editor.detectIndentation": false,
   "editor.tabSize": 2,
-  "editor.insertSpaces": true,
-  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
-  "eslint.format.enable": true,
-  "editor.formatOnSaveMode": "file",
-  "eslint.run": "onSave",
-  "eslint.debug": true,
+  "editor.insertSpaces": true
 }

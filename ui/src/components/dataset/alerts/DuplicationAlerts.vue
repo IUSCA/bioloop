@@ -1,19 +1,5 @@
 <template>
   <div>
-    <!--
-   Shows important alerts regarding the dataset's state.
-
-   Alerts are generated if this dataset is in either of the following states:
-   1. Dataset is active and is a duplicate of another dataset, and is currently pending acceptance into the system.
-   2. Dataset is active and has been duplicated by another dataset.
-   3. Dataset has been deleted via a soft-delete
-   4. Dataset has been deleted on account of being a rejected duplicate of an another dataset.
-   5. Dataset has been deleted on account of being overwritten by another dataset (a dataset
-   reaches this state once it's duplicate dataset has been accepted into the system).
-  -->
-
-    <!-- First, handle cases where current dataset is active (not deleted) -->
-
     <!-- The current dataset is an active duplicate of another -->
     <va-alert v-if="isActiveDuplicatePendingAction" color="warning">
       <div class="flex items-center">
@@ -28,7 +14,7 @@
           </div>
         </div>
 
-        <!-- Allow users to see any active action items for this duplication -->
+        <!-- Allow authorized users to see any active action items for this duplication -->
         <va-button
           v-if="
             props.dataset?.action_items?.length > 0 &&
@@ -36,8 +22,6 @@
           "
           @click="
             () => {
-              // exactly one action item is created
-              // for a dataset duplication
               router.push(
                 `/datasets/${props.dataset.id}/actionItems/${props.dataset.action_items[0].id}`,
               );
@@ -65,8 +49,7 @@
       </div>
     </va-alert>
 
-    <!-- The current dataset is an active dataset which has incoming duplicates,
-     or one that is currently being overwritten by a duplicate. -->
+    <!-- The current dataset is an active dataset which has incoming duplicates -->
     <DuplicatedByAlerts :dataset="props.dataset" />
 
     <!-- The current dataset is being overwritten by another dataset -->
@@ -75,12 +58,12 @@
     <!-- The current dataset has been overwritten by another dataset -->
     <va-alert v-if="isInactiveOverwrittenDataset" color="danger">
       This dataset has been overwritten by duplicate
-      <a :href="`/datasets/${overwrittenByDatasetId(props.dataset)}`">
-        #{{ overwrittenByDatasetId(props.dataset) }}
+      <a :href="`/datasets/${_overwrittenByDatasetId}`">
+        #{{ _overwrittenByDatasetId }}
       </a>
     </va-alert>
 
-    <!-- The current dataset is an active dataset which is currently being overwritten by its duplicate. -->
+    <!-- The current dataset is an active duplicate which is currently being rejected. -->
     <va-alert v-if="isActiveDuplicateBeingRejected" color="warning">
       This dataset is a duplicate of
       <a
@@ -101,19 +84,18 @@
       </a>
     </va-alert>
 
-    <!-- The current dataset has been deleted (soft-delete) -->
+    <!-- The current dataset has been (soft-) deleted -->
     <va-alert v-if="isInactiveDataset" color="danger">
       This dataset has been deleted
     </va-alert>
-    <!-- Now, handle cases where current dataset has been deleted. -->
-
-    <!-- Any of the following states (DUPLICATE_REJECTED, DELETED, OVERWRITTEN) will only be reached once
-    the current dataset has been deleted. -->
   </div>
 </template>
 
 <script setup>
-import { datasetCurrentState } from "@/services/utils";
+import {
+  datasetCurrentState,
+  overwrittenByDatasetId,
+} from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
 
@@ -126,6 +108,10 @@ const props = defineProps({
     required: true,
   },
 });
+
+const _overwrittenByDatasetId = computed(() =>
+  overwrittenByDatasetId(props.dataset),
+);
 
 const datasetState = computed(() => datasetCurrentState(props.dataset));
 
@@ -153,6 +139,7 @@ const isActiveDuplicateBeingAccepted = computed(() => {
   );
 });
 
+// whether this dataset has been overwritten by a duplicate
 const isInactiveOverwrittenDataset = computed(() => {
   return (
     !props.dataset.is_duplicate &&
@@ -161,6 +148,7 @@ const isInactiveOverwrittenDataset = computed(() => {
   );
 });
 
+// whether this dataset is a duplicate that is currently being rejected.
 const isActiveDuplicateBeingRejected = computed(() => {
   return (
     datasetState.value ===
@@ -170,50 +158,21 @@ const isActiveDuplicateBeingRejected = computed(() => {
   );
 });
 
+// whether this dataset is a rejected duplicate of another.
 const isInactiveRejectedDuplicate = computed(() => {
   return (
     props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
-    datasetState.value === "DUPLICATE_REJECTED"
+    datasetState.value === config.DATASET_STATES.DUPLICATE_REJECTED
   );
 });
 
-// dataset has been soft-deleted
+// whether this dataset has been soft-deleted
 const isInactiveDataset = computed(() => {
   return (
     !props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
-    datasetState.value === "DELETED"
+    datasetState.value === config.DATASET_STATES.DELETED
   );
-});
-
-// Returns the dataset that overwrote the current
-// dataset (via acceptance of a duplicate into the system)
-const overwrittenByDatasetId = (dataset) => {
-  if (!dataset || !dataset.duplicated_by) {
-    return undefined;
-  }
-
-  // When a dataset overwrites another, it's `is_duplicate` is changed from
-  // `true` to `false`
-  const duplicationLog = (dataset.duplicated_by || []).find(
-    (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
-  );
-
-  return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
-};
-
-onMounted(() => {
-  console.log("onMounted");
-  console.log("dataset");
-  console.dir(props.dataset, { depth: null });
-});
-
-const datasetWatcher = toRef(() => props.dataset);
-
-watch(datasetWatcher, () => {
-  console.log("watch");
-  console.log("dataset");
-  console.dir(datasetWatcher.value, { depth: null });
 });
 </script>

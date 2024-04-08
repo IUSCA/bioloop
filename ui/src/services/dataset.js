@@ -17,9 +17,9 @@ class DatasetService {
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
-   * @param is_duplicate
-   * @param include_action_items Includes any active action items on the dataset in the result
-   * @param include_states Include dataset's state history
+   * @param is_duplicate Boolean field to filter datasets by the is_duplicate attribute
+   * @param include_action_items Boolean field to includes any active action items on the dataset in the result
+   * @param include_states Boolean field to include dataset's state history
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll({
@@ -172,15 +172,6 @@ class DatasetService {
 
   getActionItem({ action_item_id } = {}) {
     return api.get(`/datasets/action-items/${action_item_id}`);
-  }
-
-  getActionItems({ type, active = true } = {}) {
-    return api.get("/datasets/action-items", {
-      params: {
-        type,
-        active,
-      },
-    });
   }
 }
 

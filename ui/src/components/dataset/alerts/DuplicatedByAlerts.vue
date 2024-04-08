@@ -1,15 +1,5 @@
 <template>
   <div>
-    <!--
-   Shows important alerts regarding the dataset's state.
-
-   Alerts are generated if this dataset is in either of the following states:
-   1. Dataset is active and has been duplicated by another dataset.
-   -->
-
-    <!-- First, handle cases where current dataset is active (not deleted) -->
-
-    <!-- The current dataset is an active dataset which has incoming duplicates -->
     <div v-if="isActiveDatasetWithIncomingDuplicates(props.dataset)">
       <va-alert
         v-for="(duplicateDataset, index) in duplicateDatasets"
@@ -25,7 +15,7 @@
             </a>
           </div>
 
-          <!-- Allow users to see visit the action item for this duplication -->
+          <!-- Allow authorized users to see visit the action item for this duplication -->
           <va-button
             v-if="
               duplicateDataset.action_items.length > 0 &&
@@ -33,8 +23,6 @@
             "
             @click="
               () => {
-                // duplicateDataset.action_items[0] is sufficient because exactly one action item is created
-                // for a dataset duplication
                 router.push(
                   `/datasets/${duplicateDataset.id}/actionItems/${duplicateDataset.action_items[0].id}`,
                 );
@@ -50,7 +38,7 @@
 </template>
 
 <script setup>
-import { isActiveDatasetWithIncomingDuplicates } from "@/services/utils";
+import { isActiveDatasetWithIncomingDuplicates } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();

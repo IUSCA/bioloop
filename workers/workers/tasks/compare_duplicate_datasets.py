@@ -61,18 +61,13 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
         })
 
     comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
-    # logger.info(f"are_files_same: {are_files_same}")
-    logger.info('comparison_checks_report')
-    logger.info(comparison_checks_report)
 
     # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
-    # create an action item for operators to review later. This way, in case our comparison process
-    # mistakenly assumes the incoming dataset to be a duplicate, operators will still have a chance
-    # to review the incoming dataset before it is rejected.    
-
+    # create an action item for operators to review later. This way, operators will always have a chance
+    # to review the incoming dataset before it is rejected.
     # Exactly one action item of type DUPLICATE_DATASET_INGESTION is created for a duplicate dataset.
     duplication_action_item: dict = [item for item in duplicate_dataset['action_items']
-                                     if item['type'] == 'DUPLICATE_DATASET_INGESTION'][0]
+                                     if item['type'] == config['ACTION_ITEM_TYPES']['DUPLICATE_DATASET_INGESTION']][0]
 
     action_item_data: dict = {
        "ingestion_checks": comparison_checks_report,
@@ -89,14 +84,11 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
 # Given two lists of dataset files, determines if the two sets of files are duplicates. The following checks are used
 # to determine whether files are same:
-#    1. Comparing number of files in both datasets
-#    2. Comparing checksums of files in both datasets
-#    3. Verifying if any files from the original dataset are missing from the incoming duplicate.
-#    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
+#    1. Comparing checksums of files in both datasets
+#    2. Verifying if any files from the original dataset are missing from the incoming duplicate.
+#    3. Verifying if any files from the incoming duplicate dataset are missing from the original.
 #
-# Returns a tuple, the first element of which is a bool indicating whether both sets of files
-# are same, with the second element being a detailed comparison report containing the results
-# for each of the 3 checks performed.
+# Returns a dict, which contains the results for each of the 3 checks performed.
 #
 # Example of comparison report:
 

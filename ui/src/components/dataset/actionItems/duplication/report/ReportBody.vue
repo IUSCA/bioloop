@@ -1,7 +1,7 @@
 <template>
   <va-card>
     <va-card-title class="mt-1">
-      <span class="text-lg">Duplicate Analysis Report</span>
+      <span class="text-lg">Duplication Analysis Report</span>
     </va-card-title>
 
     <va-card-content>
@@ -37,12 +37,6 @@
         <!-- Expanded details for current check -->
         <template #expandableRow="{ rowData }">
           <div>
-            <num-files-diff
-              v-if="rowData.type === 'FILE_COUNT'"
-              :original_files_count="rowData.report.original_files_count"
-              :duplicate_files_count="rowData.report.duplicate_files_count"
-            />
-
             <checksums-diff
               v-if="rowData.type === 'CHECKSUMS_MATCH'"
               :conflicting-files="rowData.report.conflicting_checksum_files"
@@ -65,10 +59,6 @@
 </template>
 
 <script setup>
-import { useBreakpoint } from "vuestic-ui";
-
-const breakpoint = useBreakpoint();
-
 const props = defineProps({
   actionItem: {
     type: Object,

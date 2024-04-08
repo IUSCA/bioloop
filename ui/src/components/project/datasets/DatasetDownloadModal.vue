@@ -142,9 +142,6 @@ import datasetService from "@/services/dataset";
 import statisticsService from "@/services/statistics";
 import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
-
-const breakpoint = useBreakpoint();
 
 const props = defineProps({
   dataset: {
@@ -193,9 +190,6 @@ const initiate_dataset_download = () => {
         url: url.toString(),
         filename: props.dataset.name,
       });
-      console.log(
-        `DatasetDownloadModal: emitting download-initiated | dataset_id: ${props.dataset.id}`,
-      );
       emit("download-initiated", props.dataset.id);
     })
     .catch((err) => {
@@ -213,9 +207,4 @@ function hide() {
 function show() {
   visible.value = true;
 }
-
-watch(props.dataset, () => {
-  console.log("DatasetDownloadModal: props.dataset updated");
-  console.dir(props.dataset, { depth: null });
-});
 </script>

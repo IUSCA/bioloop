@@ -66,7 +66,6 @@ async function soft_delete(dataset, user_id) {
     await prisma.dataset.update({
       data: {
         is_deleted: true,
-        name: `${dataset.name}-${dataset.id}`,
         states: {
           create: {
             state: 'DELETED',

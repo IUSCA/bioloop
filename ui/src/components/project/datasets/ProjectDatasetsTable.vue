@@ -140,9 +140,11 @@
     ref="downloadModal"
     :dataset="datasetToDownload"
     @download-initiated="
-      (dataset_id) => {
-        console.log('ProjectDatasetsTable: @download-initiated: ', dataset_id);
-        // emit('download-initiated', dataset_id);
+      () => {
+        // refresh dataset after initiating download, in case a
+        // user triggered the dataset being overwritten by a duplicate
+        // before the download begins. This way, the user knows
+        // that the dataset they are downloading will soon be outdated.
         refresh_downloaded_dataset();
       }
     "
@@ -161,7 +163,8 @@ import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
-import { formatBytes, isDatasetLockedForWrite } from "@/services/utils";
+import { formatBytes } from "@/services/utils";
+import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { HalfCircleSpinner } from "epic-spinners";
@@ -252,9 +255,7 @@ const updateFiltersGroupQuery = (newVal) => {
   filters_group_query.value = newVal;
 };
 
-const fetch_project_datasets = (caller) => {
-  console.log(`fetch_project_datasets: caller = ${caller}`);
-
+const fetch_project_datasets = () => {
   loading.value = true;
   if (!props.project.id) return [];
   projectService
@@ -272,7 +273,8 @@ const fetch_project_datasets = (caller) => {
       projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
     })
-    .catch(() => {
+    .catch((err) => {
+      console.log(err);
       toast.error("Failed to retrieve datasets");
     })
     .finally(() => {
@@ -282,27 +284,17 @@ const fetch_project_datasets = (caller) => {
 };
 
 const refresh_downloaded_dataset = () => {
-  console.log(
-    "ProjectDatasetsTable: refresh_downloaded_dataset",
-    datasetToDownload.value.id,
-  );
   DatasetService.getById({
     id: datasetToDownload.value.id,
     include_states: true,
     include_duplications: true,
   }).then((res) => {
-    console.log(
-      "ProjectDatasetsTable: refresh_downloaded_dataset refreshed dataset",
-    );
     datasetToDownload.value = res.data;
   });
 };
 
 watch(props.triggerDatasetsRetrieval, () => {
-  console.log("ProjectDatasetsTable: triggerDatasetsRetrieval watch");
-
   if (props.triggerDatasetsRetrieval) {
-    console.log("re-fetching project datasets");
     currentPageIndex.value = 1;
     fetch_project_datasets("watch triggerDatasetsRetrieval");
   }
@@ -441,12 +433,6 @@ const columns = [
 const downloadModal = ref(null);
 const datasetToDownload = ref(null);
 
-watch(datasetToDownload, () => {
-  // todo - not being called
-  console.log("ProjectDatasetsTable - watch - datasetToDownload");
-  console.dir(datasetToDownload.value, { depth: null });
-});
-
 function openModalToDownloadProject(dataset) {
   datasetToDownload.value = dataset;
   downloadModal.value.show();
@@ -457,7 +443,6 @@ const stageModal = ref(null);
 const datasetToStage = ref({});
 
 function openModalToStageProject(dataset) {
-  // console.log("openModalToStageProject", dataset);
   datasetToStage.value = dataset;
   stageModal.value.show();
 }

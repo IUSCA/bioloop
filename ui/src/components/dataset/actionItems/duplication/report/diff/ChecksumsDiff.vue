@@ -45,9 +45,6 @@ const columns = [
     label: "File",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    // width: "90px",
-    // tdStyle: "word-wrap: break-word; overflow-wrap: anywhere;",
-    // tdClass: "break-words",
   },
   {
     key: "path",
@@ -70,5 +67,3 @@ const columns = [
   },
 ];
 </script>
-
-<style scoped></style>

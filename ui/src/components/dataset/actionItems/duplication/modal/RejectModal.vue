@@ -5,7 +5,7 @@
     @before-close="clearModalInput"
     hide-default-actions
   >
-    <modal-header :dataset="associatedDataset"></modal-header>
+    <duplication-modal-header :dataset="associatedDataset" />
 
     <va-divider class="my-4" />
 
@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import ModalHeader from "@/components/dataset/actionItems/duplication/modal/ModalHeader.vue";
+import DuplicationModalHeader from "@/components/dataset/actionItems/duplication/modal/ModalHeader.vue";
 
 const props = defineProps({
   showModal: {

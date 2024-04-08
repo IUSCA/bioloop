@@ -2,10 +2,6 @@
   <div class="va-table-responsive">
     <table class="va-table">
       <tbody>
-        <!--        <tr v-if="is_processed_duplicate(dataset)">-->
-        <!--          <td>Duplicated From</td>-->
-        <!--          <td>{{ props.dataset.duplicated_from.original_dataset_id }}</td>-->
-        <!--        </tr>-->
         <tr>
           <td>ID</td>
           <td>{{ props.dataset.id }}</td>
@@ -73,12 +69,6 @@ import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 
 const props = defineProps({ dataset: Object });
-
-// const is_processed_duplicate = (dataset) => {
-//   // Once a dataset has been processed (accepted or rejected by the system), it is no
-//   // longer of a duplicate.
-//   return dataset.duplicated_from && dataset.is_duplicate;
-// };
 </script>
 
 <style lang="scss" scoped>

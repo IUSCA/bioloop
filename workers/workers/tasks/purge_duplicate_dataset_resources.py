@@ -58,12 +58,10 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
     duplicate_dataset_origin_path = Path(incoming_duplicate_dataset['origin_path']).resolve() if \
         incoming_duplicate_dataset['origin_path'] is not None else None
 
-    # in case step is being resumed after this database write
     if rejected_dataset_latest_state == config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS']:
         if (duplicate_dataset_origin_path is not None and
                 duplicate_dataset_origin_path.exists()):
-            pass
-            # shutil.rmtree(duplicate_dataset_origin_path)
+            shutil.rmtree(duplicate_dataset_origin_path)
 
     if rejected_dataset_latest_state != config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED']:
         api.add_state_to_dataset(dataset_id=duplicate_dataset_id,

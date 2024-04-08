@@ -16,9 +16,6 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-# Handles the acceptance of an incoming duplicate dataset, by updating the `type`
-# of the incoming duplicate to match the original dataset's `type`, and removing the
-# original dataset from the database and the filesystem.
 def reject(celery_task, duplicate_dataset_id, **kwargs):
     duplicate_dataset = api.get_dataset(
         dataset_id=duplicate_dataset_id,
@@ -31,8 +28,6 @@ def reject(celery_task, duplicate_dataset_id, **kwargs):
 
     duplicate_dataset_latest_state = duplicate_dataset['states'][0]['state']
 
-    # allow step to be resumed after even if it has already reached the next
-    # state (DUPLICATE_REJECTED)
     if (duplicate_dataset_latest_state != config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED'] and
             duplicate_dataset_latest_state != config['DATASET_STATES']['DUPLICATE_REJECTED']):
         raise InspectionFailed(f"Expected dataset {duplicate_dataset['id']} to be in one of "

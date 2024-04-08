@@ -226,7 +226,7 @@ const data_loading = ref(false);
 const roleOptions = ["user", "operator", "admin"];
 const autofill = ref({
   username: "",
-  cas_id: ""
+  cas_id: "",
 });
 
 const editModalTitle = computed(() => {
@@ -241,7 +241,7 @@ function get_role_color(role) {
     {
       user: "secondary",
       admin: "info",
-      operator: "warning"
+      operator: "warning",
     }[role] || null
   );
 }
@@ -254,16 +254,16 @@ const columns = ref([
   {
     key: "created_at",
     sortable: true,
-    label: "created on"
+    label: "created on",
   },
   { key: "is_deleted", sortable: true, label: "status" },
   {
     key: "login",
     sortable: true,
     label: "Last Login",
-    sortingFn: (a, b) => cmp(a?.last_login, b?.last_login)
+    sortingFn: (a, b) => cmp(a?.last_login, b?.last_login),
   },
-  { key: "actions", width: 30 }
+  { key: "actions", width: 30 },
 ]);
 
 function fetch_all_users() {
@@ -296,7 +296,7 @@ function openModalToEditItem(rowData) {
     ...user,
     status: !user.is_deleted,
     roles: user.roles || [],
-    orig_username: user.username
+    orig_username: user.username,
   };
 }
 
@@ -306,7 +306,7 @@ function openModalToCreateUser() {
   // eslint-disable-next-line no-unused-vars
   editedUser.value = {
     status: true,
-    roles: ["user"]
+    roles: ["user"],
   };
 }
 
@@ -386,7 +386,7 @@ watch(
       autofill.value.username = username;
       autofill.value.cas_id = username;
     }
-  }
+  },
 );
 
 fetch_all_users();
@@ -400,7 +400,7 @@ fetch_all_users();
 
 <route lang="yaml">
 meta:
-title: Users
-requiresRoles: ["operator", "admin"]
-nav: [{ label: "Users" }]
+  title: Users
+  requiresRoles: ["operator", "admin"]
+  nav: [{ label: "Users" }]
 </route>

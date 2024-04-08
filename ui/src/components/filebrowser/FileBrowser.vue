@@ -1,17 +1,13 @@
 <template>
   <div class="flex justify-center">
     <div class="w-full flex-none">
+      <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
       <DuplicationAlerts v-if="dataset" :dataset="dataset" />
 
       <va-inner-loading :loading="data_loading">
         <!-- BreadCrumbs Navigation / Search Filters -->
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
         <div class="h-[40px] flex items-center">
-          <!--
-          The current dataset is an active dataset which has incoming duplicates,
-          or one that is currently being overwritten by a duplicate.
-          -->
-
           <FileBrowserSearchFilters
             v-if="isInSearchMode"
             class="flex-none"

@@ -1,7 +1,7 @@
 <template>
   <va-inner-loading :loading="loading">
+    <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
     <DuplicationAlerts :dataset="dataset" class="mb-2" />
-    <!--    <DatasetActionsItemAlert :dataset="dataset" class="mb-2" />-->
 
     <!-- Content -->
     <div class="flex flex-col gap-3">
@@ -330,7 +330,8 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import { formatBytes, isDatasetLockedForWrite } from "@/services/utils";
+import { formatBytes } from "@/services/utils";
+import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import workflowService from "@/services/workflow";
 const router = useRouter();
 const route = useRoute();

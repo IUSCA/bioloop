@@ -1,4 +1,5 @@
 <template>
+  <!-- This dataset has duplicates incoming -->
   <va-alert
     v-if="isActiveDatasetWithIncomingDuplicates(props.dataset)"
     color="warning"
@@ -20,12 +21,12 @@
     </div>
   </va-alert>
 
+  <!-- This dataset is currently being overwritten by a duplicate -->
   <OverwriteInProgressAlert :dataset="props.dataset" />
 </template>
 
 <script setup>
-import { isActiveDatasetWithIncomingDuplicates } from "@/services/utils";
-import { useAuthStore } from "@/stores/auth";
+import { isActiveDatasetWithIncomingDuplicates } from "@/services/datasetUtils";
 
 const router = useRouter();
 const props = defineProps({
@@ -34,6 +35,4 @@ const props = defineProps({
     required: true,
   },
 });
-
-const auth = useAuthStore();
 </script>

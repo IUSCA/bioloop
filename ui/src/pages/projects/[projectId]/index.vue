@@ -76,7 +76,6 @@
               :project="project"
               @datasets-retrieved="
                 () => {
-                  console.log('datasets-retrieved event triggered');
                   triggerDatasetsRetrieval = false;
                 }
               "

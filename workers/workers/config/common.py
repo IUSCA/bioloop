@@ -202,12 +202,6 @@ config = {
             'max_purge_count': 10
         }
     },
-    'notifications': {
-        "INCOMING_DUPLICATE_DATASET": {
-            'NOTIFICATION_TYPE': "INCOMING_DUPLICATE_DATASET",
-            'NOTIFICATION_LABEL': "Duplicate Dataset",
-        }
-    },
     'DATASET_STATES': {
         'REGISTERED': 'REGISTERED',
         'READY': 'READY',
@@ -224,5 +218,9 @@ config = {
         'OVERWRITE_IN_PROGRESS': 'OVERWRITE_IN_PROGRESS',
         'ORIGINAL_DATASET_RESOURCES_PURGED': 'ORIGINAL_DATASET_RESOURCES_PURGED',
         'OVERWRITTEN': 'OVERWRITTEN',
+        'DELETED': 'DELETED',
+    },
+    'ACTION_ITEM_TYPES': {
+        'DUPLICATE_DATASET_INGESTION': 'DUPLICATE_DATASET_INGESTION',
     }
 }

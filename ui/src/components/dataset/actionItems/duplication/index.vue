@@ -1,15 +1,5 @@
 <template>
   <va-inner-loading :loading="loading">
-    <!--
-   Displays a report for each check performed in the process of determining
-   whether two datasets are the same.
-
-   The following checks are performed in the current process:
-   1. Comparing number of files in both datasets
-   2. Comparing checksums of files in both datasets
-   3. Verifying if any files from the original dataset are missing from the incoming duplicate.
-   4. Verifying if any files from the incoming duplicate dataset are missing from the original.
-  -->
     <div class="flex flex-col gap-3">
       <va-alert v-if="!isActionItemActive" color="warning" class="mx-0">
         This action item is no longer active.
@@ -21,14 +11,6 @@
         class="mx-0"
       >
         This action item has been acknowledged.
-      </va-alert>
-
-      <va-alert
-        v-if="isActionItemLocked && isActionItemActive"
-        color="warning"
-        class="mx-0"
-      >
-        This action item is currently locked.
       </va-alert>
 
       <va-alert
@@ -45,9 +27,9 @@
         Current state is {{ associatedDatasetState }}.
       </va-alert>
 
-      <report-header :action-item="props.actionItem" />
-
-      <report-body :action-item="props.actionItem" />
+      <!-- The report generated for this duplication -->
+      <duplication-report-header :action-item="props.actionItem" />
+      <duplication-report-body :action-item="props.actionItem" />
 
       <!-- Accept / Reject buttons -->
       <div class="flex gap-2 mt-5">
@@ -61,26 +43,26 @@
       </div>
     </div>
 
-    <accept-modal
+    <duplication-accept-modal
       v-model:show-modal="showAcceptModal"
       :action-item="props.actionItem"
       :are-controls-disabled="areControlsDisabled"
       @confirm="acceptDuplicate(props.actionItem.dataset_id)"
     />
-    <reject-modal
+    <duplication-reject-modal
       v-model:show-modal="showRejectModal"
       :action-item="props.actionItem"
       :are-controls-disabled="areControlsDisabled"
       @confirm="rejectDuplicate(props.actionItem.dataset_id)"
     />
-
-    <!-- add modals with v-model   -->
   </va-inner-loading>
 </template>
 
 <script setup>
-import ReportHeader from "@/components/dataset/actionItems/duplication/report/ReportHeader.vue";
-import ReportBody from "@/components/dataset/actionItems/duplication/report/ReportBody.vue";
+import DuplicationReportHeader from "@/components/dataset/actionItems/duplication/report/ReportHeader.vue";
+import DuplicationReportBody from "@/components/dataset/actionItems/duplication/report/ReportBody.vue";
+import DuplicationAcceptModal from "@/components/dataset/actionItems/duplication/modal/AcceptModal.vue";
+import DuplicationRejectModal from "@/components/dataset/actionItems/duplication/modal/RejectModal.vue";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useNotificationStore } from "@/stores/notification";
@@ -164,18 +146,12 @@ function rejectDuplicate(duplicate_dataset_id) {
     });
 }
 
-// const associatedDataset = computed(() => props.actionItem.dataset);
-
 // the current state of the dataset associated with this action item
 const associatedDatasetState = computed(() => {
   // assumes states are sorted by descending timestamp
   const latestState = props.actionItem.dataset.states[0];
   return latestState.state;
 });
-
-// const originalDataset = computed(() => {
-//   return props.actionItem.dataset.duplicated_from.original_dataset;
-// });
 
 const isDuplicateDatasetReadyForProcessing = computed(() => {
   return associatedDatasetState.value === config.DATASET_STATES.DUPLICATE_READY;
@@ -185,17 +161,12 @@ const isActionItemActive = computed(() => {
   return props.actionItem.active;
 });
 
-const isActionItemLocked = computed(() => {
-  return props.actionItem.status === "LOCKED";
-});
-
 const isActionItemAcknowledged = computed(() => {
   return props.actionItem.status === "ACKNOWLEDGED";
 });
 
 const areControlsDisabled = computed(() => {
   return (
-    isActionItemLocked.value ||
     isActionItemAcknowledged.value ||
     !isActionItemActive.value ||
     !isDuplicateDatasetReadyForProcessing.value

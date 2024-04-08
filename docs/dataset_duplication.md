@@ -44,7 +44,6 @@ When an operator/admin decides to accept a duplicate dataset into the system, th
    * The following state updates are made:
      * The Duplicate dataset's state is moved to `DUPLICATE_ACCEPTANCE_IN_PROGRESS`
      * Te original dataset's state is moved to `OVERWRITE_IN_PROGRESS`.
-   * These state locks ensure that any writes made on either dataset (or its state) via the API layer will fail while the state locks are in place. The workers processing a dataset also check for state locks, and won't proceed if a dataset is locked.
 2. The action item and notification corresponding to the duplicate dataset are acknowledged.
 3. An audit log is created for the incoming duplicate dataset's acceptance, and another one for the original dataset's overwrite.
 4. Any other duplicates that may have been created for the original dataset are rejected, and their action items and notifications are resolved. 
@@ -76,6 +75,13 @@ When an operator/admin decides to reject a duplicate dataset from the syste, the
      * moves the state of the duplicate dataset to `DUPLICATE_DATASET_RESOURCES_PURGED`.
    * runs the `reject` step, which marks the duplicate dataset as deleted in the database (by setting its `is_deleted` to `true`.)
 
+### State locks
+While a dataset has state locks:
+- Any writes made to the dataset (or its state) via the API layer will fail.
+- The workers processing a dataset won't proceed. 
+- UI controls that can allow writing to a dataset will be disabled.
+
+On the API layer, the state locks are enforced by the use of the `dataset_state_check` layer within the `/datasets` route. Workers and UI have utility methods to achieve the same.
 
 ### Resumable
 - The steps outlined above for the acceptance/rejection of a duplicate dataset can be resumed in case of an error occurs in either the API layer or the workflow layer.

@@ -36,7 +36,7 @@
     </template>
 
     <template #right>
-      <va-navbar-item class="flex items-center">
+      <va-navbar-item class="flex items-center" v-if="auth.user?.username">
         <HeaderUserDropdown />
       </va-navbar-item>
       <va-navbar-item

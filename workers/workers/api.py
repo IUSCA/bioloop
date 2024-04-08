@@ -118,9 +118,9 @@ def entity_getter(entity: dict, date_keys: list, int_keys: list):
 
 
 def dataset_getter(dataset: dict):
-    converted_dataset = entity_getter(dataset, ['created_at', 'updated_at'], ['du_size', 'size'])
-    converted_dataset['files'] = [str_to_int(f, 'size') for f in converted_dataset.get('files', [])]
-    return converted_dataset
+    _dataset = entity_getter(dataset, ['created_at', 'updated_at'], ['du_size', 'size'])
+    _dataset['files'] = [str_to_int(f, 'size') for f in _dataset.get('files', [])]
+    return _dataset
 
 
 def dataset_setter(dataset: dict):

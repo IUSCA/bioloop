@@ -77,52 +77,53 @@
       </template>
 
       <template #cell(actions)="{ rowData }">
-        <!-- Archive / Delete buttons for RAW_DATA and DATA_PRODUCTS type datasets -->
-        <!-- Archive Button -->
-        <va-popover
-          message="Archive"
-          placement="left"
-          v-if="(rowData?.workflows?.length || 0) == 0 && !rowData.is_deleted"
-        >
-          <va-button
-            class="flex-initial"
-            size="small"
-            preset="primary"
-            @click="
-              launch_modal.visible = true;
-              launch_modal.selected = rowData;
-            "
-            :disabled="isDatasetLockedForWrite(rowData)"
+        <div class="flex gap-2">
+          <!-- Archive Button -->
+          <va-popover
+            message="Archive"
+            placement="left"
+            v-if="(rowData?.workflows?.length || 0) == 0 && !rowData.is_deleted"
           >
-            <i-mdi-rocket-launch />
-          </va-button>
-        </va-popover>
+            <va-button
+              class="flex-initial"
+              size="small"
+              preset="primary"
+              @click="
+                launch_modal.visible = true;
+                launch_modal.selected = rowData;
+              "
+              :disabled="isDatasetLockedForWrite(rowData)"
+            >
+              <i-mdi-rocket-launch />
+            </va-button>
+          </va-popover>
 
-        <!-- Delete button -->
-        <!-- Only show when the dataset has no workflows, is not archived, and is not deleted -->
-        <va-popover
-          message="Delete entry"
-          placement="left"
-          v-if="
-            (rowData?.workflows?.length || 0) == 0 &&
-            !rowData.is_deleted &&
-            !rowData.is_archived
-          "
-        >
-          <va-button
-            size="small"
-            preset="primary"
-            color="danger"
-            class="flex-initial"
-            @click="
-              delete_modal.visible = true;
-              delete_modal.selected = rowData;
+          <!-- Delete button -->
+          <!-- Only show when the dataset has no workflows, is not archived, and is not deleted -->
+          <va-popover
+            message="Delete entry"
+            placement="left"
+            v-if="
+              (rowData?.workflows?.length || 0) == 0 &&
+              !rowData.is_deleted &&
+              !rowData.is_archived
             "
-            :disabled="isDatasetLockedForWrite(rowData)"
           >
-            <i-mdi-delete />
-          </va-button>
-        </va-popover>
+            <va-button
+              size="small"
+              preset="primary"
+              color="danger"
+              class="flex-initial"
+              @click="
+                delete_modal.visible = true;
+                delete_modal.selected = rowData;
+              "
+              :disabled="isDatasetLockedForWrite(rowData)"
+            >
+              <i-mdi-delete />
+            </va-button>
+          </va-popover>
+        </div>
       </template>
     </va-data-table>
 
@@ -198,10 +199,10 @@ import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import { dayjs, formatBytes, isDatasetLockedForWrite } from "@/services/utils";
+import { formatBytes } from "@/services/utils";
+import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import _ from "lodash";
 
-const router = useRouter();
 useSearchKeyShortcut();
 
 const props = defineProps({
@@ -375,8 +376,6 @@ function fetch_datasets(query = {}, updatePageCount = true) {
   return DatasetService.getAll({
     ...datasets_retrieval_query.value,
     ...query,
-    include_action_items: true,
-    include_states: true,
   })
     .then((res) => {
       datasets.value = res.data.datasets;
@@ -427,24 +426,6 @@ function delete_dataset(id) {
 
 const updateFiltersGroupQuery = (newVal) => {
   filters_group_query.value = newVal;
-};
-
-const actionItemURL = (dataset) => {
-  const actionItem = dataset.action_items[0];
-  return actionItem.type === "DUPLICATE_DATASET_INGESTION"
-    ? `/datasets/${dataset.id}/actionItems/${actionItem.id}`
-    : "#";
-};
-
-const isInspected = (dataset) => {
-  // sort states by timestamp (descending).
-  const datasetStates = dataset.states
-    .sort((state1, state2) => {
-      dayjs(state2.timestamp).diff(dayjs(state1.timestamp));
-    })
-    .map((state) => state.state);
-  // Verify that latest state is INSPECTED.
-  return datasetStates[datasetStates.length - 1] === "INSPECTED";
 };
 
 onMounted(() => {

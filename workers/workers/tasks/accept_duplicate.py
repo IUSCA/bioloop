@@ -13,16 +13,11 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-# Handles the acceptance of an incoming duplicate dataset, by updating the `type`
-# of the incoming duplicate to match the original dataset's `type`, and removing the
-# original dataset from the database and the filesystem.
 def accept(celery_task, duplicate_dataset_id, **kwargs):
     duplicate_being_accepted = api.get_dataset(
         dataset_id=duplicate_dataset_id,
         include_duplications=True
     )
-
-    # raise Exception("test error")
 
     if not duplicate_being_accepted['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_being_accepted['id']} is not a duplicate")

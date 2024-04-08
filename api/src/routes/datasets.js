@@ -22,37 +22,7 @@ const CONSTANTS = require('../constants');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient(
-  { log: ['query', 'info', 'warn', 'error'] },
-
-  // {
-  //   log: [
-  //     {
-  //       emit: 'event',
-  //       level: 'query',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'info',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'warn',
-  //     },
-  //     {
-  //       emit: 'event',
-  //       level: 'error',
-  //     },
-  //   ],
-  // },
-);
-
-// ['query', 'info', 'warn', 'error'].forEach((level) => {
-//   prisma.$on(level, async (e) => {
-//     console.log(`QUERY: ${e.query}`);
-//     console.log(`PARAMS: ${e.params}`);
-//   });
-// });
+const prisma = new PrismaClient();
 
 const dataset_state_check = asyncHandler(async (req, res, next) => {
   const dataset = await prisma.dataset.findUnique({
@@ -90,7 +60,7 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
 const state_write_check = asyncHandler(async (req, res, next) => {
   const dataset = await prisma.dataset.findUnique({
     where: {
-      id: parseInt(req.params.id),
+      id: parseInt(req.params.id, 10),
     },
     include: {
       states: {
@@ -129,11 +99,10 @@ router.post(
   ]),
   dataset_state_check,
   asyncHandler(async (req, res, next) => {
-    // next_state - optional param provided if dataset's state needs to be
-    // updated as part of the action item's creation
-    const { action_item, notification, next_state } = req.body;
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = Post an action item to a dataset
 
-    console.dir(req.body, { depth: null });
+    const { action_item, notification, next_state } = req.body;
 
     const createQueries = [
       prisma.dataset_action_item.create({
@@ -159,8 +128,6 @@ router.post(
     ];
 
     if (next_state) {
-      // update dataset's state if dataset is supposed to reach another state
-      // // after this action item is created
       createQueries.push(prisma.dataset_state.create({
         data: {
           state: next_state,
@@ -190,11 +157,41 @@ router.patch(
   ]),
   dataset_state_check,
   asyncHandler(async (req, res, next) => {
-    // next_state - optional param provided if dataset's state needs to be
-    // updated as part of the action item's creation
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = patch an action item associated with a dataset.
+    // #swagger.description = provided `ingestion_checks` will overwrite
+    // existing ingestion checks associated with this action item.
+
     const { ingestion_checks = [] } = req.body;
 
-    const updatedDataset = await prisma.dataset.update({
+    const dataset = await prisma.dataset.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        states: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+        },
+      },
+    });
+
+    // check if dataset is already in state `next_state`
+    const has_next_state = !!(
+      (dataset.states?.length > 0 && dataset.states[0].state === req.body.next_state)
+    );
+
+    const update_queries = [];
+
+    // delete existing checks associated with this action item
+    update_queries.push(prisma.dataset_ingestion_check.deleteMany({
+      where: {
+        action_item_id: req.params.action_item_id,
+      },
+    }));
+
+    update_queries.push(prisma.dataset.update({
       where: {
         id: req.params.id,
       },
@@ -211,7 +208,7 @@ router.patch(
             },
           },
         },
-        states: req.body.next_state ? {
+        states: (req.body.next_state && !has_next_state) ? {
           createMany: {
             data: [
               {
@@ -221,41 +218,10 @@ router.patch(
           },
         } : undefined,
       },
-    });
+    }));
 
+    const [updatedDataset] = await prisma.$transaction(update_queries);
     res.json(updatedDataset);
-  }),
-);
-
-router.get(
-  '/action-items',
-  isPermittedTo('update'),
-  validate([
-    query('type').escape().notEmpty().isIn([config.DATASET_ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION]),
-    query('active').optional().toBoolean(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const filterQuery = _.omitBy(_.isUndefined)({
-      type: req.query.type,
-      active: req.query.active || true,
-    });
-
-    const actionItems = await prisma.dataset_action_item.findMany({
-      where: filterQuery,
-      include: {
-        dataset: {
-          include: {
-            states: {
-              orderBy: {
-                timestamp: 'desc',
-              },
-            },
-          },
-        },
-      },
-    });
-
-    res.json(actionItems);
   }),
 );
 
@@ -266,6 +232,9 @@ router.get(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = get an action item by id
+
     const actionItem = await prisma.dataset_action_item.findUnique({
       where: {
         id: req.params.id,
@@ -611,11 +580,10 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /*
-    * #swagger.description = 'workflow_id is optional. If the request body has
-    * workflow_id,
-        a new relation is created between dataset and given workflow_id'
-    */
+    // #swagger.description = 'workflow_id is optional. If the request body has
+    // workflow_id, a new relation is created between dataset and given
+    // workflow_id'
+
     const { workflow_id, state, ...data } = req.body;
 
     if (data.is_duplicate) {
@@ -673,8 +641,6 @@ router.post(
       action_item, notification,
     } = req.body;
 
-    console.dir(req.body, { depth: null });
-
     const dataset = await prisma.dataset.findUnique({
       where: {
         id: req.params.id,
@@ -690,7 +656,7 @@ router.post(
 
     if (!action_item) {
       action_item = {
-        type: 'DUPLICATE_DATASET_INGESTION',
+        type: config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION,
         metadata: {
           original_dataset_id: req.params.id,
         },
@@ -705,9 +671,7 @@ router.post(
       };
     }
 
-    // const createQuery = {}
-
-    // check if other duplicates for this dataset exist in the system already
+    // check if other duplicates for this dataset exist in the system
     const existingDuplicates = await prisma.dataset.findMany({
       where: {
         name: dataset.name,
@@ -928,7 +892,7 @@ router.delete(
     });
 
     if (_dataset.is_duplicate) {
-      return next(createError.BadRequest(`Soft-deletion cannot be performed on an active duplicate dataset ${req.params.id}.`));
+      return next(createError.BadRequest(`Deletion cannot be performed on an active duplicate dataset ${req.params.id}.`));
     }
 
     if (_dataset) {
@@ -969,7 +933,7 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
-    // Allowed names are stage, integrated
+    // Allowed names are stage, integrated.
 
     // Log the staging attempt first.
     if (req.params.wf === 'stage') {
@@ -1190,9 +1154,8 @@ router.post(
   dataset_delete_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Replace an existing dataset with its duplicate
-    // dataset, and create and start a workflow to accept or reject a duplicate
-    // dataset.
+    // #swagger.summary = Initiate the overwriting of an active dataset with a
+    // duplicate. with its duplicate.
 
     let duplicate_dataset;
     try {
@@ -1203,18 +1166,9 @@ router.post(
         },
       );
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       return next(createError.BadRequest(err.message));
     }
-
-    // This kicks off a workflow, which then makes another call to the API to
-    // accept/reject the duplicate dataset. This second call to the API is where
-    // the states of the original and the duplicates datasets are validated,
-    // after which the duplicate is either accepted or rejected. The workflow
-    // is launched first to allow a failed acceptance/rejection to be resumed
-    // from the UI.
-
-    console.dir(duplicate_dataset, { depth: null });
 
     const wf = await datasetService.create_workflow(duplicate_dataset, 'accept_duplicate_dataset');
     return res.json(wf);
@@ -1231,9 +1185,7 @@ router.post(
   dataset_delete_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Replace an existing dataset with its duplicate
-    // dataset, and create and start a workflow to accept or reject a duplicate
-    // dataset.
+    // #swagger.summary = Initiate the rejection of a duplicate dataset.
 
     let duplicate_dataset;
     try {
@@ -1244,12 +1196,9 @@ router.post(
         },
       );
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       return next(createError.BadRequest(err.message));
     }
-
-    console.log('duplicate_dataset');
-    console.dir(duplicate_dataset, { depth: null });
 
     const wf = await datasetService.create_workflow(duplicate_dataset, 'reject_duplicate_dataset');
     return res.json(wf);
@@ -1262,15 +1211,18 @@ router.patch(
     param('id').isInt().toInt(),
   ]),
   dataset_delete_check,
-  // state middleware is omitted here - the service method validates state
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Complete the overwriting of an active dataset with
+    // its duplicate.
+
     let updatedDataset;
     try {
       updatedDataset = await datasetDuplicationService.complete_duplicate_acceptance({
         duplicate_dataset_id: req.params.id,
       });
     } catch (e) {
-      console.log(e);
+      // console.log(e);
       return next(createError.BadRequest(e.message));
     }
 
@@ -1284,15 +1236,17 @@ router.patch(
     param('id').isInt().toInt(),
   ]),
   dataset_delete_check,
-  // state middleware is omitted here - the service method validates state
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Complete the rejection of a duplicate dataset.
+
     let updatedDataset;
     try {
       updatedDataset = await datasetDuplicationService.complete_duplicate_rejection({
         duplicate_dataset_id: req.params.id,
       });
     } catch (e) {
-      console.log(e);
+      // console. log(e);
       return next(createError.BadRequest(e.message));
     }
 
