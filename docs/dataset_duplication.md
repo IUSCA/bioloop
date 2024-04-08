@@ -9,7 +9,11 @@ Duplicate datasets are registered by the `watch.py` script, if it finds a datase
 The duplicate dataset is registered at the database level, and action items and notifications are created in the system, to allow authorized users a chance to review the duplicate dataset.
 
 Upon registration, the `watch` script launches the `handle_duplicate_datasets` workflow that runs the `await_stability`, `inspect_dataset` and `compare_duplicate_datasets` steps on the duplicate dataset.
-- The `compare_duplicae_datasets` step compares the newly created duplicate dataset with the original dataset, and generates a comparison report which is persisted to Postgres.
+- The `compare_duplicae_datasets` step:
+  - compares the newly created duplicate dataset with the original dataset, and generates a comparison report which is persisted to Postgres.
+  - Updates the state of the dataset to `DUPLICATE_READY`, at which the dataset becomes available for acceptance/rejection.
+
+<img src="assets/duplicate_dataset_registration.png">
 
 The results of the comparison analysis are shown to authorized users in the UI, based on which they can either accept or reject a duplicate dataset.
 
