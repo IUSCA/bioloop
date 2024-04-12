@@ -1,9 +1,7 @@
-import shutil
 from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
-import json
 
 import workers.api as api
 import workers.cmd as cmd
@@ -11,6 +9,7 @@ import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from workers.config import config
+from workers.dataset import is_dataset_locked_for_writes
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -46,7 +45,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]}/{dataset["name"]}.tar')
+    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
@@ -57,7 +56,6 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     bundle_checksum = utils.checksum(bundle)
     bundle_attrs = {
         'name': bundle.name,
-        'path': str(bundle),
         'size': bundle_size,
         'md5': bundle_checksum,
     }
@@ -79,6 +77,12 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+
+    locked, latest_state = is_dataset_locked_for_writes(dataset)
+    if locked:
+        raise Exception(f"Dataset {dataset['id']} is locked for writes. Dataset's current "
+                        f"state is {latest_state}.")
+
     sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
     update_data = {
         'archive_path': sda_bundle_path,

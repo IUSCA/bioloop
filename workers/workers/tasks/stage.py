@@ -10,11 +10,11 @@ from sca_rhythm import WorkflowTask
 
 import workers.api as api
 import workers.utils as utils
-from workers.config import config
+from workers.dataset import is_dataset_locked_for_writes
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.dataset import compute_staging_path
-from workers.dataset import compute_bundle_path
+from workers.dataset import compute_bundle_path, get_bundle_staged_path
 from workers import exceptions as exc
 
 app = Celery("tasks")
@@ -74,7 +74,7 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 
     bundle = dataset["bundle"]
     bundle_md5 = bundle["md5"]
-    bundle_download_path = Path(bundle["path"])
+    bundle_download_path = Path(get_bundle_staged_path(dataset=dataset))
 
     wf_utils.download_file_from_sda(sda_file_path=sda_bundle_path,
                                     local_file_path=bundle_download_path,
@@ -97,6 +97,12 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+
+    locked, latest_state = is_dataset_locked_for_writes(dataset)
+    if locked:
+        raise Exception(f"Dataset {dataset['id']} is locked for writes. Dataset's current "
+                        f"state is {latest_state}.")
+
     staged_path, alias, bundle_alias = stage(celery_task, dataset)
 
     update_data = {

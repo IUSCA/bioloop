@@ -1,5 +1,8 @@
 <template>
   <va-inner-loading :loading="loading">
+    <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
+    <DuplicationAlerts :dataset="dataset" class="mb-2" />
+
     <!-- Content -->
     <div class="flex flex-col gap-3">
       <!-- Dataset Info + Status Cards -->
@@ -15,6 +18,7 @@
                   class="flex-none"
                   edit
                   @click="openModalToEditDataset"
+                  :disabled="isDatasetLocked"
                 />
               </div>
             </va-card-title>
@@ -22,18 +26,14 @@
               <DatasetInfo :dataset="dataset"></DatasetInfo>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
-
-                <!-- Download Modal -->
-                <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
                 <va-button
                   :disabled="!dataset.num_files"
-                  class="flex-initial"
-                  color="primary"
-                  border-color="primary"
-                  preset="secondary"
-                  @click="openModalToDownloadDataset"
+                  preset="primary"
+                  @click="navigateToFileBrowser"
+                  class="flex-none"
+                  :color="isDark ? '#9171f8' : '#A020F0'"
                 >
-                  <i-mdi-folder-open class="pr-2 text-2xl" /> Access Files
+                  <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
                 </va-button>
 
                 <!-- edit description -->
@@ -115,21 +115,23 @@
                   <!-- Stage Action Button-->
                   <va-button
                     v-if="dataset.archive_path"
-                    :disabled="is_stage_pending || dataset.is_staged"
+                    :disabled="
+                      is_stage_pending || dataset.is_staged || isDatasetLocked
+                    "
                     color="primary"
                     border-color="primary"
                     preset="secondary"
                     class="flex-initial"
                     @click="stage_modal = true"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" />
+                    <i-mdi-cloud-sync class="pr-2 text-2xl" />
                     Stage Files
                   </va-button>
 
                   <!-- Delete Action Button-->
                   <va-button
                     v-if="config.enable_delete_archive && dataset.archive_path"
-                    :disabled="is_delete_pending"
+                    :disabled="is_delete_pending || isDatasetLocked"
                     color="danger"
                     border-color="danger"
                     class="flex-initial"
@@ -138,6 +140,17 @@
                   >
                     <i-mdi-delete class="pr-2 text-2xl" />
                     Delete Archive
+                  </va-button>
+
+                  <va-button
+                    :disabled="!dataset.is_staged"
+                    class="flex-initial"
+                    color="primary"
+                    border-color="primary"
+                    preset="secondary"
+                    @click="openModalToDownloadDataset"
+                  >
+                    <i-mdi-download class="pr-2 text-2xl" /> Download
                   </va-button>
                 </div>
               </va-card-content>
@@ -165,6 +178,7 @@
                   class="flex-initial"
                   preset="plain"
                   @click="delete_archive_modal.visible = false"
+                  :disabled="isDatasetLocked"
                 >
                   <i-mdi-close />
                 </va-button>
@@ -230,7 +244,10 @@
                 />
                 <va-button
                   color="danger"
-                  :disabled="delete_archive_modal.input !== dataset.name"
+                  :disabled="
+                    delete_archive_modal.input !== dataset.name ||
+                    isDatasetLocked
+                  "
                   @click="delete_archive"
                 >
                   Delete this dataset
@@ -293,6 +310,12 @@
         </div>
       </div>
     </div>
+    <!-- Download Modal -->
+    <DatasetDownloadModal
+      ref="downloadModal"
+      :dataset="dataset"
+      @download-initiated="trigger_dataset_retrieval = true"
+    />
   </va-inner-loading>
 
   <EditDatasetModal
@@ -308,9 +331,11 @@ import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
+import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import workflowService from "@/services/workflow";
-
-const downloadModal = ref(null);
+const router = useRouter();
+const route = useRoute();
+const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
@@ -321,6 +346,9 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
+// Can be set to true to re-retrieve the dataset from the API without
+// refreshing the page.
+const trigger_dataset_retrieval = ref(false);
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
@@ -343,7 +371,13 @@ const polling_interval = computed(() => {
 
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  DatasetService.getById({ id: props.datasetId, bundle: true })
+  DatasetService.getById({
+    id: props.datasetId,
+    bundle: true,
+    include_duplications: true,
+    include_states: true,
+    include_action_items: true,
+  })
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
@@ -371,6 +405,7 @@ function fetch_dataset(show_loading = false) {
     })
     .finally(() => {
       loading.value = false;
+      trigger_dataset_retrieval.value = false;
     });
 }
 
@@ -385,8 +420,9 @@ watch(
 
 /**
  * providing the interval directly will kick of the polling immediately
- * provide a ref which will resolve to null when there are no active workflows and to 10s otherwise
- * now it can be controlled by resume and pause whenever active_wf changes
+ * provide a ref which will resolve to null when there are no active workflows
+ * and to 10s otherwise now it can be controlled by resume and pause whenever
+ * active_wf changes
  */
 const poll = useIntervalFn(fetch_dataset, polling_interval);
 
@@ -448,9 +484,26 @@ function openModalToEditDataset() {
   editModal.value.show();
 }
 
+function navigateToFileBrowser() {
+  if (props.appendFileBrowserUrl) {
+    router.push(route.path + "/filebrowser");
+  } else {
+    router.push(`/datasets/${props.datasetId}/filebrowser`);
+  }
+}
+
+const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
+
+const isDatasetLocked = computed(() => {
+  return isDatasetLockedForWrite(dataset.value);
+});
+
+watch(trigger_dataset_retrieval, () => {
+  fetch_dataset(true);
+});
 </script>
 
 <route lang="yaml">

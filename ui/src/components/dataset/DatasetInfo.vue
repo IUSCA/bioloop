@@ -69,8 +69,6 @@ import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 
 const props = defineProps({ dataset: Object });
-
-console.log("in dataset info");
 </script>
 
 <style lang="scss" scoped>
