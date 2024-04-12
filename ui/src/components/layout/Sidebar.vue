@@ -162,6 +162,11 @@ const operator_items = ref([
     path: "/dataproducts",
   },
   {
+    icon: "mdi-content-copy",
+    title: "Duplicate Datasets",
+    path: "/duplicateDatasets",
+  },
+  {
     icon: "mdi-table-account",
     title: "User Management",
     path: "/users",

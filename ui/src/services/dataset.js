@@ -17,6 +17,9 @@ class DatasetService {
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
+   * @param is_duplicate Boolean field to filter datasets by the is_duplicate attribute
+   * @param include_action_items Boolean field to includes any active action items on the dataset in the result
+   * @param include_states Boolean field to include dataset's state history
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll({
@@ -29,6 +32,9 @@ class DatasetService {
     limit = null,
     offset = null,
     sortBy = null,
+    is_duplicate = false,
+    include_action_items = false,
+    include_states = false,
   } = {}) {
     return api.get("/datasets", {
       params: {
@@ -41,6 +47,9 @@ class DatasetService {
         limit,
         offset,
         sortBy,
+        is_duplicate,
+        include_action_items,
+        include_states,
       },
     });
   }
@@ -53,6 +62,9 @@ class DatasetService {
     prev_task_runs = false,
     only_active = false,
     bundle = false,
+    include_duplications = false,
+    include_states = false,
+    include_action_items = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -62,6 +74,9 @@ class DatasetService {
         prev_task_runs,
         only_active,
         bundle,
+        include_duplications,
+        include_states,
+        include_action_items,
       },
     });
   }
@@ -89,6 +104,18 @@ class DatasetService {
         soft_delete,
       },
     });
+  }
+
+  accept_duplicate_dataset({ duplicate_dataset_id }) {
+    return api.post(
+      `/datasets/duplicates/${duplicate_dataset_id}/accept_duplicate_dataset`,
+    );
+  }
+
+  reject_duplicate_dataset({ duplicate_dataset_id }) {
+    return api.post(
+      `/datasets/duplicates/${duplicate_dataset_id}/reject_duplicate_dataset`,
+    );
   }
 
   getStats({ type }) {
@@ -141,6 +168,10 @@ class DatasetService {
         max_file_size: maxSize,
       },
     });
+  }
+
+  getActionItem({ action_item_id } = {}) {
+    return api.get(`/datasets/action-items/${action_item_id}`);
   }
 }
 

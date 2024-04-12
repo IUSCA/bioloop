@@ -15,12 +15,259 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const datasetDuplicationService = require('../services/datasetDuplication');
 const authService = require('../services/auth');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+const dataset_state_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: req.params.id,
+    },
+    include: {
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+    },
+  });
+
+  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  const locked_error = `Dataset is locked and cannot be written to. Current state is ${latest_state}.`;
+
+  if (!dataset.is_deleted) {
+    if (!dataset.is_duplicate) {
+      if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
+          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
+        return next(createError.InternalServerError(locked_error));
+      }
+    } else if (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED) {
+      return next(createError.InternalServerError(locked_error));
+    }
+  }
+
+  next();
+});
+
+const state_write_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: parseInt(req.params.id, 10),
+    },
+    include: {
+      states: {
+        orderBy: {
+          timestamp: 'desc',
+        },
+      },
+    },
+  });
+
+  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  if (
+    ((latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
+            || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+          && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+      || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+              || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+          && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+      || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
+  ) {
+    return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
+        + `while its current state is ${latest_state}`));
+  }
+
+  next();
+});
+
+router.post(
+  '/:id/action-item',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    body('action_item').isObject(),
+    body('notification').isObject(),
+    body('next_state').escape().notEmpty().optional(),
+  ]),
+  dataset_state_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = Post an action item to a dataset
+
+    const { action_item, notification, next_state } = req.body;
+
+    const createQueries = [
+      prisma.dataset_action_item.create({
+        data: {
+          type: action_item.type,
+          title: action_item.title,
+          text: action_item.text,
+          to: action_item.to,
+          metadata: action_item.metadata,
+          dataset: {
+            connect: {
+              id: req.params.id,
+            },
+          },
+          ingestion_checks: {
+            createMany: { data: action_item.ingestion_checks },
+          },
+          notification: {
+            create: notification,
+          },
+        },
+      }),
+    ];
+
+    if (next_state) {
+      createQueries.push(prisma.dataset_state.create({
+        data: {
+          state: next_state,
+          dataset: {
+            connect: {
+              id: action_item.dataset_id,
+            },
+          },
+        },
+      }));
+    }
+
+    const [created_action_item] = await prisma.$transaction(createQueries);
+
+    res.json(created_action_item);
+  }),
+);
+
+router.patch(
+  '/:id/action-item/:action_item_id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    param('action_item_id').isInt().toInt(),
+    body('ingestion_checks').optional().isArray(),
+    body('next_state').optional().escape().notEmpty(),
+  ]),
+  dataset_state_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = patch an action item associated with a dataset.
+    // #swagger.description = provided `ingestion_checks` will overwrite
+    // existing ingestion checks associated with this action item.
+
+    const { ingestion_checks = [] } = req.body;
+
+    const dataset = await prisma.dataset.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        states: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+        },
+      },
+    });
+
+    // check if dataset is already in state `next_state`
+    const has_next_state = !!(
+      (dataset.states?.length > 0 && dataset.states[0].state === req.body.next_state)
+    );
+
+    const update_queries = [];
+
+    // delete existing checks associated with this action item
+    update_queries.push(prisma.dataset_ingestion_check.deleteMany({
+      where: {
+        action_item_id: req.params.action_item_id,
+      },
+    }));
+
+    update_queries.push(prisma.dataset.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        action_items: {
+          update: {
+            where: {
+              id: req.params.action_item_id,
+            },
+            data: {
+              ingestion_checks: {
+                createMany: { data: ingestion_checks },
+              },
+            },
+          },
+        },
+        states: (req.body.next_state && !has_next_state) ? {
+          createMany: {
+            data: [
+              {
+                state: req.body.next_state,
+              },
+            ],
+          },
+        } : undefined,
+      },
+    }));
+
+    const [updatedDataset] = await prisma.$transaction(update_queries);
+    res.json(updatedDataset);
+  }),
+);
+
+router.get(
+  '/action-items/:id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = get an action item by id
+
+    const actionItem = await prisma.dataset_action_item.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        ingestion_checks: true,
+        dataset: {
+          include: {
+            states: {
+              orderBy: {
+                timestamp: 'desc',
+              },
+            },
+            duplicated_from: {
+              include: {
+                original_dataset: true,
+                duplicate_dataset: true,
+              },
+            },
+            duplicated_by: {
+              include: {
+                duplicate_dataset: true,
+                original_dataset: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.json(actionItem);
+  }),
+);
 
 // stats - UI
 router.get(
@@ -30,8 +277,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -108,12 +355,13 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, processed, archived, staged, type, name, days_since_last_staged,
+  deleted, processed, archived, staged, is_duplicate, type, name, days_since_last_staged,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
+    is_duplicate,
     type,
     name: name ? {
       contains: name,
@@ -181,9 +429,8 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
-// the criteria specified.
-// Used by workers + UI.
+// Get all datasets, and the count of datasets. Results can optionally be
+// filtered and sorted by the criteria specified. Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -192,13 +439,19 @@ router.get(
     query('processed').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
-    query('type').isIn(config.dataset_types).optional(),
+    query('is_duplicate').toBoolean().optional(),
+    query('type')
+      .isIn(config.dataset_types)
+      .optional(),
     query('name').notEmpty().escape().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
+    query('include_action_items').optional().toBoolean(),
+    query('include_duplications').optional().toBoolean(),
+    query('include_states').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -210,6 +463,7 @@ router.get(
       processed: req.query.processed,
       archived: req.query.archived,
       staged: req.query.staged,
+      is_duplicate: req.query.is_duplicate || false,
       type: req.query.type,
       name: req.query.name,
       days_since_last_staged: req.query.days_since_last_staged,
@@ -222,10 +476,13 @@ router.get(
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
+        action_items: req.query.include_action_items || false,
+        ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
+        ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DUPLICATIONS }),
       },
     };
 
@@ -261,6 +518,21 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// Currently, operators and admins are allowed to delete any datasets.
+const dataset_delete_check = asyncHandler(async (req, res, next) => {
+  // assumes req.params.id is the dataset id user is requesting
+  // access check
+  const permission = getPermission({
+    resource: 'datasets',
+    action: 'delete',
+    requester_roles: req?.user?.roles,
+  });
+  if (!permission.granted) {
+    return next(createError.Forbidden());
+  }
+  next();
+});
+
 // get by id - worker + UI
 router.get(
   '/:id',
@@ -272,11 +544,14 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
+    query('include_duplications').toBoolean().optional(),
+    query('include_action_items').toBoolean().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the dataset_file table if files is true
+    // only select path and md5 columns from the dataset_file table if files is
+    // true
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -286,6 +561,8 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
+      include_duplications: req.query.include_duplications || false,
+      include_action_items: req.query.include_action_items || false,
     });
     res.json(dataset);
   }),
@@ -298,15 +575,20 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle').optional().isObject(),
+    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
-        a new relation is created between dataset and given workflow_id'
-    */
+    // #swagger.description = 'workflow_id is optional. If the request body has
+    // workflow_id, a new relation is created between dataset and given
+    // workflow_id'
+
     const { workflow_id, state, ...data } = req.body;
+
+    if (data.is_duplicate) {
+      next(createError.BadRequest('Created datasets cannot be duplicate.'));
+    }
 
     // create workflow association
     if (workflow_id) {
@@ -332,10 +614,131 @@ router.post(
     const dataset = await prisma.dataset.create({
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     });
     res.json(dataset);
+  }),
+);
+
+router.post(
+  '/:id/duplicate',
+  isPermittedTo('create'),
+  validate([
+    param('id').isInt().toInt(),
+    body('action_item').optional().isObject(),
+    body('notification').optional().isObject(),
+    body('next_state').optional().escape().notEmpty(),
+  ]),
+  dataset_state_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Create a duplicate dataset.'
+
+    const { next_state } = req.body;
+
+    let {
+      action_item, notification,
+    } = req.body;
+
+    const dataset = await prisma.dataset.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        projects: true,
+      },
+    });
+
+    if (dataset.is_duplicate) {
+      return next(createError.BadRequest(`Dataset ${dataset.name} cannot be duplicated, as it is a duplicate of another dataset.`));
+    }
+
+    if (!action_item) {
+      action_item = {
+        type: config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION,
+        metadata: {
+          original_dataset_id: req.params.id,
+        },
+      };
+    }
+
+    if (!notification) {
+      notification = {
+        type: 'INCOMING_DUPLICATE_DATASET',
+        label: 'Duplicate Dataset Created',
+        text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
+      };
+    }
+
+    // check if other duplicates for this dataset exist in the system
+    const existingDuplicates = await prisma.dataset.findMany({
+      where: {
+        name: dataset.name,
+        type: dataset.type,
+        is_deleted: false,
+        is_duplicate: true,
+      },
+      orderBy: {
+        version: 'desc',
+      },
+    });
+    // if so, find the most recent duplicate (the one with the highest
+    // version), to determine the version to be assigned to the current
+    // duplicate dataset
+    const latestDuplicateVersion = existingDuplicates[0]?.version;
+
+    const createQueries = [];
+
+    createQueries.push(prisma.dataset.create({
+      data: {
+        name: dataset.name,
+        type: dataset.type,
+        description: dataset.description,
+        origin_path: dataset.origin_path,
+        is_duplicate: true,
+        version: existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined,
+        duplicated_from: {
+          create: {
+            original_dataset_id: req.params.id,
+          },
+        },
+        states: {
+          create: [
+            {
+              state: next_state || config.DATASET_STATES.DUPLICATE_REGISTERED,
+            },
+          ],
+        },
+        action_items: {
+          create: [
+            {
+              type: action_item.type,
+              title: action_item.title,
+              text: action_item.text,
+              to: action_item.to,
+              metadata: action_item.metadata,
+              notification: {
+                create: notification,
+              },
+            },
+          ],
+        },
+        projects: {
+          createMany: {
+            data: dataset.projects.map((p) => ({
+              project_id: p.project_id,
+            })),
+          },
+        },
+      },
+      include: {
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
+      },
+    }));
+
+    const [createdDuplicate] = await prisma.$transaction(createQueries);
+    res.json(createdDuplicate);
   }),
 );
 
@@ -349,8 +752,11 @@ router.patch(
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().bail()
+      .customSanitizer(BigInt),
     body('bundle').optional().isObject(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Modify dataset.'
@@ -364,7 +770,9 @@ router.patch(
         id: req.params.id,
       },
     });
-    if (!datasetToUpdate) { return next(createError(404)); }
+    if (!datasetToUpdate) {
+      return next(createError(404));
+    }
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
@@ -384,7 +792,7 @@ router.patch(
       },
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
       },
@@ -400,16 +808,18 @@ router.post(
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
+
     const data = req.body.map((f) => ({
       path: f.path,
       md5: f.md5,
       size: BigInt(f.size),
       filetype: f.type,
     }));
-    datasetService.add_files({ dataset_id: req.params.id, data });
+    await datasetService.add_files({ dataset_id: req.params.id, data });
 
     res.sendStatus(200);
   }),
@@ -423,6 +833,7 @@ router.post(
     param('id').isInt().toInt(),
     body('workflow_id').notEmpty(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate workflow_id to a dataset
@@ -439,6 +850,7 @@ router.post(
 // add state to dataset
 router.post(
   '/:id/states',
+  state_write_check,
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
@@ -465,14 +877,23 @@ router.delete(
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = starts a delete archive workflow which will
     // mark the dataset as deleted on success.
     const _dataset = await datasetService.get_dataset({
       id: req.params.id,
-      workflows: true,
+      workflows: {
+        select: {
+          id: true,
+        },
+      },
     });
+
+    if (_dataset.is_duplicate) {
+      return next(createError.BadRequest(`Deletion cannot be performed on an active duplicate dataset ${req.params.id}.`));
+    }
 
     if (_dataset) {
       await datasetService.soft_delete(_dataset, req.user?.id);
@@ -483,6 +904,21 @@ router.delete(
   }),
 );
 
+const workflow_access_check = (req, res, next) => {
+  // The workflows that a user is allowed to run depends on their role
+  // allowed_wfs is an object with keys as workflow names and values as true
+  // filter only works on objects not arrays, so we use an object with true
+  // value
+
+  // user role can only run wf on the datasets they can access through project
+  // associations
+  const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
+  if (allowed_wfs[req.params.wf]) {
+    return next();
+  }
+  next(createError.Forbidden());
+};
+
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
@@ -491,24 +927,13 @@ router.post(
     param('id').isInt().toInt(),
     param('wf').isIn(['stage', 'integrated']),
   ]),
-  (req, res, next) => {
-    // admin and operator roles can run stage and integrated workflows
-    // user role can only run stage workflows
-
-    // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true value
-    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
-    if (allowed_wfs[req.params.wf]) {
-      return next();
-    }
-    next(createError.Forbidden());
-  },
-  // user role can only run wf on the datasets they can access through project associations
+  workflow_access_check,
   dataset_access_check,
+  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
-    // Allowed names are stage, integrated
+    // Allowed names are stage, integrated.
 
     // Log the staging attempt first.
     if (req.params.wf === 'stage') {
@@ -520,7 +945,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
@@ -571,6 +996,7 @@ router.put(
   validate([
     param('id').isInt().toInt(),
   ]),
+  dataset_state_check,
   multer({ storage: report_storage }).single('report'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -597,7 +1023,8 @@ router.get(
       base: req.query.basepath,
     });
     // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+    // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -637,7 +1064,8 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of a token being returned.
+    // Catch errors to ensure that logging does not get in the way of a token
+    // being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -716,4 +1144,113 @@ router.get(
   }),
 );
 
+router.post(
+  '/duplicates/:id/accept_duplicate_dataset',
+  accessControl('workflow')('create'),
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  workflow_access_check,
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Initiate the overwriting of an active dataset with a
+    // duplicate. with its duplicate.
+
+    let duplicate_dataset;
+    try {
+      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_acceptance(
+        {
+          duplicate_dataset_id: req.params.id,
+          accepted_by_id: req.user.id,
+        },
+      );
+    } catch (err) {
+      // console.log(err);
+      return next(createError.BadRequest(err.message));
+    }
+
+    const wf = await datasetService.create_workflow(duplicate_dataset, 'accept_duplicate_dataset');
+    return res.json(wf);
+  }),
+);
+
+router.post(
+  '/duplicates/:id/reject_duplicate_dataset',
+  accessControl('workflow')('create'),
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  workflow_access_check,
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Initiate the rejection of a duplicate dataset.
+
+    let duplicate_dataset;
+    try {
+      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_rejection(
+        {
+          duplicate_dataset_id: req.params.id,
+          rejected_by_id: req.user.id,
+        },
+      );
+    } catch (err) {
+      // console.log(err);
+      return next(createError.BadRequest(err.message));
+    }
+
+    const wf = await datasetService.create_workflow(duplicate_dataset, 'reject_duplicate_dataset');
+    return res.json(wf);
+  }),
+);
+
+router.patch(
+  '/duplicates/:id/accept_duplicate_dataset/complete',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Complete the overwriting of an active dataset with
+    // its duplicate.
+
+    let updatedDataset;
+    try {
+      updatedDataset = await datasetDuplicationService.complete_duplicate_acceptance({
+        duplicate_dataset_id: req.params.id,
+      });
+    } catch (e) {
+      // console.log(e);
+      return next(createError.BadRequest(e.message));
+    }
+
+    res.json(updatedDataset);
+  }),
+);
+
+router.patch(
+  '/duplicates/:id/reject_duplicate_dataset/complete',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  dataset_delete_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Complete the rejection of a duplicate dataset.
+
+    let updatedDataset;
+    try {
+      updatedDataset = await datasetDuplicationService.complete_duplicate_rejection({
+        duplicate_dataset_id: req.params.id,
+      });
+    } catch (e) {
+      // console. log(e);
+      return next(createError.BadRequest(e.message));
+    }
+
+    res.json(updatedDataset);
+  }),
+);
 module.exports = router;

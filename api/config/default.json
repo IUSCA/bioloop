@@ -74,8 +74,8 @@
           "task": "validate_dataset"
         },
         {
-          "name": "generate_qc",
-          "task": "generate_qc"
+          "name": "setup_download",
+          "task": "setup_dataset_download"
         }
       ]
     },
@@ -86,7 +86,65 @@
           "task": "delete_dataset"
         }
       ]
+    },
+    "accept_duplicate_dataset": {
+      "description": "Overwrites an existing dataset with its incoming duplicate.",
+      "steps": [
+        {
+          "name": "purge resources",
+          "task": "purge_original_dataset_resources"
+        }, {
+          "name": "accept",
+          "task": "accept_duplicate"
+        }, {
+          "name": "archive",
+          "task": "archive_dataset"
+        }, {
+          "name": "stage",
+          "task": "stage_dataset"
+        }, {
+          "name": "validate",
+          "task": "validate_dataset"
+        }, {
+          "name": "setup_download",
+          "task": "setup_dataset_download"
+        }
+      ]
+    },
+    "reject_duplicate_dataset": {
+      "description": "Rejects an incoming duplicate dataset by prohibiting its ingestion into the system.",
+      "steps": [
+        {
+          "name": "purge resources",
+          "task": "purge_duplicate_dataset_resources"
+        },
+        {
+          "name": "reject",
+          "task": "reject_duplicate"
+        }
+      ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"]
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "DATASET_STATES": {
+      "REGISTERED": "REGISTERED",
+      "READY": "READY",
+      "INSPECTED": "INSPECTED",
+      "ARCHIVED": "ARCHIVED",
+      "FETCHED": "FETCHED",
+      "STAGED": "STAGED",
+      "DUPLICATE_REGISTERED": "DUPLICATE_REGISTERED",
+      "DUPLICATE_READY": "DUPLICATE_READY",
+      "DUPLICATE_ACCEPTANCE_IN_PROGRESS": "DUPLICATE_ACCEPTANCE_IN_PROGRESS",
+      "DUPLICATE_REJECTION_IN_PROGRESS": "DUPLICATE_REJECTION_IN_PROGRESS",
+      "DUPLICATE_DATASET_RESOURCES_PURGED": "DUPLICATE_DATASET_RESOURCES_PURGED",
+      "DUPLICATE_ACCEPTED": "DUPLICATE_ACCEPTED",
+      "OVERWRITE_IN_PROGRESS": "OVERWRITE_IN_PROGRESS",
+      "ORIGINAL_DATASET_RESOURCES_PURGED": "ORIGINAL_DATASET_RESOURCES_PURGED",
+      "OVERWRITTEN": "OVERWRITTEN",
+      "DELETED": "DELETED"
+  },
+  "ACTION_ITEM_TYPES": {
+    "DUPLICATE_DATASET_INGESTION": "DUPLICATE_DATASET_INGESTION"
+  }
 }

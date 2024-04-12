@@ -1,0 +1,34 @@
+stateDiagram
+    reject_ui: (UI) Reject action performed
+    database_writes: (API) Initiate rejection
+    note left of database_writes
+        Acknowledge action item/notification
+        Create audit logs
+        Put state locks on duplicate dataset
+
+        Duplicate dataset's state: DUPLICATE_REJECTION_IN_PROGRESS
+    end note
+    rejection_wf: 'reject_duplicate_dataset' workflow launched
+    purge_step: (worker) Purge
+    note right of purge_step
+        Delete duplicate dataset's 'origin_path' from filesystem
+
+        Duplicate dataset's state: DUPLICATE_DATASET_RESOURCES_PURGED
+    end note
+    reject_step: (worker) Reject
+    note left of reject_step
+        (API)
+
+        Mark duplicate dataset as deleted in the database
+        Resolve action item/notification
+        Release state locks
+
+        Duplicate dataset's state: REJECTED
+    end note
+
+    reject_ui --> database_writes
+    database_writes --> rejection_wf
+    rejection_wf --> purge_step
+    purge_step --> reject_step
+
+[![](https://mermaid.live/edit#pako:eNqVVMGOmzAU_BXLl3SlXfXOoRJK0Iqq3SBIbkiWix_EjbGRbYpWq_33PiBZLJJKW5_geWae32jsN1oZATSiznMPO8kby9tSE1wWfkPlWS8j8uWYPpB8-ie88tJo0oGtjW1BzGDBPf_FHbDBSg8OKXGGnFRLL1H4IobEGa4N1hTUnph6zZ0R44qrszaDAtHAtS0C2q_IlrWs-KI3rq2FsRPvhfREmSYQynpPpgGxXp0dQSHRd2qUgKm9A18GUrv15sbN_IjsjtmPdBsfEpYn35PtId2_sPSFZfn-OU-KYtYALaYRQyPxrGyoI7K5-PpxAHbtQQZjz7UyA1G819Xp6m3X2waY89ChrSMG7AOOhMXATCub0-Tmgg7mAQXjMHfG2hhkSs067k8bUlvTkloqcK-o0P63J7v4EBfJAb0p9sd8mxQsO-bPye7ftqznmlN2JyUBfDnUlLLwlD-5Pd_OSbgjYvJAEKmJP8FH6BZqDs6oP59JWo5SSA0j9Umn5szc-rG6ceTp6dv9a7EqTsAwX7eJmyDrUCz_gcJlnz7SFmzLpcBn4W3ElxQda6GkEX4KdLikpX5HHO-9KV51RSNve3ikfSeWV4RGNVcO3v8C4994FA)]

@@ -1,0 +1,47 @@
+stateDiagram
+    accept_ui: (UI) Accept action performed
+    database_writes: (API) Initiate acceptance
+    note left of database_writes
+        Acknowledge action item/notification
+        Create audit logs
+        Put state locks on both datasets
+
+        Original dataset's state: OVERWRITE_IN_PROGRESS
+        Duplicate dataset's state: DUPLICATE_ACCEPTANCE_IN_PROGRESS
+    end note
+    acceptance_wf: 'accept_duplicate_dataset' workflow launched
+    purge_step: (worker) Purge
+    note right of purge_step
+        Delete original dataset's 'staged_path' and 'bundle.path' from filesystem
+
+        Original dataset's state: ORIGINAL_DATASET_RESOURCES_PURGED
+    end note
+    accept_step: (worker) Accept
+    note left of accept_step
+        (API)
+
+        Overwrite original dataset with duplicate
+        Resolve action item/notification
+        Release state locks
+
+        Original dataset's state: OVERWRITTEN
+        Duplicate dataset's state: DUPLICATE_ACCEPTED
+    end note
+    archive_step: (worker) Archive
+    stage_step: (worker) Stage
+    validate_step: (worker) Validate
+    setup_download_step: (worker) Setup Download
+    note right of setup_download_step
+        Accepted dataset is ready for download.
+    end note
+
+    accept_ui --> database_writes
+    database_writes --> acceptance_wf
+    acceptance_wf --> purge_step
+    purge_step --> accept_step
+    accept_step --> archive_step
+    archive_step --> stage_step
+    stage_step --> validate_step
+    validate_step --> setup_download_step
+
+[![](https://mermaid.live/edit#pako:eNqdVVGLozAQ_ivBl97C7t67DwfSShGWVrTdeylIasY2NCYSY6Us-99vjPW06sLe-aQz3zfJfN8kfjipYuC4TmmogRWnJ03zgyT40DSFwiQVd8mPffBEPPuNYcOVJAXoTOkcWAtm1NAjLSGpNTdQIsULkRNIbjgWvhejMoUWLxUGBWSGqGxMbhHN46UXqWoB7ATdugjIfyKbZzylTaRHLzXYpSrGDRHqNCgUVobYDjGeXkqChY7KnO3KJRhE9tit5icuqeiSi7KlumT77ke_o2DnJ8EmCaPtOvLjuCeuqkI0m4Ipc7UP34Klh0xvufTDnbdZzhQByawwQ_0byZI6c8ni7gfrVkm6VUit9CUTqiaCVjI9d54UlT5BUhoo0I4GA_oJlcDgwANs9mxN6NGDjkAAYtRUkQU2dgKWFNScF4TixhfHSjIBr20k0yonGRdQ3rBk_k19o2AdbLy3ZOXtvNjfJSjNdh8t_TgJ99HaX30t07jNdlhnZm0A77dkh_Vhj1fQdhgnvZOaN3PTmdBTIiiVuH5nTiNUFUsNB_Lf5m_nb_5r6r4QUKdnfp0MiteGW4x1e4yIm2Cbv1LBWTOTI8j7PX6vAqYqEqZqKRRlk3JNlqzu2bkRneEP74rGWGB_jeIlwQuB3QjeU6QjvY4VGN115OXl1_x9NApa4MMRnTm1FjQ-WP33oMYgPwi0gIE_U8cspLdnbJdNP7gzY1hbYyqu8-zkoHPKGf4gPhriwTFnyOHguPjKqL4cnIP8RBytjIpvMnVcoyt4dqqC9f8Tx82oKOHzDwqnKHM)]
