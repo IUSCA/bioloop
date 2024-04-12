@@ -48,7 +48,37 @@ services:
       network:
         ipv4_address: 172.19.0.3
 
-# sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
+  secure_download:
+    restart: unless-stopped
+    build:
+      context: ./secure_download
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
+    volumes:
+      - ./secure_download/:/opt/sca/app
+      - api_modules:/opt/sca/app/node_modules
+    expose:
+      - 3080
+    # entrypoint: [ "tail", "-f", "/dev/null" ]
+    networks:
+      network:
+        ipv4_address: 172.19.0.10
+
+
+
+  secure_download_nginx:
+    volumes:
+      - ${DOWNLOAD_NGINX_CONF_MAIN}
+      - ${DOWNLOAD_NGINX_CONF}
+      - ${DOWNLOAD_SCRATCH_DIR}
+    image: nginx-secure-download:latest
+    restart: always
+    networks:
+      network:
+        ipv4_address: 172.19.0.20
+
+  # sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
   pgbackup:
     image: postgres:14.5
     environment:
