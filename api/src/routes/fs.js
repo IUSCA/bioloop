@@ -4,7 +4,9 @@ const path = require('node:path');
 const { exec } = require('child_process');
 
 const asyncHandler = require('../middleware/asyncHandler');
+const { accessControl } = require('../middleware/auth');
 
+const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 
 const BASE_PATH = '/Users/deduggi/';
@@ -31,6 +33,7 @@ function validatePath(req, res, next) {
 router.get(
   '/',
   validatePath,
+  // isPermittedTo('create'),
   asyncHandler(async (req, res) => {
     const files = await fsPromises.readdir(req.query.path, { withFileTypes: true });
     const filesData = files.map((f) => ({
