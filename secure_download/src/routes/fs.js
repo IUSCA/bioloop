@@ -1,10 +1,10 @@
-const fsPromises = require('fs').promises;
+const fsPromises = require('secure_download/src/routes/fs').promises;
 const express = require('express');
 const path = require('node:path');
 const { exec } = require('child_process');
 
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
+const asyncHandler = require('../../../api/src/middleware/asyncHandler');
+const { accessControl } = require('../../../api/src/middleware/auth');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
