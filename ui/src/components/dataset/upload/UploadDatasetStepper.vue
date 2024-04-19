@@ -60,34 +60,34 @@
         <!--          ]"-->
       </template>
 
+      <!--      <template #step-content-1>-->
+      <!--        <FileTypeSelect-->
+      <!--          v-model="fileType"-->
+      <!--          :file-type-list="fileTypeList"-->
+      <!--          @file-type-created="-->
+      <!--            (newFileType) => {-->
+      <!--              // if a new File Type has already been created, remove it-->
+      <!--              const currentNewFileTypeIndex = fileTypeList.findIndex(-->
+      <!--                (e) => !e.id,-->
+      <!--              );-->
+      <!--              if (currentNewFileTypeIndex) {-->
+      <!--                fileTypeList.splice(currentNewFileTypeIndex, 1);-->
+      <!--              }-->
+      <!--              fileTypeList.push(newFileType);-->
+      <!--            }-->
+      <!--          "-->
+      <!--          :messages="-->
+      <!--            !isFormValid(1, 'FileTypeSelect') ? [stepErrors.fileType] : []-->
+      <!--          "-->
+      <!--          :message-variant="-->
+      <!--            !stepErrors(1, 'FileTypeSelect') ? 'error' : undefined-->
+      <!--          "-->
+      <!--        />-->
+
+      <!--        <va-button @click="reset">Reset Form</va-button>-->
+      <!--      </template>-->
+
       <template #step-content-1>
-        <FileTypeSelect
-          v-model="fileType"
-          :file-type-list="fileTypeList"
-          @file-type-created="
-            (newFileType) => {
-              // if a new File Type has already been created, remove it
-              const currentNewFileTypeIndex = fileTypeList.findIndex(
-                (e) => !e.id,
-              );
-              if (currentNewFileTypeIndex) {
-                fileTypeList.splice(currentNewFileTypeIndex, 1);
-              }
-              fileTypeList.push(newFileType);
-            }
-          "
-          :messages="
-            !isFormValid(1, 'FileTypeSelect') ? [stepErrors.fileType] : []
-          "
-          :message-variant="
-            !stepErrors(1, 'FileTypeSelect') ? 'error' : undefined
-          "
-        />
-
-        <!--        <va-button @click="reset">Reset Form</va-button>-->
-      </template>
-
-      <template #step-content-2>
         <va-select
           name="raw_data"
           v-model="sourceRawData"
@@ -110,7 +110,7 @@
       </template>
 
       <!-- File upload tool and selected files table -->
-      <template #step-content-3>
+      <template #step-content-2>
         <div class="flex-none">
           <va-file-upload
             class="w-full"
@@ -398,9 +398,9 @@ const isFormValid = (stepIndex, caller) => {
   const ret = isValid(stepIndex);
   console.log("isFormValid ret: ", ret);
 
-  return ret;
+  // return ret;
 
-  // return true;
+  return true;
 };
 
 const stepErrors = computed(() => {

@@ -4,7 +4,10 @@ export const useDatasetUploadFormStore = defineStore(
   "datasetUploadForm",
   () => {
     const datasetName = ref("");
-    const fileType = ref();
+    const fileType = ref({
+      name: "test",
+      extension: "test",
+    });
     const sourceRawData = ref();
 
     const isDatasetNameValid = computed(() => datasetName.value !== "");
@@ -15,8 +18,8 @@ export const useDatasetUploadFormStore = defineStore(
       () => Object.values(sourceRawData.value || {}).length > 0,
     );
 
-    // Order of these validations is expected to be the same the order of the steps defined
-    // in your Stepper component
+    // Order of these validations is expected to be the same the order of the
+    // steps defined in your Stepper component
     const stepValidations = computed(() => [
       isDatasetNameValid.value,
       isFileTypeValid.value,
