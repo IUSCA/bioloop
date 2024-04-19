@@ -12,10 +12,8 @@
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
     <main id="main" class="w-full overflow-y-scroll">
-      <div class="px-6 pb-10 pt-4 min-h-screen">
-        <div class="flex flex-row gap-x-4 mb-4">
-          <LeaveBreadcrumbs />
-        </div>
+      <div class="px-2 md:px-6 pb-10 pt-4 min-h-screen">
+        <LeaveBreadcrumbs class="mb-2" />
         <router-view></router-view>
       </div>
       <Footer></Footer>
@@ -27,6 +25,9 @@
 import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
+import { useNotificationStore } from "@/stores/notification";
+
+const notificationStore = useNotificationStore();
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();

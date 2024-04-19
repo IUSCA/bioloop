@@ -20,7 +20,9 @@
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "explicit"
   },
-  "eslint.validate": ["javascript"],
+  "eslint.validate": [
+    "javascript"
+  ],
   "files.associations": {
     "*.css": "postcss"
   },
@@ -33,5 +35,5 @@
   },
   "editor.detectIndentation": false,
   "editor.tabSize": 2,
-  "editor.insertSpaces": true,
+  "editor.insertSpaces": true
 }

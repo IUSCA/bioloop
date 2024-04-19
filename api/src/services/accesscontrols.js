@@ -37,6 +37,18 @@ const grantsObject = {
       'create:any': ['*'],
       'read:any': ['*'],
     },
+    about: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    notifications: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     auth: {
       'create:any': ['*'],
     },
@@ -92,6 +104,17 @@ const grantsObject = {
     },
     metrics: {
       'read:any': ['*'],
+    },
+    about: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    notifications: {
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
     },
   },
 };

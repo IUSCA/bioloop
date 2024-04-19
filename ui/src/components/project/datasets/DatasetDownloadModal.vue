@@ -5,6 +5,10 @@
     fixed-layout
     hide-default-actions
   >
+    <!-- The current dataset is an active dataset which has incoming duplicates,
+     or one that is currently being overwritten by a duplicate. -->
+    <IncomingDuplicatesAlert :dataset="props.dataset" />
+
     <div class="">
       <!-- sm:w-full -->
       <span class="va-text-secondary">
@@ -31,7 +35,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of all files will use
-                {{ formatBytes(dataset.du_size) }} of bandwidth
+                {{ formatBytes(props.dataset.du_size) }} of bandwidth
               </span>
             </va-list-item-label>
 
@@ -55,7 +59,7 @@
         </va-list-item>
 
         <!-- Direct Download -->
-        <va-list-item>
+        <va-list-item v-if="props.dataset?.metadata?.bundle_alias">
           <!-- icon -->
           <va-list-item-section avatar>
             <i-mdi:folder-zip-outline class="text-2xl" />
@@ -66,8 +70,9 @@
             <va-list-item-label>
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
-              <span class="">
-                Size: {{ formatBytes(dataset.bundle_size) }}
+              <span>
+                Transfer of file will use
+                {{ formatBytes(props.dataset.bundle?.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>
@@ -144,7 +149,7 @@ const props = defineProps({
     default: () => ({}),
   },
 });
-// const emit = defineEmits(["update"]);
+const emit = defineEmits(["download-initiated"]);
 
 // parent component can invoke these methods through the template ref
 defineExpose({
@@ -185,10 +190,11 @@ const initiate_dataset_download = () => {
         url: url.toString(),
         filename: props.dataset.name,
       });
+      emit("download-initiated", props.dataset.id);
     })
     .catch((err) => {
       console.error(err);
-      toast.error("Unable to initiate dataset download");
+      toast.error("Unable to download dataset");
     });
 };
 

@@ -78,6 +78,7 @@
 
       <template #cell(actions)="{ rowData }">
         <div class="flex gap-2">
+          <!-- Archive Button -->
           <va-popover
             message="Archive"
             placement="left"
@@ -91,13 +92,14 @@
                 launch_modal.visible = true;
                 launch_modal.selected = rowData;
               "
+              :disabled="isDatasetLockedForWrite(rowData)"
             >
               <i-mdi-rocket-launch />
             </va-button>
           </va-popover>
 
           <!-- Delete button -->
-          <!-- Only show when the dataset has no workflows, is not archived, and has no workflows -->
+          <!-- Only show when the dataset has no workflows, is not archived, and is not deleted -->
           <va-popover
             message="Delete entry"
             placement="left"
@@ -116,6 +118,7 @@
                 delete_modal.visible = true;
                 delete_modal.selected = rowData;
               "
+              :disabled="isDatasetLockedForWrite(rowData)"
             >
               <i-mdi-delete />
             </va-button>
@@ -197,6 +200,7 @@ import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
+import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import _ from "lodash";
 
 useSearchKeyShortcut();
@@ -228,14 +232,16 @@ const pageSize = ref(20);
 const filters_group_query = ref({});
 
 /**
- * Results are fetched in batches for efficient pagination, but the sorting criteria specified
- * needs to query all of persistent storage (as opposed to the current batch of retrieved results).
- * Hence, va-data-table's default sorting behavior (which would normally only sort the current
- * batch of results) is overridden (by providing each column with a `sortingFn` prop that does
- * nothing), and instead, network calls are made to run the sorting criteria across all of
- * persistent storage. The field to sort the results by and the sort order are captured in
- * va-data-table's 'sorted' event, and added to the sorting criteria maintained in the
- * `datasets_sort_query` reactive variable.
+ * Results are fetched in batches for efficient pagination,
+ * but the sorting criteria specified needs to query all of persistent storage
+ * (as opposed to the current batch of retrieved results). Hence,
+ * va-data-table's default sorting behavior (which would normally only sort the
+ * current batch of results) is overridden (by providing each column with a
+ * `sortingFn` prop that does nothing), and instead,
+ * network calls are made to run the sorting criteria across all of persistent
+ * storage. The field to sort the results by and the sort order are captured in
+ * va-data-table's 'sorted' event, and added to the sorting criteria maintained
+ * in the `datasets_sort_query` reactive variable.
  */
 const columns = [
   // { key: "id", sortable: true, sortingOptions: ["desc", "asc", null] },
@@ -314,7 +320,8 @@ const columns = [
 //   }
 // }
 
-// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch
+// of results
 const offset = computed(() => (currPage.value - 1) * pageSize.value);
 
 // Criterion based on search input
@@ -322,8 +329,8 @@ const search_query = computed(() => {
   return filterInput.value?.length > 0 && { name: filterInput.value };
 });
 
-// Aggregation of all filtering criteria. Used for retrieving results, and configuring number of
-// pages for pagination.
+// Aggregation of all filtering criteria. Used for retrieving results, and
+// configuring number of pages for pagination.
 const datasets_filter_query = computed(() => {
   return {
     type: props.dtype,
@@ -332,22 +339,23 @@ const datasets_filter_query = computed(() => {
   };
 });
 
-// Criterion for sorting. Initial sorting order is based on the `updated_at` field. The sorting
-// criterion can be updated, which will trigger a call to retrieve the updated search results.
-// Note - va-data-table supports sorting by one column at a time, so this object should always have
-// a single key-value pair.
+// Criterion for sorting. Initial sorting order is based on the `updated_at`
+// field. The sorting criterion can be updated, which will trigger a call to
+// retrieve the updated search results. Note - va-data-table supports sorting by
+// one column at a time, so this object should always have a single key-value
+// pair.
 let datasets_sort_query = computed(() => {
   return { [defaultSortField.value]: defaultSortOrder.value };
 });
 
-// Criteria used to limit the number of results retrieved, and to define the offset starting at
-// which the next batch of results will be retrieved.
+// Criteria used to limit the number of results retrieved, and to define the
+// offset starting at which the next batch of results will be retrieved.
 const datasets_batching_query = computed(() => {
   return { offset: offset.value, limit: pageSize.value };
 });
 
-// Aggregate of all other criteria. Used for retrieving results according to the criteria
-// specified.
+// Aggregate of all other criteria. Used for retrieving results according to
+// the criteria specified.
 const datasets_retrieval_query = computed(() => {
   return {
     ...datasets_filter_query.value,
@@ -357,13 +365,18 @@ const datasets_retrieval_query = computed(() => {
 });
 
 /**
- * Fetches updated list of datasets, based on the query provided, and updates the pagination
- * page-count. Page-count update can be opted out of by providing `false` to updatePageCount.
+ * Fetches updated list of datasets, based on the query provided,
+ * and updates the pagination page-count.
+ * Page-count update can be opted out of by providing `false` to
+ * updatePageCount.
  */
 function fetch_datasets(query = {}, updatePageCount = true) {
   data_loading.value = true;
 
-  return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
+  return DatasetService.getAll({
+    ...datasets_retrieval_query.value,
+    ...query,
+  })
     .then((res) => {
       datasets.value = res.data.datasets;
       if (updatePageCount) {
@@ -421,7 +434,8 @@ onMounted(() => {
 });
 
 watch([datasets_sort_query, datasets_filter_query], () => {
-  // when sorting or filtering criteria changes, show results starting from the first page
+  // when sorting or filtering criteria changes, show results starting from the
+  // first page
   currPage.value = 1;
 });
 

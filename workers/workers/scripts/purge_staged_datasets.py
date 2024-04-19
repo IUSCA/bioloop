@@ -4,6 +4,7 @@ from pathlib import Path
 
 import workers.api as api
 from workers.config import config
+from workers.dataset import get_bundle_staged_path, is_dataset_locked_for_writes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ MAX_PURGES = config['stage']['purge']['max_purges']
 
 
 def main():
-    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'])
+    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'], bundle=True)
 
     if len(datasets) > MAX_PURGES:
         logger.warning(
@@ -25,10 +26,14 @@ def main():
         'staged_path': None
     }
     for dataset in datasets[:MAX_PURGES]:
+        locked, latest_state = is_dataset_locked_for_writes(dataset)
+        if locked:
+            logger.warning(f"Dataset {dataset['id']}'s current state is {latest_state}, and it is locked for writes. Dataset will not be purged.'")
+            continue
+
         try:
-            # staged_dataset_path.parent = the alias sub-directory
             staged_path = Path(dataset['staged_path'])
-            bundle_path = Path(f'{str(staged_path.parent)}/{dataset["name"]}.tar')
+            bundle_path = Path(get_bundle_staged_path(dataset=dataset))
 
             if staged_path.exists():
                 shutil.rmtree(staged_path)
