@@ -1508,7 +1508,6 @@ router.patch(
   }),
 );
 
-// /N/scratch/scadev/bioloop/dev
 const UPLOAD_PATH = config.upload_path;
 
 const getUploadPath = (datasetName) => path.join(
