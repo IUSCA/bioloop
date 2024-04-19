@@ -6,10 +6,9 @@ const { exec } = require('child_process');
 const asyncHandler = require('../../../api/src/middleware/asyncHandler');
 const { accessControl } = require('../../../api/src/middleware/auth');
 
-const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 
-const BASE_PATH = '/Users/deduggi/';
+const BASE_PATH = '/N/slate/scadev/bioloop/dev';
 
 function validatePath(req, res, next) {
   let p = req.query.path ? path.normalize(req.query.path) : null;
