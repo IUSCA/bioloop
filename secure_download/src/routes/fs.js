@@ -1,4 +1,4 @@
-const fsPromises = require('secure_download/src/routes/fs').promises;
+const fsPromises = require('fs').promises;
 const express = require('express');
 const path = require('node:path');
 const { exec } = require('child_process');
