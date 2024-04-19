@@ -11,7 +11,7 @@ class UploadService {
   // }
 
   uploadFileChunk(data) {
-    return api.post("/file-chunk", data);
+    return api.post("/datasets/file-chunk", data);
   }
 }
 
