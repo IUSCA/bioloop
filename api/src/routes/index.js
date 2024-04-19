@@ -18,6 +18,7 @@ router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": [
 router.use('/workflows', require('./workflows') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/statistics', require('./statistics'));
+router.use('/uploads', require('./uploads'));
 router.use('/notifications', require('./notifications'));
 
 module.exports = router;

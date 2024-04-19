@@ -161,11 +161,15 @@ def get_dataset(dataset_id: str,
                 files: bool = False,
                 bundle: bool = False,
                 include_duplications: bool = False,
-                include_action_items: bool = False):
+                include_action_items: bool = False,
+                workflows: bool = False,
+                upload_log: bool = False):
     with APIServerSession() as s:
         payload = {
             'bundle': bundle,
             'files': files,
+            'workflows': workflows,
+            'upload_log': upload_log,
             'include_duplications': include_duplications,
             'include_action_items': include_action_items,
         }
@@ -296,6 +300,32 @@ def register_process(worker_process: dict):
 def post_worker_logs(process_id: str, logs: list[dict]):
     with APIServerSession(enable_retry=False) as s:
         r = s.post(f'workflows/processes/{process_id}/logs', json=logs)
+        r.raise_for_status()
+
+
+def get_upload_log(upload_log_id: str):
+    with APIServerSession() as s:
+        r = s.get(f'datasets/upload-log/{upload_log_id}')
+        r.raise_for_status()
+        return r.json()
+
+
+def get_upload_logs():
+    with APIServerSession() as s:
+        r = s.get(f'datasets/upload-logs')
+        r.raise_for_status()
+        return r.json()
+
+
+def update_upload_log(upload_log_id, log):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/upload-log/{upload_log_id}', json=log)
+        r.raise_for_status()
+
+
+def update_file_upload_log(file_upload_log_id, log):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/file-upload-log/{file_upload_log_id}', json=log)
         r.raise_for_status()
 
 

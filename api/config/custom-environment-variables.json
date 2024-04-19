@@ -11,6 +11,10 @@
     "download": {
       "client_id": "OAUTH_DOWNLOAD_CLIENT_ID",
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
+    },
+    "upload": {
+      "client_id": "OAUTH_UPLOAD_CLIENT_ID",
+      "client_secret": "OAUTH_UPLOAD_CLIENT_SECRET"
     }
   },
   "download_server": {

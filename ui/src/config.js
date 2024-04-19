@@ -3,8 +3,13 @@ const exports = {
   // vite server redirects traffic on starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
+  uploadBasePath: "https://bioloop-dev2.sca.iu.edu",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
-  refreshTokenTMinusSeconds: 300,
+  refreshTMinusSeconds: {
+    token: 300,
+    uploadToken: 30,
+  },
+  // refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
@@ -55,6 +60,15 @@ const exports = {
       ],
       refresh_interval_ms: 10000,
     },
+  },
+  upload_status: {
+    UPLOADING: "UPLOADING",
+    UPLOAD_FAILED: "UPLOAD_FAILED",
+    UPLOADED: "UPLOADED",
+    PROCESSING: "PROCESSING",
+    PROCESSING_FAILED: "PROCESSING_FAILED",
+    COMPLETE: "COMPLETE",
+    FAILED: "FAILED",
   },
   DATASET_STATES: {
     REGISTERED: "REGISTERED",

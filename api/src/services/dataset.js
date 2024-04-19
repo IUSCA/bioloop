@@ -95,6 +95,8 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   bundle = false,
+  fetch_uploading_data_products = false,
+  upload_log = false,
   include_duplications = false,
   include_action_items = false,
 }) {
@@ -107,7 +109,23 @@ async function get_dataset({
       ...CONSTANTS.INCLUDE_STATES,
       bundle,
       source_datasets: true,
-      derived_datasets: true,
+      derived_datasets: fetch_uploading_data_products ? true : {
+        where: {
+          derived_dataset: {
+            OR: [
+              {
+                upload_log: null,
+              },
+              {
+                upload_log: {
+                  status: config.upload_status.COMPLETE,
+                },
+              },
+            ],
+          },
+        },
+      },
+      upload_log,
       ...(include_duplications && CONSTANTS.INCLUDE_DUPLICATIONS),
       action_items: include_action_items ? {
         where: {

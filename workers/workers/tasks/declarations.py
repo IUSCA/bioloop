@@ -119,6 +119,20 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         raise exc.RetryableException(e)
 
 
+@app.task(base=WorkflowTask, bind=True, name='chunks_to_files',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def chunks_to_files(celery_task, dataset_id, **kwargs):
+    from workers.tasks.process_uploads import chunks_to_files as task_body
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.RetryableException:
+        raise
+    except Exception:
+        raise
+
+
 @app.task(base=WorkflowTask, bind=True, name='generate_qc',
           autoretry_for=(Exception,),
           max_retries=3,

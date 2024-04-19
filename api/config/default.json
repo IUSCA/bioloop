@@ -28,6 +28,11 @@
       "client_id": "",
       "client_secret": "",
       "scope_prefix": "download_file:"
+    },
+    "upload": {
+      "client_id": "",
+      "client_secret": "",
+      "scope": "upload_file"
     }
   },
   "download_server": {
@@ -87,6 +92,14 @@
         }
       ]
     },
+    "process_uploads": {
+      "steps": [
+        {
+          "name": "chunks_to_files",
+          "task": "chunks_to_files"
+        }
+      ]
+    },
     "accept_duplicate_dataset": {
       "description": "Overwrites an existing dataset with its incoming duplicate.",
       "steps": [
@@ -125,6 +138,22 @@
       ]
     }
   },
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "DONE_STATUSES": {
+    "REVOKED": "REVOKED",
+    "FAILURE": "FAILURE",
+    "SUCCESS": "SUCCESS"
+  },
+  "upload_status": {
+    "UPLOADING": "UPLOADING",
+    "UPLOAD_FAILED": "UPLOAD_FAILED",
+    "UPLOADED": "UPLOADED",
+    "PROCESSING": "PROCESSING",
+    "PROCESSING_FAILED": "PROCESSING_FAILED",
+    "COMPLETE": "COMPLETE",
+    "FAILED": "FAILED"
+  },
+  "upload_path": "/opt/sca/data/uploads",
   "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
   "DATASET_STATES": {
       "REGISTERED": "REGISTERED",

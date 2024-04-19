@@ -37,6 +37,9 @@ const grantsObject = {
       'create:any': ['*'],
       'read:any': ['*'],
     },
+    uploads: {
+      'create:any': ['*'],
+    },
     about: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -115,6 +118,9 @@ const grantsObject = {
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
+    },
+    uploads: {
+      'create:any': ['*'],
     },
   },
 };

@@ -33,6 +33,7 @@ async function onLogin({ user, updateLastLogin = true }) {
   const userProfile = get_user_profile(user);
 
   const token = issueJWT({ userProfile });
+
   return {
     profile: userProfile,
     token,
@@ -44,12 +45,12 @@ function checkJWT(token) {
     const decoded = jsonwt.verify(token, pub);
     return decoded;
   } catch (err) {
-    logger.error('Failed to verify JWT', err);
+    console.log('Failed to verify JWT', err);
     return null;
   }
 }
 
-const oAuth2DownloadClient = new OAuth2Client({
+const oAuth2Client = new OAuth2Client({
   // The base URI of your OAuth2 server
   server: config.get('oauth.base_url'),
   // OAuth2 client id
@@ -59,8 +60,15 @@ const oAuth2DownloadClient = new OAuth2Client({
 });
 
 function get_download_token(file_path) {
-  return oAuth2DownloadClient.clientCredentials({
+  return oAuth2Client.clientCredentials({
     scope: [`${config.get('oauth.download.scope_prefix')}${file_path}`],
+  });
+}
+
+function get_upload_token(file_name) {
+  // console.log(`upload scope: ${config.get('oauth.upload.scope')}`);
+  return oAuth2Client.clientCredentials({
+    scope: [`${config.get('oauth.upload.scope')}:${file_name}`],
   });
 }
 
@@ -70,4 +78,5 @@ module.exports = {
   checkJWT,
   get_user_profile,
   get_download_token,
+  get_upload_token,
 };

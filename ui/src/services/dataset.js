@@ -5,22 +5,24 @@ import api from "./api";
 class DatasetService {
   /**
    *
-   * @param deleted    Boolean field to filter datasets by `is_deleted` field
-   * @param processed  Field to filter datasets by number of associated workflows. Can be one of
-   *                   'some' or 'none'
-   * @param archived   Boolean field to filter datasets by the presence/absence of `archive_path`
-   *                   field
-   * @param staged     Boolean field to filter datasets by `is_deleted` field
-   * @param type       Field to filter datasets by `type`. One of 'RAW_DATA' or 'DATA_PRODUCT'
-   * @param name       Field to filter datasets by `name`
-   * @param limit      The number of datasets to be retrieved
-   * @param offset     Database offset starting at which results will be retrieved
-   * @param sortBy     Object containing property to sort datasets by, whose key is the name
-   *                   of said property, and value is one of 'asc' or 'desc'
-   * @param is_duplicate Boolean field to filter datasets by the is_duplicate attribute
+   * @param deleted          Boolean field to filter datasets by `is_deleted` field
+   * @param processed        Field to filter datasets by number of associated workflows. Can be one of
+   *                         'some' or 'none'
+   * @param archived         Boolean field to filter datasets by the presence/absence of `archive_path`
+   *                         field
+   * @param staged           Boolean field to filter datasets by `is_deleted` field
+   * @param type             Field to filter datasets by `type`. One of 'RAW_DATA' or 'DATA_PRODUCT'
+   * @param name             Field to filter datasets by `name`
+   * @param match_name_exact Boolean field to determine whether records will be matched by
+   *                         exact or matching values of `name`
+   * @param limit            The number of datasets to be retrieved
+   * @param offset           Database offset starting at which results will be retrieved
+   * @param sortBy           Object containing property to sort datasets by, whose key is the name
+   *                         of said property, and value is one of 'asc' or 'desc'
+   * @param is_duplicate     Boolean field to filter datasets by the is_duplicate attribute
    * @param include_action_items Boolean field to includes any active action items on the dataset in the result
-   * @param include_states Boolean field to include dataset's state history
-   * @returns          Object containing matching datasets, and count of matching datasets
+   * @param include_states   Boolean field to include dataset's state history
+   * @returns                Object containing matching datasets, and count of matching datasets
    */
   getAll({
     deleted = null,
@@ -29,6 +31,7 @@ class DatasetService {
     staged = null,
     type = null,
     name = null,
+    match_name_exact = null,
     limit = null,
     offset = null,
     sortBy = null,
@@ -44,6 +47,7 @@ class DatasetService {
         staged,
         type,
         name,
+        match_name_exact,
         limit,
         offset,
         sortBy,
@@ -61,6 +65,7 @@ class DatasetService {
     last_task_run = false,
     prev_task_runs = false,
     only_active = false,
+    fetch_uploading_data_products = false,
     bundle = false,
     include_duplications = false,
     include_states = false,
@@ -77,8 +82,38 @@ class DatasetService {
         include_duplications,
         include_states,
         include_action_items,
+        fetch_uploading_data_products,
       },
     });
+  }
+
+  getDatasetFileTypes() {
+    return api.get("/datasets/file-types");
+  }
+
+  getUploadLogs({ status = null, dataset_name = null } = {}) {
+    return api.get(`/datasets/upload-logs`, {
+      params: {
+        status,
+        dataset_name,
+      },
+    });
+  }
+
+  logUpload(data) {
+    return api.post("/datasets/upload-log", data);
+  }
+
+  updateUploadLog(upload_id, data) {
+    return api.patch(`/datasets/upload-log/${upload_id}`, data);
+  }
+
+  updateFileUploadLog(file_log_id, data) {
+    return api.patch(`/datasets/file-upload-log/${file_log_id}`, data);
+  }
+
+  processUploadedChunks(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/process-uploaded-chunks`);
   }
 
   stage_dataset(id) {
