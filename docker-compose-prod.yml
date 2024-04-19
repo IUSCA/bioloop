@@ -20,16 +20,10 @@ services:
         APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./api/:/opt/sca/app
+      - /opt/sca/uploads:/opt/sca/uploads
       - api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
-    entrypoint:
-      - sh
-      - -c
-      - |
-        npm install \
-        && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
      - postgres

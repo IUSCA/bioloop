@@ -45,7 +45,7 @@ model upload_log {
   id                       Int               @id @default(autoincrement())
   status                   upload_status
   dataset_id               Int?              @unique
-  dataset                  dataset?          @relation(fields: [dataset_id], references: [id])
+  dataset                  dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   files                    file_upload_log[]
   last_updated             DateTime          @default(now()) @db.Timestamp(6)
   processing_attempt_count Int               @default(0)
@@ -61,17 +61,8 @@ model file_upload_log {
   status           upload_status
   chunks_path      String
   destination_path String
-  upload_log       upload_log?   @relation(fields: [upload_log_id], references: [id])
+  upload_log       upload_log?   @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
   upload_log_id    Int?
-}
-
-model dataset_file_type {
-  id        Int       @id @default(autoincrement())
-  name      String
-  extension String
-  datasets  dataset[]
-
-  @@unique([name, extension])
 }
 
 model dataset_hierarchy {

@@ -1,14 +1,15 @@
+const fs = require('fs');
 const fsPromises = require('fs/promises');
+const multer = require('multer');
 
+const { createHash } = require('node:crypto');
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
 const {
   query, param, body, checkSchema,
 } = require('express-validator');
-const multer = require('multer');
 const _ = require('lodash/fp');
-
 const config = require('config');
 
 // const logger = require('../services/logger');
@@ -24,37 +25,6 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 // const prisma = new PrismaClient();
 
-const prisma = new PrismaClient(
-  // { log: ['query', 'info', 'warn', 'error'] },
-
-  {
-    log: [
-      {
-        emit: 'event',
-        level: 'query',
-      },
-      {
-        emit: 'event',
-        level: 'info',
-      },
-      {
-        emit: 'event',
-        level: 'warn',
-      },
-      {
-        emit: 'event',
-        level: 'error',
-      },
-    ],
-  },
-);
-
-['query', 'info', 'warn', 'error'].forEach((level) => {
-  prisma.$on(level, async (e) => {
-    console.log(`QUERY: ${e.query}`);
-    console.log(`PARAMS: ${e.params}`);
-  });
-});
 
 // stats - UI
 router.get(
@@ -64,8 +34,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -215,8 +185,8 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
-// the criteria specified.
+// Get all datasets, and the count of datasets. Results can optionally be
+// filtered and sorted by the criteria specified.
 // Used by workers + UI.
 router.get(
   '/',
@@ -364,6 +334,8 @@ router.get(
       bundle: req.query.bundle || false,
       fetch_uploading_data_products: req.query.fetch_uploading_data_products,
       upload_log: req.query.upload_log,
+      include_duplications: req.query.include_duplications || false,
+      include_action_items: req.query.include_action_items || false,
     });
     res.json(dataset);
   }),
@@ -380,10 +352,15 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
-        a new relation is created between dataset and given workflow_id'
-    */
+    // #swagger.description = 'workflow_id is optional. If the request body has
+    // workflow_id, a new relation is created between dataset and given
+    // workflow_id'
+
     const { workflow_id, state, ...data } = req.body;
+
+    if (data.is_duplicate) {
+      next(createError.BadRequest('Created datasets cannot be duplicate.'));
+    }
 
     // create workflow association
     if (workflow_id) {
@@ -487,7 +464,7 @@ router.post(
       size: BigInt(f.size),
       filetype: f.type,
     }));
-    datasetService.add_files({ dataset_id: req.params.id, data });
+    await datasetService.add_files({ dataset_id: req.params.id, data });
 
     res.sendStatus(200);
   }),
@@ -586,7 +563,7 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
-    // Allowed names are stage, integrated
+    // Allowed names are stage, integrated.
 
     // Log the staging attempt first.
     if (req.params.wf === 'stage') {
@@ -598,7 +575,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
@@ -1075,6 +1052,95 @@ router.patch(
     });
 
     res.json(file_upload_log);
+  }),
+);
+
+const UPLOAD_PATH = config.upload_path;
+
+const getUploadPath = (datasetName) => path.join(
+  UPLOAD_PATH,
+  datasetName,
+);
+
+const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
+  getUploadPath(datasetName),
+  'chunked_files',
+  fileChecksum,
+);
+
+const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
+
+const uploadFileStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const chunkStorage = getFileChunksStorageDir(req.body.data_product_name, req.body.checksum);
+    await fsPromises.mkdir(chunkStorage, {
+      recursive: true,
+    });
+    cb(null, chunkStorage);
+  },
+  filename: (req, file, cb) => {
+    cb(null, getFileChunkName(req.body.checksum, req.body.index));
+  },
+});
+
+/**
+ * Accepts a multipart/form-data request, validates the checksum of the bytes
+ * received, and upon successful validation, writes the received bytes to the
+ * filesystem. Path of the file is constructed from metadata fields present in
+ * the request body.
+ */
+router.post(
+  '/file-chunk',
+  multer({ storage: uploadFileStorage }).single('file'),
+  asyncHandler(async (req, res, next) => {
+    const {
+      name, data_product_name, total, index, size, checksum, chunk_checksum,
+    } = req.body;
+
+    // const UPLOAD_SCOPE = config.get('upload_scope');
+
+    // const scopes = (req.token?.scope || '').split(' ');
+    // console.log(`scopes: ${scopes}`);
+
+    // const has_upload_scope = scopes.find((scope) => scope === UPLOAD_SCOPE);
+    // console.log(`has_upload_scope: ${has_upload_scope}`);
+
+    // if (!has_upload_scope) {
+    //   return next(createError.Forbidden('Invalid scope'));
+    // }
+    // console.log('passed scope check');
+
+    if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
+      res.sendStatus(400);
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('Processing file piece ...', data_product_name, name, total, index, size, checksum, chunk_checksum);
+
+    // const filePath = `${getFileChunksStorageDir(req.body.data_product_name,
+    // req.body.checksum)}/${getFileChunkName(req.body.checksum,
+    // req.body.index)}`; const stats = await fsPromises.open(filePath, 'w');
+    // console.log('writing to file');
+    // while (stats.size < 2048000) {
+    // await fsPromises.appendFile(filePath, 'test ');
+    // }
+    // console.log('wrote to file');
+
+    // const receivedFilePath = req.file.path;
+    // fs.readFile(receivedFilePath, (err, data) => {
+    //   if (err) {
+    //     throw err;
+    //   }
+
+    // const evaluated_checksum =
+    // createHash('md5').update(data).digest('hex'); if (evaluated_checksum
+    // !== chunk_checksum) { res.sendStatus(409).json('Expected checksum for
+    // chunk did not equal evaluated checksum'); return; }
+
+    //   res.sendStatus(200);
+    // });
+
+  res.sendStatus(200)
   }),
 );
 

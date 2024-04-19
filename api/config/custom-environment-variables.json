@@ -19,5 +19,6 @@
   },
   "download_server": {
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
-  }
+  },
+  "upload_path": "UPLOAD_PATH"
 }
