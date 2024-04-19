@@ -9,7 +9,6 @@ const createError = require('http-errors');
 const {
   query, param, body, checkSchema,
 } = require('express-validator');
-const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 
