@@ -55,7 +55,12 @@
         </va-list-item>
 
         <!-- Direct Download -->
-        <va-list-item v-if="props.dataset?.metadata?.bundle_alias">
+        <va-list-item
+          v-if="
+            config.file_browser.enable_downloads &&
+            props.dataset?.metadata?.bundle_alias
+          "
+        >
           <!-- icon -->
           <va-list-item-section avatar>
             <i-mdi:folder-zip-outline class="text-2xl" />
