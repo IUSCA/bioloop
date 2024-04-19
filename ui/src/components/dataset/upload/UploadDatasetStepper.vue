@@ -300,7 +300,8 @@ watch(formData, () => {
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // Blob.slice method is used to segment files.
-// At the same time, this method is used in different browsers in different ways.
+// At the same time, this method is used in different browsers in different
+// ways.
 const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 const columns = [
@@ -384,7 +385,8 @@ const isSubmitEnabled = computed(() => {
 //  update pristine when:
 //    v-model changes
 //    next is clicked
-//      if step is validated, and widget can move to next step, set pristine to true again
+// if step is validated, and widget can move to next step, set pristine to true
+// again
 const pristine = ref(true);
 
 const { isValid, evaluateErrors } = formStore;
@@ -498,7 +500,8 @@ const evaluateChecksums = (filesToUpload) => {
   });
 };
 
-// Uploads a chunk. Retries to upload chunk upto 5 times in case of network errors.
+// Uploads a chunk. Retries to upload chunk upto 5 times in case of network
+// errors.
 const uploadChunk = async (chunkData) => {
   const upload = async () => {
     if (uploadCancelled.value) {
@@ -545,8 +548,8 @@ const uploadFileChunks = async (fileDetails) => {
     const fileData = blobSlice.call(file, start, end);
     // Building form data
     const chunkData = new FormData();
-    // If the request's body needs to be accessed before the request's file, the body's fields
-    // should be set before the `file` field.
+    // If the request's body needs to be accessed before the request's file,
+    // the body's fields should be set before the `file` field.
     chunkData.append("checksum", fileDetails.fileChecksum);
     chunkData.append("name", fileDetails.name);
     chunkData.append("total", blockCount);
@@ -574,7 +577,7 @@ const uploadFile = async (fileDetails) => {
   console.dir(fileDetails, { depth: null });
 
   // persist token in store
-  await auth.onFileUpload(fileDetails.name);
+  // await auth.onFileUpload(fileDetails.name);
 
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
@@ -781,9 +784,10 @@ const removeFile = (index) => {
 
 const validateNotExists = (value) => {
   return new Promise((resolve) => {
-    // Vuestic claims that it should not run async validation if synchronous validation fails,
-    // but it seems to be triggering async validation nonetheless when `value` is ''. Hence
-    // the explicit check for whether `value` is falsy.
+    // Vuestic claims that it should not run async validation if synchronous
+    // validation fails, but it seems to be triggering async validation
+    // nonetheless when `value` is ''. Hence the explicit check for whether
+    // `value` is falsy.
     if (!value) {
       resolve(true);
     } else {

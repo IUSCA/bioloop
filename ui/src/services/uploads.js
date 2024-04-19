@@ -1,5 +1,5 @@
 import api from "./api";
-import uploadApi from "./uploadApi";
+// import uploadApi from "./uploadApi";
 
 class UploadService {
   getToken(filename) {
@@ -11,7 +11,7 @@ class UploadService {
   // }
 
   uploadFileChunk(data) {
-    return uploadApi.post("/file-chunk", data);
+    return api.post("/file-chunk", data);
   }
 }
 
