@@ -1,5 +1,8 @@
+const fs = require('fs');
 const fsPromises = require('fs/promises');
+const multer = require('multer');
 
+const { createHash } = require('node:crypto');
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
@@ -1299,84 +1302,6 @@ router.patch(
     res.json(updatedDataset);
   }),
 );
-// Post a file chunks
-// router.post(
-//   '/file-chunk',
-//   isPermittedTo('update'),
-//   asyncHandler(async (req, res, next) => {
-//     authService.fetchWrapper.fetch(`${config.get('download_server.base_url')}/file-chunk`, {
-//       method: 'POST',
-//       body: req.body,
-//     }).then((response) => {
-//       res.send(response.status);
-//     }).catch((e) => {
-//       // eslint-disable-next-line no-console
-//       console.log(e);
-//       res.sendStatus(500);
-//     });
-//   }),
-// );
-
-const UPLOAD_PATH = path.join(config.upload_path, 'datasets');
-
-const getUploadPath = (datasetName) => path.join(
-  UPLOAD_PATH,
-  datasetName,
-);
-
-const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
-  getUploadPath(datasetName),
-  'chunked_files',
-  fileChecksum,
-);
-
-// const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
-//
-// const uploadFileStorage = multer.diskStorage({
-//   destination: async (req, file, cb) => {
-//     const chunkStorage = getFileChunksStorageDir(req.body.data_product_name, req.body.checksum);
-//     await fsPromises.mkdir(chunkStorage, {
-//       recursive: true,
-//     });
-//     cb(null, chunkStorage);
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, getFileChunkName(req.body.checksum, req.body.index));
-//   },
-// });
-//
-// router.post(
-//   '/file-chunk',
-//   multer({ storage: uploadFileStorage }).single('file'),
-//   asyncHandler(async (req, res, next) => {
-//     const {
-//       name, data_product_name, total, index, size, checksum, chunk_checksum,
-//     } = req.body;
-//
-//     // eslint-disable-next-line no-console
-// eslint-disable-next-line max-len
-//     console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
-//
-//     const receivedFilePath = req.file.path;
-//
-//     fs.readFile(receivedFilePath, (err, data) => {
-//       if (err) {
-//         throw err;
-//       }
-//
-//       const evaluated_checksum = createHash('md5').update(data).digest('hex');
-//
-//       console.log(`expected: ${chunk_checksum}`);
-//       console.log(`evaluated: ${evaluated_checksum}`);
-//
-//       if (evaluated_checksum !== chunk_checksum) {
-//         res.sendStatus(409).json('Expected checksum for chunk did not equal evaluated checksum');
-//       }
-//
-//       res.json('success');
-//     });
-//   }),
-// );
 
 const UPLOAD_LOG_INCLUDE_RELATIONS = {
   files: true,
@@ -1580,6 +1505,86 @@ router.patch(
     });
 
     res.json(file_upload_log);
+  }),
+);
+
+// /N/scratch/scadev/bioloop/dev
+const UPLOAD_PATH = config.upload_path;
+
+const getUploadPath = (datasetName) => path.join(
+  UPLOAD_PATH,
+  datasetName,
+);
+
+const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
+  getUploadPath(datasetName),
+  'chunked_files',
+  fileChecksum,
+);
+
+const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
+
+const uploadFileStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const chunkStorage = getFileChunksStorageDir(req.body.data_product_name, req.body.checksum);
+    await fsPromises.mkdir(chunkStorage, {
+      recursive: true,
+    });
+    cb(null, chunkStorage);
+  },
+  filename: (req, file, cb) => {
+    cb(null, getFileChunkName(req.body.checksum, req.body.index));
+  },
+});
+
+/**
+ * Accepts a multipart/form-data request, validates the checksum of the bytes
+ * received, and upon successful validation, writes the received bytes to the
+ * filesystem. Path of the file is constructed from metadata fields present in
+ * the request body.
+ */
+router.post(
+  '/file-chunk',
+  multer({ storage: uploadFileStorage }).single('file'),
+  asyncHandler(async (req, res, next) => {
+    const {
+      name, data_product_name, total, index, size, checksum, chunk_checksum,
+    } = req.body;
+
+    const UPLOAD_SCOPE = config.get('upload_scope');
+
+    const scopes = (req.token?.scope || '').split(' ');
+    console.log(`scopes: ${scopes}`);
+
+    const has_upload_scope = scopes.find((scope) => scope === UPLOAD_SCOPE);
+    console.log(`has_upload_scope: ${has_upload_scope}`);
+
+    if (!has_upload_scope) {
+      return next(createError.Forbidden('Invalid scope'));
+    }
+    console.log('passed scope check');
+
+    if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
+      res.sendStatus(400);
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
+
+    const receivedFilePath = req.file.path;
+    fs.readFile(receivedFilePath, (err, data) => {
+      if (err) {
+        throw err;
+      }
+
+      const evaluated_checksum = createHash('md5').update(data).digest('hex');
+      if (evaluated_checksum !== chunk_checksum) {
+        res.sendStatus(409).json('Expected checksum for chunk did not equal evaluated checksum');
+        return;
+      }
+
+      res.sendStatus(200);
+    });
   }),
 );
 
