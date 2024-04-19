@@ -98,7 +98,7 @@ files in `src/`
 - `services/logger.js` - winston logger
 - `config/*.json` - hierarchical configuration
 - `prisma/schema.prisma` - Data definitions
-- `prisma/seed.js` - code to initialize tables with some data
+- `prisma/data.js` - code to initialize tables with some data
 - `utils/index.js` - non-specific common code
 
 ## Error Handling

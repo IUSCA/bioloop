@@ -55,6 +55,15 @@ model dataset_duplication {
   created_at           DateTime @default(now()) @db.Timestamp(6)
 }
 
+model dataset_file_type {
+  id        Int       @id @default(autoincrement())
+  name      String
+  extension String
+  datasets  dataset[]
+
+  @@unique([name, extension])
+}
+
 model upload_log {
   id                       Int               @id @default(autoincrement())
   status                   upload_status

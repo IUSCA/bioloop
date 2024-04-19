@@ -75,6 +75,12 @@ services:
     expose:
       - 3080
     # entrypoint: [ "tail", "-f", "/dev/null" ]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        npm install \
+        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
     networks:
       network:
         ipv4_address: 172.19.0.10

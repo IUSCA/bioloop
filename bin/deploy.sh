@@ -56,4 +56,4 @@ sudo docker compose -f "docker-compose-prod.yml" build api
 sudo docker compose -f "docker-compose-prod.yml" up -d postgres
 
 # recreates and starts api and ui
-sudo docker compose -f "docker-compose-prod.yml" up -d --force-recreate ui api
+sudo docker compose -f "docker-compose-prod.yml" up -d --force-recreate ui api secure_download
