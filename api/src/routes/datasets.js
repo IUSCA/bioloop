@@ -25,7 +25,39 @@ const CONSTANTS = require('../constants');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
+const prisma = new PrismaClient(
+  // { log: ['query', 'info', 'warn', 'error'] },
+
+  {
+    log: [
+      {
+        emit: 'event',
+        level: 'query',
+      },
+      {
+        emit: 'event',
+        level: 'info',
+      },
+      {
+        emit: 'event',
+        level: 'warn',
+      },
+      {
+        emit: 'event',
+        level: 'error',
+      },
+    ],
+  },
+);
+
+['query', 'info', 'warn', 'error'].forEach((level) => {
+  prisma.$on(level, async (e) => {
+    console.log(`QUERY: ${e.query}`);
+    console.log(`PARAMS: ${e.params}`);
+  });
+});
+
 
 const dataset_state_check = asyncHandler(async (req, res, next) => {
   const dataset = await prisma.dataset.findUnique({
@@ -1549,18 +1581,18 @@ router.post(
       name, data_product_name, total, index, size, checksum, chunk_checksum,
     } = req.body;
 
-    const UPLOAD_SCOPE = config.get('upload_scope');
+    // const UPLOAD_SCOPE = config.get('upload_scope');
 
-    const scopes = (req.token?.scope || '').split(' ');
-    console.log(`scopes: ${scopes}`);
+    // const scopes = (req.token?.scope || '').split(' ');
+    // console.log(`scopes: ${scopes}`);
 
-    const has_upload_scope = scopes.find((scope) => scope === UPLOAD_SCOPE);
-    console.log(`has_upload_scope: ${has_upload_scope}`);
+    // const has_upload_scope = scopes.find((scope) => scope === UPLOAD_SCOPE);
+    // console.log(`has_upload_scope: ${has_upload_scope}`);
 
-    if (!has_upload_scope) {
-      return next(createError.Forbidden('Invalid scope'));
-    }
-    console.log('passed scope check');
+    // if (!has_upload_scope) {
+    //   return next(createError.Forbidden('Invalid scope'));
+    // }
+    // console.log('passed scope check'); 
 
     if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
       res.sendStatus(400);
@@ -1569,20 +1601,20 @@ router.post(
     // eslint-disable-next-line no-console
     console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
-    const receivedFilePath = req.file.path;
-    fs.readFile(receivedFilePath, (err, data) => {
-      if (err) {
-        throw err;
-      }
+    // const receivedFilePath = req.file.path;
+    // fs.readFile(receivedFilePath, (err, data) => {
+    //   if (err) {
+    //     throw err;
+    //   }
 
-      const evaluated_checksum = createHash('md5').update(data).digest('hex');
-      if (evaluated_checksum !== chunk_checksum) {
-        res.sendStatus(409).json('Expected checksum for chunk did not equal evaluated checksum');
-        return;
-      }
+    //   const evaluated_checksum = createHash('md5').update(data).digest('hex');
+    //   if (evaluated_checksum !== chunk_checksum) {
+    //     res.sendStatus(409).json('Expected checksum for chunk did not equal evaluated checksum');
+    //     return;
+    //   }
 
-      res.sendStatus(200);
-    });
+    //   res.sendStatus(200);
+    // });
   }),
 );
 

@@ -20,6 +20,7 @@ services:
         APP_GID: ${APP_GID} # read from .env file
     volumes:
       - ./api/:/opt/sca/app
+      - /path/to/upload/volumn/mount:/opt/sca/uploads
       - api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
