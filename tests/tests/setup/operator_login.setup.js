@@ -1,6 +1,6 @@
 import { expect, test as setup } from '@playwright/test';
 // eslint-disable-next-line import/named
-import { USER_STORAGE_STATE } from '../../playwright.config';
+import { OPERATOR_STORAGE_STATE } from '../../playwright.config';
 
 // import config from 'config';
 const config = require('config');
@@ -12,5 +12,5 @@ setup('login', async ({ page }) => {
   // enough
   await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.operator.username);
 
-  await page.context().storageState({ path: USER_STORAGE_STATE });
+  await page.context().storageState({ path: OPERATOR_STORAGE_STATE });
 });
