@@ -156,7 +156,6 @@ E2E_ADMIN=e2eAdmin
 ```
 3. Start docker containers
 ```
-cd [bioloop_home]
 docker compose up -d
 ```
 4. (Optional) Reset the database to a fixed state:
@@ -165,7 +164,7 @@ docker compose up -d
 5. (Optional) Perform Prisma migrations
 6. Install dependencies and run tests:
 ```
-cd [bioloop_home]/tests
+cd tests
 npm install
 
 # https://playwright.dev/docs/running-tests
