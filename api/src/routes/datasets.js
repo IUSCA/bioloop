@@ -58,7 +58,6 @@ const prisma = new PrismaClient(
   });
 });
 
-
 const dataset_state_check = asyncHandler(async (req, res, next) => {
   const dataset = await prisma.dataset.findUnique({
     where: {
@@ -1575,7 +1574,7 @@ const uploadFileStorage = multer.diskStorage({
  */
 router.post(
   '/file-chunk',
-  multer({ storage: uploadFileStorage }).single('file'),
+  // multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
       name, data_product_name, total, index, size, checksum, chunk_checksum,
@@ -1592,7 +1591,7 @@ router.post(
     // if (!has_upload_scope) {
     //   return next(createError.Forbidden('Invalid scope'));
     // }
-    // console.log('passed scope check'); 
+    // console.log('passed scope check');
 
     if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
       res.sendStatus(400);
@@ -1601,17 +1600,24 @@ router.post(
     // eslint-disable-next-line no-console
     console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
+    const filePath = `${getFileChunksStorageDir(req.body.data_product_name, req.body.checksum)}/${getFileChunkName(req.body.checksum, req.body.index)}`;
+    const stats = await fsPromises.open(filePath, 'w');
+    console.log('writing to file');
+    while (stats.size < 2048000) {
+      await fsPromises.appendFile(filePath, 'test ');
+    }
+    console.log('wrote to file');
+
     // const receivedFilePath = req.file.path;
     // fs.readFile(receivedFilePath, (err, data) => {
     //   if (err) {
     //     throw err;
     //   }
 
-    //   const evaluated_checksum = createHash('md5').update(data).digest('hex');
-    //   if (evaluated_checksum !== chunk_checksum) {
-    //     res.sendStatus(409).json('Expected checksum for chunk did not equal evaluated checksum');
-    //     return;
-    //   }
+    // const evaluated_checksum = createHash('md5').update(data).digest('hex');
+    // if (evaluated_checksum !== chunk_checksum) {
+    // res.sendStatus(409).json('Expected checksum for chunk did not equal
+    // evaluated checksum'); return; }
 
     //   res.sendStatus(200);
     // });
