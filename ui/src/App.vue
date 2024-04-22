@@ -16,10 +16,13 @@ import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
 import { useBreakpoint, useColors } from "vuestic-ui";
+import featureFlagService from "@/services/featureFlag";
+import { useFeatureFlagStore } from "@/stores/featureFlag";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
+const featureFlagStore = useFeatureFlagStore();
 const { applyPreset, colors } = useColors();
 
 const nav = useNavStore();
@@ -69,8 +72,15 @@ onBeforeMount(() => {
   auth.initialize();
 });
 
+const fetchFeatureFlags = async () => {
+  featureFlagService.getAll().then((res) => {
+    featureFlagStore.setFeatures(res.data.features);
+  });
+};
+
 onMounted(() => {
   setupTheme();
   setViewType();
+  fetchFeatureFlags();
 });
 </script>

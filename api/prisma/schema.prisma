@@ -177,6 +177,11 @@ model user_settings {
   users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
+model feature_flag {
+  id       Int  @id @default(autoincrement())
+  features Json
+}
+
 model contact {
   id          Int               @id @default(autoincrement())
   type        String
