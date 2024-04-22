@@ -15,7 +15,7 @@ Tests are written using Playwright.
 ---
 
 ## Config
-Playwright config is in `playwright.config.js`.
+Playwright config is in `tests/playwright.config.js`.
 
 ---
 
