@@ -9,7 +9,7 @@ setup('login', async ({ context, page }) => {
 
   // do a test that page is finished loading - checking for username is good
   // enough
-  await expect(page.getByTestId('header-username')).toContainText('e2eAdmin');
+  await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.admin.username);
 
   await context.storageState({ path: ADMIN_STORAGE_STATE });
 });

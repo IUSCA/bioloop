@@ -1,5 +1,4 @@
 {
-  "base_url": "https:localhost",
   "mode": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {

@@ -1,12 +1,7 @@
-import path from 'path';
+const path = require('path');
+require('dotenv').config();
 
 const { defineConfig, devices } = require('@playwright/test');
-const fs = require('fs').promises;
-
-// (async () => {
-//   await fs.rmdir(path.join(__dirname, '/.auth'));
-//   await fs.mkdir(path.join(__dirname, '/.auth'));
-// })();
 
 const USER_STORAGE_STATE = path.join(__dirname, '/.auth/user_storage_state.json');
 const ADMIN_STORAGE_STATE = path.join(__dirname, '/.auth/admin_storage_state.json');

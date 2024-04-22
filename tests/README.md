@@ -99,16 +99,18 @@ The files that the `localStorage` information is written to should not be tracke
 ### Isolation
 Each setup project and its dependent projects are run in an isolated browser context, so tests that require logging in as different roles can be executed in parallel.
 
-### Setting server-side state before test
+### Using server-side state in test
 
-If a test needs to modify the server-side state before or after it runs, it can be accomplished by making calls to the API layer. For authenticated API routes, the token that will need to be included in the `Authorization` header can be read from `localStorage` inside a test, thus:
+If a test needs to get/set the server-side state before or after it runs, it can be accomplished by making calls to the API layer. For authenticated API routes, the token that will need to be included in the `Authorization` header can be read from `localStorage` inside a test, thus:
 
 ```
-test('test that needs to modify server-side state', async ({ page }) => {
-  # It's necessary to visit a route in the app first before accessing `localStorage`
+test('test that needs to get/set server-side state', async ({ page }) => {
+  ...
+  // It's necessary to visit a route in the app first before accessing `localStorage`
   await page.goto('/');
   
   const token = await page.evaluate(() => localStorage.getItem('token'));
+  // use retrieved token to make API calls
   ...
 })
 ```
@@ -127,16 +129,22 @@ E2E_USER=e2eUser
 E2E_OPERATOR=e2eOperator
 E2E_ADMIN=e2eAdmin
 ```
-2. Start docker containers
+2. Set in tests/.env
+```
+E2E_USER=e2eUser
+E2E_OPERATOR=e2eOperator
+E2E_ADMIN=e2eAdmin
+```
+3. Start docker containers
 ```
 cd [bioloop_home]
 docker compose up -d
 ```
-3. If needed, reset the database to a fixed state:
+4. (Optional) Reset the database to a fixed state:
    - Exec into postgres container
    - reset database via backup file
-4. If needed, perform Prisma migrations
-5. Install dependencies and run tests:
+5. (Optional) Perform Prisma migrations
+6. Install dependencies and run tests:
 ```
 cd [bioloop_home]/tests
 npm install
