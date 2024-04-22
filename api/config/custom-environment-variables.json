@@ -15,5 +15,18 @@
   },
   "download_server": {
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
+  },
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": "E2E_ADMIN"
+      },
+      "operator": {
+        "username": "E2E_OPERATOR"
+      },
+      "user": {
+        "username": "E2E_USER"
+      }
+    }
   }
 }

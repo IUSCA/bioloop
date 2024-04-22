@@ -20,7 +20,9 @@
             >
               <IULogo />
             </span>
-            <span class="font-semibold">Login with Indiana University</span>
+            <span class="font-semibold" data-testid="login-button"
+              >Login with Indiana University</span
+            >
           </va-button>
         </div>
       </va-card-content>

@@ -1,4 +1,5 @@
 {
+  "base_url": "https:localhost",
   "mode": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
@@ -74,8 +75,8 @@
           "task": "validate_dataset"
         },
         {
-          "name": "generate_qc",
-          "task": "generate_qc"
+          "name": "setup_download",
+          "task": "setup_dataset_download"
         }
       ]
     },
