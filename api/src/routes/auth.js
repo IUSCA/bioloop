@@ -57,7 +57,7 @@ router.post(
     };
 
     if (config.mode === 'ci') {
-      const test_user = await get_test_user({ role: req.body.ticket });
+      const test_user = await find_or_create_test_user({ role: req.body.ticket });
       await login(test_user.cas_id);
     } else {
       IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id) => {
@@ -72,7 +72,7 @@ router.post(
   }),
 );
 
-const get_test_user = async ({ role }) => {
+const find_or_create_test_user = async ({ role }) => {
   const test_user_config = config.e2e.users[role];
   const test_user_username = test_user_config.username;
 
