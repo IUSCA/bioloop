@@ -8,5 +8,14 @@ export const useFeatureFlagStore = defineStore("featureFlag", () => {
     features.value = value;
   }
 
-  return { features, setFeatures };
+  function updateFeatureFlag(id, updatedFeature) {
+    const featureIndex = features.value.findIndex(
+      (feature) => feature.id === id,
+    );
+    if (featureIndex >= 0) {
+      features.value[featureIndex] = updatedFeature;
+    }
+  }
+
+  return { features, setFeatures, updateFeatureFlag };
 });

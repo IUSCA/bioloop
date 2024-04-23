@@ -1,25 +1,8 @@
 <template>
-  <va-card>
-    <va-card-title>
-      <div class="flex flex-nowrap items-center w-full">
-        <span class="flex-auto text-lg"> Features </span>
-      </div>
-    </va-card-title>
-    <va-card-content>
-      <va-switch
-        v-for="(feature, i) in features"
-        :key="i"
-        v-model="features[i].enabled"
-        :label="feature.label"
-      ></va-switch>
-    </va-card-content>
-  </va-card>
+  <feature-flags />
 </template>
 
 <script setup>
-import { useFeatureFlagStore } from "@/stores/featureFlag";
-//
-const { features } = useFeatureFlagStore();
 // const features = ref([
 //   {
 //     feature: "feature1",
@@ -53,6 +36,7 @@ const { features } = useFeatureFlagStore();
 //     // console.log(test_arrayValue.value);
 //   },
 // );
+import FeatureFlags from "@/components/settings/featureFlags.vue";
 </script>
 
 <style scoped></style>
