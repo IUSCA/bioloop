@@ -8,7 +8,7 @@ function remove_leading_slash(str) {
   return str?.replace(/^\/+/, '');
 }
 
-router.get('*', (req, res, next) => {
+router.get('/', (req, res, next) => {
   const SCOPE_PREFIX = config.get('scope_prefix');
 
   const scopes = (req.token?.scope || '').split(' ');
