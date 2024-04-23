@@ -2,7 +2,7 @@
   <va-card>
     <va-card-title>
       <div class="flex flex-nowrap items-center w-full">
-        <span class="flex-auto text-lg"> Features </span>
+        <span class="flex-auto text-lg"> Enabled Features </span>
       </div>
     </va-card-title>
     <va-card-content>

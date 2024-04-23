@@ -1,31 +1,36 @@
 <template>
-  <Header
-    :is-sidebar-collapsed="isSidebarCollapsed"
-    @toggle-sidebar-visibility="toggleSidebarVisibility"
-  >
-  </Header>
-  <div class="flex flex-row h-screen">
-    <nav
-      aria-label="menu nav"
-      class="relative h-full content-center flex-none shadow-xl"
+  <va-inner-loading :loading="loadingFeatureFlags">
+    <Header
+      :is-sidebar-collapsed="isSidebarCollapsed"
+      @toggle-sidebar-visibility="toggleSidebarVisibility"
     >
-      <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
-    </nav>
-    <main id="main" class="w-full overflow-y-scroll">
-      <div class="px-2 md:px-6 pb-10 pt-4 min-h-screen">
-        <LeaveBreadcrumbs class="mb-2" />
-        <router-view></router-view>
-      </div>
-      <Footer></Footer>
-    </main>
-  </div>
+    </Header>
+    <div class="flex flex-row h-screen">
+      <nav
+        aria-label="menu nav"
+        class="relative h-full content-center flex-none shadow-xl"
+      >
+        <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
+      </nav>
+      <main id="main" class="w-full overflow-y-scroll">
+        <div class="px-2 md:px-6 pb-10 pt-4 min-h-screen">
+          <LeaveBreadcrumbs class="mb-2" />
+          <router-view></router-view>
+        </div>
+        <Footer></Footer>
+      </main>
+    </div>
+  </va-inner-loading>
 </template>
 
 <script setup>
 import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
+import { useFeatureFlagStore } from "@/stores/featureFlag";
+import { storeToRefs } from "pinia";
 
+const { loadingFeatureFlags } = storeToRefs(useFeatureFlagStore());
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 

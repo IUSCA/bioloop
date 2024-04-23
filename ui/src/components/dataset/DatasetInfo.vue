@@ -73,12 +73,9 @@ import config from "@/config";
 
 const props = defineProps({ dataset: Object });
 
-const { features, loadingFeatureFlags } = storeToRefs(useFeatureFlagStore());
+const { features } = storeToRefs(useFeatureFlagStore());
 
 const isGenomeBrowserEnabled = computed(() => {
-  console.log("features");
-  console.log(features.value);
-
   const genome_browser_feature = features.value.find(
     (e) => e.feature === config.features.GENOME_BROWSER,
   );
