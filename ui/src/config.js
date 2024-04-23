@@ -56,6 +56,9 @@ const exports = {
       refresh_interval_ms: 10000,
     },
   },
+  features: {
+    GENOME_BROWSER: "GENOME_BROWSER",
+  },
 };
 
 export default exports;

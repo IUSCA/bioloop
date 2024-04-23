@@ -43,7 +43,7 @@
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
-        <tr>
+        <tr v-if="isGenomeBrowserEnabled">
           <td>Genome Files</td>
           <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
@@ -69,10 +69,21 @@ import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 import { useFeatureFlagStore } from "@/stores/featureFlag";
 import { storeToRefs } from "pinia";
+import config from "@/config";
 
 const props = defineProps({ dataset: Object });
 
-const { features } = storeToRefs(useFeatureFlagStore());
+const { features, loadingFeatureFlags } = storeToRefs(useFeatureFlagStore());
+
+const isGenomeBrowserEnabled = computed(() => {
+  console.log("features");
+  console.log(features.value);
+
+  const genome_browser_feature = features.value.find(
+    (e) => e.feature === config.features.GENOME_BROWSER,
+  );
+  return genome_browser_feature ? genome_browser_feature.enabled : false;
+});
 </script>
 
 <style lang="scss" scoped>

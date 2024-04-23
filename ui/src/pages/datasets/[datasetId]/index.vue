@@ -1,5 +1,5 @@
 <template>
-  <Dataset :dataset-id="props.datasetId" />
+  <Dataset v-if="!loadingFeatureFlags" :dataset-id="props.datasetId" />
 </template>
 
 <script setup>
@@ -7,7 +7,9 @@ import DatasetService from "@/services/dataset";
 import { useNavStore } from "@/stores/nav";
 import { storeToRefs } from "pinia";
 import config from "@/config";
+import { useFeatureFlagStore } from "@/stores/featureFlag";
 
+const { loadingFeatureFlags } = storeToRefs(useFeatureFlagStore());
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 

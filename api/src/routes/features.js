@@ -18,8 +18,16 @@ router.get(
   '/',
   isPermittedTo('read'),
   asyncHandler(async (req, res) => {
-    const ret = await prisma.feature_flag.findMany();
+    const ret = await prisma.feature_flag.findMany({
+      where: {},
+      orderBy: {
+        feature: 'asc',
+      },
+      take: 100,
+    });
+    // setTimeout(() => {
     res.json(ret);
+    // }, 2000);
   }),
 );
 

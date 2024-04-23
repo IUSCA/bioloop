@@ -1,14 +1,26 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import featureFlagService from "@/services/featureFlag";
+import toast from "@/services/toast";
 
 export const useFeatureFlagStore = defineStore("featureFlag", () => {
+  const loadingFeatureFlags = ref(false);
   const features = ref([]);
 
   function fetchFeatureFlags() {
-    featureFlagService.getAll().then((res) => {
-      setFeatures(res.data);
-    });
+    loadingFeatureFlags.value = true;
+    featureFlagService
+      .getAll()
+      .then((res) => {
+        setFeatures(res.data);
+      })
+      .catch((err) => {
+        toast.error("Could not fetch feature flags");
+        console.error(err);
+      })
+      .finally(() => {
+        loadingFeatureFlags.value = false;
+      });
   }
 
   function setFeatures(value) {
@@ -24,5 +36,11 @@ export const useFeatureFlagStore = defineStore("featureFlag", () => {
     }
   }
 
-  return { features, setFeatures, updateFeatureFlag, fetchFeatureFlags };
+  return {
+    features,
+    setFeatures,
+    updateFeatureFlag,
+    fetchFeatureFlags,
+    loadingFeatureFlags,
+  };
 });
