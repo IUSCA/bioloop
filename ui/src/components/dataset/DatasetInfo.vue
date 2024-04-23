@@ -43,7 +43,7 @@
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
-        <tr v-if="featureFlags.genome_files.enabled">
+        <tr>
           <td>Genome Files</td>
           <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
@@ -68,10 +68,11 @@
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 import { useFeatureFlagStore } from "@/stores/featureFlag";
+import { storeToRefs } from "pinia";
 
 const props = defineProps({ dataset: Object });
 
-const featureFlags = useFeatureFlagStore();
+const { features } = storeToRefs(useFeatureFlagStore());
 </script>
 
 <style lang="scss" scoped>
