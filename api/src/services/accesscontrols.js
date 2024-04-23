@@ -111,6 +111,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    settings: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 };
 const ac = new AccessControl(grantsObject);

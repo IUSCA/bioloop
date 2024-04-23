@@ -176,6 +176,11 @@ const operator_items = ref([
     title: "Workflows",
     path: "/workflows",
   },
+  {
+    icon: "mdi:cog-outline",
+    title: "Settings",
+    path: "/settings",
+  },
   // {
   //   icon: "mdi-account-multiple",
   //   title: "Group Management",

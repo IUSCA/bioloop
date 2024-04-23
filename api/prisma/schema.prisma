@@ -151,6 +151,7 @@ model user {
   accesses       data_access_log[]
   stage_requests stage_request_log[]
   about_edits    about[]
+  feature_changes feature_flag[]
 }
 
 model user_password {
@@ -179,7 +180,11 @@ model user_settings {
 
 model feature_flag {
   id       Int  @id @default(autoincrement())
-  features Json
+  feature  String @unique
+  label    String?
+  enabled  Boolean @default(false)
+  last_updated_by user @relation(fields: [last_updated_by_id], references: [id])
+  last_updated_by_id Int
 }
 
 model contact {

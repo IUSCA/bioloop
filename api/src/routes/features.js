@@ -18,7 +18,7 @@ router.get(
   '/',
   isPermittedTo('read'),
   asyncHandler(async (req, res) => {
-    const ret = await prisma.about.findFirstOrThrow();
+    const ret = await prisma.feature_flag.findMany();
     res.json(ret);
   }),
 );

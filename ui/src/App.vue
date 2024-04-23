@@ -74,7 +74,8 @@ onBeforeMount(() => {
 
 const fetchFeatureFlags = async () => {
   featureFlagService.getAll().then((res) => {
-    featureFlagStore.setFeatures(res.data.features);
+    featureFlagStore.setFeatures(res.data);
+    // console.log(featureFlagStore.features);
   });
 };
 
