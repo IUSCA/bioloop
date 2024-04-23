@@ -43,7 +43,7 @@
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
-        <tr>
+        <tr v-if="featureFlags.genome_files.enabled">
           <td>Genome Files</td>
           <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
@@ -67,10 +67,11 @@
 <script setup>
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
+import { useFeatureFlagStore } from "@/stores/featureFlag";
 
 const props = defineProps({ dataset: Object });
 
-console.log("in dataset info");
+const featureFlags = useFeatureFlagStore();
 </script>
 
 <style lang="scss" scoped>
