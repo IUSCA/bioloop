@@ -1,8 +1,15 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
+import featureFlagService from "@/services/featureFlag";
 
 export const useFeatureFlagStore = defineStore("featureFlag", () => {
   const features = ref([]);
+
+  function fetchFeatureFlags() {
+    featureFlagService.getAll().then((res) => {
+      setFeatures(res.data);
+    });
+  }
 
   function setFeatures(value) {
     features.value = value;
@@ -17,5 +24,5 @@ export const useFeatureFlagStore = defineStore("featureFlag", () => {
     }
   }
 
-  return { features, setFeatures, updateFeatureFlag };
+  return { features, setFeatures, updateFeatureFlag, fetchFeatureFlags };
 });

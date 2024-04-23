@@ -72,16 +72,8 @@ onBeforeMount(() => {
   auth.initialize();
 });
 
-const fetchFeatureFlags = async () => {
-  featureFlagService.getAll().then((res) => {
-    featureFlagStore.setFeatures(res.data);
-    // console.log(featureFlagStore.features);
-  });
-};
-
 onMounted(() => {
   setupTheme();
   setViewType();
-  fetchFeatureFlags();
 });
 </script>

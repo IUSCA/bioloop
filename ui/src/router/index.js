@@ -3,6 +3,8 @@ import generatedRoutes from "virtual:generated-pages";
 import { setupLayouts } from "virtual:generated-layouts";
 import { isLiveToken, setIntersection } from "@/services/utils";
 import config from "@/config";
+// import featureFlagService from "@/services/featureFlag";
+import { useFeatureFlagStore } from "@/stores/featureFlag";
 
 // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
 const routes = setupLayouts(generatedRoutes);
@@ -82,5 +84,9 @@ router.afterEach((to, _from) => {
     document.title = to.meta?.title || config.appTitle;
   });
 });
-
+// re-retrieve feature flags after navigation
+router.afterEach(() => {
+  const featureFlagStore = useFeatureFlagStore();
+  featureFlagStore.fetchFeatureFlags();
+});
 export default router;
