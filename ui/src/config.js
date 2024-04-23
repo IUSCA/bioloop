@@ -8,7 +8,7 @@ const exports = {
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
-    app_admin: "admin@sca.iu.edu",
+    app_admin: "bioloop-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
   paths: {

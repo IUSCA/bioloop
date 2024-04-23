@@ -125,6 +125,19 @@
       ]
     }
   },
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": ""
+      },
+      "operator": {
+        "username": ""
+      },
+      "user": {
+        "username": ""
+      }
+    }
+  },
   "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
   "DATASET_STATES": {
       "REGISTERED": "REGISTERED",

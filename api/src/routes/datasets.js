@@ -1103,9 +1103,12 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const download_token = await authService.get_download_token(download_file_path);
-
       const url = new URL(download_file_path, config.get('download_server.base_url'));
+
+      // use url.pathname instead of download_file_path to deal with spaces in the file path
+      // oauth scope cannot contain spaces
+      const download_token = await authService.get_download_token(url.pathname);
+      
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,

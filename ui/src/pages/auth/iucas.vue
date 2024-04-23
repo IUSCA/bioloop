@@ -9,7 +9,7 @@
           v-if="notAuthorized"
         >
           <i-mdi-alert class="text-amber-600 text-5xl" />
-          <span>
+          <span data-testid="not-authorized">
             It appears that you do not currently have permission to access this
             application. If you require access, please send a message to
             <a class="va-link" :href="`mailto:${config.contact.app_admin}`">{{

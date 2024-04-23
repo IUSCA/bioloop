@@ -1,0 +1,25 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint . --ext .js --fix --ignore-path .gitignore"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.48.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-comment-length": "^1.7.3",
+    "@types/node": "^20.11.19"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "config": "^3.3.11",
+    "dotenv": "^16.4.5",
+    "@playwright/test": "^1.41.2"
+  }
+}
