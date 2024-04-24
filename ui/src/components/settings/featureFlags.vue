@@ -1,4 +1,5 @@
 <template>
+  <!-- List of features -->
   <va-card>
     <va-card-title>
       <div class="flex flex-nowrap items-center w-full">
@@ -7,19 +8,28 @@
       </div>
     </va-card-title>
     <va-card-content>
-      <div class="flex flex-col gap-4">
-        <va-switch
-          v-for="(feature, i) in features"
-          :key="i"
-          v-model="features[i].enabled"
-          @update:model-value="(newValue) => updateFlag(feature.id, newValue)"
-          :label="feature.label"
-          :loading="loadingFeatureFlags"
-        ></va-switch>
+      <div class="va-table-responsive">
+        <table class="va-table">
+          <tbody>
+            <tr v-for="(feature, i) in features" :key="i">
+              <td>{{ feature.label }}</td>
+              <td>
+                <va-switch
+                  v-model="features[i].enabled"
+                  @update:model-value="
+                    (newValue) => updateFlag(feature.id, newValue)
+                  "
+                  :loading="loadingFeatureFlags"
+                ></va-switch>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </va-card-content>
   </va-card>
 
+  <!-- Modal to add new feature -->
   <va-modal
     title="Add New Feature"
     v-model="isModalOpen"
