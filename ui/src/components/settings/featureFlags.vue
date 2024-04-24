@@ -94,6 +94,7 @@ const resetModalInputs = () => {
 };
 
 // todo - validation for "feature already exists"
+// todo - validation for "feature name is empty"
 const addFeatureFlag = () => {
   createFeatureFlag(newFeatureName.value, newFeatureEnabled.value).then(() => {
     // resetModalInputs()
