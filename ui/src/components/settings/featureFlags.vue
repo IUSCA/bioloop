@@ -7,14 +7,16 @@
       </div>
     </va-card-title>
     <va-card-content>
-      <va-switch
-        v-for="(feature, i) in features"
-        :key="i"
-        v-model="features[i].enabled"
-        @update:model-value="(newValue) => updateFlag(feature.id, newValue)"
-        :label="feature.label"
-        :loading="loadingFeatureFlags"
-      ></va-switch>
+      <div class="flex flex-col gap-4">
+        <va-switch
+          v-for="(feature, i) in features"
+          :key="i"
+          v-model="features[i].enabled"
+          @update:model-value="(newValue) => updateFlag(feature.id, newValue)"
+          :label="feature.label"
+          :loading="loadingFeatureFlags"
+        ></va-switch>
+      </div>
     </va-card-content>
   </va-card>
 
