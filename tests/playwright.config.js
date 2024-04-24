@@ -35,11 +35,11 @@ module.exports = {
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-      baseURL: 'https://localhost',
+      baseURL: 'https://bioloop-dev.sca.iu.edu',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
-      headless: true,
+      headless: false,
       viewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true,
       video: 'on-first-retry',
@@ -71,6 +71,14 @@ module.exports = {
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
         testMatch: '/view/authenticated/user_*_view.spec.js',
+      },
+      {
+        name: 'dataset_duplication',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        // testMatch:
+        // '/view/authenticated/datasetDuplication/notification.spec.js',
+        testIgnore: '*',
       },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
