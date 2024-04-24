@@ -298,7 +298,7 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle').optional().isObject(),
+    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -348,6 +348,8 @@ router.patch(
     body('du_size').optional().notEmpty().bail()
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
+      .customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
     body('bundle').optional().isObject(),
   ]),
@@ -675,9 +677,12 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const download_token = await authService.get_download_token(download_file_path);
-
       const url = new URL(download_file_path, config.get('download_server.base_url'));
+
+      // use url.pathname instead of download_file_path to deal with spaces in the file path
+      // oauth scope cannot contain spaces
+      const download_token = await authService.get_download_token(url.pathname);
+      
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,

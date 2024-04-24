@@ -15,6 +15,7 @@ model dataset {
   num_files        Int?
   du_size          BigInt?
   size             BigInt?
+  bundle_size      BigInt?
   description      String?
   created_at       DateTime            @default(now()) @db.Timestamp(6)
   updated_at       DateTime            @default(now()) @updatedAt @db.Timestamp(6)
@@ -103,11 +104,10 @@ model bundle {
   id         Int      @id @default(autoincrement())
   created_at DateTime @default(now()) @db.Timestamp(6)
   name       String
-  path       String
   size       BigInt?
   md5        String
   dataset_id Int      @unique
-  dataset    dataset  @relation(fields: [dataset_id], references: [id])
+  dataset    dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 }
 
 model data_access_log {

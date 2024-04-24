@@ -57,7 +57,7 @@ To enhance security, the access control list (ACL) of the `<stage_directory>/<da
 
 #### UUID Generation
 
-The UUIDs used in the staging/bundle paths are generated deterministically. They are a function of the dataset type, dataset (or bundle) name, and a salt string. This deterministic approach ensures consistency and allows authorized users to access the staged dataset/bundle when needed, while making it computationally infeasible for users to guess the path of other datasets.
+The UUIDs used in the staging paths of the dataset and the bundle are generated deterministically. They are a function of the dataset type, dataset (or bundle) name, and a salt string. This deterministic approach ensures consistency and allows authorized users to access the staged dataset/bundle when needed, while making it computationally infeasible for users to guess the path of other datasets.
 
 By implementing these measures, the Staging Dataset functionality maintains data security and privacy, preventing unauthorized access and ensuring the integrity of the staged datasets.
 

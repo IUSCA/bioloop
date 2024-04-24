@@ -58,23 +58,32 @@ Iconify icons are installed using
 
 Vuestic colors: https://ui.vuestic.dev/en/styles/colors
 
-Accent
-- primary
-- secondary
-- success
-- warning
-- danger
-- info
-
-Background
-- backgroundPrimary
-- backgroundSecondary
-- backgroundElement
-- backgroundBorder
-
-Text
-- textPrimary
-- textInverted
+```css
+:host {
+  --va-text-selected: #b3d4fc;
+  --va-text-highlighted: #ffc5274e;
+  --va-link-color: var(--va-primary);
+  --va-link-color-secondary: var(--va-secondary);
+  --va-link-color-hover: var(--va-primary-lighten, --va-primary);
+  --va-link-color-active: var(--va-primary);
+  --va-link-color-visited: var(--va-primary-darken, --va-primary);
+  --va-muted: #7f828b;
+  --va-primary: #154ec1;
+  --va-secondary: #767c88;
+  --va-success: #3d9209;
+  --va-info: #158de3;
+  --va-danger: #e42222;
+  --va-warning: #ffd43a;
+  --va-background-primary: #f6f6f6;
+  --va-background-secondary: #ffffff;
+  --va-background-element: #ebf1f4;
+  --va-background-border: #dee5f2;
+  --va-text-primary: #262824;
+  --va-text-inverted: #ffffff;
+  --va-shadow: rgba(0, 0, 0, .12);
+  --va-focus: #49a8ff;
+}
+```
 
 Using 
 
@@ -110,24 +119,7 @@ Using
 ```
 ## Notable Vuestic Classes
 
-CSS: `bioloop/ui/node_modules/vuestic-ui/dist/styles/index.css`
-
-```
-va-text-text-primary
-va-text-text-inverted
-va-text-{primary, secondary, warninig, success, danger, info}
-
-va-code-text
-va-code-snippet
-
-va-link
-va-link-secondary
-
-va-blockquote
-va-text-block
-va-text-truncate
-va-text-highlighted
-```
+CSS: `bioloop/ui/node_modules/vuestic-ui/dist/styles/css-variables.css`
 
 ## Configuration
 

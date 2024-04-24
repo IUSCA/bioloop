@@ -31,7 +31,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of all files will use
-                {{ formatBytes(dataset.du_size) }} of bandwidth
+                {{ formatBytes(props.dataset.du_size) }} of bandwidth
               </span>
             </va-list-item-label>
 
@@ -55,7 +55,7 @@
         </va-list-item>
 
         <!-- Direct Download -->
-        <va-list-item>
+        <va-list-item v-if="props.dataset?.metadata?.bundle_alias">
           <!-- icon -->
           <va-list-item-section avatar>
             <i-mdi:folder-zip-outline class="text-2xl" />
@@ -68,7 +68,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of file will use
-                {{ formatBytes(dataset.bundle.size) }} of bandwidth
+                {{ formatBytes(props.dataset.bundle.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>
