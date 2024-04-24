@@ -27,7 +27,7 @@ export const useFeatureFlagStore = defineStore("featureFlag", () => {
     features.value = value;
   }
 
-  function updateFeatureFlag(id, updatedFeature) {
+  function _updateFeatureFlag(id, updatedFeature) {
     const featureIndex = features.value.findIndex(
       (feature) => feature.id === id,
     );
@@ -36,10 +36,47 @@ export const useFeatureFlagStore = defineStore("featureFlag", () => {
     }
   }
 
+  function updateFeatureFlag(id, updatedFeature) {
+    loadingFeatureFlags.value = true;
+    return featureFlagService
+      .updateFeatureFlag(id, updatedFeature)
+      .then((res) => {
+        _updateFeatureFlag(id, res.data);
+      })
+      .catch((err) => {
+        toast.error("Could not update feature");
+        console.error(err);
+      })
+      .finally(() => {
+        loadingFeatureFlags.value = false;
+      });
+  }
+
+  function addFeatureFlag(feature) {
+    features.value.push(feature);
+  }
+
+  function createFeatureFlag(label, enabled = false) {
+    loadingFeatureFlags.value = true;
+    return featureFlagService
+      .createFeatureFlag(label, enabled)
+      .then((res) => {
+        addFeatureFlag(res.data);
+      })
+      .catch((err) => {
+        toast.error("Could not create feature");
+        console.error(err);
+      })
+      .finally(() => {
+        loadingFeatureFlags.value = false;
+      });
+  }
+
   return {
     features,
-    setFeatures,
+    // setFeatures,
     updateFeatureFlag,
+    createFeatureFlag,
     fetchFeatureFlags,
     loadingFeatureFlags,
   };

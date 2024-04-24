@@ -3,6 +3,7 @@
     <va-card-title>
       <div class="flex flex-nowrap items-center w-full">
         <span class="flex-auto text-lg"> Enabled Features </span>
+        <AddEditButton :show-text="true" @click="openModalToAddFeatureFlag" />
       </div>
     </va-card-title>
     <va-card-content>
@@ -12,10 +13,44 @@
         v-model="features[i].enabled"
         @update:model-value="(newValue) => updateFlag(feature.id, newValue)"
         :label="feature.label"
-        :loading="loading"
+        :loading="loadingFeatureFlags"
       ></va-switch>
     </va-card-content>
   </va-card>
+
+  <va-modal
+    title="Add New Feature"
+    v-model="isModalOpen"
+    hide-default-actions
+    @before-close="resetModalInputs"
+    @before-cancel="resetModalInputs"
+  >
+    <div class="flex flex-col gap-6">
+      <va-input
+        :disabled="loadingFeatureFlags"
+        v-model="newFeatureName"
+        label="Feature"
+      ></va-input>
+      <va-switch
+        :disabled="loadingFeatureFlags"
+        v-model="newFeatureEnabled"
+        label="Enabled"
+      ></va-switch>
+
+      <div class="flex flex-row-reverse gap-3">
+        <va-button @click="addFeatureFlag" :disabled="loadingFeatureFlags"
+          >OK</va-button
+        >
+        <va-button
+          class="va-text-secondary"
+          preset="secondary"
+          @click="closeModalToAddFeatureFlag"
+          :disabled="loadingFeatureFlags"
+          >Cancel</va-button
+        >
+      </div>
+    </div>
+  </va-modal>
 </template>
 
 <script setup>
@@ -23,33 +58,39 @@ import { useFeatureFlagStore } from "@/stores/featureFlag";
 import featureFlagService from "@/services/featureFlag";
 import { storeToRefs } from "pinia";
 import toast from "@/services/toast";
-// todo
-//  loading when store is not populated yet
-//  loading when switch is toggled
-const featureFlagStore = useFeatureFlagStore();
-const { features } = storeToRefs(featureFlagStore);
-const { updateFeatureFlag } = featureFlagStore;
 
-const loading = ref(false);
+const featureFlagStore = useFeatureFlagStore();
+const { features, loadingFeatureFlags } = storeToRefs(featureFlagStore);
+const { createFeatureFlag, updateFeatureFlag } = featureFlagStore;
+
+const newFeatureName = ref("");
+const newFeatureEnabled = ref(true);
+const isModalOpen = ref(false);
+// const loading = ref(false);
+
+const openModalToAddFeatureFlag = () => {
+  isModalOpen.value = true;
+};
+
+const closeModalToAddFeatureFlag = () => {
+  isModalOpen.value = false;
+};
+
+const resetModalInputs = () => {
+  newFeatureName.value = "";
+  newFeatureEnabled.value = true;
+};
+
+// todo - validation for "feature already exists"
+const addFeatureFlag = () => {
+  createFeatureFlag(newFeatureName.value, newFeatureEnabled.value).then(() => {
+    // resetModalInputs()
+    closeModalToAddFeatureFlag();
+  });
+};
 
 const updateFlag = (id, newValue) => {
-  console.log(`id: ${id}`);
-  console.log(`arg:`);
-  console.log(newValue);
-
-  loading.value = true;
-  featureFlagService
-    .updateFeatureFlag(id, { enabled: newValue })
-    .then((res) => {
-      updateFeatureFlag(id, res.data);
-    })
-    .catch((err) => {
-      toast.error("Could not update feature");
-      console.error(err);
-    })
-    .finally(() => {
-      loading.value = false;
-    });
+  updateFeatureFlag(id, { enabled: newValue });
 };
 </script>
 
