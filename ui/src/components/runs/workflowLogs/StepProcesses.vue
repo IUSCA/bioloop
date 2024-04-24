@@ -48,21 +48,21 @@
 
       <!-- logs icon and modal link -->
       <va-list-item-section icon>
-        <div
+        <button
           class="flex gap-1 va-link hover:underline"
           @click="emit('showLogs', p.id)"
         >
           <Icon icon="vscode-icons:file-type-log" class="text-2xl flex-none" />
           <span class="">Logs</span>
-        </div>
+        </button>
       </va-list-item-section>
     </va-list-item>
   </va-list>
 </template>
 
 <script setup>
-import workflowService from "@/services/workflow";
 import * as datetime from "@/services/datetime";
+import workflowService from "@/services/workflow";
 
 const props = defineProps({
   workflowId: {

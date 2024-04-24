@@ -42,7 +42,7 @@
 
           <!-- Action icon -->
           <va-list-item-section class="flex-none">
-            <a target="_blank" :href="downloadURL">
+            <a target="_blank" :href="downloadURL" aria-label="Download">
               <va-button
                 preset="secondary"
                 icon="open_in_new"
@@ -67,7 +67,8 @@
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
               <span class="">
-                Size: {{ formatBytes(dataset.bundle_size) }}
+                Transfer of file will use
+                {{ formatBytes(dataset.bundle.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>

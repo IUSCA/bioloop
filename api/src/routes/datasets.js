@@ -112,13 +112,13 @@ const buildQueryObject = ({
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
-    archive_path: archived ? { not: null } : {},
+    archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
     type,
-    name: {
+    name: name ? {
       contains: name,
       mode: 'insensitive', // case-insensitive search
-    },
+    } : undefined,
   });
 
   // processed=true: datasets with one or more workflows associated
@@ -198,6 +198,7 @@ router.get(
     query('limit').isInt().toInt().optional(),
     query('offset').isInt().toInt().optional(),
     query('sortBy').isObject().optional(),
+    query('bundle').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -224,6 +225,7 @@ router.get(
         ...datasetService.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
+        bundle: req.query.bundle || false,
       },
     };
 
@@ -269,6 +271,7 @@ router.get(
     query('last_task_run').toBoolean().default(false),
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
+    query('bundle').optional().toBoolean(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -282,6 +285,7 @@ router.get(
       last_task_run: req.query.last_task_run,
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
+      bundle: req.query.bundle || false,
     });
     res.json(dataset);
   }),
@@ -294,7 +298,7 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -345,8 +349,7 @@ router.patch(
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
-    body('bundle_size').optional().notEmpty().bail()
-      .customSanitizer(BigInt),
+    body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -365,6 +368,15 @@ router.patch(
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
+
+    if (req.body.bundle) {
+      data.bundle = {
+        upsert: {
+          create: req.body.bundle,
+          update: req.body.bundle,
+        },
+      };
+    }
 
     const dataset = await prisma.dataset.update({
       where: {
@@ -474,18 +486,31 @@ router.delete(
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
-  isPermittedTo('update'),
+  accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
     param('wf').isIn(['stage', 'integrated']),
   ]),
+  (req, res, next) => {
+    // admin and operator roles can run stage and integrated workflows
+    // user role can only run stage workflows
+
+    // allowed_wfs is an object with keys as workflow names and values as true
+    // filter only works on objects not arrays, so we use an object with true value
+    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
+    if (allowed_wfs[req.params.wf]) {
+      return next();
+    }
+    next(createError.Forbidden());
+  },
+  // user role can only run wf on the datasets they can access through project associations
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
     // Allowed names are stage, integrated
 
     // Log the staging attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
     if (req.params.wf === 'stage') {
       try {
         await prisma.stage_request_log.create({
@@ -612,7 +637,7 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of the rest of the method.
+    // Catch errors to ensure that logging does not get in the way of a token being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -640,12 +665,16 @@ router.get(
       where: {
         id: req.params.id,
       },
+      include: {
+        bundle: true,
+      },
     });
 
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${dataset.metadata.stage_alias}/${dataset.name}.tar`;
+        : `${dataset.metadata.bundle_alias}`;
+
       const download_token = await authService.get_download_token(download_file_path);
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));

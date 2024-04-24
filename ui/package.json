@@ -26,14 +26,17 @@
     "chartjs-adapter-dayjs-4": "^1.0.4",
     "config": "^3.3.9",
     "dayjs": "^1.11.10",
+    "dompurify": "^3.0.8",
     "epic-spinners": "^2.0.0",
     "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",
+    "markdown-it": "^14.0.0",
     "pinia": "^2.1.6",
+    "turndown": "^7.1.2",
     "vue": "^3.3.4",
     "vue-chartjs": "^5.2.0",
     "vue-router": "^4.2.5",
-    "vuestic-ui": "^1.8.0"
+    "vuestic-ui": "^1.9.2"
   },
   "devDependencies": {
     "@iconify-json/mdi": "^1.1.54",
@@ -44,6 +47,7 @@
     "autoprefixer": "^10.4.15",
     "eslint": "^8.48.0",
     "eslint-plugin-vue": "^9.17.0",
+    "eslint-plugin-vuejs-accessibility": "^2.2.1",
     "material-design-icons-iconfont": "^6.7.0",
     "postcss": "^8.4.31",
     "prettier": "^3.0.3",

@@ -12,8 +12,8 @@
       <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
     </nav>
     <main id="main" class="w-full overflow-y-scroll">
-      <div class="px-6 pb-10 pt-4 min-h-screen">
-        <LeaveBreadcrumbs class="mb-4" />
+      <div class="px-2 md:px-6 pb-10 pt-4 min-h-screen">
+        <LeaveBreadcrumbs class="mb-2" />
         <router-view></router-view>
       </div>
       <Footer></Footer>
@@ -22,9 +22,9 @@
 </template>
 
 <script setup>
+import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
-import { useUIStore } from "@/stores/ui";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();

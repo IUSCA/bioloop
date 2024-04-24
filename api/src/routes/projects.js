@@ -1,7 +1,10 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-const { body } = require('express-validator');
+const {
+  query, body, param,
+} = require('express-validator');
+const createError = require('http-errors');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
@@ -9,19 +12,24 @@ const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
+const datasetService = require('../services/dataset');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const INCLUDE_USERS_DATASETS_CONTACTS = {
-  users: {
+const build_include_object = ({
+  include_users = true,
+  include_datasets = true,
+  include_contacts = true,
+} = {}) => _.omitBy(_.isUndefined)({
+  users: include_users ? {
     select: {
       user: true,
       assigned_at: true,
     },
-  },
-  datasets: {
+  } : undefined,
+  datasets: include_datasets ? {
     select: {
       dataset: {
         include: {
@@ -34,14 +42,14 @@ const INCLUDE_USERS_DATASETS_CONTACTS = {
       },
       assigned_at: true,
     },
-  },
-  contacts: {
+  } : undefined,
+  contacts: include_contacts ? {
     select: {
       contact: true,
       assigned_at: true,
     },
-  },
-};
+  } : undefined,
+});
 
 // router.get(
 //   '/:username/:id/slug',
@@ -64,7 +72,7 @@ router.get(
     // #swagger.description = admin and operator roles are allowed and user role is forbidden
     const projects = await prisma.project.findMany({
       where: {},
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     res.json(projects);
   }),
@@ -73,10 +81,15 @@ router.get(
 router.get(
   '/:id',
   isPermittedTo('read'),
+  validate([
+    query('include_datasets').toBoolean().optional().default(true),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project irrespective of user association.
     // #swagger.description = admin and operator roles are allowed and user role is forbidden
+    const { include_datasets } = req.query;
+
     const project = await prisma.project.findFirstOrThrow({
       where: {
         OR: [
@@ -87,12 +100,12 @@ router.get(
             slug: req.params.id,
           },
         ],
-      }, // filter by username
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      },
+      include: build_include_object({ include_datasets }),
     });
 
     // include workflow objects with dataset
-    const wfPromises = project.datasets.map(async (ds) => {
+    const wfPromises = (project.datasets || []).map(async (ds) => {
       const { dataset, assigned_at } = ds;
       if (dataset.workflows.length > 0) {
         return wfService.getAll({
@@ -120,6 +133,119 @@ router.get(
 );
 
 router.get(
+  '/:username/:id/datasets',
+  isPermittedTo('read', { checkOwnerShip: true }),
+  validate([
+    param('username').notEmpty().escape(),
+    query('staged').toBoolean().optional(),
+    query('limit').isInt().toInt().optional(),
+    query('offset').isInt().toInt().optional(),
+    query('name').notEmpty().escape().optional(),
+    query('sortBy').isObject().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = get all datasets associated with a project, with optional params for
+    // filtering;
+    /* #swagger.description = user role: can only see datasets if they have access to the project.
+      operator, admin: can see any project's datasets
+    */
+
+    const hasProjectAssociation = await projectService.has_project_assoc({
+      projectId: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (
+      req.user.roles.includes('user')
+        && !hasProjectAssociation
+    ) {
+      return next(createError(403)); // Forbidden
+    }
+
+    const sortBy = req.query.sortBy || {};
+
+    const query_obj = _.omitBy(_.isUndefined)({
+      projects: {
+        some: {
+          project: {
+            OR: [
+              {
+                id: req.params.id,
+              },
+              {
+                slug: req.params.id,
+              },
+            ],
+          },
+        },
+      },
+      name: req.query.name ? {
+        contains: req.query.name,
+        mode: 'insensitive', // case-insensitive search
+      } : undefined,
+      is_staged: req.query.staged,
+    });
+
+    const filterQuery = { where: query_obj };
+    const datasetRetrievalQuery = {
+      skip: req.query.offset,
+      take: req.query.limit,
+      ...filterQuery,
+      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
+      include: {
+        ...datasetService.INCLUDE_WORKFLOWS,
+        bundle: true,
+      },
+    };
+
+    const [datasets, count] = await prisma.$transaction([
+      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
+      prisma.dataset.count({ ...filterQuery }),
+    ]);
+
+    // include workflow objects with dataset
+    const wfPromises = (datasets || []).map(async (ds) => {
+      if (ds.workflows.length > 0) {
+        return wfService.getAll({
+          only_active: true,
+          last_task_run: false,
+          prev_task_runs: false,
+          workflow_ids: ds.workflows.map((x) => x.id),
+        }).then((wf_res) => (Object.assign(ds, { workflows: wf_res.data.results })))
+          .catch((error) => {
+            log_axios_error(error);
+            return Object.assign(ds, { workflows: [] });
+          });
+      }
+      return ds;
+    });
+    const datasets_with_wfs = await Promise.all(wfPromises);
+
+    res.json({
+      metadata: { count },
+      datasets: datasets_with_wfs,
+    });
+  }),
+);
+
+const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
+  const nullable_order_by_fields = ['du_size', 'size'];
+
+  if (!field || !sortOrder) {
+    return {};
+  }
+  if (nullable_order_by_fields.includes(field)) {
+    return {
+      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
+    };
+  }
+  return {
+    [field]: sortOrder,
+  };
+};
+
+router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
@@ -138,7 +264,7 @@ router.get(
           },
         },
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     // don't know why projects.map(req.permission.filter) wouldn't work
     res.json(projects.map((p) => req.permission.filter(p)));
@@ -147,6 +273,9 @@ router.get(
 
 router.get(
   '/:username/:id',
+  validate([
+    query('include_datasets').toBoolean().optional().default(true),
+  ]),
   isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -154,6 +283,8 @@ router.get(
     /* #swagger.description = user role: can only see their project.
       operator, admin: can see anyone's project
     */
+    const { include_datasets } = req.query;
+
     const project = await prisma.project.findFirstOrThrow({
       where: {
         OR: [
@@ -172,11 +303,11 @@ router.get(
           },
         },
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object({ include_datasets }),
     });
 
     // include workflow objects with dataset
-    const wfPromises = project.datasets.map(async (ds) => {
+    const wfPromises = (project.datasets || []).map(async (ds) => {
       const { dataset, assigned_at } = ds;
       if (dataset.workflows.length > 0) {
         return wfService.getAll({
@@ -240,7 +371,7 @@ router.post(
 
     const project = await prisma.project.create({
       data,
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     res.json(project);
   }),
@@ -264,7 +395,7 @@ router.post(
       where: {
         id: req.params.src,
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     // get target projects
@@ -274,7 +405,7 @@ router.post(
           in: req.body.target_project_ids,
         },
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     // assemble all unique dataset_ids associated with the target projects
@@ -333,7 +464,7 @@ router.put(
       where: {
         id: req.params.id,
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     const cur_user_ids = project.users.map((obj) => obj.user.id);
@@ -416,14 +547,18 @@ router.put(
   }),
 );
 
-router.put(
+router.patch(
   '/:id/datasets',
   isPermittedTo('update'),
+  validate([
+    body('add_dataset_ids').isArray().optional(),
+    body('remove_dataset_ids').isArray().optional(),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
     /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+     */
 
     // get project or send 404 if not found
     await prisma.project.findFirstOrThrow({
@@ -432,26 +567,30 @@ router.put(
       },
     });
 
-    // delete existing associations
-    const delete_assocs = prisma.project_dataset.deleteMany({
-      where: {
-        project_id: req.params.id,
-      },
-    });
+    const add_dataset_ids = req.body.add_dataset_ids || [];
+    const remove_dataset_ids = req.body.remove_dataset_ids || [];
 
-    const dataset_ids = req.body.dataset_ids || [];
-    const data = dataset_ids.map((dataset_id) => ({
+    const create_data = add_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
       dataset_id,
     }));
+    const delete_data = remove_dataset_ids.map((dataset_id) => ({
+      project_id: req.params.id,
+      dataset_id,
+    }));
+
+    // create new associations
     const add_assocs = prisma.project_dataset.createMany({
-      data,
+      data: create_data,
+    });
+    // delete existing associations
+    const delete_assocs = prisma.project_dataset.deleteMany({
+      where: {
+        OR: delete_data,
+      },
     });
 
-    await prisma.$transaction([
-      delete_assocs,
-      add_assocs,
-    ]);
+    await prisma.$transaction([delete_assocs, add_assocs]);
 
     res.send();
   }),
@@ -468,7 +607,7 @@ router.patch(
     // #swagger.tags = ['Projects']
     // #swagger.summary = update a project
     /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+     */
 
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
@@ -480,7 +619,7 @@ router.patch(
       where: {
         id: req.params.id,
       },
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
 
     data.metadata = _.merge(projectToUpdate?.metadata)(data.metadata); // deep merge
@@ -498,7 +637,7 @@ router.patch(
         id: req.params.id,
       },
       data,
-      include: INCLUDE_USERS_DATASETS_CONTACTS,
+      include: build_include_object(),
     });
     res.json(updatedProject);
   }),

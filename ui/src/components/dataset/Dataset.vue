@@ -118,7 +118,7 @@
                     class="flex-initial"
                     @click="stage_modal = true"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" />
+                    <i-mdi-cloud-sync class="pr-2 text-2xl" />
                     Stage Files
                   </va-button>
 
@@ -134,6 +134,17 @@
                   >
                     <i-mdi-delete class="pr-2 text-2xl" />
                     Delete Archive
+                  </va-button>
+
+                  <va-button
+                    :disabled="!dataset.is_staged"
+                    class="flex-initial"
+                    color="primary"
+                    border-color="primary"
+                    preset="secondary"
+                    @click="openModalToDownloadDataset"
+                  >
+                    <i-mdi-download class="pr-2 text-2xl" /> Downlaod
                   </va-button>
                 </div>
               </va-card-content>
@@ -289,6 +300,8 @@
         </div>
       </div>
     </div>
+    <!-- Download Modal -->
+    <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
   </va-inner-loading>
 
   <EditDatasetModal
@@ -340,7 +353,7 @@ const polling_interval = computed(() => {
 
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  DatasetService.getById({ id: props.datasetId })
+  DatasetService.getById({ id: props.datasetId, bundle: true })
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
@@ -451,6 +464,11 @@ function navigateToFileBrowser() {
   } else {
     router.push(`/datasets/${props.datasetId}/filebrowser`);
   }
+}
+
+const downloadModal = ref(null);
+function openModalToDownloadDataset() {
+  downloadModal.value.show();
 }
 </script>
 

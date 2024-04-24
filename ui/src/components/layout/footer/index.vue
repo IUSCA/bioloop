@@ -1,35 +1,22 @@
 <template>
   <footer
     id="footer-v1"
-    role="contentinfo"
     itemScope="itemscope"
     itemType="http://schema.org/CollegeOrUniversity"
     class="text-sm pb-3.5"
   >
     <!-- Primary divider -->
-    <va-divider />
+    <va-divider class="my-0" />
 
-    <div class="flex flex-wrap mt-3.5 gap-y-3">
-      <div class="flex-auto text-left">
-        {{ config.appTitle }} is a service of the Indiana University
-
-        <a href="https://sca.iu.edu" class="footer-link">
-          Scalable Compute Archive (IU SCA)
-        </a>
-        group.
-      </div>
-
-      <div>
-        <FooterMobile v-if="ui.isMobileView" />
-        <FooterDesktop v-else />
-      </div>
+    <div class="mt-5">
+      <FooterMobile v-if="ui.isMobileView" />
+      <FooterDesktop v-else />
     </div>
   </footer>
 </template>
 
 <script setup>
 import FooterDesktop from "@/components/layout/footer/FooterDesktop.vue";
-import config from "@/config";
 import { useUIStore } from "@/stores/ui";
 
 const ui = useUIStore();
