@@ -5,8 +5,6 @@ import { ADMIN_STORAGE_STATE } from '../../playwright.config';
 const config = require('config');
 
 setup('login', async ({ context, page }) => {
-  // await page.waitForTimeout(60000);
-
   await page.goto(`${config.baseURL}/auth/iucas?ticket=admin`);
 
   // do a test that page is finished loading - checking for username is good
