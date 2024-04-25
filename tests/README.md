@@ -140,6 +140,7 @@ After retrieving the token, either `axios` or Playwright's `APIRequest` API can 
 
 The following instructions are meant for running tests on a local host machine, and do not conform to any particular CI/CD workflow at this point.
 
+### Set CI properties
 1. Set in api/.env:
 ```
 NODE_ENV=ci
@@ -154,46 +155,42 @@ E2E_USER=e2eUser
 E2E_OPERATOR=e2eOperator
 E2E_ADMIN=e2eAdmin
 ```
-3. Start docker containers
+
+The test suite can now be run either via `./tests/Dockerfile` or `./docker-compose-e2e.yml`.
+
+### Run tests via Dockerfile
 ```
-docker compose up -d
-```
-4. (Optional) Reset the database to a fixed state:
-   - Exec into postgres container
-   - reset database via backup file
-5. (Optional) Perform Prisma migrations
-6. Build the test image
-```
+cd tests
+
+# build image
 docker build -t bioloop-e2e .
-```
-7. Run the test image
-```
+
+# run test suite
+# `--network="host"` allows the e2e container to call services running on the host machine.
 docker run -it --network="host" bioloop-e2e:latest npm test
 ```
-`--network="host"` allows the e2e container to call services running on the host.
+When running the test suite via a Dockerfile, the container will exit once the test suite is finished running, and test artifacts will be lost. To retain test artifacts, run the suite via `docker-compose-e2e.yml`, as described below.
 
-Enter test container:
+### Run tests via docker-compose-e2e.yml
+
+- `./docker-compose-e2e.yml` builds an image from `./tests/Dockerfile`, which is used to start the `e2e` container.
+- The `e2e` container has a `depends_on` condition which ensures that the test suite isn't kicked off until the `api` container's health check returns `200 OK`.
+
 ```
-docker run -it bioloop-e2e:latest /bin/bash
-```
-Kill orphan containers
-```
-docker compose down --remove-orphans -v
-```
-Create e2e container, run tests
-```
-docker compose -f "docker-compose-e2e.yml" up -d
+# in bioloop root dir
+docker-compose -f "docker-compose-e2e.yml" build
+docker-compose -f "docker-compose-e2e.yml" up -d
 ```
 
+### Viewing artifacts
+- The `e2e` container mounts its `/opt/sca/app` directory to the host machine's `./tests` directory, to enable accessing test artifacts from the host machine.  
+- Artifacts are generated in the following locations:
+  - `./tests/playwright-report`
+    - contains an HTML report of passed/failed tests
+  - `./tests/test-results`
 
 ### Notes
-1. Playwright version in `tests/Dockerfile` needs to be the same as that in `tests/package.json` for the Playwright running in Docker to be able to detect the test suite.
-2. Running the app in CI mode (i.e. when the API's env is set to `ci`) breaks the redirect that occurs after a successful IU Login, since the ticket included in the redirect is ignored in CI mode.
+- Playwright version in `./tests/Dockerfile` needs to be the same as that in `./tests/package.json`
+  - If these versions don't match, the Playwright running in Docker won't be able to detect the test suite.
+- Running the app in CI mode (i.e. when the API's env is set to `ci`) breaks the redirect that occurs after a successful IU Login, since the ticket included in the redirect is ignored in CI mode.
    - To bypass this, visit `/auth/iucas?role=[testRole]` where `testRole` can be one of `admin`, `operator` or `user`. This will log you in as a test user.
-
-[//]: # (
-todo - how to see test artifacts?
-    - especially traces for failed tests
-    - give container a name
-    - rename 'tests' directories to 'e2e'?
-)
