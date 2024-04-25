@@ -138,7 +138,7 @@ After retrieving the token, either `axios` or Playwright's `APIRequest` API can 
 ---
 ## Running tests locally
 
-The following instructions are meant for running tests on a local host machine, and do not conform to any particular CI/CD workflow at this point:
+The following instructions are meant for running tests on a local host machine, and do not conform to any particular CI/CD workflow at this point.
 
 1. Set in api/.env:
 ```
@@ -168,6 +168,32 @@ docker build -t bioloop-e2e .
 ```
 7. Run the test image
 ```
-docker run -it --network="host" bioloop-e2e:latest npm run test
+docker run -it --network="host" bioloop-e2e:latest npm test
 ```
 `--network="host"` allows the e2e container to call services running on the host.
+
+Enter test container:
+```
+docker run -it bioloop-e2e:latest /bin/bash
+```
+Kill orphan containers
+```
+docker compose down --remove-orphans -v
+```
+Create e2e container, run tests
+```
+docker compose -f "docker-compose-e2e.yml" up -d
+```
+
+
+### Notes
+1. Playwright version in `tests/Dockerfile` needs to be the same as that in `tests/package.json` for the Playwright running in Docker to be able to detect the test suite.
+2. Running the app in CI mode (i.e. when the API's env is set to `ci`) breaks the redirect that occurs after a successful IU Login, since the ticket included in the redirect is ignored in CI mode.
+   - To bypass this, visit `/auth/iucas?role=[testRole]` where `testRole` can be one of `admin`, `operator` or `user`. This will log you in as a test user.
+
+[//]: # (
+todo - how to see test artifacts?
+    - especially traces for failed tests
+    - give container a name
+    - rename 'tests' directories to 'e2e'?
+)
