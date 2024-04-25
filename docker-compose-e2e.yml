@@ -92,8 +92,9 @@ services:
       - -c
       - |
         npm install && /opt/sca/app/node_modules/.bin/playwright test
-#    depends_on:
-#      - api
+    depends_on:
+      - api
+    network_mode: "host"
 #    extra_hosts:
 #      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
 
