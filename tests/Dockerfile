@@ -10,7 +10,7 @@ FROM mcr.microsoft.com/playwright:v1.43.0-jammy
 WORKDIR /opt/sca/app
  
 # Set the environment path to node_modules/.bin
-ENV PATH /app/node_modules/.bin:$PATH
+#ENV PATH opt/sca/app/node_modules/.bin:$PATH
 
 # COPY the needed files to the app folder in Docker image
 #COPY package.json /app/
