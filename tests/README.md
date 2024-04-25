@@ -162,11 +162,12 @@ docker compose up -d
    - Exec into postgres container
    - reset database via backup file
 5. (Optional) Perform Prisma migrations
-6. Install dependencies and run tests:
+6. Build the test image
 ```
-cd tests
-npm install
-
-# https://playwright.dev/docs/running-tests
-npx playwright test
+docker build -t bioloop-e2e .
 ```
+7. Run the test image
+```
+docker run -it --network="host" bioloop-e2e:latest npm run test
+```
+`--network="host"` allows the e2e container to call services running on the host.
