@@ -1,0 +1,15 @@
+{
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": "E2E_ADMIN"
+      },
+      "operator": {
+        "username": "E2E_OPERATOR"
+      },
+      "user": {
+        "username": "E2E_USER"
+      }
+    }
+  }
+}

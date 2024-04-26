@@ -56,6 +56,7 @@ const exports = {
       refresh_interval_ms: 10000,
     },
   },
+  alertForEnvironments: ["ci"],
 };
 
 export default exports;

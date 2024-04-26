@@ -36,6 +36,9 @@
     </template>
 
     <template #right>
+      <va-navbar-item class="flex items-center">
+        <env-alert icon="warning" />
+      </va-navbar-item>
       <va-navbar-item class="flex items-center" v-if="auth.user?.username">
         <HeaderUserDropdown />
       </va-navbar-item>

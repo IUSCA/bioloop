@@ -5,6 +5,8 @@
     <va-card class="w-full max-w-md">
       <va-card-content class="">
         <div class="flex flex-col gap-2 items-center justify-center opacity-90">
+          <env-alert class="w-full" icon="warning" />
+
           <AppIcon size="3rem" />
           <AppTitle />
         </div>
@@ -20,7 +22,9 @@
             >
               <IULogo />
             </span>
-            <span class="font-semibold">Login with Indiana University</span>
+            <span class="font-semibold" data-testid="login-button"
+              >Login with Indiana University</span
+            >
           </va-button>
         </div>
       </va-card-content>
