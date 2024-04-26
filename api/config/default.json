@@ -153,7 +153,7 @@
     "COMPLETE": "COMPLETE",
     "FAILED": "FAILED"
   },
-  "upload_path": "/opt/sca/data/uploads",
+  "upload_path": "/opt/sca/uploads",
   "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
   "DATASET_STATES": {
       "REGISTERED": "REGISTERED",
