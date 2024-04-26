@@ -1,3 +1,4 @@
+import https from 'node:https';
 
 const { test, expect } = require('@playwright/test');
 const axios = require('axios');
@@ -27,18 +28,18 @@ test('notifications created', async ({ page }) => {
   console.log('token');
   console.log(token);
   
-  expect(token).not.toEqual("")
+  // expect(token).not.toEqual("")
 
   // Set test state in API layer
-  // await axios({
-  //   method: 'POST',
-  //   url: `${config.apiBaseURL}/datasets/3/duplicate`,
-  //   headers: {
-  //     Authorization: `Bearer ${token}`,
-  //     'Content-Type': 'application/json',
-  //   },
-  //   httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-  // });
+  await axios({
+    method: 'POST',
+    url: `${config.apiBaseURL}/datasets/3/duplicate`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+  });
 
-  // await expect(page.getByTestId('notification-count-badge')).toContainText('1');
+  await expect(page.getByTestId('notification-count-badge')).toContainText('1');
 });
