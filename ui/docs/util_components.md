@@ -672,6 +672,25 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 - labels - Array of 2 element (off lable, on label)
   - default: `['disbaled', 'enabled']`
 
+## EnvAlert
+
+Shows an `<va-alert/>` which displays the mode that the app is running in (`test`, `CI`, etc.). 
+
+The environments that this alert should be enabled for can be set in `./ui/config.js`, under property `alertForEnvironments`.
+
+```html
+<template>
+  <EnvAlert color="warning" icon="info" />
+</template>
+```
+
+### Props
+
+- icon: String - icon to be included in the alert.
+- color: String - alert's color
+
+Props are forwarded to Vuestic's `<va-alert />` component.
+
 ## useQueryPersistence Composable
 
 This composition function helps you manage query parameters in the URL and keep them in sync with a reactive object in

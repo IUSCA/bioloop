@@ -156,22 +156,8 @@ E2E_OPERATOR=e2eOperator
 E2E_ADMIN=e2eAdmin
 ```
 
-The test suite can now be run either via `./tests/Dockerfile` or `./docker-compose-e2e.yml`.
-
-### Run tests via Dockerfile
-```
-cd tests
-
-# build image
-docker build -t bioloop-e2e .
-
-# run test suite
-# `--network="host"` allows the e2e container to call services running on the host machine.
-docker run -it --network="host" bioloop-e2e:latest npm test
-```
-When running the test suite via a Dockerfile, the container will exit once the test suite is finished running, and test artifacts will be lost. To retain test artifacts, run the suite via `docker-compose-e2e.yml`, as described below.
-
-### Run tests via docker-compose-e2e.yml
+### Run tests via Docker Compose
+The test suite can be run via Docker Compose, using `./docker-compose-e2e.yml`.
 
 - `./docker-compose-e2e.yml` builds an image from `./tests/Dockerfile`, which is used to start the `e2e` container.
 - The `e2e` container has a `depends_on` condition which ensures that the test suite isn't kicked off until the `api` container's health check returns `200 OK`.
