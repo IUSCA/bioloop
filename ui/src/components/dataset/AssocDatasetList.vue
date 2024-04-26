@@ -25,6 +25,7 @@ import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
+import config from "@/config";
 
 const props = defineProps({
   dataset_ids: {
@@ -45,12 +46,16 @@ const columns = ref([
     sortable: true,
     sortingOptions: ["desc", "asc", null],
   },
-  {
-    key: "num_genome_files",
-    label: "data files",
-    sortable: true,
-    sortingOptions: ["desc", "asc", null],
-  },
+  ...(config.enabledFeatures.genomeBrowser
+    ? [
+        {
+          key: "num_genome_files",
+          label: "data files",
+          sortable: true,
+          sortingOptions: ["desc", "asc", null],
+        },
+      ]
+    : []),
   {
     key: "du_size",
     label: "size",

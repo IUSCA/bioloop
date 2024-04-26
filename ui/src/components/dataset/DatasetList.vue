@@ -198,6 +198,7 @@ import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import _ from "lodash";
+import config from "@/config";
 
 useSearchKeyShortcut();
 
@@ -278,11 +279,15 @@ const columns = [
     width: "150px",
   },
   // { key: "status", sortable: false },
-  {
-    key: "num_genome_files",
-    label: "data files",
-    width: "80px",
-  },
+  ...(config.enabledFeatures.genomeBrowser
+    ? [
+        {
+          key: "num_genome_files",
+          label: "data files",
+          width: "80px",
+        },
+      ]
+    : []),
   {
     key: "du_size",
     label: "size",
