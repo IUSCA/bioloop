@@ -7,7 +7,7 @@ FROM mcr.microsoft.com/playwright:v1.43.0-jammy
 WORKDIR /opt/sca/app
  
 # COPY the tests/ subdirectory to /opt/sca/app within the container
-COPY . /opt/sca/app/
+COPY package.json /opt/sca/app/
 
 # Install dependencies
 RUN npm install
