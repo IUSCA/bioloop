@@ -57,6 +57,10 @@ const exports = {
     },
   },
   alertForEnvironments: ["ci"],
+  enabledFeatures: {
+    // VITE_* env variables are interpreted as strings here
+    genomeBrowser: import.meta.env.VITE_ENABLED_GENOME_BROWSER === "true",
+  },
 };
 
 export default exports;

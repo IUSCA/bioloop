@@ -194,7 +194,10 @@
                     <i-mdi-harddisk class="text-xl" />
                     <span> {{ formatBytes(dataset.du_size) }} </span>
                   </div>
-                  <div class="flex items-center gap-1">
+                  <div
+                    class="flex items-center gap-1"
+                    v-if="config.enabledFeatures.genomeBrowser"
+                  >
                     <i-mdi-file-multiple class="text-xl" />
                     <span> {{ dataset.metadata?.num_genome_files }} </span>
                   </div>
