@@ -125,20 +125,6 @@
       ]
     }
   },
-  "e2e": {
-    "users": {
-      "admin": {
-        "username": ""
-      },
-      "operator": {
-        "username": ""
-      },
-      "user": {
-        "username": ""
-      }
-    }
-  },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
   "DATASET_STATES": {
       "REGISTERED": "REGISTERED",
       "READY": "READY",
@@ -159,5 +145,19 @@
   },
   "ACTION_ITEM_TYPES": {
     "DUPLICATE_DATASET_INGESTION": "DUPLICATE_DATASET_INGESTION"
+  },
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": ""
+      },
+      "operator": {
+        "username": ""
+      },
+      "user": {
+        "username": ""
+      }
+    }
   }
 }

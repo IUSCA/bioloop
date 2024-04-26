@@ -84,7 +84,7 @@ config = {
         'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
-        'prepare_bundle_downloads': {
+        'stage': {
             'steps': [
                 {
                     'name': 'stage',

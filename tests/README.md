@@ -138,8 +138,9 @@ After retrieving the token, either `axios` or Playwright's `APIRequest` API can 
 ---
 ## Running tests locally
 
-The following instructions are meant for running tests on a local host machine, and do not conform to any particular CI/CD workflow at this point:
+The following instructions are meant for running tests on a local host machine, and do not conform to any particular CI/CD workflow at this point.
 
+### Set CI properties
 1. Set in api/.env:
 ```
 NODE_ENV=ci
@@ -154,19 +155,28 @@ E2E_USER=e2eUser
 E2E_OPERATOR=e2eOperator
 E2E_ADMIN=e2eAdmin
 ```
-3. Start docker containers
-```
-docker compose up -d
-```
-4. (Optional) Reset the database to a fixed state:
-   - Exec into postgres container
-   - reset database via backup file
-5. (Optional) Perform Prisma migrations
-6. Install dependencies and run tests:
-```
-cd tests
-npm install
 
-# https://playwright.dev/docs/running-tests
-npx playwright test
+### Run tests via Docker Compose
+The test suite can be run via Docker Compose, using `./docker-compose-e2e.yml`.
+
+- `./docker-compose-e2e.yml` builds an image from `./tests/Dockerfile`, which is used to start the `e2e` container.
+- The `e2e` container has a `depends_on` condition which ensures that the test suite isn't kicked off until the `api` container's health check returns `200 OK`.
+
 ```
+# in bioloop root dir
+docker-compose -f "docker-compose-e2e.yml" build
+docker-compose -f "docker-compose-e2e.yml" up -d
+```
+
+### Viewing artifacts
+- The `e2e` container mounts its `/opt/sca/app` directory to the host machine's `./tests` directory, to enable accessing test artifacts from the host machine.  
+- Artifacts are generated in the following locations:
+  - `./tests/playwright-report`
+    - contains an HTML report of passed/failed tests
+  - `./tests/test-results`
+
+### Notes
+- Playwright version in `./tests/Dockerfile` needs to be the same as that in `./tests/package.json`
+  - If these versions don't match, the Playwright running in Docker won't be able to detect the test suite.
+- Running the app in CI mode (i.e. when the API's env is set to `ci`) breaks the redirect that occurs after a successful IU Login, since the ticket included in the redirect is ignored in CI mode.
+   - To bypass this, visit `/auth/iucas?role=[testRole]` where `testRole` can be one of `admin`, `operator` or `user`. This will log you in as a test user.

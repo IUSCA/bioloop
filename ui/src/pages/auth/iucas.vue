@@ -4,6 +4,8 @@
   >
     <va-card class="w-full max-w-md" v-if="notAuthorized || authFailure">
       <va-card-content>
+        <env-alert class="w-full" icon="warning" />
+
         <div
           class="text-lg flex flex-col items-center gap-5 text-center"
           v-if="notAuthorized"

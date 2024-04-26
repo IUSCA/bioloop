@@ -178,6 +178,7 @@ const operator_items = ref([
     icon: "mdi-content-copy",
     title: "Duplicate Datasets",
     path: "/duplicateDatasets",
+    test_id: "sidebar-duplicate-datasets",
   },
   {
     icon: "mdi-table-account",
