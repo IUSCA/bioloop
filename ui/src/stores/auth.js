@@ -5,6 +5,7 @@ import authService from "@/services/auth";
 import config from "@/config";
 
 export const useAuthStore = defineStore("auth", () => {
+  const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
   const loggedIn = ref(false);
@@ -117,6 +118,10 @@ export const useAuthStore = defineStore("auth", () => {
     });
   }
 
+  const setEnv = (val) => {
+    env.value = val;
+  };
+
   const setTheme = (theme) => {
     user.value.theme = theme;
   };
@@ -137,6 +142,8 @@ export const useAuthStore = defineStore("auth", () => {
     canAdmin,
     setTheme,
     getTheme,
+    env,
+    setEnv,
   };
 });
 
