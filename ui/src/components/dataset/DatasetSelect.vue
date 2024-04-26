@@ -31,9 +31,15 @@
       </va-button-dropdown>
     </template>
 
+    <template #name="slotProps">
+      <va-popover placement="top" :message="slotProps['value'].raw">
+        {{ slotProps["value"].formatted }}
+      </va-popover>
+    </template>
+
     <template #type="slotProps">
       <DatasetType
-        :type="slotProps['value']"
+        :type="slotProps['value'].formatted"
         :show-icon="!(breakpoint.sm || breakpoint.xs)"
       />
     </template>
@@ -98,6 +104,7 @@ const primaryColumns = computed(() => {
       label: "Name",
       width: props.columnWidths.name,
       formatFn: trimName,
+      slotted: true,
     },
     {
       key: "type",
