@@ -1622,6 +1622,8 @@ router.post(
 
     //   res.sendStatus(200);
     // });
+  
+  res.sendStatus(200)
   }),
 );
 
