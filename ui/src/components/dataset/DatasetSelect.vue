@@ -54,7 +54,7 @@ import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
 import _ from "lodash";
 
-const NAME_TRIM_THRESHOLD = 13;
+const NAME_TRIM_THRESHOLD = 20;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
