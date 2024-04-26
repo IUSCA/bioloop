@@ -416,12 +416,27 @@ const selectedColumnsConfig = [searchColumnsConfig[0]];
 Displayed results can be formatted via the `formatFn` prop. They can also be put inside slots for a more customized
 markup per cell.
 
-For showing a cell's value inside customized markup, embed the cell's value inside `<template #templateName>` (
-example - `<template #address>`). The name of a column's template must be the same as the `key` of the column's config
-that was provided via the `searchResultColumns` or `selectedResultColumns` props. The value of the column inside
-the `<template>` can be accessed via `slotProps["value"]`.
+For showing a field's value inside customized markup
+- set `{ slotted: true }` in the field's config that is being provided via the `searchResultColumns` or `selectedResultColumns` props
+- embed the cell's value inside `<template #templateName>` (
+example - `<template #address>`).
+  - The name of a column's template is the same as the `key` of the column's config that was provided via the `searchResultColumns` or `selectedResultColumns` props.
 
-The below example formats the first column, and embeds the second column inside custom markup.
+The value of the column inside the `<template>` can be accessed via `slotProps["value"]`, which is an object that contains the formatted as well as the raw value for the slotted field.
+
+```
+// slotProps['value]
+
+{
+  formatted: 'formatted value',
+  raw: 'raw value
+}
+
+```
+
+The below example formats the values in the `text` column, and embeds the values in the `other` column inside custom markup.
+
+Notice how both the formatted and raw values of a slotted field can be access via `slotProps["value"]`.
 
 ```html
 <template>
@@ -443,7 +458,9 @@ The below example formats the first column, and embeds the second column inside 
     "
   >
     <template #other="slotProps">
-      <va-chip>{{ slotProps["value"] }}</va-chip>
+    <!-- Both formatted and unFormatted values can be accessed via slotProps -->
+      <va-chip>{{ slotProps["value"].formatted }}</va-chip>
+      <va-chip>{{ slotProps["value"].raw }}</va-chip>
     </template>
   </SearchAndSelect>
 </template>
@@ -669,7 +686,7 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 
 - status: Boolean (0-off, 1-on)
 - icons - Array of 2 elements (off icon, on icon)
-- labels - Array of 2 element (off lable, on label)
+- labels - Array of 2 element (off label, on label)
   - default: `['disbaled', 'enabled']`
 
 ## useQueryPersistence Composable
