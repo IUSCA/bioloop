@@ -1,5 +1,5 @@
 {
-  "baseURL": "https://localhost",
+  "baseURL": "https://bioloop-dev.sca.iu.edu",
   "apiBaseURL": "https://bioloop-dev.sca.iu.edu/api",
   "e2e": {
     "users": {
