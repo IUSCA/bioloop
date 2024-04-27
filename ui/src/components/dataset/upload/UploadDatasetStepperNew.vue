@@ -36,7 +36,10 @@
         <va-form-field
           v-slot="{ value: v }"
           v-model="datasetName"
-          :rules="[(v) => v.length >= 3 || 'Min length is 3 characters']"
+          :rules="[
+            (v) => v.length >= 3 || 'Min length is 3 characters',
+            validateNotExists,
+          ]"
         >
           <DatasetNameInput
             label="Dataset Name"
@@ -159,6 +162,28 @@ const onNextClick = (nextStep) => {
   } else {
     nextStep();
   }
+};
+
+const validateNotExists = (value) => {
+  return new Promise((resolve) => {
+    // Vuestic claims that it should not run async validation if synchronous
+    // validation fails, but it seems to be triggering async validation
+    // nonetheless when `value` is ''. Hence the explicit check for whether
+    // `value` is falsy.
+    if (!value) {
+      resolve(true);
+    } else {
+      datasetService
+        .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
+        .then((res) => {
+          resolve(
+            res.data.datasets.length !== 0
+              ? "Data Product with provided name already exists"
+              : true,
+          );
+        });
+    }
+  });
 };
 </script>
 
