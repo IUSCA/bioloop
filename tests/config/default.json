@@ -1,6 +1,6 @@
 {
-  "baseURL": "https://bioloop-dev.sca.iu.edu",
-  "apiBaseURL": "https://bioloop-dev.sca.iu.edu/api",
+  "baseURL": "https://localhost",
+  "apiBasePath": "https://localhost/api",
   "e2e": {
     "users": {
       "admin": {
