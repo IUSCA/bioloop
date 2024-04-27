@@ -1598,7 +1598,7 @@ router.post(
     }
 
     // eslint-disable-next-line no-console
-    console.log('Processing file piece...', data_product_name, name, total, index, size, checksum, chunk_checksum);
+    console.log('Processing file piece ...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
     // const filePath = `${getFileChunksStorageDir(req.body.data_product_name,
     // req.body.checksum)}/${getFileChunkName(req.body.checksum,
