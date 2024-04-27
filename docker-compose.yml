@@ -44,7 +44,7 @@ services:
       - |
         npm install \
         && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+        && npx nodemon --signal SIGTERM src/index.js
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
