@@ -3,7 +3,6 @@
     :label="props.label || 'Dataset Name'"
     :placeholder="props.placeholder || 'Dataset Name'"
     v-model="_modelValue"
-    :rules="props.rules"
   />
 </template>
 
@@ -12,10 +11,6 @@ const props = defineProps({
   modelValue: {
     type: String,
     required: true,
-  },
-  rules: {
-    type: Array,
-    required: false,
   },
   label: {
     type: String,

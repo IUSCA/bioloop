@@ -1,5 +1,8 @@
 <template>
-  <va-form ref="dataProductUploadForm" class="h-full">
+  <!-- todo
+      disable submission/moving to next step when return pressed
+ -->
+  <va-form ref="datasetUploadForm" class="h-full">
     <va-stepper
       v-model="step"
       :steps="steps"
@@ -19,7 +22,6 @@
             'step-button--completed': isCompleted,
           }"
           role="button"
-          @keydown.enter="isFormValid(i, 'stepButton') && setStep(i)"
           tabindex="0"
           @click="isFormValid(i, 'stepButton') && setStep(i)"
         >
@@ -31,18 +33,15 @@
       </template>
 
       <template #step-content-0>
-        <DatasetNameInput
-          label="Dataset Name"
-          placeholder="Dataset Name"
-          v-model="datasetName"
-          class="w-full"
-          :messages="
-            !isFormValid(0, 'FileTypeSelect') ? [stepErrors.datasetName] : []
-          "
-          :message-variant="
-            !isFormValid(0, 'FileTypeSelect') ? 'error' : undefined
-          "
-        />
+        <va-form-field v-slot="{value: v} v-model=">
+          <DatasetNameInput
+            label="Dataset Name"
+            placeholder="Dataset Name"
+            v-model="datasetName"
+            class="w-full"
+          />
+        </va-form-field>
+
         <!--                  :rules="[-->
         <!--            (value) => {-->
         <!--              return (value && value.length > 0) || 'Name is required';-->
@@ -87,158 +86,158 @@
       <!--        <va-button @click="reset">Reset Form</va-button>-->
       <!--      </template>-->
 
-      <template #step-content-1>
-        <va-select
-          name="raw_data"
-          v-model="sourceRawData"
-          v-model:search="rawDataSelected_search"
-          autocomplete
-          class="w-full raw_data_select"
-          label="Source Raw Data"
-          placeholder="Raw Data"
-          :options="rawDataList"
-          :text-by="(option) => option.name"
-          :rules="[
-            (value) => {
-              return (
-                (value && value.name.length > 0) ||
-                'Source Raw Data is required'
-              );
-            },
-          ]"
-        />
-      </template>
+      <!--      <template #step-content-1>-->
+      <!--        <va-select-->
+      <!--          name="raw_data"-->
+      <!--          v-model="sourceRawData"-->
+      <!--          v-model:search="rawDataSelected_search"-->
+      <!--          autocomplete-->
+      <!--          class="w-full raw_data_select"-->
+      <!--          label="Source Raw Data"-->
+      <!--          placeholder="Raw Data"-->
+      <!--          :options="rawDataList"-->
+      <!--          :text-by="(option) => option.name"-->
+      <!--          :rules="[-->
+      <!--            (value) => {-->
+      <!--              return (-->
+      <!--                (value && value.name.length > 0) ||-->
+      <!--                'Source Raw Data is required'-->
+      <!--              );-->
+      <!--            },-->
+      <!--          ]"-->
+      <!--        />-->
+      <!--      </template>-->
 
       <!-- File upload tool and selected files table -->
-      <template #step-content-2>
-        <div class="flex-none">
-          <va-file-upload
-            class="w-full"
-            label="File"
-            upload-button-text="Select Files"
-            drop-zone-text="Drop files here"
-            dropzone
-            @file-added="
-              (files) => {
-                setFiles(files);
-                isSubmissionAlertVisible = false;
-              }
-            "
-            :disabled="submitAttempted"
-          />
+      <!--      <template #step-content-2>-->
+      <!--        <div class="flex-none">-->
+      <!--          <va-file-upload-->
+      <!--            class="w-full"-->
+      <!--            label="File"-->
+      <!--            upload-button-text="Select Files"-->
+      <!--            drop-zone-text="Drop files here"-->
+      <!--            dropzone-->
+      <!--            @file-added="-->
+      <!--              (files) => {-->
+      <!--                setFiles(files);-->
+      <!--                isSubmissionAlertVisible = false;-->
+      <!--              }-->
+      <!--            "-->
+      <!--            :disabled="submitAttempted"-->
+      <!--          />-->
 
-          <va-data-table
-            v-if="!(isSubmissionAlertVisible || noFilesSelected)"
-            :items="dataProductFiles"
-            :columns="columns"
-          >
-            <template #cell(progress)="{ value }">
-              <va-progress-circle
-                :model-value="value ? parseInt(value, 10) : 0"
-                size="small"
-              >
-                {{ value && value + "%" }}
-              </va-progress-circle>
-            </template>
+      <!--          <va-data-table-->
+      <!--            v-if="!(isSubmissionAlertVisible || noFilesSelected)"-->
+      <!--            :items="dataProductFiles"-->
+      <!--            :columns="columns"-->
+      <!--          >-->
+      <!--            <template #cell(progress)="{ value }">-->
+      <!--              <va-progress-circle-->
+      <!--                :model-value="value ? parseInt(value, 10) : 0"-->
+      <!--                size="small"-->
+      <!--              >-->
+      <!--                {{ value && value + "%" }}-->
+      <!--              </va-progress-circle>-->
+      <!--            </template>-->
 
-            <template #cell(uploadStatus)="{ value }">
-              <span class="flex justify-center">
-                <va-popover
-                  v-if="value === config.upload_status.UPLOADED"
-                  message="Succeeded"
-                >
-                  <va-icon name="check_circle_outline" color="success" />
-                </va-popover>
-                <va-popover
-                  v-if="value === config.upload_status.UPLOADING"
-                  message="Uploading"
-                >
-                  <va-icon name="pending" color="info" />
-                </va-popover>
-                <va-popover
-                  v-if="value === config.upload_status.UPLOAD_FAILED"
-                  message="Failed"
-                >
-                  <va-icon name="error_outline" color="danger" />
-                </va-popover>
-              </span>
-            </template>
+      <!--            <template #cell(uploadStatus)="{ value }">-->
+      <!--              <span class="flex justify-center">-->
+      <!--                <va-popover-->
+      <!--                  v-if="value === config.upload_status.UPLOADED"-->
+      <!--                  message="Succeeded"-->
+      <!--                >-->
+      <!--                  <va-icon name="check_circle_outline" color="success" />-->
+      <!--                </va-popover>-->
+      <!--                <va-popover-->
+      <!--                  v-if="value === config.upload_status.UPLOADING"-->
+      <!--                  message="Uploading"-->
+      <!--                >-->
+      <!--                  <va-icon name="pending" color="info" />-->
+      <!--                </va-popover>-->
+      <!--                <va-popover-->
+      <!--                  v-if="value === config.upload_status.UPLOAD_FAILED"-->
+      <!--                  message="Failed"-->
+      <!--                >-->
+      <!--                  <va-icon name="error_outline" color="danger" />-->
+      <!--                </va-popover>-->
+      <!--              </span>-->
+      <!--            </template>-->
 
-            <template #cell(actions)="{ rowIndex }">
-              <div class="flex gap-1">
-                <va-button
-                  preset="plain"
-                  icon="delete"
-                  color="danger"
-                  @click="removeFile(rowIndex)"
-                  :disabled="submitAttempted"
-                />
-              </div>
-            </template>
-          </va-data-table>
-        </div>
+      <!--            <template #cell(actions)="{ rowIndex }">-->
+      <!--              <div class="flex gap-1">-->
+      <!--                <va-button-->
+      <!--                  preset="plain"-->
+      <!--                  icon="delete"-->
+      <!--                  color="danger"-->
+      <!--                  @click="removeFile(rowIndex)"-->
+      <!--                  :disabled="submitAttempted"-->
+      <!--                />-->
+      <!--              </div>-->
+      <!--            </template>-->
+      <!--          </va-data-table>-->
+      <!--        </div>-->
 
-        <!-- Alert for showing errors encountered during submission -->
-        <va-alert
-          v-if="isSubmissionAlertVisible"
-          class="mt-5"
-          :color="submissionAlertColor"
-          border="left"
-          dense
-          >{{ submissionAlert }}
-        </va-alert>
+      <!--        &lt;!&ndash; Alert for showing errors encountered during submission &ndash;&gt;-->
+      <!--        <va-alert-->
+      <!--          v-if="isSubmissionAlertVisible"-->
+      <!--          class="mt-5"-->
+      <!--          :color="submissionAlertColor"-->
+      <!--          border="left"-->
+      <!--          dense-->
+      <!--          >{{ submissionAlert }}-->
+      <!--        </va-alert>-->
 
-        <!-- Submitted values -->
-        <va-card v-if="submitAttempted" class="mt-5">
-          <va-card-title>
-            <div class="flex flex-nowrap items-center w-full">
-              <span class="text-lg">Details</span>
-            </div>
-          </va-card-title>
-          <va-card-content>
-            <div class="va-table-responsive">
-              <table class="va-table">
-                <tbody>
-                  <tr>
-                    <td>Status</td>
-                    <td>
-                      <va-chip size="small" :color="statusChipColor">
-                        {{ submissionStatus }}
-                      </va-chip>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Data Product Name</td>
-                    <td>{{ datasetName }}</td>
-                  </tr>
-                  <tr>
-                    <td>File Type</td>
-                    <td>
-                      <va-chip outline small class="mr-2">{{
-                        fileType.name
-                      }}</va-chip>
-                      <va-chip outline small>{{ fileType.extension }}</va-chip>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Source Raw Data</td>
-                    <td>
-                      <span>
-                        <router-link
-                          :to="`/datasets/${sourceRawData.id}`"
-                          target="_blank"
-                        >
-                          {{ sourceRawData.name }}
-                        </router-link>
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </va-card-content>
-        </va-card>
-      </template>
+      <!--        &lt;!&ndash; Submitted values &ndash;&gt;-->
+      <!--        <va-card v-if="submitAttempted" class="mt-5">-->
+      <!--          <va-card-title>-->
+      <!--            <div class="flex flex-nowrap items-center w-full">-->
+      <!--              <span class="text-lg">Details</span>-->
+      <!--            </div>-->
+      <!--          </va-card-title>-->
+      <!--          <va-card-content>-->
+      <!--            <div class="va-table-responsive">-->
+      <!--              <table class="va-table">-->
+      <!--                <tbody>-->
+      <!--                  <tr>-->
+      <!--                    <td>Status</td>-->
+      <!--                    <td>-->
+      <!--                      <va-chip size="small" :color="statusChipColor">-->
+      <!--                        {{ submissionStatus }}-->
+      <!--                      </va-chip>-->
+      <!--                    </td>-->
+      <!--                  </tr>-->
+      <!--                  <tr>-->
+      <!--                    <td>Data Product Name</td>-->
+      <!--                    <td>{{ datasetName }}</td>-->
+      <!--                  </tr>-->
+      <!--                  <tr>-->
+      <!--                    <td>File Type</td>-->
+      <!--                    <td>-->
+      <!--                      <va-chip outline small class="mr-2">{{-->
+      <!--                        fileType.name-->
+      <!--                      }}</va-chip>-->
+      <!--                      <va-chip outline small>{{ fileType.extension }}</va-chip>-->
+      <!--                    </td>-->
+      <!--                  </tr>-->
+      <!--                  <tr>-->
+      <!--                    <td>Source Raw Data</td>-->
+      <!--                    <td>-->
+      <!--                      <span>-->
+      <!--                        <router-link-->
+      <!--                          :to="`/datasets/${sourceRawData.id}`"-->
+      <!--                          target="_blank"-->
+      <!--                        >-->
+      <!--                          {{ sourceRawData.name }}-->
+      <!--                        </router-link>-->
+      <!--                      </span>-->
+      <!--                    </td>-->
+      <!--                  </tr>-->
+      <!--                </tbody>-->
+      <!--              </table>-->
+      <!--            </div>-->
+      <!--          </va-card-content>-->
+      <!--        </va-card>-->
+      <!--      </template>-->
 
       <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
@@ -291,7 +290,7 @@ import { storeToRefs } from "pinia";
 const auth = useAuthStore();
 const formStore = useDatasetUploadFormStore();
 
-const { formData } = useForm("dataProductUploadForm");
+const { formData } = useForm("datasetUploadForm");
 watch(formData, () => {
   console.log("formData changed");
   console.log(formData.value);
@@ -379,7 +378,7 @@ const isSubmitEnabled = computed(() => {
 // const {
 //   // reset,
 //   // , validate
-// } = useForm("dataProductUploadForm");
+// } = useForm("datasetUploadForm");
 
 // todo:
 //  update pristine when:
@@ -390,7 +389,9 @@ const isSubmitEnabled = computed(() => {
 const pristine = ref(true);
 
 const { isValid, evaluateErrors } = formStore;
-const { datasetName, fileType, sourceRawData } = storeToRefs(formStore);
+// const { datasetName, fileType, sourceRawData } = storeToRefs(formStore);
+
+const datasetName = ref("");
 
 const isFormValid = (stepIndex, caller) => {
   console.log("isFormValid caller: ", caller);
