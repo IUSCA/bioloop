@@ -25,37 +25,78 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 const dataset_state_check = asyncHandler(async (req, res, next) => {
-  const dataset = await prisma.dataset.findUnique({
-    where: {
-      id: req.params.id,
-    },
-    include: {
-      states: {
-        orderBy: {
-          timestamp: 'desc',
+  let filtered_datasets = [];
+
+  if (req.params.id) {
+    const dataset = await prisma.dataset.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        states: {
+          orderBy: {
+            timestamp: 'desc',
+          },
         },
       },
-    },
-  });
+    });
+    filtered_datasets.push(dataset);
+  } else if (Object.values(req.query).length > 0) {
+    const filter_query = buildQueryObject(req.query);
 
-  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
-  const locked_error = `Dataset is locked and cannot be written to. Current state is ${latest_state}.`;
+    const matching_datasets = await prisma.dataset.findMany({
+      where: { ...filter_query },
+      include: {
+        states: {
+          orderBy: {
+            timestamp: 'desc',
+          },
+        },
+      },
+    });
 
-  if (!dataset.is_deleted) {
-    if (!dataset.is_duplicate) {
-      if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
-        return next(createError.InternalServerError(locked_error));
-      }
-    } else if (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
-        || latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-        || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED) {
-      return next(createError.InternalServerError(locked_error));
-    }
+    filtered_datasets = filtered_datasets.concat(matching_datasets);
+  }
+
+  const locked_datasets = filtered_datasets.filter(
+    (dataset) => is_dataset_locked_for_write(dataset),
+  );
+
+  const errors = [];
+
+  if (locked_datasets.length > 0) {
+    errors.push({
+      error: 'datasets_locked_for_write',
+      details: `${locked_datasets.length === 1 ? 'Dataset is' : 'Some datasets are'} locked and cannot be written to.`,
+      locked_datasets: locked_datasets.map(
+        (dataset) => ({ id: dataset.id, state: dataset.states[0].state }),
+      ),
+    });
+
+    return next(createError(500, JSON.stringify(errors), { expose: true }));
   }
 
   next();
 });
+
+const is_dataset_locked_for_write = (dataset) => {
+  if (!dataset.is_deleted) {
+    const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+
+    if (!dataset.is_duplicate) {
+      if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
+          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
+        return true;
+      }
+    } else {
+      return latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED;
+    }
+  } else {
+    return false;
+  }
+};
 
 const state_write_check = asyncHandler(async (req, res, next) => {
   const dataset = await prisma.dataset.findUnique({
@@ -904,6 +945,34 @@ router.delete(
   }),
 );
 
+// delete - UI
+router.delete(
+  '/',
+  validate([
+    query('is_duplicate').optional().isBoolean().toBoolean(),
+  ]),
+  isPermittedTo('delete'),
+  dataset_state_check,
+  asyncHandler(async (req, res, next) => {
+    const filtered_query = buildQueryObject(req.query);
+
+    const matching_datasets = await prisma.dataset.findMany({
+      where: filtered_query,
+      include: {
+        workflows: true,
+      },
+    });
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const dataset of matching_datasets) {
+      // eslint-disable-next-line no-await-in-loop
+      await datasetService.soft_delete(dataset, req.user?.id);
+    }
+
+    res.send(`${matching_datasets.length}`);
+  }),
+);
+
 const workflow_access_check = (req, res, next) => {
   // The workflows that a user is allowed to run depends on their role
   // allowed_wfs is an object with keys as workflow names and values as true
@@ -1105,10 +1174,10 @@ router.get(
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
 
-      // use url.pathname instead of download_file_path to deal with spaces in the file path
-      // oauth scope cannot contain spaces
+      // use url.pathname instead of download_file_path to deal with spaces in
+      // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
-      
+
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,

@@ -63,6 +63,8 @@ async function soft_delete(dataset, user_id) {
     await create_workflow(dataset, 'delete');
   } else {
     // if not archived, mark the dataset as deleted
+    console.log('soft_delete');
+
     await prisma.dataset.update({
       data: {
         is_deleted: true,
