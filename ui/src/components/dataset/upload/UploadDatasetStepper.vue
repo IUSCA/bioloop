@@ -109,135 +109,135 @@
       <!--      </template>-->
 
       <!-- File upload tool and selected files table -->
-      <!--      <template #step-content-2>-->
-      <!--        <div class="flex-none">-->
-      <!--          <va-file-upload-->
-      <!--            class="w-full"-->
-      <!--            label="File"-->
-      <!--            upload-button-text="Select Files"-->
-      <!--            drop-zone-text="Drop files here"-->
-      <!--            dropzone-->
-      <!--            @file-added="-->
-      <!--              (files) => {-->
-      <!--                setFiles(files);-->
-      <!--                isSubmissionAlertVisible = false;-->
-      <!--              }-->
-      <!--            "-->
-      <!--            :disabled="submitAttempted"-->
-      <!--          />-->
+      <template #step-content-2>
+        <div class="flex-none">
+          <va-file-upload
+            class="w-full"
+            label="File"
+            upload-button-text="Select Files"
+            drop-zone-text="Drop files here"
+            dropzone
+            @file-added="
+              (files) => {
+                setFiles(files);
+                isSubmissionAlertVisible = false;
+              }
+            "
+            :disabled="submitAttempted"
+          />
 
-      <!--          <va-data-table-->
-      <!--            v-if="!(isSubmissionAlertVisible || noFilesSelected)"-->
-      <!--            :items="dataProductFiles"-->
-      <!--            :columns="columns"-->
-      <!--          >-->
-      <!--            <template #cell(progress)="{ value }">-->
-      <!--              <va-progress-circle-->
-      <!--                :model-value="value ? parseInt(value, 10) : 0"-->
-      <!--                size="small"-->
-      <!--              >-->
-      <!--                {{ value && value + "%" }}-->
-      <!--              </va-progress-circle>-->
-      <!--            </template>-->
+          <va-data-table
+            v-if="!(isSubmissionAlertVisible || noFilesSelected)"
+            :items="dataProductFiles"
+            :columns="columns"
+          >
+            <template #cell(progress)="{ value }">
+              <va-progress-circle
+                :model-value="value ? parseInt(value, 10) : 0"
+                size="small"
+              >
+                {{ value && value + "%" }}
+              </va-progress-circle>
+            </template>
 
-      <!--            <template #cell(uploadStatus)="{ value }">-->
-      <!--              <span class="flex justify-center">-->
-      <!--                <va-popover-->
-      <!--                  v-if="value === config.upload_status.UPLOADED"-->
-      <!--                  message="Succeeded"-->
-      <!--                >-->
-      <!--                  <va-icon name="check_circle_outline" color="success" />-->
-      <!--                </va-popover>-->
-      <!--                <va-popover-->
-      <!--                  v-if="value === config.upload_status.UPLOADING"-->
-      <!--                  message="Uploading"-->
-      <!--                >-->
-      <!--                  <va-icon name="pending" color="info" />-->
-      <!--                </va-popover>-->
-      <!--                <va-popover-->
-      <!--                  v-if="value === config.upload_status.UPLOAD_FAILED"-->
-      <!--                  message="Failed"-->
-      <!--                >-->
-      <!--                  <va-icon name="error_outline" color="danger" />-->
-      <!--                </va-popover>-->
-      <!--              </span>-->
-      <!--            </template>-->
+            <template #cell(uploadStatus)="{ value }">
+              <span class="flex justify-center">
+                <va-popover
+                  v-if="value === config.upload_status.UPLOADED"
+                  message="Succeeded"
+                >
+                  <va-icon name="check_circle_outline" color="success" />
+                </va-popover>
+                <va-popover
+                  v-if="value === config.upload_status.UPLOADING"
+                  message="Uploading"
+                >
+                  <va-icon name="pending" color="info" />
+                </va-popover>
+                <va-popover
+                  v-if="value === config.upload_status.UPLOAD_FAILED"
+                  message="Failed"
+                >
+                  <va-icon name="error_outline" color="danger" />
+                </va-popover>
+              </span>
+            </template>
 
-      <!--            <template #cell(actions)="{ rowIndex }">-->
-      <!--              <div class="flex gap-1">-->
-      <!--                <va-button-->
-      <!--                  preset="plain"-->
-      <!--                  icon="delete"-->
-      <!--                  color="danger"-->
-      <!--                  @click="removeFile(rowIndex)"-->
-      <!--                  :disabled="submitAttempted"-->
-      <!--                />-->
-      <!--              </div>-->
-      <!--            </template>-->
-      <!--          </va-data-table>-->
-      <!--        </div>-->
+            <template #cell(actions)="{ rowIndex }">
+              <div class="flex gap-1">
+                <va-button
+                  preset="plain"
+                  icon="delete"
+                  color="danger"
+                  @click="removeFile(rowIndex)"
+                  :disabled="submitAttempted"
+                />
+              </div>
+            </template>
+          </va-data-table>
+        </div>
 
-      <!--        &lt;!&ndash; Alert for showing errors encountered during submission &ndash;&gt;-->
-      <!--        <va-alert-->
-      <!--          v-if="isSubmissionAlertVisible"-->
-      <!--          class="mt-5"-->
-      <!--          :color="submissionAlertColor"-->
-      <!--          border="left"-->
-      <!--          dense-->
-      <!--          >{{ submissionAlert }}-->
-      <!--        </va-alert>-->
+        <!-- Alert for showing errors encountered during submission -->
+        <va-alert
+          v-if="isSubmissionAlertVisible"
+          class="mt-5"
+          :color="submissionAlertColor"
+          border="left"
+          dense
+          >{{ submissionAlert }}
+        </va-alert>
 
-      <!--        &lt;!&ndash; Submitted values &ndash;&gt;-->
-      <!--        <va-card v-if="submitAttempted" class="mt-5">-->
-      <!--          <va-card-title>-->
-      <!--            <div class="flex flex-nowrap items-center w-full">-->
-      <!--              <span class="text-lg">Details</span>-->
-      <!--            </div>-->
-      <!--          </va-card-title>-->
-      <!--          <va-card-content>-->
-      <!--            <div class="va-table-responsive">-->
-      <!--              <table class="va-table">-->
-      <!--                <tbody>-->
-      <!--                  <tr>-->
-      <!--                    <td>Status</td>-->
-      <!--                    <td>-->
-      <!--                      <va-chip size="small" :color="statusChipColor">-->
-      <!--                        {{ submissionStatus }}-->
-      <!--                      </va-chip>-->
-      <!--                    </td>-->
-      <!--                  </tr>-->
-      <!--                  <tr>-->
-      <!--                    <td>Data Product Name</td>-->
-      <!--                    <td>{{ datasetName }}</td>-->
-      <!--                  </tr>-->
-      <!--                  <tr>-->
-      <!--                    <td>File Type</td>-->
-      <!--                    <td>-->
-      <!--                      <va-chip outline small class="mr-2">{{-->
-      <!--                        fileType.name-->
-      <!--                      }}</va-chip>-->
-      <!--                      <va-chip outline small>{{ fileType.extension }}</va-chip>-->
-      <!--                    </td>-->
-      <!--                  </tr>-->
-      <!--                  <tr>-->
-      <!--                    <td>Source Raw Data</td>-->
-      <!--                    <td>-->
-      <!--                      <span>-->
-      <!--                        <router-link-->
-      <!--                          :to="`/datasets/${sourceRawData.id}`"-->
-      <!--                          target="_blank"-->
-      <!--                        >-->
-      <!--                          {{ sourceRawData.name }}-->
-      <!--                        </router-link>-->
-      <!--                      </span>-->
-      <!--                    </td>-->
-      <!--                  </tr>-->
-      <!--                </tbody>-->
-      <!--              </table>-->
-      <!--            </div>-->
-      <!--          </va-card-content>-->
-      <!--        </va-card>-->
-      <!--      </template>-->
+        <!-- Submitted values -->
+        <va-card v-if="submitAttempted" class="mt-5">
+          <va-card-title>
+            <div class="flex flex-nowrap items-center w-full">
+              <span class="text-lg">Details</span>
+            </div>
+          </va-card-title>
+          <va-card-content>
+            <div class="va-table-responsive">
+              <table class="va-table">
+                <tbody>
+                  <tr>
+                    <td>Status</td>
+                    <td>
+                      <va-chip size="small" :color="statusChipColor">
+                        {{ submissionStatus }}
+                      </va-chip>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Data Product Name</td>
+                    <td>{{ datasetName }}</td>
+                  </tr>
+                  <tr>
+                    <td>File Type</td>
+                    <td>
+                      <va-chip outline small class="mr-2">{{
+                        fileType.name
+                      }}</va-chip>
+                      <va-chip outline small>{{ fileType.extension }}</va-chip>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Source Raw Data</td>
+                    <td>
+                      <span>
+                        <router-link
+                          :to="`/datasets/${sourceRawData.id}`"
+                          target="_blank"
+                        >
+                          {{ sourceRawData.name }}
+                        </router-link>
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </va-card-content>
+        </va-card>
+      </template>
 
       <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">

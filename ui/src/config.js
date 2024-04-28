@@ -89,6 +89,14 @@ const exports = {
     OVERWRITTEN: "OVERWRITTEN",
     DELETED: "DELETED",
   },
+  SUBMISSION_STATES: {
+    UNINITIATED: "Uninitiated",
+    PROCESSING: "Processing",
+    PROCESSING_FAILED: "Processing Failed",
+    UPLOADING: "Uploading",
+    UPLOAD_FAILED: "Upload Failed",
+    UPLOADED: "Uploaded",
+  },
 };
 
 export default exports;

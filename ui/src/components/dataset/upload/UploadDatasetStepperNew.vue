@@ -32,83 +32,97 @@
         </div>
       </template>
 
+      <!--      <template #step-content-0>-->
+      <!--        <va-form-field-->
+      <!--          v-model="datasetName"-->
+      <!--          :rules="[-->
+      <!--            (v) => v.length >= 3 || 'Min length is 3 characters',-->
+      <!--            validateNotExists,-->
+      <!--          ]"-->
+      <!--        >-->
+      <!--          <template #default="{ value }">-->
+      <!--            <va-input-->
+      <!--              label="Dataset Name"-->
+      <!--              :placeholder="'Dataset Name'"-->
+      <!--              class="w-full"-->
+      <!--              v-model="value.ref"-->
+      <!--            />-->
+      <!--          </template>-->
+      <!--        </va-form-field>-->
+      <!--      </template>-->
+
+      <!--      <template #step-content-1>-->
+      <!--        <va-form-field-->
+      <!--          v-model="fileTypeSelected"-->
+      <!--          v-slot="{ value: v }"-->
+      <!--          :rules="[-->
+      <!--            (v) => {-->
+      <!--              return (-->
+      <!--                (typeof v?.name === 'string' &&-->
+      <!--                  v?.name?.length > 0 &&-->
+      <!--                  typeof v?.extension === 'string' &&-->
+      <!--                  v?.extension?.length > 0) ||-->
+      <!--                'File Type is required'-->
+      <!--              );-->
+      <!--            },-->
+      <!--          ]"-->
+      <!--        >-->
+      <!--          <FileTypeSelect-->
+      <!--            v-model="v.ref"-->
+      <!--            :allow-create-new="true"-->
+      <!--            :file-type-list="fileTypeList"-->
+      <!--          />-->
+      <!--        </va-form-field>-->
+      <!--      </template>-->
+
+      <!--      <template #step-content-2>-->
+      <!--        <va-form-field-->
+      <!--          v-model="rawDataSelected"-->
+      <!--          v-slot="{ value: v }"-->
+      <!--          :rules="[-->
+      <!--            (v) => {-->
+      <!--              return typeof v.length > 0 || 'Source dataset is required';-->
+      <!--            },-->
+      <!--          ]"-->
+      <!--        >-->
+      <!--          <DatasetSelect-->
+      <!--            :selected-results="v.ref"-->
+      <!--            @select="addDataset"-->
+      <!--            @remove="removeDataset"-->
+      <!--            :column-widths="columnWidths"-->
+      <!--          ></DatasetSelect>-->
+      <!--        </va-form-field>-->
+
+      <!--        <div v-if="isDirty" class="mt-2">-->
+      <!--          <p v-for="error in errorMessages" :key="error">-->
+      <!--            {{ error }}-->
+      <!--          </p>-->
+      <!--        </div>-->
+      <!--      </template>-->
+
       <template #step-content-0>
-        <va-form-field
-          v-model="datasetName"
-          :rules="[
-            (v) => v.length >= 3 || 'Min length is 3 characters',
-            validateNotExists,
-          ]"
-        >
-          <template #default="{ value }">
-            <va-input
-              label="Dataset Name"
-              :placeholder="'Dataset Name'"
-              class="w-full"
-              v-model="value.ref"
-            />
-          </template>
-        </va-form-field>
-      </template>
+        <DatasetFileUploadTable
+          :file-type="fileTypeSelected"
+          :source-raw-data="rawDataSelected[0]"
+          :dataset-name="datasetName"
+          :status-chip-color="statusChipColor"
+          :submission-status="submissionStatus"
+          :is-submission-alert-visible="isSubmissionAlertVisible"
+          :submission-alert="submissionAlert"
+          @file-added="
+            (files) => {
+              console.log('Stepper - files');
+              console.log(files);
 
-      <template #step-content-1>
-        <va-form-field
-          v-model="fileTypeSelected"
-          v-slot="{ value: v }"
-          :rules="[
-            (v) => {
-              return (
-                (typeof v?.name === 'string' &&
-                  v?.name?.length > 0 &&
-                  typeof v?.extension === 'string' &&
-                  v?.extension?.length > 0) ||
-                'File Type is required'
-              );
-            },
-          ]"
-        >
-          <FileTypeSelect
-            v-model="v.ref"
-            :allow-create-new="true"
-            :file-type-list="fileTypeList"
-          />
-        </va-form-field>
-      </template>
-
-      <template #step-content-2>
-        <va-form-field
-          v-model="rawDataSelected"
-          v-slot="{ value: v }"
-          :rules="[
-            (v) => {
-              console.log('v');
-              console.log(v);
-              // console.log('typeof v');
-              // console.log(typeof v);
-              // console.log('v[0]');
-              // console.log(v[0]);
-              // console.log('v[0].name');
-              // console.log(v.length > 0 ? v[0].name : undefined);
-              console.log('v.length');
-              console.log(v.length);
-
-              return typeof v.length > 0 || 'Source dataset is required';
-            },
-          ]"
-        >
-          <DatasetSelect
-            :selected-results="v.ref"
-            @select="addDataset"
-            @remove="removeDataset"
-            :column-widths="columnWidths"
-          ></DatasetSelect>
-        </va-form-field>
-
-        <div v-if="isDirty" class="mt-2">
-          <p v-for="error in errorMessages" :key="error">
-            {{ error }}
-          </p>
-        </div>
+              setFiles(files);
+              isSubmissionAlertVisible = false;
+            }
+          "
+          @remove-file="removeFile"
+          :submit-attempted="submitAttempted"
+          :submission-alert-color="submissionAlertColor"
+          :data-product-files="dataProductFiles"
+        />
       </template>
 
       <!-- custom controls -->
@@ -158,16 +172,19 @@ import { useForm, useBreakpoint } from "vuestic-ui";
 import config from "@/config";
 import { useDatasetUploadFormStore } from "@/stores/datasetUploadForm";
 import { storeToRefs } from "pinia";
+import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
 
 const auth = useAuthStore();
 const breakpoint = useBreakpoint();
 
+const { SUBMISSION_STATES } = config;
+
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
 
-watch(errorMessages, () => {
-  console.log("errorMessages");
-  console.log(errorMessages.value);
-});
+// watch(errorMessages, () => {
+//   console.log("errorMessages");
+//   console.log(errorMessages.value);
+// });
 
 const columnWidths = computed(() => {
   return {
@@ -177,16 +194,6 @@ const columnWidths = computed(() => {
     created_at: "105px",
   };
 });
-
-// const { formData } = useForm("datasetUploadForm");
-const SUBMISSION_STATES = {
-  UNINITIATED: "Uninitiated",
-  PROCESSING: "Processing",
-  PROCESSING_FAILED: "Processing Failed",
-  UPLOADING: "Uploading",
-  UPLOAD_FAILED: "Upload Failed",
-  UPLOADED: "Uploaded",
-};
 
 const steps = [
   { label: "Name", icon: "material-symbols:description-outline" },
@@ -232,6 +239,22 @@ const addDataset = (selectedDatasets) => {
 
 const removeDataset = () => {
   rawDataSelected.value = [];
+};
+
+const setFiles = (files) => {
+  _.range(0, files.length).forEach((i) => {
+    const file = files.item(i);
+    dataProductFiles.value.push({
+      file: file,
+      name: file.name,
+      formattedSize: formatBytes(file.size),
+      progress: undefined,
+    });
+  });
+};
+
+const removeFile = (index) => {
+  dataProductFiles.value.splice(index, 1);
 };
 
 const onNextClick = (nextStep) => {
