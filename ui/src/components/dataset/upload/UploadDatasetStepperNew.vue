@@ -57,15 +57,6 @@
           v-slot="{ value: v }"
           :rules="[
             (v) => {
-              // debugger;
-              // console.log('v');
-              // console.dir(v, { depth: null });
-              //
-              // console.log(`v.name`);
-              // console.log(v?.name);
-              // console.log(`v.extension`);
-              // console.log(v?.extension);
-
               return (
                 (typeof v?.name === 'string' &&
                   v?.name?.length > 0 &&
@@ -73,8 +64,6 @@
                   v?.extension?.length > 0) ||
                 'File Type is required'
               );
-
-              // return v?.length > 2 || 'Min length is 2 characters';
             },
           ]"
         >
@@ -83,25 +72,43 @@
             :allow-create-new="true"
             :file-type-list="fileTypeList"
           />
+        </va-form-field>
+      </template>
 
-          <!--          <va-select-->
-          <!--            v-model="v.ref"-->
-          <!--            label="File Type"-->
-          <!--            placeholder="Select File Type"-->
-          <!--            :options="fileTypeList"-->
-          <!--            :text-by="(option) => option.name"-->
-          <!--            :track-by="(option) => option"-->
-          <!--            clearable-->
-          <!--          ></va-select>-->
+      <template #step-content-2>
+        <va-form-field
+          v-model="rawDataSelected"
+          v-slot="{ value: v }"
+          :rules="[
+            (v) => {
+              console.log('v');
+              console.log(v);
+              // console.log('typeof v');
+              // console.log(typeof v);
+              // console.log('v[0]');
+              // console.log(v[0]);
+              // console.log('v[0].name');
+              // console.log(v.length > 0 ? v[0].name : undefined);
+              console.log('v.length');
+              console.log(v.length);
 
-          <!--          <va-input v-model="v.ref"></va-input>-->
+              return typeof v.length > 0 || 'Source dataset is required';
+            },
+          ]"
+        >
+          <DatasetSelect
+            :selected-results="v.ref"
+            @select="addDataset"
+            @remove="removeDataset"
+            :column-widths="columnWidths"
+          ></DatasetSelect>
         </va-form-field>
 
-        <!--        <div v-if="isDirty" class="mt-2">-->
-        <!--          <p v-for="error in errorMessages" :key="error">-->
-        <!--            {{ error }}-->
-        <!--          </p>-->
-        <!--        </div>-->
+        <div v-if="isDirty" class="mt-2">
+          <p v-for="error in errorMessages" :key="error">
+            {{ error }}
+          </p>
+        </div>
       </template>
 
       <!-- custom controls -->
@@ -147,18 +154,28 @@ import datasetService from "@/services/dataset";
 import uploadService from "@/services/uploads";
 import { useAuthStore } from "@/stores/auth";
 import { formatBytes } from "@/services/utils";
-import { useForm } from "vuestic-ui";
+import { useForm, useBreakpoint } from "vuestic-ui";
 import config from "@/config";
 import { useDatasetUploadFormStore } from "@/stores/datasetUploadForm";
 import { storeToRefs } from "pinia";
 
 const auth = useAuthStore();
+const breakpoint = useBreakpoint();
 
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
 
 watch(errorMessages, () => {
   console.log("errorMessages");
   console.log(errorMessages.value);
+});
+
+const columnWidths = computed(() => {
+  return {
+    name: breakpoint.xs || breakpoint.sm ? "230px" : "190px",
+    type: "130px",
+    size: "100px",
+    created_at: "105px",
+  };
 });
 
 // const { formData } = useForm("datasetUploadForm");
@@ -183,7 +200,7 @@ const datasetName = ref("");
 const fileTypeSelected = ref(null);
 const fileTypeList = ref([]);
 const rawDataList = ref([]);
-const rawDataSelected = ref();
+const rawDataSelected = ref([]);
 const rawDataSelected_search = ref("");
 const uploadLog = ref();
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
@@ -208,6 +225,14 @@ const isSubmitEnabled = computed(() => {
 const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
+
+const addDataset = (selectedDatasets) => {
+  rawDataSelected.value = selectedDatasets;
+};
+
+const removeDataset = () => {
+  rawDataSelected.value = [];
+};
 
 const onNextClick = (nextStep) => {
   console.log("onNextClick", nextStep);
