@@ -8,11 +8,7 @@
     :options="props.fileTypeList"
     :text-by="(option) => option.name"
     :track-by="(option) => option"
-    :rules="props.rules"
-    :messages="nativeValidation ? undefined : props.messages"
-    :success="nativeValidation ? undefined : messageVariant.success"
-    :errror="nativeValidation ? undefined : messageVariant.error"
-    @update:dirty="(newValue) => emit('update:dirty', newValue)"
+    :clearable="props.clearable"
   >
     <template #content="{ value }">
       <va-chip class="mr-2" key="name" size="small">
@@ -23,7 +19,8 @@
       </va-chip>
     </template>
 
-    <template #append>
+    <!--    <div >-->
+    <template #append v-if="props.allowCreateNew">
       <va-popover message="Create New File Type">
         <va-button
           class="ml-3"
@@ -35,6 +32,7 @@
         </va-button>
       </va-popover>
     </template>
+    <!--    </div>-->
   </va-select>
 
   <va-form ref="createNewFileTypeForm">
@@ -98,46 +96,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  rules: {
-    type: Array,
-    required: false,
-  },
-  messages: {
-    type: Array,
-    required: false,
-  },
-  messageVariant: {
-    type: String,
-    required: false,
-  },
-  showError: {
+  allowCreateNew: {
     type: Boolean,
     default: false,
   },
+  clearable: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-const emit = defineEmits([
-  "update:dirty",
-  "update:modelValue",
-  "fileTypeCreated",
-]);
-
-const messageVariant = computed(() => {
-  return {
-    success: props.messageVariant === "success",
-    error: props.messageVariant === "error",
-  };
-});
-
-// const defaultValidationRules = [
-//   (value) => {
-//     return (value && value.name?.length > 0) || "File Type is required";
-//   },
-// ];
-
-const nativeValidation = computed(() => {
-  return (props.rules || []).length > 0;
-});
+const emit = defineEmits(["update:modelValue", "fileTypeCreated"]);
 
 const _modelValue = computed({
   get() {
@@ -178,7 +147,8 @@ const beforeModalCancel = (hide) => {
 };
 
 const beforeModalOk = (hide) => {
-  // force validation to run, which would otherwise only run when a field is interacted with
+  // force validation to run, which would otherwise only run when a field is
+  // interacted with
   validate();
   // if there are form-wide errors, show them
   showFormWideErrors.value = true;

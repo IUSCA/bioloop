@@ -32,28 +32,77 @@
         </div>
       </template>
 
+      <!--      <template #step-content-0>-->
+      <!--        <va-form-field-->
+      <!--          v-model="datasetName"-->
+      <!--          :rules="[-->
+      <!--            (v) => v.length >= 3 || 'Min length is 3 characters',-->
+      <!--            validateNotExists,-->
+      <!--          ]"-->
+      <!--        >-->
+      <!--          <template #default="{ value }">-->
+      <!--            <va-input-->
+      <!--              label="Dataset Name"-->
+      <!--              :placeholder="'Dataset Name'"-->
+      <!--              class="w-full"-->
+      <!--              v-model="value.ref"-->
+      <!--            />-->
+      <!--          </template>-->
+      <!--        </va-form-field>-->
+      <!--      </template>-->
+
       <template #step-content-0>
         <va-form-field
-          v-model="datasetName"
+          v-model="fileTypeSelected"
+          v-slot="{ value: v }"
           :rules="[
-            (v) => v.length >= 3 || 'Min length is 3 characters',
-            validateNotExists,
+            (v) => {
+              debugger;
+              console.log('v');
+              console.dir(v, { depth: null });
+
+              console.log(`v.name`);
+              console.log(v?.name);
+              console.log(`v.extension`);
+              console.log(v?.extension);
+
+              return (
+                (typeof v?.name === 'string' &&
+                  v?.name?.length > 0 &&
+                  typeof v?.extension === 'string' &&
+                  v?.extension?.length > 0) ||
+                'File Type is required'
+              );
+
+              // return v?.length > 2 || 'Min length is 2 characters';
+            },
           ]"
         >
-          <template #default="{ value }">
-            <va-input
-              label="Dataset Name"
-              :placeholder="'Dataset Name'"
-              class="w-full"
-              v-model="value.ref"
-            />
-          </template>
-        </va-form-field>
-      </template>
+          <FileTypeSelect
+            v-model="v.ref"
+            :allow-create-new="true"
+            :file-type-list="fileTypeList"
+          />
 
-      <!--      <template #step-content-1>-->
-      <!--        <va-form-field v-model=""></va-form-field>-->
-      <!--      </template>-->
+          <!--          <va-select-->
+          <!--            v-model="v.ref"-->
+          <!--            label="File Type"-->
+          <!--            placeholder="Select File Type"-->
+          <!--            :options="fileTypeList"-->
+          <!--            :text-by="(option) => option.name"-->
+          <!--            :track-by="(option) => option"-->
+          <!--            clearable-->
+          <!--          ></va-select>-->
+
+          <!--          <va-input v-model="v.ref"></va-input>-->
+        </va-form-field>
+
+        <!--        <div v-if="isDirty" class="mt-2">-->
+        <!--          <p v-for="error in errorMessages" :key="error">-->
+        <!--            {{ error }}-->
+        <!--          </p>-->
+        <!--        </div>-->
+      </template>
 
       <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
@@ -107,6 +156,11 @@ const auth = useAuthStore();
 
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
 
+watch(errorMessages, () => {
+  console.log("errorMessages");
+  console.log(errorMessages.value);
+});
+
 // const { formData } = useForm("datasetUploadForm");
 const SUBMISSION_STATES = {
   UNINITIATED: "Uninitiated",
@@ -127,8 +181,9 @@ const steps = [
 const datasetName = ref("");
 // const dataProductName = ref("");
 const fileTypeSelected = ref(null);
-// const fileTypeList = ref([]);
-// const rawDataSelected = ref();
+const fileTypeList = ref([]);
+const rawDataList = ref([]);
+const rawDataSelected = ref();
 const rawDataSelected_search = ref("");
 const uploadLog = ref();
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
@@ -139,6 +194,7 @@ const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
 const dataProductFiles = ref([]);
 const step = ref(0);
+
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
@@ -190,6 +246,15 @@ const validateNotExists = (value) => {
     }
   });
 };
+
+onMounted(() => {
+  datasetService.getDatasetFileTypes().then((res) => {
+    fileTypeList.value = res.data;
+  });
+  datasetService.getAll({ type: "RAW_DATA" }).then((res) => {
+    rawDataList.value = res.data.datasets;
+  });
+});
 </script>
 
 <style lang="scss">
