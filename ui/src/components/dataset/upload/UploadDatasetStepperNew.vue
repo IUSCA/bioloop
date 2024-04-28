@@ -32,39 +32,39 @@
         </div>
       </template>
 
-      <!--      <template #step-content-0>-->
-      <!--        <va-form-field-->
-      <!--          v-model="datasetName"-->
-      <!--          :rules="[-->
-      <!--            (v) => v.length >= 3 || 'Min length is 3 characters',-->
-      <!--            validateNotExists,-->
-      <!--          ]"-->
-      <!--        >-->
-      <!--          <template #default="{ value }">-->
-      <!--            <va-input-->
-      <!--              label="Dataset Name"-->
-      <!--              :placeholder="'Dataset Name'"-->
-      <!--              class="w-full"-->
-      <!--              v-model="value.ref"-->
-      <!--            />-->
-      <!--          </template>-->
-      <!--        </va-form-field>-->
-      <!--      </template>-->
-
       <template #step-content-0>
+        <va-form-field
+          v-model="datasetName"
+          :rules="[
+            (v) => v.length >= 3 || 'Min length is 3 characters',
+            validateNotExists,
+          ]"
+        >
+          <template #default="{ value }">
+            <va-input
+              label="Dataset Name"
+              :placeholder="'Dataset Name'"
+              class="w-full"
+              v-model="value.ref"
+            />
+          </template>
+        </va-form-field>
+      </template>
+
+      <template #step-content-1>
         <va-form-field
           v-model="fileTypeSelected"
           v-slot="{ value: v }"
           :rules="[
             (v) => {
-              debugger;
-              console.log('v');
-              console.dir(v, { depth: null });
-
-              console.log(`v.name`);
-              console.log(v?.name);
-              console.log(`v.extension`);
-              console.log(v?.extension);
+              // debugger;
+              // console.log('v');
+              // console.dir(v, { depth: null });
+              //
+              // console.log(`v.name`);
+              // console.log(v?.name);
+              // console.log(`v.extension`);
+              // console.log(v?.extension);
 
               return (
                 (typeof v?.name === 'string' &&
