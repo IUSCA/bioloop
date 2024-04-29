@@ -2,163 +2,163 @@
   <!-- todo
       disable submission/moving to next step when return pressed
  -->
-  <va-form ref="datasetUploadForm" class="h-full">
-    <va-stepper
-      v-model="step"
-      :steps="steps"
-      controlsHidden
-      class="h-full create-data-product-stepper"
-    >
-      <!-- Step icons and labels -->
-      <template
-        v-for="(step, i) in steps"
-        :key="step.label"
-        #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
+  <va-inner-loading :loading="loading">
+    <va-form ref="datasetUploadForm" class="h-full">
+      <va-stepper
+        v-model="step"
+        :steps="steps"
+        controlsHidden
+        class="h-full create-data-product-stepper"
       >
-        <div
-          class="step-button p-1 sm:p-3 cursor-pointer"
-          :class="{
-            'step-button--active': isActive,
-            'step-button--completed': isCompleted,
-          }"
-          role="button"
-          tabindex="0"
-          @click="setStep(i)"
+        <!-- Step icons and labels -->
+        <template
+          v-for="(step, i) in steps"
+          :key="step.label"
+          #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
         >
-          <div class="flex flex-col items-center">
-            <Icon :icon="step.icon" />
-            <span class="hidden sm:block"> {{ step.label }} </span>
-          </div>
-        </div>
-      </template>
+          <button
+            class="step-button p-1 sm:p-3 cursor-pointer"
+            :class="{
+              'step-button--active': isActive,
+              'step-button--completed': isCompleted,
+            }"
+            @click="setStep(i)"
+          >
+            <div class="flex flex-col items-center">
+              <Icon :icon="step.icon" />
+              <span class="hidden sm:block"> {{ step.label }} </span>
+            </div>
+          </button>
+        </template>
 
-      <template #step-content-0>
-        <va-form-field
-          v-model="datasetName"
-          :rules="[
-            (v) => v.length >= 3 || 'Min length is 3 characters',
-            validateNotExists,
-          ]"
-        >
-          <template #default="{ value }">
-            <va-input
-              label="Dataset Name"
-              :placeholder="'Dataset Name'"
-              class="w-full"
-              v-model="value.ref"
+        <template #step-content-0>
+          <va-form-field
+            v-model="datasetName"
+            :rules="[
+              (v) => v.length >= 3 || 'Min length is 3 characters',
+              validateNotExists,
+            ]"
+          >
+            <template #default="{ value }">
+              <va-input
+                label="Dataset Name"
+                :placeholder="'Dataset Name'"
+                class="w-full"
+                v-model="value.ref"
+              />
+            </template>
+          </va-form-field>
+        </template>
+
+        <template #step-content-1>
+          <va-form-field
+            v-model="fileTypeSelected"
+            v-slot="{ value: v }"
+            :rules="[
+              (v) => {
+                return (
+                  (typeof v?.name === 'string' &&
+                    v?.name?.length > 0 &&
+                    typeof v?.extension === 'string' &&
+                    v?.extension?.length > 0) ||
+                  'File Type is required'
+                );
+              },
+            ]"
+          >
+            <FileTypeSelect
+              v-model="v.ref"
+              :allow-create-new="true"
+              :file-type-list="fileTypeList"
             />
-          </template>
-        </va-form-field>
-      </template>
+          </va-form-field>
+        </template>
 
-      <template #step-content-1>
-        <va-form-field
-          v-model="fileTypeSelected"
-          v-slot="{ value: v }"
-          :rules="[
-            (v) => {
-              return (
-                (typeof v?.name === 'string' &&
-                  v?.name?.length > 0 &&
-                  typeof v?.extension === 'string' &&
-                  v?.extension?.length > 0) ||
-                'File Type is required'
-              );
-            },
-          ]"
-        >
-          <FileTypeSelect
-            v-model="v.ref"
-            :allow-create-new="true"
-            :file-type-list="fileTypeList"
-          />
-        </va-form-field>
-      </template>
+        <template #step-content-2>
+          <va-form-field
+            v-model="rawDataSelected"
+            v-slot="{ value: v }"
+            :rules="[
+              (v) => {
+                return typeof v.length > 0 || 'Source dataset is required';
+              },
+            ]"
+          >
+            <DatasetSelect
+              :selected-results="v.ref"
+              @select="addDataset"
+              @remove="removeDataset"
+              :column-widths="columnWidths"
+            ></DatasetSelect>
+          </va-form-field>
 
-      <template #step-content-2>
-        <va-form-field
-          v-model="rawDataSelected"
-          v-slot="{ value: v }"
-          :rules="[
-            (v) => {
-              return typeof v.length > 0 || 'Source dataset is required';
-            },
-          ]"
-        >
-          <DatasetSelect
-            :selected-results="v.ref"
-            @select="addDataset"
-            @remove="removeDataset"
-            :column-widths="columnWidths"
-          ></DatasetSelect>
-        </va-form-field>
+          <div v-if="isDirty" class="mt-2">
+            <p v-for="error in errorMessages" :key="error">
+              {{ error }}
+            </p>
+          </div>
+        </template>
 
-        <div v-if="isDirty" class="mt-2">
-          <p v-for="error in errorMessages" :key="error">
-            {{ error }}
-          </p>
-        </div>
-      </template>
+        <template #step-content-3>
+          <DatasetFileUploadTable
+            :file-type="fileTypeSelected"
+            :source-raw-data="rawDataSelected[0]"
+            :dataset-name="datasetName"
+            :status-chip-color="statusChipColor"
+            :submission-status="submissionStatus"
+            :is-submission-alert-visible="isSubmissionAlertVisible"
+            :submission-alert="submissionAlert"
+            @file-added="
+              (files) => {
+                console.log('Stepper - files');
+                console.log(files);
 
-      <template #step-content-3>
-        <DatasetFileUploadTable
-          :file-type="fileTypeSelected"
-          :source-raw-data="rawDataSelected[0]"
-          :dataset-name="datasetName"
-          :status-chip-color="statusChipColor"
-          :submission-status="submissionStatus"
-          :is-submission-alert-visible="isSubmissionAlertVisible"
-          :submission-alert="submissionAlert"
-          @file-added="
-            (files) => {
-              console.log('Stepper - files');
-              console.log(files);
-
-              setFiles(files);
-              isSubmissionAlertVisible = false;
-            }
-          "
-          @remove-file="removeFile"
-          :submit-attempted="submitAttempted"
-          :submission-alert-color="submissionAlertColor"
-          :data-product-files="dataProductFiles"
-        />
-      </template>
-
-      <!-- custom controls -->
-      <template #controls="{ nextStep, prevStep }">
-        <div class="flex items-center justify-around w-full">
-          <va-button
-            class="flex-none"
-            preset="primary"
-            @click="
-              () => {
+                setFiles(files);
                 isSubmissionAlertVisible = false;
-                prevStep();
               }
             "
-            :disabled="step === 0 || submitAttempted"
-          >
-            Previous
-          </va-button>
-          <va-button
-            class="flex-none"
-            @click="onNextClick(nextStep)"
-            :color="isLastStep ? 'success' : 'primary'"
-            :disabled="!isSubmitEnabled"
-          >
-            {{
-              isLastStep
-                ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
-                  ? "Retry Uploading Failed Files"
-                  : "Upload Files"
-                : "Next"
-            }}
-          </va-button>
-        </div>
-      </template>
-    </va-stepper>
-  </va-form>
+            @remove-file="removeFile"
+            :submit-attempted="submitAttempted"
+            :submission-alert-color="submissionAlertColor"
+            :data-product-files="dataProductFiles"
+          />
+        </template>
+
+        <!-- custom controls -->
+        <template #controls="{ nextStep, prevStep }">
+          <div class="flex items-center justify-around w-full">
+            <va-button
+              class="flex-none"
+              preset="primary"
+              @click="
+                () => {
+                  isSubmissionAlertVisible = false;
+                  prevStep();
+                }
+              "
+              :disabled="step === 0 || submitAttempted"
+            >
+              Previous
+            </va-button>
+            <va-button
+              class="flex-none"
+              @click="onNextClick(nextStep)"
+              :color="isLastStep ? 'success' : 'primary'"
+              :disabled="!isSubmitEnabled"
+            >
+              {{
+                isLastStep
+                  ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
+                    ? "Retry Uploading Failed Files"
+                    : "Upload Files"
+                  : "Next"
+              }}
+            </va-button>
+          </div>
+        </template>
+      </va-stepper>
+    </va-form>
+  </va-inner-loading>
 </template>
 
 <script setup>
@@ -181,11 +181,6 @@ const breakpoint = useBreakpoint();
 const { SUBMISSION_STATES } = config;
 
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
-
-// watch(errorMessages, () => {
-//   console.log("errorMessages");
-//   console.log(errorMessages.value);
-// });
 
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -307,13 +302,6 @@ onMounted(() => {
     .finally(() => {
       loading.value = false;
     });
-
-  // datasetService.getDatasetFileTypes().then((res) => {
-  //   fileTypeList.value = res.data;
-  // });
-  // datasetService.getAll({ type: "RAW_DATA" }).then((res) => {
-  //   rawDataList.value = res.data.datasets;
-  // });
 });
 
 const evaluateFileChecksums = (file) => {
