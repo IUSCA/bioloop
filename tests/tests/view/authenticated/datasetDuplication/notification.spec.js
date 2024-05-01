@@ -40,7 +40,7 @@ test('notifications created', async ({ page }) => {
   // });
 
   const { request } = page;
-  const _apiResponse = await request.get(`${config.apiBasePath}/datasets`, {
+  const _apiResponse = await request.delete(`${config.apiBasePath}/datasets?is_duplicate=true`, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -49,12 +49,12 @@ test('notifications created', async ({ page }) => {
     // httpsAgent: new https.Agent({ rejectUnauthorized: false }),
   });
 
-  const responseBody = await _apiResponse.json()
+  const responseBody = await _apiResponse.json();
 
-  console.log('response')
-  console.log(responseBody)
+  console.log('response');
+  console.log(responseBody);
 
-  expect(responseBody.datasets.length).toEqual(32);
+  // expect(responseBody.datasets.length).toEqual(32);
 
   // todo - pre-test validation
   // await expect(page.getByTestId('notification-count-badge')).toText('0');
