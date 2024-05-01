@@ -965,8 +965,10 @@ router.delete(
 
     // eslint-disable-next-line no-restricted-syntax
     for (const dataset of matching_datasets) {
-      // eslint-disable-next-line no-await-in-loop
-      await datasetService.soft_delete(dataset, req.user?.id);
+      if (!dataset.is_deleted) {
+        // eslint-disable-next-line no-await-in-loop
+        await datasetService.soft_delete(dataset, req.user?.id);
+      }
     }
 
     res.send(`${matching_datasets.length}`);
