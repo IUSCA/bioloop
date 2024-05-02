@@ -1,0 +1,16 @@
+{
+  "baseURL": "https://localhost",
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": ""
+      },
+      "operator": {
+        "username": ""
+      },
+      "user": {
+        "username": ""
+      }
+    }
+  }
+}

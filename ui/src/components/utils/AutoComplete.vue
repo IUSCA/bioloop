@@ -24,15 +24,15 @@
         >
           Showing {{ search_results.length }} of {{ data.length }} results
         </li>
-        <li
-          v-for="(item, idx) in search_results"
-          :key="idx"
-          class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded"
-          @click="handleSelect(item)"
-        >
-          <slot name="filtered" :item="item">
-            {{ item[props.displayBy] }}
-          </slot>
+        <li v-for="(item, idx) in search_results" :key="idx">
+          <button
+            class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded w-full text-left"
+            @click="handleSelect(item)"
+          >
+            <slot name="filtered" :item="item">
+              {{ item[props.displayBy] }}
+            </slot>
+          </button>
         </li>
         <li v-if="search_results.length == 0" class="py-2 px-3">
           <span

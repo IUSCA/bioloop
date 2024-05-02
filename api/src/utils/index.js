@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const _ = require('lodash/fp');
 
 function renameKey(oldKey, newKey) {
@@ -203,6 +205,32 @@ function decodeJWT(token) {
   return JSON.parse(Buffer.from(payload, 'base64').toString());
 }
 
+function readUsersFromJSON(fname) {
+  try {
+    const fpath = path.join(global.__basedir, fname);
+
+    // check if file exists
+    const exists = fs.existsSync(fpath, fs.constants.F_OK);
+
+    // read from file
+    if (exists) {
+      const users_read = JSON.parse(fs.readFileSync(fpath, 'utf8'));
+
+      // validate users_read is an array
+      if (Array.isArray(users_read)) {
+        return users_read;
+      }
+      // eslint-disable-next-line no-console
+      console.log(`${fpath} is not an array. Skipping.`);
+    }
+    return [];
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.log(`Unable to read users from file ${fname}. Skipping.`, e);
+    return [];
+  }
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -213,4 +241,5 @@ module.exports = {
   groupByAndAggregate,
   numericStringsToNumbers,
   decodeJWT,
+  readUsersFromJSON,
 };

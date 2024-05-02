@@ -7,6 +7,7 @@
     "auth_token": "WORKFLOW_AUTH_TOKEN"
   },
   "oauth": {
+    "base_url": "OAUTH_BASE_URL",
     "download": {
       "client_id": "OAUTH_DOWNLOAD_CLIENT_ID",
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
@@ -20,6 +21,22 @@
     "cilogon": {
       "client_id": "CILOGON_OAUTH_CLIENT_ID",
       "client_secret": "CILOGON_OAUTH_CLIENT_SECRET"
+    }
+  },
+  "download_server": {
+    "base_url": "DOWNLOAD_SERVER_BASE_URL"
+  },
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": "E2E_ADMIN"
+      },
+      "operator": {
+        "username": "E2E_OPERATOR"
+      },
+      "user": {
+        "username": "E2E_USER"
+      }
     }
   }
 }

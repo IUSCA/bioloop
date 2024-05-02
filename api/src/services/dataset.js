@@ -129,6 +129,7 @@ async function get_dataset({
   last_task_run = false,
   prev_task_runs = false,
   only_active = false,
+  bundle = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -149,6 +150,7 @@ async function get_dataset({
       ...INCLUDE_WORKFLOWS,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
+      bundle,
       source_datasets: true,
       derived_datasets: true,
     },
@@ -485,7 +487,6 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
-
   create_filetree,
   has_dataset_assoc,
   files_ls,

@@ -5,10 +5,7 @@
         class="w-full"
         label="Name"
         v-model="name"
-        :rules="[
-          (value) => (value && value.length > 0) || 'Name is required',
-          (value) => (value && value.length > 5) || 'Name is too short',
-        ]"
+        :rules="[(value) => (value && value.length > 0) || 'Name is required']"
       />
 
       <!-- <span class="flex-none va-text-secondary pl-2 text-sm mt-[-0.5rem] mb-2">

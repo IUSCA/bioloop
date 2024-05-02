@@ -12,9 +12,11 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     sda_path = dataset['archive_path']
     sda.delete(sda_path)
+    # id is appended to name to make it unique (database constraint) to allow new datasets to have this same name
     update_data = {
         'archive_path': None,
-        'is_deleted': True
+        'is_deleted': True,
+        'name': f"{dataset['name']}-{dataset['id']}"
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='DELETED')

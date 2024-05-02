@@ -31,7 +31,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of all files will use
-                {{ formatBytes(dataset.du_size) }} of bandwidth
+                {{ formatBytes(props.dataset.du_size) }} of bandwidth
               </span>
             </va-list-item-label>
 
@@ -42,7 +42,7 @@
 
           <!-- Action icon -->
           <va-list-item-section class="flex-none">
-            <a target="_blank" :href="downloadURL">
+            <a target="_blank" :href="downloadURL" aria-label="Download">
               <va-button
                 preset="secondary"
                 icon="open_in_new"
@@ -55,7 +55,7 @@
         </va-list-item>
 
         <!-- Direct Download -->
-        <va-list-item>
+        <va-list-item v-if="props.dataset?.metadata?.bundle_alias">
           <!-- icon -->
           <va-list-item-section avatar>
             <i-mdi:folder-zip-outline class="text-2xl" />
@@ -67,7 +67,8 @@
               <span class="text-lg">Download Archive</span>
               <span class="px-1"> - </span>
               <span class="">
-                Size: {{ formatBytes(dataset.bundle_size) }}
+                Transfer of file will use
+                {{ formatBytes(props.dataset.bundle.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>
@@ -132,11 +133,11 @@
 </template>
 
 <script setup>
-import statisticsService from "@/services/statistics";
-import datasetService from "@/services/dataset";
 import config from "@/config";
-import { formatBytes, downloadFile } from "@/services/utils";
-import { useToastStore } from "@/stores/toast";
+import datasetService from "@/services/dataset";
+import statisticsService from "@/services/statistics";
+import toast from "@/services/toast";
+import { downloadFile, formatBytes } from "@/services/utils";
 
 const props = defineProps({
   dataset: {
@@ -151,8 +152,6 @@ defineExpose({
   show,
   hide,
 });
-
-const toast = useToastStore();
 
 const downloadURL = computed(() => {
   return `${window.location.origin}/datasets/${props.dataset?.id}/filebrowser`;

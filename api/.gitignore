@@ -21,6 +21,9 @@ pids
 .node_repl_history
 .pnpm-store
 
+# MacOS metadata file
+.DS_store
+
 # keys
 keys/*.pub
 keys/*.key
@@ -34,3 +37,8 @@ reports
 
 test.js
 src/test.js
+coverage
+
+admins.json
+operators.json
+users.json

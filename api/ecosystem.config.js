@@ -5,5 +5,5 @@ module.exports = [{
   instances: 2,
   exp_backoff_restart_delay: 100,
   max_restarts: 3,
-  watch: true,
+  watch: false,
 }];

@@ -10,7 +10,7 @@
             <va-card-title>
               <!-- <span class="text-xl">Info</span> -->
               <div class="flex flex-nowrap items-center w-full">
-                <span class="text-lg"> Info </span>
+                <span class="flex-auto text-lg"> Info </span>
                 <AddEditButton
                   class="flex-none"
                   edit
@@ -72,7 +72,7 @@
               </va-card-title>
               <va-card-content>
                 <div class="">
-                  <CopyText :text="DatasetService.get_staged_path(dataset)" />
+                  <CopyText :text="dataset.staged_path" />
                 </div>
               </va-card-content>
             </va-card>
@@ -118,7 +118,7 @@
                     class="flex-initial"
                     @click="stage_modal = true"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" />
+                    <i-mdi-cloud-sync class="pr-2 text-2xl" />
                     Stage Files
                   </va-button>
 
@@ -135,6 +135,17 @@
                     <i-mdi-delete class="pr-2 text-2xl" />
                     Delete Archive
                   </va-button>
+
+                  <va-button
+                    :disabled="!dataset.is_staged"
+                    class="flex-initial"
+                    color="primary"
+                    border-color="primary"
+                    preset="secondary"
+                    @click="openModalToDownloadDataset"
+                  >
+                    <i-mdi-download class="pr-2 text-2xl" /> Download
+                  </va-button>
                 </div>
               </va-card-content>
             </va-card>
@@ -144,6 +155,7 @@
           <va-modal
             :model-value="stage_modal"
             message="Stage all files in this dataset from the SDA?"
+            size="small"
             @ok="stage_dataset"
             @cancel="stage_modal = !stage_modal"
           />
@@ -151,7 +163,6 @@
           <!-- delete archive modal -->
           <va-modal
             :model-value="delete_archive_modal.visible"
-            max-width="480px"
             blur
             hide-default-actions
           >
@@ -289,6 +300,8 @@
         </div>
       </div>
     </div>
+    <!-- Download Modal -->
+    <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
   </va-inner-loading>
 
   <EditDatasetModal
@@ -300,12 +313,11 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
-import workflowService from "@/services/workflow";
 import config from "@/config";
+import DatasetService from "@/services/dataset";
+import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
-import { useToastStore } from "@/stores/toast";
-const toast = useToastStore();
+import workflowService from "@/services/workflow";
 const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
@@ -341,7 +353,7 @@ const polling_interval = computed(() => {
 
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  DatasetService.getById({ id: props.datasetId })
+  DatasetService.getById({ id: props.datasetId, bundle: true })
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
@@ -365,7 +377,7 @@ function fetch_dataset(show_loading = false) {
       console.error(err);
       if (err?.response?.status == 404)
         toast.error("Could not find the dataset");
-      else toast.error("Something went wrong. Could not fetch datatset");
+      else toast.error("Could not fetch datatset");
     })
     .finally(() => {
       loading.value = false;
@@ -452,6 +464,11 @@ function navigateToFileBrowser() {
   } else {
     router.push(`/datasets/${props.datasetId}/filebrowser`);
   }
+}
+
+const downloadModal = ref(null);
+function openModalToDownloadDataset() {
+  downloadModal.value.show();
 }
 </script>
 

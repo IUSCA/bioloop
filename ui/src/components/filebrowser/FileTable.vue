@@ -30,8 +30,8 @@
       </div>
 
       <!-- file -->
-      <div
-        class="flex items-center gap-1"
+      <button
+        class="flex items-center gap-1 text-left"
         :class="{ 'cursor-pointer': showDownload }"
         v-else
         @click="showDownload ? initiate_file_download(rowData) : () => {}"
@@ -39,17 +39,20 @@
         <FileTypeIcon :filename="rowData.name" />
 
         <span> {{ rowData.name }} </span>
+      </button>
+    </template>
 
-        <!-- donwload button -->
-        <va-button
-          class="flex-none"
-          preset="plain"
-          color="primary"
-          icon="download"
-          v-if="showDownload"
-        >
-        </va-button>
-      </div>
+    <template #cell(download)="{ rowData }">
+      <!-- donwload button -->
+      <va-button
+        class="flex-none"
+        preset="plain"
+        color="primary"
+        icon="download"
+        v-if="showDownload && rowData.filetype !== 'directory'"
+        @click="showDownload ? initiate_file_download(rowData) : () => {}"
+      >
+      </va-button>
     </template>
 
     <!-- <template #cell(lastModified)="{ source }">
@@ -81,12 +84,11 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
-import { formatBytes, downloadFile, cmp } from "@/services/utils";
+import toast from "@/services/toast";
+import { cmp, downloadFile, formatBytes } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
-import { useToastStore } from "@/stores/toast";
 
 const store = useFileBrowserStore();
-const toast = useToastStore();
 
 const props = defineProps({
   datasetId: {
@@ -105,8 +107,21 @@ const props = defineProps({
 const columns = computed(() => {
   if (store.isInSearchMode) {
     return [
-      { key: "typeSortableName", label: "name" },
-      { key: "path", label: "Location", width: "300px" },
+      {
+        key: "typeSortableName",
+        label: "name",
+        tdStyle:
+          "min-width: 300px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+      },
+      { key: "download", label: "DL", width: "30px", tdAlign: "left" },
+      {
+        key: "path",
+        label: "Location",
+        width: "300px",
+        tdStyle:
+          "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+        tdAlign: "center",
+      },
       { key: "size", width: "100px" },
       { key: "md5", width: "250px", label: "MD5 Checksum" },
     ];
@@ -117,7 +132,10 @@ const columns = computed(() => {
         label: "name",
         sortable: true,
         sortingFn: nameSortingFn,
+        tdStyle:
+          "min-width: 300px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
       },
+      { key: "download", label: "DL", width: "30px", tdAlign: "left" },
       // { key: "lastModified", label: "Last Modified", sortable: true },
       {
         key: "size",

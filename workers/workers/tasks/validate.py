@@ -9,7 +9,6 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 from workers import exceptions as exc
-from workers.dataset import compute_staging_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -33,7 +32,8 @@ def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: li
 
 def validate_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, files=True)
-    staged_path, _ = compute_staging_path(dataset)
+    staged_path = Path(dataset['staged_path'])
+
     validation_errors = check_files(celery_task=celery_task,
                                     dataset_dir=staged_path,
                                     files_metadata=dataset['files'])

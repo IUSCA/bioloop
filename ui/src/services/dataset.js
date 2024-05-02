@@ -1,25 +1,23 @@
-import api from "./api";
 import config from "@/config";
-import { useToastStore } from "@/stores/toast";
-
-const toast = useToastStore();
+import toast from "@/services/toast";
+import api from "./api";
 
 class DatasetService {
   /**
    *
-   * @param deleted   Boolean field to filter datasets by `is_deleted` field
-   * @param processed Field to filter datasets by number of associated workflows. Can be one of
-   *                  'some' or 'none'
-   * @param archived  Boolean field to filter datasets by the presence/absence of `archive_path`
-   *                  field
-   * @param staged    Boolean field to filter datasets by `is_deleted` field
-   * @param type      Field to filter datasets by `type`. One of 'RAW_DATA' or 'DATA_PRODUCT'
-   * @param name      Field to filter datasets by `name`
-   * @param limit     The number of datasets to be retrieved
-   * @param offset    Database offset starting at which results will be retrieved
-   * @param sortBy    Object containing property to sort datasets by, whose key is the name
-   *                  of said property, and value is one of 'asc' or 'desc'
-   * @returns         Object containing matching datasets, and count of matching datasets
+   * @param deleted    Boolean field to filter datasets by `is_deleted` field
+   * @param processed  Field to filter datasets by number of associated workflows. Can be one of
+   *                   'some' or 'none'
+   * @param archived   Boolean field to filter datasets by the presence/absence of `archive_path`
+   *                   field
+   * @param staged     Boolean field to filter datasets by `is_deleted` field
+   * @param type       Field to filter datasets by `type`. One of 'RAW_DATA' or 'DATA_PRODUCT'
+   * @param name       Field to filter datasets by `name`
+   * @param limit      The number of datasets to be retrieved
+   * @param offset     Database offset starting at which results will be retrieved
+   * @param sortBy     Object containing property to sort datasets by, whose key is the name
+   *                   of said property, and value is one of 'asc' or 'desc'
+   * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll({
     deleted = null,
@@ -54,6 +52,7 @@ class DatasetService {
     last_task_run = false,
     prev_task_runs = false,
     only_active = false,
+    bundle = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -62,6 +61,7 @@ class DatasetService {
         last_task_run,
         prev_task_runs,
         only_active,
+        bundle,
       },
     });
   }
@@ -97,20 +97,6 @@ class DatasetService {
         type,
       },
     });
-  }
-
-  // is_staged(states) {
-  //   return (
-  //     (states || []).filter((s) => (s?.state || "").toLowerCase() == "staged")
-  //       .length > 0
-  //   );
-  // }
-
-  get_staged_path(dataset) {
-    if (dataset?.metadata?.stage_alias) {
-      const dataset_type = dataset.type;
-      return `${config.paths.stage[dataset_type]}/${dataset.metadata.stage_alias}/${dataset.name}`;
-    }
   }
 
   update({ id, updated_data }) {

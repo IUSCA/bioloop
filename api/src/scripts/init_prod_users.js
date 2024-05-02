@@ -1,4 +1,9 @@
+/* eslint-disable no-console */
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
+const { readUsersFromJSON } = require('../utils');
+
+global.__basedir = path.join(__dirname, '..', '..');
 
 const prisma = new PrismaClient();
 
@@ -43,40 +48,57 @@ async function main() {
   console.log(`created ${roles.length} roles`);
 
   // Create default admins
-  const admins = [
+  const _admins = [
     {
-      name: 'Charles Brandt',
-      username: 'ccbrandt',
-    }, {
-      name: 'Deepak Duggirala',
-      username: 'deduggi',
-    }, {
-      name: 'Ray Perigo',
-      username: 'rperigo',
-    }, {
       name: 'svc_tasks',
       username: 'svc_tasks',
+      email: 'svc_tasks@iu.edu',
     },
   ];
 
-  const admin_promises = admins.map((admin) => prisma.user.upsert({
-    where: { email: `${admin.username}@iu.edu` },
-    update: {},
-    create: {
-      username: admin.username,
-      email: `${admin.username}@iu.edu`,
-      cas_id: admin.username,
-      name: admin.name,
+  const additional_admins = readUsersFromJSON('admins.json');
+
+  const admins = _admins
+    .concat(additional_admins)
+    .map((user) => ({
+      ...user,
+      cas_id: user.username,
       user_role: {
         create: [{ role_id: 1 }],
       },
+    }));
+
+  const users_read = readUsersFromJSON('users.json');
+  const users = users_read.map((user) => ({
+    ...user,
+    cas_id: user.username,
+    user_role: {
+      create: [{ role_id: 3 }],
+    },
+  }));
+  const operators_read = readUsersFromJSON('operators.json');
+  const operators = operators_read.map((user) => ({
+    ...user,
+    cas_id: user.username,
+    user_role: {
+      create: [{ role_id: 2 }],
     },
   }));
 
-  await Promise.all(admin_promises);
+  const promises = admins
+    .concat(operators)
+    .concat(users)
+    .map((user) => prisma.user.upsert({
+      where: { email: user.email },
+      update: {},
+      create: user,
+    }));
 
-  // eslint-disable-next-line no-console
-  console.log(`created ${admins.length} admin users`);
+  await Promise.all(promises);
+
+  console.log(`created ${admins.length} adminstrators`);
+  console.log(`created ${operators.length} operators`);
+  console.log(`created ${users.length} users`);
 
   const tables = ['user', 'role'];
   await Promise.all(tables.map(update_seq));

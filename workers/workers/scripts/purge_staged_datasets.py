@@ -4,7 +4,7 @@ from pathlib import Path
 
 import workers.api as api
 from workers.config import config
-from workers.dataset import compute_staging_path
+from workers.dataset import get_bundle_staged_path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ MAX_PURGES = config['stage']['purge']['max_purges']
 
 
 def main():
-    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'])
+    datasets = api.get_all_datasets(days_since_last_staged=config['stage']['purge']['days_to_live'], bundle=True)
 
     if len(datasets) > MAX_PURGES:
         logger.warning(
@@ -22,23 +22,24 @@ def main():
             f"Only the first {MAX_PURGES} staged datasets will be purged")
 
     update_data = {
-        'is_staged': False
+        'is_staged': False,
+        'staged_path': None
     }
     for dataset in datasets[:MAX_PURGES]:
         try:
-            staged_dataset_path, alias = compute_staging_path(dataset)
-            scratch_tar_path = Path(f'{str(staged_dataset_path.parent)}/{dataset["name"]}.tar') # staged_dataset_path.parent = the alias sub-directory
+            staged_path = Path(dataset['staged_path'])
+            bundle_path = Path(get_bundle_staged_path(dataset=dataset))
 
-            if staged_dataset_path.exists():
-                shutil.rmtree(staged_dataset_path)
-            if scratch_tar_path.exists():
-                scratch_tar_path.unlink()
+            if staged_path.exists():
+                shutil.rmtree(staged_path)
+            if bundle_path.exists():
+                bundle_path.unlink()
 
             api.update_dataset(dataset_id=dataset['id'], update_data=update_data)
             api.add_state_to_dataset(dataset_id=dataset['id'], state='PURGED')
 
             logger.info(
-                f'Purged staged dataset id:{dataset["id"]} name:{dataset["name"]} staged_path:{staged_dataset_path}')
+                f'Purged staged dataset id:{dataset["id"]} name:{dataset["name"]} staged_path:{staged_path}')
 
         except Exception as e:
             logger.error(f'Error purging staged dataset #{dataset["id"]} {dataset["name"]}', exc_info=e)

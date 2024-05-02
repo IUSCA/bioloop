@@ -1,23 +1,23 @@
 <template>
-  <div class="flex justify-center">
-    <div class="max-w-md">
-      <va-card class="mt-10 lg:mt-20">
-        <va-card-content>
-          <div class="flex justify-center opacity-90">
-            <div class="flex flex-col gap-2 items-center">
-              <AppIcon size="3rem" />
-              <AppTitle />
-            </div>
-          </div>
-          <div class="text-center mt-8 text-xl">
-            <span>You have been logged out of the application.</span>
-          </div>
-          <div class="text-center mt-4">
-            <va-button to="/auth">Log In</va-button>
-          </div>
-        </va-card-content>
-      </va-card>
-    </div>
+  <div
+    class="min-h-screen flex flex-col items-center justify-center bg-gray-300 dark:bg-gray-600"
+  >
+    <va-card class="w-full max-w-md">
+      <va-card-content class="px-9">
+        <div class="flex flex-col gap-2 items-center justify-center opacity-90">
+          <env-alert class="w-full" icon="warning" />
+
+          <AppIcon size="3rem" />
+          <AppTitle />
+        </div>
+        <div class="text-center mt-6 text-xl">
+          <span>You have been logged out of the application.</span>
+        </div>
+        <div class="text-center mt-6">
+          <va-button to="/auth">Log In</va-button>
+        </div>
+      </va-card-content>
+    </va-card>
   </div>
 </template>
 

@@ -5,9 +5,7 @@ from workers.config import config
 queue_url = config['celery']['queue']['url']
 queue_username = config['celery']['queue']['username']
 queue_password = config['celery']['queue']['password']
-mongo_url = config['celery']['mongo']['url']
-mongo_username = config['celery']['mongo']['username']
-mongo_password = config['celery']['mongo']['password']
+mongo_uri = config['celery']['mongo']['uri']
 
 # https://docs.celeryq.dev/en/stable/getting-started/backends-and-brokers/rabbitmq.html
 broker_url = f'amqp://{queue_username}:{urllib.parse.quote(queue_password)}@{queue_url}'
@@ -19,7 +17,7 @@ broker_connection_retry_on_startup = True
 # result_backend = 'redis://localhost:6379/0'
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#conf-mongodb-result-backend
-result_backend = f'mongodb://{mongo_username}:{urllib.parse.quote(mongo_password)}@{mongo_url}'
+result_backend = mongo_uri
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#database-backend-settings
 # https://stackoverflow.com/questions/69952488/celery-task-result-in-postgres-database-is-in-byte-format
@@ -50,6 +48,14 @@ task_serializer = 'json'
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-track-started
 task_track_started = True
 
+# rabbitmq settings
+# consumer_timeout=86400000
+# https://www.rabbitmq.com/consumers.html#acknowledgement-timeout
+# Why: I’m running celery tasks which acks messages in queue after the task is complete. 
+# The tasks can take as long as 1 day to complete. 
+# But rabbitmq closes the channel if it does not receive acknowledgements within 30 min.
+# We couldn't configure this setting per vhost, so we had to set it globally.
+
 # The worker processing the task will be killed and replaced with a new one when this is exceeded.
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-time-limit
 ONE_DAY = 24 * 60 * 60
@@ -69,6 +75,10 @@ task_soft_time_limit = ONE_DAY - TEN_MINUTES
 # default value is 'celery'
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-default-queue
 task_default_queue = f'{config["app_id"]}.q'
+
+# https://docs.celeryq.dev/en/stable/userguide/routing.html#rabbitmq-message-priorities
+task_queue_max_priority = 10
+task_default_priority = 1
 
 # The queue name for each worker is automatically generated
 # based on the worker hostname and a .dq suffix, using the C.dq exchange.

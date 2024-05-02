@@ -14,7 +14,9 @@
       <va-sidebar-item-content>
         <Icon :icon="item.icon" class="text-2xl" />
         <!-- User can hide item with css if they want -->
-        <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
+        <va-sidebar-item-title :data-testid="item.test_id">{{
+          item.title
+        }}</va-sidebar-item-title>
       </va-sidebar-item-content>
     </va-sidebar-item>
 
@@ -31,7 +33,9 @@
         <va-sidebar-item-content>
           <Icon :icon="item.icon" class="text-2xl" />
           <!-- User can hide item with css if they want -->
-          <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
+          <va-sidebar-item-title :data-testid="item.test_id">{{
+            item.title
+          }}</va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
 
@@ -49,7 +53,9 @@
         <va-sidebar-item-content>
           <Icon :icon="item.icon" class="text-2xl" />
           <!-- User can hide item with css if they want -->
-          <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
+          <va-sidebar-item-title :data-testid="item.test_id">{{
+            item.title
+          }}</va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
 
@@ -65,7 +71,9 @@
       <va-sidebar-item-content>
         <Icon :icon="item.icon" class="text-2xl" />
         <!-- User can hide item with css if they want -->
-        <va-sidebar-item-title>{{ item.title }}</va-sidebar-item-title>
+        <va-sidebar-item-title :data-testid="item.test_id">{{
+          item.title
+        }}</va-sidebar-item-title>
       </va-sidebar-item-content>
     </va-sidebar-item>
   </va-sidebar>
@@ -92,8 +100,9 @@ function isActive(path) {
    * path is from the sidebar item config
    * route.path is the actual path in the browser URL
    *
-   * Since paths of all components start with '/', dashboard requires a special check
-   * All types of datasets use the same /datasets/ prefix, these require special handling
+   * Since paths of all components start with '/',
+   * dashboard requires a special check All types of datasets use the same
+   * /datasets/ prefix, these require special handling
    */
   if (path === "/") return route.path === "/";
   if (
@@ -117,6 +126,7 @@ const user_items = ref([
     icon: "mdi-flask",
     title: "Projects",
     path: "/projects",
+    test_id: "sidebar-projects",
   },
   // {
   //   icon: "mdi-chart-gantt",
@@ -135,6 +145,7 @@ const operator_items = ref([
     icon: "mdi-monitor-dashboard",
     title: "Dashboard",
     path: "/dashboard",
+    test_id: "sidebar-dashboard",
   },
   // {
   //   icon: "mdi-file-lock",
@@ -155,26 +166,31 @@ const operator_items = ref([
     icon: "mdi-dna",
     title: "Raw Data",
     path: "/rawdata",
+    test_id: "sidebar-raw-data",
   },
   {
     icon: "mdi-package-variant-closed",
     title: "Data Products",
     path: "/dataproducts",
+    test_id: "sidebar-data-products",
   },
   {
     icon: "mdi-table-account",
     title: "User Management",
     path: "/users",
+    test_id: "sidebar-user-management",
   },
   {
     icon: "mdi-format-list-bulleted",
     title: "Stats/Tracking",
     path: "/stats",
+    test_id: "sidebar-stats-tracking",
   },
   {
     icon: "mdi:map-marker-path",
     title: "Workflows",
     path: "/workflows",
+    test_id: "sidebar-workflows",
   },
   // {
   //   icon: "mdi-account-multiple",
@@ -193,16 +209,19 @@ const bottom_items = ref([
     icon: "mdi-information",
     title: "About",
     path: "/about",
+    test_id: "sidebar-about",
   },
   {
     icon: "mdi-account-details",
     title: "Profile",
     path: "/profile",
+    test_id: "sidebar-profile",
   },
   {
     icon: "mdi-logout-variant",
     title: "Logout",
     path: "/auth/logout",
+    test_id: "sidebar-logout",
   },
 ]);
 
