@@ -1,51 +1,52 @@
 <template>
-  <div class="flex justify-center items-center h-full">
-    <div class="max-w-lg" v-if="notAuthorized || authFailure">
-      <va-card>
-        <va-card-content>
-          <div
-            class="text-xl flex flex-col items-center gap-5"
-            v-if="notAuthorized"
+  <div
+    class="min-h-screen flex items-center justify-center bg-gray-300 dark:bg-gray-600"
+  >
+    <va-card class="w-full max-w-md" v-if="notAuthorized || authFailure">
+      <va-card-content>
+        <env-alert class="w-full" icon="warning" />
+
+        <div
+          class="text-lg flex flex-col items-center gap-5 text-center"
+          v-if="notAuthorized"
+        >
+          <i-mdi-alert class="text-amber-600 text-5xl" />
+          <span data-testid="not-authorized">
+            It appears that you do not currently have permission to access this
+            application. If you require access, please send a message to
+            <a class="va-link" :href="`mailto:${config.contact.app_admin}`">{{
+              config.contact.app_admin
+            }}</a>
+          </span>
+        </div>
+        <div
+          class="text-lg text-gray-700 flex flex-col items-center gap-5 text-center"
+          v-if="authFailure"
+        >
+          <i-mdi-alert-octagon class="text-red-600 text-5xl" />
+          <span class="va-text-text-primary"
+            >Authentication Failed. Something went wrong.</span
           >
-            <i-mdi-alert class="text-amber-600 text-5xl" />
-            <span>
-              It appears that you do not currently have permission to access
-              this application. If you require access, please send a message to
-              <a class="va-link" :href="`mailto:${config.contact.app_admin}`">{{
-                config.contact.app_admin
-              }}</a>
-            </span>
+          <div>
+            <va-button to="/auth">Try Again</va-button>
           </div>
-          <div
-            class="text-xl text-gray-700 flex flex-col items-center gap-5"
-            v-if="authFailure"
-          >
-            <i-mdi-alert-octagon class="text-red-600 text-5xl" />
-            <span class="va-text-text-primary"
-              >Authentication Failed. Something went wrong.</span
-            >
-            <div>
-              <va-button to="/auth">Try Again</va-button>
-            </div>
-          </div>
-        </va-card-content>
-      </va-card>
-    </div>
-    <div v-if="loading" class="max-w-lg">
-      <va-card>
-        <va-card-content class="flex items-center gap-2 justify-center">
-          <!-- <va-inner-loading loading class="col-span-1" /> -->
-          <span class="text-2xl tracking-wide flex-none"> Logging in </span>
-          <fingerprint-spinner
-            class="flex-none"
-            :animation-duration="2000"
-            :dot-size="10"
-            :dots-num="3"
-            :color="colors.primary"
-          />
-        </va-card-content>
-      </va-card>
-    </div>
+        </div>
+      </va-card-content>
+    </va-card>
+
+    <va-card class="w-full max-w-md" v-if="validation_loading">
+      <va-card-content class="flex items-center gap-2 justify-center">
+        <!-- <va-inner-loading loading class="col-span-1" /> -->
+        <span class="text-2xl tracking-wide flex-none"> Logging in </span>
+        <fingerprint-spinner
+          class="flex-none"
+          :animation-duration="2000"
+          :dot-size="10"
+          :dots-num="3"
+          :color="colors.primary"
+        />
+      </va-card-content>
+    </va-card>
   </div>
 </template>
 
@@ -62,7 +63,7 @@ const redirectPath = ref(useLocalStorage("auth.redirect", ""));
 const storedState = ref(useLocalStorage("auth.state", ""));
 const notAuthorized = ref(false);
 const authFailure = ref(false);
-const loading = ref(false);
+const validation_loading = ref(false);
 
 const props = defineProps(["getUrl", "verify", "paramNames"]);
 
@@ -77,12 +78,12 @@ if (paramsExist) {
   // console.log({ params, storedState: storedState.value });
 
   // csrf protection
-  // bypass csrf protection check when params do not has state - this auth has no state
+  // bypass csrf protection check when params does not include the state parameter - this auth has no state
   // read stored state from local storage and reset it
   const _storedState = storedState.value;
   storedState.value = null;
   if (params.state === _storedState || !params.state) {
-    loading.value = true;
+    validation_loading.value = true;
     props
       .verify(params)
       .then((user) => {
@@ -106,7 +107,7 @@ if (paramsExist) {
         console.error(err);
       })
       .finally(() => {
-        loading.value = false;
+        validation_loading.value = false;
       });
   } else {
     // csrf protection check failed
