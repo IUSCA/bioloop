@@ -24,9 +24,9 @@
           v-if="authFailure"
         >
           <i-mdi-alert-octagon class="text-red-600 text-5xl" />
-          <span class="va-text-text-primary"
-            >Authentication Failed. Something went wrong.</span
-          >
+          <span class="va-text-text-primary"> 
+            Authentication Failed. Something went wrong.
+          </span>
           <div>
             <va-button to="/auth">Try Again</va-button>
           </div>
