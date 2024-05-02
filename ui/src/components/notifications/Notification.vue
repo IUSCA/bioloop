@@ -1,7 +1,7 @@
 <template>
-  <a class="notification-anchor" :href="notification.to || '#'">
-    <h6 class="va-h6">{{ notification.label }}</h6>
-    <p>{{ notification.text }}</p>
+  <a class="notification-anchor" :href="props.to">
+    <h6 class="va-h6">{{ props.notification.label }}</h6>
+    <p>{{ props.notification.text }}</p>
   </a>
 </template>
 
@@ -11,12 +11,11 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  to: {
+    type: String,
+    default: "#",
+  },
 });
-
-const notification = computed(() => ({
-  ...props.notification,
-  to: `/testNotification`,
-}));
 </script>
 
 <style lang="scss" scoped>
