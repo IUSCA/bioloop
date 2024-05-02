@@ -1,10 +1,11 @@
+import config from "@/config";
+import authService from "@/services/auth";
+import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import { jwtDecode } from "jwt-decode";
-import authService from "@/services/auth";
-import config from "@/config";
 
 export const useAuthStore = defineStore("auth", () => {
+  const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
   const loggedIn = ref(false);
@@ -147,6 +148,10 @@ export const useAuthStore = defineStore("auth", () => {
     });
   }
 
+  const setEnv = (val) => {
+    env.value = val;
+  };
+
   const setTheme = (theme) => {
     user.value.theme = theme;
   };
@@ -169,6 +174,8 @@ export const useAuthStore = defineStore("auth", () => {
     getTheme,
     googleLogin,
     ciLogin,
+    env,
+    setEnv,
   };
 });
 

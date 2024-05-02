@@ -1,19 +1,12 @@
 <template>
-  <div class="flex justify-end">
-    <div class="flex flex-row max-w-max">
-      <div class="max-w-max mr-2.5">
-        <FooterLogo />
-      </div>
+  <div class="flex justify-between gap-3">
+    <FooterAppTagline />
 
-      <div class="max-w-max mx-2.5">
+    <div class="flex justify-end">
+      <div class="flex flex-row gap-4 items-center">
+        <IULogo />
         <FooterAccessibility />
-      </div>
-
-      <div class="max-w-max mx-2.5">
         <FooterPrivacy />
-      </div>
-
-      <div class="max-w-max ml-2.5">
         <FooterCopyright />
       </div>
     </div>

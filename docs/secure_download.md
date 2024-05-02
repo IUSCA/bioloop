@@ -27,28 +27,37 @@ The UI and API are running on a node where the Slate Scratch path is not mounted
 
 ## 3. Staging the Dataset
 
-The Staging Dataset functionality allows users to request the download of dataset files through the UI or API. Staging a dataset involves the transfer of the requested dataset file from the SDA (Source Data Archive) to a temporary location known as the Slate Scratch path. This intermediate step ensures efficient and secure access to the dataset while preventing unauthorized access through path enumeration.
+The Staging Dataset functionality allows users to request the download of individual dataset files (or the entire dataset, as a bundled file) through the UI or API. Staging a dataset involves the transfer of the corresponding archived bundle from the SDA (Source Data Archive) to a temporary location known as the Slate Scratch path. This intermediate step ensures efficient and secure access to the dataset while preventing unauthorized access through path enumeration.
 
 Staging Process:
 
-- **User Request**: Users initiate a dataset file download request through either the user interface (UI) or the application programming interface (API).
+- **User Request**: Users initiate a dataset file/bundle download request through either the user interface (UI) or the application programming interface (API).
 
 - **Rhythm Workflow**: The request triggers a rhythm workflow "Stage" on the colo node where the celery tasks are registered. "stage_dataset", "validate_dataset", "setup_dataset_download" are the celery tasks involved in this workflow. 
 
-- **Path Randomization**: During dataset staging, a random string, in the form of a universally unique identifier (UUID) called `stage_alias`, is incorporated into the path. This UUID is generated to limit access to datasets through path enumeration. The staging path follows the pattern: `<stage_directory>/<dataset_stage_alias>/<dataset_name>`. "stage_dataset" celery task downloads the dataset tar from SDA and extarcts to this randomized path.
+- **Path Randomization**: During dataset staging, the path of the staged dataset files/bundle are obfuscated through the means of two random universally unique identifiers (UUIDs) called `stage_alias` and `bundle_alias`. This UUIDs are generated to limit access to datasets through path enumeration.
+  - The `stage_dataset` celery task downloads the dataset bundle from SDA, and extracts the dataset files and the bundle to their corresponding randomized paths.
+    - The dataset's staging path follows the pattern: `<stage_directory>/<dataset_stage_alias>/<dataset_name>`.
+    - The bundle's staging path follows the pattern: `<bundle_stage_directory>/<dataset_bundle_name>`.
 
 Example:
 ```
 /stage_directory/6a5b1734-98e8-4e47-ae5f-1a9e5d8d9f7c/dataset_name
+/bundle_stage_directory/bundle_name
 ```
 
-- **Symlink Creation**: A symlink `<download_path>/<dataset_stage_alias>` is created to point to `<stage_directory>/<dataset_stage_alias>/<dataset_name>`. This will be path given to the users who want to download the data from the Slate Scratch directly. The file download nginx server is configured to server files from the `<download_path>` directory.
+- **Symlink Creation**: Two symlinks are created to facilitate downloads. 
+  - `<download_path>/<dataset_stage_alias>`. This points to `<stage_directory>/<dataset_stage_alias>/<dataset_name>`. This will be path given to the users who want to download the dataset files from the Slate Scratch directly.
+  - `<download_path>/<dataset_bundle_alias>`. This points to `<bundle_stage_directory>/<dataset_bundle_alias>/<dataset_name>`. This will be path given to the users who want to download the dataset as a bundle from the Slate Scratch directly.
+
+The file download nginx server is configured to serve files from the `<download_path>` directory.
+
 
 To enhance security, the access control list (ACL) of the `<stage_directory>/<dataset_stage_alias>` directory is carefully configured. It is limited to granting only the "execute" permission bit (--x) for the "others" group. This permission setup ensures that users with access to the Slate Scratch path cannot browse or navigate through all datasets present in the directory. Instead, only users who possess the complete path `<stage_directory>/<dataset_stage_alias>/<dataset_name>` are allowed to read the contents of the staged dataset.
 
 #### UUID Generation
 
-The UUID used in the staging path is generated deterministically. It is a function of the dataset type, dataset name, and a salt string. This deterministic approach ensures consistency and allows authorized users to access the staged dataset when needed, while making it computationally infeasible for users to guess the path of other datasets.
+The UUIDs used in the staging paths of the dataset and the bundle are generated deterministically. They are a function of the dataset type, dataset (or bundle) name, and a salt string. This deterministic approach ensures consistency and allows authorized users to access the staged dataset/bundle when needed, while making it computationally infeasible for users to guess the path of other datasets.
 
 By implementing these measures, the Staging Dataset functionality maintains data security and privacy, preventing unauthorized access and ensuring the integrity of the staged datasets.
 

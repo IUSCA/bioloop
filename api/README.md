@@ -321,6 +321,8 @@ Each role defines CRUD permissions on resources with two scopes: "own" and "any"
 
 The goal of the [accessControl](src/middleware/auth.js) middleware is to determine from an incoming request whether the requester has enough permissions to perform the desired operation on a particular resource.
 
+`req.permission.filter`: Uses [Notation](https://www.npmjs.com/package/notation) to filter attributes.
+
 ### A simple use case: 
 
 **Objective**: Users with `user` role are only permitted to read and update thier own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
@@ -355,6 +357,7 @@ Code to check if the requester to is authorized to `GET /users/dduck`. This rout
 
 ```javascript
 const { authenticate } = require('../middleware/auth');
+const ac = require('../services/accesscontrols');
 
 router.get('/:username',
   authenticate,

@@ -39,7 +39,7 @@
     }
   },
   "oauth": {
-    "base_url": "http://127.0.0.1:5050",
+    "base_url": "",
     "download": {
       "client_id": "",
       "client_secret": "",
@@ -47,33 +47,37 @@
     }
   },
   "download_server": {
-    "base_url": "http://localhost:8000"
+    "base_url": ""
   },
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
-          "name": "inspect",
-          "task": "inspect_dataset"
+            "name": "await stability",
+            "task": "await_stability"
         },
         {
-          "name": "archive",
-          "task": "archive_dataset"
+            "name": "inspect",
+            "task": "inspect_dataset"
         },
         {
-          "name": "stage",
-          "task": "stage_dataset"
+            "name": "archive",
+            "task": "archive_dataset"
         },
         {
-          "name": "validate",
-          "task": "validate_dataset"
+            "name": "stage",
+            "task": "stage_dataset"
         },
         {
-          "name": "generate_qc",
-          "task": "generate_qc"
+            "name": "validate",
+            "task": "validate_dataset"
+        },
+        {
+            "name": "setup_download",
+            "task": "setup_dataset_download"
         }
-      ]
+    ]
     },
     "stage": {
       "steps": [
@@ -86,8 +90,8 @@
           "task": "validate_dataset"
         },
         {
-          "name": "generate_qc",
-          "task": "generate_qc"
+          "name": "setup_download",
+          "task": "setup_dataset_download"
         }
       ]
     },
@@ -100,5 +104,18 @@
       ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"]
+  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": ""
+      },
+      "operator": {
+        "username": ""
+      },
+      "user": {
+        "username": ""
+      }
+    }
+  }
 }

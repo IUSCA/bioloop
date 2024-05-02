@@ -17,18 +17,6 @@ const roles = [{
 
 const admins = [
   {
-    name: 'Rishi Pandey',
-    username: 'ripandey',
-  }, {
-    name: 'Charles Brandt',
-    username: 'ccbrandt',
-  }, {
-    name: 'Deepak Duggirala',
-    username: 'deduggi',
-  }, {
-    name: 'Ryan Long',
-    username: 'ryanlong',
-  }, {
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
@@ -75,7 +63,7 @@ const _datasets = [
     size: 160612394997,
     description: null,
     is_staged: true,
-    origin_path: '/N/scratch/scauser/bs_test/PCM230203',
+    origin_path: '/origin/path/PCM230203',
     archive_path: 'archive/2023/PCM230203.tar',
     workflows: ['6ca07614-bc84-4e5d-8808-71d0ebaef98b'],
     metadata: {
@@ -93,7 +81,7 @@ const _datasets = [
     du_size: 58097236036,
     size: 58097207364,
     description: null,
-    origin_path: '/N/scratch/scauser/test/PCM230327PL',
+    origin_path: '/origin/path/test/PCM230327PL',
     archive_path: 'archive/2023/PCM230327PL.tar',
     workflows: ['874a4b40-0534-44e3-b4ff-ae029cca5109'],
     metadata: {
@@ -110,7 +98,7 @@ const _datasets = [
     du_size: 2685335,
     size: 2648471,
     description: null,
-    origin_path: '/N/scratch/scauser/test/PCM230215_657496842_Aborted_WF',
+    origin_path: '/origin/path/test/PCM230215_657496842_Aborted_WF',
     archive_path: 'archive/2023/PCM230215_657496842_Aborted_WF.tar',
     workflows: ['8afb902b-2ed3-47cd-9390-a262672d2d64'],
     metadata: {
@@ -129,7 +117,7 @@ const _datasets = [
     size: 137205924022,
     description: null,
     is_staged: true,
-    origin_path: '/N/scratch/scauser/test/PCM230306PL',
+    origin_path: '/origin/path/test/PCM230306PL',
     archive_path: 'archive/2023/PCM230306PL.tar',
     workflows: ['970e13dd-1905-493e-aa3a-13645bd439d9'],
     metadata: {
@@ -147,7 +135,7 @@ const _datasets = [
     size: 87835338192,
     description: null,
     is_staged: true,
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/bcl_fastq',
+    origin_path: '/origin/path/bcl_fastq',
     archive_path: 'archive/2023/bcl_fastq.tar',
     metadata: {
       num_genome_files: 636,
@@ -163,7 +151,7 @@ const _datasets = [
     du_size: 357839228469,
     size: 357839175221,
     description: null,
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/PCM221205',
+    origin_path: '/origin/path/PCM221205',
     archive_path: 'archive/2023/PCM221205.tar',
     metadata: {
       num_genome_files: 93,
@@ -174,25 +162,25 @@ const _datasets = [
     id: 7,
     name: 'PCM230203',
     type: 'DATA_PRODUCT',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230203',
+    origin_path: '/origin/path/data_products/PCM230203',
   },
   {
     id: 8,
     name: 'PCM230327',
     type: 'DATA_PRODUCT',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230327',
+    origin_path: '/origin/path/data_products/PCM230327',
   },
   {
     id: 9,
     name: 'PCM230406',
     type: 'RAW_DATA',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230406',
+    origin_path: '/origin/path/data_products/PCM230406',
   },
   {
     id: 10,
     name: 'PCM230417',
     type: 'RAW_DATA',
-    origin_path: '/N/project/DG_Multiple_Myeloma/share/data_products/PCM230417',
+    origin_path: '/origin/path/data_products/PCM230417',
   },
 ];
 
@@ -201,7 +189,7 @@ const additional_datasets = [11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24,
     id,
     name: `PCM2304${id}_new`,
     type: 'RAW_DATA',
-    origin_path: `/N/project/DG_Multiple_Myeloma/share/data_products/PCM2304${id}`,
+    origin_path: `/origin/path/data_products/PCM2304${id}`,
   }));
 
 const datasets = _datasets.concat(additional_datasets);
@@ -324,6 +312,18 @@ const project_contact_assoc = [
   },
 ];
 
+const about_records = [
+  {
+    html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a> group.'
+        + '<br><br>'
+        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.'
+        + '<br><br>'
+        + 'This instance of Bioloop is being run by:'
+        + '<br><br>'
+        + 'For questions or support, please contact the primary operator:</p>',
+  },
+];
+
 module.exports = {
   roles,
   admins,
@@ -338,4 +338,5 @@ module.exports = {
   project_user_assoc,
   project_dataset_assoc,
   project_contact_assoc,
+  about_records,
 };

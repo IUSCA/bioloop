@@ -6,7 +6,7 @@
   >
     <template #filtered="{ item }">
       <div class="flex">
-        <div>
+        <div class="flex-auto">
           <span> {{ item.name }} </span>
           <!-- <span class="va-text-secondary p-1"> &VerticalLine; </span> -->
           <!-- <span class="va-text-secondary text-sm"> {{ item.type }} </span> -->

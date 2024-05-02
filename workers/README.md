@@ -138,7 +138,7 @@ ssh \
   -R 3130:localhost:3030 \
   -R 28017:localhost:27017 \
   -R 5772:localhost:5672 \
-  bioloopuser@colo23.carbonate.uits.iu.edu
+  bioloopuser@workers.iu.edu
 ```
 
 - pull latest changes in dev branch to `<bioloop_dev>`

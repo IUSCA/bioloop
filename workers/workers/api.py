@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from urllib.parse import urljoin
+import json
 
 import requests
 from glom import glom, assign as glom_assign
@@ -85,7 +86,7 @@ class APIServerSession(requests.Session):
 
 
 def str_to_int(d: dict, key: str):
-    d['du_size'] = utils.parse_number(d.get(key, None))
+    d[key] = utils.parse_number(d.get(key, None))
     return d
 
 
@@ -126,13 +127,21 @@ def dataset_setter(dataset: dict):
     return dataset
 
 
-def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, deleted=False):
+def get_all_datasets(
+        dataset_type=None,
+        name=None,
+        days_since_last_staged=None,
+        deleted=False,
+        archived=False,
+        bundle=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
             'name': name,
             'days_since_last_staged': days_since_last_staged,
-            'deleted': deleted
+            'deleted': deleted,
+            'archived': archived,
+            'bundle': bundle
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -140,12 +149,14 @@ def get_all_datasets(dataset_type=None, name=None, days_since_last_staged=None, 
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False):
+def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
     with APIServerSession() as s:
         payload = {
-            'files': files
+            'files': files,
+            'bundle': bundle
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
+
         r.raise_for_status()
         return dataset_getter(r.json())
 
@@ -221,6 +232,13 @@ def post_worker_logs(process_id: str, logs: list[dict]):
     with APIServerSession(enable_retry=False) as s:
         r = s.post(f'workflows/processes/{process_id}/logs', json=logs)
         r.raise_for_status()
+
+
+def get_all_workflows():
+    with APIServerSession() as s:
+        r = s.get('workflows/current')
+        r.raise_for_status()
+        return r.json()
 
 
 if __name__ == '__main__':

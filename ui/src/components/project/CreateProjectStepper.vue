@@ -12,7 +12,7 @@
         :key="step.label"
         #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
       >
-        <div
+        <button
           class="step-button p-1 sm:p-3 cursor-pointer"
           :class="{
             'step-button--active': isActive,
@@ -24,7 +24,7 @@
             <va-icon :name="step.icon" />
             <span class="hidden sm:block"> {{ step.label }} </span>
           </div>
-        </div>
+        </button>
       </template>
 
       <!-- general info -->
@@ -34,7 +34,10 @@
 
       <!-- dataset select -->
       <template #step-content-1>
-        <ProjectDatasetsForm class="" />
+        <ProjectDatasetsForm
+          :selected-results="selectedDatasets"
+          :column-widths="columnWidths"
+        />
       </template>
 
       <!-- user select -->
@@ -120,12 +123,25 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
+import { useBreakpoint } from "vuestic-ui";
 
 const emit = defineEmits(["update"]);
 
+const breakpoint = useBreakpoint();
+
 const projectFormStore = useProjectFormStore();
+const selectedDatasets = computed(() => projectFormStore.datasets);
+
+const columnWidths = computed(() => {
+  return {
+    name: breakpoint.xs || breakpoint.sm ? "230px" : "190px",
+    type: "130px",
+    size: "100px",
+    created_at: "105px",
+  };
+});
 
 const step = ref(0);
 const loading = ref(false);

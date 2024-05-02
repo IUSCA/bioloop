@@ -8,7 +8,7 @@
       <!-- Steps Table -->
       <va-data-table :items="row_items" :columns="columns">
         <template #cell(step)="{ source }">
-          <div class="flex gap-3 justify-start items-center">
+          <div class="flex gap-3 justify-start items-center min-w-[150px]">
             <span style="text-transform: uppercase" class="flex-initial">
               {{ source.name }}
             </span>
@@ -222,7 +222,11 @@ const is_resume_locked = computed(() => {
 });
 
 const columns = ref([
-  { key: "step" },
+  {
+    key: "step",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;",
+  },
   { key: "status", width: "100px", thAlign: "center", tdAlign: "center" },
   { key: "start_date", width: "220px", thAlign: "center", tdAlign: "center" },
   { key: "duration", width: "150px", thAlign: "center", tdAlign: "center" },

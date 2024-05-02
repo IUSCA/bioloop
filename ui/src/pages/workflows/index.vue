@@ -7,9 +7,9 @@
     >
       <!-- reset -->
       <div class="text-right px-3">
-        <span class="va-link text-center" @click="reset_query_params">
+        <button class="va-link text-center" @click="reset_query_params">
           Reset
-        </span>
+        </button>
       </div>
 
       <!-- status filters -->
@@ -339,9 +339,10 @@ function reset_query_params() {
 }
 
 function get_failure_mode(wf) {
-  const last_step =
-    wf?.steps?.length > 0 ? wf.steps[wf.steps.length - 1] : null;
-  const failure_mode = last_step?.last_task_run?.result?.exc_type;
+  const failed_step = (wf?.steps || []).filter(
+    (step) => step.status === "FAILURE",
+  )[0];
+  const failure_mode = failed_step?.last_task_run?.result?.exc_type;
   return failure_mode;
 }
 

@@ -12,8 +12,7 @@ const exports = {
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
-    app_admin: "admin@sca.iu.edu",
-    sca_admin: "sca-ops-l@list.iu.edu",
+    app_admin: "bioloop-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
   paths: {
@@ -65,6 +64,7 @@ const exports = {
       refresh_interval_ms: 10000,
     },
   },
+  alertForEnvironments: ["ci"],
 };
 
 export default exports;

@@ -14,7 +14,7 @@
           <va-card class="general-info">
             <va-card-title class="">
               <div class="flex flex-nowrap items-center w-full">
-                <span class="text-lg"> General Info </span>
+                <span class="flex-auto text-lg"> General Info </span>
                 <AddEditButton
                   class="flex-none"
                   edit
@@ -34,7 +34,7 @@
           <va-card class="h-full">
             <va-card-title class="">
               <div class="flex flex-nowrap items-center w-full">
-                <span class="text-lg"> Access Permissions </span>
+                <span class="flex-auto text-lg"> Access Permissions </span>
                 <AddEditButton
                   class="flex-none"
                   :edit="project.users?.length > 0"
@@ -57,10 +57,10 @@
 
       <!-- Associated datasets -->
       <div>
-        <va-card class="">
-          <va-card-title class="">
+        <va-card>
+          <va-card-title>
             <div class="flex flex-nowrap items-center w-full">
-              <span class="text-lg"> Associated Datasets </span>
+              <span class="flex-auto text-lg"> Associated Datasets </span>
 
               <AddEditButton
                 class="flex-none"
@@ -73,8 +73,9 @@
           </va-card-title>
           <va-card-content>
             <ProjectDatasetsTable
-              :datasets="project.datasets"
               :project="project"
+              @datasets-retrieved="triggerDatasetsRetrieval = false"
+              :trigger-datasets-retrieval="triggerDatasetsRetrieval"
             />
           </va-card-content>
         </va-card>
@@ -173,7 +174,11 @@ const projectFormStore = useProjectFormStore();
 const nav = useNavStore();
 
 const project = ref({});
+const projectId = computed(() => {
+  return project.value?.id || toRef(() => props.projectId).value;
+});
 const data_loading = ref(false);
+const triggerDatasetsRetrieval = ref(false);
 
 watch(project, () => {
   nav.setNavItems([
@@ -191,8 +196,11 @@ function fetch_project() {
   data_loading.value = true;
   return projectService
     .getById({
-      id: project.value?.id || props.projectId,
+      id: projectId.value,
       forSelf: !auth.canOperate,
+      query: {
+        include_datasets: false,
+      },
     })
     .then((res) => {
       project.value = res.data;
@@ -206,18 +214,13 @@ function fetch_project() {
     });
 }
 
-fetch_project();
+onMounted(() => {
+  fetch_project();
+});
 
 const users = computed(() => {
   return (project.value.users || []).map((obj) => ({
     ...obj.user,
-    assigned_at: obj.assigned_at,
-  }));
-});
-
-const datasets = computed(() => {
-  return (project.value.datasets || []).map((obj) => ({
-    ...obj.dataset,
     assigned_at: obj.assigned_at,
   }));
 });
@@ -243,6 +246,9 @@ function handleEditUpdate() {
       router.push({
         path: `/projects/${new_slug}`,
       });
+    } else {
+      // update prop which will trigger re-fetching of project-dataset associations
+      triggerDatasetsRetrieval.value = true;
     }
   });
 }
@@ -267,7 +273,6 @@ function openUsersModal() {
 const datasetsModal = ref(null);
 
 function openDatasetsModal() {
-  projectFormStore.setDatasets(datasets.value);
   datasetsModal.value.show();
 }
 
