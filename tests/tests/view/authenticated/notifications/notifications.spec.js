@@ -20,12 +20,6 @@ test.beforeEach(async ({ page }) => {
   await deleteActiveNotifications(request, token);
 });
 
-const notificationBadgeLocator = (page) => page.getByTestId('notification-count')
-  .locator('span.va-badge__text');
-
-const notificationMenuItemLocator = (page) => page.getByTestId('notification-menu-items')
-  .locator('tr.va-menu-item');
-
 test.describe('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
     await expect(notificationBadgeLocator(page)).toBeEmpty();
@@ -92,6 +86,12 @@ const createNotifications = async ({ request, token }) => {
 
   return created;
 };
+
+const notificationBadgeLocator = (page) => page.getByTestId('notification-count')
+  .locator('span.va-badge__text');
+
+const notificationMenuItemLocator = (page) => page.getByTestId('notification-menu-items')
+  .locator('tr.va-menu-item');
 
 const createNotification = async ({
   request, token, label, text,
