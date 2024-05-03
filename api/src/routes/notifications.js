@@ -1,7 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const {
-  query, param,
+  query, body,
 } = require('express-validator');
 const _ = require('lodash/fp');
 
@@ -45,5 +45,60 @@ router.get(
     res.json(notifications);
   }),
 );
+
+router.post(
+  '/',
+  isPermittedTo('create'),
+  validate([
+    body('label').escape().notEmpty(),
+    body('text').escape().notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Post a notification
+
+    const createdNotification = await prisma.notification.create({
+      data: {
+        ...req.body,
+      },
+    });
+
+    res.json(createdNotification);
+  }),
+);
+
+router.delete(
+  '/',
+  isPermittedTo('delete'),
+  validate([
+    query('active').isBoolean().toBoolean().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Delete matching notifications
+
+    const filterQuery = buildFilterQuery(req.query);
+
+    if (Object.keys(filterQuery).length === 0) {
+      res.send({
+        count: 0,
+      });
+      return;
+    }
+
+    const updatedCount = await prisma.notification.updateMany({
+      where: filterQuery,
+      data: {
+        status: 'RESOLVED',
+        active: false,
+      },
+    });
+    res.json(updatedCount);
+  }),
+);
+
+const buildFilterQuery = ({ active }) => _.omitBy(_.isUndefined)({
+  active,
+});
 
 module.exports = router;

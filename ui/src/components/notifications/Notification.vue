@@ -1,7 +1,11 @@
 <template>
   <a class="notification-anchor" :href="props.to">
-    <h6 class="va-h6">{{ props.notification.label }}</h6>
-    <p>{{ props.notification.text }}</p>
+    <h6 class="va-h6" :data-testid="`notification-${notification.id}-label`">
+      {{ props.notification.label }}
+    </h6>
+    <p :data-testid="`notification-${notification.id}-text`">
+      {{ props.notification.text }}
+    </p>
   </a>
 </template>
 
