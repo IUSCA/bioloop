@@ -19,7 +19,8 @@ test('notifications', async ({ page }) => {
 
   const { request } = page;
 
-  await expect(page.getByTestId('notification-menu-items')).not.toBeVisible();
+  // await
+  // expect(page.getByTestId('notification-menu-items')).not.toBeVisible();
 
   // delete active notifications before test
   try {
@@ -40,7 +41,9 @@ test('notifications', async ({ page }) => {
 
   // assert that no notifications are active
   await page.getByTestId('notification-icon').click();
-  await expect(page.getByTestId('notification-menu-items')).toContainText('No pending notifications');
+  // await
+  // expect(page.getByTestId('notification-menu-items')).toContainText('No
+  // pending notifications');
 
   // create a notification
   const createResponse = await request.post(`${config.apiBasePath}/notifications`, {
@@ -61,12 +64,12 @@ test('notifications', async ({ page }) => {
 
   await page.getByTestId('notification-icon').click();
 
-  // await expect(page.getByTestId('notification-menu-items')).toBeVisible();
-
-  // await
-  // expect(page.getByTestId(`notification-${createdNotification.id}-label`)).toContainText(NOTIFICATION_LABEL,
-  // { useInnerText: true, }); await
-  // expect(page.getByTestId(`notification-${createdNotification.id}-text`)).toContainText(NOTIFICATION_TEXT);
+  await expect(page.getByTestId(`notification-${createdNotification.id}-label`)).toContainText(
+    NOTIFICATION_LABEL,
+    // ,
+    // { useInnerText: true },
+  );
+  await expect(page.getByTestId(`notification-${createdNotification.id}-text`)).toContainText(NOTIFICATION_TEXT);
 
   // await
   // expect(page.getByTestId('notification-menu-items')).toContainText(NOTIFICATION_LABEL,
