@@ -1,10 +1,10 @@
 <template>
   <va-inner-loading>
-    <!--    v-model="open"-->
-    <!--          :close-on-anchor-click="false"-->
-    <!--          :close-on-focus-outside="false"-->
-    <!--          :close-on-content-click="false"-->
-    <!--          :close-on-click-outside="false"-->
+    <!--        v-model="open"-->
+    <!--              :close-on-anchor-click="false"-->
+    <!--              :close-on-focus-outside="false"-->
+    <!--              :close-on-content-click="false"-->
+    <!--              :close-on-click-outside="false"-->
     <va-menu placement="left-bottom">
       <template #anchor>
         <va-badge
