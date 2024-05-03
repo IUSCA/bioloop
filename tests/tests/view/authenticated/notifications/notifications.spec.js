@@ -12,12 +12,13 @@ const NOTIFICATION_TEXT = 'Notification Text';
 test.describe.configure({ mode: 'serial' });
 
 test.beforeEach(async ({ page }) => {
+  // delete active notifications before each test
+
   await page.goto('/');
   const { request } = page;
 
   const token = await page.evaluate(() => localStorage.getItem('token'));
 
-  // delete active notifications before test
   const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?active=true`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -43,30 +44,31 @@ test.describe('Notifications', () => {
   });
 
   test('Notification created', async ({ page }) => {
-    await page.goto('/');
-    const token = await page.evaluate(() => localStorage.getItem('token'));
+    let createdNotification;
 
-    const { request } = page;
+    await test.step('Create a notification', async () => {
+      await page.goto('/');
+      const token = await page.evaluate(() => localStorage.getItem('token'));
 
-    // create a notification
-    const createResponse = await request.post(`${config.apiBasePath}/notifications`, {
-      data: {
-        label: NOTIFICATION_LABEL,
-        text: NOTIFICATION_TEXT,
-      },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      ignoreHTTPSErrors: true,
+      const { request } = page;
+
+      // create a notification
+      const createResponse = await request.post(`${config.apiBasePath}/notifications`, {
+        data: {
+          label: NOTIFICATION_LABEL,
+          text: NOTIFICATION_TEXT,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        ignoreHTTPSErrors: true,
+      });
+      createdNotification = await createResponse.json();
     });
-    const createdNotification = await createResponse.json();
-
-    // ```
 
     const badgeTextLocator = page.getByTestId('notification-count')
       .locator('span.va-badge__text');
     await expect(badgeTextLocator).toContainText('1');
-    // ```
 
     // open the notification menu
     await page.getByTestId('notification-icon').click();
