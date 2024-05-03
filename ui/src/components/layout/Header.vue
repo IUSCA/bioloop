@@ -70,7 +70,6 @@ const areNotificationsEnabled = computed(() => {
     hasRole(role),
   );
 });
-// hasRole();
 </script>
 
 <style>

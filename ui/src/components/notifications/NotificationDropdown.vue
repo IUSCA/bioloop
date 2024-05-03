@@ -1,10 +1,5 @@
 <template>
   <va-inner-loading>
-    <!--        v-model="open"-->
-    <!--              :close-on-anchor-click="false"-->
-    <!--              :close-on-focus-outside="false"-->
-    <!--              :close-on-content-click="false"-->
-    <!--              :close-on-click-outside="false"-->
     <va-menu placement="left-bottom">
       <template #anchor>
         <va-badge
@@ -44,6 +39,7 @@
 <script setup>
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
+import config from "@/config";
 
 const notificationStore = useNotificationStore();
 
@@ -51,9 +47,13 @@ const { notifications } = storeToRefs(notificationStore);
 const { fetchActiveNotifications } = notificationStore;
 
 // retrieve notifications every 5 seconds
-const { resume } = useIntervalFn(fetchActiveNotifications, 5000, {
-  immediateCallback: true,
-});
+const { resume } = useIntervalFn(
+  fetchActiveNotifications,
+  config.notifications.pollingInterval,
+  {
+    immediateCallback: true,
+  },
+);
 
 onMounted(() => {
   resume();
