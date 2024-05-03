@@ -5,34 +5,30 @@ const { test, expect } = require('@playwright/test');
 const NOTIFICATION_LABEL = 'Notification Label';
 const NOTIFICATION_TEXT = 'Notification Text';
 
-// todos
+// todo
 //  tests for
 //   different roles
 
 test.describe.configure({ mode: 'serial' });
 
+test.beforeEach(async ({ page }) => {
+  await page.goto('/');
+  const { request } = page;
+
+  const token = await page.evaluate(() => localStorage.getItem('token'));
+
+  // delete active notifications before test
+  const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?active=true`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    ignoreHTTPSErrors: true,
+  });
+  await deleteResponse.json();
+});
+
 test.describe('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
-    await page.goto('/');
-    const token = await page.evaluate(() => localStorage.getItem('token'));
-    // console.log('token');
-    // console.log(token);
-    // console.log(config.apiBasePath);
-
-    const { request } = page;
-
-    // await
-    // expect(page.getByTestId('notification-menu-items')).not.toBeVisible();
-
-    // delete active notifications before test
-    const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?active=true`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      ignoreHTTPSErrors: true,
-    });
-    await deleteResponse.json();
-
     const badgeTextLocator = page.getByTestId('notification-count')
       .locator('span.va-badge__text');
     await expect(badgeTextLocator).toBeEmpty();
