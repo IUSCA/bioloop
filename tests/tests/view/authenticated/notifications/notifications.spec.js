@@ -20,17 +20,22 @@ test.beforeEach(async ({ page }) => {
   await deleteActiveNotifications(request, token);
 });
 
+const notificationBadgeLocator = (page) => page.getByTestId('notification-count')
+  .locator('span.va-badge__text');
+
+const notificationMenuItemLocator = (page) => page.getByTestId('notification-menu-items')
+  .locator('tr.va-menu-item');
+
 test.describe('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
-    const badgeTextLocator = page.getByTestId('notification-count')
-      .locator('span.va-badge__text');
-    await expect(badgeTextLocator).toBeEmpty();
+    await expect(notificationBadgeLocator(page)).toBeEmpty();
 
     // Assert that no notifications are active
     // open the notification menu
     await page.getByTestId('notification-icon').click();
     await expect(page.getByTestId('notification-menu-items'))
       .toContainText('No pending notifications');
+    await expect(notificationMenuItemLocator(page)).toHaveCount(1);
     // close the notification menu
     await page.getByTestId('notification-icon').click();
   });
@@ -49,12 +54,12 @@ test.describe('Notifications', () => {
     });
 
     await test.step('Assert', async () => {
-      const badgeTextLocator = page.getByTestId('notification-count')
-        .locator('span.va-badge__text');
-      await expect(badgeTextLocator).toContainText(`${NUMBER_OF_NOTIFICATIONS}`);
+      await expect(notificationBadgeLocator(page)).toContainText(`${NUMBER_OF_NOTIFICATIONS}`);
 
       // open the notification menu
       await page.getByTestId('notification-icon').click();
+
+      await expect(notificationMenuItemLocator(page)).toHaveCount(NUMBER_OF_NOTIFICATIONS);
 
       // eslint-disable-next-line no-plusplus
       for (let i = 0; i < NUMBER_OF_NOTIFICATIONS; i++) {
