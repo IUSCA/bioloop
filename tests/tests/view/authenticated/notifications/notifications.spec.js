@@ -66,16 +66,18 @@ test.describe('Notifications', () => {
       createdNotification = await createResponse.json();
     });
 
-    const badgeTextLocator = page.getByTestId('notification-count')
-      .locator('span.va-badge__text');
-    await expect(badgeTextLocator).toContainText('1');
+    await test.step('Assert', async () => {
+      const badgeTextLocator = page.getByTestId('notification-count')
+        .locator('span.va-badge__text');
+      await expect(badgeTextLocator).toContainText('1');
 
-    // open the notification menu
-    await page.getByTestId('notification-icon').click();
+      // open the notification menu
+      await page.getByTestId('notification-icon').click();
 
-    await expect(page.getByTestId(`notification-${createdNotification.id}-label`))
-      .toContainText(NOTIFICATION_LABEL);
-    await expect(page.getByTestId(`notification-${createdNotification.id}-text`))
-      .toContainText(NOTIFICATION_TEXT);
+      await expect(page.getByTestId(`notification-${createdNotification.id}-label`))
+        .toContainText(NOTIFICATION_LABEL);
+      await expect(page.getByTestId(`notification-${createdNotification.id}-text`))
+        .toContainText(NOTIFICATION_TEXT);
+    });
   });
 });
