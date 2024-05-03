@@ -22,8 +22,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
-    const badgeTextLocator = page.getByTestId('notification-count')
-      .locator('span.va-badge__text');
+    const badgeTextLocator = await notificationBadgeTextLocator({ page });
     await expect(badgeTextLocator).toBeEmpty();
 
     // Assert that no notifications are active
@@ -49,8 +48,13 @@ test.describe('Notifications', () => {
     });
 
     await test.step('Assert', async () => {
-      const badgeTextLocator = page.getByTestId('notification-count')
-        .locator('span.va-badge__text');
+      // assert that the number of notifications in the DOM matches the number
+      // of notifications created
+      await expect(page.getByTestId('notification-menu-items')
+        .locator('tr.va-menu-item'))
+        .toHaveCount(NUMBER_OF_NOTIFICATIONS);
+
+      const badgeTextLocator = await notificationBadgeTextLocator({ page });
       await expect(badgeTextLocator).toContainText(`${NUMBER_OF_NOTIFICATIONS}`);
 
       // open the notification menu
@@ -68,6 +72,9 @@ test.describe('Notifications', () => {
     });
   });
 });
+
+const notificationBadgeTextLocator = ({ page }) => page.getByTestId('notification-count')
+  .locator('span.va-badge__text');
 
 const createNotifications = async ({ request, token }) => {
   const created = [];
