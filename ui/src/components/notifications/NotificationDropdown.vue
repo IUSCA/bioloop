@@ -5,14 +5,7 @@
     <!--          :close-on-focus-outside="false"-->
     <!--          :close-on-content-click="false"-->
     <!--          :close-on-click-outside="false"-->
-    <va-menu
-      placement="left-bottom"
-      v-model="open"
-      :close-on-anchor-click="false"
-      :close-on-focus-outside="false"
-      :close-on-content-click="false"
-      :close-on-click-outside="false"
-    >
+    <va-menu placement="left-bottom">
       <template #anchor>
         <va-badge
           :offset="[-3, 10]"

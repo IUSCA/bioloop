@@ -13,9 +13,9 @@ test('notifications', async ({ page }) => {
   await page.goto('/');
 
   const token = await page.evaluate(() => localStorage.getItem('token'));
-  console.log('token');
-  console.log(token);
-  console.log(config.apiBasePath);
+  // console.log('token');
+  // console.log(token);
+  // console.log(config.apiBasePath);
 
   const { request } = page;
 
@@ -39,11 +39,13 @@ test('notifications', async ({ page }) => {
     console.log(e);
   }
 
-  // assert that no notifications are active
+  // Assert that no notifications are active
+  // open the notification menu
   await page.getByTestId('notification-icon').click();
-  // await
-  // expect(page.getByTestId('notification-menu-items')).toContainText('No
-  // pending notifications');
+  await expect(page.getByTestId('notification-menu-items'))
+    .toContainText('No pending notifications');
+  // close the notification menu
+  await page.getByTestId('notification-icon').click();
 
   // create a notification
   const createResponse = await request.post(`${config.apiBasePath}/notifications`, {
@@ -59,20 +61,13 @@ test('notifications', async ({ page }) => {
   });
   const createdNotification = await createResponse.json();
 
-  // await expect(page.getByRole('banner')).toContainText('1');
   await expect(page.getByTestId('notification-count')).toContainText('1');
 
+  // open the notification menu
   await page.getByTestId('notification-icon').click();
 
-  await expect(page.getByTestId(`notification-${createdNotification.id}-label`)).toContainText(
-    NOTIFICATION_LABEL,
-    // ,
-    // { useInnerText: true },
-  );
-  await expect(page.getByTestId(`notification-${createdNotification.id}-text`)).toContainText(NOTIFICATION_TEXT);
-
-  // await
-  // expect(page.getByTestId('notification-menu-items')).toContainText(NOTIFICATION_LABEL,
-  // { useInnerText: true, }); await
-  // expect(page.getByTestId('notification-menu-items')).toContainText(NOTIFICATION_TEXT);
+  await expect(page.getByTestId(`notification-${createdNotification.id}-label`))
+    .toContainText(NOTIFICATION_LABEL);
+  await expect(page.getByTestId(`notification-${createdNotification.id}-text`))
+    .toContainText(NOTIFICATION_TEXT);
 });
