@@ -43,7 +43,6 @@ test.describe('Notifications', () => {
 
       const { request } = page;
 
-      // create a notification
       createdNotifications = await createNotifications({ request, token });
     });
 
