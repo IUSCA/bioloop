@@ -23,21 +23,18 @@ test('notifications', async ({ page }) => {
   // expect(page.getByTestId('notification-menu-items')).not.toBeVisible();
 
   // delete active notifications before test
-  try {
-    const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?active=true`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      ignoreHTTPSErrors: true,
-    });
-    const _response = await deleteResponse.json();
-    console.log('response');
-    console.log(_response);
-  } catch (e) {
-    console.log('error');
-    console.log(e);
-  }
+  const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?active=true`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    ignoreHTTPSErrors: true,
+  });
+  await deleteResponse.json();
+
+  const badgeTextLocator = page.getByTestId('notification-count')
+    .locator('span.va-badge__text');
+  await expect(badgeTextLocator).toBeEmpty();
 
   // Assert that no notifications are active
   // open the notification menu
@@ -61,7 +58,10 @@ test('notifications', async ({ page }) => {
   });
   const createdNotification = await createResponse.json();
 
-  await expect(page.getByTestId('notification-count')).toContainText('1');
+  // ```
+
+  await expect(badgeTextLocator).toContainText('1');
+  // ```
 
   // open the notification menu
   await page.getByTestId('notification-icon').click();
