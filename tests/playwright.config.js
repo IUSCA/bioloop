@@ -80,20 +80,22 @@ module.exports = {
         name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch:
-      '/view/authenticated/notifications/notifications.spec.js',
+        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+        // fullyParallel: false,
       },
       {
         name: 'operator_notifications',
-        use: {
-          ...devices['Desktop Chrome'],
-          storageState: OPERATOR_STORAGE_STATE,
-        },
-        dependencies: ['operator_login'],
-        testMatch:
-      '/view/authenticated/notifications/notifications.spec.js',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login', 'admin_notifications'],
+        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+        // fullyParallel: false,
       },
-
+      {
+        name: 'user_notifications',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/notifications/notifications_user.spec.js',
+      },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
       //
