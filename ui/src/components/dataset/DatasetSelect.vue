@@ -31,9 +31,15 @@
       </va-button-dropdown>
     </template>
 
+    <template #name="slotProps">
+      <va-popover placement="top" :message="slotProps['value'].raw">
+        {{ slotProps["value"].formatted }}
+      </va-popover>
+    </template>
+
     <template #type="slotProps">
       <DatasetType
-        :type="slotProps['value']"
+        :type="slotProps['value'].formatted"
         :show-icon="!(breakpoint.sm || breakpoint.xs)"
       />
     </template>
@@ -48,7 +54,7 @@ import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
 import _ from "lodash";
 
-const NAME_TRIM_THRESHOLD = 13;
+const NAME_TRIM_THRESHOLD = 20;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
@@ -98,6 +104,7 @@ const primaryColumns = computed(() => {
       label: "Name",
       width: props.columnWidths.name,
       formatFn: trimName,
+      slotted: true,
     },
     {
       key: "type",
