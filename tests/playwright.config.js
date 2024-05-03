@@ -52,6 +52,10 @@ module.exports = {
         testMatch: path.join(__dirname, '/tests/setup/admin_login.setup.js'),
       },
       {
+        name: 'operator_login',
+        testMatch: path.join(__dirname, '/tests/setup/operator_login.setup.js'),
+      },
+      {
         name: 'user_login',
         testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
       },
@@ -73,10 +77,21 @@ module.exports = {
         testMatch: '/view/authenticated/user_*_view.spec.js',
       },
       {
-        name: 'notifications',
+        name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+        testMatch:
+      '/view/authenticated/notifications/notifications.spec.js',
+      },
+      {
+        name: 'operator_notifications',
+        use: {
+          ...devices['Desktop Chrome'],
+          storageState: OPERATOR_STORAGE_STATE,
+        },
+        dependencies: ['operator_login'],
+        testMatch:
+      '/view/authenticated/notifications/notifications.spec.js',
       },
 
       // { name: 'firefox', use: {
