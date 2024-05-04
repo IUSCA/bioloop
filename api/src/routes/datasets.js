@@ -21,6 +21,7 @@ const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
+const isPermittedToWorkflow = accessControl('workflow');
 
 const router = express.Router();
 const prisma = new PrismaClient();
