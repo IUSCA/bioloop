@@ -915,19 +915,13 @@ router.get(
 
     const wf_promises = [];
     workflow_ids.forEach((workflow_id) => {
-      // eslint-disable-next-line no-await-in-loop
       wf_promises.push(wfService.getOne(workflow_id));
     });
 
-    // wfService.getOne(workflow_ids[0]).then((e) => {
-    //   console.log('response')
-    //   console.log(e.data)
+    console.log('workflow_ids')
+    console.log(workflow_ids)
 
-    //   res.send('OK')
-    // })
-
-    const retrievedWorkflowsResponse = await Promise.allSettled(wf_promises);
-
+    const retrievedWorkflowsResponse = await Promise.all(wf_promises);
     let _workflows = retrievedWorkflowsResponse.map((e) => e.data);
 
     console.log('retrievedWorkflows');
