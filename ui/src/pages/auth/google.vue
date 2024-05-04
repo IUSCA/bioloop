@@ -1,14 +1,14 @@
 <template>
   <AuthStatus
-    :get-url="authService.getCasUrl"
-    :verify="auth.casLogin"
-    :param-names="['ticket']"
+    :get-url="authService.getGoogleUrl"
+    :verify="auth.googleLogin"
+    :param-names="['code', 'state']"
   />
 </template>
 
 <script setup>
-import authService from "@/services/auth";
 import { useAuthStore } from "@/stores/auth";
+import authService from "@/services/auth";
 
 const auth = useAuthStore();
 </script>
@@ -16,6 +16,6 @@ const auth = useAuthStore();
 <route lang="yaml">
 meta:
   layout: auth
-  title: IU CAS Auth
+  title: Google Auth
   requiresAuth: false
 </route>

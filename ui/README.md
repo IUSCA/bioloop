@@ -143,6 +143,33 @@ Add the name and value of the environment variable to the `.env` file. This file
 
 Users are authenticated using IU CAS. [More on auth module](docs/auth_explained.md).
 
+Authentication with google OpenID Connect is implemented following this guide https://developers.google.com/identity/openid-connect/openid-connect
+
+Authentication with CILogon OpenID Connect is implemented following this guide https://www.cilogon.org/oidc
+
+Enable / disable login with authentication providers:
+
+`ui/src/config.js`
+- "auth_enabled.google": true | false
+- "auth_enabled.cilogon": true | false
+
+`api/src/config/default.json`
+- "auth.google.enabled": true | false
+- "auth.cilogon.enabled": true | false
+
+Environment Variables:
+
+`ui/.env`
+- VITE_GOOGLE_RETURN=https://localhost/auth/google
+- VITE_CILOGON_RETURN=https://localhost/auth/cil
+
+`api/.env`
+- GOOGLE_OAUTH_CLIENT_ID=
+- GOOGLE_OAUTH_CLIENT_SECRET=
+- CILOGON_OAUTH_CLIENT_ID=
+- CILOGON_OAUTH_CLIENT_SECRET=
+
+### Authentication controls on router
 By default any page will require user authentication
 
 ```html
