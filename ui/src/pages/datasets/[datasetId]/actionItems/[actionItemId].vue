@@ -56,7 +56,9 @@ const fetchDatasetWorkflows = (dataset_id) => {
 const fetchResources = async () => {
   loading.value = true;
   await fetchActionItemDetails();
-  await fetchDatasetWorkflows(actionItem.value.dataset_id);
+  await fetchDatasetWorkflows(
+    actionItem.value.dataset.duplicated_from.original_dataseet_id,
+  );
   loading.value = false;
 };
 
