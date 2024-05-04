@@ -956,12 +956,13 @@ router.delete(
   asyncHandler(async (req, res, next) => {
     const filtered_query = buildQueryObject(req.query);
 
-    const matching_datasets = await prisma.dataset.findMany({
-      where: filtered_query,
-      include: {
-        workflows: true,
-      },
-    });
+    const matching_datasets = (Object.keys(filtered_query).length > 0)
+      ? await prisma.dataset.findMany({
+        where: filtered_query,
+        include: {
+          workflows: true,
+        },
+      }) : [];
 
     // eslint-disable-next-line no-restricted-syntax
     for (const dataset of matching_datasets) {
