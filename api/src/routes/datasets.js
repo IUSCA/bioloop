@@ -15,11 +15,13 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const wfService = require('../services/workflow');
 const datasetDuplicationService = require('../services/datasetDuplication');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
+const isPermittedToWorkflow = accessControl('workflow');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -885,6 +887,44 @@ router.post(
       },
     });
     res.sendStatus(200);
+  }),
+);
+
+router.get(
+  '/:id/workflows',
+  isPermittedToWorkflow('read'),
+  validate([
+    param('id').isInt().toInt(),
+    query('status').optional().isArray(),
+  ]),
+  dataset_state_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = get workflows associated with a dataset
+
+    console.log('STATUS');
+    console.log(req.query.status);
+
+    const workflows = await prisma.workflow.findMany({
+      where: {
+        dataset_id: req.params.id,
+      },
+    });
+    const workflow_ids = workflows.map((w) => w.id);
+
+    const wf_promises = [];
+    workflow_ids.forEach((workflow_id) => {
+      // eslint-disable-next-line no-await-in-loop
+      wf_promises.push(wfService.getOne(workflow_id));
+    });
+
+    const retrievedWorkflows = await Promise.allSettled(workflow_ids);
+
+    if ((req.query.status || []).length > 0) {
+      retrievedWorkflows.filter((wf) => req.query.status.includes(wf.status));
+    }
+
+    res.send(retrievedWorkflows);
   }),
 );
 

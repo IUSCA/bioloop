@@ -106,6 +106,8 @@ function onRejectClick() {
   showRejectModal.value = true;
 }
 
+function isDatasetReadyForProcessing(dataset) {}
+
 function acceptDuplicate(duplicate_dataset_id) {
   initiatingResolution.value = true;
   datasetService
