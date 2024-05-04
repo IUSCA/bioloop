@@ -87,7 +87,7 @@ const is_dataset_locked_for_write = (dataset) => {
 
     if (!dataset.is_duplicate) {
       if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
+        || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
         return true;
       }
     } else {
@@ -117,15 +117,15 @@ const state_write_check = asyncHandler(async (req, res, next) => {
   const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
   if (
     ((latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-            || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-          && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-      || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-              || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-          && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-      || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
+      || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+      && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+    || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+      || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+      && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+    || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
   ) {
     return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
-        + `while its current state is ${latest_state}`));
+      + `while its current state is ${latest_state}`));
   }
 
   next();
@@ -890,43 +890,44 @@ router.post(
   }),
 );
 
-router.get(
-  '/:id/workflows',
-  isPermittedToWorkflow('read'),
-  validate([
-    param('id').isInt().toInt(),
-    query('status').optional().isArray(),
-  ]),
-  dataset_state_check,
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = get workflows associated with a dataset
+// todo - this makes auth fail somehow
+// router.get(
+//   '/:id/workflows',
+//   isPermittedToWorkflow('read'),
+//   validate([
+//     param('id').isInt().toInt(),
+//     query('status').optional().isArray(),
+//   ]),
+//   dataset_state_check,
+//   asyncHandler(async (req, res, next) => {
+//     // #swagger.tags = ['datasets']
+//     // #swagger.summary = get workflows associated with a dataset
 
-    console.log('STATUS');
-    console.log(req.query.status);
+//     console.log('STATUS');
+//     console.log(req.query.status);
 
-    const workflows = await prisma.workflow.findMany({
-      where: {
-        dataset_id: req.params.id,
-      },
-    });
-    const workflow_ids = workflows.map((w) => w.id);
+//     const workflows = await prisma.workflow.findMany({
+//       where: {
+//         dataset_id: req.params.id,
+//       },
+//     });
+//     const workflow_ids = workflows.map((w) => w.id);
 
-    const wf_promises = [];
-    workflow_ids.forEach((workflow_id) => {
-      // eslint-disable-next-line no-await-in-loop
-      wf_promises.push(wfService.getOne(workflow_id));
-    });
+//     const wf_promises = [];
+//     workflow_ids.forEach((workflow_id) => {
+//       // eslint-disable-next-line no-await-in-loop
+//       wf_promises.push(wfService.getOne(workflow_id));
+//     });
 
-    const retrievedWorkflows = await Promise.allSettled(workflow_ids);
+//     const retrievedWorkflows = await Promise.allSettled(workflow_ids);
 
-    if ((req.query.status || []).length > 0) {
-      retrievedWorkflows.filter((wf) => req.query.status.includes(wf.status));
-    }
+//     if ((req.query.status || []).length > 0) {
+//       retrievedWorkflows.filter((wf) => req.query.status.includes(wf.status));
+//     }
 
-    res.send(retrievedWorkflows);
-  }),
-);
+//     res.send(retrievedWorkflows);
+//   }),
+// );
 
 // add state to dataset
 router.post(
