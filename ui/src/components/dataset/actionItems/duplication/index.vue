@@ -27,6 +27,25 @@
         Current state is {{ associatedDatasetState }}.
       </va-alert>
 
+      <va-alert
+        v-if="
+          datasetHasPendingWorkflows &&
+          !isActionItemAcknowledged &&
+          isActionItemActive
+        "
+        color="warning"
+        class="mx-0"
+      >
+        Dataset
+        <a
+          :href="`/datasets/${props.actionItem.dataset.duplicated_from.original_dataset_id}`"
+          >#{{
+            props.actionItem.dataset.duplicated_from.original_dataset_id
+          }}</a
+        >
+        cannot be overwritten because it has pending workflows.
+      </va-alert>
+
       <!-- The report generated for this duplication -->
       <duplication-report-header :action-item="props.actionItem" />
       <duplication-report-body :action-item="props.actionItem" />
@@ -73,6 +92,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  datasetWorkflows: {
+    type: Array,
+    default: () => [],
+  },
   loadingResources: {
     type: Boolean,
     default: false,
@@ -106,7 +129,9 @@ function onRejectClick() {
   showRejectModal.value = true;
 }
 
-function isDatasetReadyForProcessing(dataset) {}
+const datasetHasPendingWorkflows = computed(() => {
+  return props.datasetWorkflows.length > 0;
+});
 
 function acceptDuplicate(duplicate_dataset_id) {
   initiatingResolution.value = true;
@@ -174,7 +199,8 @@ const areControlsDisabled = computed(() => {
   return (
     isActionItemAcknowledged.value ||
     !isActionItemActive.value ||
-    !isDuplicateDatasetReadyForProcessing.value
+    !isDuplicateDatasetReadyForProcessing.value ||
+    datasetHasPendingWorkflows.value
   );
 });
 </script>

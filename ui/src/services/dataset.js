@@ -173,6 +173,10 @@ class DatasetService {
   getActionItem({ action_item_id } = {}) {
     return api.get(`/datasets/action-items/${action_item_id}`);
   }
+
+  getWorkflows({ dataset_id, params }) {
+    return api.get(`/datasets/${dataset_id}/workflows`, { params });
+  }
 }
 
 export default new DatasetService();

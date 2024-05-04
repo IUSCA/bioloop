@@ -890,7 +890,6 @@ router.post(
   }),
 );
 
-// todo - this makes auth fail somehow
 router.get(
   '/:id/workflows',
   isPermittedToWorkflow('read'),
@@ -918,8 +917,8 @@ router.get(
       wf_promises.push(wfService.getOne(workflow_id));
     });
 
-    console.log('workflow_ids')
-    console.log(workflow_ids)
+    console.log('workflow_ids');
+    console.log(workflow_ids);
 
     const retrievedWorkflowsResponse = await Promise.all(wf_promises);
     let _workflows = retrievedWorkflowsResponse.map((e) => e.data);
