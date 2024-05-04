@@ -87,7 +87,7 @@ const is_dataset_locked_for_write = (dataset) => {
 
     if (!dataset.is_duplicate) {
       if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
+        || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
         return true;
       }
     } else {
@@ -117,15 +117,15 @@ const state_write_check = asyncHandler(async (req, res, next) => {
   const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
   if (
     ((latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-            || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-          && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-      || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-              || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-          && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-      || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
+      || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+      && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+    || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+      || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+      && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+    || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
   ) {
     return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
-        + `while its current state is ${latest_state}`));
+      + `while its current state is ${latest_state}`));
   }
 
   next();
@@ -890,6 +890,7 @@ router.post(
   }),
 );
 
+// todo - this makes auth fail somehow
 router.get(
   '/:id/workflows',
   isPermittedToWorkflow('read'),
@@ -918,13 +919,25 @@ router.get(
       wf_promises.push(wfService.getOne(workflow_id));
     });
 
-    const retrievedWorkflows = await Promise.allSettled(workflow_ids);
+    // wfService.getOne(workflow_ids[0]).then((e) => {
+    //   console.log('response')
+    //   console.log(e.data)
+
+    //   res.send('OK')
+    // })
+
+    const retrievedWorkflowsResponse = await Promise.allSettled(wf_promises);
+
+    let _workflows = retrievedWorkflowsResponse.map((e) => e.data);
+
+    console.log('retrievedWorkflows');
+    console.dir(_workflows, { depth: true });
 
     if ((req.query.status || []).length > 0) {
-      retrievedWorkflows.filter((wf) => req.query.status.includes(wf.status));
+      _workflows = _workflows.filter((wf) => req.query.status.includes(wf.status));
     }
 
-    res.send(retrievedWorkflows);
+    res.send(_workflows);
   }),
 );
 
