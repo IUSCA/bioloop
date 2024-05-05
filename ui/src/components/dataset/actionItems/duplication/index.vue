@@ -23,8 +23,8 @@
         class="mx-0"
       >
         Duplicate dataset needs to reach a state of
-        {{ config.DUPLICATE_READY }} before it can be accepted or rejected.
-        Current state is {{ associatedDatasetState }}.
+        {{ config.DATASET_STATES.DUPLICATE_READY }} before it can be accepted or
+        rejected. Current state is {{ associatedDatasetState }}.
       </va-alert>
 
       <va-alert
