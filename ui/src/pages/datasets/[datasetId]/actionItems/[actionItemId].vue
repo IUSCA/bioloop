@@ -57,7 +57,7 @@ const fetchResources = async () => {
   loading.value = true;
   await fetchActionItemDetails();
   await fetchDatasetWorkflows(
-    actionItem.value.dataset.duplicated_from.original_dataseet_id,
+    actionItem.value.dataset.duplicated_from.original_dataset_id,
   );
   loading.value = false;
 };
