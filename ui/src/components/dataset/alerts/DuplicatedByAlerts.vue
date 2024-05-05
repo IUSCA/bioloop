@@ -1,6 +1,10 @@
 <template>
   <div>
-    <div v-if="isActiveDatasetWithIncomingDuplicates(props.dataset)">
+    <div
+      v-if="
+        isActiveDatasetWithIncomingDuplicates(props.dataset) && isAuthorized
+      "
+    >
       <va-alert
         v-for="(duplicateDataset, index) in duplicateDatasets"
         color="warning"
@@ -17,10 +21,7 @@
 
           <!-- Allow authorized users to see visit the action item for this duplication -->
           <va-button
-            v-if="
-              duplicateDataset.action_items.length > 0 &&
-              (auth.canAdmin || auth.canOperate)
-            "
+            v-if="duplicateDataset.action_items.length > 0"
             @click="
               () => {
                 router.push(
@@ -51,6 +52,10 @@ const props = defineProps({
 });
 
 const auth = useAuthStore();
+
+const isAuthorized = computed(
+  () => auth.canAdmin.value || auth.canOperate.value,
+);
 
 // Gather and sort all duplicates of the current dataset
 const duplicateDatasets = computed(() =>

@@ -16,10 +16,7 @@
 
         <!-- Allow authorized users to see any active action items for this duplication -->
         <va-button
-          v-if="
-            props.dataset?.action_items?.length > 0 &&
-            (auth.canAdmin || auth.canOperate)
-          "
+          v-if="props.dataset?.action_items?.length > 0 && isAuthorized"
           @click="
             () => {
               router.push(
@@ -100,7 +97,6 @@ import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
 
 const router = useRouter();
-const auth = useAuthStore();
 
 const props = defineProps({
   dataset: {
@@ -108,6 +104,12 @@ const props = defineProps({
     required: true,
   },
 });
+
+const auth = useAuthStore();
+
+const isAuthorized = computed(
+  () => auth.canAdmin.value || auth.canOperate.value,
+);
 
 const _overwrittenByDatasetId = computed(() =>
   overwrittenByDatasetId(props.dataset),

@@ -1,6 +1,9 @@
 <template>
   <!-- The current dataset is an active dataset which is currently being overwritten by its duplicate. -->
-  <va-alert v-if="isActiveDatasetBeingOverwritten" color="warning">
+  <va-alert
+    v-if="isActiveDatasetBeingOverwritten && isAuthorized"
+    color="warning"
+  >
     This dataset is currently being overwritten by duplicate
     <a :href="`/datasets/${_overwrittenByDatasetId}`">
       #{{ _overwrittenByDatasetId }}
@@ -13,6 +16,7 @@ import {
   isDatasetBeingOverwritten,
   overwrittenByDatasetId,
 } from "@/services/datasetUtils";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   dataset: {
@@ -20,6 +24,12 @@ const props = defineProps({
     required: true,
   },
 });
+
+const auth = useAuthStore();
+
+const isAuthorized = computed(
+  () => auth.canAdmin.value || auth.canOperate.value,
+);
 
 const _overwrittenByDatasetId = computed(() =>
   overwrittenByDatasetId(props.dataset),

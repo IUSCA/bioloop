@@ -1,7 +1,7 @@
 <template>
   <!-- This dataset has duplicates incoming -->
   <va-alert
-    v-if="isActiveDatasetWithIncomingDuplicates(props.dataset)"
+    v-if="isActiveDatasetWithIncomingDuplicates(props.dataset) && isAuthorized"
     color="warning"
   >
     <div class="flex items-center">
@@ -27,12 +27,19 @@
 
 <script setup>
 import { isActiveDatasetWithIncomingDuplicates } from "@/services/datasetUtils";
+import { useAuthStore } from "@/stores/auth";
 
-const router = useRouter();
 const props = defineProps({
   dataset: {
     type: Object,
     required: true,
   },
 });
+
+const router = useRouter();
+const auth = useAuthStore();
+
+const isAuthorized = computed(
+  () => auth.canAdmin.value || auth.canOperate.value,
+);
 </script>
