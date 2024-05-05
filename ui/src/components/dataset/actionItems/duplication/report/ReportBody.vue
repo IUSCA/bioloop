@@ -18,9 +18,16 @@
 
         <!-- The current check's passed / failed status -->
         <template #cell(passed)="{ value }">
-          <va-chip size="small" :color="styleStatusChip(value)">
-            {{ value === "true" ? "PASSED" : "FAILED" }}
-          </va-chip>
+          <div>
+            <i-mdi-check-circle-outline
+              v-if="value === 'true'"
+              class="text-green-700"
+            />
+            <i-mdi-close-circle-outline
+              v-if="value === 'false'"
+              class="text-red-700"
+            />
+          </div>
         </template>
 
         <!-- Expand current check's row -->
@@ -74,13 +81,9 @@ const columns = ref([
   {
     key: "passed",
     label: "Status",
-    thAlign: "right",
+    thAlign: "left",
     tdAlign: "right",
   },
   { key: "actions", thAlign: "right", tdAlign: "right" },
 ]);
-
-const styleStatusChip = (passed) => {
-  return passed === "true" ? "success" : "warning";
-};
 </script>
