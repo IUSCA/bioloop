@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 const CONSTANTS = require('../constants');
+const wfService = require('./workflow');
 
 const prisma = new PrismaClient();
 
@@ -332,6 +333,24 @@ const update_action_item_queries = async ({
   return update_queries;
 };
 
+const check_for_pending_workflows = async (dataset_id) => {
+  const workflows = await prisma.workflow.findMany({
+    where: {
+      dataset_id,
+    },
+  });
+  const workflow_ids = workflows.map((w) => w.id);
+
+  const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
+
+  const retrievedWorkflowsResponses = await Promise.all(wf_promises);
+  const retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
+
+  if (retrievedWorkflows.some((w) => ['PENDING', 'STARTED', 'FAILURE'].includes(w.status))) {
+    throw new Error(`Dataset ${dataset_id} cannot be overwritten because it has pending workflows.`);
+  }
+};
+
 /**
  * Initiates the overwriting of a dataset by its incoming duplicate.
  *
@@ -351,8 +370,8 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
   const {
     original_dataset,
     duplicate_dataset,
-  } = await
-  validate_state_pre_overwrite_resource_purge(duplicate_dataset_id);
+  } = await validate_state_pre_overwrite_resource_purge(duplicate_dataset_id);
+  await check_for_pending_workflows(original_dataset.id);
 
   // write queries to be run in a single transaction.
   let update_queries = [];

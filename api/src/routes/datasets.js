@@ -902,9 +902,6 @@ router.get(
     // #swagger.tags = ['datasets']
     // #swagger.summary = get workflows associated with a dataset
 
-    console.log('STATUS');
-    console.log(req.query.status);
-
     const workflows = await prisma.workflow.findMany({
       where: {
         dataset_id: req.params.id,
@@ -912,25 +909,16 @@ router.get(
     });
     const workflow_ids = workflows.map((w) => w.id);
 
-    const wf_promises = [];
-    workflow_ids.forEach((workflow_id) => {
-      wf_promises.push(wfService.getOne(workflow_id));
-    });
+    const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
 
-    console.log('workflow_ids');
-    console.log(workflow_ids);
-
-    const retrievedWorkflowsResponse = await Promise.all(wf_promises);
-    let _workflows = retrievedWorkflowsResponse.map((e) => e.data);
-
-    console.log('retrievedWorkflows');
-    console.dir(_workflows, { depth: true });
+    const retrievedWorkflowsResponses = await Promise.all(wf_promises);
+    let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
 
     if ((req.query.status || []).length > 0) {
-      _workflows = _workflows.filter((wf) => req.query.status.includes(wf.status));
+      retrievedWorkflows = retrievedWorkflows.filter((wf) => req.query.status.includes(wf.status));
     }
 
-    res.send(_workflows);
+    res.send(retrievedWorkflows);
   }),
 );
 
