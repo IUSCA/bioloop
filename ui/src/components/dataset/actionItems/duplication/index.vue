@@ -29,9 +29,10 @@
 
       <va-alert
         v-if="
-          datasetHasPendingWorkflows &&
+          isDuplicateDatasetReadyForProcessing &&
           !isActionItemAcknowledged &&
-          isActionItemActive
+          isActionItemActive &&
+          datasetHasPendingWorkflows
         "
         color="warning"
         class="mx-0"
