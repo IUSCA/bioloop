@@ -819,7 +819,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
 
 module.exports = {
   accept_duplicate_dataset,
-  complete_duplicate_acceptance,
+  // complete_duplicate_acceptance,
   initiate_duplicate_rejection,
   complete_duplicate_rejection,
 };
