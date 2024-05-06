@@ -103,14 +103,6 @@ config = {
         'accept_duplicate_dataset': {
             'steps': [
                 {
-                    'name': 'purge resources',
-                    'task': 'purge_original_dataset_resources'
-                },
-                {
-                    'name': 'accept',
-                    'task': 'accept_duplicate'
-                },
-                {
                     'name': 'archive',
                     'task': 'archive_dataset'
                 },

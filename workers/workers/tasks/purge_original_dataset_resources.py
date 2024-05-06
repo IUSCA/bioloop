@@ -51,8 +51,10 @@ def purge(celery_task, duplicate_dataset_id, **kwargs):
                               f"{config['DATASET_STATES']['OVERWRITE_IN_PROGRESS']} or {config['DATASET_STATES']['ORIGINAL_DATASET_RESOURCES_PURGED']}, but current state is "
                               f"{original_dataset_latest_state}.")
 
+    # not needed
     original_dataset_staged_path = Path(original_dataset['staged_path']).resolve() if \
         original_dataset['staged_path'] is not None else None
+    # not needed
     original_dataset_bundle_path = Path(get_bundle_staged_path(dataset=original_dataset)).resolve() if \
             original_dataset['bundle'] is not None else None
 

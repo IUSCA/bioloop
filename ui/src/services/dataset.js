@@ -107,9 +107,7 @@ class DatasetService {
   }
 
   accept_duplicate_dataset({ duplicate_dataset_id }) {
-    return api.post(
-      `/datasets/duplicates/${duplicate_dataset_id}/accept_duplicate_dataset`,
-    );
+    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/accept`);
   }
 
   reject_duplicate_dataset({ duplicate_dataset_id }) {

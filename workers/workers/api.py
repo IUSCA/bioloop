@@ -264,11 +264,11 @@ def update_dataset_action_item(dataset_id: int, action_item_id: int, data: dict)
         return r.json()
 
 
-def complete_duplicate_dataset_acceptance(duplicate_dataset_id: str):
-    with APIServerSession() as s:
-        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept_duplicate_dataset/complete')
-        r.raise_for_status()
-        return r.json()
+# def complete_duplicate_dataset_acceptance(duplicate_dataset_id: str):
+#     with APIServerSession() as s:
+#         r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept/complete')
+#         r.raise_for_status()
+#         return r.json()
 
 
 def complete_duplicate_dataset_rejection(duplicate_dataset_id: str):

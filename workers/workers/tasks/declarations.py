@@ -77,20 +77,6 @@ def purge_duplicate_dataset_resources(celery_task, duplicate_dataset_id, **kwarg
         raise exc.RetryableException(e)
 
 
-@app.task(base=WorkflowTask, bind=True, name='accept_duplicate',
-          autoretry_for=(exc.RetryableException,),
-          max_retries=3,
-          default_retry_delay=5)
-def accept_duplicate(celery_task, duplicate_dataset_id, **kwargs):
-    from workers.tasks.accept_duplicate import accept as task_body
-    try:
-        return task_body(celery_task, duplicate_dataset_id, **kwargs)
-    except exc.InspectionFailed:
-        raise
-    except Exception as e:
-        raise exc.RetryableException(e)
-
-
 @app.task(base=WorkflowTask, bind=True, name='reject_duplicate',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
