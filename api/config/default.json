@@ -107,12 +107,6 @@
       "description": "Overwrites an existing dataset with its incoming duplicate.",
       "steps": [
         {
-          "name": "purge resources",
-          "task": "purge_original_dataset_resources"
-        }, {
-          "name": "accept",
-          "task": "accept_duplicate"
-        }, {
           "name": "archive",
           "task": "archive_dataset"
         }, {
