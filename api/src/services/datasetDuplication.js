@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
  * @param dataset_type
  * @param is_deleted
  * @param is_duplicate
- * @returns {Promise<number|number>}
+ * @returns {Number}
  */
 async function get_dataset_latest_version({
   dataset_name, dataset_type, is_deleted, is_duplicate,
@@ -102,7 +102,7 @@ async function validate_duplication_state(duplicate_dataset_id) {
  * into the system.
  * @returns tuple containing the original and the duplicate datasets
  */
-async function validate_state_pre_overwrite_resource_purge(duplicate_dataset_id) {
+async function validate_state_before_overwrite(duplicate_dataset_id) {
   const {
     original_dataset,
     duplicate_dataset,
@@ -497,7 +497,7 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
   const {
     original_dataset,
     duplicate_dataset,
-  } = await validate_state_pre_overwrite_resource_purge(duplicate_dataset_id);
+  } = await validate_state_before_overwrite(duplicate_dataset_id);
   await check_for_pending_workflows(original_dataset.id);
 
   // assumes states are sorted descending by timestamp
