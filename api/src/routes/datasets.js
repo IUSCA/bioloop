@@ -86,14 +86,8 @@ const is_dataset_locked_for_write = (dataset) => {
   if (!dataset.is_deleted) {
     const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
 
-    if (!dataset.is_duplicate) {
-      if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-        || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
-        return true;
-      }
-    } else {
-      return latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
-        || latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+    if (dataset.is_duplicate) {
+      return latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
         || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED;
     }
   } else {
