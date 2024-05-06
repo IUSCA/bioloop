@@ -1,0 +1,57 @@
+version: "3"
+name: bioloop-secure-download
+services:
+    
+
+  api:
+    restart: unless-stopped
+    build:
+      context: .
+      args:
+        APP_UID: ${APP_UID} # read from .env file
+        APP_GID: ${APP_GID} # read from .env file
+    volumes:
+      - ${APP_INSTALL_DIR}:/opt/sca/app
+      - ${SLATE_DATA_DIR}:${SLATE_DATA_DIR}:ro
+    expose:
+      - 3080
+    # entrypoint: [ "tail", "-f", "/dev/null" ]
+    networks:
+      network:
+        ipv4_address: 172.140.0.10
+
+
+## As used right now, nginx is running via a separately-
+## built container with the appropriate UID/GID injected
+## This could likely be moved into the compose, but this
+## file is really just here for reference to our current
+## prod setup
+  nginx:
+    volumes:
+      - ${NGINX_CONF_MAIN}:/etc/nginx/nginx.conf:ro
+      - ${NGINX_CONF_D}:/etc/nginx/conf.d/:ro
+      - ${SCRATCH_DATA_DIR}:${SCRATCH_DATA_DIR}:ro
+      - ${SLATE_DATA_DIR}:${SLATE_DATA_DIR}:ro
+    image: nginx-bioloop:latest
+    restart: always
+    networks:
+      network:
+        ipv4_address: 172.140.0.20
+
+
+volumes:
+  ui_modules:
+    external: false
+
+  api_modules:
+    external: false
+networks:
+  network:
+    attachable: true
+    name: bioloop
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.140.0.0/24
+          gateway: 172.140.0.1
+      

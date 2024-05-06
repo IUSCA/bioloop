@@ -5,9 +5,12 @@ const jsonwt = require('jsonwebtoken');
 const _ = require('lodash/fp');
 const config = require('config');
 const { OAuth2Client } = require('@badgateway/oauth2-client');
+const { PrismaClient } = require('@prisma/client');
 
 const logger = require('./logger');
 const userService = require('./user');
+
+const prisma = new PrismaClient();
 
 const key = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.key')));
 const pub = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.pub')));
@@ -27,8 +30,8 @@ function issueJWT({ userProfile, forever = false }) {
 
 const get_user_profile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id']);
 
-async function onLogin({ user, updateLastLogin = true }) {
-  if (updateLastLogin) { await userService.updateLastLogin({ id: user.id, method: 'IUCAS' }); }
+async function onLogin({ user, updateLastLogin = true, method = 'IUCAS' }) {
+  if (updateLastLogin) { await userService.updateLastLogin({ id: user.id, method }); }
 
   const userProfile = get_user_profile(user);
 
@@ -64,10 +67,46 @@ function get_download_token(file_path) {
   });
 }
 
+const find_or_create_test_user = async ({ role }) => {
+  const test_user_config = config.e2e.users[role];
+  const test_user_username = test_user_config.username;
+
+  let test_user = await prisma.user.findUnique({
+    where: {
+      username: test_user_username,
+    },
+  });
+
+  if (!test_user) {
+    const requested_role = await prisma.role.findFirstOrThrow({
+      where: {
+        name: role,
+      },
+    });
+
+    test_user = await prisma.user.create({
+      data: {
+        username: test_user_username,
+        name: test_user_username,
+        cas_id: test_user_username,
+        email: `${test_user_username}@iu.edu`,
+        user_role: {
+          create: {
+            role_id: requested_role.id,
+          },
+        },
+      },
+    });
+  }
+
+  return test_user;
+};
+
 module.exports = {
   onLogin,
   issueJWT,
   checkJWT,
   get_user_profile,
   get_download_token,
+  find_or_create_test_user,
 };

@@ -13,7 +13,30 @@
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
     }
   },
+  "auth": {
+    "google": {
+      "client_id": "GOOGLE_OAUTH_CLIENT_ID",
+      "client_secret": "GOOGLE_OAUTH_CLIENT_SECRET"
+    },
+    "cilogon": {
+      "client_id": "CILOGON_OAUTH_CLIENT_ID",
+      "client_secret": "CILOGON_OAUTH_CLIENT_SECRET"
+    }
+  },
   "download_server": {
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
+  },
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": "E2E_ADMIN"
+      },
+      "operator": {
+        "username": "E2E_OPERATOR"
+      },
+      "user": {
+        "username": "E2E_USER"
+      }
+    }
   }
 }

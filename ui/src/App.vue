@@ -1,5 +1,6 @@
 <template>
-  <!-- 
+  <va-inner-loading :loading="loading">
+    <!-- 
     Remounts the component when the path changes.
     
     This is useful when navigating to the same component, ex: from /datasets/1 to /datasets/2
@@ -7,7 +8,8 @@
     By default, for these navigations, the component is not unmounted, only the props change 
     and the setup code is not run again.
   -->
-  <RouterView :key="$route.path" />
+    <RouterView :key="$route.path" />
+  </va-inner-loading>
 </template>
 
 <script setup>
@@ -16,11 +18,13 @@ import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
 import { useBreakpoint, useColors } from "vuestic-ui";
+import envService from "@/services/env";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
 const { applyPreset, colors } = useColors();
+const loading = ref(false);
 
 const nav = useNavStore();
 const isDark = useDark();
@@ -35,6 +39,21 @@ const setupTheme = () => {
   if (auth?.user?.theme?.primary) {
     colors.primary = auth.user.theme.primary;
   }
+};
+
+const fetchEnv = () => {
+  loading.value = true;
+  envService
+    .getEnvironment()
+    .then((res) => {
+      auth.setEnv(res.data);
+    })
+    .catch((err) => {
+      console.log(err);
+    })
+    .finally(() => {
+      loading.value = false;
+    });
 };
 
 watch(
@@ -70,6 +89,7 @@ onBeforeMount(() => {
 });
 
 onMounted(() => {
+  fetchEnv();
   setupTheme();
   setViewType();
 });

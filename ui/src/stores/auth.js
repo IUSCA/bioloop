@@ -1,10 +1,11 @@
+import config from "@/config";
+import authService from "@/services/auth";
+import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import { jwtDecode } from "jwt-decode";
-import authService from "@/services/auth";
-import config from "@/config";
 
 export const useAuthStore = defineStore("auth", () => {
+  const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
   const loggedIn = ref(false);
@@ -37,7 +38,7 @@ export const useAuthStore = defineStore("auth", () => {
     token.value = "";
   }
 
-  function casLogin(ticket) {
+  function casLogin({ ticket }) {
     return authService
       .casVerify(ticket)
       .then((res) => {
@@ -46,6 +47,36 @@ export const useAuthStore = defineStore("auth", () => {
       })
       .catch((error) => {
         console.error("CAS Login failed", error);
+        status.value = error;
+        onLogout();
+        return Promise.reject();
+      });
+  }
+
+  function googleLogin({ code, state }) {
+    return authService
+      .googleVerify({ code, state })
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+        return res.data;
+      })
+      .catch((error) => {
+        console.error("Google Login failed", error);
+        status.value = error;
+        onLogout();
+        return Promise.reject();
+      });
+  }
+
+  function ciLogin({ code }) {
+    return authService
+      .ciVerify({ code })
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+        return res.data;
+      })
+      .catch((error) => {
+        console.error("CI Login failed", error);
         status.value = error;
         onLogout();
         return Promise.reject();
@@ -117,6 +148,10 @@ export const useAuthStore = defineStore("auth", () => {
     });
   }
 
+  const setEnv = (val) => {
+    env.value = val;
+  };
+
   const setTheme = (theme) => {
     user.value.theme = theme;
   };
@@ -137,6 +172,10 @@ export const useAuthStore = defineStore("auth", () => {
     canAdmin,
     setTheme,
     getTheme,
+    googleLogin,
+    ciLogin,
+    env,
+    setEnv,
   };
 });
 
