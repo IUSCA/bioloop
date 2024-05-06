@@ -9,6 +9,7 @@ const {
 const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
+const dayjs = require('dayjs');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -896,11 +897,14 @@ router.get(
   validate([
     param('id').isInt().toInt(),
     query('status').optional().isArray(),
+    query('last_run_only').optional().isBoolean(),
   ]),
   dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = get workflows associated with a dataset
+
+    const last_run_only = req.query.last_run_only || false;
 
     const workflows = await prisma.workflow.findMany({
       where: {
@@ -914,6 +918,29 @@ router.get(
     const retrievedWorkflowsResponses = await Promise.all(wf_promises);
     let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
 
+    if (last_run_only) {
+      // filter last successful runs
+      let workflow_names = retrievedWorkflows
+        .map((wf) => wf.name);
+      // get distinct workflow names
+      workflow_names = workflow_names
+        .filter((name, i) => workflow_names.indexOf(name) === i);
+
+      // group workflows by distinct workflow names
+      const workflows_grouped_by_name = workflow_names.map((wf_name) => (
+        retrievedWorkflows
+          .filter((wf) => wf.name === wf_name)));
+
+      // eslint-disable-next-line
+      retrievedWorkflows = workflows_grouped_by_name.map((wfs_grouped_by_name) => wfs_grouped_by_name.reduce((acc, curr) => {
+        return dayjs(acc.updated_at).diff(dayjs(curr.updated_at)) >= 0 ? acc : curr;
+      }));
+
+      // console.log('retrievedWorkflows');
+      // console.dir(retrievedWorkflows, { depth: null });
+    }
+
+    // filter by status
     if ((req.query.status || []).length > 0) {
       retrievedWorkflows = retrievedWorkflows.filter((wf) => req.query.status.includes(wf.status));
     }
