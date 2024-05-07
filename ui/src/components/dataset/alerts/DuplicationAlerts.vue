@@ -1,7 +1,10 @@
 <template>
   <div>
     <!-- The current dataset is an active duplicate of another -->
-    <va-alert v-if="isActiveDuplicatePendingAction" color="warning">
+    <va-alert
+      v-if="isActiveDuplicatePendingAction && isAuthorized"
+      color="warning"
+    >
       <div class="flex items-center">
         <div class="flex-auto">
           <div>
@@ -16,7 +19,7 @@
 
         <!-- Allow authorized users to see any active action items for this duplication -->
         <va-button
-          v-if="props.dataset?.action_items?.length > 0 && isAuthorized"
+          v-if="props.dataset?.action_items?.length > 0"
           @click="
             () => {
               router.push(
@@ -65,6 +68,7 @@ import {
 } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
+import { storeToRefs } from "pinia";
 
 const router = useRouter();
 
@@ -75,11 +79,9 @@ const props = defineProps({
   },
 });
 
-const auth = useAuthStore();
+const { canAdmin, canOperate } = storeToRefs(useAuthStore());
 
-const isAuthorized = computed(
-  () => auth.canAdmin.value || auth.canOperate.value,
-);
+const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 
 const _overwrittenByDatasetId = computed(() =>
   overwrittenByDatasetId(props.dataset),
