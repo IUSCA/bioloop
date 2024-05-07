@@ -12,7 +12,7 @@
             <a
               :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
             >
-              #{{ props.dataset.duplicated_from?.original_dataset_id }}
+              {{ props.dataset.duplicated_from?.original_dataset?.name }}
             </a>
           </div>
         </div>
@@ -39,8 +39,8 @@
     <!-- The current dataset has been overwritten by another dataset -->
     <va-alert v-if="isInactiveOverwrittenDataset" color="danger">
       This dataset has been overwritten by duplicate
-      <a :href="`/datasets/${_overwrittenByDatasetId}`">
-        #{{ _overwrittenByDatasetId }}
+      <a :href="`/datasets/${_overwrittenByDataset?.id}`">
+        {{ _overwrittenByDataset?.name }}
       </a>
     </va-alert>
 
@@ -50,7 +50,7 @@
       <a
         :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
       >
-        #{{ props.dataset.duplicated_from?.original_dataset_id }}
+        {{ props.dataset.duplicated_from?.original_dataset?.name }}
       </a>
     </va-alert>
 
@@ -64,7 +64,7 @@
 <script setup>
 import {
   datasetCurrentState,
-  overwrittenByDatasetId,
+  overwrittenByDataset,
 } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
@@ -83,8 +83,8 @@ const { canAdmin, canOperate } = storeToRefs(useAuthStore());
 
 const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 
-const _overwrittenByDatasetId = computed(() =>
-  overwrittenByDatasetId(props.dataset),
+const _overwrittenByDataset = computed(() =>
+  overwrittenByDataset(props.dataset),
 );
 
 const datasetState = computed(() => datasetCurrentState(props.dataset));

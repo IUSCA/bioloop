@@ -37,7 +37,7 @@ function datasetCurrentState(dataset) {
 
 // Returns the dataset that overwrote the current
 // dataset (via acceptance of a duplicate into the system)
-function overwrittenByDatasetId(dataset) {
+function overwrittenByDataset(dataset) {
   if (!dataset || !dataset.duplicated_by) {
     return undefined;
   }
@@ -48,12 +48,12 @@ function overwrittenByDatasetId(dataset) {
     (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
   );
 
-  return duplicationLog ? duplicationLog.duplicate_dataset.id : undefined;
+  return duplicationLog ? duplicationLog.duplicate_dataset : undefined;
 }
 
 export {
   isActiveDatasetWithIncomingDuplicates,
   datasetHasActiveDuplicates,
   datasetCurrentState,
-  overwrittenByDatasetId,
+  overwrittenByDataset,
 };

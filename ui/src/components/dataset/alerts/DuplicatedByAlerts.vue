@@ -15,7 +15,7 @@
           <div class="flex-auto">
             This dataset has been duplicated by
             <a :href="`/datasets/${duplicateDataset.id}`">
-              #{{ duplicateDataset.id }}
+              {{ duplicateDataset.name }}
             </a>
           </div>
 

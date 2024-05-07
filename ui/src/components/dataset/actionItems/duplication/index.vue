@@ -40,8 +40,8 @@
         Dataset
         <a
           :href="`/datasets/${props.actionItem.dataset.duplicated_from.original_dataset_id}`"
-          >#{{
-            props.actionItem.dataset.duplicated_from.original_dataset_id
+          >{{
+            props.actionItem.dataset.duplicated_from.original_dataset.name
           }}</a
         >
         cannot be overwritten because it has pending workflows.
