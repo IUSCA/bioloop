@@ -41,6 +41,7 @@
 <script setup>
 import { isActiveDatasetWithIncomingDuplicates } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
+import { storeToRefs } from "pinia";
 
 const router = useRouter();
 
@@ -51,11 +52,11 @@ const props = defineProps({
   },
 });
 
-const auth = useAuthStore();
+const { canAdmin, canOperate } = storeToRefs(useAuthStore());
 
-const isAuthorized = computed(
-  () => auth.canAdmin.value || auth.canOperate.value,
-);
+// console.log(canAdmin.value);
+
+const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 
 // Gather and sort all duplicates of the current dataset
 const duplicateDatasets = computed(() =>

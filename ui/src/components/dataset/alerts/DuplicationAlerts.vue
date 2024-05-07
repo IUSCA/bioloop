@@ -68,6 +68,7 @@ import {
 } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
+import { storeToRefs } from "pinia";
 
 const router = useRouter();
 
@@ -78,11 +79,9 @@ const props = defineProps({
   },
 });
 
-const auth = useAuthStore();
+const { canAdmin, canOperate } = storeToRefs(useAuthStore());
 
-const isAuthorized = computed(
-  () => auth.canAdmin.value || auth.canOperate.value,
-);
+const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 
 const _overwrittenByDatasetId = computed(() =>
   overwrittenByDatasetId(props.dataset),

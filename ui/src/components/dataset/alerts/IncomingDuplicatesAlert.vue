@@ -25,6 +25,7 @@
 <script setup>
 import { isActiveDatasetWithIncomingDuplicates } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
+import { storeToRefs } from "pinia";
 
 const props = defineProps({
   dataset: {
@@ -34,9 +35,7 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const auth = useAuthStore();
+const { canAdmin, canOperate } = storeToRefs(useAuthStore());
 
-const isAuthorized = computed(
-  () => auth.canAdmin.value || auth.canOperate.value,
-);
+const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 </script>
