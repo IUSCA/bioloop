@@ -1,3 +1,4 @@
+# Auth Explained
 
 ## Objectives for Auth module
 1. Enable users to authenticate with IU CAS, which will create a session.
@@ -7,24 +8,24 @@
 5. Ensure that the session does not expire as long as the user remains active on the app.
 
 ## Overview of Auth Flow
-<img src="assets/auth-overview-2.png" style="max-width: 75%;" class="center">
+<img src="/ui/assets/auth-overview-2.png" style="max-width: 75%;" class="center">
 
 refer to https://kb.iu.edu/d/bfpq
 
 ## Vue App Code Execution Order
-<img src="assets/app-load.png" style="max-width: 75%;" class="center">
+<img src="/ui/assets/app-load.png" style="max-width: 75%;" class="center">
 
 ## Route Navigation Guard Logic
-<img src="assets/navigation-guard-logic.png" style="max-width: 90%;" class="center">
+<img src="/ui/assets/navigation-guard-logic.png" style="max-width: 90%;" class="center">
 
 ## Login Code flow - Before IU Login
-<img src="assets/login-flow-before-cas.png" style="max-width: 75%;" class="center">
+<img src="/ui/assets/login-flow-before-cas.png" style="max-width: 75%;" class="center">
 
 ## Login Code flow - After IU Login
-<img src="assets/login-flow-after-cas-return.png" style="max-width: 75%;" class="center">
+<img src="/ui/assets/login-flow-after-cas-return.png" style="max-width: 75%;" class="center">
 
 ## Code flow for a Revisiting (logged in) User
-<img src="assets/logged-in-flow.png" style="max-width: 75%;" class="center">
+<img src="/ui/assets/logged-in-flow.png" style="max-width: 75%;" class="center">
 
 ## Code flow for token refresh
 On login / initialize, the auth store creates a timer that will invoke `refreshToken` function five minutes (configurable) before the current token expires. `refreshToken` requests API for a new token. Once the API responds with a new token and user profile data, `refreshToken` invokes `onLogin`, which updates the user and token refs and stores them in the local storage.
