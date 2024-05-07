@@ -1,3 +1,5 @@
+# Dataset Duplications
+
 Bioloop allows for duplicate datasets to be registered in the system.
 
 ---
@@ -13,7 +15,7 @@ Upon registration, the `watch` script launches the `handle_duplicate_datasets` w
   - compares the newly created duplicate dataset with the original dataset, and generates a comparison report which is persisted to Postgres.
   - Updates the state of the dataset to `DUPLICATE_READY`, at which the dataset becomes available for acceptance/rejection.
 
-<img src="assets/datasetDuplication/duplicate_dataset_registration.png">
+<img src="assets/datasetDuplication/assets/duplicate_dataset_registration.png">
 
 The results of the comparison analysis are shown to authorized users in the UI, based on which they can either accept or reject a duplicate dataset.
 
@@ -39,7 +41,7 @@ A dataset is compared with another based on 3 criteria:
 
 ## ER Diagram
 
-<img src="assets/datasetDuplication/duplication_er_diagram.png" />
+<img src="assets/datasetDuplication/assets/duplication_er_diagram.png" />
 
 ---
 
@@ -49,7 +51,7 @@ Only Operator and Admin roles are authorized to accept or reject an incoming dup
 
 ### Acceptance
 
-<img src="assets/datasetDuplication/accept_duplicate_steps.png" />
+<img src="assets/datasetDuplication/assets/accept_duplicate_steps.png" />
 
 When an authorized user accepts a duplicate dataset into the system, the following steps take place:
 1. The action item and notification corresponding to the duplicate dataset are marked as resolved and marked as inactive.
@@ -64,7 +66,7 @@ When an authorized user accepts a duplicate dataset into the system, the followi
 
 ### Rejection
 
-<img src="assets/datasetDuplication/reject_duplicate_steps.png" />
+<img src="assets/datasetDuplication/assets/reject_duplicate_steps.png" />
 
 When an authorized user rejects a duplicate dataset from the system, the following steps take place:
 1. The action item and notification corresponding to the duplicate dataset are acknowledged.
