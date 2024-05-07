@@ -352,17 +352,15 @@ const reject_concurrent_active_duplicates_queries = async (duplicate_dataset, ac
 /**
  * Overwrites a dataset by its incoming duplicate.
  *
- * Updates the states of the original and the duplicate datasets,
- * acknowledges the notification and action items associated with the
+ * Acknowledges the notification and action items associated with the
  * duplication, and rejects any other concurrent duplicates of the original
  * dataset.
  *
- * This method is expected to be idempotent (the resultant end state
- * should be the same every time this method is invoked).
+ * This method is expected to be idempotent.
  *
  * @param {Number} duplicate_dataset_id - The duplicate dataset to be accepted.
  * @param {Number} accepted_by_id - id of the user who is accepting the duplicate dataset.
- * @returns the dataset that is overwriting the original dataset.
+ * @returns the dataset that has now overwritten the original dataset.
  */
 async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }) {
   const {
@@ -435,18 +433,17 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
 }
 
 /**
- * Initiates the rejection of an incoming duplicate dataset.
+ * Rejects an incoming duplicate dataset.
  *
- * Updates the state of the incoming duplicate dataset, and acknowledges the
+ * Acknowledges the
  * action item and the notification associated with this duplication.
  *
- * This method is expected to be idempotent (the resultant end state
- * should be the same every time this method is called).
+ * This method is expected to be idempotent.
  *
  * @param {Number} duplicate_dataset_id The duplicate dataset to be rejected.
  * @param {Number} rejected_by_id id of the user who is rejecting the duplicate dataset.
  *
- * @returns the dataset that is being rejected.
+ * @returns the dataset that has now been rejected.
  */
 async function reject_duplicate_dataset({ duplicate_dataset_id, rejected_by_id }) {
   const { duplicate_dataset } = await validate_duplication_state(
