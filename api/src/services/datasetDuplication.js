@@ -305,7 +305,7 @@ const reject_concurrent_active_duplicates_queries = async (duplicate_dataset, ac
       dataset_id: d.id,
       user_id: accepted_by_id,
       action: 'duplicate_rejected',
-      state: 'DUPLICATE_REJECTED',
+      state: config.DATASET_STATES.DUPLICATE_REJECTED,
     }));
 
     // eslint-disable-next-line no-await-in-loop
@@ -404,7 +404,6 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
     dataset_id: duplicate_dataset.id,
     user_id: accepted_by_id,
     action: 'duplicate_accepted',
-    state: config.DATASET_STATES.DUPLICATE_ACCEPTED,
   }));
 
   update_queries.push(prisma.dataset.update({
