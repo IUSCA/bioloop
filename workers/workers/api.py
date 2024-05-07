@@ -264,20 +264,6 @@ def update_dataset_action_item(dataset_id: int, action_item_id: int, data: dict)
         return r.json()
 
 
-# def complete_duplicate_dataset_acceptance(duplicate_dataset_id: str):
-#     with APIServerSession() as s:
-#         r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept/complete')
-#         r.raise_for_status()
-#         return r.json()
-
-
-def complete_duplicate_dataset_rejection(duplicate_dataset_id: str):
-    with APIServerSession() as s:
-        r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/reject_duplicate_dataset/complete')
-        r.raise_for_status()
-        return r.json()
-
-
 def add_workflow_to_dataset(dataset_id, workflow_id):
     with APIServerSession() as s:
         r = s.post(f'datasets/{dataset_id}/workflows', json={

@@ -1187,27 +1187,4 @@ router.post(
   }),
 );
 
-router.patch(
-  '/duplicates/:id/reject_duplicate_dataset/complete',
-  validate([
-    param('id').isInt().toInt(),
-  ]),
-  dataset_delete_check,
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = Complete the rejection of a duplicate dataset.
-
-    let updatedDataset;
-    try {
-      updatedDataset = await datasetDuplicationService.complete_duplicate_rejection({
-        duplicate_dataset_id: req.params.id,
-      });
-    } catch (e) {
-      // console. log(e);
-      return next(createError.BadRequest(e.message));
-    }
-
-    res.json(updatedDataset);
-  }),
-);
 module.exports = router;

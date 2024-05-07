@@ -111,9 +111,7 @@ class DatasetService {
   }
 
   reject_duplicate_dataset({ duplicate_dataset_id }) {
-    return api.post(
-      `/datasets/duplicates/${duplicate_dataset_id}/reject_duplicate_dataset`,
-    );
+    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/reject`);
   }
 
   getStats({ type }) {
