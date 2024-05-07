@@ -493,7 +493,7 @@ async function get_workflows({ dataset_id, last_run_only = false, statuses = [] 
     retrievedWorkflows = retrievedWorkflows.filter((wf) => statuses.includes(wf.status));
   }
 
-  return retrievedWorkflows
+  return retrievedWorkflows;
 }
 
 module.exports = {
