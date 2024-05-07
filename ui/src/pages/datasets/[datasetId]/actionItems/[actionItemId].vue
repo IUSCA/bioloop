@@ -40,6 +40,7 @@ const fetchDatasetWorkflows = (dataset_id) => {
   return datasetService
     .getWorkflows({
       dataset_id,
+      statuses: ["PENDING", "STARTED", "FAILURE"],
       params: {
         last_run_only: true,
       },

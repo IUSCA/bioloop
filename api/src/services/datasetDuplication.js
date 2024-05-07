@@ -215,9 +215,10 @@ const action_item_and_notification_update_queries = async ({
   return update_queries;
 };
 
-const check_for_pending_workflows = async (dataset_id) => {
+const check_for_pending_workflows = async ({ dataset_id, statuses = [] }) => {
   const retrievedWorkflows = await datasetService.get_workflows({
     dataset_id,
+    statuses,
     last_run_only: true,
   });
 
@@ -368,7 +369,7 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
     original_dataset,
     duplicate_dataset,
   } = await validate_state_before_overwrite(duplicate_dataset_id);
-  await check_for_pending_workflows(original_dataset.id);
+  await check_for_pending_workflows({ dataset_id: original_dataset.id, statuses: ['PENDING', 'STARTED', 'FAILURE'] });
 
   // assumes states are sorted descending by timestamp
   // const original_dataset_state = original_dataset.states[0].state;
