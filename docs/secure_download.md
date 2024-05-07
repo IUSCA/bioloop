@@ -91,7 +91,7 @@ To meet the requirements outlined above, a distributed architecture is employed.
 
 ### 6. Downloading a Dataset File
 
-<img src="assets/secure-download-arch-diagram.png" >
+<img src="/secure-download-arch-diagram.png" >
 
 To download a dataset file:
 
