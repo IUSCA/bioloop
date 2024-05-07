@@ -20,9 +20,6 @@
       </div>
     </div>
   </va-alert>
-
-  <!-- This dataset is currently being overwritten by a duplicate -->
-  <OverwriteInProgressAlert :dataset="props.dataset" />
 </template>
 
 <script setup>

@@ -8,12 +8,8 @@ function isDatasetLockedForWrite(dataset) {
       : undefined;
 
   let isLocked;
-  if (!dataset.is_duplicate) {
-    isLocked = isDatasetBeingOverwritten(dataset);
-  } else {
+  if (dataset.is_duplicate) {
     isLocked =
-      datasetLatestState ===
-        config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS ||
       datasetLatestState ===
         config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS ||
       datasetLatestState ===
@@ -21,20 +17,6 @@ function isDatasetLockedForWrite(dataset) {
   }
 
   return datasetLatestState ? isLocked : true;
-}
-
-function isDatasetBeingOverwritten(dataset) {
-  // assumes states are sorted in descending order by timestamp
-  const datasetLatestState =
-    dataset.states && dataset.states?.length > 0
-      ? dataset.states[0].state
-      : undefined;
-
-  return (
-    datasetLatestState === config.DATASET_STATES.OVERWRITE_IN_PROGRESS ||
-    datasetLatestState ===
-      config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED
-  );
 }
 
 function datasetHasActiveDuplicates(dataset) {
@@ -89,7 +71,6 @@ function overwrittenByDatasetId(dataset) {
 }
 
 export {
-  isDatasetBeingOverwritten,
   isDatasetLockedForWrite,
   isActiveDatasetWithIncomingDuplicates,
   datasetHasActiveDuplicates,

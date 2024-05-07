@@ -27,6 +27,7 @@ const isPermittedToWorkflow = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Middleware to determine if a dataset is locked for write
 const dataset_state_check = asyncHandler(async (req, res, next) => {
   let filtered_datasets = [];
 
@@ -82,6 +83,8 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// A dataset is considered locked for writes if it is a duplicate which is
+// going through the process of being rejected by the system.
 const is_dataset_locked_for_write = (dataset) => {
   if (!dataset.is_deleted) {
     const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
@@ -110,14 +113,11 @@ const state_write_check = asyncHandler(async (req, res, next) => {
   });
 
   const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
-  if (
-    ((latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-      || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-      && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-    || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-      || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-      && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-    || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
+  if ((
+    latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+          || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
+  )
+      && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
   ) {
     return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
       + `while its current state is ${latest_state}`));
@@ -135,7 +135,6 @@ router.post(
     body('notification').isObject(),
     body('next_state').escape().notEmpty().optional(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Datasets']
     // #swagger.summary = Post an action item to a dataset
@@ -193,7 +192,6 @@ router.patch(
     body('ingestion_checks').optional().isArray(),
     body('next_state').optional().escape().notEmpty(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Datasets']
     // #swagger.summary = patch an action item associated with a dataset.
@@ -668,7 +666,6 @@ router.post(
     body('notification').optional().isObject(),
     body('next_state').optional().escape().notEmpty(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a duplicate dataset.'
@@ -794,7 +791,6 @@ router.patch(
       .customSanitizer(BigInt),
     body('bundle').optional().isObject(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Modify dataset.'
@@ -846,7 +842,6 @@ router.post(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
@@ -871,7 +866,6 @@ router.post(
     param('id').isInt().toInt(),
     body('workflow_id').notEmpty(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate workflow_id to a dataset
@@ -893,7 +887,6 @@ router.get(
     query('status').optional().isArray(),
     query('last_run_only').optional().isBoolean(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = get workflows associated with a dataset
@@ -986,10 +979,6 @@ router.delete(
         },
       },
     });
-
-    if (_dataset.is_duplicate) {
-      return next(createError.BadRequest(`Deletion cannot be performed on an active duplicate dataset ${req.params.id}.`));
-    }
 
     if (_dataset) {
       await datasetService.soft_delete(_dataset, req.user?.id);
@@ -1123,7 +1112,6 @@ router.put(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_state_check,
   multer({ storage: report_storage }).single('report'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']

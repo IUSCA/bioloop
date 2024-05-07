@@ -30,27 +30,8 @@
       </div>
     </va-alert>
 
-    <!-- The current dataset is an active duplicate of another, and is currently overwriting the original. -->
-    <va-alert v-else-if="isActiveDuplicateBeingAccepted" color="warning">
-      <div class="flex items-center">
-        <div class="flex-auto">
-          <div>
-            This dataset overwrites
-            <a
-              :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
-            >
-              #{{ props.dataset.duplicated_from?.original_dataset_id }} </a
-            >, and is currently being integrated into the system.
-          </div>
-        </div>
-      </div>
-    </va-alert>
-
     <!-- The current dataset is an active dataset which has incoming duplicates -->
     <DuplicatedByAlerts :dataset="props.dataset" />
-
-    <!-- The current dataset is being overwritten by another dataset -->
-    <OverwriteInProgressAlert :dataset="props.dataset" />
 
     <!-- The current dataset has been overwritten by another dataset -->
     <va-alert v-if="isInactiveOverwrittenDataset" color="danger">
@@ -129,17 +110,6 @@ const isActiveDuplicatePendingAction = computed(
       datasetState.value === config.DATASET_STATES.DUPLICATE_READY), // state of duplicate after running a comparison of
   // duplicate dataset with the original dataset.
 );
-
-// whether this dataset is an active duplicate of another, and is currently
-// undergoing the process of replacing the original dataset.
-const isActiveDuplicateBeingAccepted = computed(() => {
-  return (
-    props.dataset.is_duplicate &&
-    !props.dataset.is_deleted &&
-    datasetState.value ===
-      config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
-  );
-});
 
 // whether this dataset has been overwritten by a duplicate
 const isInactiveOverwrittenDataset = computed(() => {

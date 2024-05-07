@@ -57,12 +57,8 @@ def is_dataset_locked_for_writes(dataset: dict) -> tuple:
     if dataset['is_deleted']:
         locked = True
     else:
-        if not dataset['is_duplicate']:
-            locked = (latest_state['state'] == config['DATASET_STATES']['OVERWRITE_IN_PROGRESS'] or
-                      latest_state['state'] == config['DATASET_STATES']['ORIGINAL_DATASET_RESOURCES_PURGED'])
-        else:
-            locked = (latest_state['state'] == config['DATASET_STATES']['DUPLICATE_ACCEPTANCE_IN_PROGRESS'] or
-                      latest_state['state'] == config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS'] or
+        if dataset['is_duplicate']:
+            locked = (latest_state['state'] == config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS'] or
                       latest_state['state'] == config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED'])
 
     return locked, latest_state if latest_state is not None else None

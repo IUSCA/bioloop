@@ -111,9 +111,7 @@ async function validate_state_before_overwrite(duplicate_dataset_id) {
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing acceptance.
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== config.DATASET_STATES.DUPLICATE_READY
-  // && latest_state !== config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
-  ) {
+  if (latest_state !== config.DATASET_STATES.DUPLICATE_READY) {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in state `
         + `${config.DATASET_STATES.DUPLICATE_READY}, but current state is `
@@ -451,10 +449,7 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
       is_duplicate: false,
       // if incoming duplicate's version is not already updated, update it
       version:
-          (!original_dataset.is_deleted
-          // && original_dataset_state ===
-          // config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED
-          )
+          !original_dataset.is_deleted
             ? original_dataset.version + 1
             : undefined,
     },
@@ -469,21 +464,12 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
     notification_active: false,
   }));
 
-  // update_queries = update_queries.concat(await
-  // action_item_and_notification_update_queries({ dataset: duplicate_dataset,
-  // status: 'ACKNOWLEDGED', notification_status: 'ACKNOWLEDGED', }));
-
   update_queries = update_queries.concat(await audit_and_state_update_queries({
     dataset_id: duplicate_dataset.id,
     user_id: accepted_by_id,
     action: 'duplicate_accepted',
     state: config.DATASET_STATES.DUPLICATE_ACCEPTED,
   }));
-
-  // update_queries = update_queries.concat(await
-  // audit_and_state_update_queries({ dataset_id: original_dataset.id, user_id:
-  // accepted_by_id, action: 'overwrite_initiated', state:
-  // config.DATASET_STATES.OVERWRITE_IN_PROGRESS, }));
 
   update_queries.push(prisma.dataset.update({
     where: {
