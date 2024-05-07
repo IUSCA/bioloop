@@ -794,44 +794,10 @@ router.get(
 
     const last_run_only = req.query.last_run_only || false;
 
-    const workflows = await prisma.workflow.findMany({
-      where: {
-        dataset_id: req.params.id,
-      },
+    const retrievedWorkflows = await datasetService.get_workflows({
+      dataset_id: req.params.id,
+      last_run_only,
     });
-    const workflow_ids = workflows.map((w) => w.id);
-
-    const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
-
-    const retrievedWorkflowsResponses = await Promise.all(wf_promises);
-    let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
-
-    if (last_run_only) {
-      // filter last successful runs
-      let workflow_names = retrievedWorkflows
-        .map((wf) => wf.name);
-      // get distinct workflow names
-      workflow_names = workflow_names
-        .filter((name, i) => workflow_names.indexOf(name) === i);
-
-      // group workflows by distinct workflow names
-      const workflows_grouped_by_name = workflow_names.map((wf_name) => (
-        retrievedWorkflows
-          .filter((wf) => wf.name === wf_name)));
-
-      // eslint-disable-next-line
-      retrievedWorkflows = workflows_grouped_by_name.map((wfs_grouped_by_name) => wfs_grouped_by_name.reduce((acc, curr) => {
-        return dayjs(acc.updated_at).diff(dayjs(curr.updated_at)) >= 0 ? acc : curr;
-      }));
-
-      // console.log('retrievedWorkflows');
-      // console.dir(retrievedWorkflows, { depth: null });
-    }
-
-    // filter by status
-    if ((req.query.status || []).length > 0) {
-      retrievedWorkflows = retrievedWorkflows.filter((wf) => req.query.status.includes(wf.status));
-    }
 
     res.send(retrievedWorkflows);
   }),

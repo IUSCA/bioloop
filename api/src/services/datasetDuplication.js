@@ -1,7 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const config = require('config');
+
 const CONSTANTS = require('../constants');
-const wfService = require('./workflow');
+const datasetService = require('./dataset');
 
 const prisma = new PrismaClient();
 
@@ -215,19 +216,12 @@ const action_item_and_notification_update_queries = async ({
 };
 
 const check_for_pending_workflows = async (dataset_id) => {
-  const workflows = await prisma.workflow.findMany({
-    where: {
-      dataset_id,
-    },
+  const retrievedWorkflows = await datasetService.get_workflows({
+    dataset_id,
+    last_run_only: true,
   });
-  const workflow_ids = workflows.map((w) => w.id);
 
-  const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
-
-  const retrievedWorkflowsResponses = await Promise.all(wf_promises);
-  const retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
-
-  if (retrievedWorkflows.some((w) => ['PENDING', 'STARTED', 'FAILURE'].includes(w.status))) {
+  if (retrievedWorkflows.length > 0) {
     throw new Error(`Dataset ${dataset_id} cannot be overwritten because it has pending workflows.`);
   }
 };
