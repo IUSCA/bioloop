@@ -52,12 +52,15 @@
       <duplication-report-body :action-item="props.actionItem" />
 
       <!-- Accept / Reject buttons -->
-      <div class="flex gap-2 mt-5">
+      <div class="flex gap-5 mt-5">
         <va-button @click="onAcceptClick" :disabled="areControlsDisabled"
           >Accept Duplicate</va-button
         >
 
-        <va-button @click="onRejectClick" :disabled="areControlsDisabled"
+        <va-button
+          @click="onRejectClick"
+          :disabled="areControlsDisabled"
+          preset="plain"
           >Reject Duplicate</va-button
         >
       </div>
@@ -79,14 +82,14 @@
 </template>
 
 <script setup>
-import DuplicationReportHeader from "@/components/dataset/actionItems/duplication/report/ReportHeader.vue";
-import DuplicationReportBody from "@/components/dataset/actionItems/duplication/report/ReportBody.vue";
 import DuplicationAcceptModal from "@/components/dataset/actionItems/duplication/modal/AcceptModal.vue";
 import DuplicationRejectModal from "@/components/dataset/actionItems/duplication/modal/RejectModal.vue";
+import DuplicationReportBody from "@/components/dataset/actionItems/duplication/report/ReportBody.vue";
+import DuplicationReportHeader from "@/components/dataset/actionItems/duplication/report/ReportHeader.vue";
+import config from "@/config";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useNotificationStore } from "@/stores/notification";
-import config from "@/config";
 
 const props = defineProps({
   actionItem: {
