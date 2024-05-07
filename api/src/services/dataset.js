@@ -469,7 +469,7 @@ async function get_workflows({ dataset_id, last_run_only = false, statuses = [] 
     // filter last successful runs
     let workflow_names = retrievedWorkflows
       .map((wf) => wf.name);
-      // get distinct workflow names
+    // get distinct workflow names
     workflow_names = workflow_names
       .filter((name, i) => workflow_names.indexOf(name) === i);
 
@@ -492,6 +492,8 @@ async function get_workflows({ dataset_id, last_run_only = false, statuses = [] 
   if ((statuses || []).length > 0) {
     retrievedWorkflows = retrievedWorkflows.filter((wf) => statuses.includes(wf.status));
   }
+
+  return retrievedWorkflows
 }
 
 module.exports = {
