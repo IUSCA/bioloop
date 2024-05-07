@@ -126,10 +126,6 @@ config = {
                     'name': 'purge resources',
                     'task': 'purge_duplicate_dataset_resources'
                 },
-                {
-                    'name': 'reject',
-                    'task': 'reject_duplicate'
-                }
             ]
         },
         'handle_duplicate_dataset': {
@@ -203,9 +199,8 @@ config = {
         'STAGED': 'STAGED',
         'DUPLICATE_REGISTERED': 'DUPLICATE_REGISTERED',
         'DUPLICATE_READY': 'DUPLICATE_READY',
-        'DUPLICATE_REJECTION_IN_PROGRESS': 'DUPLICATE_REJECTION_IN_PROGRESS',
-        'DUPLICATE_DATASET_RESOURCES_PURGED': 'DUPLICATE_DATASET_RESOURCES_PURGED',
         'DUPLICATE_ACCEPTED': 'DUPLICATE_ACCEPTED',
+        'DUPLICATE_REJECTED': 'DUPLICATE_REJECTED',
         'OVERWRITTEN': 'OVERWRITTEN',
         'DELETED': 'DELETED',
     },

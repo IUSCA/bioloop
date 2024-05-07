@@ -27,105 +27,6 @@ const isPermittedToWorkflow = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Middleware to determine if a dataset is locked for write
-const dataset_state_check = asyncHandler(async (req, res, next) => {
-  let filtered_datasets = [];
-
-  if (req.params.id) {
-    const dataset = await prisma.dataset.findUnique({
-      where: {
-        id: req.params.id,
-      },
-      include: {
-        states: {
-          orderBy: {
-            timestamp: 'desc',
-          },
-        },
-      },
-    });
-    filtered_datasets.push(dataset);
-  } else if (Object.values(req.query).length > 0) {
-    const filter_query = buildQueryObject(req.query);
-
-    const matching_datasets = await prisma.dataset.findMany({
-      where: { ...filter_query },
-      include: {
-        states: {
-          orderBy: {
-            timestamp: 'desc',
-          },
-        },
-      },
-    });
-
-    filtered_datasets = filtered_datasets.concat(matching_datasets);
-  }
-
-  const locked_datasets = filtered_datasets.filter(
-    (dataset) => is_dataset_locked_for_write(dataset),
-  );
-
-  const errors = [];
-
-  if (locked_datasets.length > 0) {
-    errors.push({
-      error: 'datasets_locked_for_write',
-      details: `${locked_datasets.length === 1 ? 'Dataset is' : 'Some datasets are'} locked and cannot be written to.`,
-      locked_datasets: locked_datasets.map(
-        (dataset) => ({ id: dataset.id, state: dataset.states[0].state }),
-      ),
-    });
-
-    return next(createError(500, JSON.stringify(errors), { expose: true }));
-  }
-
-  next();
-});
-
-// A dataset is considered locked for writes if it is a duplicate which is
-// going through the process of being rejected by the system.
-const is_dataset_locked_for_write = (dataset) => {
-  if (!dataset.is_deleted) {
-    const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
-
-    if (dataset.is_duplicate) {
-      return latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-        || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED;
-    }
-  } else {
-    return false;
-  }
-};
-
-const state_write_check = asyncHandler(async (req, res, next) => {
-  const dataset = await prisma.dataset.findUnique({
-    where: {
-      id: parseInt(req.params.id, 10),
-    },
-    include: {
-      states: {
-        orderBy: {
-          timestamp: 'desc',
-        },
-      },
-    },
-  });
-
-  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
-  if ((
-    latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-          || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
-  )
-      && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
-  ) {
-    return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
-      + `while its current state is ${latest_state}`));
-  }
-
-  next();
-});
-
 router.post(
   '/:id/action-item',
   isPermittedTo('update'),
@@ -939,7 +840,6 @@ router.get(
 // add state to dataset
 router.post(
   '/:id/states',
-  state_write_check,
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
@@ -966,7 +866,6 @@ router.delete(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = starts a delete archive workflow which will
@@ -996,7 +895,6 @@ router.delete(
     query('is_duplicate').optional().isBoolean().toBoolean(),
   ]),
   isPermittedTo('delete'),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     const filtered_query = buildQueryObject(req.query);
 
@@ -1045,7 +943,6 @@ router.post(
   ]),
   workflow_access_check,
   dataset_access_check,
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
@@ -1272,8 +1169,8 @@ router.post(
   dataset_delete_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Initiate the overwriting of an active dataset with a
-    // duplicate. with its duplicate.
+    // #swagger.summary = Overwrites an active dataset with its
+    // duplicate
 
     let duplicate_dataset;
     try {
@@ -1294,7 +1191,7 @@ router.post(
 );
 
 router.post(
-  '/duplicates/:id/reject_duplicate_dataset',
+  '/duplicates/:id/reject',
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
@@ -1303,11 +1200,11 @@ router.post(
   dataset_delete_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Initiate the rejection of a duplicate dataset.
+    // #swagger.summary = Rejects a duplicate dataset.
 
     let duplicate_dataset;
     try {
-      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_rejection(
+      duplicate_dataset = await datasetDuplicationService.reject_duplicate_dataset(
         {
           duplicate_dataset_id: req.params.id,
           rejected_by_id: req.user.id,
@@ -1322,31 +1219,6 @@ router.post(
     return res.json(wf);
   }),
 );
-
-// router.patch(
-//   '/duplicates/:id/accept_duplicate_dataset/complete',
-//   validate([
-//     param('id').isInt().toInt(),
-//   ]),
-//   dataset_delete_check,
-//   asyncHandler(async (req, res, next) => {
-//     // #swagger.tags = ['datasets']
-//     // #swagger.summary = Complete the overwriting of an active dataset with
-//     // its duplicate.
-//
-//     let updatedDataset;
-//     try {
-//       updatedDataset = await datasetDuplicationService.complete_duplicate_acceptance({
-//         duplicate_dataset_id: req.params.id,
-//       });
-//     } catch (e) {
-//       // console.log(e);
-//       return next(createError.BadRequest(e.message));
-//     }
-//
-//     res.json(updatedDataset);
-//   }),
-// );
 
 router.patch(
   '/duplicates/:id/reject_duplicate_dataset/complete',

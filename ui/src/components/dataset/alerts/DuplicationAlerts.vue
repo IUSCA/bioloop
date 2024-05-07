@@ -41,17 +41,6 @@
       </a>
     </va-alert>
 
-    <!-- The current dataset is an active duplicate which is currently being rejected. -->
-    <va-alert v-if="isActiveDuplicateBeingRejected" color="warning">
-      This dataset is a duplicate of
-      <a
-        :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
-      >
-        #{{ props.dataset.duplicated_from?.original_dataset_id }}
-      </a>
-      and is currently being rejected by the system.
-    </va-alert>
-
     <!-- The current dataset is a rejected duplicate of another -->
     <va-alert v-else-if="isInactiveRejectedDuplicate" color="danger">
       This dataset is a rejected duplicate of
@@ -117,16 +106,6 @@ const isInactiveOverwrittenDataset = computed(() => {
     !props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
     datasetState.value === config.DATASET_STATES.OVERWRITTEN
-  );
-});
-
-// whether this dataset is a duplicate that is currently being rejected.
-const isActiveDuplicateBeingRejected = computed(() => {
-  return (
-    datasetState.value ===
-      config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS ||
-    datasetState.value ===
-      config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
   );
 });
 

@@ -46,19 +46,3 @@ def compute_bundle_path(dataset: dict) -> str:
 
 def get_bundle_staged_path(dataset: dict) -> str:
     return f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{dataset["bundle"]["name"]}'
-
-
-def is_dataset_locked_for_writes(dataset: dict) -> tuple:
-    # assumes states are sorted by descending timestamp
-    latest_state = dataset['states'][0] if \
-        (dataset['states'] is not None and len(dataset['states']) > 0) else \
-        None
-
-    if dataset['is_deleted']:
-        locked = True
-    else:
-        if dataset['is_duplicate']:
-            locked = (latest_state['state'] == config['DATASET_STATES']['DUPLICATE_REJECTION_IN_PROGRESS'] or
-                      latest_state['state'] == config['DATASET_STATES']['DUPLICATE_DATASET_RESOURCES_PURGED'])
-
-    return locked, latest_state if latest_state is not None else None

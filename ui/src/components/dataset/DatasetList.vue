@@ -92,7 +92,6 @@
                 launch_modal.visible = true;
                 launch_modal.selected = rowData;
               "
-              :disabled="isDatasetLockedForWrite(rowData)"
             >
               <i-mdi-rocket-launch />
             </va-button>
@@ -118,7 +117,6 @@
                 delete_modal.visible = true;
                 delete_modal.selected = rowData;
               "
-              :disabled="isDatasetLockedForWrite(rowData)"
             >
               <i-mdi-delete />
             </va-button>
@@ -200,7 +198,6 @@ import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
-import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import _ from "lodash";
 
 useSearchKeyShortcut();

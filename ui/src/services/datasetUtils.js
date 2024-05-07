@@ -1,24 +1,5 @@
 import config from "@/config";
 
-function isDatasetLockedForWrite(dataset) {
-  // Assume dataset is locked if it's current state can't be determined
-  const datasetLatestState =
-    dataset.states && dataset.states?.length > 0
-      ? dataset.states[0].state
-      : undefined;
-
-  let isLocked;
-  if (dataset.is_duplicate) {
-    isLocked =
-      datasetLatestState ===
-        config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS ||
-      datasetLatestState ===
-        config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED;
-  }
-
-  return datasetLatestState ? isLocked : true;
-}
-
 function datasetHasActiveDuplicates(dataset) {
   return (
     dataset?.duplicated_by?.length > 0 &&
@@ -71,7 +52,6 @@ function overwrittenByDatasetId(dataset) {
 }
 
 export {
-  isDatasetLockedForWrite,
   isActiveDatasetWithIncomingDuplicates,
   datasetHasActiveDuplicates,
   datasetCurrentState,
