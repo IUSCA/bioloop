@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   token = await page.evaluate(() => localStorage.getItem('token'));
 });
 
-test.describe('Duplication notification created', () => {
+test.describe('Dataset duplication', () => {
   test('No duplicate datasets exist', async ({ page }) => {
     await expect(notificationBadgeLocator(page)).toBeEmpty();
     const { request } = page;
