@@ -84,6 +84,7 @@
           color="info"
           icon="cloud_sync"
           @click="openModalToStageProject(rowData)"
+          :disabled="!rowData.archive_path"
         />
       </div>
     </template>
