@@ -68,13 +68,17 @@
       </div>
       <div v-else class="flex justify-center">
         <!-- dataset is not staged and a workflow with staging is pending -->
-        <half-circle-spinner
-          class="flex-none"
-          v-if="rowData.is_staging_pending"
-          :animation-duration="1000"
-          :size="24"
-          :color="colors.warning"
-        />
+        <va-popover
+          v-if="rowData.is_staging_pending || rowData.is_archival_pending"
+          message="Dataset cannot be staged while it is pending archival to SDA"
+        >
+          <half-circle-spinner
+            class="flex-none"
+            :animation-duration="1000"
+            :size="24"
+            :color="rowData.is_staging_pending ? colors.warning : colors.info"
+          />
+        </va-popover>
 
         <!-- dataset is not staged and is not being staged -->
         <va-button
@@ -300,6 +304,7 @@ const rows = computed(() => {
   return Object.values(_datasets.value).map((ds) => ({
     ...ds,
     is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
+    is_archival_pending: wfService.is_step_pending("ARCHIVE", ds.workflows),
   }));
 });
 
