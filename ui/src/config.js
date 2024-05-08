@@ -65,6 +65,14 @@ const exports = {
     },
   },
   alertForEnvironments: ["ci"],
+  featureFlags: {
+    notifications: {
+      enabledForRoles: ["admin", "operator"],
+    },
+  },
+  notifications: {
+    pollingInterval: 5000, // milliseconds
+  },
 };
 
 export default exports;
