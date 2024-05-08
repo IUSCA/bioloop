@@ -120,20 +120,30 @@ Each setup project and its dependent projects are run in an isolated browser con
 
 ### Using server-side state in test
 
-If a test needs to get/set the server-side state before or after it runs, it can be accomplished by making calls to the API layer. For authenticated API routes, the token that will need to be included in the `Authorization` header can be read from `localStorage` inside a test, thus:
+If a test needs to get/set the server-side state before or after it runs, it can be accomplished by making calls to the API layer.
+
+For authenticated API routes, the token that will need to be included in the `Authorization` header can be read from `localStorage` inside a test, and then used in a HTTP request to the API.
+
+The below example illustrates getting a token, and using it to retrieve datasets via a network call to the API layer, with the help of Playwright's `APIRequestContext` API.
 
 ```
-test('test that needs to get/set server-side state', async ({ page }) => {
+test('test that needs to get server-side state', async ({ page }) => {
   ...
   // It's necessary to visit a route in the app first before accessing `localStorage`
   await page.goto('/');
   
   const token = await page.evaluate(() => localStorage.getItem('token'));
   // use retrieved token to make API calls
+  const response = await request.get(`${config.apiBasePath}/datasets`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    ignoreHTTPSErrors: true,
+  });
+  const retrievedDatasets = await response.json();
   ...
 })
 ```
-After retrieving the token, either `axios` or Playwright's `APIRequest` API can be used for making network calls from within a test.
 
 ---
 ## Running tests locally
