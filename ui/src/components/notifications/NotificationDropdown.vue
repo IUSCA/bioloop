@@ -3,10 +3,10 @@
     <va-menu placement="left-bottom">
       <template #anchor>
         <va-badge
-          data-testid="notification-count-badge"
           :offset="[-3, 10]"
           :text="`${notifications.length > 0 ? notifications.length : ''}`"
           overlap
+          data-testid="notification-count"
         >
           <va-button class="notification-bell" plain>
             <Icon icon="mdi-bell-outline" height="36px" width="36px" />

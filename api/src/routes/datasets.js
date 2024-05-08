@@ -670,6 +670,11 @@ router.post(
       },
       include: {
         ...CONSTANTS.INCLUDE_WORKFLOWS,
+        action_items: {
+          include: {
+            notification: true,
+          },
+        },
       },
     }));
 
