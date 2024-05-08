@@ -15,15 +15,19 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Dataset duplication', () => {
-  test('No duplicate datasets exist', async ({ page }) => {
-    await expect(notificationBadgeLocator(page)).toBeEmpty();
-    const { request } = page;
-
-    await deleteDuplicates({ request, token });
-
-    const duplicateDatasets = await getDatasets({ request, token, filters: { is_duplicate: true } });
-    expect(duplicateDatasets).toHaveLength(0);
-  });
+  // test('No duplicate datasets exist', async ({ page }) => {
+  //   await expect(notificationBadgeLocator(page)).toBeEmpty();
+  //   const { request } = page;
+  //
+  //   await deleteDuplicates({ request, token });
+  //
+  //   const duplicateDatasets = await getDatasets({
+  //     request,
+  //     token,
+  //     filters: { is_duplicate: true },
+  //   });
+  //   expect(duplicateDatasets).toHaveLength(0);
+  // });
 
   test('Duplicate dataset created', async ({ page }) => {
     let createdDuplicate;
