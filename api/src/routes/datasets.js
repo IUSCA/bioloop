@@ -23,7 +23,7 @@ const authService = require('../services/auth');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-// const prisma = new PrismaClient();
+const prisma = new PrismaClient();
 
 
 // stats - UI
@@ -334,8 +334,6 @@ router.get(
       bundle: req.query.bundle || false,
       fetch_uploading_data_products: req.query.fetch_uploading_data_products,
       upload_log: req.query.upload_log,
-      include_duplications: req.query.include_duplications || false,
-      include_action_items: req.query.include_action_items || false,
     });
     res.json(dataset);
   }),
@@ -348,19 +346,15 @@ router.post(
   validate([
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    // #swagger.description = 'workflow_id is optional. If the request body has
-    // workflow_id, a new relation is created between dataset and given
-    // workflow_id'
-
+    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
+        a new relation is created between dataset and given workflow_id'
+    */
     const { workflow_id, state, ...data } = req.body;
-
-    if (data.is_duplicate) {
-      next(createError.BadRequest('Created datasets cannot be duplicate.'));
-    }
 
     // create workflow association
     if (workflow_id) {
@@ -403,6 +397,8 @@ router.patch(
     body('du_size').optional().notEmpty().bail()
       .customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().bail()
+      .customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().bail()
       .customSanitizer(BigInt),
     body('bundle').optional().isObject(),
   ]),
@@ -575,7 +571,7 @@ router.post(
           },
         });
       } catch (e) {
-        // console.log()
+      // console.log()
       }
     }
 
@@ -730,9 +726,11 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const download_token = await authService.get_download_token(download_file_path);
-
       const url = new URL(download_file_path, config.get('download_server.base_url'));
+
+      // use url.pathname instead of download_file_path to deal with spaces in the file path
+      // oauth scope cannot contain spaces
+      const download_token = await authService.get_download_token(url.pathname);
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,

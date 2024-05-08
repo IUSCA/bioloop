@@ -1,0 +1,21 @@
+https://mermaid.live
+```
+flowchart TD
+    A[App load] --> |mount|E
+    A --> |initialize|J[Auth Store]
+    E[Route view] --> |route /dashboard|H[Navigation Guard]
+    H --> |mount|F[Default Layout]
+    F --> |mount|I[Dashboard Component]
+    I --> |function call|P[Some Service]
+    P --> |register|O[axios interceptor]
+    P --> |function call|L[axios interceptor\nadds auth header]
+    L --> |network call|M[API]
+    M --> |response|P
+    N[Local Storage] --> |data: token|H
+    R[Local Storage] --> |data: token|O
+    J --> |user data|I
+    J --> |user data|F
+
+```
+
+[![](https://mermaid.ink/img/pako:eNqFkktP4zAUhf-K5XXR7LNAqqaUFrWlIrPCYXGJbxuLxDfjRwvU_e84cSKKECKr-Jwv5z7iEy9JIs_4rqZjWYFx7N-s0Cw-UzFtW1YTyCd2dXXNQkNeu3AzuElTWjkFtXrHcCem3lUsd2TwKUE34oG8Q3ZQeBxCTC_8kWCrZwIjw0Js4KD24BRpduujNHy8uKw6FzPcga8dW8FbjBiY-SWzFLMxlf2lpiWNegSXCdx5XfaFSqjrsBU5NchyNAdVjj1vhz5xr6xDE-4FvCqyTOl4KrGN430lv2auvuNFoUFKy6BbT4UgcUxYpQSN7kjmJQWsxXS7HPz12IuNw1gM2yRvxIoi268a9jhsVoKDjDl6QR0WCXz4FbxP4F1yvEXDOjssf9DnfMIbNA0oGS_NqaMK7ipssOBZfJXpLxV8kiyL_z3qsndPKTOKFR3zwdj45hmN7XxnPHbIudDnWCaui_I3XfKsMybct7EDnCnYG2h4toPaRrUF_Uj0eUap4rDrdKn7u33-AOkM91Y?type=png)](https://mermaid.live/edit#pako:eNqFkktP4zAUhf-K5XXR7LNAqqaUFrWlIrPCYXGJbxuLxDfjRwvU_e84cSKKECKr-Jwv5z7iEy9JIs_4rqZjWYFx7N-s0Cw-UzFtW1YTyCd2dXXNQkNeu3AzuElTWjkFtXrHcCem3lUsd2TwKUE34oG8Q3ZQeBxCTC_8kWCrZwIjw0Js4KD24BRpduujNHy8uKw6FzPcga8dW8FbjBiY-SWzFLMxlf2lpiWNegSXCdx5XfaFSqjrsBU5NchyNAdVjj1vhz5xr6xDE-4FvCqyTOl4KrGN430lv2auvuNFoUFKy6BbT4UgcUxYpQSN7kjmJQWsxXS7HPz12IuNw1gM2yRvxIoi268a9jhsVoKDjDl6QR0WCXz4FbxP4F1yvEXDOjssf9DnfMIbNA0oGS_NqaMK7ipssOBZfJXpLxV8kiyL_z3qsndPKTOKFR3zwdj45hmN7XxnPHbIudDnWCaui_I3XfKsMybct7EDnCnYG2h4toPaRrUF_Uj0eUap4rDrdKn7u33-AOkM91Y)

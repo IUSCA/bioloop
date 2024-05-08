@@ -8,7 +8,7 @@
       <!-- Steps Table -->
       <va-data-table :items="row_items" :columns="columns">
         <template #cell(step)="{ source }">
-          <div class="flex gap-3 justify-start items-center">
+          <div class="flex gap-3 justify-start items-center min-w-[150px]">
             <span style="text-transform: uppercase" class="flex-initial">
               {{ source.name }}
             </span>
