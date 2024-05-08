@@ -18,6 +18,9 @@ test.describe('Duplication notification created', () => {
     const { request } = page;
 
     await deleteDuplicates({ request });
+
+    const duplicateDatasets = await getDatasets({ request, filters: { is_duplicate: true } });
+    expect(duplicateDatasets).toHaveLength(0);
   });
 
   test('Duplicate dataset created', async ({ page }) => {
@@ -115,6 +118,18 @@ const getDataset = async ({ request, datasetId }) => {
   });
   const dataset = await response.json();
   return dataset;
+};
+
+const getDatasets = async ({ request, filters = {} }) => {
+  const response = await request.get(`${config.apiBasePath}/datasets`, {
+    params: filters,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    ignoreHTTPSErrors: true,
+  });
+  const datasets = await response.json();
+  return datasets;
 };
 
 const deleteDuplicates = async ({ request }) => {
