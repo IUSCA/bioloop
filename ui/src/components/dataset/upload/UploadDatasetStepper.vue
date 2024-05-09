@@ -482,9 +482,6 @@ const uploadFile = async (fileDetails) => {
     console.log(`Upload of file ${fileDetails.name} failed`);
   }
 
-  // clear token from store
-  auth.postFileUpload();
-
   fileDetails.uploadStatus = uploaded
     ? config.upload_status.UPLOADED
     : config.upload_status.UPLOAD_FAILED;
