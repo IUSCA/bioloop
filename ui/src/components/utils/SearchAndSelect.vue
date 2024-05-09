@@ -418,11 +418,9 @@ const addOrRemove = (rowData) => {
 
 <style lang="scss">
 .search {
-  --va-data-table-thead-background: var(--va-background-secondary);
-  --va-data-table-tfoot-background: var(--va-background-secondary);
-
   .results-table {
     --va-data-table-cell-padding: 3px;
+    --va-data-table-selectable-cell-width: 40px;
   }
 
   .icon {
