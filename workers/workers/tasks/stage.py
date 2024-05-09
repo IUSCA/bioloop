@@ -98,9 +98,6 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
 
-    if dataset['archive_path'] is None:
-        raise exc.InspectionFailed(f'Dataset {dataset_id} needs to be archived before it can be staged')
-
     staged_path, alias, bundle_alias = stage(celery_task, dataset)
 
     update_data = {

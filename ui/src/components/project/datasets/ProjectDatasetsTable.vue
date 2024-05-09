@@ -70,7 +70,7 @@
         <!-- dataset is not staged and is being archived -->
         <va-popover
           v-if="rowData.is_archival_pending"
-          :message="'Dataset cannot be staged before it has been archived to the SDA'"
+          :message="'Dataset is pending archival to SDA'"
         >
           <half-circle-spinner
             class="flex-none"
