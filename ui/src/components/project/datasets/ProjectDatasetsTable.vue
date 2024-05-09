@@ -67,19 +67,30 @@
         />
       </div>
       <div v-else class="flex justify-center">
-        <!-- dataset is not staged and a workflow with staging is pending -->
+        <!-- dataset is not staged and is being archived -->
         <va-popover
-          v-if="rowData.is_staging_pending || rowData.is_archival_pending"
-          message="Dataset cannot be staged while it is pending archival to SDA"
+          v-if="rowData.is_archival_pending"
+          :message="'Dataset cannot be staged before it has been archived to the SDA'"
         >
           <half-circle-spinner
             class="flex-none"
             :animation-duration="1000"
             :size="24"
-            :color="rowData.is_staging_pending ? colors.warning : colors.info"
+            :color="colors.info"
           />
         </va-popover>
-
+        <!-- dataset is not staged and is being staged -->
+        <va-popover
+          v-else-if="rowData.is_staging_pending"
+          :message="'Dataset is being staged'"
+        >
+          <half-circle-spinner
+            class="flex-none"
+            :animation-duration="1000"
+            :size="24"
+            :color="colors.warning"
+          />
+        </va-popover>
         <!-- dataset is not staged and is not being staged -->
         <va-button
           v-else
@@ -88,7 +99,6 @@
           color="info"
           icon="cloud_sync"
           @click="openModalToStageProject(rowData)"
-          :disabled="!rowData.archive_path"
         />
       </div>
     </template>
