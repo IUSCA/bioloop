@@ -95,6 +95,15 @@ model dataset_file {
   @@index([dataset_id])
 }
 
+model dataset_file_type {
+  id        Int       @id @default(autoincrement())
+  name      String
+  extension String
+  datasets  dataset[]
+
+  @@unique([name, extension])
+}
+
 model dataset_file_hierarchy {
   parent_id Int
   child_id  Int
