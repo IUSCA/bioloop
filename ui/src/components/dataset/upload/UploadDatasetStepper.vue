@@ -1,7 +1,4 @@
 <template>
-  <!-- todo
-      disable submission/moving to next step when return pressed
- -->
   <va-inner-loading :loading="loading">
     <va-form ref="datasetUploadForm" class="h-full">
       <va-stepper
@@ -165,7 +162,6 @@
 import SparkMD5 from "spark-md5";
 import _ from "lodash";
 import datasetService from "@/services/dataset";
-import uploadService from "@/services/uploads";
 import { useAuthStore } from "@/stores/auth";
 import { formatBytes } from "@/services/utils";
 import { useForm, useBreakpoint } from "vuestic-ui";
@@ -406,7 +402,7 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
     try {
-      await uploadService.uploadFileChunk(chunkData);
+      await datasetService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
       console.log(`Encountered error`, e);
@@ -589,7 +585,7 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return datasetService.processUploadedChunks(uploadLog.value.dataset_id);
+      return datasetService.processUpload(uploadLog.value.dataset_id);
     })
     .catch((err) => {
       console.log(err);
@@ -636,8 +632,6 @@ const preUpload = async () => {
           };
         }),
       };
-
-  await auth.postFileUpload();
 
   const res = await createOrUpdateUploadLog(uploadLog.value?.id, logData);
   uploadLog.value = res.data;

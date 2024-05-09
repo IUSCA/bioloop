@@ -142,7 +142,7 @@ config = {
                 }
             ]
         },
-        'process_uploads': {
+        'process_upload': {
             'steps': [
                 {
                     'name': 'chunks_to_files',

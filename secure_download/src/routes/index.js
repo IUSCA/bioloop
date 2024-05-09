@@ -92,7 +92,7 @@ const uploadFileStorage = multer.diskStorage({
  * constructed from metadata fields present in the request body.
  */
 router.post(
-  '/file-chunk',
+  '/upload',
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {

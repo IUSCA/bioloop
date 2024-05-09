@@ -97,8 +97,8 @@ class DatasetService {
     return api.patch(`/datasets/file-upload-log/${file_log_id}`, data);
   }
 
-  processUploadedChunks(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/process-uploaded-chunks`);
+  processUpload(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/upload/process`);
   }
 
   stage_dataset(id) {
@@ -176,6 +176,10 @@ class DatasetService {
         max_file_size: maxSize,
       },
     });
+  }
+
+  uploadFile(data) {
+    return api.post("/datasets/upload", data);
   }
 }
 

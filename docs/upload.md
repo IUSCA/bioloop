@@ -46,7 +46,7 @@ For each upload, information is logged to the following relational tables (Postg
 
 4. The client first sends an HTTP request to upload a chunk to our main API server, which is then forwarded to another HTTP endpoint in the secure_upload NGINX server, which writes the received chunk to the filesystem, after validating its checksum (this is the first stage of checksum validation).
 
-5. After all files' chunks are uploaded successfully, the client-side makes a request to the Rhythm API to trigger the `process_uploads` worker.
+5. After all files' chunks are uploaded successfully, the client-side makes a request to the Rhythm API to trigger the `process_upload` worker.
 
 ### 4.3 Directory structure
 The following directories on the Colo node are used for uploads:
@@ -76,7 +76,7 @@ The status of the upload, as well the status of each file in the upload goes thr
 | FAILED | Upload was pending (i.e. `status != COMPLETE`) for more than 24 hours, and was marked as failed |
 
 ## 5. Processing
-Uploaded chunked files are then merged into corresponding files by the worker `process_uploads`. After each file is created from its chunks, its MD5 checksum is matched with the expected MD5 checksum (this is the second stage of checksum validation).
+Uploaded chunked files are then merged into corresponding files by the worker `process_upload`. After each file is created from its chunks, its MD5 checksum is matched with the expected MD5 checksum (this is the second stage of checksum validation).
 
 As files are processed successfully, the resources (chunks) associated with them are deleted.
 
@@ -86,5 +86,5 @@ The uploaded data goes through two stages of checksum validation:
 2. Validating MD5 checksum of the file, once it has been processed by the worker.
 
 ## 7. Retry
-1. Upon encountering retryable exceptions, the `process_uploads` worker retries itself 3 times before failing.
+1. Upon encountering retryable exceptions, the `process_upload` worker retries itself 3 times before failing.
 2. The script `manage_pending_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that are pending (`status != COMPLETE`), and retries the ones which have been pending for less than 24 hours. Other uploads are marked as FAILED, and their resources are deleted. 

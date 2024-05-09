@@ -54,7 +54,7 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
           max_retries=3,
           default_retry_delay=5)
 def chunks_to_files(celery_task, dataset_id, **kwargs):
-    from workers.tasks.process_uploads import chunks_to_files as task_body
+    from workers.tasks.process_upload import chunks_to_files as task_body
     try:
         return task_body(celery_task, dataset_id, **kwargs)
     except exc.RetryableException:

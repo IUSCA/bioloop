@@ -771,10 +771,10 @@ router.get(
 
 // Post a file chunks
 // router.post(
-//   '/file-chunk',
+//   '/upload',
 //   isPermittedTo('update'),
 //   asyncHandler(async (req, res, next) => {
-//     authService.fetchWrapper.fetch(`${config.get('download_server.base_url')}/file-chunk`, {
+//     authService.fetchWrapper.fetch(`${config.get('download_server.base_url')}/upload`, {
 //       method: 'POST',
 //       body: req.body,
 //     }).then((response) => {
@@ -816,7 +816,7 @@ const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
 // });
 //
 // router.post(
-//   '/file-chunk',
+//   '/upload',
 //   multer({ storage: uploadFileStorage }).single('file'),
 //   asyncHandler(async (req, res, next) => {
 //     const {
@@ -1007,10 +1007,10 @@ router.patch(
 
 // Initiate the processing of uploaded files - worker
 router.post(
-  '/:id/process-uploaded-chunks',
+  '/:id/upload/process',
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
-    const WORKFLOW_NAME = 'process_uploads';
+    const WORKFLOW_NAME = 'process_upload';
 
     const { dataset_id } = req.params;
 
@@ -1024,7 +1024,7 @@ router.post(
     });
 
     await datasetService.create_workflow(dataset, WORKFLOW_NAME);
-    res.json('success');
+    res.send('OK');
   }),
 );
 
@@ -1088,7 +1088,7 @@ const uploadFileStorage = multer.diskStorage({
  * the request body.
  */
 router.post(
-  '/file-chunk',
+  '/upload',
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
