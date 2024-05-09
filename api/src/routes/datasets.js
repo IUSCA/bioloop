@@ -25,7 +25,6 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-
 // stats - UI
 router.get(
   '/stats',
@@ -787,19 +786,6 @@ router.get(
 //   }),
 // );
 
-const UPLOAD_PATH = path.join(config.upload_path, 'datasets');
-
-const getUploadPath = (datasetName) => path.join(
-  UPLOAD_PATH,
-  datasetName,
-);
-
-const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
-  getUploadPath(datasetName),
-  'chunked_files',
-  fileChecksum,
-);
-
 // const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
 //
 // const uploadFileStorage = multer.diskStorage({
@@ -1138,7 +1124,7 @@ router.post(
     //   res.sendStatus(200);
     // });
 
-  res.sendStatus(200)
+    res.sendStatus(200);
   }),
 );
 
