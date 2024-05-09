@@ -16,11 +16,11 @@ const nav = useNavStore();
 
 nav.setNavItems([
   {
-    label: "Data Product Uploads",
-    to: "/dataProductUploads",
+    label: "Dataset Upload",
+    to: "/datasetUpload",
   },
   {
-    label: "Upload Data Product",
+    label: "Upload Dataset",
   },
 ]);
 </script>

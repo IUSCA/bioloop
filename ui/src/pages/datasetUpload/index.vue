@@ -5,7 +5,7 @@
       <va-input
         v-model="filterInput"
         class="w-full"
-        placeholder="Type / to search Data Product Uploads"
+        placeholder="Type / to search Dataset Uploads"
         outline
         clearable
         input-class="search-input"
@@ -22,7 +22,7 @@
         icon="add"
         class="px-1"
         color="success"
-        @click="router.push('/dataProductUploads/new')"
+        @click="router.push('/datasetUpload/new')"
       >
         Upload Data Product
       </va-button>
@@ -107,7 +107,7 @@ import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 const nav = useNavStore();
 const router = useRouter();
 
-nav.setNavItems([{ label: "Data Product Uploads" }]);
+nav.setNavItems([{ label: "Dataset Uploads" }]);
 useSearchKeyShortcut();
 
 const filterInput = ref("");
@@ -183,6 +183,6 @@ watch(filterInput, () => {
 
 <route lang="yaml">
 meta:
-  title: Data Product Uploads
+  title: Dataset Uploads
   requiresRoles: ["operator", "admin"]
 </route>

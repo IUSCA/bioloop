@@ -194,8 +194,8 @@ const operator_items = ref([
   },
   {
     icon: "mdi:folder-upload",
-    title: "Data Product Upload",
-    path: "/dataProductUploads",
+    title: "Dataset Upload",
+    path: "/datasetUpload",
   },
   // {
   //   icon: "mdi-account-multiple",

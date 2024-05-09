@@ -9,8 +9,8 @@
       :disabled="props.submitAttempted"
       @file-added="
         (files) => {
-          console.log('DatasetFileUploadTable - files');
-          console.log(files);
+          // console.log('DatasetFileUploadTable - files');
+          // console.log(files);
           emit('file-added', files);
         }
       "
