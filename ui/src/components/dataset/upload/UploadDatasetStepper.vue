@@ -707,6 +707,20 @@ onBeforeUnmount(() => {
   // Cancels pending uploads and prompts cleanup activities before page unload
   uploadCancelled.value = true;
 });
+
+onMounted(() => {
+  console.log("onMounted test call");
+  uploadService
+    .test()
+    .then((res) => {
+      console.log("test call success");
+      console.log(res.data);
+    })
+    .catch((err) => {
+      console.log("test call error");
+      console.log(err);
+    });
+});
 </script>
 
 <style lang="scss">
