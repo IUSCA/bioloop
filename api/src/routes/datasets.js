@@ -332,7 +332,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       include_uploading_derived_datasets: req.query.include_uploading_derived_datasets,
-      upload_log: req.query.upload_log,
+      include_upload_log: req.query.include_upload_log,
     });
     res.json(dataset);
   }),

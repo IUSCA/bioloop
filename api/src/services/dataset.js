@@ -131,7 +131,7 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   include_uploading_derived_datasets = false,
-  upload_log = false,
+  include_upload_log = false,
 
 }) {
   const fileSelect = files ? {
@@ -171,7 +171,7 @@ async function get_dataset({
           },
         },
       },
-      upload_log,
+      upload_log: include_upload_log,
     },
   });
 
