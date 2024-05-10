@@ -162,6 +162,7 @@
 import SparkMD5 from "spark-md5";
 import _ from "lodash";
 import datasetService from "@/services/dataset";
+import uploadService from "@/services/upload";
 import { useAuthStore } from "@/stores/auth";
 import { formatBytes } from "@/services/utils";
 import { useForm, useBreakpoint } from "vuestic-ui";
@@ -402,7 +403,7 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
     try {
-      await datasetService.uploadFile(chunkData);
+      await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
       console.log(`Encountered error`, e);
