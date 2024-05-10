@@ -23,6 +23,7 @@ const wfService = require('../services/workflow');
 const datasetDuplicationService = require('../services/datasetDuplication');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
+const { INCLUDE_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 const isPermittedToWorkflow = accessControl('workflow');
@@ -504,10 +505,211 @@ router.get(
 
     const upload_logs = await prisma.upload_log.findMany({
       where: query_obj,
-      include: UPLOAD_LOG_INCLUDE_RELATIONS,
+      include: INCLUDE_UPLOAD_LOG_RELATIONS,
     });
 
     res.json(upload_logs);
+  }),
+);
+
+const UPLOAD_PATH = config.upload_path;
+
+const getUploadPath = (datasetName) => path.join(
+  UPLOAD_PATH,
+  datasetName,
+);
+
+const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
+  getUploadPath(datasetName),
+  'chunked_files',
+  fileChecksum,
+);
+
+// Post a Dataset's upload log, files' info and the Dataset to the database - UI
+router.post(
+  '/upload-log',
+  isPermittedTo('update'),
+  validate([
+    body('data_product_name').notEmpty().escape().isLength({ min: 3 }),
+    body('file_type').isObject(),
+    body('source_dataset_id').isInt().toInt(),
+    body('files_metadata').isArray(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const {
+      data_product_name, source_dataset_id, file_type, files_metadata,
+    } = req.body;
+
+    const upload_log = await prisma.upload_log.create({
+      data: {
+        status: config.upload_status.UPLOADING,
+        user: {
+          connect: {
+            id: req.user.id,
+          },
+        },
+        files: {
+          create: files_metadata.map((file) => ({
+            name: file.name,
+            md5: file.checksum,
+            num_chunks: file.num_chunks,
+            chunks_path: getFileChunksStorageDir(data_product_name, file.checksum),
+            destination_path: path.join(
+              getUploadPath(data_product_name),
+              file.name,
+            ),
+            status: config.upload_status.UPLOADING,
+          })),
+        },
+        dataset: {
+          create: {
+            source_datasets: {
+              create: [{
+                source_id: source_dataset_id,
+              }],
+            },
+            name: data_product_name,
+            origin_path: getUploadPath(data_product_name),
+            type: config.dataset_types[1],
+            file_type: file_type.id === undefined ? {
+              create: {
+                name: file_type.name,
+                extension: file_type.extension,
+              },
+            } : { connect: { id: file_type.id } },
+          },
+        },
+      },
+      include: INCLUDE_UPLOAD_LOG_RELATIONS,
+    });
+
+    res.json(upload_log);
+  }),
+);
+
+// Get an upload log - UI, worker
+router.get(
+  '/upload-log/:id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const upload_log = await prisma.upload_log.findFirstOrThrow({
+      where: { id: req.params.id },
+      include: INCLUDE_UPLOAD_LOG_RELATIONS,
+    });
+    res.json(upload_log);
+  }),
+);
+
+// Update an upload log and it's files - UI, workers
+router.patch(
+  '/upload-log/:id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    body('status').notEmpty().escape().optional(),
+    body('increment_processing_count').isBoolean().toBoolean().optional()
+      .default(false),
+    body('files').isArray().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const { status, files, increment_processing_count } = req.body;
+    const existing_upload = await prisma.upload_log.findFirstOrThrow({
+      where: {
+        id: req.params.id,
+      },
+      include: INCLUDE_UPLOAD_LOG_RELATIONS,
+    });
+    if (existing_upload.status === config.upload_status.FAILED) {
+      res.json(existing_upload);
+      return;
+    }
+
+    const update_query = _.omitBy(_.isUndefined)({
+      status,
+      last_updated: new Date(),
+      ...(increment_processing_count && {
+        processing_attempt_count:
+          {
+            increment: 1,
+          },
+      }),
+      ...(status === config.upload_status.FAILED && {
+        dataset: {
+          delete: true,
+        },
+      }),
+    });
+
+    const updates = [];
+    updates.push(prisma.upload_log.update({
+      where: { id: req.params.id },
+      data: update_query,
+    }));
+    (files || []).forEach((f) => {
+      updates.push(prisma.file_upload_log.update({
+        where: { id: f.id },
+        data: f.data,
+      }));
+    });
+
+    await prisma.$transaction(updates);
+
+    const upload = await prisma.upload_log.findUniqueOrThrow({
+      where: {
+        id: req.params.id,
+      },
+      include: INCLUDE_UPLOAD_LOG_RELATIONS,
+    });
+    res.json(upload);
+  }),
+);
+
+// Initiate the processing of uploaded files - worker
+router.post(
+  '/:id/upload/process',
+  isPermittedTo('update'),
+  asyncHandler(async (req, res, next) => {
+    const WORKFLOW_NAME = 'process_upload';
+
+    const dataset = await prisma.dataset.findFirst({
+      where: {
+        id: Number(req.params.id),
+      },
+      include: {
+        workflows: true,
+      },
+    });
+
+    await datasetService.create_workflow(dataset, WORKFLOW_NAME);
+    res.send('OK');
+  }),
+);
+
+// Update the attributes of an uploaded file - worker
+router.patch(
+  '/file-upload-log/:id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    body('status').notEmpty().escape(),
+  ]),
+  isPermittedTo('update'),
+  asyncHandler(async (req, res, next) => {
+    const { status } = req.body;
+
+    const file_upload_log = await prisma.file_upload_log.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        status,
+      },
+    });
+
+    res.json(file_upload_log);
   }),
 );
 

@@ -94,6 +94,21 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const INCLUDE_UPLOAD_LOG_RELATIONS = {
+  files: true,
+  user: true,
+  dataset: {
+    include: {
+      source_datasets: {
+        include: {
+          source_dataset: true,
+        },
+      },
+      file_type: true,
+    },
+  },
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 module.exports = {
@@ -104,4 +119,5 @@ module.exports = {
   INCLUDE_DUPLICATIONS,
   DUPLICATION_PROCESSING_INCLUSIONS,
   DONE_STATUSES,
+  INCLUDE_UPLOAD_LOG_RELATIONS,
 };
