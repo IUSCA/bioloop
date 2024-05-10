@@ -1003,9 +1003,9 @@ router.post(
     const dataset = await prisma.dataset.findFirst({
       where: {
         id: dataset_id,
-        include: {
-          workflows: true,
-        },
+      },
+      include: {
+        workflows: true,
       },
     });
 
