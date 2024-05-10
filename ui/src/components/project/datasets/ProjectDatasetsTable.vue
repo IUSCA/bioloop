@@ -84,7 +84,6 @@
           color="info"
           icon="cloud_sync"
           @click="openModalToStageProject(rowData)"
-          :disabled="isDatasetLockedForWrite(rowData)"
         />
       </div>
     </template>
@@ -164,7 +163,6 @@ import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
 import { formatBytes } from "@/services/utils";
-import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { HalfCircleSpinner } from "epic-spinners";
