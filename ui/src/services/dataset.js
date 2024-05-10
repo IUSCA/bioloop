@@ -56,7 +56,7 @@ class DatasetService {
     last_task_run = false,
     prev_task_runs = false,
     only_active = false,
-    fetch_uploading_data_products = false,
+    include_uploading_derived_datasets = false,
     bundle = false,
   }) {
     return api.get(`/datasets/${id}`, {
@@ -67,7 +67,7 @@ class DatasetService {
         prev_task_runs,
         only_active,
         bundle,
-        fetch_uploading_data_products,
+        include_uploading_derived_datasets,
       },
     });
   }

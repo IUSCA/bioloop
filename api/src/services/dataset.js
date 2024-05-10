@@ -130,7 +130,7 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   bundle = false,
-  fetch_uploading_data_products = false,
+  include_uploading_derived_datasets = false,
   upload_log = false,
 
 }) {
@@ -155,7 +155,7 @@ async function get_dataset({
       ...INCLUDE_STATES,
       bundle,
       source_datasets: true,
-      derived_datasets: fetch_uploading_data_products ? true : {
+      derived_datasets: include_uploading_derived_datasets ? true : {
         where: {
           derived_dataset: {
             OR: [

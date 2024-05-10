@@ -315,8 +315,8 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
-    query('fetch_uploading_data_products').toBoolean().default(false),
-    query('upload_log').toBoolean().default(false),
+    query('include_uploading_derived_datasets').toBoolean().default(false),
+    query('include_upload_log').toBoolean().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -331,7 +331,7 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
-      fetch_uploading_data_products: req.query.fetch_uploading_data_products,
+      include_uploading_derived_datasets: req.query.include_uploading_derived_datasets,
       upload_log: req.query.upload_log,
     });
     res.json(dataset);
