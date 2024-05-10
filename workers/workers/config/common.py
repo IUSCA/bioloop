@@ -98,7 +98,7 @@ config = {
         'SUCCESS': 'SUCCESS'
     },
     'workflow_registry': {
-        'prepare_bundle_downloads': {
+        'stage': {
             'steps': [
                 {
                     'name': 'stage',
@@ -202,11 +202,11 @@ config = {
                 }
             ]
         },
-        'process_uploads': {
+        'process_upload': {
             'steps': [
                 {
-                    'name': 'chunks_to_files',
-                    'task': 'chunks_to_files'
+                    'name': 'process uploaded chunks',
+                    'task': 'process_uploaded_chunks'
                 }
             ]
         }

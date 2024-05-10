@@ -5,9 +5,12 @@ const jsonwt = require('jsonwebtoken');
 const _ = require('lodash/fp');
 const config = require('config');
 const { OAuth2Client } = require('@badgateway/oauth2-client');
+const { PrismaClient } = require('@prisma/client');
 
 const logger = require('./logger');
 const userService = require('./user');
+
+const prisma = new PrismaClient();
 
 const key = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.key')));
 const pub = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.pub')));
@@ -27,13 +30,12 @@ function issueJWT({ userProfile, forever = false }) {
 
 const get_user_profile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id']);
 
-async function onLogin({ user, updateLastLogin = true }) {
-  if (updateLastLogin) { await userService.updateLastLogin({ id: user.id, method: 'IUCAS' }); }
+async function onLogin({ user, updateLastLogin = true, method = 'IUCAS' }) {
+  if (updateLastLogin) { await userService.updateLastLogin({ id: user.id, method }); }
 
   const userProfile = get_user_profile(user);
 
   const token = issueJWT({ userProfile });
-
   return {
     profile: userProfile,
     token,
@@ -45,12 +47,12 @@ function checkJWT(token) {
     const decoded = jsonwt.verify(token, pub);
     return decoded;
   } catch (err) {
-    console.log('Failed to verify JWT', err);
+    logger.error('Failed to verify JWT', err);
     return null;
   }
 }
 
-const oAuth2Client = new OAuth2Client({
+const oAuth2DownloadClient = new OAuth2Client({
   // The base URI of your OAuth2 server
   server: config.get('oauth.base_url'),
   // OAuth2 client id
@@ -60,17 +62,45 @@ const oAuth2Client = new OAuth2Client({
 });
 
 function get_download_token(file_path) {
-  return oAuth2Client.clientCredentials({
+  return oAuth2DownloadClient.clientCredentials({
     scope: [`${config.get('oauth.download.scope_prefix')}${file_path}`],
   });
 }
 
-function get_upload_token(file_name) {
-  // console.log(`upload scope: ${config.get('oauth.upload.scope')}`);
-  return oAuth2Client.clientCredentials({
-    scope: [`${config.get('oauth.upload.scope')}:${file_name}`],
+const find_or_create_test_user = async ({ role }) => {
+  const test_user_config = config.e2e.users[role];
+  const test_user_username = test_user_config.username;
+
+  let test_user = await prisma.user.findUnique({
+    where: {
+      username: test_user_username,
+    },
   });
-}
+
+  if (!test_user) {
+    const requested_role = await prisma.role.findFirstOrThrow({
+      where: {
+        name: role,
+      },
+    });
+
+    test_user = await prisma.user.create({
+      data: {
+        username: test_user_username,
+        name: test_user_username,
+        cas_id: test_user_username,
+        email: `${test_user_username}@iu.edu`,
+        user_role: {
+          create: {
+            role_id: requested_role.id,
+          },
+        },
+      },
+    });
+  }
+
+  return test_user;
+};
 
 module.exports = {
   onLogin,
@@ -78,5 +108,5 @@ module.exports = {
   checkJWT,
   get_user_profile,
   get_download_token,
-  get_upload_token,
+  find_or_create_test_user,
 };

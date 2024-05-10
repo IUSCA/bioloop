@@ -5,7 +5,9 @@
         <va-avatar :color="stringToRGB(auth.user.name || '')" size="small">
           <span class="text-sm uppercase">{{ initials(auth.user.name) }}</span>
         </va-avatar>
-        <span class="hidden md:inline"> {{ auth.user.username }} </span>
+        <span class="hidden md:inline" data-testid="header-username">
+          {{ auth.user.username }}
+        </span>
       </div>
     </template>
     <va-dropdown-content placement="auto" offset="10">

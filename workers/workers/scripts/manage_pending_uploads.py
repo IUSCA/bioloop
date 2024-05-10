@@ -12,7 +12,7 @@ from sca_rhythm import WorkflowTask, Workflow
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-WORKFLOW_NAME = 'process_uploads'
+WORKFLOW_NAME = 'process_upload'
 DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
                  config['DONE_STATUSES']['SUCCESS']]

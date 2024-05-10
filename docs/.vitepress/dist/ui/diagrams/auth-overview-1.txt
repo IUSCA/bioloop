@@ -1,0 +1,16 @@
+https://plantuml.com/deployment-diagram
+```
+@startuml
+!theme plain
+User -> Browser : /dashboard
+Browser -> Browser : redirect: /auth
+Browser -> CAS : redirect: IU login
+User -> CAS: Credentials
+CAS -> Browser: redirect: ticket
+Browser -> API: verify ticket
+API -> CAS: verify ticket
+CAS -> API: username
+API -> Browser: JWT
+Browser -> Browser: redirect: /dashboard
+@enduml
+```

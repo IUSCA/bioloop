@@ -163,15 +163,15 @@ def get_dataset(dataset_id: str,
                 include_duplications: bool = False,
                 include_action_items: bool = False,
                 workflows: bool = False,
-                upload_log: bool = False):
+                include_upload_log: bool = False):
     with APIServerSession() as s:
         payload = {
             'bundle': bundle,
             'files': files,
             'workflows': workflows,
-            'upload_log': upload_log,
             'include_duplications': include_duplications,
             'include_action_items': include_action_items,
+            'include_upload_log': include_upload_log
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 

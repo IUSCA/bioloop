@@ -5,6 +5,11 @@ const exports = {
   apiBasePath: "/api",
   uploadBasePath: "https://bioloop-dev2.sca.iu.edu",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
+  googleReturn:
+    import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
+  cilogonReturn:
+    import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
+  refreshTokenTMinusSeconds: 300,
   refreshTMinusSeconds: {
     token: 300,
     uploadToken: 30,
@@ -13,7 +18,7 @@ const exports = {
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
-    app_admin: "admin@sca.iu.edu",
+    app_admin: "bioloop-ops-l@list.iu.edu",
   },
   dataset_polling_interval: 10000,
   paths: {
@@ -48,6 +53,10 @@ const exports = {
     SLATE_SCRATCH: "/N/scratch",
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
+  auth_enabled: {
+    google: true,
+    cilogon: true,
+  },
   dashboard: {
     active_tasks: {
       steps: [
@@ -71,6 +80,7 @@ const exports = {
     COMPLETE: "COMPLETE",
     FAILED: "FAILED",
   },
+  alertForEnvironments: ["ci"],
   DATASET_STATES: {
     REGISTERED: "REGISTERED",
     READY: "READY",

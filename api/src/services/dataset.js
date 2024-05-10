@@ -95,8 +95,8 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   bundle = false,
-  fetch_uploading_data_products = false,
-  upload_log = false,
+  include_uploading_derived_datasets = false,
+  include_upload_log = false,
   include_duplications = false,
   include_action_items = false,
 }) {
@@ -109,7 +109,7 @@ async function get_dataset({
       ...CONSTANTS.INCLUDE_STATES,
       bundle,
       source_datasets: true,
-      derived_datasets: fetch_uploading_data_products ? true : {
+      derived_datasets: include_uploading_derived_datasets ? true : {
         where: {
           derived_dataset: {
             OR: [
@@ -125,11 +125,15 @@ async function get_dataset({
           },
         },
       },
-      upload_log,
       ...(include_duplications && CONSTANTS.INCLUDE_DUPLICATIONS),
       action_items: include_action_items ? {
         where: {
           active: true,
+        },
+      } : undefined,
+      upload_log: include_upload_log ? {
+        include: {
+          files: true,
         },
       } : undefined,
     },
@@ -154,6 +158,7 @@ async function get_dataset({
     // eslint-disable-next-line no-param-reassign
     if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
   });
+
   return dataset;
 }
 

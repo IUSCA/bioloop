@@ -25,38 +25,7 @@ const CONSTANTS = require('../constants');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-
-const prisma = new PrismaClient(
-  // { log: ['query', 'info', 'warn', 'error'] },
-
-  {
-    log: [
-      {
-        emit: 'event',
-        level: 'query',
-      },
-      {
-        emit: 'event',
-        level: 'info',
-      },
-      {
-        emit: 'event',
-        level: 'warn',
-      },
-      {
-        emit: 'event',
-        level: 'error',
-      },
-    ],
-  },
-);
-
-['query', 'info', 'warn', 'error'].forEach((level) => {
-  prisma.$on(level, async (e) => {
-    console.log(`QUERY: ${e.query}`);
-    console.log(`PARAMS: ${e.params}`);
-  });
-});
+const prisma = new PrismaClient();
 
 const dataset_state_check = asyncHandler(async (req, res, next) => {
   const dataset = await prisma.dataset.findUnique({
@@ -464,7 +433,8 @@ router.post(
 );
 
 // Get all datasets, and the count of datasets. Results can optionally be
-// filtered and sorted by the criteria specified. Used by workers + UI.
+// filtered and sorted by the criteria specified.
+// Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -620,8 +590,8 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
-    query('fetch_uploading_data_products').toBoolean().default(false),
-    query('upload_log').toBoolean().default(false),
+    query('include_uploading_derived_datasets').toBoolean().default(false),
+    query('include_upload_log').toBoolean().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -637,10 +607,10 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
-      fetch_uploading_data_products: req.query.fetch_uploading_data_products,
-      upload_log: req.query.upload_log,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
+      include_uploading_derived_datasets: req.query.include_uploading_derived_datasets,
+      include_upload_log: req.query.include_upload_log,
     });
     res.json(dataset);
   }),
@@ -1182,9 +1152,11 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const download_token = await authService.get_download_token(download_file_path);
-
       const url = new URL(download_file_path, config.get('download_server.base_url'));
+
+      // use url.pathname instead of download_file_path to deal with spaces in the file path
+      // oauth scope cannot contain spaces
+      const download_token = await authService.get_download_token(url.pathname);
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,
@@ -1492,24 +1464,22 @@ router.patch(
 
 // Initiate the processing of uploaded files - worker
 router.post(
-  '/:id/process-uploaded-chunks',
+  '/:id/upload/process',
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
-    const WORKFLOW_NAME = 'process_uploads';
-
-    const { dataset_id } = req.params;
+    const WORKFLOW_NAME = 'process_upload';
 
     const dataset = await prisma.dataset.findFirst({
       where: {
-        id: dataset_id,
-        include: {
-          workflows: true,
-        },
+        id: Number(req.params.id),
+      },
+      include: {
+        workflows: true,
       },
     });
 
     await datasetService.create_workflow(dataset, WORKFLOW_NAME);
-    res.json('success');
+    res.send('OK');
   }),
 );
 
@@ -1573,7 +1543,7 @@ const uploadFileStorage = multer.diskStorage({
  * the request body.
  */
 router.post(
-  '/file-chunk',
+  '/upload',
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
@@ -1622,8 +1592,8 @@ router.post(
 
     //   res.sendStatus(200);
     // });
-  
-  res.sendStatus(200)
+
+    res.sendStatus(200);
   }),
 );
 

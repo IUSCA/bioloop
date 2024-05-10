@@ -83,7 +83,9 @@ class BundleSyncManager:
 
 def initiate_bundle_sync(app_id=config['app_id'], dry_run=False):
     """
-    For the given app_id, creates the bundle metadata for previously-archived datasets.
+    For the given app_id, creates the bundle metadata for previously-archived datasets, and
+    launches a workflow which sets up the bundles for download. Any existing instances of
+    the `prepare_bundle_downloads` workflow that are pending will be deleted.
 
     :param app_id:  app_id to prepare bundle downloads for
     :param dry_run: if True, do not delete pending workflows

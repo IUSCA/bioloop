@@ -65,7 +65,7 @@ class DatasetService {
     last_task_run = false,
     prev_task_runs = false,
     only_active = false,
-    fetch_uploading_data_products = false,
+    include_uploading_derived_datasets = false,
     bundle = false,
     include_duplications = false,
     include_states = false,
@@ -79,10 +79,10 @@ class DatasetService {
         prev_task_runs,
         only_active,
         bundle,
+        include_uploading_derived_datasets,
         include_duplications,
         include_states,
         include_action_items,
-        fetch_uploading_data_products,
       },
     });
   }
@@ -112,8 +112,8 @@ class DatasetService {
     return api.patch(`/datasets/file-upload-log/${file_log_id}`, data);
   }
 
-  processUploadedChunks(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/process-uploaded-chunks`);
+  processUpload(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/upload/process`);
   }
 
   stage_dataset(id) {
@@ -203,6 +203,10 @@ class DatasetService {
         max_file_size: maxSize,
       },
     });
+  }
+
+  uploadFile(data) {
+    return api.post("/datasets/upload", data);
   }
 
   getActionItem({ action_item_id } = {}) {
