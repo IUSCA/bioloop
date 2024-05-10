@@ -998,11 +998,9 @@ router.post(
   asyncHandler(async (req, res, next) => {
     const WORKFLOW_NAME = 'process_upload';
 
-    const { dataset_id } = req.params;
-
     const dataset = await prisma.dataset.findFirst({
       where: {
-        id: dataset_id,
+        id: Number(req.params.id),
       },
       include: {
         workflows: true,

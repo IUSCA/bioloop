@@ -171,7 +171,11 @@ async function get_dataset({
           },
         },
       },
-      upload_log: include_upload_log,
+      upload_log: include_upload_log ? {
+        include: {
+          files: true,
+        },
+      } : undefined,
     },
   });
 
@@ -194,6 +198,7 @@ async function get_dataset({
     // eslint-disable-next-line no-param-reassign
     if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
   });
+
   return dataset;
 }
 
