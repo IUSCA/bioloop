@@ -209,9 +209,9 @@ class DatasetService {
     return api.get(`/datasets/${dataset_id}/workflows`, { params });
   }
 
-  uploadFile(data) {
-    return api.post("/datasets/upload", data);
-  }
+  // uploadFile(data) {
+  //   return api.post("/datasets/upload", data);
+  // }
 }
 
 export default new DatasetService();

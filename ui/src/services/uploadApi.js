@@ -1,25 +1,25 @@
 import config from "@/config";
 import axios from "axios";
 
-const token = ref(useLocalStorage("uploadToken", ""));
+// const token = ref(useLocalStorage("uploadToken", ""));
 
 const uploadApi = axios.create({
   baseURL: config.uploadBasePath,
 });
 
-uploadApi.interceptors.request.use(
-  (config) => {
-    const _token = token.value;
-    if (_token) {
-      config.headers.Authorization = `Bearer ${_token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
+// uploadApi.interceptors.request.use(
+//   (config) => {
+//     const _token = token.value;
+//     if (_token) {
+//       config.headers.Authorization = `Bearer ${_token}`;
+//     }
+//     return config;
+//   },
+//   (error) => {
+//     return Promise.reject(error);
+//   },
+// );
+//
 // If API call has failed because of 401 Unauthorized
 uploadApi.interceptors.response.use(
   (res) => res,
