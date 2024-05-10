@@ -11,6 +11,7 @@ const {
 } = require('express-validator');
 const _ = require('lodash/fp');
 const config = require('config');
+const dayjs = require('dayjs');
 
 // const logger = require('../services/logger');
 const path = require('path');
@@ -18,78 +19,16 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const wfService = require('../services/workflow');
 const datasetDuplicationService = require('../services/datasetDuplication');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
+const isPermittedToWorkflow = accessControl('workflow');
 
 const router = express.Router();
 const prisma = new PrismaClient();
-
-const dataset_state_check = asyncHandler(async (req, res, next) => {
-  const dataset = await prisma.dataset.findUnique({
-    where: {
-      id: req.params.id,
-    },
-    include: {
-      states: {
-        orderBy: {
-          timestamp: 'desc',
-        },
-      },
-    },
-  });
-
-  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
-  const locked_error = `Dataset is locked and cannot be written to. Current state is ${latest_state}.`;
-
-  if (!dataset.is_deleted) {
-    if (!dataset.is_duplicate) {
-      if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
-        return next(createError.InternalServerError(locked_error));
-      }
-    } else if (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
-        || latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-        || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED) {
-      return next(createError.InternalServerError(locked_error));
-    }
-  }
-
-  next();
-});
-
-const state_write_check = asyncHandler(async (req, res, next) => {
-  const dataset = await prisma.dataset.findUnique({
-    where: {
-      id: parseInt(req.params.id, 10),
-    },
-    include: {
-      states: {
-        orderBy: {
-          timestamp: 'desc',
-        },
-      },
-    },
-  });
-
-  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
-  if (
-    ((latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
-            || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-          && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
-      || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
-              || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-          && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
-      || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
-  ) {
-    return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
-        + `while its current state is ${latest_state}`));
-  }
-
-  next();
-});
 
 router.post(
   '/:id/action-item',
@@ -100,7 +39,6 @@ router.post(
     body('notification').isObject(),
     body('next_state').escape().notEmpty().optional(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Datasets']
     // #swagger.summary = Post an action item to a dataset
@@ -158,7 +96,6 @@ router.patch(
     body('ingestion_checks').optional().isArray(),
     body('next_state').optional().escape().notEmpty(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Datasets']
     // #swagger.summary = patch an action item associated with a dataset.
@@ -433,8 +370,7 @@ router.post(
 );
 
 // Get all datasets, and the count of datasets. Results can optionally be
-// filtered and sorted by the criteria specified.
-// Used by workers + UI.
+// filtered and sorted by the criteria specified. Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -483,8 +419,6 @@ router.get(
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...CONSTANTS.INCLUDE_WORKFLOWS,
-        ...CONSTANTS.INCLUDE_STATES,
-        file_type: true,
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
@@ -663,7 +597,6 @@ router.post(
       data,
       include: {
         ...CONSTANTS.INCLUDE_WORKFLOWS,
-        ...CONSTANTS.INCLUDE_STATES,
       },
     });
     res.json(dataset);
@@ -679,7 +612,6 @@ router.post(
     body('notification').optional().isObject(),
     body('next_state').optional().escape().notEmpty(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a duplicate dataset.'
@@ -805,7 +737,6 @@ router.patch(
       .customSanitizer(BigInt),
     body('bundle').optional().isObject(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Modify dataset.'
@@ -857,11 +788,9 @@ router.post(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset
-
     const data = req.body.map((f) => ({
       path: f.path,
       md5: f.md5,
@@ -882,7 +811,6 @@ router.post(
     param('id').isInt().toInt(),
     body('workflow_id').notEmpty(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate workflow_id to a dataset
@@ -896,10 +824,33 @@ router.post(
   }),
 );
 
+router.get(
+  '/:id/workflows',
+  isPermittedToWorkflow('read'),
+  validate([
+    param('id').isInt().toInt(),
+    query('status').optional().isArray(),
+    query('last_run_only').optional().isBoolean(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = get workflows associated with a dataset
+
+    const last_run_only = req.query.last_run_only || false;
+
+    const retrievedWorkflows = await datasetService.get_workflows({
+      dataset_id: req.params.id,
+      statuses: ['PENDING', 'STARTED', 'FAILURE'],
+      last_run_only,
+    });
+
+    res.send(retrievedWorkflows);
+  }),
+);
+
 // add state to dataset
 router.post(
   '/:id/states',
-  state_write_check,
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
@@ -926,7 +877,6 @@ router.delete(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = starts a delete archive workflow which will
@@ -940,16 +890,42 @@ router.delete(
       },
     });
 
-    if (_dataset.is_duplicate) {
-      return next(createError.BadRequest(`Deletion cannot be performed on an active duplicate dataset ${req.params.id}.`));
-    }
-
     if (_dataset) {
       await datasetService.soft_delete(_dataset, req.user?.id);
       res.send();
     } else {
       next(createError(404));
     }
+  }),
+);
+
+// delete - UI
+router.delete(
+  '/',
+  validate([
+    query('is_duplicate').optional().isBoolean().toBoolean(),
+  ]),
+  isPermittedTo('delete'),
+  asyncHandler(async (req, res, next) => {
+    const filtered_query = buildQueryObject(req.query);
+
+    const matching_datasets = (Object.keys(filtered_query).length > 0)
+      ? await prisma.dataset.findMany({
+        where: filtered_query,
+        include: {
+          workflows: true,
+        },
+      }) : [];
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const dataset of matching_datasets) {
+      if (!dataset.is_deleted) {
+        // eslint-disable-next-line no-await-in-loop
+        await datasetService.soft_delete(dataset, req.user?.id);
+      }
+    }
+
+    res.send(`${matching_datasets.length}`);
   }),
 );
 
@@ -978,7 +954,6 @@ router.post(
   ]),
   workflow_access_check,
   dataset_access_check,
-  dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
@@ -1045,7 +1020,6 @@ router.put(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_state_check,
   multer({ storage: report_storage }).single('report'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -1154,9 +1128,10 @@ router.get(
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
 
-      // use url.pathname instead of download_file_path to deal with spaces in the file path
-      // oauth scope cannot contain spaces
+      // use url.pathname instead of download_file_path to deal with spaces in
+      // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
+
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,
@@ -1196,7 +1171,7 @@ router.get(
 );
 
 router.post(
-  '/duplicates/:id/accept_duplicate_dataset',
+  '/duplicates/:id/accept',
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
@@ -1205,12 +1180,12 @@ router.post(
   dataset_delete_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Initiate the overwriting of an active dataset with a
-    // duplicate. with its duplicate.
+    // #swagger.summary = Overwrites an active dataset with its
+    // duplicate
 
     let duplicate_dataset;
     try {
-      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_acceptance(
+      duplicate_dataset = await datasetDuplicationService.accept_duplicate_dataset(
         {
           duplicate_dataset_id: req.params.id,
           accepted_by_id: req.user.id,
@@ -1227,7 +1202,7 @@ router.post(
 );
 
 router.post(
-  '/duplicates/:id/reject_duplicate_dataset',
+  '/duplicates/:id/reject',
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
@@ -1236,11 +1211,11 @@ router.post(
   dataset_delete_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = Initiate the rejection of a duplicate dataset.
+    // #swagger.summary = Rejects a duplicate dataset.
 
     let duplicate_dataset;
     try {
-      duplicate_dataset = await datasetDuplicationService.initiate_duplicate_rejection(
+      duplicate_dataset = await datasetDuplicationService.reject_duplicate_dataset(
         {
           duplicate_dataset_id: req.params.id,
           rejected_by_id: req.user.id,
@@ -1253,347 +1228,6 @@ router.post(
 
     const wf = await datasetService.create_workflow(duplicate_dataset, 'reject_duplicate_dataset');
     return res.json(wf);
-  }),
-);
-
-router.patch(
-  '/duplicates/:id/accept_duplicate_dataset/complete',
-  validate([
-    param('id').isInt().toInt(),
-  ]),
-  dataset_delete_check,
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = Complete the overwriting of an active dataset with
-    // its duplicate.
-
-    let updatedDataset;
-    try {
-      updatedDataset = await datasetDuplicationService.complete_duplicate_acceptance({
-        duplicate_dataset_id: req.params.id,
-      });
-    } catch (e) {
-      // console.log(e);
-      return next(createError.BadRequest(e.message));
-    }
-
-    res.json(updatedDataset);
-  }),
-);
-
-router.patch(
-  '/duplicates/:id/reject_duplicate_dataset/complete',
-  validate([
-    param('id').isInt().toInt(),
-  ]),
-  dataset_delete_check,
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = Complete the rejection of a duplicate dataset.
-
-    let updatedDataset;
-    try {
-      updatedDataset = await datasetDuplicationService.complete_duplicate_rejection({
-        duplicate_dataset_id: req.params.id,
-      });
-    } catch (e) {
-      // console. log(e);
-      return next(createError.BadRequest(e.message));
-    }
-
-    res.json(updatedDataset);
-  }),
-);
-
-const UPLOAD_LOG_INCLUDE_RELATIONS = {
-  files: true,
-  user: true,
-  dataset: {
-    include: {
-      source_datasets: {
-        include: {
-          source_dataset: true,
-        },
-      },
-      file_type: true,
-    },
-  },
-};
-
-// Post a Dataset's upload log, files' info and the Dataset to the database - UI
-router.post(
-  '/upload-log',
-  isPermittedTo('update'),
-  validate([
-    body('data_product_name').notEmpty().escape().isLength({ min: 3 }),
-    body('file_type').isObject(),
-    body('source_dataset_id').isInt().toInt(),
-    body('files_metadata').isArray(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const {
-      data_product_name, source_dataset_id, file_type, files_metadata,
-    } = req.body;
-
-    const upload_log = await prisma.upload_log.create({
-      data: {
-        status: config.upload_status.UPLOADING,
-        user: {
-          connect: {
-            id: req.user.id,
-          },
-        },
-        files: {
-          create: files_metadata.map((file) => ({
-            name: file.name,
-            md5: file.checksum,
-            num_chunks: file.num_chunks,
-            chunks_path: getFileChunksStorageDir(data_product_name, file.checksum),
-            destination_path: path.join(
-              getUploadPath(data_product_name),
-              file.name,
-            ),
-            status: config.upload_status.UPLOADING,
-          })),
-        },
-        dataset: {
-          create: {
-            source_datasets: {
-              create: [{
-                source_id: source_dataset_id,
-              }],
-            },
-            name: data_product_name,
-            origin_path: getUploadPath(data_product_name),
-            type: config.dataset_types[1],
-            file_type: file_type.id === undefined ? {
-              create: {
-                name: file_type.name,
-                extension: file_type.extension,
-              },
-            } : { connect: { id: file_type.id } },
-          },
-        },
-      },
-      include: UPLOAD_LOG_INCLUDE_RELATIONS,
-    });
-
-    res.json(upload_log);
-  }),
-);
-
-// Get an upload log - UI, worker
-router.get(
-  '/upload-log/:id',
-  isPermittedTo('update'),
-  validate([
-    param('id').isInt().toInt(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const upload_log = await prisma.upload_log.findFirstOrThrow({
-      where: { id: req.params.id },
-      include: UPLOAD_LOG_INCLUDE_RELATIONS,
-    });
-    res.json(upload_log);
-  }),
-);
-
-// Update an upload log and it's files - UI, workers
-router.patch(
-  '/upload-log/:id',
-  isPermittedTo('update'),
-  validate([
-    param('id').isInt().toInt(),
-    body('status').notEmpty().escape().optional(),
-    body('increment_processing_count').isBoolean().toBoolean().optional()
-      .default(false),
-    body('files').isArray().optional(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const { status, files, increment_processing_count } = req.body;
-    const existing_upload = await prisma.upload_log.findFirstOrThrow({
-      where: {
-        id: req.params.id,
-      },
-      include: UPLOAD_LOG_INCLUDE_RELATIONS,
-    });
-    if (existing_upload.status === config.upload_status.FAILED) {
-      res.json(existing_upload);
-      return;
-    }
-
-    const update_query = _.omitBy(_.isUndefined)({
-      status,
-      last_updated: new Date(),
-      ...(increment_processing_count && {
-        processing_attempt_count:
-          {
-            increment: 1,
-          },
-      }),
-      ...(status === config.upload_status.FAILED && {
-        dataset: {
-          delete: true,
-        },
-      }),
-    });
-
-    const updates = [];
-    updates.push(prisma.upload_log.update({
-      where: { id: req.params.id },
-      data: update_query,
-    }));
-    (files || []).forEach((f) => {
-      updates.push(prisma.file_upload_log.update({
-        where: { id: f.id },
-        data: f.data,
-      }));
-    });
-
-    await prisma.$transaction(updates);
-
-    const upload = await prisma.upload_log.findUniqueOrThrow({
-      where: {
-        id: req.params.id,
-      },
-      include: UPLOAD_LOG_INCLUDE_RELATIONS,
-    });
-    res.json(upload);
-  }),
-);
-
-// Initiate the processing of uploaded files - worker
-router.post(
-  '/:id/upload/process',
-  isPermittedTo('update'),
-  asyncHandler(async (req, res, next) => {
-    const WORKFLOW_NAME = 'process_upload';
-
-    const dataset = await prisma.dataset.findFirst({
-      where: {
-        id: Number(req.params.id),
-      },
-      include: {
-        workflows: true,
-      },
-    });
-
-    await datasetService.create_workflow(dataset, WORKFLOW_NAME);
-    res.send('OK');
-  }),
-);
-
-// Update the attributes of an uploaded file - worker
-router.patch(
-  '/file-upload-log/:id',
-  isPermittedTo('update'),
-  validate([
-    param('id').isInt().toInt(),
-    body('status').notEmpty().escape(),
-  ]),
-  isPermittedTo('update'),
-  asyncHandler(async (req, res, next) => {
-    const { status } = req.body;
-
-    const file_upload_log = await prisma.file_upload_log.update({
-      where: {
-        id: req.params.id,
-      },
-      data: {
-        status,
-      },
-    });
-
-    res.json(file_upload_log);
-  }),
-);
-
-const UPLOAD_PATH = config.upload_path;
-
-const getUploadPath = (datasetName) => path.join(
-  UPLOAD_PATH,
-  datasetName,
-);
-
-const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
-  getUploadPath(datasetName),
-  'chunked_files',
-  fileChecksum,
-);
-
-const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
-
-const uploadFileStorage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const chunkStorage = getFileChunksStorageDir(req.body.data_product_name, req.body.checksum);
-    await fsPromises.mkdir(chunkStorage, {
-      recursive: true,
-    });
-    cb(null, chunkStorage);
-  },
-  filename: (req, file, cb) => {
-    cb(null, getFileChunkName(req.body.checksum, req.body.index));
-  },
-});
-
-/**
- * Accepts a multipart/form-data request, validates the checksum of the bytes
- * received, and upon successful validation, writes the received bytes to the
- * filesystem. Path of the file is constructed from metadata fields present in
- * the request body.
- */
-router.post(
-  '/upload',
-  multer({ storage: uploadFileStorage }).single('file'),
-  asyncHandler(async (req, res, next) => {
-    const {
-      name, data_product_name, total, index, size, checksum, chunk_checksum,
-    } = req.body;
-
-    // const UPLOAD_SCOPE = config.get('upload_scope');
-
-    // const scopes = (req.token?.scope || '').split(' ');
-    // console.log(`scopes: ${scopes}`);
-
-    // const has_upload_scope = scopes.find((scope) => scope === UPLOAD_SCOPE);
-    // console.log(`has_upload_scope: ${has_upload_scope}`);
-
-    // if (!has_upload_scope) {
-    //   return next(createError.Forbidden('Invalid scope'));
-    // }
-    // console.log('passed scope check');
-
-    if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
-      res.sendStatus(400);
-    }
-
-    // eslint-disable-next-line no-console
-    console.log('Processing file piece ...', data_product_name, name, total, index, size, checksum, chunk_checksum);
-
-    // const filePath = `${getFileChunksStorageDir(req.body.data_product_name,
-    // req.body.checksum)}/${getFileChunkName(req.body.checksum,
-    // req.body.index)}`; const stats = await fsPromises.open(filePath, 'w');
-    // console.log('writing to file');
-    // while (stats.size < 2048000) {
-    // await fsPromises.appendFile(filePath, 'test ');
-    // }
-    // console.log('wrote to file');
-
-    // const receivedFilePath = req.file.path;
-    // fs.readFile(receivedFilePath, (err, data) => {
-    //   if (err) {
-    //     throw err;
-    //   }
-
-    // const evaluated_checksum =
-    // createHash('md5').update(data).digest('hex'); if (evaluated_checksum
-    // !== chunk_checksum) { res.sendStatus(409).json('Expected checksum for
-    // chunk did not equal evaluated checksum'); return; }
-
-    //   res.sendStatus(200);
-    // });
-
-    res.sendStatus(200);
   }),
 );
 

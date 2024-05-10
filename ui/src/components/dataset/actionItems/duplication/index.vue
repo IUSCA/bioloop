@@ -23,8 +23,28 @@
         class="mx-0"
       >
         Duplicate dataset needs to reach a state of
-        {{ config.DUPLICATE_READY }} before it can be accepted or rejected.
-        Current state is {{ associatedDatasetState }}.
+        {{ config.DATASET_STATES.DUPLICATE_READY }} before it can be accepted or
+        rejected. Current state is {{ associatedDatasetState }}.
+      </va-alert>
+
+      <va-alert
+        v-if="
+          isDuplicateDatasetReadyForProcessing &&
+          !isActionItemAcknowledged &&
+          isActionItemActive &&
+          datasetHasPendingWorkflows
+        "
+        color="warning"
+        class="mx-0"
+      >
+        Dataset
+        <a
+          :href="`/datasets/${props.actionItem.dataset.duplicated_from.original_dataset_id}`"
+          >{{
+            props.actionItem.dataset.duplicated_from.original_dataset.name
+          }}</a
+        >
+        cannot be overwritten because it has pending workflows.
       </va-alert>
 
       <!-- The report generated for this duplication -->
@@ -32,12 +52,15 @@
       <duplication-report-body :action-item="props.actionItem" />
 
       <!-- Accept / Reject buttons -->
-      <div class="flex gap-2 mt-5">
+      <div class="flex gap-5 mt-5">
         <va-button @click="onAcceptClick" :disabled="areControlsDisabled"
           >Accept Duplicate</va-button
         >
 
-        <va-button @click="onRejectClick" :disabled="areControlsDisabled"
+        <va-button
+          @click="onRejectClick"
+          :disabled="areControlsDisabled"
+          preset="plain"
           >Reject Duplicate</va-button
         >
       </div>
@@ -59,19 +82,23 @@
 </template>
 
 <script setup>
-import DuplicationReportHeader from "@/components/dataset/actionItems/duplication/report/ReportHeader.vue";
-import DuplicationReportBody from "@/components/dataset/actionItems/duplication/report/ReportBody.vue";
 import DuplicationAcceptModal from "@/components/dataset/actionItems/duplication/modal/AcceptModal.vue";
 import DuplicationRejectModal from "@/components/dataset/actionItems/duplication/modal/RejectModal.vue";
+import DuplicationReportBody from "@/components/dataset/actionItems/duplication/report/ReportBody.vue";
+import DuplicationReportHeader from "@/components/dataset/actionItems/duplication/report/ReportHeader.vue";
+import config from "@/config";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useNotificationStore } from "@/stores/notification";
-import config from "@/config";
 
 const props = defineProps({
   actionItem: {
     type: Object,
     required: true,
+  },
+  datasetWorkflows: {
+    type: Array,
+    default: () => [],
   },
   loadingResources: {
     type: Boolean,
@@ -105,6 +132,10 @@ function onAcceptClick() {
 function onRejectClick() {
   showRejectModal.value = true;
 }
+
+const datasetHasPendingWorkflows = computed(() => {
+  return props.datasetWorkflows.length > 0;
+});
 
 function acceptDuplicate(duplicate_dataset_id) {
   initiatingResolution.value = true;
@@ -172,7 +203,8 @@ const areControlsDisabled = computed(() => {
   return (
     isActionItemAcknowledged.value ||
     !isActionItemActive.value ||
-    !isDuplicateDatasetReadyForProcessing.value
+    !isDuplicateDatasetReadyForProcessing.value ||
+    datasetHasPendingWorkflows.value
   );
 });
 </script>

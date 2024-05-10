@@ -1,7 +1,7 @@
 <template>
   <!-- This dataset has duplicates incoming -->
   <va-alert
-    v-if="isActiveDatasetWithIncomingDuplicates(props.dataset)"
+    v-if="isActiveDatasetWithIncomingDuplicates(props.dataset) && isAuthorized"
     color="warning"
   >
     <div class="flex items-center">
@@ -20,19 +20,22 @@
       </div>
     </div>
   </va-alert>
-
-  <!-- This dataset is currently being overwritten by a duplicate -->
-  <OverwriteInProgressAlert :dataset="props.dataset" />
 </template>
 
 <script setup>
 import { isActiveDatasetWithIncomingDuplicates } from "@/services/datasetUtils";
+import { useAuthStore } from "@/stores/auth";
+import { storeToRefs } from "pinia";
 
-const router = useRouter();
 const props = defineProps({
   dataset: {
     type: Object,
     required: true,
   },
 });
+
+const router = useRouter();
+const { canAdmin, canOperate } = storeToRefs(useAuthStore());
+
+const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 </script>

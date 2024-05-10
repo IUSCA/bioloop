@@ -1,0 +1,8 @@
+erDiagram
+    DATASET ||--o{ DATASET_ACTION_ITEM : has
+    DATASET ||--o{ DATASET_DUPLICATION: "duplicated by"
+    DATASET ||--o| DATASET_DUPLICATION: "duplicated from"
+    NOTIFICATION |o--o{  DATASET_ACTION_ITEM: "relates to"
+    DATASET_ACTION_ITEM |o--|{ DATASET_INGESTION_CHECK: contains
+
+[![](https://www.mermaidchart.com/app/projects/e12c3ac1-7d93-4ab4-af96-45920b2ecfe4/diagrams/64bb895d-3884-4509-87c2-b3cda4898ea0/version/v0.1/edit)]

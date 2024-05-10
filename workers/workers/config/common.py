@@ -117,14 +117,6 @@ config = {
         'accept_duplicate_dataset': {
             'steps': [
                 {
-                    'name': 'purge resources',
-                    'task': 'purge_original_dataset_resources'
-                },
-                {
-                    'name': 'accept',
-                    'task': 'accept_duplicate'
-                },
-                {
                     'name': 'archive',
                     'task': 'archive_dataset'
                 },
@@ -148,10 +140,6 @@ config = {
                     'name': 'purge resources',
                     'task': 'purge_duplicate_dataset_resources'
                 },
-                {
-                    'name': 'reject',
-                    'task': 'reject_duplicate'
-                }
             ]
         },
         'handle_duplicate_dataset': {
@@ -196,10 +184,6 @@ config = {
                     'name': 'setup_download',
                     'task': 'setup_dataset_download'
                 },
-                {
-                    'name': 'delete source',
-                    'task': 'delete_source'
-                }
             ]
         },
         'process_upload': {
@@ -237,12 +221,7 @@ config = {
         'STAGED': 'STAGED',
         'DUPLICATE_REGISTERED': 'DUPLICATE_REGISTERED',
         'DUPLICATE_READY': 'DUPLICATE_READY',
-        'DUPLICATE_ACCEPTANCE_IN_PROGRESS': 'DUPLICATE_ACCEPTANCE_IN_PROGRESS',
-        'DUPLICATE_REJECTION_IN_PROGRESS': 'DUPLICATE_REJECTION_IN_PROGRESS',
-        'DUPLICATE_DATASET_RESOURCES_PURGED': 'DUPLICATE_DATASET_RESOURCES_PURGED',
-        'DUPLICATE_ACCEPTED': 'DUPLICATE_ACCEPTED',
-        'OVERWRITE_IN_PROGRESS': 'OVERWRITE_IN_PROGRESS',
-        'ORIGINAL_DATASET_RESOURCES_PURGED': 'ORIGINAL_DATASET_RESOURCES_PURGED',
+        'DUPLICATE_REJECTED': 'DUPLICATE_REJECTED',
         'OVERWRITTEN': 'OVERWRITTEN',
         'DELETED': 'DELETED',
     },

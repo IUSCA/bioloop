@@ -5,24 +5,24 @@ import api from "./api";
 class DatasetService {
   /**
    *
-   * @param deleted          Boolean field to filter datasets by `is_deleted` field
-   * @param processed        Field to filter datasets by number of associated workflows. Can be one of
-   *                         'some' or 'none'
-   * @param archived         Boolean field to filter datasets by the presence/absence of `archive_path`
-   *                         field
-   * @param staged           Boolean field to filter datasets by `is_deleted` field
-   * @param type             Field to filter datasets by `type`. One of 'RAW_DATA' or 'DATA_PRODUCT'
-   * @param name             Field to filter datasets by `name`
+   * @param deleted    Boolean field to filter datasets by `is_deleted` field
+   * @param processed  Field to filter datasets by number of associated workflows. Can be one of
+   *                   'some' or 'none'
+   * @param archived   Boolean field to filter datasets by the presence/absence of `archive_path`
+   *                   field
+   * @param staged     Boolean field to filter datasets by `is_deleted` field
+   * @param type       Field to filter datasets by `type`. One of 'RAW_DATA' or 'DATA_PRODUCT'
+   * @param name       Field to filter datasets by `name`
    * @param match_name_exact Boolean field to determine whether records will be matched by
-   *                         exact or matching values of `name`
-   * @param limit            The number of datasets to be retrieved
-   * @param offset           Database offset starting at which results will be retrieved
-   * @param sortBy           Object containing property to sort datasets by, whose key is the name
-   *                         of said property, and value is one of 'asc' or 'desc'
-   * @param is_duplicate     Boolean field to filter datasets by the is_duplicate attribute
+                        exact or matching values of `name`
+   * @param limit      The number of datasets to be retrieved
+   * @param offset     Database offset starting at which results will be retrieved
+   * @param sortBy     Object containing property to sort datasets by, whose key is the name
+   *                   of said property, and value is one of 'asc' or 'desc'
+   * @param is_duplicate Boolean field to filter datasets by the is_duplicate attribute
    * @param include_action_items Boolean field to includes any active action items on the dataset in the result
-   * @param include_states   Boolean field to include dataset's state history
-   * @returns                Object containing matching datasets, and count of matching datasets
+   * @param include_states Boolean field to include dataset's state history
+   * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll({
     deleted = null,
@@ -142,15 +142,11 @@ class DatasetService {
   }
 
   accept_duplicate_dataset({ duplicate_dataset_id }) {
-    return api.post(
-      `/datasets/duplicates/${duplicate_dataset_id}/accept_duplicate_dataset`,
-    );
+    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/accept`);
   }
 
   reject_duplicate_dataset({ duplicate_dataset_id }) {
-    return api.post(
-      `/datasets/duplicates/${duplicate_dataset_id}/reject_duplicate_dataset`,
-    );
+    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/reject`);
   }
 
   getStats({ type }) {
@@ -205,12 +201,16 @@ class DatasetService {
     });
   }
 
-  uploadFile(data) {
-    return api.post("/datasets/upload", data);
-  }
-
   getActionItem({ action_item_id } = {}) {
     return api.get(`/datasets/action-items/${action_item_id}`);
+  }
+
+  getWorkflows({ dataset_id, params }) {
+    return api.get(`/datasets/${dataset_id}/workflows`, { params });
+  }
+
+  uploadFile(data) {
+    return api.post("/datasets/upload", data);
   }
 }
 

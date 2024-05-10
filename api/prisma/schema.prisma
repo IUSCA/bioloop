@@ -88,6 +88,7 @@ model file_upload_log {
   upload_log_id    Int?
 }
 
+
 model dataset_hierarchy {
   source_id       Int
   derived_id      Int
@@ -115,15 +116,6 @@ model dataset_file {
 
   @@unique([path, dataset_id])
   @@index([dataset_id])
-}
-
-model dataset_file_type {
-  id        Int       @id @default(autoincrement())
-  name      String
-  extension String
-  datasets  dataset[]
-
-  @@unique([name, extension])
 }
 
 model dataset_file_hierarchy {

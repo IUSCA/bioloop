@@ -115,12 +115,6 @@
       "description": "Overwrites an existing dataset with its incoming duplicate.",
       "steps": [
         {
-          "name": "purge resources",
-          "task": "purge_original_dataset_resources"
-        }, {
-          "name": "accept",
-          "task": "accept_duplicate"
-        }, {
           "name": "archive",
           "task": "archive_dataset"
         }, {
@@ -141,13 +135,25 @@
         {
           "name": "purge resources",
           "task": "purge_duplicate_dataset_resources"
-        },
-        {
-          "name": "reject",
-          "task": "reject_duplicate"
         }
       ]
     }
+  },
+  "DATASET_STATES": {
+      "REGISTERED": "REGISTERED",
+      "READY": "READY",
+      "INSPECTED": "INSPECTED",
+      "ARCHIVED": "ARCHIVED",
+      "FETCHED": "FETCHED",
+      "STAGED": "STAGED",
+      "DUPLICATE_REGISTERED": "DUPLICATE_REGISTERED",
+      "DUPLICATE_READY": "DUPLICATE_READY",
+      "DUPLICATE_REJECTED": "DUPLICATE_REJECTED",
+      "OVERWRITTEN": "OVERWRITTEN",
+      "DELETED": "DELETED"
+  },
+  "ACTION_ITEM_TYPES": {
+    "DUPLICATE_DATASET_INGESTION": "DUPLICATE_DATASET_INGESTION"
   },
   "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
   "e2e": {
@@ -163,7 +169,14 @@
       }
     }
   },
-  "DONE_STATUSES": {
+  "WORKFLOW_STATUS": {
+    "PENDING": "PENDING",
+    "STARTED": "STARTED",
+    "SUCCESS": "SUCCESS",
+    "FAILURE": "FAILURE",
+    "REVOKED": "REVOKED"
+  },
+    "DONE_STATUSES": {
     "REVOKED": "REVOKED",
     "FAILURE": "FAILURE",
     "SUCCESS": "SUCCESS"
@@ -177,27 +190,5 @@
     "COMPLETE": "COMPLETE",
     "FAILED": "FAILED"
   },
-  "upload_path": "/opt/sca/uploads",
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
-  "DATASET_STATES": {
-      "REGISTERED": "REGISTERED",
-      "READY": "READY",
-      "INSPECTED": "INSPECTED",
-      "ARCHIVED": "ARCHIVED",
-      "FETCHED": "FETCHED",
-      "STAGED": "STAGED",
-      "DUPLICATE_REGISTERED": "DUPLICATE_REGISTERED",
-      "DUPLICATE_READY": "DUPLICATE_READY",
-      "DUPLICATE_ACCEPTANCE_IN_PROGRESS": "DUPLICATE_ACCEPTANCE_IN_PROGRESS",
-      "DUPLICATE_REJECTION_IN_PROGRESS": "DUPLICATE_REJECTION_IN_PROGRESS",
-      "DUPLICATE_DATASET_RESOURCES_PURGED": "DUPLICATE_DATASET_RESOURCES_PURGED",
-      "DUPLICATE_ACCEPTED": "DUPLICATE_ACCEPTED",
-      "OVERWRITE_IN_PROGRESS": "OVERWRITE_IN_PROGRESS",
-      "ORIGINAL_DATASET_RESOURCES_PURGED": "ORIGINAL_DATASET_RESOURCES_PURGED",
-      "OVERWRITTEN": "OVERWRITTEN",
-      "DELETED": "DELETED"
-  },
-  "ACTION_ITEM_TYPES": {
-    "DUPLICATE_DATASET_INGESTION": "DUPLICATE_DATASET_INGESTION"
-  }
+  "upload_path": "/opt/sca/uploads"
 }

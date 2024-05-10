@@ -8,7 +8,6 @@ import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
-from workers.dataset import is_dataset_locked_for_writes
 from workers import exceptions as exc
 from workers.config import config
 from workers.exceptions import InspectionFailed
@@ -69,11 +68,6 @@ def generate_metadata(celery_task, source: Path):
 
 def inspect_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-
-    locked, latest_state = is_dataset_locked_for_writes(dataset)
-    if locked:
-        raise InspectionFailed(f"Dataset {dataset['id']} is locked for writes. Dataset's current "
-                        f"state is {latest_state}.")
 
     source = Path(dataset['origin_path']).resolve()
     du_size = cmd.total_size(source)

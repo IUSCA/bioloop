@@ -1,6 +1,10 @@
 <template>
   <div>
-    <div v-if="isActiveDatasetWithIncomingDuplicates(props.dataset)">
+    <div
+      v-if="
+        isActiveDatasetWithIncomingDuplicates(props.dataset) && isAuthorized
+      "
+    >
       <va-alert
         v-for="(duplicateDataset, index) in duplicateDatasets"
         color="warning"
@@ -11,16 +15,13 @@
           <div class="flex-auto">
             This dataset has been duplicated by
             <a :href="`/datasets/${duplicateDataset.id}`">
-              #{{ duplicateDataset.id }}
+              {{ duplicateDataset.name }}
             </a>
           </div>
 
           <!-- Allow authorized users to see visit the action item for this duplication -->
           <va-button
-            v-if="
-              duplicateDataset.action_items.length > 0 &&
-              (auth.canAdmin || auth.canOperate)
-            "
+            v-if="duplicateDataset.action_items.length > 0"
             @click="
               () => {
                 router.push(
@@ -40,6 +41,7 @@
 <script setup>
 import { isActiveDatasetWithIncomingDuplicates } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
+import { storeToRefs } from "pinia";
 
 const router = useRouter();
 
@@ -50,7 +52,11 @@ const props = defineProps({
   },
 });
 
-const auth = useAuthStore();
+const { canAdmin, canOperate } = storeToRefs(useAuthStore());
+
+// console.log(canAdmin.value);
+
+const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 
 // Gather and sort all duplicates of the current dataset
 const duplicateDatasets = computed(() =>

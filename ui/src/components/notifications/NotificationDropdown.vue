@@ -3,6 +3,7 @@
     <va-menu placement="left-bottom">
       <template #anchor>
         <va-badge
+          data-testid="notification-count-badge"
           :offset="[-3, 10]"
           :text="`${notifications.length > 0 ? notifications.length : ''}`"
           overlap

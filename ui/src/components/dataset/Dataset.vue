@@ -18,7 +18,6 @@
                   class="flex-none"
                   edit
                   @click="openModalToEditDataset"
-                  :disabled="isDatasetLocked"
                 />
               </div>
             </va-card-title>
@@ -115,9 +114,7 @@
                   <!-- Stage Action Button-->
                   <va-button
                     v-if="dataset.archive_path"
-                    :disabled="
-                      is_stage_pending || dataset.is_staged || isDatasetLocked
-                    "
+                    :disabled="is_stage_pending || dataset.is_staged"
                     color="primary"
                     border-color="primary"
                     preset="secondary"
@@ -131,7 +128,7 @@
                   <!-- Delete Action Button-->
                   <va-button
                     v-if="config.enable_delete_archive && dataset.archive_path"
-                    :disabled="is_delete_pending || isDatasetLocked"
+                    :disabled="is_delete_pending"
                     color="danger"
                     border-color="danger"
                     class="flex-initial"
@@ -178,7 +175,6 @@
                   class="flex-initial"
                   preset="plain"
                   @click="delete_archive_modal.visible = false"
-                  :disabled="isDatasetLocked"
                 >
                   <i-mdi-close />
                 </va-button>
@@ -244,10 +240,7 @@
                 />
                 <va-button
                   color="danger"
-                  :disabled="
-                    delete_archive_modal.input !== dataset.name ||
-                    isDatasetLocked
-                  "
+                  :disabled="delete_archive_modal.input !== dataset.name"
                   @click="delete_archive"
                 >
                   Delete this dataset
@@ -331,7 +324,6 @@ import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
-import { isDatasetLockedForWrite } from "@/services/datasetUtils";
 import workflowService from "@/services/workflow";
 const router = useRouter();
 const route = useRoute();
@@ -496,10 +488,6 @@ const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
-
-const isDatasetLocked = computed(() => {
-  return isDatasetLockedForWrite(dataset.value);
-});
 
 watch(trigger_dataset_retrieval, () => {
   fetch_dataset(true);

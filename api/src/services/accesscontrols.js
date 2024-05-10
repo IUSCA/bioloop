@@ -122,7 +122,6 @@ const grantsObject = {
     uploads: {
       'create:any': ['*'],
     },
-  },
 };
 const ac = new AccessControl(grantsObject);
 
