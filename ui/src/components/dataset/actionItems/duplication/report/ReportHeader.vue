@@ -1,22 +1,21 @@
 <template>
   <va-card>
-    <va-card-title>
-      <div class="mt-1">
-        <span class="text-lg">Info</span>
-      </div>
+    <va-card-title class="mt-1">
+      <span class="text-lg" :data-testid="`${TEST_ID_PREFIX}-info`">Info</span>
     </va-card-title>
 
     <va-card-content>
       <div class="va-table-responsive">
         <table class="va-table">
           <tbody>
-            <tr>
+            <tr :data-testid="`${TEST_ID_PREFIX}-name`">
               <td>Dataset Name</td>
               <td>
                 {{ props.actionItem.dataset.name }}
               </td>
             </tr>
-            <tr>
+
+            <tr :data-testid="`${TEST_ID_PREFIX}-original-dataset-id`">
               <td>Original Dataset</td>
               <td>
                 <router-link
@@ -27,7 +26,8 @@
                 </router-link>
               </td>
             </tr>
-            <tr>
+
+            <tr :data-testid="`${TEST_ID_PREFIX}-duplicate-dataset-id`">
               <td>Duplicate Dataset</td>
               <td>
                 <router-link
@@ -49,6 +49,8 @@
 const props = defineProps({
   actionItem: { type: Object, required: true },
 });
+
+const TEST_ID_PREFIX = "dataset-duplication-report";
 </script>
 
 <style scoped></style>

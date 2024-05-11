@@ -3,6 +3,7 @@
     class="notification-anchor"
     :href="_notification.to || '#'"
     @click="_notification.onClick"
+    :data-testid="`notification-${notification.id}-anchor`"
   >
     <h6 class="va-h6">{{ _notification.label }}</h6>
     <p>{{ _notification.text }}</p>
@@ -10,7 +11,6 @@
 </template>
 
 <script setup>
-
 const props = defineProps({
   notification: {
     type: Object,
@@ -19,8 +19,8 @@ const props = defineProps({
 });
 
 const actionItem = computed(() => {
-  return props.notification.dataset_action_items[0]
-})
+  return props.notification.dataset_action_items[0];
+});
 
 const _notification = computed(() => ({
   ...props.notification,
