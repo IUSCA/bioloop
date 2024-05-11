@@ -8,13 +8,17 @@
           overlap
           data-testid="notification-count"
         >
-          <va-button class="notification-bell" plain>
+          <va-button
+            data-testid="notification-icon"
+            class="notification-bell"
+            plain
+          >
             <Icon icon="mdi-bell-outline" height="36px" width="36px" />
           </va-button>
         </va-badge>
       </template>
 
-      <div class="max-w-md max-h-96">
+      <div class="max-w-md max-h-96" data-testid="notification-menu-items">
         <va-menu-item v-if="notifications.length === 0">
           No pending notifications
         </va-menu-item>
