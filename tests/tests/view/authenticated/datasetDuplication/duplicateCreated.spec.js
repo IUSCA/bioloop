@@ -71,7 +71,7 @@ test.describe('Dataset duplication', () => {
       await expect(report_info_title_locator)
         .toHaveClass('text-lg');
       await expect(report_info_title_locator)
-        .toContainText('INFO');
+        .toContainText('Info');
 
       const name_td_locator = page.getByTestId(`${REPORT_TEST_ID_PREFIX}-name`)
         .locator('td');
@@ -94,7 +94,7 @@ test.describe('Dataset duplication', () => {
       await expect(report_body_title_locator)
         .toHaveClass('text-lg');
       await expect(report_body_title_locator)
-        .toContainText('DUPLICATION ANALYSIS REPORT');
+        .toContainText('Duplication Analysis Report');
     });
   });
 });
