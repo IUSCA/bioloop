@@ -5,8 +5,12 @@
     @click="_notification.onClick"
     :data-testid="`notification-${notification.id}-anchor`"
   >
-    <h6 class="va-h6">{{ _notification.label }}</h6>
-    <p>{{ _notification.text }}</p>
+    <h6 class="va-h6" :data-testid="`notification-${notification.id}-label`">
+      {{ _notification.label }}
+    </h6>
+    <p :data-testid="`notification-${notification.id}-text`">
+      {{ _notification.text }}
+    </p>
   </a>
 </template>
 
