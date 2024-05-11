@@ -8,6 +8,10 @@ const createdDuplicateDataset = async ({ request, token, datasetId }) => {
     ignoreHTTPSErrors: true,
   });
   const createdDataset = await createResponse.json();
+
+  console.log('createdDataset');
+  console.log(createdDataset);
+
   return createdDataset;
 };
 
