@@ -1,7 +1,9 @@
 <template>
   <va-card>
     <va-card-title class="mt-1">
-      <span class="text-lg">Duplication Analysis Report</span>
+      <span class="text-lg" :data-testid="`${TEST_ID_PREFIX}-body`"
+        >Duplication Analysis Report</span
+      >
     </va-card-title>
 
     <va-card-content>
@@ -70,6 +72,8 @@ const props = defineProps({
     required: true,
   },
 });
+
+const TEST_ID_PREFIX = "dataset-duplication-report";
 
 const columns = ref([
   {

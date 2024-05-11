@@ -82,7 +82,7 @@ module.exports = {
         name: 'dataset_duplication',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/datasetDuplication/notification.spec.js',
+        testMatch: '/view/authenticated/datasetDuplication/duplicateCreated.spec.js',
         // testIgnore: '*',
       },
       {
