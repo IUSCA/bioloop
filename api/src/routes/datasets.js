@@ -632,9 +632,9 @@ router.patch(
       last_updated: new Date(),
       ...(increment_processing_count && {
         processing_attempt_count:
-          {
-            increment: 1,
-          },
+        {
+          increment: 1,
+        },
       }),
       ...(status === config.upload_status.FAILED && {
         dataset: {
@@ -917,6 +917,11 @@ router.post(
       },
       include: {
         ...CONSTANTS.INCLUDE_WORKFLOWS,
+        action_items: {
+          include: {
+            notification: true,
+          },
+        },
       },
     }));
 
