@@ -1,0 +1,97 @@
+name: bioloop
+services:
+  nginx:
+    image: git.sca.iu.edu:5050/iusca/bioloop/nginx:test
+    volumes:
+      - ui_modules:/usr/share/nginx/html
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    networks:
+      network:
+        ipv4_address: 172.20.0.2
+
+  ui:
+    image: git.sca.iu.edu:5050/iusca/bioloop/ui:test
+    volumes:
+      - ui_modules:/opt/sca/app/dist
+    environment:
+      - VITE_CAS_RETURN=${VITE_CAS_RETURN}
+      - VITE_API_URL=${VITE_API_URL}
+    depends_on:
+      - api
+    restart: "no"
+    networks:
+      network:
+        ipv4_address: 172.20.0.3
+
+  test:
+    image: git.sca.iu.edu:5050/iusca/bioloop/test:test
+    restart: "no"
+    depends_on:
+      # ensures that tests don't run until the API container is up
+      nginx:
+        condition: service_healthy
+    network_mode: "host"
+    networks:
+      network:
+        ipv4_address: 172.20.0.4
+      
+  api:
+    image: git.sca.iu.edu:5050/iusca/bioloop/api:test
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DATABASE_HOST=${POSTGRES_HOST}
+      - DATABASE_USER=${POSTGRES_USER}
+      - DATABASE_PORT=5432
+      - DATABASE_DB=${POSTGRES_DB}
+      - DATABASE_SCHEMA=public
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}?schema=public
+      - WORKFLOW_AUTH_TOKEN=${WORKFLOW_AUTH_TOKEN}
+      - OAUTH_BASE_URL=${OAUTH_BASE_URL}
+      - OAUTH_DOWNLOAD_CLIENT_ID=${OAUTH_DOWNLOAD_CLIENT_ID}
+      - OAUTH_DOWNLOAD_CLIENT_SECRET=${OAUTH_DOWNLOAD_CLIENT_SECRET}
+      - DOWNLOAD_SERVER_BASE_URL=${DOWNLOAD_SERVER_BASE_URL}
+    # entrypoint: [ "tail", "-f", "/dev/null" ]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        ./keys/genkeys.sh \
+        && npx prisma generate \
+        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+    expose:
+      - 3030
+    depends_on:
+     - postgres
+    networks:
+      network:
+        ipv4_address: 172.20.0.5
+
+  postgres:
+    image: postgres:14.5
+    restart: unless-stopped
+    # user: ${CONTAINER_USER}
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    expose:
+      - 5432
+    networks:
+      network:
+        ipv4_address: 172.20.0.6
+        
+
+
+volumes:
+  ui_modules:
+    external: false
+
+networks:
+  network:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
