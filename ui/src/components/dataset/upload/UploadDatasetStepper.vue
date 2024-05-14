@@ -467,6 +467,19 @@ const uploadFileChunks = async (fileDetails) => {
   return uploaded;
 };
 
+const testCall = async () => {
+  return uploadService
+    .test()
+    .then((res) => {
+      console.log("test call success");
+      console.log(res.data);
+    })
+    .catch((err) => {
+      console.log("test call error");
+      console.log(err);
+    });
+};
+
 const uploadFile = async (fileDetails) => {
   console.log(`Beginning upload of file`);
   console.log("fileDetails");
@@ -474,6 +487,8 @@ const uploadFile = async (fileDetails) => {
 
   // persist token in store
   await auth.onFileUpload(fileDetails.name);
+
+  await testCall();
 
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
@@ -709,20 +724,6 @@ onBeforeRouteLeave(() => {
 onBeforeUnmount(() => {
   // Cancels pending uploads and prompts cleanup activities before page unload
   uploadCancelled.value = true;
-});
-
-onMounted(() => {
-  console.log("onMounted test call");
-  uploadService
-    .test()
-    .then((res) => {
-      console.log("test call success");
-      console.log(res.data);
-    })
-    .catch((err) => {
-      console.log("test call error");
-      console.log(err);
-    });
 });
 </script>
 
