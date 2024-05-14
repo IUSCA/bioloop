@@ -1045,11 +1045,18 @@ router.get(
 
     const last_run_only = req.query.last_run_only || false;
 
-    const retrievedWorkflows = await datasetService.get_workflows({
+    let retrievedWorkflows;
+
+    // try {
+    retrievedWorkflows = await datasetService.get_workflows({
       dataset_id: req.params.id,
       statuses: ['PENDING', 'STARTED', 'FAILURE'],
       last_run_only,
     });
+    // } catch (e) {
+    //   console.log('ERROR');
+    //   console.log(e);
+    // }
 
     res.send(retrievedWorkflows);
   }),

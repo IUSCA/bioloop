@@ -18,6 +18,7 @@ test.describe('Dataset duplication', () => {
     let createdDuplicate;
     let originalDataset;
     let notificationId;
+    let actionItem;
     let actionItemId;
     const REPORT_TEST_ID_PREFIX = 'dataset-duplication-report';
 
@@ -30,6 +31,16 @@ test.describe('Dataset duplication', () => {
         token,
         datasetId: DATASET_TO_DUPLICATE,
       });
+      actionItem = createdDuplicate.action_items[0];
+      actionItemId = actionItem.id;
+      notificationId = actionItem.notification.id;
+    });
+
+    await test.step('Navigate to action item', async () => {
+      await page.getByTestId('notification-icon').click();
+      await page.getByTestId(`notification-${notificationId}-anchor`).click();
+
+      await page.waitForURL(`/datasets/${createdDuplicate.id}/actionItems/${actionItemId}`);
     });
 
     await test.step('Duplication Analysis Report', async () => {

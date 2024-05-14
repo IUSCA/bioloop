@@ -478,12 +478,28 @@ async function get_workflows({ dataset_id, last_run_only = false, statuses = [] 
       dataset_id,
     },
   });
+
+  console.log('workflows');
+  console.dir(workflows, { depth: null });
+
   const workflow_ids = workflows.map((w) => w.id);
+  console.log('workflow_ids');
+  console.dir(workflow_ids, { depth: null });
 
   const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
 
-  const retrievedWorkflowsResponses = await Promise.all(wf_promises);
+  let retrievedWorkflowsResponses;
+  try {
+    retrievedWorkflowsResponses = await Promise.all(wf_promises);
+  } catch (e) {
+    console.log('errors');
+    console.log(e);
+    // throw e;
+  }
   let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
+
+  console.log('retrievedWorkflows');
+  console.dir(retrievedWorkflows, { depth: null });
 
   if (last_run_only) {
     // filter last successful runs

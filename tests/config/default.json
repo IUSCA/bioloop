@@ -1,5 +1,4 @@
 {
-  "baseURL": "https://bioloop-dev.sca.iu.edu",
   "apiBasePath": "https://bioloop-dev.sca.iu.edu/api",
   "e2e": {
     "users": {
