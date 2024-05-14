@@ -161,7 +161,7 @@ export const useAuthStore = defineStore("auth", () => {
   const getTheme = () => user.value.theme;
 
   const onFileUpload = async (fileName) => {
-    return uploadService.getUploadToken(fileName).then((res) => {
+    return uploadService.getUploadToken({ file_name: fileName }).then((res) => {
       uploadToken.value = res.data;
     });
   };
