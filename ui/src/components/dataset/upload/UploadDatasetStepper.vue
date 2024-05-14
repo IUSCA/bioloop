@@ -162,7 +162,8 @@
 import SparkMD5 from "spark-md5";
 import _ from "lodash";
 import datasetService from "@/services/dataset";
-import uploadService from "@/services/upload";
+// import uploadService from "@/services/upload";
+import UploadService from "@/services/upload";
 import { useAuthStore } from "@/stores/auth";
 import { formatBytes } from "@/services/utils";
 import { useForm, useBreakpoint } from "vuestic-ui";
@@ -174,7 +175,7 @@ import toast from "@/services/toast";
 
 const auth = useAuthStore();
 
-// const { uploadToken } = storeToRefs(auth);
+const { uploadToken } = storeToRefs(auth);
 
 const breakpoint = useBreakpoint();
 
@@ -206,6 +207,7 @@ const steps = [
   { label: "Select Files", icon: "material-symbols:folder" },
 ];
 
+const uploadService = ref(null);
 const loading = ref(true);
 const datasetName = ref("");
 // const dataProductName = ref("");
@@ -406,7 +408,7 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
     try {
-      await uploadService.uploadFile(chunkData);
+      await uploadService.value.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
       console.log(`Encountered error`, e);
@@ -468,7 +470,7 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const testCall = async () => {
-  return uploadService
+  return uploadService.value
     .test()
     .then((res) => {
       console.log("test call success");
@@ -487,6 +489,8 @@ const uploadFile = async (fileDetails) => {
 
   // persist token in store
   await auth.onFileUpload(fileDetails.name);
+
+  uploadService.value = new UploadService(uploadToken.value);
 
   await testCall();
 

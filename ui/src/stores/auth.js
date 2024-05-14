@@ -3,7 +3,7 @@ import authService from "@/services/auth";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import uploadService from "@/services/upload";
+import uploadTokenService from "@/services/upload/token";
 
 export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
@@ -161,10 +161,13 @@ export const useAuthStore = defineStore("auth", () => {
   const getTheme = () => user.value.theme;
 
   const onFileUpload = async (fileName) => {
-    return uploadService
+    // const uploadService = new UploadService(uploadToken.value);
+
+    return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
         uploadToken.value = res.data.accessToken;
+        // uploadToken.value = "rishi";
         console.log("uploadToken.value");
         console.log(uploadToken.value);
       });

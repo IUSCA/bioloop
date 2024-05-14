@@ -1,9 +1,13 @@
-import uploadApi from "@/services/uploadApi";
+import UploadApi from "@/services/uploadApi";
 import api from "@/services/api";
 
 class UploadService {
+  constructor(token) {
+    this.uploadApi = new UploadApi(token);
+  }
+
   test() {
-    return uploadApi.get("/upload/test");
+    return this.uploadApi.get("/upload/test");
   }
 
   // postTest() {
@@ -11,7 +15,7 @@ class UploadService {
   // }
 
   uploadFile(data) {
-    return uploadApi.post("/upload", data);
+    return this.uploadApi.post("/upload", data);
   }
 
   getUploadToken({ data }) {
@@ -19,4 +23,4 @@ class UploadService {
   }
 }
 
-export default new UploadService();
+export default UploadService;
