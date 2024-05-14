@@ -10,7 +10,7 @@ class UploadService {
     return uploadApi.post("/upload", data);
   }
 
-  getUploadToken(data) {
+  getUploadToken({ data }) {
     return api.post("/upload/token", data);
   }
 }
