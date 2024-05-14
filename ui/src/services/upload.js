@@ -1,4 +1,5 @@
 import uploadApi from "@/services/uploadApi";
+import api from "@/services/api";
 
 class UploadService {
   test() {
@@ -10,7 +11,7 @@ class UploadService {
   }
 
   getUploadToken(data) {
-    return uploadApi.post("/upload/token", data);
+    return api.post("/upload/token", data);
   }
 }
 
