@@ -173,6 +173,10 @@ import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploa
 import toast from "@/services/toast";
 
 const auth = useAuthStore();
+
+const { uploadToken } = storeToRefs(auth);
+const { onFileUpload } = auth;
+
 const breakpoint = useBreakpoint();
 
 const { SUBMISSION_STATES } = config;
@@ -470,7 +474,7 @@ const uploadFile = async (fileDetails) => {
   console.dir(fileDetails, { depth: null });
 
   // persist token in store
-  // await auth.onFileUpload(fileDetails.name);
+  await auth.onFileUpload(fileDetails.name);
 
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;

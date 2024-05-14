@@ -3,11 +3,13 @@ import authService from "@/services/auth";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
+import uploadService from "@/services/upload";
 
 export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
+  const uploadToken = ref(useLocalStorage("uploadToken", ""));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
@@ -158,6 +160,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
+  const onFileUpload = async (fileName) => {
+    return uploadService.getUploadToken(fileName).then((res) => {
+      uploadToken.value = res.data;
+    });
+  };
+
   return {
     user,
     loggedIn,
@@ -176,6 +184,7 @@ export const useAuthStore = defineStore("auth", () => {
     ciLogin,
     env,
     setEnv,
+    onFileUpload,
   };
 });
 

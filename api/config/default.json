@@ -44,6 +44,9 @@
       "client_id": "",
       "client_secret": "",
       "scope_prefix": "download_file:"
+    },
+    "upload": {
+      "scope_prefix": "upload_file:"
     }
   },
   "download_server": {
