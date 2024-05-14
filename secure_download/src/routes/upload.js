@@ -43,7 +43,7 @@ const uploadFileStorage = multer.diskStorage({
  * the request body.
  */
 router.post(
-  '/upload',
+  '/',
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
@@ -94,6 +94,13 @@ router.post(
     // });
 
     res.sendStatus(200);
+  }),
+);
+
+router.get(
+  '/test',
+  asyncHandler(async (req, res, next) => {
+    res.send('OK test');
   }),
 );
 
