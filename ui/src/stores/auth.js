@@ -165,6 +165,8 @@ export const useAuthStore = defineStore("auth", () => {
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
         uploadToken.value = res.data;
+        console.log("uploadToken.value");
+        console.log(uploadToken.value);
       });
   };
 

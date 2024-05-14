@@ -1,7 +1,8 @@
 import config from "@/config";
 import axios from "axios";
 
-const uploadToken = ref(useLocalStorage("uploadToken", ""));
+// const uploadToken = ref(useLocalStorage("uploadToken", ""));
+const _token = localStorage.getItem("uploadToken");
 
 const uploadApi = axios.create({
   baseURL: config.uploadBasePath,
@@ -9,11 +10,11 @@ const uploadApi = axios.create({
 
 uploadApi.interceptors.request.use(
   (config) => {
-    const _token = uploadToken.value;
-    console.log("uploadApi.interceptors.request.use");
-    console.log("uploadToken.value");
-    console.log(uploadToken.value);
-    console.log("token");
+    // const _token = uploadToken.value;
+    // console.log("uploadApi.interceptors.request.use");
+    // console.log("uploadToken.value");
+    // console.dir(uploadToken.value, { depth: null });
+    console.log("_token");
     console.log(_token);
 
     if (_token) {
