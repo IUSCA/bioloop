@@ -11,7 +11,10 @@ uploadApi.interceptors.request.use(
   (config) => {
     const _token = uploadToken.value;
     console.log("uploadApi.interceptors.request.use");
-    console.log("token", _token);
+    console.log("uploadToken.value");
+    console.log(uploadToken.value);
+    console.log("token");
+    console.log(_token);
 
     if (_token) {
       config.headers.Authorization = `Bearer ${_token}`;

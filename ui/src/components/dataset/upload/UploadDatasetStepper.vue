@@ -174,8 +174,7 @@ import toast from "@/services/toast";
 
 const auth = useAuthStore();
 
-const { uploadToken } = storeToRefs(auth);
-const { onFileUpload } = auth;
+// const { uploadToken } = storeToRefs(auth);
 
 const breakpoint = useBreakpoint();
 

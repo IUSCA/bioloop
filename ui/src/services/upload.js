@@ -6,6 +6,10 @@ class UploadService {
     return uploadApi.get("/upload/test");
   }
 
+  // postTest() {
+  //   return uploadApi.post("/upload/test");
+  // }
+
   uploadFile(data) {
     return uploadApi.post("/upload", data);
   }
