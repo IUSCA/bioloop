@@ -51,6 +51,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
+            'upload': '/path/to/data_product/upload',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
@@ -188,6 +189,10 @@ config = {
         },
         'process_upload': {
             'steps': [
+                {
+                    'name': 'move uploaded chunks',
+                    'task': 'move_upload_to_worker_space'
+                },
                 {
                     'name': 'process uploaded chunks',
                     'task': 'process_uploaded_chunks'

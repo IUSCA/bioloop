@@ -109,6 +109,10 @@
     "process_upload": {
       "steps": [
         {
+          "name": "move uploaded chunks",
+          "task": "move_upload_to_worker_space"
+        },
+        {
           "name": "process uploaded chunks",
           "task": "process_uploaded_chunks"
         }
@@ -192,6 +196,5 @@
     "PROCESSING_FAILED": "PROCESSING_FAILED",
     "COMPLETE": "COMPLETE",
     "FAILED": "FAILED"
-  },
-  "upload_path": "/opt/sca/uploads"
+  }
 }

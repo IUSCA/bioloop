@@ -8,10 +8,8 @@ const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
-const UPLOAD_PATH = config.upload_path;
-
 const getUploadPath = (datasetName) => path.join(
-  UPLOAD_PATH,
+  config.upload_path.data_products,
   datasetName,
 );
 
@@ -94,13 +92,6 @@ router.post(
     // });
 
     res.sendStatus(200);
-  }),
-);
-
-router.get(
-  '/test',
-  asyncHandler(async (req, res, next) => {
-    res.send('OK test');
   }),
 );
 
