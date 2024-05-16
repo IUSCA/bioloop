@@ -7,7 +7,7 @@ class UploadService {
   }
 
   test() {
-    return this.uploadApi.get("/upload/test");
+    return this.axios.get("/upload/test");
   }
 
   // postTest() {
@@ -15,7 +15,7 @@ class UploadService {
   // }
 
   uploadFile(data) {
-    return this.uploadApi.post("/upload", data);
+    return this.axios.post("/upload", data);
   }
 
   getUploadToken({ data }) {

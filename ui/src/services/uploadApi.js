@@ -8,7 +8,7 @@ class UploadApi {
     console.log("uploadApi constructor token");
     console.log(token);
     this.token = token;
-    this.uploadApi = axios.create({
+    this.axiosInstance = axios.create({
       baseURL: config.uploadBasePath,
     });
 
@@ -16,7 +16,7 @@ class UploadApi {
   }
 
   setInterceptors() {
-    this.uploadApi.interceptors.request.use(
+    this.axiosInstance.interceptors.request.use(
       (config) => {
         // const _token = uploadToken.value;
         // console.log("uploadApi.interceptors.request.use");
@@ -39,7 +39,7 @@ class UploadApi {
       },
     );
 
-    this.uploadApi.interceptors.response.use(
+    this.axiosInstance.interceptors.response.use(
       (res) => res,
       (err) => {
         if (err.response && err.response.status === 401) {
