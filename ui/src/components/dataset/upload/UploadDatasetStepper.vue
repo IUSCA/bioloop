@@ -33,6 +33,7 @@
             v-model="datasetName"
             :rules="[
               (v) => v.length >= 3 || 'Min length is 3 characters',
+              (v) => v.indexof(' ') === -1 || 'Name cannot contain spaces',
               validateNotExists,
             ]"
           >
