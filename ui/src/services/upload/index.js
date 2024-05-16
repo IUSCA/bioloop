@@ -4,7 +4,7 @@ class UploadService {
   constructor(token) {
     console.log("uploadService token");
     console.log(token);
-    this.uploadApi = new UploadApi(token);
+    this.uploadApi = new UploadApi(token).uploadApi;
     console.log("this.uploadApi.token");
     console.log(this.uploadApi.token);
   }
