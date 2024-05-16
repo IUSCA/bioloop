@@ -2,7 +2,11 @@ import UploadApi from "@/services/uploadApi";
 
 class UploadService {
   constructor(token) {
+    console.log("uploadService token");
+    console.log(token);
     this.uploadApi = new UploadApi(token);
+    console.log("this.uploadApi.token");
+    console.log(this.uploadApi.token);
   }
 
   test() {

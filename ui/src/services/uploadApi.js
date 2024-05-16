@@ -5,6 +5,8 @@ import { ref } from "vue";
 
 class UploadApi {
   constructor(token) {
+    console.log("uploadApi constructor token");
+    console.log(token);
     this.token = token;
     this.uploadApi = axios.create({
       baseURL: config.uploadBasePath,
@@ -20,7 +22,7 @@ class UploadApi {
         // console.log("uploadApi.interceptors.request.use");
         // console.log("uploadToken.value");
         // console.dir(uploadToken.value, { depth: null });
-        console.log("_token");
+        console.log("uploadApi interceptor token");
         // console.dir(_token, { depth: null });
         console.log(this.token);
 

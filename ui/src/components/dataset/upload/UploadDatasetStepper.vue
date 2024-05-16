@@ -207,7 +207,7 @@ const steps = [
   { label: "Select Files", icon: "material-symbols:folder" },
 ];
 
-const uploadService = ref(null);
+let uploadService = null;
 const loading = ref(true);
 const datasetName = ref("");
 // const dataProductName = ref("");
@@ -408,7 +408,7 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
     try {
-      await uploadService.value.uploadFile(chunkData);
+      await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
       console.log(`Encountered error`, e);
@@ -470,7 +470,7 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const testCall = async () => {
-  return uploadService.value
+  return uploadService
     .test()
     .then((res) => {
       console.log("test call success");
@@ -490,7 +490,9 @@ const uploadFile = async (fileDetails) => {
   // persist token in store
   await auth.onFileUpload(fileDetails.name);
 
-  uploadService.value = new UploadService(uploadToken.value);
+  console.log("stepper token");
+  console.log(uploadToken.value);
+  uploadService = new UploadService(uploadToken.value);
 
   await testCall();
 
