@@ -33,7 +33,7 @@
             v-model="datasetName"
             :rules="[
               (v) => v.length >= 3 || 'Min length is 3 characters',
-              (v) => v.indexof(' ') === -1 || 'Name cannot contain spaces',
+              // (v) => v?.indexof(' ') === -1 || 'Name cannot contain spaces',
               validateNotExists,
             ]"
           >
@@ -176,7 +176,8 @@ import toast from "@/services/toast";
 
 const auth = useAuthStore();
 
-const { uploadToken } = storeToRefs(auth);
+// const { uploadToken } = storeToRefs(auth);
+const uploadToken = ref(useLocalStorage("uploadToken", ""));
 
 const breakpoint = useBreakpoint();
 
