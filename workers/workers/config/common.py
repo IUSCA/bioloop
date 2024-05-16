@@ -52,6 +52,7 @@ config = {
         },
         'DATA_PRODUCT': {
             'upload': '/path/to/data_product/upload',
+            'upload_destination': '/path/to/data_product/upload/destination',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
