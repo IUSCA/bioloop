@@ -672,8 +672,6 @@ router.post(
   '/:id/upload/process',
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
-    const WORKFLOW_NAME = 'process_upload';
-
     const dataset = await prisma.dataset.findFirst({
       where: {
         id: Number(req.params.id),
@@ -683,8 +681,8 @@ router.post(
       },
     });
 
-    await datasetService.create_workflow(dataset, WORKFLOW_NAME);
-    res.send('OK');
+    const workflow = await datasetService.create_workflow(dataset, 'process_upload');
+    res.json(workflow);
   }),
 );
 
