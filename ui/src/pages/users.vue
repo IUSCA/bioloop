@@ -18,12 +18,7 @@
 
     <!-- create button -->
     <div class="flex-none">
-      <va-button
-        icon="add"
-        class="px-3"
-        color="success"
-        @click="openModalToCreateUser"
-      >
+      <va-button icon="add" class="px-3" color="success" @click="openModalToCreateUser">
         Create User
       </va-button>
     </div>
@@ -68,9 +63,7 @@
     </template>
 
     <template #cell(login)="{ source }">
-      <span v-if="source?.last_login">
-        {{ datetime.fromNow(source.last_login) }}</span
-      >
+      <span v-if="source?.last_login"> {{ datetime.fromNow(source.last_login) }}</span>
     </template>
 
     <template #cell(login_method)="{ rowData }">
@@ -109,9 +102,16 @@
 
         <!-- delete button -->
         <div class="flex-none" v-if="auth.canAdmin">
-          <va-button size="small" preset="primary" color="danger">
-            <i-mdi-delete />
-          </va-button>
+          <va-popover message="Delete user" placement="top">
+            <va-button
+              size="small"
+              preset="primary"
+              color="danger"
+              @click="deleteUser(rowData)"
+            >
+              <i-mdi-delete class="" />
+            </va-button>
+          </va-popover>
         </div>
       </div>
     </template>
@@ -208,6 +208,9 @@
 
   <!-- Log in as User modal -->
   <SudoUserModal ref="sudoModal" :user="selected" />
+  <!-- hard delete selected user -->
+  <DeleteUser ref="deleteSelectedUser" :user="selected" @user-deleted="fetch_all_users" />
+
 </template>
 
 <script setup>
@@ -327,10 +330,11 @@ function resetEditModal() {
   editedUser.value = {};
 }
 
-// sudo user modal
+// sudo user modal and hard delete
 
 const sudoModal = ref(null);
 const selected = ref({});
+const deleteSelectedUser = ref(null);
 
 function openModaltoLogInAsUser(rowData) {
   selected.value = rowData;
@@ -387,6 +391,12 @@ function createUser() {
         resetEditModal();
       });
   }
+}
+
+function deleteUser(rowData) {
+  selected.value = rowData;
+  console.log("test1 ", rowData.username);
+  deleteSelectedUser.value.show();
 }
 
 watch(

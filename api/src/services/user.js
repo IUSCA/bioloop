@@ -127,6 +127,20 @@ async function softDeleteUser(username) {
   return updatedUser ? transformUser(updatedUser) : updatedUser;
 }
 
+async function hardDeleteUser(username) {
+  try {
+    const deletedUser = await prisma.user.delete({
+      where: {
+          username,
+      },
+    });
+    return deletedUser ? transformUser(deletedUser) : deletedUser;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+}
+
 // async function setRoles(user_id, role_ids) {
 
 // }
@@ -189,6 +203,7 @@ module.exports = {
   createUser,
   setPassword,
   softDeleteUser,
+  hardDeleteUser,
   updateUser,
   findRoles,
   canUpdateUser,
