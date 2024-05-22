@@ -13,6 +13,7 @@ const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
 const datasetService = require('../services/dataset');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -69,7 +70,8 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects.
-    // #swagger.description = admin and operator roles are allowed and user role is forbidden
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
     const projects = await prisma.project.findMany({
       where: {},
       include: build_include_object(),
@@ -86,8 +88,9 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
-    // #swagger.summary = get a specific project irrespective of user association.
-    // #swagger.description = admin and operator roles are allowed and user role is forbidden
+    // #swagger.summary = get a specific project irrespective of user
+    // association. #swagger.description = admin and operator roles are allowed
+    // and user role is forbidden
     const { include_datasets } = req.query;
 
     const project = await prisma.project.findFirstOrThrow({
@@ -142,14 +145,17 @@ router.get(
     query('offset').isInt().toInt().optional(),
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
+    query('include_duplicates').toBoolean().optional(),
+    query('include_deleted').toBoolean().optional(),
+    query('include_dataset_states').toBoolean().optional(),
+    query('include_dataset_duplications').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
-    // #swagger.summary = get all datasets associated with a project, with optional params for
-    // filtering;
-    /* #swagger.description = user role: can only see datasets if they have access to the project.
-      operator, admin: can see any project's datasets
-    */
+    // #swagger.summary = get all datasets associated with a project, with
+    // optional params for filtering;
+    // #swagger.description = user role: can only see datasets if they have
+    // access to the project. operator, admin: can see any project's datasets
 
     const hasProjectAssociation = await projectService.has_project_assoc({
       projectId: req.params.id,
@@ -185,16 +191,22 @@ router.get(
         mode: 'insensitive', // case-insensitive search
       } : undefined,
       is_staged: req.query.staged,
+      is_duplicate: req.query.include_duplicates || false,
+      is_deleted: req.query.include_deleted || false,
     });
 
     const filterQuery = { where: query_obj };
+
     const datasetRetrievalQuery = {
       skip: req.query.offset,
       take: req.query.limit,
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
+        ...(req.query.include_dataset_states && CONSTANTS.INCLUDE_STATES),
+        ...(req.query.include_dataset_duplications
+            && CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS),
         bundle: true,
       },
     };
@@ -344,8 +356,9 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = create a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
+
     const { user_ids, dataset_ids, ...projectData } = req.body;
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
@@ -359,6 +372,19 @@ router.post(
           user_id: id,
         })),
       };
+    }
+
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
     }
 
     if ((dataset_ids || []).length > 0) {
@@ -387,8 +413,8 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = merge multiple projects into a source project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
 
     // get source project
     const source_porject = await prisma.project.findFirstOrThrow({
@@ -413,6 +439,19 @@ router.post(
       target_projects.map((p) => p.datasets.map((obj) => obj.dataset.id)),
     ));
 
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: target_dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
+
     // find dataset ids which are not already associated with the source project
     const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
 
@@ -429,7 +468,8 @@ router.post(
       data,
     });
 
-    // if delete merged is true, delete target projects as well as its user and dataset associations
+    // if delete merged is true, delete target projects as well as its user and
+    // dataset associations
     if (req.body.delete_merged) {
       const deletes = prisma.project.deleteMany({
         where: {
@@ -456,8 +496,8 @@ router.put(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate users to a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
 
     // get project or send 404 if not found
     const project = await prisma.project.findFirstOrThrow({
@@ -506,8 +546,8 @@ router.put(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate contacts / external users to a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
 
     // get project or send 404 if not found
     await prisma.project.findFirstOrThrow({
@@ -557,8 +597,8 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-     */
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
 
     // get project or send 404 if not found
     await prisma.project.findFirstOrThrow({
@@ -569,6 +609,19 @@ router.patch(
 
     const add_dataset_ids = req.body.add_dataset_ids || [];
     const remove_dataset_ids = req.body.remove_dataset_ids || [];
+
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: add_dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
 
     const create_data = add_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
@@ -606,8 +659,8 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = update a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-     */
+    //  #swagger.description = admin and operator roles are allowed and user
+    //  role is forbidden
 
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
@@ -649,8 +702,8 @@ router.delete(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = delete a project and all its associations
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
-    */
+    // #swagger.description = admin and operator roles are allowed and user role
+    // is forbidden
 
     const deleted_project = await prisma.project.delete({
       where: {

@@ -1,5 +1,8 @@
 <template>
   <va-inner-loading :loading="loading">
+    <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
+    <DuplicationAlerts :dataset="dataset" class="mb-2" />
+
     <!-- Content -->
     <div class="flex flex-col gap-3">
       <!-- Dataset Info + Status Cards -->
@@ -301,7 +304,11 @@
       </div>
     </div>
     <!-- Download Modal -->
-    <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
+    <DatasetDownloadModal
+      ref="downloadModal"
+      :dataset="dataset"
+      @download-initiated="trigger_dataset_retrieval = true"
+    />
   </va-inner-loading>
 
   <EditDatasetModal
@@ -331,6 +338,9 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
+// Can be set to true to re-retrieve the dataset from the API without
+// refreshing the page.
+const trigger_dataset_retrieval = ref(false);
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
@@ -353,7 +363,13 @@ const polling_interval = computed(() => {
 
 function fetch_dataset(show_loading = false) {
   loading.value = show_loading;
-  DatasetService.getById({ id: props.datasetId, bundle: true })
+  DatasetService.getById({
+    id: props.datasetId,
+    bundle: true,
+    include_duplications: true,
+    include_states: true,
+    include_action_items: true,
+  })
     .then((res) => {
       const _dataset = res.data;
       const _workflows = _dataset?.workflows || [];
@@ -381,6 +397,7 @@ function fetch_dataset(show_loading = false) {
     })
     .finally(() => {
       loading.value = false;
+      trigger_dataset_retrieval.value = false;
     });
 }
 
@@ -395,8 +412,9 @@ watch(
 
 /**
  * providing the interval directly will kick of the polling immediately
- * provide a ref which will resolve to null when there are no active workflows and to 10s otherwise
- * now it can be controlled by resume and pause whenever active_wf changes
+ * provide a ref which will resolve to null when there are no active workflows
+ * and to 10s otherwise now it can be controlled by resume and pause whenever
+ * active_wf changes
  */
 const poll = useIntervalFn(fetch_dataset, polling_interval);
 
@@ -470,6 +488,10 @@ const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
+
+watch(trigger_dataset_retrieval, () => {
+  fetch_dataset(true);
+});
 </script>
 
 <route lang="yaml">

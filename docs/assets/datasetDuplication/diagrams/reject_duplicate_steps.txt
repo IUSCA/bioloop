@@ -1,0 +1,17 @@
+stateDiagram
+    reject_ui: (UI) Reject action performed
+    reject_api: (API) Reject
+    note left of reject_api
+        Acknowledge action item/notification
+        Create audit logs
+        Marks rejected dataset as deleted
+        Updates state of rejected dataset to REJECTED
+    end note
+    rejection_wf: 'reject_duplicate_dataset' workflow launched
+
+    reject_ui --> reject_api
+    reject_api --> rejection_wf
+    rejection_wf --> purge_step
+    purge_step --> reject_step
+
+[![](https://mermaid.live/edit#pako:eNplksFqwzAMhl9F-NINWnbPYVDaHjYYjG69BYKx5dSLYwdbJozSd5-dpEu26hTl_2T9kn1hwklkBQvECfea1563pYUUHr9QUBV1AQ-nl0c4DjlwQdpZ6NAr51uUf2DeZXr7_ouPqnWEYFAROLVARzHHVjTW9QZljbcGmrB9SoVaacHzn5neeUxmgUepCYyrwyy9cd-EqQVKkJx4wGQ6gESDdLOb49QlFQMMk8_GFlXk4Hh4Pew-D_uxDK0cZlnOnJxVvSpgNc0lY2eyY6ymY1bQO98o43owPFpxvpn4t2bYbJ7vljPnC3lseW9iQLroa6wCYTcCc75skHO2Zi36lmuZ7v-S6ZLRGVssWZE-ZVplyUp7TRyP5D6-rWAF-YhrFofdTc-FFYqbgNcf3fXFzw)]

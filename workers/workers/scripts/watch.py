@@ -88,13 +88,17 @@ class Register:
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
         self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
+        self.duplicates: set[str] = set(self.get_registered_dataset_names({
+            'is_duplicate': True
+        }))  # HTTP GET
         self.default_wf_name = default_wf_name
 
     def is_a_reject(self, name):
         return any([fnmatch.fnmatchcase(name, pat) for pat in self.rejects])
 
-    def get_registered_dataset_names(self):
-        datasets = api.get_all_datasets(dataset_type=self.dataset_type)
+    def get_registered_dataset_names(self, filters: dict = None) -> list[str]:
+        is_duplicate = filters['is_duplicate'] if filters is not None else False
+        datasets = api.get_all_datasets(is_duplicate=is_duplicate)
         return [b['name'] for b in datasets]
 
     def register(self, event: str, new_dirs: list[Path]) -> None:
@@ -109,10 +113,26 @@ class Register:
                 # cmd.total_size(p) >= config['registration']['minimum_dataset_size']
             ])
         ]
+        # If a candidate's name is in self.completed, it could potentially be a duplicate.
+        # In such cases, we create a dataset of duplicate dataset, which is later accepted or
+        # rejected by an authorized user.
+        duplicate_candidates: list[Path] = [p for p in new_dirs if slugify_(p.name) in self.completed]
 
         for candidate in candidates:
+            logger.info(f'processing candidate: {str(candidate.name)}')
             self.register_candidate(candidate)
             self.completed.add(candidate.name)
+
+        for candidate in duplicate_candidates:
+            # some duplicates might already be under processing when this script is run
+            if slugify_(candidate.name) not in self.duplicates:
+                self.register_duplicate_candidate(candidate)
+                self.duplicates.add(candidate.name)
+            else:
+                logger.warning(f'Attempted to process another duplicate candidate'
+                            f' named {str(candidate.name)} when a duplicate candidate'
+                            f' named {str(candidate.name)} is already being processed.')
+                pass
 
     def register_candidate(self, candidate: Path):
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
@@ -122,11 +142,35 @@ class Register:
             'origin_path': str(candidate.resolve()),
         }
         created_dataset = api.create_dataset(dataset)
-        self.run_workflows(created_dataset)
+        self.run_workflows(created_dataset, self.default_wf_name)
 
-    def run_workflows(self, dataset):
+
+    def register_duplicate_candidate(self, candidate: Path):
+        logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
+        # Get any active datasets with the same name and type
+        matching_datasets = api.get_all_datasets(dataset_type=self.dataset_type,
+                                                 name=candidate.name,
+                                                 is_duplicate=False)
+        if len(matching_datasets) != 1:
+            logger.error(f'Expected one, but found {len(matching_datasets)} active '
+                         f'datasets having name {candidate.name} '
+                         f'and type {self.dataset_type} that are eligible for '
+                         f'duplication. The system is in an invalid '
+                         f'state, and a duplicate dataset will not be created.')
+            return
+
+        original_dataset = matching_datasets[0]
+        created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=original_dataset['id'])
+
+        self.run_workflows(
+            created_duplicate_dataset,
+            'handle_duplicate_dataset'
+        )
+
+
+    def run_workflows(self, dataset, workflow_name=None):
         dataset_id = dataset['id']
-        wf_body = wf_utils.get_wf_body(wf_name=self.default_wf_name)
+        wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
         wf = Workflow(celery_app=celery_app, **wf_body)
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
         wf.start(dataset_id)
