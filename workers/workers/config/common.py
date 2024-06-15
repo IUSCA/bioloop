@@ -131,8 +131,20 @@ config = {
         'process_dataset_upload': {
             'steps': [
                 {
-                    'name': 'Process Dataset Upload',
-                    'task': 'process_dataset_upload'
+                    'name': 'stage',
+                    'task': 'stage_dataset'
+                },
+                {
+                    'name': 'validate',
+                    'task': 'validate_dataset'
+                },
+                {
+                    'name': 'source2raw',
+                    'task': 'source2raw',
+                    'kwargs': {
+                        'register': True,
+                        'launch_wf': True
+                    }
                 }
             ]
         },
@@ -161,7 +173,8 @@ config = {
     },
     'workflow': {
         'purge': {
-            'types': ['integrated', 'stage', 'delete'],
+            'types': ['integrated', 'source_to_raw_conversion', 'source_integrated', 'reingest', 'stage', 'delete',
+                      'sync_archived_bundles'],
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }

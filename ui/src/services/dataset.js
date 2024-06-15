@@ -87,6 +87,14 @@ class DatasetService {
       });
   }
 
+  convert_dataset(id) {
+    return api
+      .post(`/datasets/${id}/workflow/source_to_raw_conversion`)
+      .then(() => {
+        toast.success("A workflow has started to convert the dataset");
+      });
+  }
+
   archive_dataset(id) {
     return api.post(`/datasets/${id}/workflow/integrated`);
   }
