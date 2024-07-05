@@ -13,6 +13,7 @@ export const useAuthStore = defineStore("auth", () => {
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
+  let refreshUploadTokenTimer = null;
   const canOperate = computed(() => {
     return hasRole("operator") || hasRole("admin");
   });
@@ -32,6 +33,11 @@ export const useAuthStore = defineStore("auth", () => {
     token.value = data.token;
     loggedIn.value = true;
     refreshTokenBeforeExpiry();
+  }
+
+  function onUploadTokenRefresh(data, fileName) {
+    uploadToken.value = data.token;
+    refreshUploadTokenBeforeExpiry(fileName);
   }
 
   function onLogout() {
@@ -100,7 +106,7 @@ export const useAuthStore = defineStore("auth", () => {
         if (now < expiresAt) {
           // token is still alive
           const delay =
-            expiresAt - now - config.refreshTokenTMinusSeconds * 1000;
+            expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
           console.log(
             "auth store: refreshTokenBeforeExpiry: trigerring refreshToken in ",
             delay / 1000,
@@ -115,6 +121,36 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  function refreshUploadTokenBeforeExpiry(fileName) {
+    // idempotent method - will not create a timeout if one already exists
+    if (!refreshUploadTokenTimer) {
+      // timer is not running running
+      try {
+        const payload = jwtDecode(uploadToken.value);
+        const expiresAt = new Date(payload.exp * 1000);
+        const now = new Date();
+        if (now < expiresAt) {
+          // token is still alive
+          const delay =
+            expiresAt -
+            now -
+            config.refreshTokenTMinusSeconds.uploadToken * 1000;
+          console.log(
+            "auth store: refreshUploadTokenBeforeExpiry: trigerring refreshToken in ",
+            delay / 1000,
+            "seconds",
+          );
+          refreshUploadTokenTimer = setTimeout(() => {
+            refreshUploadToken(fileName);
+          }, delay);
+        }
+        // else - do nothing, navigation guard will redirect to /auth
+      } catch (err) {
+        console.error("Errored trying to decode upload token", err);
+      }
+    }
+  }
+
   function refreshToken() {
     console.log("refreshing token");
     refreshTokenTimer = null; // reset timer state
@@ -125,6 +161,20 @@ export const useAuthStore = defineStore("auth", () => {
       })
       .catch((err) => {
         console.error("Unable to refresh token", err);
+      });
+  }
+
+  function refreshUploadToken(fileName) {
+    console.log("refreshing upload token");
+    refreshUploadTokenTimer = null; // reset upload timer state
+
+    uploadTokenService
+      .getUploadToken({ data: { file_name: fileName } })
+      .then((res) => {
+        uploadToken.value = res.data.accessToken;
+      })
+      .catch((err) => {
+        console.error("Unable to refresh upload token", err);
       });
   }
 
@@ -160,16 +210,18 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
-  const onFileUpload = async (fileName) => {
+  const getFileUploadToken = async (fileName) => {
     // const uploadService = new UploadService(uploadToken.value);
 
     return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
         uploadToken.value = res.data.accessToken;
-        // uploadToken.value = "rishi";
-        console.log("uploadToken.value");
-        console.log(uploadToken.value);
+        // console.log("uploadToken.value");
+        // console.log(uploadToken.value);
+      })
+      .catch((err) => {
+        console.error("Unable to refresh upload token", err);
       });
   };
 
@@ -191,7 +243,7 @@ export const useAuthStore = defineStore("auth", () => {
     ciLogin,
     env,
     setEnv,
-    onFileUpload,
+    onFileUpload: getFileUploadToken,
   };
 });
 
