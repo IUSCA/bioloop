@@ -35,11 +35,6 @@ export const useAuthStore = defineStore("auth", () => {
     refreshTokenBeforeExpiry();
   }
 
-  function onUploadTokenRefresh(data, fileName) {
-    uploadToken.value = data.token;
-    refreshUploadTokenBeforeExpiry(fileName);
-  }
-
   function onLogout() {
     loggedIn.value = false;
     user.value = {};
@@ -210,7 +205,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
-  const getFileUploadToken = async (fileName) => {
+  const onFileUpload = async (fileName) => {
     // const uploadService = new UploadService(uploadToken.value);
 
     return uploadTokenService
@@ -219,6 +214,7 @@ export const useAuthStore = defineStore("auth", () => {
         uploadToken.value = res.data.accessToken;
         // console.log("uploadToken.value");
         // console.log(uploadToken.value);
+        refreshUploadTokenBeforeExpiry(fileName);
       })
       .catch((err) => {
         console.error("Unable to refresh upload token", err);
@@ -243,7 +239,7 @@ export const useAuthStore = defineStore("auth", () => {
     ciLogin,
     env,
     setEnv,
-    onFileUpload: getFileUploadToken,
+    onFileUpload,
   };
 });
 
