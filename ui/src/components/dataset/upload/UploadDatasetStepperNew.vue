@@ -110,8 +110,8 @@
             :submission-alert="submissionAlert"
             @file-added="
               (files) => {
-                console.log('Stepper - files');
-                console.log(files);
+                // console.log('Stepper - files');
+                // console.log(files);
 
                 setFiles(files);
                 isSubmissionAlertVisible = false;
@@ -297,7 +297,7 @@ onMounted(() => {
     })
     .catch((err) => {
       toast.error("Failed to load resources");
-      console.log(err);
+      // console.log(err);
     })
     .finally(() => {
       loading.value = false;
@@ -306,7 +306,7 @@ onMounted(() => {
 
 const evaluateFileChecksums = (file) => {
   return new Promise((resolve, reject) => {
-    console.log(`evaluating checksums for file ${file.name}`);
+    // console.log(`evaluating checksums for file ${file.name}`);
 
     const fileReader = new FileReader();
 
@@ -332,7 +332,7 @@ const evaluateFileChecksums = (file) => {
         if (chunkIndex < chunks) {
           loadNext(chunkIndex);
         } else {
-          console.log(`successfully evaluated checksums of file ${file.name}`);
+          // console.log(`successfully evaluated checksums of file ${file.name}`);
           resolve({
             fileChecksum: buffer.end(),
             chunkChecksums,
@@ -369,14 +369,14 @@ const evaluateChecksums = (filesToUpload) => {
                 fileDetails.fileChecksum = fileChecksum;
                 fileDetails.chunkChecksums = chunkChecksums;
                 fileDetails.checksumsEvaluated = true;
-                console.log(
+                // console.log(
                   `Successfully evaluated checksums of file ${file.name}`,
                 );
                 resolve();
               })
               .catch(() => {
                 fileDetails.checksumsEvaluated = false;
-                console.log(
+                // console.log(
                   `Failed to evaluate checksums of file ${file.name}`,
                 );
                 reject();
@@ -409,7 +409,7 @@ const uploadChunk = async (chunkData) => {
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
-      console.log(`Encountered error`, e);
+      // console.log(`Encountered error`, e);
     }
     return chunkUploaded;
   };
@@ -422,7 +422,7 @@ const uploadChunk = async (chunkData) => {
       retry_count += 1;
     }
     if (retry_count > RETRY_COUNT_THRESHOLD) {
-      console.log("Exceeded retry threshold");
+      // console.log("Exceeded retry threshold");
       break;
     }
   }
@@ -434,7 +434,7 @@ const uploadFileChunks = async (fileDetails) => {
   let file = fileDetails.file;
   let uploaded = false;
 
-  console.log(`Beginning upload of file ${file.name}`);
+  // console.log(`Beginning upload of file ${file.name}`);
   const blockCount = fileDetails.numChunks;
 
   for (let i = 0; i < blockCount; i++) {
@@ -468,8 +468,8 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  console.log(`Beginning upload of file`);
-  console.log("fileDetails");
+  // console.log(`Beginning upload of file`);
+  // console.log("fileDetails");
   console.dir(fileDetails, { depth: null });
 
   // persist token in store
@@ -481,9 +481,9 @@ const uploadFile = async (fileDetails) => {
 
   const uploaded = await uploadFileChunks(fileDetails);
   if (uploaded) {
-    console.log(`File ${fileDetails.name} was successfully uploaded`);
+    // console.log(`File ${fileDetails.name} was successfully uploaded`);
   } else {
-    console.log(`Upload of file ${fileDetails.name} failed`);
+    // console.log(`Upload of file ${fileDetails.name} failed`);
   }
 
   // clear token from store
@@ -501,7 +501,7 @@ const uploadFile = async (fileDetails) => {
       });
       updated = true;
     } catch (e) {
-      console.log(e);
+      // console.log(e);
     }
   }
 
@@ -538,7 +538,7 @@ const onSubmit = () => {
         }
       })
       .catch((err) => {
-        console.log(err);
+        // console.log(err);
         submissionStatus.value = SUBMISSION_STATES.PROCESSING_FAILED;
         statusChipColor.value = "warning";
         submissionAlertColor.value = "warning";
@@ -581,7 +581,7 @@ const postSubmit = () => {
         uploadLog.value = res.data;
       })
       .catch((err) => {
-        console.log(err);
+        // console.log(err);
       });
   }
 };
@@ -592,7 +592,7 @@ const handleSubmit = () => {
       return datasetService.processUploadedChunks(uploadLog.value.dataset_id);
     })
     .catch((err) => {
-      console.log(err);
+      // console.log(err);
     })
     .finally(() => {
       postSubmit();
@@ -600,7 +600,7 @@ const handleSubmit = () => {
 };
 
 const onNextClick = (nextStep) => {
-  console.log("onNextClick", nextStep);
+  // console.log("onNextClick", nextStep);
   if (isLastStep.value) {
     if (noFilesSelected.value) {
       isSubmissionAlertVisible.value = true;

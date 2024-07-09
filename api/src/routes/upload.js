@@ -16,7 +16,15 @@ router.post(
     body('file_name').notEmpty().escape(),
   ]),
   asyncHandler(async (req, res) => {
-    const token = await authService.get_upload_token(req.body.file_name);
+    console.log("/upload/token")
+    console.log(req.body.file_name)
+    let token
+    try {
+      token = await authService.get_upload_token(req.body.file_name);
+    } catch (e) {
+      console.log("ERROR")
+      console.log(e)
+    }
 
     console.log('token');
     console.log(token);

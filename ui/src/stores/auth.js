@@ -1,9 +1,9 @@
 import config from "@/config";
 import authService from "@/services/auth";
+import uploadTokenService from "@/services/upload/token";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
-import uploadTokenService from "@/services/upload/token";
 
 export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
@@ -97,7 +97,14 @@ export const useAuthStore = defineStore("auth", () => {
       try {
         const payload = jwtDecode(token.value);
         const expiresAt = new Date(payload.exp * 1000);
+
+        console.log("expiresAt")
+        console.log(expiresAt)
+
         const now = new Date();
+        console.log("now")
+        console.log(now)
+
         if (now < expiresAt) {
           // token is still alive
           const delay =
@@ -118,14 +125,29 @@ export const useAuthStore = defineStore("auth", () => {
 
   function refreshUploadTokenBeforeExpiry(fileName) {
     // idempotent method - will not create a timeout if one already exists
+    console.log("refreshUploadTokenBeforeExpiry")
+
     if (!refreshUploadTokenTimer) {
+      console.log("if")
       // timer is not running running
       try {
+        console.log("uploadToken.value")
+        console.dir(uploadToken.value, { depth: null })
         const payload = jwtDecode(uploadToken.value);
+        console.log("payload")
+        console.dir(payload, { depth: null })
+
         const expiresAt = new Date(payload.exp * 1000);
+        console.log("expiresAt")
+        console.log(expiresAt)
+
         const now = new Date();
+        console.log("now")
+        console.log(now)
+
         if (now < expiresAt) {
           // token is still alive
+          console.log("if (now < expiresAt)")
           const delay =
             expiresAt -
             now -
@@ -136,8 +158,9 @@ export const useAuthStore = defineStore("auth", () => {
             "seconds",
           );
           refreshUploadTokenTimer = setTimeout(() => {
-            refreshUploadToken(fileName);
-          }, delay);
+            refreshUploadToken(fileName)
+          }
+            , delay);
         }
         // else - do nothing, navigation guard will redirect to /auth
       } catch (err) {
@@ -160,12 +183,21 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function refreshUploadToken(fileName) {
-    console.log("refreshing upload token");
+    console.log("refreshUploadToken");
+
+    const now = new Date();
+    console.log("now")
+    console.log(now)
+
     refreshUploadTokenTimer = null; // reset upload timer state
+    console.log("fileName")
+    console.log(fileName)
 
     uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
+        console.log("then")
+        console.log(res.data.accessToken)
         uploadToken.value = res.data.accessToken;
       })
       .catch((err) => {
@@ -207,10 +239,15 @@ export const useAuthStore = defineStore("auth", () => {
 
   const onFileUpload = async (fileName) => {
     // const uploadService = new UploadService(uploadToken.value);
+    console.log("onFileUpload")
+    console.log("filename")
+    console.log(fileName)
 
     return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
+        console.log("token")
+        console.log(res.data.accessToken)
         uploadToken.value = res.data.accessToken;
         // console.log("uploadToken.value");
         // console.log(uploadToken.value);

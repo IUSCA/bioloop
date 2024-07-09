@@ -1,18 +1,24 @@
 import config from "@/config";
 import axios from "axios";
-import { useLocalStorage } from "@vueuse/core";
-import { ref } from "vue";
 
 class UploadApi {
-  constructor(token) {
-    console.log("uploadApi constructor token");
-    console.log(token);
-    this.token = token;
+  constructor() {
+    // console.log("uploadApi constructor token");
+    // console.log(token);
+    // this.token = token;
     this.axiosInstance = axios.create({
       baseURL: config.uploadBasePath,
     });
 
-    this.setInterceptors();
+    // this.setInterceptors();
+  }
+
+  setToken(token) {
+    console.log("uploadApi setToken")
+    console.log(token)
+
+    this.token = token
+    this.setInterceptors()
   }
 
   setInterceptors() {

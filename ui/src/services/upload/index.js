@@ -1,12 +1,20 @@
 import UploadApi from "@/services/uploadApi";
 
 class UploadService {
-  constructor(token) {
-    console.log("uploadService token");
-    console.log(token);
-    this.axios = new UploadApi(token).axiosInstance;
-    console.log("this.uploadApi.token");
-    console.log(this.axios.token);
+  constructor() {
+    // console.log("uploadService token");
+    // console.log(token);
+    this.uploadApi = new UploadApi()
+    // this.uploadApi.setToken(token)
+    this.axios = this.uploadApi.axiosInstance;
+    // console.log("this.uploadApi.token");
+    // console.log(this.uploadApi.token);
+  }
+
+  setToken(token) {
+    console.log("uploadService setToken")
+    console.log(token)
+    this.uploadApi.setToken(token)
   }
 
   test() {
