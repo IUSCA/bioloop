@@ -1,16 +1,16 @@
 {
   "mode": "production",
-  "app_id": "bioloop-dev.sca.iu.edu",
+  "app_id": "demo.bioloop.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
   "workflow_server": {
-    "base_url": "http://172.19.0.4:5001"
+    "base_url": "http://172.19.2.2:5001"
   },
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "bioloop-dev.sca.iu.edu",
+      "iss": "demo.bioloop.iu.edu",
       "ttl_milliseconds": 3600000
     }
   }

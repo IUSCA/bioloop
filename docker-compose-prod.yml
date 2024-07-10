@@ -1,34 +1,37 @@
 version: "3"
-name: bioloop
+name: bioloop-demo
 services:
   ui:
     restart: unless-stopped
     image: node:19
     volumes:
-      - ./ui/:/opt/sca/app
-      - ui_modules:/opt/sca/app/node_modules
+      - ./ui/:/opt/sca/app:z
+      - ui_modules:/opt/sca/app/node_modules:z
     working_dir: /opt/sca/app
     command: sh -c "npm install && npm run builddev"
-    
+    networks:
+      bioloop_network:
+        ipv4_address: 172.19.0.4
 
   api:
     restart: unless-stopped
-    build:
-      context: ./api
-      args:
-        APP_UID: ${APP_UID} # read from .env file
-        APP_GID: ${APP_GID} # read from .env file
+    image: localhost/bioloop_api
     volumes:
-      - ./api/:/opt/sca/app
-      - api_modules:/opt/sca/app/node_modules
+      - ./api/:/opt/sca/app:z
+      - api_modules:/opt/sca/app/node_modules:z
     expose:
       - 3030
+    ports:
+      - 127.0.0.1:3030:3030
+    userns_mode: keep-id
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
      - postgres
     networks:
-      network:
+      bioloop_network:
         ipv4_address: 172.19.0.2
+      rhythm_bioloop_bridge:
+        ipv4_address: 172.19.2.3
 
   postgres:
     image: postgres:14.5
@@ -38,14 +41,14 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - ./db/prod/db_postgres:/var/lib/postgresql/data
+      - ./db/prod/db_postgres:/var/lib/postgresql/data:z
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
       - ./db/postgres/aux_scripts:/opt/sca/scripts
-      - ./db/backups:/opt/sca/backups
+      - /opt/sca/db-backups:/opt/sca/backups:z
     expose:
       - 5432
     networks:
-      network:
+      bioloop_network:
         ipv4_address: 172.19.0.3
 
 # sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
@@ -57,9 +60,10 @@ services:
       - PGPASSWORD=${POSTGRES_PASSWORD}
       - PROJ_NAME=${COMPOSE_PROJECT_NAME}
     volumes:
-      - /opt/sca/postgres_backups:/backup
+      - /opt/sca/db-backups:/backup
     networks:
-      - network
+      bioloop_network:
+        ipv4_address: 172.19.0.5
     command: >
       bash -c "pg_dump -w -f /backup/$${PROJ_NAME}_postgres_backup.$$(date +%F).psql --username=$$POSTGRES_USER --host=postgres --dbname=$$POSTGRES_DB"
 
@@ -71,7 +75,11 @@ volumes:
     external: false
 
 networks:
-  network:
+  bioloop_network:
+    name: bioloop-demo-network
     ipam:
       config:
         - subnet: 172.19.0.0/24
+  rhythm_bioloop_bridge:
+    name: rhythm-bioloop-bridge
+    external: true
