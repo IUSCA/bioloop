@@ -108,11 +108,12 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, processed, archived, staged, type, name, days_since_last_staged,
+  deleted, archived, staged, type, name, days_since_last_staged,
+  has_workflows, has_derived_data, has_source_data,
+  created_at_start, created_at_end, updated_at_start, updated_at_end,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
-    archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
     type,
     name: name ? {
@@ -121,11 +122,23 @@ const buildQueryObject = ({
     } : undefined,
   });
 
-  // processed=true: datasets with one or more workflows associated
-  // processed=false: datasets with no workflows associated
-  // processed=undefined/null: no query based on workflow association
-  if (!_.isNil(processed)) {
-    query_obj.workflows = { [processed ? 'some' : 'none']: {} };
+  // has_workflows=true: datasets with one or more workflows associated
+  // has_workflows=false: datasets with no workflows associated
+  // has_workflows=undefined/null: no query based on workflow association
+  if (!_.isNil(has_workflows)) {
+    query_obj.workflows = { [has_workflows ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_derived_data)) {
+    query_obj.derived_datasets = { [has_derived_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_source_data)) {
+    query_obj.source_datasets = { [has_source_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(archived)) {
+    query_obj.archive_path = archived ? { not: null } : null;
   }
 
   // staged datasets where there is no STAGED state in last x days
@@ -146,24 +159,40 @@ const buildQueryObject = ({
     };
   }
 
+  // created_at filter
+  if (created_at_start && created_at_end) {
+    query_obj.created_at = {
+      gte: new Date(created_at_start),
+      lte: new Date(created_at_end),
+    };
+  }
+
+  // updated_at filter
+  if (updated_at_start && updated_at_end) {
+    query_obj.updated_at = {
+      gte: new Date(updated_at_start),
+      lte: new Date(updated_at_end),
+    };
+  }
+
   return query_obj;
 };
 
-const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-  const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
+// const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
+//   const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
 
-  if (!field || !sortOrder) {
-    return {};
-  }
-  if (nullable_order_by_fields.includes(field)) {
-    return {
-      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-    };
-  }
-  return {
-    [field]: sortOrder,
-  };
-};
+//   if (!field || !sortOrder) {
+//     return {};
+//   }
+//   if (nullable_order_by_fields.includes(field)) {
+//     return {
+//       [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
+//     };
+//   }
+//   return {
+//     [field]: sortOrder,
+//   };
+// };
 
 router.post(
   '/associations',
@@ -189,38 +218,38 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('deleted').toBoolean().default(false),
-    query('processed').toBoolean().optional(),
+    query('has_workflows').toBoolean().optional(),
+    query('has_derived_data').toBoolean().optional(),
+    query('has_source_data').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
     query('type').isIn(config.dataset_types).optional(),
     query('name').notEmpty().escape().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
-    query('limit').isInt().toInt().optional(),
-    query('offset').isInt().toInt().optional(),
-    query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
+    query('created_at_start').isISO8601().optional(),
+    query('created_at_end').isISO8601().optional(),
+    query('updated_at_start').isISO8601().optional(),
+    query('updated_at_end').isISO8601().optional(),
+    query('limit').isInt({ min: 1 }).toInt().optional(), // optional because watch script needs all datasets at once
+    query('offset').isInt({ min: 0 }).toInt().optional(),
+    query('sort_by').default('updated_at'),
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
-    const sortBy = req.query.sortBy || {};
-
-    const query_obj = buildQueryObject({
-      deleted: req.query.deleted,
-      processed: req.query.processed,
-      archived: req.query.archived,
-      staged: req.query.staged,
-      type: req.query.type,
-      name: req.query.name,
-      days_since_last_staged: req.query.days_since_last_staged,
-    });
+    const query_obj = buildQueryObject(req.query);
 
     const filterQuery = { where: query_obj };
+    const orderBy = {
+      [req.query.sort_by]: req.query.sort_order,
+    };
     const datasetRetrievalQuery = {
       skip: req.query.offset,
       take: req.query.limit,
       ...filterQuery,
-      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
+      orderBy,
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         source_datasets: true,
@@ -229,6 +258,7 @@ router.get(
       },
     };
 
+    // console.log(JSON.stringify(filterQuery, null, 2));
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
       prisma.dataset.count({ ...filterQuery }),

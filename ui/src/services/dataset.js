@@ -19,29 +19,9 @@ class DatasetService {
    *                   of said property, and value is one of 'asc' or 'desc'
    * @returns          Object containing matching datasets, and count of matching datasets
    */
-  getAll({
-    deleted = null,
-    processed = null,
-    archived = null,
-    staged = null,
-    type = null,
-    name = null,
-    limit = null,
-    offset = null,
-    sortBy = null,
-  } = {}) {
+  getAll(params) {
     return api.get("/datasets", {
-      params: {
-        deleted,
-        processed,
-        archived,
-        staged,
-        type,
-        name,
-        limit,
-        offset,
-        sortBy,
-      },
+      params,
     });
   }
 

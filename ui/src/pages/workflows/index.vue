@@ -208,7 +208,7 @@ const status_counts = ref({});
 const query_params = ref(default_query_params());
 useQueryPersistence({
   refObject: query_params,
-  defaultValue: default_query_params,
+  defaultValueFn: default_query_params,
   key: "wq",
   history_push: false,
 });
