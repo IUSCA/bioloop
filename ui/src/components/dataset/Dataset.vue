@@ -255,13 +255,15 @@
       />
 
       <!-- Audit logs -->
-      <div v-if="dataset.audit_logs && dataset.audit_logs.length > 0">
+      <div v-if="dataset?.audit_logs?.length">
         <va-card>
-          <va-card-title>
-            <span class="text-xl font-bold"> AUDIT LOG </span>
+          <va-card-title class="">
+            <div class="flex flex-nowrap items-center w-full">
+              <span class="text-lg"> Audit Logs </span>
+            </div>
           </va-card-title>
           <va-card-content>
-            <dataset-audit-logs :logs="dataset.audit_logs" />
+            <AuditLogs :logs="dataset.audit_logs" />
           </va-card-content>
         </va-card>
       </div>
