@@ -36,6 +36,7 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
       },
     ]);
     sidebarDatasetType.value = dataset.value.type;
+    useTitle(`${dataset.value.name} File Browser`);
   })
   .catch((err) => {
     console.error(err);
@@ -43,8 +44,3 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
     else toast.error("Could not fetch datatset");
   });
 </script>
-
-<route lang="yaml">
-meta:
-  title: File Browser
-</route>

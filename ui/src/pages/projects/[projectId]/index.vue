@@ -190,6 +190,7 @@ watch(project, () => {
       label: project.value?.name,
     },
   ]);
+  useTitle(project.value?.name);
 });
 
 function fetch_project() {
@@ -283,11 +284,6 @@ function openMergeModal() {
   mergeModal.value.show();
 }
 </script>
-
-<route lang="yaml">
-meta:
-title: Projects
-</route>
 
 <style scoped>
 /* .general-info {

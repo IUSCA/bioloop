@@ -3,11 +3,11 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import DatasetService from "@/services/dataset";
 import projectService from "@/services/projects";
-import { useNavStore } from "@/stores/nav";
 import { useAuthStore } from "@/stores/auth";
-import config from "@/config";
+import { useNavStore } from "@/stores/nav";
 
 const auth = useAuthStore();
 const nav = useNavStore();
@@ -39,5 +39,6 @@ Promise.all([
       label: dataset.name,
     },
   ]);
+  useTitle(project.name);
 });
 </script>
