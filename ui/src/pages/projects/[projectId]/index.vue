@@ -165,6 +165,7 @@ import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+import { useUIStore } from "@/stores/ui";
 
 const props = defineProps({ projectId: String });
 const auth = useAuthStore();
@@ -172,6 +173,7 @@ const router = useRouter();
 
 const projectFormStore = useProjectFormStore();
 const nav = useNavStore();
+const ui = useUIStore();
 
 const project = ref({});
 const projectId = computed(() => {
@@ -190,7 +192,7 @@ watch(project, () => {
       label: project.value?.name,
     },
   ]);
-  useTitle(project.value?.name);
+  ui.setTitle(project.value?.name);
 });
 
 function fetch_project() {
@@ -290,3 +292,8 @@ function openMergeModal() {
   --va-card-padding: 0.75rem;
 } */
 </style>
+
+<route lang="yaml">
+meta:
+  title: Project Details
+</route>

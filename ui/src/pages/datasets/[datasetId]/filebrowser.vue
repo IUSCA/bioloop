@@ -10,10 +10,13 @@ import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useNavStore } from "@/stores/nav";
+import { useUIStore } from "@/stores/ui";
 import { storeToRefs } from "pinia";
 
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
+
+const ui = useUIStore();
 
 const props = defineProps({ datasetId: String });
 
@@ -36,7 +39,7 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
       },
     ]);
     sidebarDatasetType.value = dataset.value.type;
-    useTitle(`${dataset.value.name} File Browser`);
+    ui.setTitle(`File Browser | ${dataset.value.name} `);
   })
   .catch((err) => {
     console.error(err);
@@ -44,3 +47,8 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
     else toast.error("Could not fetch datatset");
   });
 </script>
+
+<route lang="yaml">
+meta:
+  title: File Browser
+</route>
