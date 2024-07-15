@@ -207,12 +207,15 @@
 
 <script setup>
 import useQueryPersistence from "@/composables/useQueryPersistence";
+import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import { useDatasetStore } from "@/stores/dataset";
 import { storeToRefs } from "pinia";
+
+useSearchKeyShortcut();
 
 const props = defineProps({
   dtype: String,
@@ -275,14 +278,6 @@ const columns = [
     tdAlign: "center",
     width: "80px",
   },
-  // { key: "status", sortable: false },
-  // {
-  //   key: "num_genome_files",
-  //   label: "data files",
-  //   sortable: true,
-  //   sortingOptions: ["desc", "asc", null],
-  //   width: "80px",
-  // },
   {
     key: "created_at",
     label: "registered on",
@@ -305,6 +300,15 @@ const columns = [
     label: "Derived",
     width: "80px",
   },
+  ...(config.enabledFeatures.genomeBrowser
+    ? [
+        {
+          key: "num_genome_files",
+          label: "data files",
+          width: "80px",
+        },
+      ]
+    : []),
   // {
   //   key: "workflows",
   //   thAlign: "center",

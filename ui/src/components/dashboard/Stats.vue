@@ -44,7 +44,10 @@
             <p class="va-text-center no-wrap">Total Size</p>
           </div>
 
-          <div class="flex flex-col items-center justify-end">
+          <div
+            v-if="config.enabledFeatures.genomeBrowser"
+            class="flex flex-col items-center justify-end"
+          >
             <h2
               v-if="props.data?.total_num_genome_files != undefined"
               class="va-h3 flex-auto my-0 ma-0 va-text-center"
@@ -87,6 +90,7 @@
 <script setup>
 import { formatBytes } from "@/services/utils";
 import { useColors } from "vuestic-ui";
+import config from "@/config";
 
 const { colors } = useColors();
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });

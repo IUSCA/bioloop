@@ -27,6 +27,13 @@ const build_include_object = ({
     select: {
       user: true,
       assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
     },
   } : undefined,
   datasets: include_datasets ? {
@@ -41,12 +48,26 @@ const build_include_object = ({
         },
       },
       assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
     },
   } : undefined,
   contacts: include_contacts ? {
     select: {
       contact: true,
       assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
     },
   } : undefined,
 });
@@ -196,6 +217,17 @@ router.get(
       include: {
         ...datasetService.INCLUDE_WORKFLOWS,
         bundle: true,
+        projects: {
+          include: {
+            assignor: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     };
 
@@ -338,7 +370,6 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
-    body('name').isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -357,6 +388,7 @@ router.post(
       data.users = {
         create: user_ids.map((id) => ({
           user_id: id,
+          assignor_id: req.user.id,
         })),
       };
     }
@@ -365,6 +397,7 @@ router.post(
       data.datasets = {
         create: dataset_ids.map((id) => ({
           dataset_id: id,
+          assignor_id: req.user.id,
         })),
       };
     }
@@ -424,6 +457,7 @@ router.post(
     const data = dataset_ids_to_add.map((dataset_id) => ({
       project_id: req.params.src,
       dataset_id,
+      assignor_id: req.user.id,
     }));
     const add_assocs = prisma.project_dataset.createMany({
       data,
@@ -486,6 +520,7 @@ router.put(
     const data = user_ids_to_add.map((user_id) => ({
       project_id: req.params.id,
       user_id,
+      assignor_id: req.user.id,
     }));
     const add_assocs = prisma.project_user.createMany({
       data,
@@ -540,6 +575,7 @@ router.put(
       data: {
         project_id: req.params.id,
         contact_id: upserted_contact.id,
+        assignor_id: req.user.id,
       },
     });
 
@@ -573,6 +609,7 @@ router.patch(
     const create_data = add_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
       dataset_id,
+      assignor_id: req.user.id,
     }));
     const delete_data = remove_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
