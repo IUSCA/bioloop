@@ -65,6 +65,9 @@ const exports = {
     },
   },
   alertForEnvironments: ["ci"],
+  enabledFeatures: {
+    genomeBrowser: true,
+  },
 };
 
 export default exports;
