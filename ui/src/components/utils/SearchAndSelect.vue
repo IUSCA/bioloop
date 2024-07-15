@@ -105,7 +105,10 @@
                   >
                   </slot>
                   <div v-else class="overflow-hidden">
-                    {{ fieldValue(rowData, _searchResultColumns[colIndex]) }}
+                    {{
+                      fieldValue(rowData, _searchResultColumns[colIndex])
+                        .formatted
+                    }}
                   </div>
                 </template>
 
@@ -208,7 +211,10 @@
                 >
                 </slot>
                 <div v-else class="overflow-hidden">
-                  {{ fieldValue(rowData, _selectedResultColumns[colIndex]) }}
+                  {{
+                    fieldValue(rowData, _selectedResultColumns[colIndex])
+                      .formatted
+                  }}
                 </div>
               </template>
 
@@ -367,9 +373,13 @@ const isSelected = (result) => {
  * @returns {*} the formatted value of the search result
  */
 const fieldValue = (rowData, columnConfig) => {
-  return columnConfig["formatFn"]
-    ? columnConfig["formatFn"](rowData[columnConfig["key"]])
-    : rowData[columnConfig["key"]];
+  return {
+    formatted:
+      typeof columnConfig["formatFn"] === "function"
+        ? columnConfig["formatFn"](rowData[columnConfig["key"]])
+        : rowData[columnConfig["key"]],
+    raw: rowData[columnConfig["key"]],
+  };
 };
 
 const templateName = (field) => `cell(${field["key"]})`;
@@ -408,11 +418,9 @@ const addOrRemove = (rowData) => {
 
 <style lang="scss">
 .search {
-  --va-data-table-thead-background: var(--va-background-secondary);
-  --va-data-table-tfoot-background: var(--va-background-secondary);
-
   .results-table {
     --va-data-table-cell-padding: 3px;
+    --va-data-table-selectable-cell-width: 40px;
   }
 
   .icon {
