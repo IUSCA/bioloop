@@ -1,0 +1,1 @@
+import{_ as s,c as i,o as a,V as t}from"./chunks/framework.MXVb71fM.js";const c=JSON.parse('{"title":"UI","description":"","frontmatter":{},"headers":[],"relativePath":"ui/index.md","filePath":"ui/index.md"}'),n={name:"ui/index.md"},e=t("",70),l=[e];function h(p,k,r,o,d,E){return a(),i("div",null,l)}const u=s(n,[["render",h]]);export{c as __pageData,u as default};

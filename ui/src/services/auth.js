@@ -9,10 +9,10 @@ class AuthService {
     });
   }
 
-  getCasUrl(service) {
+  getCasUrl() {
     return api.get("/auth/cas/url", {
       params: {
-        service: service,
+        service: config.casReturn,
       },
     });
   }
@@ -22,6 +22,37 @@ class AuthService {
   refreshToken = () => api.post("/auth/refresh_token");
 
   spoof = (username) => api.post(`/auth/spoof/${username}`);
+
+  getGoogleUrl() {
+    return api.get("/auth/google/url", {
+      params: {
+        redirect_uri: config.googleReturn,
+      },
+    });
+  }
+
+  googleVerify({ code, state }) {
+    return api.post("/auth/google/verify", {
+      redirect_uri: config.googleReturn,
+      code,
+      state,
+    });
+  }
+
+  getCiUrl() {
+    return api.get("/auth/cilogon/url", {
+      params: {
+        redirect_uri: config.cilogonReturn,
+      },
+    });
+  }
+
+  ciVerify({ code }) {
+    return api.post("/auth/cilogon/verify", {
+      redirect_uri: config.cilogonReturn,
+      code,
+    });
+  }
 }
 
 export default new AuthService();
