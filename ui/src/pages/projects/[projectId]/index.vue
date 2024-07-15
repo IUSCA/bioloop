@@ -46,7 +46,7 @@
               <ProjectUsersList
                 :users="users"
                 v-if="users?.length > 0"
-                :show-assigned-date="users?.length < 10"
+                :show-assign-data="users?.length < 10"
                 :wrap="users?.length >= 10"
               />
               <div v-else>This project has no associated users</div>
@@ -222,6 +222,7 @@ const users = computed(() => {
   return (project.value.users || []).map((obj) => ({
     ...obj.user,
     assigned_at: obj.assigned_at,
+    assignor: obj.assignor,
   }));
 });
 
