@@ -151,6 +151,7 @@ model user {
   accesses       data_access_log[]
   stage_requests stage_request_log[]
   about_edits    about[]
+  acknowledged_notifications notification[]
 }
 
 model user_password {
@@ -175,6 +176,17 @@ model user_settings {
   user_id  Int  @unique
   settings Json
   users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model notification {
+  id                 Int                 @id @default(autoincrement())
+  created_at         DateTime            @default(now()) @db.Timestamp(6)
+  label              String
+  text               String?
+  active             Boolean             @default(true)
+  status             NOTIFICATION_STATUS @default(CREATED)
+  acknowledged_by_id Int?
+  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
 }
 
 model contact {
@@ -303,4 +315,10 @@ model about {
 enum access_type {
   BROWSER
   SLATE_SCRATCH
+}
+
+enum NOTIFICATION_STATUS {
+  CREATED
+  ACKNOWLEDGED
+  RESOLVED
 }
