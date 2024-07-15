@@ -1,0 +1,17 @@
+```
+flowchart TD
+    L[New App Load - CAS return] --> E
+    E[router view] --> |route /auth?ticket=...|H[Navigation Guard]
+    H --> |mount|F[Auth Layout]
+    F --> |mount|I[Auth Component]
+    J --> |verify ticket|A[API]
+    A --> |profile +\nJWT|J
+    D[Local Storage] --> |data: redirect path\n/dashboard|I
+
+    I --> |1: login\ndata: ticket|J[Auth store]
+    J --> |data: set profile \n and token|K[Local Storage]
+    J --> |2: login success|I
+    I --> |3: route /dashboard|H
+```
+
+[![](https://mermaid.ink/img/pako:eNpdkt1OwzAMRl_Fyi3bEHBXCVDFGNsYCGlISLRcmMZdI9q4SpNNE-XdMUsRP71qk_M5x3XeVcGaVKLKmndFhc7D4zS3IM8qu6cdpG0LK0YNY7hK1-DIB2dfYDy-gOvIXWeOgycHW0O7uNMfVuAYg68uvSneyJ9PJpN-nt3j1mzQG7ZwE9Dpl1hjHmMNB-v7WZZKDla4lyoDMPsNLCJwxU3Lluw3s4zMlpwp9xCP7dMsfVgMQBqB1nFpaoKjPLfLp8d-GXen2YoLrGHt2eGGhk40ekykbW0cFR5a9JXEjjV21StLA_0itzG_iIGTBGreGCtUzA4iyyjdSXX6KxyxjqT6YCZZQKvB8xvZ_vaf2J_w6XAcdKEoqOu-fH7ZnIl7nMWP8VyNVEOuQaNl8O9ffK58RQ3lKpFXTSWG2ucqtx-CyhB5vbeFSrwLNFKhFWGaGtw4bFRSYt3Jaov2mfnnW36Y6N7Fy3W4Yx-fXaPLgg?type=png)](https://mermaid.live/edit#pako:eNpdkt1OwzAMRl_Fyi3bEHBXCVDFGNsYCGlISLRcmMZdI9q4SpNNE-XdMUsRP71qk_M5x3XeVcGaVKLKmndFhc7D4zS3IM8qu6cdpG0LK0YNY7hK1-DIB2dfYDy-gOvIXWeOgycHW0O7uNMfVuAYg68uvSneyJ9PJpN-nt3j1mzQG7ZwE9Dpl1hjHmMNB-v7WZZKDla4lyoDMPsNLCJwxU3Lluw3s4zMlpwp9xCP7dMsfVgMQBqB1nFpaoKjPLfLp8d-GXen2YoLrGHt2eGGhk40ekykbW0cFR5a9JXEjjV21StLA_0itzG_iIGTBGreGCtUzA4iyyjdSXX6KxyxjqT6YCZZQKvB8xvZ_vaf2J_w6XAcdKEoqOu-fH7ZnIl7nMWP8VyNVEOuQaNl8O9ffK58RQ3lKpFXTSWG2ucqtx-CyhB5vbeFSrwLNFKhFWGaGtw4bFRSYt3Jaov2mfnnW36Y6N7Fy3W4Yx-fXaPLgg)
