@@ -3,14 +3,14 @@
     <!-- search bar and filter -->
     <div class="flex mb-3 gap-3">
       <!-- search bar -->
-      <div class="flex-1">
+      <div class="flex-1" v-if="activeFilters.length === 0">
         <va-input
-          v-model="filterInput"
+          :model-value="params.inclusive_query"
           class="w-full"
-          :placeholder="`Type / to search ${props.label.toLowerCase()}`"
+          :placeholder="`Search ${props.label.toLowerCase()}`"
           outline
           clearable
-          input-class="search-input"
+          @update:model-value="handleMainFilter"
         >
           <template #prependInner>
             <Icon icon="material-symbols:search" class="text-xl" />
@@ -18,25 +18,29 @@
         </va-input>
       </div>
 
-      <!-- filter -->
-      <div class="flex-none flex items-center justify-center">
-        <DatasetFiltersGroup @update="updateFiltersGroupQuery" />
-      </div>
+      <!-- Filter button -->
+      <va-button @click="searchModal.show()" preset="primary" class="flex-none">
+        <i-mdi-filter />
+        <span> Filters </span>
+      </va-button>
+
+      <!-- active filter chips -->
+      <DatasetSearchFilters
+        v-if="activeFilters.length > 0"
+        class="flex-none"
+        @search="handleSearch"
+        @open="searchModal.show()"
+      />
     </div>
 
     <!-- table -->
     <va-data-table
       :items="datasets"
       :columns="columns"
-      v-model:sort-by="defaultSortField"
-      v-model:sorting-order="defaultSortOrder"
+      v-model:sort-by="query.sort_by"
+      v-model:sorting-order="query.sort_order"
+      disable-client-side-sorting
       :loading="data_loading"
-      @sorted="
-        (attrs) => {
-          defaultSortField = attrs.sortBy;
-          defaultSortOrder = attrs.sortingOrder;
-        }
-      "
     >
       <template #cell(name)="{ rowData }">
         <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
@@ -60,8 +64,16 @@
         </span>
       </template>
 
-      <template #cell(num_genome_files)="{ rowData }">
+      <!-- <template #cell(num_genome_files)="{ rowData }">
         <Maybe :data="rowData?.metadata?.num_genome_files" />
+      </template> -->
+
+      <template #cell(source_datasets)="{ source }">
+        <Maybe :data="source?.length" :default="0" />
+      </template>
+
+      <template #cell(derived_datasets)="{ source }">
+        <Maybe :data="source?.length" :default="0" />
       </template>
 
       <template #cell(updated_at)="{ value }">
@@ -127,8 +139,8 @@
     <!-- pagination -->
     <Pagination
       class="mt-4 px-1 lg:px-3"
-      v-model:page="currPage"
-      v-model:page_size="pageSize"
+      v-model:page="query.page"
+      v-model:page_size="query.page_size"
       :total_results="total_results"
       :curr_items="datasets.length"
       :page_size_options="PAGE_SIZE_OPTIONS"
@@ -188,17 +200,20 @@
         </p>
       </div>
     </va-modal>
+
+    <DatasetSearchModal ref="searchModal" @search="handleSearch" />
   </div>
 </template>
 
 <script setup>
-import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
+import useQueryPersistence from "@/composables/useQueryPersistence";
+import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
-import _ from "lodash";
-import config from "@/config";
+import { useDatasetStore } from "@/stores/dataset";
+import { storeToRefs } from "pinia";
 
 useSearchKeyShortcut();
 
@@ -207,10 +222,12 @@ const props = defineProps({
   label: String,
 });
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100];
+const store = useDatasetStore();
+const { filters, query, params, activeFilters } = storeToRefs(store);
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 const datasets = ref([]);
-const filterInput = ref("");
 const data_loading = ref(false);
 const launch_modal = ref({
   visible: false,
@@ -220,38 +237,29 @@ const delete_modal = ref({
   visible: false,
   selected: null,
 });
-const defaultSortField = ref("updated_at");
-const defaultSortOrder = ref("desc");
-const currPage = ref(1);
+const searchModal = ref(null);
 const total_results = ref(0);
-const pageSize = ref(20);
-// Criteria for group of true/false fields that results can be filtered by
-const filters_group_query = ref({});
 
-/**
- * Results are fetched in batches for efficient pagination, but the sorting criteria specified
- * needs to query all of persistent storage (as opposed to the current batch of retrieved results).
- * Hence, va-data-table's default sorting behavior (which would normally only sort the current
- * batch of results) is overridden (by providing each column with a `sortingFn` prop that does
- * nothing), and instead, network calls are made to run the sorting criteria across all of
- * persistent storage. The field to sort the results by and the sort order are captured in
- * va-data-table's 'sorted' event, and added to the sorting criteria maintained in the
- * `datasets_sort_query` reactive variable.
- */
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+const offset = computed(() => (query.value.page - 1) * query.value.page_size);
+
+useQueryPersistence({
+  refObject: params,
+  defaultValueFn: store.defaultParams,
+  key: "q",
+  history_push: true,
+});
+
 const columns = [
   // { key: "id", sortable: true, sortingOptions: ["desc", "asc", null] },
   {
     key: "name",
     sortable: true,
-    sortingOptions: ["desc", "asc", null],
-    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
   },
   {
-    key: "created_at",
-    label: "registered on",
+    key: "du_size",
+    label: "size",
     sortable: true,
-    sortingOptions: ["desc", "asc", null],
-    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "100px",
   },
   {
@@ -260,7 +268,7 @@ const columns = [
     label: "archived",
     thAlign: "center",
     tdAlign: "center",
-    width: "100px",
+    width: "80px",
   },
   {
     key: "is_staged",
@@ -271,14 +279,27 @@ const columns = [
     width: "80px",
   },
   {
+    key: "created_at",
+    label: "registered on",
+    sortable: true,
+    width: "100px",
+  },
+  {
     key: "updated_at",
     label: "last updated",
     sortable: true,
-    sortingOptions: ["desc", "asc", null],
-    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
     width: "150px",
   },
-  // { key: "status", sortable: false },
+  {
+    key: "source_datasets",
+    label: "Sources",
+    width: "80px",
+  },
+  {
+    key: "derived_datasets",
+    label: "Derived",
+    width: "80px",
+  },
   ...(config.enabledFeatures.genomeBrowser
     ? [
         {
@@ -288,21 +309,13 @@ const columns = [
         },
       ]
     : []),
-  {
-    key: "du_size",
-    label: "size",
-    sortable: true,
-    sortingOptions: ["desc", "asc", null],
-    sortingFn: () => {}, // overrides va-data-table's default sorting behavior
-    width: "100px",
-  },
-  {
-    key: "workflows",
-    thAlign: "center",
-    tdAlign: "center",
-    width: "80px",
-  },
-  { key: "actions", width: "100px" },
+  // {
+  //   key: "workflows",
+  //   thAlign: "center",
+  //   tdAlign: "center",
+  //   width: "80px",
+  // },
+  // { key: "actions", width: "100px" },
 ];
 
 // function getRowBind(row) {
@@ -319,69 +332,86 @@ const columns = [
 //   }
 // }
 
-// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
-const offset = computed(() => (currPage.value - 1) * pageSize.value);
-
-// Criterion based on search input
-const search_query = computed(() => {
-  return filterInput.value?.length > 0 && { name: filterInput.value };
-});
-
-// Aggregation of all filtering criteria. Used for retrieving results, and configuring number of
-// pages for pagination.
-const datasets_filter_query = computed(() => {
-  return {
-    type: props.dtype,
-    ...filters_group_query.value,
-    ...(!!search_query.value && { ...search_query.value }),
-  };
-});
-
-// Criterion for sorting. Initial sorting order is based on the `updated_at` field. The sorting
-// criterion can be updated, which will trigger a call to retrieve the updated search results.
-// Note - va-data-table supports sorting by one column at a time, so this object should always have
-// a single key-value pair.
-let datasets_sort_query = computed(() => {
-  return { [defaultSortField.value]: defaultSortOrder.value };
-});
-
-// Criteria used to limit the number of results retrieved, and to define the offset starting at
-// which the next batch of results will be retrieved.
-const datasets_batching_query = computed(() => {
-  return { offset: offset.value, limit: pageSize.value };
-});
-
-// Aggregate of all other criteria. Used for retrieving results according to the criteria
-// specified.
-const datasets_retrieval_query = computed(() => {
-  return {
-    ...datasets_filter_query.value,
-    ...datasets_batching_query.value,
-    sortBy: datasets_sort_query.value,
-  };
-});
-
-/**
- * Fetches updated list of datasets, based on the query provided, and updates the pagination
- * page-count. Page-count update can be opted out of by providing `false` to updatePageCount.
- */
-function fetch_datasets(query = {}, updatePageCount = true) {
+function fetch_items() {
   data_loading.value = true;
-
-  return DatasetService.getAll({ ...datasets_retrieval_query.value, ...query })
+  const filters_api = {
+    ...filters.value,
+    ...(params.value.inclusive_query
+      ? { name: params.value.inclusive_query }
+      : null),
+    type: props.dtype,
+  };
+  if (filters_api.created_at) {
+    filters_api.created_at_start = filters_api.created_at.start;
+    filters_api.created_at_end = filters_api.created_at.end;
+    delete filters_api.created_at;
+  }
+  if (filters_api.updated_at) {
+    filters_api.updated_at_start = filters_api.updated_at.start;
+    filters_api.updated_at_end = filters_api.updated_at.end;
+    delete filters_api.updated_at;
+  }
+  DatasetService.getAll({
+    limit: query.value.page_size,
+    offset: offset.value,
+    sort_by: query.value.sort_by,
+    sort_order: query.value.sort_order,
+    ...filters_api,
+  })
     .then((res) => {
-      datasets.value = res.data.datasets;
-      if (updatePageCount) {
-        total_results.value = res.data.metadata.count;
-      }
-    })
-    .catch((err) => {
-      console.error(err);
-      toast.error("Unable to fetch data");
+      datasets.value = res.data?.datasets || [];
+      total_results.value = res.data?.metadata?.count || 0;
     })
     .finally(() => {
       data_loading.value = false;
     });
+}
+
+onMounted(() => {
+  fetch_items();
+});
+// when sort by or sort order changes, set current page to 1 and fetch items
+// when page size changes, set current page to 1 and fetch items
+watch(
+  [
+    () => query.value.sort_by,
+    () => query.value.sort_order,
+    () => query.value.page_size,
+  ],
+  () => {
+    if (query.value.page === 1) {
+      fetch_items();
+    } else {
+      // change current page to 1 triggers the watch on currPage and fetches items
+      query.value.page = 1;
+    }
+  },
+);
+
+// when page changes, fetch items
+watch(() => query.value.page, fetch_items);
+
+// inclusive_query is changed from multiple locations, do not watch it directly
+// instead rely on VaInput's update:model-value event to fetch items
+const handleMainFilter = useDebounceFn((value) => {
+  params.value.inclusive_query = value;
+  if (query.value.page === 1) {
+    fetch_items();
+  } else {
+    // change current page to 1 triggers the watch on currPage and fetches items
+    query.value.page = 1;
+  }
+}, 300);
+
+function handleSearch() {
+  // clear the search input when search is emitted either from filter chips or from search modal
+  params.value.inclusive_query = null;
+  if (query.value.page === 1) {
+    fetch_items();
+  } else {
+    // change current page to 1 triggers the watch on currPage and fetches items
+    query.value.page = 1;
+  }
 }
 
 function launch_wf(id) {
@@ -389,7 +419,7 @@ function launch_wf(id) {
   DatasetService.archive_dataset(id)
     .then(() => {
       toast.success(`Launched a workflow to archive the dataset: ${id}`);
-      fetch_datasets();
+      fetch_items();
     })
     .catch((err) => {
       console.error(err);
@@ -405,7 +435,7 @@ function delete_dataset(id) {
   DatasetService.delete_dataset({ id, soft_delete: false })
     .then(() => {
       toast.success(`Deleted dataset: ${id}`);
-      fetch_datasets();
+      fetch_items();
     })
     .catch((err) => {
       console.error(err);
@@ -415,25 +445,4 @@ function delete_dataset(id) {
       data_loading.value = false;
     });
 }
-
-const updateFiltersGroupQuery = (newVal) => {
-  filters_group_query.value = newVal;
-};
-
-onMounted(() => {
-  // fetch results to be shown on page load
-  fetch_datasets();
-});
-
-watch([datasets_sort_query, datasets_filter_query], () => {
-  // when sorting or filtering criteria changes, show results starting from the first page
-  currPage.value = 1;
-});
-
-watch(datasets_retrieval_query, (newQuery, oldQuery) => {
-  // Retrieve updated results whenever retrieval criteria changes
-  if (!_.isEqual(newQuery, oldQuery)) {
-    fetch_datasets();
-  }
-});
 </script>
