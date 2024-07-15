@@ -135,7 +135,10 @@ config = {
             'uri': f'mongodb://{MONGO_USER}:{urllib.parse.quote(MONGO_PASSWORD)}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}',
         }
     },
-
+    'email': {
+        'from_addr': 'scauser@iu.edu',
+        'sendmail_path': '/usr/sbin/sendmail'
+    },
     'workflow': {
         'purge': {
             'types': ['integrated', 'stage', 'delete'],

@@ -4,6 +4,7 @@ const { Prisma } = require('@prisma/client');
 const axios = require('axios');
 const _ = require('lodash/fp');
 const { log_axios_error } = require('../utils');
+const logger = require('../services/logger');
 
 // catch 404 and forward to error handler
 function notFound(req, res, next) {
@@ -15,6 +16,7 @@ function notFound(req, res, next) {
 function prismaNotFoundHandler(e, req, res, next) {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
     if (e?.meta?.cause?.includes('not found') || e?.code === 'P2025') {
+      logger.error(e);
       return next(createError.NotFound());
     }
   }
@@ -25,6 +27,7 @@ function prismaNotFoundHandler(e, req, res, next) {
 function prismaConstraintFailedHandler(e, req, res, next) {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
     if (e?.code === 'P2002') {
+      logger.error(e);
       return next(createError.BadRequest('Unique constraint failed'));
     }
   }
@@ -34,6 +37,7 @@ function prismaConstraintFailedHandler(e, req, res, next) {
 // catch assertion errors and send 400
 function assertionErrorHandler(e, req, res, next) {
   if (e instanceof AssertionError) {
+    logger.error(e);
     return next(createError.BadRequest(e.message));
   }
   return next(e);

@@ -3,14 +3,16 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import DatasetService from "@/services/dataset";
 import projectService from "@/services/projects";
-import { useNavStore } from "@/stores/nav";
 import { useAuthStore } from "@/stores/auth";
-import config from "@/config";
+import { useNavStore } from "@/stores/nav";
+import { useUIStore } from "@/stores/ui";
 
 const auth = useAuthStore();
 const nav = useNavStore();
+const ui = useUIStore();
 
 const props = defineProps({ projectId: String, datasetId: String });
 
@@ -39,5 +41,11 @@ Promise.all([
       label: dataset.name,
     },
   ]);
+  ui.setTitle(project.name);
 });
 </script>
+
+<route lang="yaml">
+meta:
+  title: Project's Datasets
+</route>
