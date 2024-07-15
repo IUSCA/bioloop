@@ -132,25 +132,28 @@ model stage_request_log {
 }
 
 model user {
-  id             Int                 @id @default(autoincrement())
-  username       String              @unique @db.VarChar(100)
-  name           String?             @db.VarChar(100)
-  email          String              @unique @db.VarChar(100)
-  cas_id         String?             @unique @db.VarChar(100)
-  notes          String?
-  created_at     DateTime            @default(now()) @db.Timestamp(6)
-  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  is_deleted     Boolean             @default(false)
-  user_role      user_role[]
-  settings       user_settings?
-  contacts       contact[]
-  dataset_audit  dataset_audit[]
-  projects       project_user[]
-  password       user_password?
-  login          user_login?
-  accesses       data_access_log[]
-  stage_requests stage_request_log[]
-  about_edits    about[]
+  id                        Int                 @id @default(autoincrement())
+  username                  String              @unique @db.VarChar(100)
+  name                      String?             @db.VarChar(100)
+  email                     String              @unique @db.VarChar(100)
+  cas_id                    String?             @unique @db.VarChar(100)
+  notes                     String?
+  created_at                DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  is_deleted                Boolean             @default(false)
+  user_role                 user_role[]
+  settings                  user_settings?
+  contacts                  contact[]
+  dataset_audit             dataset_audit[]
+  projects                  project_user[]      @relation("project_user_user")
+  password                  user_password?
+  login                     user_login?
+  accesses                  data_access_log[]
+  stage_requests            stage_request_log[]
+  about_edits               about[]
+  project_users_assigned    project_user[]      @relation("project_user_assignor")
+  project_datasets_assigned project_dataset[]
+  project_contacts_assigned project_contact[]
 }
 
 model user_password {
@@ -243,8 +246,10 @@ model project_user {
   project_id  String
   user_id     Int
   assigned_at DateTime @default(now()) @db.Timestamp(6)
+  assignor_id Int?
   project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
-  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade, name: "project_user_user")
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull, name: "project_user_assignor")
 
   @@id([project_id, user_id])
 }
@@ -252,9 +257,11 @@ model project_user {
 model project_dataset {
   project_id  String
   dataset_id  Int
+  assignor_id Int?
   assigned_at DateTime @default(now()) @db.Timestamp(6)
   project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
   dataset     dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull)
 
   @@id([project_id, dataset_id])
 }
@@ -263,8 +270,10 @@ model project_contact {
   project_id  String
   contact_id  Int
   assigned_at DateTime @default(now()) @db.Timestamp(6)
+  assignor_id Int?
   project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
   contact     contact  @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull)
 
   @@id([project_id, contact_id])
 }
@@ -293,10 +302,10 @@ model worker_process {
 }
 
 model about {
-  id            Int      @id @default(autoincrement())
-  html          String
-  created_at    DateTime @default(now()) @db.Timestamp(6)
-  last_updated_by user   @relation(fields: [last_updated_by_id], references: [id])
+  id                 Int      @id @default(autoincrement())
+  html               String
+  created_at         DateTime @default(now()) @db.Timestamp(6)
+  last_updated_by    user     @relation(fields: [last_updated_by_id], references: [id])
   last_updated_by_id Int
 }
 
