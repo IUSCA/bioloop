@@ -60,7 +60,7 @@ services:
       - PGPASSWORD=${POSTGRES_PASSWORD}
       - PROJ_NAME=${COMPOSE_PROJECT_NAME}
     volumes:
-      - /opt/sca/db-backups:/backup
+      - /opt/sca/db_backups:/backup
     networks:
       bioloop_network:
         ipv4_address: 172.19.0.5
