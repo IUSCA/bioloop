@@ -328,7 +328,7 @@ const tracking = computed(() => {
 
 function fetch_and_update_dataset(id) {
   // console.log("fetch_and_update_dataset", id);
-  DatasetService.getById({ id })
+  DatasetService.getById({ id, include_projects: true })
     .then((res) => {
       _datasets.value[id] = res.data;
     })
@@ -439,6 +439,6 @@ function openModalToStageProject(dataset) {
 }
 
 function getCurrentProjAssoc(assocs) {
-  return assocs.filter((obj) => obj.project_id === props.project.id)[0];
+  return assocs?.filter((obj) => obj.project_id === props.project.id)?.[0];
 }
 </script>

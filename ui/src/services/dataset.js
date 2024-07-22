@@ -33,6 +33,7 @@ class DatasetService {
     prev_task_runs = false,
     only_active = false,
     bundle = false,
+    include_projects = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -42,6 +43,7 @@ class DatasetService {
         prev_task_runs,
         only_active,
         bundle,
+        include_projects,
       },
     });
   }

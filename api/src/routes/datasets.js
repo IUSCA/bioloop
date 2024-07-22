@@ -302,6 +302,7 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
+    query('include_projects').optional().toBoolean(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -316,6 +317,7 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
+      includeProjects: req.query.include_projects || false,
     });
     res.json(dataset);
   }),
