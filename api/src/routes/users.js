@@ -104,6 +104,7 @@ router.patch(
   }),
 );
 
+/*
 router.delete(
   '/:username',
   isPermittedTo('delete', { checkOwnerShip: true }),
@@ -113,5 +114,27 @@ router.delete(
     res.json(deletedUser);
   }),
 );
+*/
+
+router.delete(
+  '/:username',
+  isPermittedTo('delete', { checkOwnership: true }),
+  asyncHandler(async (req, res, next) => {
+    try {
+      const deletedUser = await userService.hardDeleteUser(req.params.username);
+      res.status(200).json({
+        message: 'User deleted successfully',
+        details: deletedUser // Optionally include details for confirmation/logging
+      });
+    } catch (error) {
+      if (error.message === 'User not found') {
+        return next(createError.NotFound('User not found'));
+      }
+      console.error('Error deleting user:', error);
+      return next(createError.InternalServerError());
+    }
+  }),
+);
+
 
 module.exports = router;
