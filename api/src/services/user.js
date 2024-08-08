@@ -84,12 +84,68 @@ async function updateLastLogin({ id, method }) {
   });
 }
 
-async function findAll(sort) {
-  const users = await prisma.user.findMany({
-    include: INCLUDE_ROLES_LOGIN,
-    orderBy: sort.map(({ key, dir }) => ({ [key]: dir })),
-  });
-  return users.map(transformUser);
+async function findAll({
+  text, sort_by, sort_order, skip, take,
+}) {
+  const filters = {
+    OR: [
+      {
+        name: {
+          contains: text,
+          mode: 'insensitive',
+        },
+      },
+      {
+        email: {
+          contains: text,
+          mode: 'insensitive',
+        },
+      },
+      {
+        username: {
+          contains: text,
+          mode: 'insensitive',
+        },
+      },
+    ],
+  };
+  let sort_obj = {};
+  if (sort_by === 'last_login') {
+    sort_obj = {
+      login: {
+        last_login: sort_order, // { sort: sort_order, nulls: 'last' },
+      },
+    };
+  } else if (sort_by === 'login_method') {
+    sort_obj = {
+      login: {
+        method: sort_order, // { sort: sort_order, nulls: 'last' },
+      },
+    };
+  } else {
+    (
+      sort_obj = {
+        [sort_by]: sort_order,
+      }
+    );
+  }
+  const [users, count] = await prisma.$transaction([
+    prisma.user.findMany({
+      skip,
+      take,
+      orderBy: sort_obj,
+      where: filters,
+      include: INCLUDE_ROLES_LOGIN,
+    }),
+    prisma.user.count({
+      where: filters,
+    }),
+  ]);
+
+  return {
+    count,
+    users: users.map(transformUser),
+  };
 }
 
 async function createUser(data) {
