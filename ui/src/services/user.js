@@ -1,8 +1,21 @@
 import api from "./api";
 
 class UserService {
-  getAll() {
-    return api.get("/users").then((response) => response.data);
+  getAll({ text = "", sort_by, sort_order, skip = 0, take = 10 }) {
+    return api
+      .get("/users", {
+        params: {
+          text,
+          sort_by,
+          sort_order,
+          skip,
+          take,
+        },
+      })
+      .then((response) => {
+        const { metadata, users } = response.data;
+        return { metadata, users };
+      });
   }
 
   createUser(user_data) {
