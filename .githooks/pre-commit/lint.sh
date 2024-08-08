@@ -1,9 +1,14 @@
 #!/bin/bash
 set -e
-set -o pipefail
 
 # Get the list of staged files
 staged_files=$(git diff --cached --name-status | grep -E '^(A|M)' | awk '{print $2}')
+
+# Exit early if no files are staged for addition or modification
+if [[ -z "$staged_files" ]]; then
+  echo "No files staged for addition or modification. Exiting without linting."
+  exit 0
+fi
 
 # Initialize variables
 ui_files=""
