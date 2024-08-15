@@ -82,8 +82,6 @@ model file_upload_log {
   md5              String
   num_chunks       Int
   status           upload_status
-  chunks_path      String
-  destination_path String
   upload_log       upload_log?   @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
   upload_log_id    Int?
 }

@@ -553,11 +553,11 @@ router.post(
             name: file.name,
             md5: file.checksum,
             num_chunks: file.num_chunks,
-            chunks_path: getFileChunksStorageDir(data_product_name, file.checksum),
-            destination_path: path.join(
-              getUploadPath(data_product_name),
-              file.name,
-            ),
+            // chunks_path: getFileChunksStorageDir(data_product_name, file.checksum),
+            // destination_path: path.join(
+            //   getUploadPath(data_product_name),
+            //   file.name,
+            // ),
             status: config.upload_status.UPLOADING,
           })),
         },

@@ -91,19 +91,19 @@ def process_uploaded_chunks(celery_task, dataset_id, **kwargs):
         raise
 
 
-@app.task(base=WorkflowTask, bind=True, name='move_upload_to_worker_space',
-          # autoretry_for=(exc.RetryableException,),
-          # max_retries=3,
-          # default_retry_delay=5
-          )
-def move_upload_to_worker_space(celery_task, dataset_id, **kwargs):
-    from workers.tasks.move_upload_to_worker_space import move as task_body
-    try:
-        return task_body(celery_task, dataset_id, **kwargs)
-    # except exc.RetryableException:
-    #     raise
-    except Exception:
-        raise
+# @app.task(base=WorkflowTask, bind=True, name='move_upload_to_worker_space',
+#           # autoretry_for=(exc.RetryableException,),
+#           # max_retries=3,
+#           # default_retry_delay=5
+#           )
+# def move_upload_to_worker_space(celery_task, dataset_id, **kwargs):
+#     from workers.tasks.move_upload_to_worker_space import move as task_body
+#     try:
+#         return task_body(celery_task, dataset_id, **kwargs)
+#     # except exc.RetryableException:
+#     #     raise
+#     except Exception:
+#         raise
 
 
 @app.task(base=WorkflowTask, bind=True, name='generate_qc',

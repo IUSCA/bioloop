@@ -57,30 +57,30 @@
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
-            "name": "await stability",
-            "task": "await_stability"
+          "name": "await stability",
+          "task": "await_stability"
         },
         {
-            "name": "inspect",
-            "task": "inspect_dataset"
+          "name": "inspect",
+          "task": "inspect_dataset"
         },
         {
-            "name": "archive",
-            "task": "archive_dataset"
+          "name": "archive",
+          "task": "archive_dataset"
         },
         {
-            "name": "stage",
-            "task": "stage_dataset"
+          "name": "stage",
+          "task": "stage_dataset"
         },
         {
-            "name": "validate",
-            "task": "validate_dataset"
+          "name": "validate",
+          "task": "validate_dataset"
         },
         {
-            "name": "setup_download",
-            "task": "setup_dataset_download"
+          "name": "setup_download",
+          "task": "setup_dataset_download"
         }
-    ]
+      ]
     },
     "stage": {
       "steps": [
@@ -109,10 +109,6 @@
     "process_upload": {
       "steps": [
         {
-          "name": "move uploaded chunks",
-          "task": "move_upload_to_worker_space"
-        },
-        {
           "name": "process uploaded chunks",
           "task": "process_uploaded_chunks"
         }
@@ -124,13 +120,16 @@
         {
           "name": "archive",
           "task": "archive_dataset"
-        }, {
+        },
+        {
           "name": "stage",
           "task": "stage_dataset"
-        }, {
+        },
+        {
           "name": "validate",
           "task": "validate_dataset"
-        }, {
+        },
+        {
           "name": "setup_download",
           "task": "setup_dataset_download"
         }
@@ -147,22 +146,25 @@
     }
   },
   "DATASET_STATES": {
-      "REGISTERED": "REGISTERED",
-      "READY": "READY",
-      "INSPECTED": "INSPECTED",
-      "ARCHIVED": "ARCHIVED",
-      "FETCHED": "FETCHED",
-      "STAGED": "STAGED",
-      "DUPLICATE_REGISTERED": "DUPLICATE_REGISTERED",
-      "DUPLICATE_READY": "DUPLICATE_READY",
-      "DUPLICATE_REJECTED": "DUPLICATE_REJECTED",
-      "OVERWRITTEN": "OVERWRITTEN",
-      "DELETED": "DELETED"
+    "REGISTERED": "REGISTERED",
+    "READY": "READY",
+    "INSPECTED": "INSPECTED",
+    "ARCHIVED": "ARCHIVED",
+    "FETCHED": "FETCHED",
+    "STAGED": "STAGED",
+    "DUPLICATE_REGISTERED": "DUPLICATE_REGISTERED",
+    "DUPLICATE_READY": "DUPLICATE_READY",
+    "DUPLICATE_REJECTED": "DUPLICATE_REJECTED",
+    "OVERWRITTEN": "OVERWRITTEN",
+    "DELETED": "DELETED"
   },
   "ACTION_ITEM_TYPES": {
     "DUPLICATE_DATASET_INGESTION": "DUPLICATE_DATASET_INGESTION"
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "dataset_types": [
+    "RAW_DATA",
+    "DATA_PRODUCT"
+  ],
   "e2e": {
     "users": {
       "admin": {
@@ -183,7 +185,7 @@
     "FAILURE": "FAILURE",
     "REVOKED": "REVOKED"
   },
-    "DONE_STATUSES": {
+  "DONE_STATUSES": {
     "REVOKED": "REVOKED",
     "FAILURE": "FAILURE",
     "SUCCESS": "SUCCESS"

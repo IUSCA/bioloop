@@ -74,7 +74,8 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     except Exception as e:
         raise exc.RetryableException(e)
 
-    dataset_path = Path(dataset['origin_path'])
+    # dataset_path = Path(dataset['origin_path'])
+    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload'] / dataset['name'])
 
     files = upload_log['files']
     pending_files = [file for file in files if file['status'] != config['upload_status']['COMPLETE']]
@@ -84,8 +85,8 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         num_chunks_expected = f['num_chunks']
         file_md5 = f['md5']
         file_upload_log_id = f['id']
-        chunks_path = Path(f['chunks_path'])
-        destination_path = Path(f['destination_path'])
+        chunks_path = Path(config['paths']['DATA_PRODUCT']['upload'] / dataset['name'] / 'chunked_files' / f['md5'])
+        destination_path = Path(config['paths']['DATA_PRODUCT']['upload'] / dataset['name'] / 'merged_chunks')
 
         if f['status'] != config['upload_status']['COMPLETE']:
             try:
