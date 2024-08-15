@@ -17,9 +17,9 @@ class UploadService {
     this.uploadApi.setToken(token)
   }
 
-  test() {
-    return this.axios.get("/upload/test");
-  }
+  // test() {
+  //   return this.axios.get("/upload/test");
+  // }
 
   // postTest() {
   //   return uploadApi.post("/upload/test");

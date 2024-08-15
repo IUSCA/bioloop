@@ -39,6 +39,7 @@ export const useAuthStore = defineStore("auth", () => {
     loggedIn.value = false;
     user.value = {};
     token.value = "";
+    uploadToken.value = ""
   }
 
   function casLogin({ ticket }) {
@@ -128,8 +129,8 @@ export const useAuthStore = defineStore("auth", () => {
     console.log("refreshUploadTokenBeforeExpiry")
 
     if (!refreshUploadTokenTimer) {
-      console.log("if")
-      // timer is not running running
+      console.log("if (!refreshUploadTokenTimer)")
+      // timer is not running 
       try {
         console.log("uploadToken.value")
         console.dir(uploadToken.value, { depth: null })
@@ -157,10 +158,10 @@ export const useAuthStore = defineStore("auth", () => {
             delay / 1000,
             "seconds",
           );
-          refreshUploadTokenTimer = setTimeout(() => {
+          refreshUploadTokenTimer = setInterval(() => {
+            console.log("setInterval called")
             refreshUploadToken(fileName)
-          }
-            , delay);
+          }, delay);
         }
         // else - do nothing, navigation guard will redirect to /auth
       } catch (err) {
@@ -183,7 +184,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function refreshUploadToken(fileName) {
-    console.log("refreshUploadToken");
+    console.log("refreshUploadToken() " + fileName);
 
     const now = new Date();
     console.log("now")

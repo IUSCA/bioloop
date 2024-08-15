@@ -103,19 +103,17 @@
 </template>
 
 <script setup>
-import SparkMD5 from "spark-md5";
-import _ from "lodash";
 import datasetService from "@/services/dataset";
+import _ from "lodash";
+import SparkMD5 from "spark-md5";
 // import uploadService from "@/services/upload";
-import UploadService from "@/services/upload";
-import { useAuthStore } from "@/stores/auth";
-import { formatBytes } from "@/services/utils";
-import { useForm, useBreakpoint } from "vuestic-ui";
-import config from "@/config";
-import { useDatasetUploadFormStore } from "@/stores/datasetUploadForm";
-import { storeToRefs } from "pinia";
 import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
+import config from "@/config";
 import toast from "@/services/toast";
+import UploadService from "@/services/upload";
+import { formatBytes } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
+import { useBreakpoint, useForm } from "vuestic-ui";
 
 const auth = useAuthStore();
 
@@ -128,7 +126,7 @@ const { SUBMISSION_STATES } = config;
 
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
 
-const RETRY_COUNT_THRESHOLD = 5;
+const RETRY_COUNT_THRESHOLD = 1;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // Blob.slice method is used to segment files.
 // At the same time, this method is used in different browsers in different
@@ -346,12 +344,18 @@ const evaluateChecksums = (filesToUpload) => {
 // Uploads a chunk. Retries to upload chunk upto 5 times in case of network
 // errors.
 const uploadChunk = async (chunkData) => {
+  console.log("uploadChunk()")
   const upload = async () => {
+    console.log("upload()")
     if (uploadCancelled.value) {
       return false;
     }
 
     let chunkUploaded = false;
+
+    console.log("uploadToken.value")
+    console.dir(uploadToken.value, {depth: null})
+
     uploadService.setToken(uploadToken.value)
     try {
       await uploadService.uploadFile(chunkData);
