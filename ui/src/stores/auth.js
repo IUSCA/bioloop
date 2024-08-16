@@ -132,8 +132,8 @@ export const useAuthStore = defineStore("auth", () => {
       console.log("if (!refreshUploadTokenTimer)")
       // timer is not running 
       try {
-        console.log("uploadToken.value")
-        console.dir(uploadToken.value, { depth: null })
+        // console.log("uploadToken.value")
+        // console.dir(uploadToken.value, { depth: null })
         const payload = jwtDecode(uploadToken.value);
         console.log("payload")
         console.dir(payload, { depth: null })
@@ -247,8 +247,8 @@ export const useAuthStore = defineStore("auth", () => {
     return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
-        console.log("token")
-        console.log(res.data.accessToken)
+        // console.log("token")
+        // console.log(res.data.accessToken)
         uploadToken.value = res.data.accessToken;
         // console.log("uploadToken.value");
         // console.log(uploadToken.value);

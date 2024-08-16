@@ -69,8 +69,8 @@ function get_download_token(file_path) {
 
 function get_upload_token(file_path) {
   const scope = `${config.get('oauth.upload.scope_prefix')}${file_path}`;
-  console.log('get_upload_token - scope');
-  console.log(scope);
+  // console.log('get_upload_token - scope');
+  // console.log(scope);
   return oAuth2SecureTransferClient.clientCredentials({
     scope: [scope],
   });

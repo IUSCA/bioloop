@@ -12,8 +12,8 @@ class UploadService {
   }
 
   setToken(token) {
-    console.log("uploadService setToken")
-    console.log(token)
+    // console.log("uploadService setToken")
+    // console.log(token)
     this.uploadApi.setToken(token)
   }
 

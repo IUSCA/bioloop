@@ -53,6 +53,8 @@ def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_ch
 
 
 def chunks_to_files(celery_task, dataset_id, **kwargs):
+    print("chunks_to_files called")
+    
     try:
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
         upload_log = dataset['upload_log']

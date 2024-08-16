@@ -14,8 +14,8 @@ class UploadApi {
   }
 
   setToken(token) {
-    console.log("uploadApi setToken")
-    console.log(token)
+    // console.log("uploadApi setToken")
+    // console.log(token)
 
     this.token = token
     this.setInterceptors()
@@ -28,9 +28,9 @@ class UploadApi {
         // console.log("uploadApi.interceptors.request.use");
         // console.log("uploadToken.value");
         // console.dir(uploadToken.value, { depth: null });
-        console.log("uploadApi setInterceptor() token");
+        // console.log("uploadApi setInterceptor() token");
         // console.dir(_token, { depth: null });
-        console.log(this.token);
+        // console.log(this.token);
 
         // console.log("typeof _this.token");
         // console.log(typeof this.token);

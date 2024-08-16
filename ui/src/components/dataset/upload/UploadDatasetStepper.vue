@@ -353,8 +353,8 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
 
-    console.log("uploadToken.value")
-    console.dir(uploadToken.value, {depth: null})
+    // console.log("uploadToken.value")
+    // console.dir(uploadToken.value, {depth: null})
 
     uploadService.setToken(uploadToken.value)
     try {
@@ -488,6 +488,9 @@ const onSubmit = () => {
   isSubmissionAlertVisible.value = false;
   submitAttempted.value = true;
 
+  console.log("onSubmit will return")
+
+
   return new Promise((resolve, reject) => {
     preUpload()
       .then(async () => {
@@ -495,6 +498,7 @@ const onSubmit = () => {
 
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
+          console.log("if (filesUpload), resolve")
           resolve();
         } else {
           submissionStatus.value = SUBMISSION_STATES.UPLOAD_FAILED;
@@ -502,6 +506,7 @@ const onSubmit = () => {
           submissionAlertColor.value = "warning";
           submissionAlert.value = "Some files could not be uploaded.";
           isSubmissionAlertVisible.value = true;
+          console.log("else, reject")
           reject();
         }
       })
@@ -513,9 +518,12 @@ const onSubmit = () => {
         submissionAlert.value =
           "There was an error. Please try submitting again.";
         isSubmissionAlertVisible.value = true;
+        console.log("catch")
+        console.log("reject")
         reject();
       });
   });
+
 };
 
 const postSubmit = () => {
@@ -557,9 +565,11 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
+      console.log("onSubmit then")
       return datasetService.processUpload(uploadLog.value.dataset_id);
     })
     .catch((err) => {
+      console.log("onSubmit catch")
       console.log(err);
     })
     .finally(() => {

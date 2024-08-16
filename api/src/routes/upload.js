@@ -26,8 +26,8 @@ router.post(
       console.log(e)
     }
 
-    console.log('token');
-    console.log(token);
+    // console.log('token');
+    // console.log(token);
 
     res.json(token);
   }),
