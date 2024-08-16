@@ -66,6 +66,11 @@
           >
             <FileTypeSelect
               v-model="v.ref"
+              @file-type-created="
+                (newFileType) => {
+                  fileTypeList.push(newFileType);
+                }
+              "
               :allow-create-new="true"
               :file-type-list="fileTypeList"
             />
@@ -696,15 +701,6 @@ const setFiles = (files) => {
 const removeFile = (index) => {
   dataProductFiles.value.splice(index, 1);
 };
-
-onMounted(() => {
-  datasetService.getDatasetFileTypes().then((res) => {
-    fileTypeList.value = res.data;
-  });
-  datasetService.getAll({ type: "RAW_DATA" }).then((res) => {
-    rawDataList.value = res.data.datasets;
-  });
-});
 
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
