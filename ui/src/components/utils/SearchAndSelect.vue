@@ -43,6 +43,11 @@
                 icon="add"
                 @click="
                   () => {
+                    console.log(
+                      'SearchAndSelect addSelected, searchResultSelections:',
+                    );
+
+                    console.dir(searchResultSelections, { depth: null });
                     emit('select', searchResultSelections);
                     resetSearchSelections();
                   }
@@ -396,6 +401,8 @@ const resetSelectedSelections = () => {
 };
 
 const addOrRemove = (rowData) => {
+  console.log("SearchAndSelect addOrRemove");
+  console.dir(rowData, { depth: null });
   if (!isSelected(rowData)) {
     emit("select", [rowData]);
   } else {

@@ -243,6 +243,9 @@ watch([searchTerm, filterQuery], () => {
 onMounted(() => {
   emit("loading");
   searchDatasets();
+
+  console.log("DatasetSelect component mounted");
+  console.dir(props.selectedResults, { depth: null });
 });
 
 onBeforeUnmount(() => {

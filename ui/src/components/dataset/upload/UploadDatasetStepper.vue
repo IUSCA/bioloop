@@ -263,6 +263,8 @@ const noFilesSelected = computed(() => {
 });
 
 const addDataset = (selectedDatasets) => {
+  console.log("UploadDatasetStepper: Selected datasets");
+  console.dir(selectedDatasets, { depth: null });
   rawDataSelected.value = selectedDatasets;
 };
 
