@@ -404,8 +404,10 @@ const addOrRemove = (rowData) => {
   console.log("SearchAndSelect addOrRemove");
   console.dir(rowData, { depth: null });
   if (!isSelected(rowData)) {
+    console.log("emit select");
     emit("select", [rowData]);
   } else {
+    console.log("emit remove");
     emit("remove", [rowData]);
   }
   resetSearchSelections();
