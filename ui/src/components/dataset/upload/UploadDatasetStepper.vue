@@ -1,14 +1,26 @@
 <template>
   <va-inner-loading :loading="loading">
     <va-form ref="datasetUploadForm" class="h-full">
-      <va-stepper v-model="step" :steps="steps" controlsHidden class="h-full create-data-product-stepper">
+      <va-stepper
+        v-model="step"
+        :steps="steps"
+        controlsHidden
+        class="h-full create-data-product-stepper"
+      >
         <!-- Step icons and labels -->
-        <template v-for="(step, i) in steps" :key="step.label"
-          #[`step-button-${i}`]="{ setStep, isActive, isCompleted }">
-          <button class="step-button p-1 sm:p-3 cursor-pointer" :class="{
-            'step-button--active': isActive,
-            'step-button--completed': isCompleted,
-          }" @click="setStep(i)">
+        <template
+          v-for="(step, i) in steps"
+          :key="step.label"
+          #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
+        >
+          <button
+            class="step-button p-1 sm:p-3 cursor-pointer"
+            :class="{
+              'step-button--active': isActive,
+              'step-button--completed': isCompleted,
+            }"
+            @click="setStep(i)"
+          >
             <div class="flex flex-col items-center">
               <Icon :icon="step.icon" />
               <span class="hidden sm:block"> {{ step.label }} </span>
@@ -17,41 +29,65 @@
         </template>
 
         <template #step-content-0>
-          <va-form-field v-model="datasetName" :rules="[
-            (v) => v.length >= 3 || 'Min length is 3 characters',
-            // (v) => v?.indexof(' ') === -1 || 'Name cannot contain spaces',
-            validateNotExists,
-          ]">
+          <va-form-field
+            v-model="datasetName"
+            :rules="[
+              (v) => v.length >= 3 || 'Min length is 3 characters',
+              // (v) => v?.indexof(' ') === -1 || 'Name cannot contain spaces',
+              validateNotExists,
+            ]"
+          >
             <template #default="{ value }">
-              <va-input label="Dataset Name" :placeholder="'Dataset Name'" class="w-full" v-model="value.ref" />
+              <va-input
+                label="Dataset Name"
+                :placeholder="'Dataset Name'"
+                class="w-full"
+                v-model="value.ref"
+              />
             </template>
           </va-form-field>
         </template>
 
         <template #step-content-1>
-          <va-form-field v-model="fileTypeSelected" v-slot="{ value: v }" :rules="[
-            (v) => {
-              return (
-                (typeof v?.name === 'string' &&
-                  v?.name?.length > 0 &&
-                  typeof v?.extension === 'string' &&
-                  v?.extension?.length > 0) ||
-                'File Type is required'
-              );
-            },
-          ]">
-            <FileTypeSelect v-model="v.ref" :allow-create-new="true" :file-type-list="fileTypeList" />
+          <va-form-field
+            v-model="fileTypeSelected"
+            v-slot="{ value: v }"
+            :rules="[
+              (v) => {
+                return (
+                  (typeof v?.name === 'string' &&
+                    v?.name?.length > 0 &&
+                    typeof v?.extension === 'string' &&
+                    v?.extension?.length > 0) ||
+                  'File Type is required'
+                );
+              },
+            ]"
+          >
+            <FileTypeSelect
+              v-model="v.ref"
+              :allow-create-new="true"
+              :file-type-list="fileTypeList"
+            />
           </va-form-field>
         </template>
 
         <template #step-content-2>
-          <va-form-field v-model="rawDataSelected" v-slot="{ value: v }" :rules="[
-            (v) => {
-              return typeof v.length > 0 || 'Source dataset is required';
-            },
-          ]">
-            <DatasetSelect :selected-results="v.ref" @select="addDataset" @remove="removeDataset"
-              :column-widths="columnWidths"></DatasetSelect>
+          <va-form-field
+            v-model="rawDataSelected"
+            v-slot="{ value: v }"
+            :rules="[
+              (v) => {
+                return typeof v.length > 0 || 'Source dataset is required';
+              },
+            ]"
+          >
+            <DatasetSelect
+              :selected-results="v.ref"
+              @select="addDataset"
+              @remove="removeDataset"
+              :column-widths="columnWidths"
+            ></DatasetSelect>
           </va-form-field>
 
           <div v-if="isDirty" class="mt-2">
@@ -62,31 +98,52 @@
         </template>
 
         <template #step-content-3>
-          <DatasetFileUploadTable :file-type="fileTypeSelected" :source-raw-data="rawDataSelected[0]"
-            :dataset-name="datasetName" :status-chip-color="statusChipColor" :submission-status="submissionStatus"
-            :is-submission-alert-visible="isSubmissionAlertVisible" :submission-alert="submissionAlert" @file-added="(files) => {
-              console.log('Stepper - files');
-              console.log(files);
+          <DatasetFileUploadTable
+            :file-type="fileTypeSelected"
+            :source-raw-data="rawDataSelected[0]"
+            :dataset-name="datasetName"
+            :status-chip-color="statusChipColor"
+            :submission-status="submissionStatus"
+            :is-submission-alert-visible="isSubmissionAlertVisible"
+            :submission-alert="submissionAlert"
+            @file-added="
+              (files) => {
+                console.log('Stepper - files');
+                console.log(files);
 
-              setFiles(files);
-              isSubmissionAlertVisible = false;
-            }
-              " @remove-file="removeFile" :submit-attempted="submitAttempted"
-            :submission-alert-color="submissionAlertColor" :data-product-files="dataProductFiles" />
+                setFiles(files);
+                isSubmissionAlertVisible = false;
+              }
+            "
+            @remove-file="removeFile"
+            :submit-attempted="submitAttempted"
+            :submission-alert-color="submissionAlertColor"
+            :data-product-files="dataProductFiles"
+          />
         </template>
 
         <!-- custom controls -->
         <template #controls="{ nextStep, prevStep }">
           <div class="flex items-center justify-around w-full">
-            <va-button class="flex-none" preset="primary" @click="() => {
-              isSubmissionAlertVisible = false;
-              prevStep();
-            }
-              " :disabled="step === 0 || submitAttempted">
+            <va-button
+              class="flex-none"
+              preset="primary"
+              @click="
+                () => {
+                  isSubmissionAlertVisible = false;
+                  prevStep();
+                }
+              "
+              :disabled="step === 0 || submitAttempted"
+            >
               Previous
             </va-button>
-            <va-button class="flex-none" @click="onNextClick(nextStep)" :color="isLastStep ? 'success' : 'primary'"
-              :disabled="!isSubmitEnabled">
+            <va-button
+              class="flex-none"
+              @click="onNextClick(nextStep)"
+              :color="isLastStep ? 'success' : 'primary'"
+              :disabled="!isSubmitEnabled"
+            >
               {{
                 isLastStep
                   ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
@@ -344,9 +401,9 @@ const evaluateChecksums = (filesToUpload) => {
 // Uploads a chunk. Retries to upload chunk upto 5 times in case of network
 // errors.
 const uploadChunk = async (chunkData) => {
-  console.log("uploadChunk()")
+  console.log("uploadChunk()");
   const upload = async () => {
-    console.log("upload()")
+    console.log("upload()");
     if (uploadCancelled.value) {
       return false;
     }
@@ -356,7 +413,7 @@ const uploadChunk = async (chunkData) => {
     // console.log("uploadToken.value")
     // console.dir(uploadToken.value, {depth: null})
 
-    uploadService.setToken(uploadToken.value)
+    uploadService.setToken(uploadToken.value);
     try {
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
@@ -419,22 +476,9 @@ const uploadFileChunks = async (fileDetails) => {
   return uploaded;
 };
 
-const testCall = async () => {
-  return uploadService
-    .test()
-    .then((res) => {
-      console.log("test call success");
-      console.log(res.data);
-    })
-    .catch((err) => {
-      console.log("test call error");
-      console.log(err);
-    });
-};
-
 const uploadFile = async (fileDetails) => {
-  console.log(`Beginning upload of file`);
-  console.log("fileDetails");
+  // console.log(`Beginning upload of file`);
+  // console.log("fileDetails");
   console.dir(fileDetails, { depth: null });
 
   // persist token in store
@@ -478,6 +522,7 @@ const uploadFile = async (fileDetails) => {
     delete fileDetails.progress;
   }
 
+  auth.postFileUpload();
   return successful;
 };
 
@@ -488,8 +533,7 @@ const onSubmit = () => {
   isSubmissionAlertVisible.value = false;
   submitAttempted.value = true;
 
-  console.log("onSubmit will return")
-
+  // console.log("onSubmit will return");
 
   return new Promise((resolve, reject) => {
     preUpload()
@@ -498,7 +542,7 @@ const onSubmit = () => {
 
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
-          console.log("if (filesUpload), resolve")
+          // console.log("if (filesUpload), resolve")
           resolve();
         } else {
           submissionStatus.value = SUBMISSION_STATES.UPLOAD_FAILED;
@@ -506,7 +550,7 @@ const onSubmit = () => {
           submissionAlertColor.value = "warning";
           submissionAlert.value = "Some files could not be uploaded.";
           isSubmissionAlertVisible.value = true;
-          console.log("else, reject")
+          // console.log("else, reject")
           reject();
         }
       })
@@ -518,12 +562,11 @@ const onSubmit = () => {
         submissionAlert.value =
           "There was an error. Please try submitting again.";
         isSubmissionAlertVisible.value = true;
-        console.log("catch")
-        console.log("reject")
+        // console.log("catch")
+        // console.log("reject")
         reject();
       });
   });
-
 };
 
 const postSubmit = () => {
@@ -565,11 +608,11 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      console.log("onSubmit then")
+      // console.log("onSubmit then");
       return datasetService.processUpload(uploadLog.value.dataset_id);
     })
     .catch((err) => {
-      console.log("onSubmit catch")
+      // console.log("onSubmit catch");
       console.log(err);
     })
     .finally(() => {
@@ -601,19 +644,19 @@ const preUpload = async () => {
 
   const logData = uploadLog.value?.id
     ? {
-      status: config.upload_status.UPLOADING,
-      increment_processing_count: false,
-    }
+        status: config.upload_status.UPLOADING,
+        increment_processing_count: false,
+      }
     : {
-      ...uploadFormData.value,
-      files_metadata: dataProductFiles.value.map((e) => {
-        return {
-          name: e.name,
-          checksum: e.fileChecksum,
-          num_chunks: e.numChunks,
-        };
-      }),
-    };
+        ...uploadFormData.value,
+        files_metadata: dataProductFiles.value.map((e) => {
+          return {
+            name: e.name,
+            checksum: e.fileChecksum,
+            num_chunks: e.numChunks,
+          };
+        }),
+      };
 
   const res = await createOrUpdateUploadLog(uploadLog.value?.id, logData);
   uploadLog.value = res.data;
@@ -681,9 +724,9 @@ onBeforeRouteLeave(() => {
   return submitAttempted.value &&
     submissionStatus.value !== SUBMISSION_STATES.UPLOADED
     ? window.confirm(
-      "Leaving this page before all files have been processed/uploaded will" +
-      " cancel the upload. Do you wish to continue?",
-    )
+        "Leaving this page before all files have been processed/uploaded will" +
+          " cancel the upload. Do you wish to continue?",
+      )
     : true;
 });
 

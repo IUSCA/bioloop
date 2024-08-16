@@ -39,7 +39,7 @@ export const useAuthStore = defineStore("auth", () => {
     loggedIn.value = false;
     user.value = {};
     token.value = "";
-    uploadToken.value = ""
+    uploadToken.value = "";
   }
 
   function casLogin({ ticket }) {
@@ -99,12 +99,12 @@ export const useAuthStore = defineStore("auth", () => {
         const payload = jwtDecode(token.value);
         const expiresAt = new Date(payload.exp * 1000);
 
-        console.log("expiresAt")
-        console.log(expiresAt)
+        console.log("expiresAt");
+        console.log(expiresAt);
 
         const now = new Date();
-        console.log("now")
-        console.log(now)
+        console.log("now");
+        console.log(now);
 
         if (now < expiresAt) {
           // token is still alive
@@ -126,41 +126,41 @@ export const useAuthStore = defineStore("auth", () => {
 
   function refreshUploadTokenBeforeExpiry(fileName) {
     // idempotent method - will not create a timeout if one already exists
-    console.log("refreshUploadTokenBeforeExpiry")
+    // console.log("refreshUploadTokenBeforeExpiry")
 
     if (!refreshUploadTokenTimer) {
-      console.log("if (!refreshUploadTokenTimer)")
-      // timer is not running 
+      // console.log("if (!refreshUploadTokenTimer)")
+      // timer is not running
       try {
         // console.log("uploadToken.value")
         // console.dir(uploadToken.value, { depth: null })
         const payload = jwtDecode(uploadToken.value);
-        console.log("payload")
-        console.dir(payload, { depth: null })
+        // console.log("payload")
+        // console.dir(payload, { depth: null })
 
         const expiresAt = new Date(payload.exp * 1000);
-        console.log("expiresAt")
-        console.log(expiresAt)
+        // console.log("expiresAt")
+        // console.log(expiresAt)
 
         const now = new Date();
-        console.log("now")
-        console.log(now)
+        // console.log("now")
+        // console.log(now)
 
         if (now < expiresAt) {
           // token is still alive
-          console.log("if (now < expiresAt)")
+          // console.log("if (now < expiresAt)")
           const delay =
             expiresAt -
             now -
             config.refreshTokenTMinusSeconds.uploadToken * 1000;
           console.log(
-            "auth store: refreshUploadTokenBeforeExpiry: trigerring refreshToken in ",
+            "auth store: refreshUploadTokenBeforeExpiry: triggering refreshToken in ",
             delay / 1000,
             "seconds",
           );
           refreshUploadTokenTimer = setInterval(() => {
-            console.log("setInterval called")
-            refreshUploadToken(fileName)
+            // console.log("setInterval called");
+            refreshUploadToken(fileName);
           }, delay);
         }
         // else - do nothing, navigation guard will redirect to /auth
@@ -184,21 +184,21 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function refreshUploadToken(fileName) {
-    console.log("refreshUploadToken() " + fileName);
+    // console.log("refreshUploadToken() " + fileName);
 
-    const now = new Date();
-    console.log("now")
-    console.log(now)
+    // const now = new Date();
+    // console.log("now");
+    // console.log(now);
 
     refreshUploadTokenTimer = null; // reset upload timer state
-    console.log("fileName")
-    console.log(fileName)
+    // console.log("fileName");
+    // console.log(fileName);
 
     uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
-        console.log("then")
-        console.log(res.data.accessToken)
+        // console.log("then");
+        // console.log(res.data.accessToken);
         uploadToken.value = res.data.accessToken;
       })
       .catch((err) => {
@@ -240,9 +240,9 @@ export const useAuthStore = defineStore("auth", () => {
 
   const onFileUpload = async (fileName) => {
     // const uploadService = new UploadService(uploadToken.value);
-    console.log("onFileUpload")
-    console.log("filename")
-    console.log(fileName)
+    // console.log("onFileUpload")
+    // console.log("filename")
+    // console.log(fileName)
 
     return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
@@ -257,6 +257,14 @@ export const useAuthStore = defineStore("auth", () => {
       .catch((err) => {
         console.error("Unable to refresh upload token", err);
       });
+  };
+
+  const postFileUpload = () => {
+    // const uploadService = new UploadService(uploadToken.value);
+    // console.log("onFileUpload")
+    // console.log("filename")
+    // console.log(fileName)
+    clearInterval(refreshUploadTokenTimer);
   };
 
   return {
@@ -278,6 +286,7 @@ export const useAuthStore = defineStore("auth", () => {
     env,
     setEnv,
     onFileUpload,
+    postFileUpload,
   };
 });
 
