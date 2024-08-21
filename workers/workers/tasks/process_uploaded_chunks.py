@@ -56,7 +56,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     print("chunks_to_files called")
     
     try:
-        dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
+        dataset = api.get_dataset_test(dataset_id=dataset_id)
         upload_log = dataset['upload_log']
         upload_log_id = upload_log['id']
 

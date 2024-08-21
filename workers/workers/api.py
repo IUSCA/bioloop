@@ -179,6 +179,17 @@ def get_dataset(dataset_id: str,
         return dataset_getter(r.json())
 
 
+def get_dataset_test(dataset_id: str):
+    with APIServerSession() as s:
+        r = s.get(f'datasets/{dataset_id}')
+
+        print("retrieved dataset:")
+        print(r)
+
+        r.raise_for_status()
+        return dataset_getter(r.json())
+
+
 def create_dataset(dataset):
     with APIServerSession() as s:
         r = s.post('datasets', json=dataset_setter(dataset))
