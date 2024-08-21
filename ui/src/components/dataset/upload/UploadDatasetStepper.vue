@@ -21,7 +21,7 @@
             }"
             @click="setStep(i)"
             :disabled="submitAttempted"
-            preset="plain"
+            preset="secondary"
             >
             <div class="flex flex-col items-center">
               <Icon :icon="step.icon" />
