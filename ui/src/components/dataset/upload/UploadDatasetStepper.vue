@@ -94,7 +94,7 @@
               @select="addDataset"
               @remove="removeDataset"
               :column-widths="columnWidths"
-              :select-limit="1"
+              select-mode="single"
             ></DatasetSelect>
           </va-form-field>
 

@@ -88,7 +88,7 @@
                 :items="props.searchResults"
                 :columns="_searchResultColumns"
                 selectable
-                select-mode="multiple"
+                :select-mode="props.selectMode"
               >
                 <!-- dynamically generated templates for displaying columns of the search results table -->
                 <template
@@ -255,6 +255,10 @@ const props = defineProps({
   selectedResults: {
     type: Array,
     default: () => [],
+  },
+  selectMode: {
+    type: String,
+    default: () => 'multiple'
   },
   selectedLabel: {
     type: String,

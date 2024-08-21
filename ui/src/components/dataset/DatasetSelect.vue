@@ -3,6 +3,7 @@
     v-model:searchTerm="searchTerm"
     :search-results="datasets"
     :selected-results="props.selectedResults"
+    :selectMode="props.selectMode"
     :search-result-count="totalResultCount"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
@@ -43,10 +44,10 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
-import { formatBytes, lxor } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
+import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
+import { useBreakpoint } from "vuestic-ui";
 
 const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
@@ -60,6 +61,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  selectMode: {
+    type: String,
+    default: () => 'multiple'
+  }
 });
 
 const emit = defineEmits(["loading", "loaded"]);
