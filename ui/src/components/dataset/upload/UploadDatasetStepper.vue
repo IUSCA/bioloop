@@ -71,7 +71,7 @@
                   fileTypeList.push(newFileType);
                 }
               "
-              :allow-create-new="true"
+              :allow-create-new="submissionStatus === SUBMISSION_STATES.UNINITIATED"
               :file-type-list="fileTypeList"
             />
           </va-form-field>
@@ -92,6 +92,7 @@
               @select="addDataset"
               @remove="removeDataset"
               :column-widths="columnWidths"
+              :select-limit="1"
             ></DatasetSelect>
           </va-form-field>
 
@@ -170,7 +171,7 @@ import _ from "lodash";
 import SparkMD5 from "spark-md5";
 // import uploadService from "@/services/upload";
 import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
-import config from "@/config";
+import config, {SUBMISSION_STATES} from "@/config";
 import toast from "@/services/toast";
 import UploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
@@ -265,6 +266,7 @@ const noFilesSelected = computed(() => {
 const addDataset = (selectedDatasets) => {
   console.log("UploadDatasetStepper: Selected datasets");
   console.dir(selectedDatasets, { depth: null });
+  console.log("selectedDatasets.length", selectedDatasets.length);
   rawDataSelected.value = selectedDatasets;
 };
 
