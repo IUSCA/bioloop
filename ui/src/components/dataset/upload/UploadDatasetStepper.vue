@@ -13,19 +13,21 @@
           :key="step.label"
           #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
         >
-          <button
+          <va-button
             class="step-button p-1 sm:p-3 cursor-pointer"
             :class="{
               'step-button--active': isActive,
               'step-button--completed': isCompleted,
             }"
             @click="setStep(i)"
-          >
+            :disabled="submitAttempted"
+            preset="plain"
+            >
             <div class="flex flex-col items-center">
               <Icon :icon="step.icon" />
               <span class="hidden sm:block"> {{ step.label }} </span>
             </div>
-          </button>
+          </va-button>
         </template>
 
         <template #step-content-0>
@@ -171,7 +173,7 @@ import _ from "lodash";
 import SparkMD5 from "spark-md5";
 // import uploadService from "@/services/upload";
 import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
-import config, {SUBMISSION_STATES} from "@/config";
+import config from "@/config";
 import toast from "@/services/toast";
 import UploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";

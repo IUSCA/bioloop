@@ -8,7 +8,7 @@
     :options="props.fileTypeList"
     :text-by="(option) => option.name"
     :track-by="(option) => option"
-    :clearable="props.clearable"
+    :clearable="props.allowCreateNew"
   >
     <template #content="{ value }">
       <va-chip class="mr-2" key="name" size="small">
@@ -100,10 +100,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  clearable: {
-    type: Boolean,
-    default: true,
-  },
 });
 
 const emit = defineEmits(["update:modelValue", "fileTypeCreated"]);
@@ -179,10 +175,6 @@ const resetModalFormState = () => {
 const setModalVisibility = (visibility) => {
   isModalVisible.value = visibility;
 };
-
-watch(props.allowCreateNew, (allowCreateNew) => {
-  console.log("allowCreateNew changed to:", allowCreateNew);
-});
 </script>
 
 <style lang="scss">
