@@ -179,6 +179,10 @@ const resetModalFormState = () => {
 const setModalVisibility = (visibility) => {
   isModalVisible.value = visibility;
 };
+
+watch(props.allowCreateNew, (allowCreateNew) => {
+  console.log("allowCreateNew changed to:", allowCreateNew);
+});
 </script>
 
 <style lang="scss">
