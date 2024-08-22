@@ -31,8 +31,8 @@
       <template #step-content-0>
         <va-inner-loading :loading="loading">
           <FileListAutoComplete
-            v-model:selected="selectedFile"
-            :required="true"
+            :options="mockResults(fileSearchText)"
+            v-model:search-text="fileSearchText"
           />
         </va-inner-loading>
       </template>
@@ -122,6 +122,12 @@ const steps = [
   { label: "Source Raw Data", icon: "mdi:dna" },
 ];
 
+const fileSearchText = ref("");
+watch(fileSearchText, () => {
+  console.log("Stepper: fileSearchText has changed.");
+  console.log(`fileSearchText.value: ${fileSearchText.value}`);
+});
+
 const selectedFile = ref({});
 const filePath = computed(() =>
   Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
@@ -184,6 +190,24 @@ onMounted(() => {
     rawDataList.value = res.data.datasets;
   });
 });
+
+const mockResults = (path) => {
+  const mock = (path, index) =>
+    path ? `${path}_${index}` : `base_file_${index}`;
+
+  return [
+    {
+      name: mock(path, 1),
+      isDir: false,
+      path: `/path/to/${mock(path, 1)}`,
+    },
+    {
+      name: mock(path, 2),
+      isDir: false,
+      path: `/path/to/${mock(path, 2)}`,
+    },
+  ];
+};
 </script>
 
 <style lang="scss" scoped>
