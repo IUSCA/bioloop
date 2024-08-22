@@ -12,19 +12,20 @@
         :key="step.label"
         #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
       >
-        <button
+        <va-button
           class="step-button p-1 sm:p-3 cursor-pointer"
           :class="{
             'step-button--active': isActive,
             'step-button--completed': isCompleted,
           }"
           @click="isFormValid() && setStep(i)"
+          preset="secondary"
         >
           <div class="flex flex-col items-center">
             <Icon :icon="step.icon" />
             <span class="hidden sm:block"> {{ step.label }} </span>
           </div>
-        </button>
+        </va-button>
       </template>
 
       <template #step-content-0>
