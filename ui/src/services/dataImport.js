@@ -1,7 +1,8 @@
 import axios from "axios";
+import config from "@/config";
 
 const fsApi = axios.create({
-  baseURL: "http://localhost:3060",
+  baseURL: config.slateScratchPath,
 });
 
 class DataImportService {
@@ -17,7 +18,7 @@ class DataImportService {
   dirSize(path) {
     return new Promise((resolve, reject) => {
       const source = new EventSource(
-        "http://localhost:3060/fs/dir-size?path=" + path,
+        config.slateScratchPath + "/fs/dir-size?path=" + path,
       );
       let data = null;
       source.onmessage = function (event) {
