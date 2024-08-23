@@ -1,19 +1,19 @@
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!--      @update:search="emit('update:search', $event)"-->
     <va-select
-      v-model="_searchText"
+      v-model="selected"
       v-model:search="autoCompleteSearchValue"
-      class="col-span-1"
-      label="Sigle select"
+      label="File select"
       placeholder="Start to write..."
       :options="props.options"
       autocomplete
       highlight-matched-text
-      :messages="`Search value: ${autoCompleteSearchValue}`"
+      :messages="`Search text: ${autoCompleteSearchValue}`"
       track-by="path"
-      value-by="path"
       text-by="path"
     />
+    <!--      value-by="path"-->
   </div>
 </template>
 
@@ -23,39 +23,54 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  searchText: {
+  modelValue: {
+    type: Object,
+  },
+  search: {
     type: String,
     default: "",
   },
 });
-const { propsSearchText } = toRefs(props);
 
-const emit = defineEmits(["update:searchText"]);
+// const search = defineModel("search");
 
-const _searchText = computed({
+const propsSearchText = toRef(props, "search");
+//
+const emit = defineEmits(["update:modelValue", "update:search"]);
+//
+const selected = computed({
   get: () => {
-    console.log("computed getter: props.searchText", props.searchText);
-    return props.searchText;
+    console.log("computed getter: props.modelValue", props.modelValue);
+    return props.modelValue;
   },
   set: (value) => {
-    console.log("emitting update:searchText value: ", value);
-    emit("update:searchText", value);
+    console.log("emitting update:modelValue, new value: ", value);
+    emit("update:modelValue", value);
     // autoCompleteSearchValue.value = value;
   },
 });
-// const
+// // const
 
-const autoCompleteSearchValue = ref("");
-// const searchText = ref("");
+const autoCompleteSearchValue = computed({
+  get: () => {
+    console.log("computed getter: props.search:", props.search);
+    return props.search;
+  },
+  set: (value) => {
+    console.log("emitting update:search value: ", value);
+    emit("update:search", value);
+  },
+});
+// const search = ref("");
 
 onMounted(() => {
   // console.log("options on mount");
   // console.dir(props.options);
-  console.log("searchText on mount", _searchText.value);
+  console.log("search on mount", propsSearchText.value);
 });
 
 watch(propsSearchText, (newValue) => {
-  console.log("prop searchText on change", newValue);
+  console.log("prop search on change", newValue);
   // autoCompleteSearchValue.value = newValue;
 });
 </script>
