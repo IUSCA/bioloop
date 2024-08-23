@@ -41,8 +41,8 @@ def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_ch
                 print(f'Processing chunk {chunk_file}')
                 # with open(dataset_path, 'ab') as destination:
                 with open(chunk_file, 'rb') as chunk:
-                    dataset_path.write_bytes(chunk.read())
-                        # dataset_path.write("test")
+                    with open(dataset_path, 'ab') as destination:
+                        destination.write(chunk.read())
             # todo - close file handles
 
         # evaluated_checksum = utils.checksum(dataset_path)
