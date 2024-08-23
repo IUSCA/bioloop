@@ -1,17 +1,29 @@
 <template>
   <div class="flex-none">
-    <va-file-upload
-      class="w-full"
-      label="File"
-      upload-button-text="Select Files"
-      drop-zone-text="Drop files here"
-      dropzone
-      :disabled="props.submitAttempted"
-      @file-added="
-        (files) => {
-          // console.log('DatasetFileUploadTable - files');
-          // console.log(files);
-          emit('file-added', files);
+    <!--    <va-file-upload-->
+    <!--      class="w-full"-->
+    <!--      label="File"-->
+    <!--      upload-button-text="Select Files"-->
+    <!--      drop-zone-text="Drop files here"-->
+    <!--      dropzone-->
+    <!--      :disabled="props.submitAttempted"-->
+    <!--      @file-added="-->
+    <!--        (files) => {-->
+    <!--          // console.log('DatasetFileUploadTable - files');-->
+    <!--          // console.log(files);-->
+    <!--          emit('file-added', files);-->
+    <!--        }-->
+    <!--      "-->
+    <!--    />-->
+
+    <input
+      type="file"
+      directory
+      webkitdirectory
+      multiple
+      @change="
+        (e) => {
+          emit('file-added', e.target.files);
         }
       "
     />
