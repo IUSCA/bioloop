@@ -7,7 +7,7 @@ class UploadApi {
     // console.log(token);
     // this.token = token;
     this.axiosInstance = axios.create({
-      baseURL: config.uploadBasePath,
+      baseURL: config.uploadApiBasePath,
     });
 
     // this.setInterceptors();
@@ -17,8 +17,8 @@ class UploadApi {
     // console.log("uploadApi setToken")
     // console.log(token)
 
-    this.token = token
-    this.setInterceptors()
+    this.token = token;
+    this.setInterceptors();
   }
 
   setInterceptors() {
@@ -68,7 +68,7 @@ export default UploadApi;
 // // const _token = localStorage.getItem("uploadToken");
 //
 // const uploadApi = axios.create({
-//   baseURL: config.uploadBasePath,
+//   baseURL: config.uploadApiBasePath,
 // });
 //
 // uploadApi.interceptors.request.use(
