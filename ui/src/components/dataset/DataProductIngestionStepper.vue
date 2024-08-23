@@ -12,26 +12,39 @@
         :key="step.label"
         #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
       >
-        <button
+        <va-button
           class="step-button p-1 sm:p-3 cursor-pointer"
           :class="{
             'step-button--active': isActive,
             'step-button--completed': isCompleted,
           }"
           @click="isFormValid() && setStep(i)"
+          preset="secondary"
         >
           <div class="flex flex-col items-center">
             <Icon :icon="step.icon" />
             <span class="hidden sm:block"> {{ step.label }} </span>
           </div>
-        </button>
+        </va-button>
       </template>
 
       <template #step-content-0>
         <va-inner-loading :loading="loading">
           <FileListAutoComplete
-            v-model:selected="selectedFile"
-            :required="true"
+            :options="mockResults(pathSearchText)"
+            v-model="pathSelected"
+            @update:model-value="
+              (newSelectedPath) => {
+                console.log(`Stepper newSelectedPath:`);
+                console.dir(newSelectedPath, { depth: null });
+              }
+            "
+            v-model:search="pathSearchText"
+            @update:search="
+              (newSearchText) => {
+                console.log(`Stepper newSearch:`, newSearchText);
+              }
+            "
           />
         </va-inner-loading>
       </template>
@@ -121,6 +134,13 @@ const steps = [
   { label: "Source Raw Data", icon: "mdi:dna" },
 ];
 
+const pathSelected = ref({});
+const pathSearchText = ref("");
+watch(pathSearchText, () => {
+  console.log("Stepper: pathSearchText has changed.");
+  console.log(`fileSearchText.value: ${pathSearchText.value}`);
+});
+
 const selectedFile = ref({});
 const filePath = computed(() =>
   Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
@@ -183,6 +203,25 @@ onMounted(() => {
     rawDataList.value = res.data.datasets;
   });
 });
+
+const mockResults = (path) => {
+  const mock = (path, index) =>
+    path ? `${path}_${index}` : `base_file_${index}`;
+  const mockPath = (path, index) => `path/to/${mock(path, index)}`;
+
+  return [
+    {
+      name: mock(path, 1),
+      isDir: false,
+      path: mockPath(path, 1),
+    },
+    {
+      name: mock(path, 2),
+      isDir: false,
+      path: mockPath(path, 2),
+    },
+  ];
+};
 </script>
 
 <style lang="scss" scoped>

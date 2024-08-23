@@ -3,7 +3,7 @@ const exports = {
   // vite server redirects traffic on starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
-  uploadBasePath: "https://bioloop-dev2.sca.iu.edu",
+  uploadApiBasePath: "https://bioloop-dev2.sca.iu.edu",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   googleReturn:
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
@@ -11,7 +11,7 @@ const exports = {
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
   refreshTokenTMinusSeconds: {
     appToken: 300,
-    uploadToken: 5,
+    uploadToken: 10,
   },
   // refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",

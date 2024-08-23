@@ -1,116 +1,76 @@
 <template>
-  <AutoComplete
-    ref="fileListAutoComplete"
-    :async="true"
-    :show-selected-result="true"
-    v-model:search-text="searchText"
-    @update:search-text="(path) => loadFileList(path)"
-    @open="loadFileList"
-    @close="resetFileList"
-    @select="handleSelect"
-    placeholder="Enter Directory Path"
-    :data="filesInPath"
-    :display-by="displayBy"
-    :error="!!requiredError"
-    :error-messages="requiredError"
-    label="Directory"
-  />
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!--      @update:search="emit('update:search', $event)"-->
+    <va-select
+      v-model="selected"
+      v-model:search="autoCompleteSearchValue"
+      label="File select"
+      placeholder="Start to write..."
+      :options="props.options"
+      autocomplete
+      highlight-matched-text
+      :messages="`Search text: ${autoCompleteSearchValue}`"
+      track-by="path"
+      text-by="path"
+    />
+    <!--      value-by="path"-->
+  </div>
 </template>
 
 <script setup>
-import dataImport from "@/services/dataImport";
-import dataImportService from "@/services/dataImport";
-import toast from "@/services/toast";
-
 const props = defineProps({
-  selected: {
+  options: {
+    type: Array,
+    default: () => [],
+  },
+  modelValue: {
     type: Object,
-    required: true,
   },
-  required: {
-    type: Boolean,
-    default: false,
+  search: {
+    type: String,
+    default: "",
   },
 });
 
-const emit = defineEmits(["update:selected"]);
+// const search = defineModel("search");
 
-const handleSelect = (selectedItem) => emit("update:selected", selectedItem);
+const propsSearchText = toRef(props, "search");
+//
+const emit = defineEmits(["update:modelValue", "update:search"]);
+//
+const selected = computed({
+  get: () => {
+    console.log("computed getter: props.modelValue", props.modelValue);
+    return props.modelValue;
+  },
+  set: (value) => {
+    console.log("emitting update:modelValue, new value: ", value);
+    emit("update:modelValue", value);
+    // autoCompleteSearchValue.value = value;
+  },
+});
+// // const
 
-const displayBy = (item) => {
-  // console.log(`FileListAutoComplete, displayBy(): BEGIN`);
-  // console.log(`item`);
-  // console.log(item);
-  // console.log(`FileListAutoComplete, displayBy(): END`);
+const autoCompleteSearchValue = computed({
+  get: () => {
+    console.log("computed getter: props.search:", props.search);
+    return props.search;
+  },
+  set: (value) => {
+    console.log("emitting update:search value: ", value);
+    emit("update:search", value);
+  },
+});
+// const search = ref("");
 
-  return item.path;
-};
-
-const loading = ref(true);
-const filesInPath = ref([]);
-
-const searchText = ref("");
-watchEffect(() => (searchText.value = props.selected.path || ""));
-
-const requiredError = ref("");
-
-const handleInput = () => {
-  // console.log(`FileListAutoComplete, handleClear - BEGIN`);
-
-  // console.log(`searchText.value`);
-  // console.log(searchText.value);
-
-  requiredError.value =
-    searchText.value === "" && props.required
-      ? "Please select a directory"
-      : "";
-
-  // console.log(`requiredError.value`);
-  // console.log(requiredError.value);
-
-  if (searchText.value === "") {
-    emit("update:selected", {});
-    // console.log(`emitted 'update:selected'`);
-  }
-  // console.log(`FileListAutoComplete, handleClear - END`);
-};
-
-watch(searchText, () => {
-  // console.log(`FileListAutoComplete, searchText WATCH - BEGIN`);
-  handleInput();
-  // console.log(`FileListAutoComplete, searchText WATCH - END`);
+onMounted(() => {
+  // console.log("options on mount");
+  // console.dir(props.options);
+  console.log("search on mount", propsSearchText.value);
 });
 
-// watch(searchFileListAutoComplete, searchText WATCH - END => {
-//   console.log(`FileListAutoComplete, watch(): BEGIN: searchText changed`);
-//   console.log(`searchText`);
-//   console.log(searchText.value);
-// });
-
-const fileListAutoComplete = ref(null);
-
-const loadFileList = (path) => {
-  // console.log(`FileListAutoComplete, loadFileList(): BEGIN`);
-  loading.value = true;
-  dataImportService
-    .listDir(path)
-    .then((res) => {
-      // console.log(`FileListAutoComplete, loadFileList(): RETRIEVED`);
-      filesInPath.value = res.data;
-    })
-    .catch(() => {
-      // console.log(`FileListAutoComplete, loadFileList(): ERROR`);
-      toast.error("Could not retrieve directory's contents");
-    })
-    .finally(() => {
-      loading.value = false;
-      // console.log(`FileListAutoComplete, loadFileList(): END`);
-    });
-};
-
-const resetFileList = () => {
-  // console.log(`FileListAutoComplete, resetFileList(): BEGIN`);
-  filesInPath.value = [];
-  // console.log(`FileListAutoComplete, resetFileList(): END`);
-};
+watch(propsSearchText, (newValue) => {
+  console.log("prop search on change", newValue);
+  // autoCompleteSearchValue.value = newValue;
+});
 </script>
