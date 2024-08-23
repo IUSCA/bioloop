@@ -5,10 +5,20 @@ import api from "./api";
 const auth = useAuthStore();
 
 class projectService {
-  getAll({ forSelf }) {
+  getAll({
+    forSelf,
+    take = 10,
+    skip = 0,
+    search = "",
+    sortBy = "updated_at",
+    sort_order = "asc",
+  } = {}) {
     const username = auth.user.username;
+    const params = { take, skip, search, sortBy, sort_order };
     return (
-      forSelf ? api.get(`/projects/${username}/all`) : api.get("/projects/all")
+      forSelf
+        ? api.get(`/projects/${username}/all`, { params })
+        : api.get("/projects/all", { params })
     ).catch((err) => {
       console.error(err);
       toast.error("Unable to fetch projects");
