@@ -149,7 +149,8 @@ const beforeModalCancel = (hide) => {
 };
 
 const beforeModalOk = (hide) => {
-  // force validation to run, which would otherwise only run when a field is interacted with
+  // force validation to run, which would otherwise only run when a field is
+  // interacted with
   validate();
   // if there are form-wide errors, show them
   if (isValid.value) {

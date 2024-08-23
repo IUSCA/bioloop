@@ -31,8 +31,20 @@
       <template #step-content-0>
         <va-inner-loading :loading="loading">
           <FileListAutoComplete
-            :options="mockResults(fileSearchText)"
-            v-model:search-text="fileSearchText"
+            :options="mockResults(pathSearchText)"
+            v-model="pathSelected"
+            @update:model-value="
+              (newSelectedPath) => {
+                console.log(`Stepper newSelectedPath:`);
+                console.dir(newSelectedPath, { depth: null });
+              }
+            "
+            v-model:search="pathSearchText"
+            @update:search="
+              (newSearchText) => {
+                console.log(`Stepper newSearch:`, newSearchText);
+              }
+            "
           />
         </va-inner-loading>
       </template>
@@ -122,10 +134,11 @@ const steps = [
   { label: "Source Raw Data", icon: "mdi:dna" },
 ];
 
-const fileSearchText = ref("");
-watch(fileSearchText, () => {
-  console.log("Stepper: fileSearchText has changed.");
-  console.log(`fileSearchText.value: ${fileSearchText.value}`);
+const pathSelected = ref({});
+const pathSearchText = ref("");
+watch(pathSearchText, () => {
+  console.log("Stepper: pathSearchText has changed.");
+  console.log(`fileSearchText.value: ${pathSearchText.value}`);
 });
 
 const selectedFile = ref({});
@@ -194,17 +207,18 @@ onMounted(() => {
 const mockResults = (path) => {
   const mock = (path, index) =>
     path ? `${path}_${index}` : `base_file_${index}`;
+  const mockPath = (path, index) => `path/to/${mock(path, index)}`;
 
   return [
     {
       name: mock(path, 1),
       isDir: false,
-      path: `/path/to/${mock(path, 1)}`,
+      path: mockPath(path, 1),
     },
     {
       name: mock(path, 2),
       isDir: false,
-      path: `/path/to/${mock(path, 2)}`,
+      path: mockPath(path, 2),
     },
   ];
 };
