@@ -5,7 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 
 // const logger = require('../services/logger');
 const userService = require('../services/user');
-const { validate, addSortSantizer } = require('../middleware/validators');
+const { validate } = require('../middleware/validators');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 
@@ -28,13 +28,30 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    addSortSantizer(query('sort').default('username:asc')),
+    query('search').isString().default(''),
+    query('skip').isInt({ min: 0 }).default(0),
+    query('take').isInt({ min: 1 }).default(25),
+    query('sortBy')
+      .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted'])
+      .default('username'),
+    query('sort_order').default('asc'),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Users']
-    const users = await userService.findAll(req.query.sort);
-    return res.json(users);
-    // res.json(req.query.sort);
+    const {
+      search, sortBy, sort_order, skip, take,
+    } = req.query;
+
+    const { users, count } = await userService.findAll({
+      search,
+      sortBy,
+      sort_order,
+      skip: parseInt(skip, 10),
+      take: parseInt(take, 10),
+    });
+    return res.json({
+      metadata: { count },
+      users,
+    });
   }),
 );
 

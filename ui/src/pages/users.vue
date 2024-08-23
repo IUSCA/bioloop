@@ -34,7 +34,9 @@
     class="usertable"
     :items="users"
     :columns="columns"
-    :filter="filterInput"
+    v-model:sort-by="params.sortBy"
+    v-model:sorting-order="params.sortingOrder"
+    disable-client-side-sorting
     :loading="data_loading"
   >
     <!-- roles -->
@@ -67,9 +69,9 @@
       />
     </template>
 
-    <template #cell(login)="{ source }">
-      <span v-if="source?.last_login">
-        {{ datetime.fromNow(source.last_login) }}</span
+    <template #cell(last_login)="{ rowData }">
+      <span v-if="rowData?.login?.last_login">
+        {{ datetime.fromNow(rowData?.login?.last_login) }}</span
       >
     </template>
 
@@ -116,6 +118,16 @@
       </div>
     </template>
   </va-data-table>
+
+  <!-- pagination -->
+  <Pagination
+    class="mt-4 px-1 lg:px-3"
+    v-model:page="params.currentPage"
+    v-model:page_size="params.itemsPerPage"
+    :total_results="totalItems"
+    :curr_items="users.length"
+    :page_size_options="PAGE_SIZE_OPTIONS"
+  />
 
   <!-- edit modal -->
   <va-modal
@@ -211,16 +223,23 @@
 </template>
 
 <script setup>
+import useQueryPersistence from "@/composables/useQueryPersistence";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import UserService from "@/services/user";
-import { cmp } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
-
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const users = ref([]);
 const filterInput = ref("");
+// const debouncedInput = useDebounce(filterInput, 300);
+// const currentPage = ref(1);
+// const itemsPerPage = ref(25); // Number of items per page
+const totalItems = ref(0);
+// const sort_by = ref("name");
+// const sort_order = ref("asc");
+
 const editing = ref(false);
 const editedUser = ref({});
 const modifyFormRef = ref(null);
@@ -231,6 +250,33 @@ const roleOptions = ["user", "operator", "admin"];
 const autofill = ref({
   username: "",
   cas_id: "",
+});
+
+debouncedWatch(
+  filterInput,
+  () => {
+    params.value.search = filterInput.value;
+  },
+  { debounce: 300 },
+);
+
+function defaultParams() {
+  return {
+    search: "",
+    sortBy: "name",
+    sortingOrder: "asc",
+    currentPage: 1,
+    itemsPerPage: 25,
+  };
+}
+
+const params = ref(defaultParams());
+
+useQueryPersistence({
+  refObject: params,
+  defaultValueFn: defaultParams,
+  key: "u",
+  history_push: true,
 });
 
 const editModalTitle = computed(() => {
@@ -251,9 +297,9 @@ function get_role_color(role) {
 }
 
 const columns = ref([
-  { key: "name", sortable: true },
-  { key: "username", sortable: true, sortingOptions: ["desc", "asc", null] },
-  { key: "email", sortable: true },
+  { key: "name", sortable: true, sortingOptions: ["asc", "desc", null] },
+  { key: "username", sortable: true, sortingOptions: ["asc", "desc", null] },
+  { key: "email", sortable: true, sortingOptions: ["asc", "desc", null] },
   { key: "roles", sortable: false },
   {
     key: "created_at",
@@ -263,11 +309,10 @@ const columns = ref([
   },
   { key: "is_deleted", sortable: true, label: "status", width: "60px" },
   {
-    key: "login",
+    key: "last_login",
     sortable: true,
     label: "Last Login",
     width: "150px",
-    sortingFn: (a, b) => cmp(a?.last_login, b?.last_login),
   },
   {
     key: "login_method",
@@ -280,9 +325,23 @@ const columns = ref([
 
 function fetch_all_users() {
   data_loading.value = true;
-  UserService.getAll()
-    .then((_users) => {
-      users.value = _users;
+
+  const skip = (params.value.currentPage - 1) * params.value.itemsPerPage;
+
+  const queryparams = {
+    forSelf: !auth.canOperate,
+    search: params.value.search,
+    take: params.value.itemsPerPage,
+    skip: skip,
+    sortBy: params.value.sortBy,
+    sort_order: params.value.sortingOrder,
+  };
+
+  UserService.getAll(queryparams)
+    .then((data) => {
+      const { metadata, users: userList } = data;
+      users.value = userList;
+      totalItems.value = metadata.count;
     })
     .catch((err) => {
       console.error(err);
@@ -388,6 +447,38 @@ function createUser() {
       });
   }
 }
+
+// watch([itemsPerPage, debouncedInput, sort_by, sort_order], () => {
+//   if (currentPage.value === 1) {
+//     fetch_all_users();
+//   }
+//   currentPage.value = 1;
+// });
+
+watch(
+  [
+    () => params.value.itemsPerPage,
+    () => params.value.search,
+    () => params.value.sortBy,
+    () => params.value.sortingOrder,
+  ],
+  () => {
+    if (params.value.currentPage === 1) {
+      fetch_all_users();
+    }
+    params.value.currentPage = 1;
+  },
+);
+
+// watch(currentPage, () => {
+//   fetch_all_users();
+// });
+watch(
+  () => params.value.currentPage,
+  () => {
+    fetch_all_users();
+  },
+);
 
 watch(
   () => editedUser.value.email,
