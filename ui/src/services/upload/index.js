@@ -4,7 +4,8 @@ class UploadService {
   constructor() {
     // console.log("uploadService token");
     // console.log(token);
-    this.uploadApi = new UploadApi()
+    console.log("uploadService instantiated");
+    this.uploadApi = new UploadApi();
     // this.uploadApi.setToken(token)
     this.axios = this.uploadApi.axiosInstance;
     // console.log("this.uploadApi.token");
@@ -12,9 +13,10 @@ class UploadService {
   }
 
   setToken(token) {
-    // console.log("uploadService setToken")
-    // console.log(token)
-    this.uploadApi.setToken(token)
+    console.log("uploadService setToken() called");
+    console.log(token);
+    this.uploadApi.setToken(token);
+    console.log("---");
   }
 
   // test() {
@@ -26,6 +28,8 @@ class UploadService {
   // }
 
   uploadFile(data) {
+    console.log("uploadService uploadFile() called");
+    console.log("---");
     return this.axios.post("/upload", data);
   }
 }

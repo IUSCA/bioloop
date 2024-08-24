@@ -22,7 +22,7 @@
             @click="setStep(i)"
             :disabled="submitAttempted"
             preset="secondary"
-            >
+          >
             <div class="flex flex-col items-center">
               <Icon :icon="step.icon" />
               <span class="hidden sm:block"> {{ step.label }} </span>
@@ -73,7 +73,9 @@
                   fileTypeList.push(newFileType);
                 }
               "
-              :allow-create-new="submissionStatus === SUBMISSION_STATES.UNINITIATED"
+              :allow-create-new="
+                submissionStatus === SUBMISSION_STATES.UNINITIATED
+              "
               :file-type-list="fileTypeList"
             />
           </va-form-field>
@@ -414,23 +416,26 @@ const evaluateChecksums = (filesToUpload) => {
 const uploadChunk = async (chunkData) => {
   console.log("uploadChunk()");
   const upload = async () => {
-    console.log("upload()");
+    console.log("uploadChunk(): upload() called");
     if (uploadCancelled.value) {
       return false;
     }
 
     let chunkUploaded = false;
 
-    // console.log("uploadToken.value")
-    // console.dir(uploadToken.value, {depth: null})
+    console.log("uploadToken.value");
+    console.dir(uploadToken.value, { depth: null });
 
     uploadService.setToken(uploadToken.value);
     try {
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
+      console.log(`Successfully uploaded chunk`);
     } catch (e) {
-      console.log(`Encountered error`, e);
+      console.log(`Encountered error uploading chunk`, e);
     }
+    console.log("---");
+
     return chunkUploaded;
   };
 
@@ -488,8 +493,8 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  // console.log(`Beginning upload of file`);
-  // console.log("fileDetails");
+  console.log(`uploadFile`);
+  console.log("fileDetails");
   console.dir(fileDetails, { depth: null });
 
   // persist token in store
@@ -600,6 +605,8 @@ const postSubmit = () => {
   });
 
   if (uploadLog.value) {
+    console.log("postSubmit()");
+    console.log("uploadLog.value.id", uploadLog.value.id);
     createOrUpdateUploadLog(uploadLog.value.id, {
       status: someFilesPendingUpload.value
         ? config.upload_status.UPLOAD_FAILED
@@ -669,12 +676,16 @@ const preUpload = async () => {
         }),
       };
 
+  console.log("preUpload: logData", logData);
   const res = await createOrUpdateUploadLog(uploadLog.value?.id, logData);
   uploadLog.value = res.data;
 };
 
 // Log (or update) upload status
 const createOrUpdateUploadLog = (logId, data) => {
+  console.log("createOrUpdateUploadLog: logId", logId);
+  console.log("createOrUpdateUploadLog: data:");
+  console.dir(data, { depth: null });
   return !logId
     ? datasetService.logUpload(data)
     : datasetService.updateUploadLog(logId, data);
