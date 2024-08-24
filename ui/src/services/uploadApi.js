@@ -14,8 +14,9 @@ class UploadApi {
   }
 
   setToken(token) {
-    // console.log("uploadApi setToken")
-    // console.log(token)
+    console.log("uploadApi setToken() called");
+    console.log(token);
+    console.log("---");
 
     this.token = token;
     this.setInterceptors();
