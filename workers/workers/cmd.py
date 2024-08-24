@@ -160,7 +160,7 @@ def total_size(dir_path: Path | str):
 
 
 def tar(tar_path: Path | str, source_dir: Path | str) -> None:
-    command = ['tar', 'cf', str(tar_path), '--sparse', str(source_dir)]
+    command = ['tar', 'cf', str(tar_path), '--sparse', '-C', str(source_dir), '.']
     execute(command)
 
 
