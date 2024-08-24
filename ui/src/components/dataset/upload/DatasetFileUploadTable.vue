@@ -1,32 +1,36 @@
 <template>
   <div class="flex-none">
-    <!--    <va-file-upload-->
-    <!--      class="w-full"-->
-    <!--      label="File"-->
-    <!--      upload-button-text="Select Files"-->
-    <!--      drop-zone-text="Drop files here"-->
-    <!--      dropzone-->
-    <!--      :disabled="props.submitAttempted"-->
-    <!--      @file-added="-->
-    <!--        (files) => {-->
-    <!--          // console.log('DatasetFileUploadTable - files');-->
-    <!--          // console.log(files);-->
-    <!--          emit('file-added', files);-->
-    <!--        }-->
-    <!--      "-->
-    <!--    />-->
-
-    <input
-      type="file"
-      directory
-      webkitdirectory
-      multiple
-      @change="
-        (e) => {
-          emit('file-added', e.target.files);
+    <va-file-upload
+      class="w-full"
+      label="File"
+      upload-button-text="Select Files"
+      drop-zone-text="Drop files here"
+      dropzone
+      :disabled="props.submitAttempted"
+      @file-added="
+        (files) => {
+          // console.log('DatasetFileUploadTable - files');
+          // console.log(files);
+          emit('file-added', files);
         }
       "
     />
+
+    <!--    <input-->
+    <!--      label="Choose Folder"-->
+    <!--      type="file"-->
+    <!--      directory-->
+    <!--      webkitdirectory-->
+    <!--      multiple-->
+    <!--      @change="-->
+    <!--        (e) => {-->
+    <!--          // for (let file of e.target.files) {-->
+    <!--          //   console.log('file path', file.webkitRelativePath);-->
+    <!--          // }-->
+    <!--          onDirectorySelection(e);-->
+    <!--        }-->
+    <!--      "-->
+    <!--    />-->
 
     <va-data-table
       v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
@@ -188,6 +192,46 @@ const props = defineProps({
     required: true,
   },
 });
+
+const onDirectorySelection = (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  // if directory support is available
+  if (e.dataTransfer && e.dataTransfer.items) {
+    const items = e.dataTransfer.items;
+    for (const i = 0; i < items.length; i++) {
+      const item = items[i].webkitGetAsEntry();
+
+      if (item) {
+        addDirectory(item);
+      }
+    }
+    return;
+  }
+  const files = e.target.files || e.dataTransfer.files;
+  if (!files.length) {
+    alert("File type not accepted");
+    return;
+  }
+
+  // processFile(files);
+};
+
+function addDirectory(item) {
+  var _this = this;
+  if (item.isDirectory) {
+    var directoryReader = item.createReader();
+    directoryReader.readEntries(function (entries) {
+      entries.forEach(function (entry) {
+        _this.addDirectory(entry);
+      });
+    });
+  } else {
+    item.file(function (file) {
+      processFile([file], 0);
+    });
+  }
+}
 
 const emit = defineEmits(["file-added", "remove-file"]);
 
