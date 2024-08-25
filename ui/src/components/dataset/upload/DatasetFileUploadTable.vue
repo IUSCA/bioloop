@@ -1,11 +1,11 @@
 <template>
-  <div class="flex-none">
+  <div class="flex flex-row">
     <va-file-upload
       class="w-full"
       label="File"
       upload-button-text="Select Files"
-      drop-zone-text="Drop files here"
       dropzone
+      dropZoneText=""
       :disabled="props.submitAttempted"
       @file-added="
         (files) => {
@@ -16,21 +16,44 @@
       "
     />
 
-    <!--    <input-->
-    <!--      label="Choose Folder"-->
-    <!--      type="file"-->
-    <!--      directory-->
-    <!--      webkitdirectory-->
-    <!--      multiple-->
-    <!--      @change="-->
-    <!--        (e) => {-->
-    <!--          // for (let file of e.target.files) {-->
-    <!--          //   console.log('file path', file.webkitRelativePath);-->
-    <!--          // }-->
-    <!--          onDirectorySelection(e);-->
-    <!--        }-->
-    <!--      "-->
-    <!--    />-->
+    <div
+      class="va-file-upload va-file-upload--dropzone w-full"
+      label="File"
+      style="background-color: rgba(51, 114, 240, 0.08)"
+    >
+      <div class="va-file-upload__field">
+        <div class="va-file-upload__field__text">
+          <!--            label="Choose Folder"-->
+          <input
+            label="Choose Folder"
+            ref="folderUploadInput"
+            class="folder-upload"
+            id="folder-upload"
+            type="file"
+            directory
+            webkitdirectory
+            multiple
+            @change="
+              (e) => {
+                // for (let file of e.target.files) {
+                //   console.log('file path', file.webkitRelativePath);
+                // }
+                onDirectorySelection(e);
+              }
+            "
+          />
+          <va-button
+            @click="
+              () => {
+                folderUploadInput.click();
+              }
+            "
+          >
+            Select Folder
+          </va-button>
+        </div>
+      </div>
+    </div>
 
     <va-data-table
       v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
@@ -150,6 +173,8 @@ import config from "@/config";
 import _ from "lodash";
 import { formatBytes } from "@/services/utils";
 
+const folderUploadInput = ref(null);
+
 const props = defineProps({
   dataProductFiles: {
     type: Array,
@@ -264,4 +289,8 @@ const removeFile = (index) => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.folder-upload {
+  display: none;
+}
+</style>
