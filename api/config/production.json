@@ -1,6 +1,6 @@
 {
   "mode": "production",
-  "app_id": "demo.bioloop.iu.edu",
+  "app_id": "bc2.bioloop.iu.edu",
   "express": {
     "host": "0.0.0.0"
   },
@@ -10,7 +10,7 @@
   "auth": {
     "mode": "prod",
     "jwt": {
-      "iss": "demo.bioloop.iu.edu",
+      "iss": "bc2.bioloop.iu.edu",
       "ttl_milliseconds": 3600000
     }
   }

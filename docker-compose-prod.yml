@@ -1,9 +1,9 @@
 version: "3"
-name: bioloop-demo
+name: bioloop-bc2
 services:
   ui:
     restart: unless-stopped
-    image: node:19
+    image: docker.io/library/node:19
     volumes:
       - ./ui/:/opt/sca/app:z
       - ui_modules:/opt/sca/app/node_modules:z
@@ -19,11 +19,13 @@ services:
     volumes:
       - ./api/:/opt/sca/app:z
       - api_modules:/opt/sca/app/node_modules:z
+        #environment:
+        #PODMAN_USERNS: "keep-id:uid=${APP_UID}:1000,gid=${APP_GID}:1000" # Define in .env
     expose:
       - 3030
     ports:
       - 127.0.0.1:3030:3030
-    userns_mode: keep-id
+    userns_mode: keep-id:uid=${APP_UID},gid=${APP_GID}
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
      - postgres
@@ -36,7 +38,7 @@ services:
         ipv4_address: 172.19.3.6
 
   postgres:
-    image: postgres:14.5
+    image: docker.io/library/postgres:14.5
     restart: unless-stopped
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
@@ -55,7 +57,7 @@ services:
 
 # sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
   pgbackup:
-    image: postgres:14.5
+    image: docker.io/library/postgres:14.5
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -78,7 +80,7 @@ volumes:
 
 networks:
   bioloop_network:
-    name: bioloop-demo-network
+    name: bioloop-bc2-network
     ipam:
       config:
         - subnet: 172.19.0.0/24

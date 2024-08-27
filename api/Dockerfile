@@ -1,4 +1,4 @@
-FROM node:19
+FROM docker.io/library/node:19
 
 ARG APP_GID
 ARG APP_UID 
