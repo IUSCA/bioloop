@@ -11,7 +11,7 @@ const exports = {
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
   refreshTokenTMinusSeconds: {
     appToken: 300,
-    uploadToken: 5,
+    uploadToken: 10,
   },
   // refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",

@@ -127,17 +127,17 @@ export const useAuthStore = defineStore("auth", () => {
 
   function refreshUploadTokenBeforeExpiry(fileName) {
     // idempotent method - will not create a timeout if one already exists
-    // console.log("refreshUploadTokenBeforeExpiry")
+    console.log("refreshUploadTokenBeforeExpiry");
 
     if (!refreshUploadTokenTimer) {
-      // console.log("if (!refreshUploadTokenTimer)")
+      console.log("if (!refreshUploadTokenTimer)");
       // timer is not running
       try {
-        // console.log("uploadToken.value")
-        // console.dir(uploadToken.value, { depth: null })
+        console.log("uploadToken.value");
+        console.dir(uploadToken.value, { depth: null });
         const payload = jwtDecode(uploadToken.value);
-        // console.log("payload")
-        // console.dir(payload, { depth: null })
+        // console.log("payload");
+        // console.dir(payload, { depth: null });
 
         const expiresAt = new Date(payload.exp * 1000);
         // console.log("expiresAt")
@@ -154,6 +154,7 @@ export const useAuthStore = defineStore("auth", () => {
             expiresAt -
             now -
             config.refreshTokenTMinusSeconds.uploadToken * 1000;
+          console.log("delay: ", delay);
           console.log(
             "auth store: refreshUploadTokenBeforeExpiry: triggering refreshToken in ",
             delay / 1000,
@@ -161,31 +162,36 @@ export const useAuthStore = defineStore("auth", () => {
           );
           refreshUploadTokenTimer = setInterval(() => {
             // console.log("setInterval called");
+            console.log("refresh upload token, setInterval running");
+            console.log("---");
             refreshUploadToken(fileName);
           }, delay);
         }
         // else - do nothing, navigation guard will redirect to /auth
       } catch (err) {
         console.error("Errored trying to decode upload token", err);
+        console.log("---");
       }
     }
   }
 
   function refreshToken() {
-    console.log("refreshing token");
+    console.log("refreshToken()");
     refreshTokenTimer = null; // reset timer state
     authService
       .refreshToken()
       .then((res) => {
+        console.log("auth store: refreshToken: received new token");
+        console.lot("new token: ", res.data.token);
         if (res.data) onLogin(res.data);
       })
       .catch((err) => {
-        console.error("Unable to refresh token", err);
+        console.log("Unable to refresh token", err);
       });
   }
 
   function refreshUploadToken(fileName) {
-    // console.log("refreshUploadToken() " + fileName);
+    console.log("refreshUploadToken() " + fileName);
 
     // const now = new Date();
     // console.log("now");
@@ -198,12 +204,17 @@ export const useAuthStore = defineStore("auth", () => {
     uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
-        // console.log("then");
-        // console.log(res.data.accessToken);
+        console.log(
+          "auth store: refreshUploadToken: received new upload token",
+        );
+        console.log("then, new token:");
+        console.log(res.data.accessToken);
         uploadToken.value = res.data.accessToken;
+        console.log("---");
       })
       .catch((err) => {
         console.error("Unable to refresh upload token", err);
+        console.log("---");
       });
   }
 
@@ -241,31 +252,44 @@ export const useAuthStore = defineStore("auth", () => {
 
   const onFileUpload = async (fileName) => {
     // const uploadService = new UploadService(uploadToken.value);
-    // console.log("onFileUpload")
-    // console.log("filename")
-    // console.log(fileName)
+    console.log("onFileUpload");
+    console.log("filename");
+    console.log(fileName);
 
     return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
-        // console.log("token")
-        // console.log(res.data.accessToken)
+        console.log("got initial token");
+        console.log(res.data.accessToken);
         uploadToken.value = res.data.accessToken;
-        // console.log("uploadToken.value");
-        // console.log(uploadToken.value);
+        console.log("then");
+        console.log("uploadToken.value");
+        console.log(uploadToken.value);
+        console.log("---");
         refreshUploadTokenBeforeExpiry(fileName);
       })
+
       .catch((err) => {
+        console.error("Unable to get refresh token");
         console.error("Unable to refresh upload token", err);
+
+        console.log("catch");
+        console.log("uploadToken.value");
+        console.log(uploadToken.value);
+        console.log("---");
       });
   };
 
   const postFileUpload = () => {
     // const uploadService = new UploadService(uploadToken.value);
-    // console.log("onFileUpload")
+    console.log("postFileUpload");
     // console.log("filename")
     // console.log(fileName)
+    console.log("clearInterval called");
     clearInterval(refreshUploadTokenTimer);
+    console.log("refreshUploadTokenTimer");
+    console.log(refreshUploadTokenTimer);
+    console.log("---");
   };
 
   return {

@@ -22,7 +22,7 @@
             @click="setStep(i)"
             :disabled="submitAttempted"
             preset="secondary"
-            >
+          >
             <div class="flex flex-col items-center">
               <Icon :icon="step.icon" />
               <span class="hidden sm:block"> {{ step.label }} </span>
@@ -30,80 +30,82 @@
           </va-button>
         </template>
 
-        <template #step-content-0>
-          <va-form-field
-            v-model="datasetName"
-            :rules="[
-              (v) => v.length >= 3 || 'Min length is 3 characters',
-              // (v) => v?.indexof(' ') === -1 || 'Name cannot contain spaces',
-              validateNotExists,
-            ]"
-          >
-            <template #default="{ value }">
-              <va-input
-                label="Dataset Name"
-                :placeholder="'Dataset Name'"
-                class="w-full"
-                v-model="value.ref"
-              />
-            </template>
-          </va-form-field>
-        </template>
+        <!--        <template #step-content-0>-->
+        <!--          <va-form-field-->
+        <!--            v-model="datasetName"-->
+        <!--            :rules="[-->
+        <!--              (v) => v.length >= 3 || 'Min length is 3 characters',-->
+        <!--              // (v) => v?.indexof(' ') === -1 || 'Name cannot contain spaces',-->
+        <!--              validateNotExists,-->
+        <!--            ]"-->
+        <!--          >-->
+        <!--            <template #default="{ value }">-->
+        <!--              <va-input-->
+        <!--                label="Dataset Name"-->
+        <!--                :placeholder="'Dataset Name'"-->
+        <!--                class="w-full"-->
+        <!--                v-model="value.ref"-->
+        <!--              />-->
+        <!--            </template>-->
+        <!--          </va-form-field>-->
+        <!--        </template>-->
 
-        <template #step-content-1>
-          <va-form-field
-            v-model="fileTypeSelected"
-            v-slot="{ value: v }"
-            :rules="[
-              (v) => {
-                return (
-                  (typeof v?.name === 'string' &&
-                    v?.name?.length > 0 &&
-                    typeof v?.extension === 'string' &&
-                    v?.extension?.length > 0) ||
-                  'File Type is required'
-                );
-              },
-            ]"
-          >
-            <FileTypeSelect
-              v-model="v.ref"
-              @file-type-created="
-                (newFileType) => {
-                  fileTypeList.push(newFileType);
-                }
-              "
-              :allow-create-new="submissionStatus === SUBMISSION_STATES.UNINITIATED"
-              :file-type-list="fileTypeList"
-            />
-          </va-form-field>
-        </template>
+        <!--        <template #step-content-1>-->
+        <!--          <va-form-field-->
+        <!--            v-model="fileTypeSelected"-->
+        <!--            v-slot="{ value: v }"-->
+        <!--            :rules="[-->
+        <!--              (v) => {-->
+        <!--                return (-->
+        <!--                  (typeof v?.name === 'string' &&-->
+        <!--                    v?.name?.length > 0 &&-->
+        <!--                    typeof v?.extension === 'string' &&-->
+        <!--                    v?.extension?.length > 0) ||-->
+        <!--                  'File Type is required'-->
+        <!--                );-->
+        <!--              },-->
+        <!--            ]"-->
+        <!--          >-->
+        <!--            <FileTypeSelect-->
+        <!--              v-model="v.ref"-->
+        <!--              @file-type-created="-->
+        <!--                (newFileType) => {-->
+        <!--                  fileTypeList.push(newFileType);-->
+        <!--                }-->
+        <!--              "-->
+        <!--              :allow-create-new="-->
+        <!--                submissionStatus === SUBMISSION_STATES.UNINITIATED-->
+        <!--              "-->
+        <!--              :file-type-list="fileTypeList"-->
+        <!--            />-->
+        <!--          </va-form-field>-->
+        <!--        </template>-->
 
-        <template #step-content-2>
-          <va-form-field
-            v-model="rawDataSelected"
-            v-slot="{ value: v }"
-            :rules="[
-              (v) => {
-                return typeof v.length > 0 || 'Source dataset is required';
-              },
-            ]"
-          >
-            <DatasetSelect
-              :selected-results="v.ref"
-              @select="addDataset"
-              @remove="removeDataset"
-              :column-widths="columnWidths"
-              select-mode="single"
-            ></DatasetSelect>
-          </va-form-field>
+        <!--        <template #step-content-2>-->
+        <!--          <va-form-field-->
+        <!--            v-model="rawDataSelected"-->
+        <!--            v-slot="{ value: v }"-->
+        <!--            :rules="[-->
+        <!--              (v) => {-->
+        <!--                return typeof v.length > 0 || 'Source dataset is required';-->
+        <!--              },-->
+        <!--            ]"-->
+        <!--          >-->
+        <!--            <DatasetSelect-->
+        <!--              :selected-results="v.ref"-->
+        <!--              @select="addDataset"-->
+        <!--              @remove="removeDataset"-->
+        <!--              :column-widths="columnWidths"-->
+        <!--              select-mode="single"-->
+        <!--            ></DatasetSelect>-->
+        <!--          </va-form-field>-->
 
-          <div v-if="isDirty" class="mt-2">
-            <p v-for="error in errorMessages" :key="error">
-              {{ error }}
-            </p>
-          </div>
-        </template>
+        <!--          <div v-if="isDirty" class="mt-2">-->
+        <!--            <p v-for="error in errorMessages" :key="error">-->
+        <!--              {{ error }}-->
+        <!--            </p>-->
+        <!--          </div>-->
+        <!--        </template>-->
 
         <template #step-content-3>
           <DatasetFileUploadTable
@@ -414,23 +416,26 @@ const evaluateChecksums = (filesToUpload) => {
 const uploadChunk = async (chunkData) => {
   console.log("uploadChunk()");
   const upload = async () => {
-    console.log("upload()");
+    console.log("uploadChunk(): upload() called");
     if (uploadCancelled.value) {
       return false;
     }
 
     let chunkUploaded = false;
 
-    // console.log("uploadToken.value")
-    // console.dir(uploadToken.value, {depth: null})
+    console.log("uploadToken.value");
+    console.dir(uploadToken.value, { depth: null });
 
     uploadService.setToken(uploadToken.value);
     try {
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
+      console.log(`Successfully uploaded chunk`);
     } catch (e) {
-      console.log(`Encountered error`, e);
+      console.log(`Encountered error uploading chunk`, e);
     }
+    console.log("---");
+
     return chunkUploaded;
   };
 
@@ -488,8 +493,8 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  // console.log(`Beginning upload of file`);
-  // console.log("fileDetails");
+  console.log(`uploadFile`);
+  console.log("fileDetails");
   console.dir(fileDetails, { depth: null });
 
   // persist token in store
@@ -600,6 +605,8 @@ const postSubmit = () => {
   });
 
   if (uploadLog.value) {
+    console.log("postSubmit()");
+    console.log("uploadLog.value.id", uploadLog.value.id);
     createOrUpdateUploadLog(uploadLog.value.id, {
       status: someFilesPendingUpload.value
         ? config.upload_status.UPLOAD_FAILED
@@ -669,12 +676,16 @@ const preUpload = async () => {
         }),
       };
 
+  console.log("preUpload: logData", logData);
   const res = await createOrUpdateUploadLog(uploadLog.value?.id, logData);
   uploadLog.value = res.data;
 };
 
 // Log (or update) upload status
 const createOrUpdateUploadLog = (logId, data) => {
+  console.log("createOrUpdateUploadLog: logId", logId);
+  console.log("createOrUpdateUploadLog: data:");
+  console.dir(data, { depth: null });
   return !logId
     ? datasetService.logUpload(data)
     : datasetService.updateUploadLog(logId, data);

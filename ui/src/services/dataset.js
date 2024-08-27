@@ -101,10 +101,15 @@ class DatasetService {
   }
 
   logUpload(data) {
+    console.log("logUpload called");
+    console.log("---");
     return api.post("/datasets/upload-log", data);
   }
 
   updateUploadLog(upload_id, data) {
+    console.log("updateFileUploadLog called");
+    console.log("---");
+
     return api.patch(`/datasets/upload-log/${upload_id}`, data);
   }
 
