@@ -32,6 +32,8 @@ services:
         ipv4_address: 172.19.0.2
       rhythm_bioloop_bridge:
         ipv4_address: 172.19.2.3
+      signet_network:
+        ipv4_address: 172.19.3.6
 
   postgres:
     image: postgres:14.5
@@ -44,7 +46,7 @@ services:
       - ./db/prod/db_postgres:/var/lib/postgresql/data:z
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
       - ./db/postgres/aux_scripts:/opt/sca/scripts
-      - /opt/sca/db-backups:/opt/sca/backups:z
+      - /opt/sca/db_backups:/opt/sca/backups:z
     expose:
       - 5432
     networks:
@@ -60,7 +62,7 @@ services:
       - PGPASSWORD=${POSTGRES_PASSWORD}
       - PROJ_NAME=${COMPOSE_PROJECT_NAME}
     volumes:
-      - /opt/sca/db-backups:/backup
+      - /opt/sca/db_backups:/backup
     networks:
       bioloop_network:
         ipv4_address: 172.19.0.5
@@ -82,4 +84,7 @@ networks:
         - subnet: 172.19.0.0/24
   rhythm_bioloop_bridge:
     name: rhythm-bioloop-bridge
+    external: true
+  signet_network:
+    name: signet_network
     external: true
