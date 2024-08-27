@@ -1,32 +1,59 @@
 <template>
-  <div class="flex-none">
-    <!--    <va-file-upload-->
-    <!--      class="w-full"-->
-    <!--      label="File"-->
-    <!--      upload-button-text="Select Files"-->
-    <!--      drop-zone-text="Drop files here"-->
-    <!--      dropzone-->
-    <!--      :disabled="props.submitAttempted"-->
-    <!--      @file-added="-->
-    <!--        (files) => {-->
-    <!--          // console.log('DatasetFileUploadTable - files');-->
-    <!--          // console.log(files);-->
-    <!--          emit('file-added', files);-->
-    <!--        }-->
-    <!--      "-->
-    <!--    />-->
-
-    <input
-      type="file"
-      directory
-      webkitdirectory
-      multiple
-      @change="
-        (e) => {
-          emit('file-added', e.target.files);
+  <div class="flex flex-row">
+    <va-file-upload
+      class="w-full"
+      label="File"
+      upload-button-text="Select Files"
+      dropzone
+      dropZoneText=""
+      :disabled="props.submitAttempted"
+      @file-added="
+        (files) => {
+          // console.log('DatasetFileUploadTable - files');
+          // console.log(files);
+          emit('file-added', files);
         }
       "
     />
+
+    <div
+      class="va-file-upload va-file-upload--dropzone w-full"
+      label="File"
+      style="background-color: rgba(51, 114, 240, 0.08)"
+    >
+      <div class="va-file-upload__field">
+        <div class="va-file-upload__field__text">
+          <!--            label="Choose Folder"-->
+          <input
+            label="Choose Folder"
+            ref="folderUploadInput"
+            class="folder-upload"
+            id="folder-upload"
+            type="file"
+            directory
+            webkitdirectory
+            multiple
+            @change="
+              (e) => {
+                // for (let file of e.target.files) {
+                //   console.log('file path', file.webkitRelativePath);
+                // }
+                onDirectorySelection(e);
+              }
+            "
+          />
+          <va-button
+            @click="
+              () => {
+                folderUploadInput.click();
+              }
+            "
+          >
+            Select Folder
+          </va-button>
+        </div>
+      </div>
+    </div>
 
     <va-data-table
       v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
@@ -146,6 +173,8 @@ import config from "@/config";
 import _ from "lodash";
 import { formatBytes } from "@/services/utils";
 
+const folderUploadInput = ref(null);
+
 const props = defineProps({
   dataProductFiles: {
     type: Array,
@@ -189,6 +218,46 @@ const props = defineProps({
   },
 });
 
+const onDirectorySelection = (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  // if directory support is available
+  if (e.dataTransfer && e.dataTransfer.items) {
+    const items = e.dataTransfer.items;
+    for (const i = 0; i < items.length; i++) {
+      const item = items[i].webkitGetAsEntry();
+
+      if (item) {
+        addDirectory(item);
+      }
+    }
+    return;
+  }
+  const files = e.target.files || e.dataTransfer.files;
+  if (!files.length) {
+    alert("File type not accepted");
+    return;
+  }
+
+  // processFile(files);
+};
+
+function addDirectory(item) {
+  var _this = this;
+  if (item.isDirectory) {
+    var directoryReader = item.createReader();
+    directoryReader.readEntries(function (entries) {
+      entries.forEach(function (entry) {
+        _this.addDirectory(entry);
+      });
+    });
+  } else {
+    item.file(function (file) {
+      processFile([file], 0);
+    });
+  }
+}
+
 const emit = defineEmits(["file-added", "remove-file"]);
 
 const { SUBMISSION_STATES } = config;
@@ -220,4 +289,8 @@ const removeFile = (index) => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.folder-upload {
+  display: none;
+}
+</style>
