@@ -38,6 +38,7 @@ In the developement environment, the API calls from the UI are proxied by the vi
 - Docker
 - Dark mode (TODO)
 - [Rollup Dependencies Visualizer](https://www.npmjs.com/package/rollup-plugin-visualizer) - Visualize and analyze your Rollup bundle to see which modules are taking up space. Run `npm run build` and open `stats.html`
+- Feature flags
 
 ## Icons
 
@@ -230,6 +231,31 @@ datetime.formatDuration(12000 * 1000) // "3h 20m"
 ```
 
 If you have a usecase to display in formats other than above in more than one component, add a function to [datetime](src/services/datetime.js) service and use it.
+
+## Feature Flags
+
+Features can be enabled or disabled at the UI level. Components can determine whether a feature is enabled by reading it from `./config.js`, which in turn reads this config from `./.env`.
+
+```
+// ./config.js
+
+  ...
+  enabledFeatures: {
+    genomeBrowser: import.meta.env.VITE_ENABLED_GENOME_BROWSER === "true",
+  },
+  ...
+
+```
+```
+# ./.env
+
+VITE_ENABLED_GENOME_BROWSER=true
+```
+
+Reading the feature flag from `.env` allows for features to be toggled without changing the code.
+
+Once a feature's status has been changed in `.env`, the app will need to be redeployed for those changes to come into effect.
+
 
 ## Navigational Breadcrumbs
 

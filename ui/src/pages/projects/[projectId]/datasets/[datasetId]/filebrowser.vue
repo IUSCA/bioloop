@@ -51,6 +51,7 @@ Promise.all([
         label: "File Browser",
       },
     ]);
+    useTitle(project.name);
   })
   .catch((err) => {
     console.error(err);
