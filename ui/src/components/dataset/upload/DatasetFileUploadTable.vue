@@ -11,13 +11,13 @@
         (files) => {
           // console.log('DatasetFileUploadTable - files');
           // console.log(files);
-          emit('file-added', files);
+          emit('files-added', files);
         }
       "
     />
 
     <div
-      class="va-file-upload va-file-upload--dropzone w-full"
+      class="va-file-upload va-file-upload--dropzone w-full folder-upload--container"
       label="File"
       style="background-color: rgba(51, 114, 240, 0.08)"
     >
@@ -27,8 +27,8 @@
           <input
             label="Choose Folder"
             ref="folderUploadInput"
-            class="folder-upload"
-            id="folder-upload"
+            class="folder-upload--input"
+            id="folder-upload--input"
             type="file"
             directory
             webkitdirectory
@@ -54,57 +54,61 @@
         </div>
       </div>
     </div>
-
-    <va-data-table
-      v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
-      :items="props.dataProductFiles"
-      :columns="columns"
-    >
-      <template #cell(progress)="{ value }">
-        <va-progress-circle
-          :model-value="value ? parseInt(value, 10) : 0"
-          size="small"
-        >
-          {{ value && value + "%" }}
-        </va-progress-circle>
-      </template>
-
-      <template #cell(uploadStatus)="{ value }">
-        <span class="flex justify-center">
-          <va-popover
-            v-if="value === config.upload_status.UPLOADED"
-            message="Succeeded"
-          >
-            <va-icon name="check_circle_outline" color="success" />
-          </va-popover>
-          <va-popover
-            v-if="value === config.upload_status.UPLOADING"
-            message="Uploading"
-          >
-            <va-icon name="pending" color="info" />
-          </va-popover>
-          <va-popover
-            v-if="value === config.upload_status.UPLOAD_FAILED"
-            message="Failed"
-          >
-            <va-icon name="error_outline" color="danger" />
-          </va-popover>
-        </span>
-      </template>
-
-      <template #cell(actions)="{ rowIndex }">
-        <div class="flex gap-1">
-          <va-button
-            preset="plain"
-            icon="delete"
-            color="danger"
-            @click="removeFile(rowIndex)"
-            :disabled="props.submitAttempted"
-          />
-        </div>
-      </template>
-    </va-data-table>
   </div>
+
+  <va-data-table
+    v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
+    :items="isDirectory ? props.dataProductDirectory : props.dataProductFiles"
+    :columns="columns"
+  >
+    <!--    <template #cell(name)="{ value }">-->
+    <!--    -->
+    <!--    </template>-->
+
+    <template #cell(progress)="{ value }">
+      <va-progress-circle
+        :model-value="value ? parseInt(value, 10) : 0"
+        size="small"
+      >
+        {{ value && value + "%" }}
+      </va-progress-circle>
+    </template>
+
+    <template #cell(uploadStatus)="{ value }">
+      <span class="flex justify-center">
+        <va-popover
+          v-if="value === config.upload_status.UPLOADED"
+          message="Succeeded"
+        >
+          <va-icon name="check_circle_outline" color="success" />
+        </va-popover>
+        <va-popover
+          v-if="value === config.upload_status.UPLOADING"
+          message="Uploading"
+        >
+          <va-icon name="pending" color="info" />
+        </va-popover>
+        <va-popover
+          v-if="value === config.upload_status.UPLOAD_FAILED"
+          message="Failed"
+        >
+          <va-icon name="error_outline" color="danger" />
+        </va-popover>
+      </span>
+    </template>
+
+    <template #cell(actions)="{ rowIndex }">
+      <div class="flex gap-1">
+        <va-button
+          preset="plain"
+          icon="delete"
+          color="danger"
+          @click="removeFile(rowIndex)"
+          :disabled="props.submitAttempted"
+        />
+      </div>
+    </template>
+  </va-data-table>
 
   <!-- Alert for showing errors encountered during submission -->
   <va-alert
@@ -173,9 +177,10 @@ import config from "@/config";
 import _ from "lodash";
 import { formatBytes } from "@/services/utils";
 
-const folderUploadInput = ref(null);
-
 const props = defineProps({
+  dataProductDirectory: {
+    type: [],
+  },
   dataProductFiles: {
     type: Array,
     required: true,
@@ -218,53 +223,15 @@ const props = defineProps({
   },
 });
 
-const onDirectorySelection = (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  // if directory support is available
-  if (e.dataTransfer && e.dataTransfer.items) {
-    const items = e.dataTransfer.items;
-    for (const i = 0; i < items.length; i++) {
-      const item = items[i].webkitGetAsEntry();
+const emit = defineEmits(["files-added", "directory-added", "file-removed"]);
 
-      if (item) {
-        addDirectory(item);
-      }
-    }
-    return;
-  }
-  const files = e.target.files || e.dataTransfer.files;
-  if (!files.length) {
-    alert("File type not accepted");
-    return;
-  }
+const folderUploadInput = ref(null);
 
-  // processFile(files);
-};
+let directoryName = ref("");
 
-function addDirectory(item) {
-  var _this = this;
-  if (item.isDirectory) {
-    var directoryReader = item.createReader();
-    directoryReader.readEntries(function (entries) {
-      entries.forEach(function (entry) {
-        _this.addDirectory(entry);
-      });
-    });
-  } else {
-    item.file(function (file) {
-      processFile([file], 0);
-    });
-  }
-}
-
-const emit = defineEmits(["file-added", "remove-file"]);
-
-const { SUBMISSION_STATES } = config;
-
-// const dataProductFiles = ref([]);
-// const isSubmissionAlertVisible = ref(false);
-// const submissionAlert = ref();
+const isDirectory = computed(() => {
+  return directoryName.value && directoryName.value.length > 0;
+});
 
 const noFilesSelected = computed(() => {
   return props.dataProductFiles.length === 0;
@@ -283,14 +250,46 @@ const columns = [
   { key: "actions", width: "80px" },
 ];
 
+const onDirectorySelection = (e) => {
+  // all files will have the same base path (the name of the containing folder)
+  const fileRelativePath = e.target.files[0]?.webkitRelativePath || "";
+
+  if (
+    fileRelativePath.indexOf("/") === -1 &&
+    fileRelativePath.indexOf("\\") > 0
+  ) {
+    // windows path
+    directoryName.value = fileRelativePath.slice(
+      0,
+      fileRelativePath.indexOf("\\"),
+    );
+  } else if (
+    fileRelativePath.indexOf("//") === -1 &&
+    fileRelativePath.indexOf("/") > 0
+  ) {
+    // unix path
+    directoryName.value = fileRelativePath.slice(
+      0,
+      fileRelativePath.indexOf("/"),
+    );
+  }
+  emit("directory-added", {
+    directoryName: directoryName.value,
+    files: e.target.files,
+  });
+};
+
 const removeFile = (index) => {
-  // dataProductFiles.value.splice(index, 1);
-  emit("remove-file", index);
+  emit("file-removed", index);
 };
 </script>
 
 <style scoped>
-.folder-upload {
+.folder-upload--input {
   display: none;
+}
+
+.folder-upload--container {
+  cursor: default;
 }
 </style>
