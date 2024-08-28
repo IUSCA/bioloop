@@ -1,7 +1,7 @@
 import api from "./api";
 
 class UserService {
-  getAll({ search = "", sortBy, sort_order, skip = 0, take = 10 }) {
+  getAll({ search = "", sortBy, sort_order, skip, take } = {}) {
     return api
       .get("/users", {
         params: {

@@ -28,13 +28,12 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('search').isString().default(''),
-    query('skip').isInt({ min: 0 }).default(0),
-    query('take').isInt({ min: 1 }).default(25),
-    query('sortBy')
-      .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted'])
-      .default('username'),
-    query('sort_order').default('asc'),
+    query('search').default(''),
+    query('skip').isInt({ min: 0 }).optional(),
+    query('take').isInt({ min: 1 }).optional(),
+    query('sortBy').default('username')
+      .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   asyncHandler(async (req, res, next) => {
     const {

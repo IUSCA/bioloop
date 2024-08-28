@@ -4,7 +4,8 @@
     <!-- search bar -->
     <div class="flex-1">
       <va-input
-        v-model="filterInput"
+        :model-value="params.search"
+        @update:model-value="debouncedUpdate"
         class="w-full"
         placeholder="search users"
         outline
@@ -14,6 +15,13 @@
           <Icon icon="material-symbols:search" class="text-xl" />
         </template>
       </va-input>
+    </div>
+
+    <!-- reset button -->
+    <div class="flex-none" v-if="isResetVisible">
+      <va-button icon="restart_alt" @click="resetSortParams" preset="primary">
+        Reset Sort
+      </va-button>
     </div>
 
     <!-- create button -->
@@ -232,13 +240,7 @@ import { useAuthStore } from "@/stores/auth";
 const auth = useAuthStore();
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const users = ref([]);
-const filterInput = ref("");
-// const debouncedInput = useDebounce(filterInput, 300);
-// const currentPage = ref(1);
-// const itemsPerPage = ref(25); // Number of items per page
 const totalItems = ref(0);
-// const sort_by = ref("name");
-// const sort_order = ref("asc");
 
 const editing = ref(false);
 const editedUser = ref({});
@@ -252,13 +254,9 @@ const autofill = ref({
   cas_id: "",
 });
 
-debouncedWatch(
-  filterInput,
-  () => {
-    params.value.search = filterInput.value;
-  },
-  { debounce: 300 },
-);
+const debouncedUpdate = useDebounceFn((val) => {
+  params.value.search = val;
+}, 300);
 
 function defaultParams() {
   return {
@@ -278,6 +276,20 @@ useQueryPersistence({
   key: "u",
   history_push: true,
 });
+
+const isResetVisible = computed(() => {
+  const defaultParamsObj = defaultParams();
+  return (
+    params.value.sortBy !== defaultParamsObj.sortBy ||
+    params.value.sortingOrder !== defaultParamsObj.sortingOrder
+  );
+});
+
+function resetSortParams() {
+  // Reset params to their default values
+  params.value.sortBy = defaultParams().sortBy;
+  params.value.sortingOrder = defaultParams().sortingOrder;
+}
 
 const editModalTitle = computed(() => {
   return editMode.value == "modify" ? "Modify User" : "Create User";
@@ -448,13 +460,6 @@ function createUser() {
   }
 }
 
-// watch([itemsPerPage, debouncedInput, sort_by, sort_order], () => {
-//   if (currentPage.value === 1) {
-//     fetch_all_users();
-//   }
-//   currentPage.value = 1;
-// });
-
 watch(
   [
     () => params.value.itemsPerPage,
@@ -470,9 +475,6 @@ watch(
   },
 );
 
-// watch(currentPage, () => {
-//   fetch_all_users();
-// });
 watch(
   () => params.value.currentPage,
   () => {

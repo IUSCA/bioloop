@@ -5,14 +5,7 @@ import api from "./api";
 const auth = useAuthStore();
 
 class projectService {
-  getAll({
-    forSelf,
-    take = 10,
-    skip = 0,
-    search = "",
-    sortBy = "updated_at",
-    sort_order = "asc",
-  } = {}) {
+  getAll({ forSelf, take, skip, search = "", sortBy, sort_order } = {}) {
     const username = auth.user.username;
     const params = { take, skip, search, sortBy, sort_order };
     return (

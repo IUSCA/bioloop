@@ -5,7 +5,8 @@
       <!-- search bar -->
       <div class="flex-1">
         <va-input
-          v-model="filterInput"
+          v-model="params.search"
+          @update:model-value="debouncedUpdate"
           class="w-full"
           placeholder="Search projects by name, associated dataset names, and user names."
           outline
@@ -15,6 +16,13 @@
             <Icon icon="material-symbols:search" class="text-xl" />
           </template>
         </va-input>
+      </div>
+
+      <!-- reset button -->
+      <div class="flex-none" v-if="isResetVisible">
+        <va-button icon="restart_alt" @click="resetSortParams" preset="primary">
+          Reset Sort
+        </va-button>
       </div>
 
       <!-- create button -->
@@ -144,26 +152,23 @@
 import useQueryPersistence from "@/composables/useQueryPersistence";
 import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+import { useDebounceFn } from "@vueuse/core";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
 
 const projects = ref([]);
-const filterInput = ref("");
 const data_loading = ref(false);
 const totalItems = ref(0);
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
-debouncedWatch(
-  filterInput,
-  () => {
-    params.value.search = filterInput.value;
-  },
-  { debounce: 300 },
-);
+const debouncedUpdate = useDebounceFn((val) => {
+  params.value.search = val;
+}, 300);
 
 function defaultParams() {
   return {
@@ -183,6 +188,20 @@ useQueryPersistence({
   key: "q",
   history_push: true,
 });
+
+const isResetVisible = computed(() => {
+  const defaultParamsObj = defaultParams();
+  return (
+    params.value.sortBy !== defaultParamsObj.sortBy ||
+    params.value.sortingOrder !== defaultParamsObj.sortingOrder
+  );
+});
+
+function resetSortParams() {
+  // Reset params to their default values
+  params.value.sortBy = defaultParams().sortBy;
+  params.value.sortingOrder = defaultParams().sortingOrder;
+}
 
 const row_items = computed(() => {
   return projects.value.map((project) => {
@@ -227,19 +246,6 @@ const columns = [
   ...(auth.canOperate ? [{ key: "actions", width: "80px" }] : []),
 ];
 
-// function customFilteringFn(searchText, { name, users, datasets }) {
-//   return (
-//     searchText === "" ||
-//     (name || "").toLowerCase().includes(searchText) ||
-//     users.some((user) =>
-//       (user?.username || "").toLowerCase().includs(searchText),
-//     ) ||
-//     datasets.some((dataset) =>
-//       (dataset?.name || "").toLowerCase().includes(searchText),
-//     )
-//   );
-// }
-
 function fetch_projects() {
   data_loading.value = true;
 
@@ -261,7 +267,8 @@ function fetch_projects() {
       totalItems.value = res.data.metadata.count;
     })
     .catch((error) => {
-      console.log("Error fetching projects:", error);
+      console.error(error);
+      toast.error("Error fetching Projects");
     })
     .finally(() => {
       data_loading.value = false;
@@ -270,8 +277,6 @@ function fetch_projects() {
 
 fetch_projects();
 
-// edit modal code
-// template ref binding
 const editModal = ref(null);
 const selectedId = ref(null);
 
@@ -282,15 +287,6 @@ function openModalToEditProject(rowData) {
   editModal.value.show();
 }
 
-// create modal code
-// const createModal = ref(null);
-
-// function openModalToCreateProject() {
-//   createModal.value.show();
-// }
-
-// delete modal code
-// template ref binding
 const deleteModal = ref(null);
 const selectedForDeletion = ref({});
 

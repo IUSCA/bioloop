@@ -88,11 +88,11 @@ router.get(
   '/all',
   isPermittedTo('read'),
   validate([
-    query('take').isInt().toInt().default(10),
-    query('skip').isInt().toInt().default(0),
-    query('search').optional().isString(),
-    query('sort_order').optional().isString().default('asc'),
-    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    query('take').default(25).isInt().toInt(),
+    query('skip').default(0).isInt().toInt(),
+    query('search').default(''), // Adding search query validation
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
   ]),
   asyncHandler(async (req, res, next) => {
     const { search, sort_order, sort_by } = req.query;
@@ -136,7 +136,7 @@ router.get(
       : {};
 
     const sort_obj = {
-      [sort_by]: sort_order, // Sort by 'Name' column in the specified order
+      [sort_by]: sort_order,
     };
 
     const [projects, totalCount] = await prisma.$transaction([
@@ -341,11 +341,11 @@ router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnerShip: true }),
   validate([
-    query('take').isInt().toInt().default(10),
-    query('skip').isInt().toInt().default(0),
-    query('search').optional().isString(), // Adding search query validation
-    query('sort_order').optional().isString().default('asc'),
-    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    query('take').default(25).isInt().toInt(),
+    query('skip').default(0).isInt().toInt(),
+    query('search').default(''), // Adding search query validation
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
