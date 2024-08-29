@@ -714,11 +714,12 @@ const setFiles = (files) => {
     // console.log(file.webkitRelativePath);
     // console.dir(file, { depth: null });
     dataProductFiles.value.push({
+      type: "file",
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-      // path: file.webkitRelativePath,
+      path: file.webkitRelativePath,
     });
   });
 };
@@ -729,6 +730,7 @@ const setDirectory = (directoryDetails) => {
   _.range(0, directoryFiles.length).forEach((i) => {
     const file = directoryFiles.item(i);
     dataProductFiles.value.push({
+      type: "file",
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
@@ -738,6 +740,7 @@ const setDirectory = (directoryDetails) => {
     directorySize += file.size;
   });
   dataProductDirectory.value.push({
+    type: "directory",
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: undefined,

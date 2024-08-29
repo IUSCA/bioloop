@@ -61,9 +61,20 @@
     :items="isDirectory ? props.dataProductDirectory : props.dataProductFiles"
     :columns="columns"
   >
-    <!--    <template #cell(name)="{ value }">-->
-    <!--    -->
-    <!--    </template>-->
+    <template #cell(name)="{ rowData }">
+      <div
+        v-if="rowData.type === 'directory'"
+        class="flex items-center gap-1 text-left"
+      >
+        <Icon icon="mdi-folder" class="text-xl flex-none text-gray-700" />
+        <span> {{ rowData.name }} </span>
+      </div>
+
+      <div v-else class="flex items-center gap-1 text-left">
+        <FileTypeIcon :filename="rowData.name" />
+        <span> {{ rowData.name }} </span>
+      </div>
+    </template>
 
     <template #cell(progress)="{ value }">
       <va-progress-circle
