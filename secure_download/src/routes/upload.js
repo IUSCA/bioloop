@@ -51,7 +51,7 @@ router.post(
       name, data_product_name, total, index, size, checksum, chunk_checksum,
     } = req.body;
 
-    const UPLOAD_SCOPE = config.get('upload_scope');
+    const UPLOAD_SCOPE = String(config.get('upload_scope'));
 
     const scopes = (req.token?.scope || '').split(' ');
     console.log(`scopes: ${scopes}`);
