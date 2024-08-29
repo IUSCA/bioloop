@@ -1,7 +1,10 @@
 const express = require('express');
+const fs = require('fs');
 const fsPromises = require('fs/promises');
 const path = require('path');
 const multer = require('multer');
+const createError = require('http-errors');
+const { createHash } = require('node:crypto');
 
 const config = require('config');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -57,28 +60,41 @@ router.post(
     // console.log(`has_upload_scope: ${has_upload_scope}`);
 
     if (matching_scopes.length === 0) {
-      return next(createError.Forbidden('Expected one, but found no matching scopes'))
+      console.log('Expected one, but found no matching scopes');
+      return next(createError.Forbidden('Expected one, but found no matching scopes'));
     }
     if (matching_scopes.length !== 1) {
-      return next(createError.Forbidden('Exptected one, but found multiple matching scopes'));
+      console.log('Expected one, but found multiple matching scopes');
+      return next(createError.Forbidden('Expected one, but found multiple matching scopes'));
     }
     console.log('passed scope check');
 
     if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
+      console.log('if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)):');
       res.sendStatus(400);
     }
 
     // eslint-disable-next-line no-console
     console.log('Processing file piece ...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
+    const receivedFilePath = req.file.path;
+    fs.readFile(receivedFilePath, (err, data) => {
+      if (err) {
+        console.log('Error reading file:', err);
+        throw err;
+      }
 
-    const evaluated_checksum = createHash('md5').update(data).digest('hex');
-    if (evaluated_checksum !== chunk_checksum) {
-      return next(createError.BadRequest('Evaluated checksum of chunk does not match checksum received in the request'));
-    }
+      const evaluated_checksum = createHash('md5').update(data).digest('hex');
+      if (evaluated_checksum !== chunk_checksum) {
+        console.log('Evaluated checksum of chunk does not match checksum received in the request');
+        return next(createError.BadRequest('Evaluated checksum of chunk does not match checksum received in the request'));
+      }
+      console.log('checksums match');
 
-    res.sendStatus(200);
-  })
+      console.log('writing file to disk...');
+      res.sendStatus(200);
+    });
+  }),
 );
 
 // router.get(
