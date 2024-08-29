@@ -51,12 +51,20 @@ router.post(
       name, data_product_name, total, index, size, checksum, chunk_checksum,
     } = req.body;
 
+    // eslint-disable-next-line no-console
+    console.log('Processing file piece ...', data_product_name, name, total, index, size, checksum, chunk_checksum);
+
     const UPLOAD_SCOPE = String(config.get('upload_scope'));
+    console.log('UPLOAD_SCOPE:');
+    console.log(UPLOAD_SCOPE);
+    console.log(typeof UPLOAD_SCOPE);
 
     const scopes = (req.token?.scope || '').split(' ');
     console.log(`scopes: ${scopes}`);
 
-    const matching_scopes = scopes.filter((scope) => scope === UPLOAD_SCOPE);
+    console.log('upload scope:', `${UPLOAD_SCOPE}:${name}`);
+
+    const matching_scopes = scopes.filter((scope) => scope === `${UPLOAD_SCOPE}:${name}`);
     // console.log(`has_upload_scope: ${has_upload_scope}`);
     console.log(`matching_scopes: ${matching_scopes}`);
 
@@ -74,9 +82,6 @@ router.post(
       console.log('if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)):');
       res.sendStatus(400);
     }
-
-    // eslint-disable-next-line no-console
-    console.log('Processing file piece ...', data_product_name, name, total, index, size, checksum, chunk_checksum);
 
     const receivedFilePath = req.file.path;
     fs.readFile(receivedFilePath, (err, data) => {
