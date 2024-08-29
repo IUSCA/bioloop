@@ -33,6 +33,7 @@
             directory
             webkitdirectory
             multiple
+            :disabled="props.submitAttempted"
             @change="
               (e) => {
                 // for (let file of e.target.files) {
@@ -43,6 +44,7 @@
             "
           />
           <va-button
+            :disabled="props.submitAttempted"
             @click="
               () => {
                 folderUploadInput.click();
