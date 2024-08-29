@@ -23,11 +23,20 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['SUCCESS']]
 
 
-def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_chunks_expected):
+def merge_file_chunks(file_name, rel_path, file_md5, chunks_path, destination_path, num_chunks_expected):
     print(f'Processing file {file_name}')
     processing_error = False
-    dataset_path = Path(destination_path) / file_name
-        
+
+    if rel_path is not None:
+        dataset_base_path = Path(destination_path) / rel_path
+    else:
+        dataset_base_path = Path(destination_path)
+
+    if not dataset_base_path.exists():
+        dataset_base_path.mkdir(parents=True)
+
+    dataset_file_path = dataset_base_path / file_name / file_name
+
     try:
         num_chunks_found = len([p for p in chunks_path.iterdir()])
         if num_chunks_found != num_chunks_expected:
@@ -41,7 +50,7 @@ def merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_ch
                 print(f'Processing chunk {chunk_file}')
                 # with open(dataset_path, 'ab') as destination:
                 with open(chunk_file, 'rb') as chunk:
-                    with open(dataset_path, 'ab') as destination:
+                    with open(dataset_file_path, 'ab') as destination:
                         destination.write(chunk.read())
             # todo - close file handles
 
@@ -99,8 +108,11 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         num_chunks_expected = f['num_chunks']
         file_md5 = f['md5']
         file_upload_log_id = f['id']
+        file_rel_path = f['path']
+
         chunks_path = Path(config['paths']['DATA_PRODUCT']['upload']) / dataset['name'] / 'chunked_files' / f['md5']
         print("Created chunks path", chunks_path)
+
         destination_path = Path(config['paths']['DATA_PRODUCT']['upload']) / dataset['name'] / 'merged_chunks'
         if destination_path.exists():
             destination_path.unlink()
@@ -110,7 +122,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         
         if f['status'] != config['upload_status']['COMPLETE']:
             try:
-                f['status'] = merge_file_chunks(file_name, file_md5, chunks_path, destination_path, num_chunks_expected)
+                f['status'] = merge_file_chunks(file_name, file_rel_path, file_md5, chunks_path, destination_path, num_chunks_expected)
             except Exception as e:
                 f['status'] = config['upload_status']['PROCESSING_FAILED']
                 print('Caught exception')
