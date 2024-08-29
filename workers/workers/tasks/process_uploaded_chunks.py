@@ -115,7 +115,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
         destination_path = Path(config['paths']['DATA_PRODUCT']['upload']) / dataset['name'] / 'merged_chunks'
         if destination_path.exists():
-            destination_path.unlink()
+            shutil.rmtree(destination_path)
         print("Creating destination path")
         destination_path.mkdir()
         print("Created destination path")
