@@ -58,12 +58,13 @@ router.post(
 
     const matching_scopes = scopes.filter((scope) => scope === UPLOAD_SCOPE);
     // console.log(`has_upload_scope: ${has_upload_scope}`);
+    console.log(`matching_scopes: ${matching_scopes}`);
 
     if (matching_scopes.length === 0) {
       console.log('Expected one, but found no matching scopes');
       return next(createError.Forbidden('Expected one, but found no matching scopes'));
     }
-    if (matching_scopes.length !== 1) {
+    if (matching_scopes.length > 1) {
       console.log('Expected one, but found multiple matching scopes');
       return next(createError.Forbidden('Expected one, but found multiple matching scopes'));
     }
