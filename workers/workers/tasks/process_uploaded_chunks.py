@@ -28,14 +28,12 @@ def merge_file_chunks(file_name, rel_path, file_md5, chunks_path, destination_pa
     processing_error = False
 
     if rel_path is not None:
-        dataset_base_path = Path(destination_path) / rel_path
+        file_destination_path = Path(destination_path) / rel_path
     else:
-        dataset_base_path = Path(destination_path)
+        file_destination_path = Path(destination_path)
 
-    if not dataset_base_path.exists():
-        dataset_base_path.mkdir(parents=True)
-
-    dataset_file_path = dataset_base_path / file_name / file_name
+    if not file_destination_path.exists():
+        file_destination_path.mkdir(parents=True)
 
     try:
         num_chunks_found = len([p for p in chunks_path.iterdir()])
@@ -50,7 +48,7 @@ def merge_file_chunks(file_name, rel_path, file_md5, chunks_path, destination_pa
                 print(f'Processing chunk {chunk_file}')
                 # with open(dataset_path, 'ab') as destination:
                 with open(chunk_file, 'rb') as chunk:
-                    with open(dataset_file_path, 'ab') as destination:
+                    with open(file_destination_path, 'ab') as destination:
                         destination.write(chunk.read())
             # todo - close file handles
 
