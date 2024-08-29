@@ -264,22 +264,26 @@ const columns = [
 ];
 
 const onDirectorySelection = (e) => {
+  const isWindows = (path) =>
+    path.indexOf("/") === -1 && path.indexOf("\\") > 0;
+  const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;
+
+  const getFileRelativePath = (file) => {
+    return isUnix(file)
+      ? file.webkitRelativePath.slice(file.webkitRelativePath.lastIndexOf("/"))
+      : file.webkitRelativePath.lastIndexOf("\\");
+  };
+
   // all files will have the same base path (the name of the containing folder)
   const fileRelativePath = e.target.files[0]?.webkitRelativePath || "";
 
-  if (
-    fileRelativePath.indexOf("/") === -1 &&
-    fileRelativePath.indexOf("\\") > 0
-  ) {
+  if (isWindows(fileRelativePath)) {
     // windows path
     directoryName.value = fileRelativePath.slice(
       0,
       fileRelativePath.indexOf("\\"),
     );
-  } else if (
-    fileRelativePath.indexOf("//") === -1 &&
-    fileRelativePath.indexOf("/") > 0
-  ) {
+  } else if (isUnix(fileRelativePath)) {
     // unix path
     directoryName.value = fileRelativePath.slice(
       0,
@@ -288,7 +292,13 @@ const onDirectorySelection = (e) => {
   }
   emit("directory-added", {
     directoryName: directoryName.value,
-    files: e.target.files,
+    files: e.target.files.map((file) => {
+      return {
+        ...file,
+        relativePath: getFileRelativePath(file),
+        basePath: directoryName.value,
+      };
+    }),
   });
 };
 

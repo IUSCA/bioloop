@@ -735,7 +735,8 @@ const setDirectory = (directoryDetails) => {
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-      path: file.webkitRelativePath,
+      base_path: file.basePath,
+      relativePath: file.relativePath,
     });
     directorySize += file.size;
   });
