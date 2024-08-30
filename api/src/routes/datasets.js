@@ -553,7 +553,8 @@ router.post(
             name: file.name,
             md5: file.checksum,
             num_chunks: file.num_chunks,
-            path: file.path,
+            base_path: file.basePath,
+            relative_path: file.relativePath,
             // chunks_path: getFileChunksStorageDir(data_product_name,
             // file.checksum), destination_path: path.join(
             // getUploadPath(data_product_name), file.name, ),

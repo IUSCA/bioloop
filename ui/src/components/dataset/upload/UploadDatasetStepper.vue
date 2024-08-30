@@ -719,7 +719,6 @@ const setFiles = (files) => {
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-      path: file.webkitRelativePath,
     });
   });
 };
@@ -728,14 +727,17 @@ const setDirectory = (directoryDetails) => {
   const directoryFiles = directoryDetails.files;
   let directorySize = 0;
   _.range(0, directoryFiles.length).forEach((i) => {
-    const file = directoryFiles.item(i);
+    const file = directoryFiles[i];
+    // console.log("stepper file:");
+    // console.dir(file, { depth: null });
     dataProductFiles.value.push({
       type: "file",
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-      path: file.webkitRelativePath,
+      basePath: file.basePath,
+      relativePath: file.relativePath,
     });
     directorySize += file.size;
   });

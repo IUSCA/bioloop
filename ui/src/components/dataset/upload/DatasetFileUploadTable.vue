@@ -264,31 +264,64 @@ const columns = [
 ];
 
 const onDirectorySelection = (e) => {
-  // all files will have the same base path (the name of the containing folder)
-  const fileRelativePath = e.target.files[0]?.webkitRelativePath || "";
+  const isWindows = (path) =>
+    path.indexOf("/") === -1 && path.indexOf("\\") > 0;
+  const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;
 
-  if (
-    fileRelativePath.indexOf("/") === -1 &&
-    fileRelativePath.indexOf("\\") > 0
-  ) {
-    // windows path
-    directoryName.value = fileRelativePath.slice(
-      0,
-      fileRelativePath.indexOf("\\"),
-    );
-  } else if (
-    fileRelativePath.indexOf("//") === -1 &&
-    fileRelativePath.indexOf("/") > 0
-  ) {
-    // unix path
-    directoryName.value = fileRelativePath.slice(
-      0,
-      fileRelativePath.indexOf("/"),
-    );
-  }
+  const getFileRelativePath = (file) => {
+    return isUnix(file.webkitRelativePath)
+      ? file.webkitRelativePath.slice(
+          file.webkitRelativePath.indexOf("/") + 1,
+          file.webkitRelativePath.lastIndexOf("/"),
+        )
+      : file.webkitRelativePath
+          .slice(
+            file.webkitRelativePath.indexOf("\\") + 1,
+            file.webkitRelativePath.lastIndexOf("\\"),
+          )
+          .replace(/\\/g, "/");
+  };
+
+  console.log("onDirectorySelection, e.target.files:");
+  console.dir(e.target.files, { depth: null });
+
+  // all files will have the same base path (the name of the containing folder)
+  const filePath = e.target.files[0]?.webkitRelativePath || "";
+
+  directoryName.value = isWindows(filePath)
+    ? filePath.slice(0, filePath.indexOf("\\"))
+    : filePath.slice(0, filePath.indexOf("/"));
+
   emit("directory-added", {
     directoryName: directoryName.value,
-    files: e.target.files,
+    files: Array.from(e.target.files).map((file) => {
+      // console.log("Array.from(e.target.files), file:");
+      // console.log("appending property:");
+      // (file.relativePath = getFileRelativePath(file))(
+      //   (file.basePath = directoryName.value),
+      // );
+      file.relativePath = getFileRelativePath(file);
+      file.basePath = directoryName.value;
+
+      // file.append("testProperty", "testProperty");
+      // console.dir(file, { depth: null });
+      // console.log("typeof file: ", typeof file);
+
+      // let ret = _.cloneDeep(file);
+      // let ret = {
+      //   ...file,
+      //   // relativePath: getFileRelativePath(file),
+      //   // basePath: directoryName.value,
+      // };
+
+      // console.log("ret");
+      // console.log(ret);
+
+      return file;
+      // relativePath: getFileRelativePath(file),
+      // basePath: directoryName.value,
+      // };
+    }),
   });
 };
 
