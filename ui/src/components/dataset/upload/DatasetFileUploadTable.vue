@@ -187,8 +187,6 @@
 
 <script setup>
 import config from "@/config";
-import _ from "lodash";
-import { formatBytes } from "@/services/utils";
 
 const props = defineProps({
   dataProductDirectory: {
@@ -269,35 +267,33 @@ const onDirectorySelection = (e) => {
   const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;
 
   const getFileRelativePath = (file) => {
-    return isUnix(file)
-      ? file.webkitRelativePath.slice(file.webkitRelativePath.lastIndexOf("/"))
-      : file.webkitRelativePath.lastIndexOf("\\");
+    return isUnix(file.webkitRelativePath)
+      ? file.webkitRelativePath.slice(
+          file.webkitRelativePath.indexOf("/") + 1,
+          file.webkitRelativePath.lastIndexOf("/"),
+        )
+      : file.webkitRelativePath
+          .slice(
+            file.webkitRelativePath.indexOf("\\") + 1,
+            file.webkitRelativePath.lastIndexOf("\\"),
+          )
+          .replace(/\\/g, "/");
   };
 
   // all files will have the same base path (the name of the containing folder)
-  const fileRelativePath = e.target.files[0]?.webkitRelativePath || "";
+  const filePath = e.target.files[0]?.webkitRelativePath || "";
 
-  if (isWindows(fileRelativePath)) {
-    // windows path
-    directoryName.value = fileRelativePath.slice(
-      0,
-      fileRelativePath.indexOf("\\"),
-    );
-  } else if (isUnix(fileRelativePath)) {
-    // unix path
-    directoryName.value = fileRelativePath.slice(
-      0,
-      fileRelativePath.indexOf("/"),
-    );
-  }
+  directoryName.value = isWindows(filePath)
+    ? filePath.slice(0, filePath.indexOf("\\"))
+    : filePath.slice(0, filePath.indexOf("/"));
+
   emit("directory-added", {
     directoryName: directoryName.value,
-    files: e.target.files.map((file) => {
-      return {
-        ...file,
-        relativePath: getFileRelativePath(file),
-        basePath: directoryName.value,
-      };
+    files: Array.from(e.target.files).map((file) => {
+      file.relativePath = getFileRelativePath(file);
+      file.basePath = directoryName.value;
+
+      return file;
     }),
   });
 };

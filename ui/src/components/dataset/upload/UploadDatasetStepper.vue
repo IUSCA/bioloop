@@ -177,7 +177,6 @@
 import datasetService from "@/services/dataset";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-// import uploadService from "@/services/upload";
 import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
 import config from "@/config";
 import toast from "@/services/toast";
@@ -187,8 +186,6 @@ import { useAuthStore } from "@/stores/auth";
 import { useBreakpoint, useForm } from "vuestic-ui";
 
 const auth = useAuthStore();
-
-// const { uploadToken } = storeToRefs(auth);
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
 
 const breakpoint = useBreakpoint();
@@ -196,6 +193,7 @@ const breakpoint = useBreakpoint();
 const { SUBMISSION_STATES } = config;
 
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
+const isDirectory = ref(false);
 
 const RETRY_COUNT_THRESHOLD = 1;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -417,27 +415,21 @@ const evaluateChecksums = (filesToUpload) => {
 // Uploads a chunk. Retries to upload chunk upto 5 times in case of network
 // errors.
 const uploadChunk = async (chunkData) => {
-  console.log("uploadChunk()");
   const upload = async () => {
-    console.log("uploadChunk(): upload() called");
     if (uploadCancelled.value) {
       return false;
     }
 
     let chunkUploaded = false;
 
-    console.log("uploadToken.value");
-    console.dir(uploadToken.value, { depth: null });
-
     uploadService.setToken(uploadToken.value);
     try {
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
-      console.log(`Successfully uploaded chunk`);
+      // console.log(`Successfully uploaded chunk`);
     } catch (e) {
       console.log(`Encountered error uploading chunk`, e);
     }
-    console.log("---");
 
     return chunkUploaded;
   };
@@ -488,7 +480,12 @@ const uploadFileChunks = async (fileDetails) => {
     if (!uploaded) {
       break;
     } else {
-      fileDetails.progress = Math.trunc(((i + 1) / blockCount) * 100);
+      const chunkUploadProgress = Math.trunc(((i + 1) / blockCount) * 100);
+      if (isDirectory.value) {
+        dataProductDirectory.progress += chunkUploadProgress;
+      } else {
+        fileDetails.progress = chunkUploadProgress;
+      }
     }
   }
 
@@ -496,18 +493,10 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  console.log(`uploadFile`);
-  console.log("fileDetails");
-  console.dir(fileDetails, { depth: null });
-
   // persist token in store
   await auth.onFileUpload(fileDetails.name);
 
-  // console.log("stepper token");
-  // console.log(uploadToken.value);
   uploadService = new UploadService();
-
-  // await testCall();
 
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
@@ -719,23 +708,30 @@ const setFiles = (files) => {
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-      path: file.webkitRelativePath,
     });
   });
 };
 
 const setDirectory = (directoryDetails) => {
+  isDirectory.value = true;
+
   const directoryFiles = directoryDetails.files;
   let directorySize = 0;
   _.range(0, directoryFiles.length).forEach((i) => {
-    const file = directoryFiles.item(i);
+    const file = directoryFiles[i];
+    // console.log("stepper file:");
+    // console.dir(file, { depth: null });
     dataProductFiles.value.push({
       type: "file",
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
+<<<<<<< HEAD
       base_path: file.basePath,
+=======
+      basePath: file.basePath,
+>>>>>>> origin/dev
       relativePath: file.relativePath,
     });
     directorySize += file.size;
