@@ -482,7 +482,7 @@ const uploadFileChunks = async (fileDetails) => {
     } else {
       const chunkUploadProgress = Math.trunc(((i + 1) / blockCount) * 100);
       if (isDirectory.value) {
-        dataProductDirectory.progress += chunkUploadProgress;
+        dataProductDirectory.value[0].progress += chunkUploadProgress;
       } else {
         fileDetails.progress = chunkUploadProgress;
       }
