@@ -172,7 +172,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
             print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
  have been processed successfully. Deleting chunked files directory\
  {chunked_files_path}')
-            shutil.rmtree(dataset_path / 'chunked_files')
+            shutil.rmtree(chunked_files_path)
             print(f'Deleted chunked files directory {chunked_files_path}')
 
         workflow_name = 'integrated'

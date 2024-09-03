@@ -512,17 +512,12 @@ router.get(
   }),
 );
 
-const UPLOAD_PATH = config.upload_path;
+const UPLOAD_PATH = config.upload.path;
 
 const getUploadPath = (datasetName) => path.join(
   UPLOAD_PATH,
   datasetName,
-);
-
-const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
-  getUploadPath(datasetName),
   'chunked_files',
-  fileChecksum,
 );
 
 // Post a Dataset's upload log, files' info and the Dataset to the database - UI
