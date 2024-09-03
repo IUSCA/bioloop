@@ -64,6 +64,7 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         # processing_error = evaluated_checksum != file_md5
     except Exception as e:
         processing_error = True
+        print(e)
         # raise Exception(e)
 
     return config['upload_status']['PROCESSING_FAILED'] \
