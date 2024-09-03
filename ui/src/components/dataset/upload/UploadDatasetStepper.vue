@@ -128,7 +128,7 @@
             @file-removed="removeFile"
             @directory-added="
               (directoryDetails) => {
-                setDirectory(directoryDetails)
+                setDirectory(directoryDetails);
                 isSubmissionAlertVisible = false;
               }
             "
@@ -716,6 +716,7 @@ const setFiles = (files) => {
 };
 
 const setDirectory = (directoryDetails) => {
+  // console.log("Stepper: setDirectory: directoryDetails");
   isDirectory.value = true;
 
   const directoryFiles = directoryDetails.files;
@@ -724,14 +725,16 @@ const setDirectory = (directoryDetails) => {
     const file = directoryFiles[i];
     // console.log("stepper file:");
     // console.dir(file, { depth: null });
+    // console.log("file.name", file.name);
+    // console.log("file.basePath", file.basePath);
+    // console.log("file.relativePath", file.relativePath);
     dataProductFiles.value.push({
       type: "file",
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-      basePath: file.basePath,
-      relativePath: file.relativePath,
+      path: file.path,
     });
     directorySize += file.size;
   });

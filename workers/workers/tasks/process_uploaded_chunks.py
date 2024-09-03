@@ -23,28 +23,32 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['SUCCESS']]
 
 
-def merge_file_chunks(file_upload_log_id, file_name, rel_path, base_path,
-                       file_md5, chunks_path, destination_path, num_chunks_expected):
+def merge_file_chunks(file_upload_log_id, file_name, file_path,
+                      file_md5, chunks_path, dataset_merged_chunks_path,
+                      num_chunks_expected):
     print(f'Processing file {file_name}')
     processing_error = False
 
-    if base_path is not None and rel_path is not None:
-        file_destination_path = Path(destination_path) / base_path / rel_path
+    if file_path is not None:
+        file_destination_path = Path(dataset_merged_chunks_path) / file_path / file_name
     else:
-        file_destination_path = Path(destination_path)
+        file_destination_path = Path(dataset_merged_chunks_path) / file_name
 
     if file_destination_path.exists():
-        print(f'Destination path {file_destination_path} already exists for file_upload_log_id {file_upload_log_id}')
+        print(f'Destination path {file_destination_path} already exists for file {file_name}\
+         (file_upload_log_id {file_upload_log_id})')
         print(f'Deleting existing destination path {file_destination_path}')
-        shutil.rmtree(file_destination_path)
-        print(f'Creating destination path {file_destination_path}')
-        file_destination_path.mkdir(parents=True)
+        file_destination_path.unlink(file_destination_path)
+        # print(f'Creating destination path {file_destination_path}')
+        # file_destination_path.mkdir(parents=True)
 
     try:
         num_chunks_found = len([p for p in chunks_path.iterdir()])
         if num_chunks_found != num_chunks_expected:            
-            raise Exception(f'Expected number of chunks for file {file_upload_log_id} ({num_chunks_expected}) don\'t equal number of chunks found {num_chunks_found}. This file\'s'
-                  ' chunks will not be merged')
+            raise Exception(f'Expected number of chunks for file\
+             {file_upload_log_id} ({num_chunks_expected}) don\'t\
+              equal number of chunks found {num_chunks_found}.\
+               This file\'s chunks will not be merged')
             
         if not processing_error:
             for i in range(num_chunks_found):
@@ -53,7 +57,6 @@ def merge_file_chunks(file_upload_log_id, file_name, rel_path, base_path,
                 with open(chunk_file, 'rb') as chunk:
                     with open(file_destination_path, 'ab') as destination:
                         destination.write(chunk.read())
-            # todo - close file handles
 
         # evaluated_checksum = utils.checksum(dataset_path)
         # print(f'evaluated_checksum: {evaluated_checksum}')
@@ -78,7 +81,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
         file_log_updates = []
         for file_log in upload_log['files']:
-            if file_log.status != config['upload_status']['COMPLETE']:
+            if file_log['status'] != config['upload_status']['COMPLETE']:
               file_log_updates.append({
                   'id': file_log['id'],
                   'data': {
@@ -97,11 +100,20 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / dataset['name']
 
     if not dataset_path.exists():
-        raise Exception(f"Upload directory {dataset_path} does not exist for
+        raise Exception(f"Upload directory {dataset_path} does not exist for\
                          dataset id {dataset_id} (upload_log_id: {upload_log_id})")
 
     files = upload_log['files']
     pending_files = [file for file in files if file['status'] != config['upload_status']['COMPLETE']]
+
+    dataset_merged_chunks_path = dataset_path / 'merged_chunks'
+    # if destination_path.exists():
+    #     # shutil.rmtree(destination_path)
+    if not dataset_merged_chunks_path.exists():
+        print(f"Creating merged_chunks path {dataset_merged_chunks_path} for\
+               dataset id {dataset_id} (upload_log_id: {upload_log_id})")
+        dataset_merged_chunks_path.mkdir()
+        print(f"Created merged_chunks path {dataset_merged_chunks_path}")
 
     for f in pending_files:
         # print(f"creating chunks for file:")
@@ -110,30 +122,20 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         num_chunks_expected = f['num_chunks']
         file_md5 = f['md5']
         file_upload_log_id = f['id']
-        file_rel_path = f['relative_path']
-        file_base_path = f['base_path']
+        file_path = f['path']
 
         chunks_path = dataset_path / 'chunked_files' / f['md5']
 
         if not chunks_path.exists():
-            raise Exception(f"Chunks directory {chunks_path} does not exist
+            raise Exception(f"Chunks directory {chunks_path} does not exist\
                              for file {file_name} (file_upload_log_id: {file_upload_log_id})")
         # print("Created chunks path", chunks_path)
 
-        dataset_merged_chunks_path = dataset_path / 'merged_chunks'
-        # if destination_path.exists():
-        #     # shutil.rmtree(destination_path)
-        if not dataset_merged_chunks_path.exists():
-            print(f"Creating merged_chunks path {dataset_merged_chunks_path} for
-                   dataset id {dataset_id} (upload_log_id: {upload_log_id})")
-            dataset_merged_chunks_path.mkdir()
-            print(f"Created merged_chunks path {dataset_merged_chunks_path}")
-        
         if f['status'] != config['upload_status']['COMPLETE']:
             try:
-                f['status'] = merge_file_chunks(file_upload_log_id, file_name, file_rel_path, file_base_path,
-                                                 file_md5, chunks_path, dataset_merged_chunks_path,
-                                                   num_chunks_expected)
+                f['status'] = merge_file_chunks(file_upload_log_id, file_name, file_path,
+                                                file_md5, chunks_path, dataset_merged_chunks_path,
+                                                num_chunks_expected)
             except Exception as e:
                 f['status'] = config['upload_status']['PROCESSING_FAILED']
                 print(e)
@@ -158,8 +160,8 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         # delete subdirectory containing all chunked files
         chunked_files_path = Path(dataset_path) / 'chunked_files'
         if chunked_files_path.exists():
-            print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})
-                   have been processed successfully. Deleting chunked files directory
+            print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
+                   have been processed successfully. Deleting chunked files directory\
                    {chunked_files_path}')
             shutil.rmtree(dataset_path / 'chunked_files')
             print(f'Deleted chunked files directory {chunked_files_path}')
