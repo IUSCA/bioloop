@@ -268,9 +268,12 @@ const onDirectorySelection = (e) => {
 
   const getFilePath = (file) => {
     return isUnix(file.webkitRelativePath)
-      ? file.webkitRelativePath.slice(0, filePath.lastIndexOf("/"))
+      ? file.webkitRelativePath.slice(
+          0,
+          file.webkitRelativePath.lastIndexOf("/"),
+        )
       : file.webkitRelativePath
-          .slice(0, filePath.lastIndexOf("\\"))
+          .slice(0, file.webkitRelativePath.lastIndexOf("\\"))
           .replace(/\\/g, "/");
   };
 
