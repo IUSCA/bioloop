@@ -512,17 +512,13 @@ router.get(
   }),
 );
 
-const UPLOAD_PATH = config.upload_path;
+const UPLOAD_PATH = config.upload.path;
 
-const getUploadPath = (datasetName) => path.join(
+const getDataProductOriginPath = (datasetName) => path.join(
   UPLOAD_PATH,
+  'data_products',
   datasetName,
-);
-
-const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
-  getUploadPath(datasetName),
-  'chunked_files',
-  fileChecksum,
+  'merged_chunks',
 );
 
 // Post a Dataset's upload log, files' info and the Dataset to the database - UI
@@ -561,7 +557,6 @@ router.post(
               path: file.path,
               // chunks_path: getFileChunksStorageDir(data_product_name,
               // file.checksum), destination_path: path.join(
-              // getUploadPath(data_product_name), file.name, ),
               status: config.upload_status.UPLOADING,
             })),
         },
@@ -573,7 +568,7 @@ router.post(
               }],
             },
             name: data_product_name,
-            origin_path: getUploadPath(data_product_name),
+            origin_path: getDataProductOriginPath(data_product_name),
             type: config.dataset_types[1],
             file_type: file_type.id === undefined ? {
               create: {
