@@ -549,12 +549,12 @@ router.post(
           },
         },
         files: {
-          create: files_metadata.map((file) => {
-            console.log('file:', file.name);
-            console.log('relative_path:', file.relativePath);
-            console.log('file_base_path:', file.basePath);
+          create: files_metadata.map((file) =>
+          // console.log('file:', file.name);
+          // console.log('relative_path:', file.relative_path);
+          // console.log('file_base_path:', file.base_path);
 
-            return {
+            ({
               name: file.name,
               md5: file.checksum,
               num_chunks: file.num_chunks,
@@ -564,8 +564,7 @@ router.post(
               // file.checksum), destination_path: path.join(
               // getUploadPath(data_product_name), file.name, ),
               status: config.upload_status.UPLOADING,
-            }
-          }),
+            })),
         },
         dataset: {
           create: {
@@ -646,7 +645,7 @@ router.patch(
       //   dataset: {
       //     delete: true,
       //   },
-    })
+    });
 
     const updates = [];
     updates.push(prisma.upload_log.update({
