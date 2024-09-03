@@ -49,6 +49,9 @@
       "scope_prefix": "upload_file:"
     }
   },
+  "upload": {
+    "path": ""
+  },
   "download_server": {
     "base_url": ""
   },
