@@ -266,18 +266,10 @@ const onDirectorySelection = (e) => {
     path.indexOf("/") === -1 && path.indexOf("\\") > 0;
   const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;
 
-  const getFileRelativePath = (file) => {
+  const getFilePath = (file) => {
     return isUnix(file.webkitRelativePath)
-      ? file.webkitRelativePath.slice(
-          file.webkitRelativePath.indexOf("/") + 1,
-          file.webkitRelativePath.lastIndexOf("/"),
-        )
-      : file.webkitRelativePath
-          .slice(
-            file.webkitRelativePath.indexOf("\\") + 1,
-            file.webkitRelativePath.lastIndexOf("\\"),
-          )
-          .replace(/\\/g, "/");
+      ? file.webkitRelativePath
+      : file.webkitRelativePath.replace(/\\/g, "/");
   };
 
   // all files will have the same base path (the name of the containing folder)
@@ -290,7 +282,8 @@ const onDirectorySelection = (e) => {
   emit("directory-added", {
     directoryName: directoryName.value,
     files: Array.from(e.target.files).map((file) => {
-      file.path = `${directoryName.value}/${getFileRelativePath(file)}`;
+      console.log("file path", file.webkitRelativePath);
+      file.path = getFilePath(file);
 
       // console.log("file name", file.name);
       // console.log("file rel path", file.relativePath);

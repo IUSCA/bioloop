@@ -24,21 +24,23 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
 
 
 def merge_file_chunks(file_upload_log_id, file_name, file_path,
-                      file_md5, chunks_path, destination_path, num_chunks_expected):
+                      file_md5, chunks_path, dataset_merged_chunks_path,
+                      num_chunks_expected):
     print(f'Processing file {file_name}')
     processing_error = False
 
     if file_path is not None:
-        file_destination_path = Path(destination_path) / file_path
+        file_destination_path = Path(dataset_merged_chunks_path) / file_path / file_name
     else:
-        file_destination_path = Path(destination_path)
+        file_destination_path = Path(dataset_merged_chunks_path) / file_name
 
     if file_destination_path.exists():
-        print(f'Destination path {file_destination_path} already exists for file_upload_log_id {file_upload_log_id}')
+        print(f'Destination path {file_destination_path} already exists for file {file_name}\
+         (file_upload_log_id {file_upload_log_id})')
         print(f'Deleting existing destination path {file_destination_path}')
-        shutil.rmtree(file_destination_path)
-        print(f'Creating destination path {file_destination_path}')
-        file_destination_path.mkdir(parents=True)
+        file_destination_path.unlink(file_destination_path)
+        # print(f'Creating destination path {file_destination_path}')
+        # file_destination_path.mkdir(parents=True)
 
     try:
         num_chunks_found = len([p for p in chunks_path.iterdir()])
@@ -55,7 +57,6 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
                 with open(chunk_file, 'rb') as chunk:
                     with open(file_destination_path, 'ab') as destination:
                         destination.write(chunk.read())
-            # todo - close file handles
 
         # evaluated_checksum = utils.checksum(dataset_path)
         # print(f'evaluated_checksum: {evaluated_checksum}')
@@ -80,7 +81,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
         file_log_updates = []
         for file_log in upload_log['files']:
-            if file_log.status != config['upload_status']['COMPLETE']:
+            if file_log['status'] != config['upload_status']['COMPLETE']:
               file_log_updates.append({
                   'id': file_log['id'],
                   'data': {
@@ -105,6 +106,15 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     files = upload_log['files']
     pending_files = [file for file in files if file['status'] != config['upload_status']['COMPLETE']]
 
+    dataset_merged_chunks_path = dataset_path / 'merged_chunks'
+    # if destination_path.exists():
+    #     # shutil.rmtree(destination_path)
+    if not dataset_merged_chunks_path.exists():
+        print(f"Creating merged_chunks path {dataset_merged_chunks_path} for\
+               dataset id {dataset_id} (upload_log_id: {upload_log_id})")
+        dataset_merged_chunks_path.mkdir()
+        print(f"Created merged_chunks path {dataset_merged_chunks_path}")
+
     for f in pending_files:
         # print(f"creating chunks for file:")
         # print(dumps(f, indent=4))
@@ -121,15 +131,6 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
                              for file {file_name} (file_upload_log_id: {file_upload_log_id})")
         # print("Created chunks path", chunks_path)
 
-        dataset_merged_chunks_path = dataset_path / 'merged_chunks'
-        # if destination_path.exists():
-        #     # shutil.rmtree(destination_path)
-        if not dataset_merged_chunks_path.exists():
-            print(f"Creating merged_chunks path {dataset_merged_chunks_path} for\
-                   dataset id {dataset_id} (upload_log_id: {upload_log_id})")
-            dataset_merged_chunks_path.mkdir()
-            print(f"Created merged_chunks path {dataset_merged_chunks_path}")
-        
         if f['status'] != config['upload_status']['COMPLETE']:
             try:
                 f['status'] = merge_file_chunks(file_upload_log_id, file_name, file_path,
