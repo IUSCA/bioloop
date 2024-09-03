@@ -36,6 +36,7 @@ router.get(
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Users']
     const {
       search, sortBy, sort_order, skip, take,
     } = req.query;

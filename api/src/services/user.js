@@ -83,11 +83,21 @@ async function updateLastLogin({ id, method }) {
     },
   });
 }
-
+/** The function `findAll` is used to retrieve a list of users from the database with various filtering, sorting,
+ * and pagination options. */
 async function findAll({
   search, sortBy, sort_order, skip, take,
 }) {
   const sort_sql = Prisma.raw(`"${sortBy}" ${sort_order}`);
+  /**
+ * Constructs a SQL query to:
+ * 1. Join `user`, `user_login`, `user_role`, and `role` tables to retrieve user details, roles, and last login info.
+ * 2. Filter users based on the search term.
+ * 3. Group results by user ID and login method.
+ * 4. Sort results by the specified column and order, with nulls last.
+ * 5. Apply pagination using limit and offset.
+ * Executes the query and returns the total user count and details.
+ */
   const sql = Prisma.sql`
   with results as (
       select u.*, ul.last_login, ul."method", array_agg(r."name") as roles from "user" u

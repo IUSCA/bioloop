@@ -95,6 +95,9 @@ router.get(
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = get all projects.
+    // #swagger.description = admin and operator roles are allowed and user role is forbidden
     const { search, sort_order, sort_by } = req.query;
 
     const filters = search
