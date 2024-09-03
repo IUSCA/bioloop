@@ -549,17 +549,23 @@ router.post(
           },
         },
         files: {
-          create: files_metadata.map((file) => ({
-            name: file.name,
-            md5: file.checksum,
-            num_chunks: file.num_chunks,
-            base_path: file.basePath,
-            relative_path: file.relativePath,
-            // chunks_path: getFileChunksStorageDir(data_product_name,
-            // file.checksum), destination_path: path.join(
-            // getUploadPath(data_product_name), file.name, ),
-            status: config.upload_status.UPLOADING,
-          })),
+          create: files_metadata.map((file) => {
+            console.log('file:', file.name);
+            console.log('relative_path:', file.relativePath);
+            console.log('file_base_path:', file.basePath);
+
+            return {
+              name: file.name,
+              md5: file.checksum,
+              num_chunks: file.num_chunks,
+              base_path: file.basePath,
+              relative_path: file.relativePath,
+              // chunks_path: getFileChunksStorageDir(data_product_name,
+              // file.checksum), destination_path: path.join(
+              // getUploadPath(data_product_name), file.name, ),
+              status: config.upload_status.UPLOADING,
+            }
+          }),
         },
         dataset: {
           create: {
@@ -636,12 +642,11 @@ router.patch(
           increment: 1,
         },
       }),
-      ...(status === config.upload_status.FAILED && {
-        dataset: {
-          delete: true,
-        },
-      }),
-    });
+      // ...(status === config.upload_status.FAILED && {
+      //   dataset: {
+      //     delete: true,
+      //   },
+    })
 
     const updates = [];
     updates.push(prisma.upload_log.update({
