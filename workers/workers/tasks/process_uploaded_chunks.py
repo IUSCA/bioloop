@@ -29,8 +29,12 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
     print(f'Processing file {file_name}')
     processing_error = False
 
+    file_destination_path = None
+
     if file_path is not None:
-        file_destination_path = Path(dataset_merged_chunks_path) / file_path / file_name
+        file_base_path = Path(dataset_merged_chunks_path) / file_path
+        file_base_path.mkdir(parents=True, exist_ok=True)
+        file_destination_path = file_base_path  / file_name
     else:
         file_destination_path = Path(dataset_merged_chunks_path) / file_name
 
@@ -41,6 +45,10 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         file_destination_path.unlink(file_destination_path)
         # print(f'Creating destination path {file_destination_path}')
         # file_destination_path.mkdir(parents=True)
+
+    print(f'Creating destination path {file_destination_path}')
+    file_destination_path.touch()
+    print('Destination path exists: ', file_destination_path.exists())
 
     try:
         num_chunks_found = len([p for p in chunks_path.iterdir()])
