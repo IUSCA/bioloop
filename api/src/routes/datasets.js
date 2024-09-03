@@ -557,6 +557,7 @@ router.post(
               path: file.path,
               // chunks_path: getFileChunksStorageDir(data_product_name,
               // file.checksum), destination_path: path.join(
+              // getDataProductOriginPath(data_product_name), file.name, ),
               status: config.upload_status.UPLOADING,
             })),
         },
