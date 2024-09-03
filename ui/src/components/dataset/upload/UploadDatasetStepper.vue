@@ -174,15 +174,15 @@
 </template>
 
 <script setup>
-import datasetService from "@/services/dataset";
-import _ from "lodash";
-import SparkMD5 from "spark-md5";
 import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
 import config from "@/config";
+import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import UploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import _ from "lodash";
+import SparkMD5 from "spark-md5";
 import { useBreakpoint, useForm } from "vuestic-ui";
 
 const auth = useAuthStore();
@@ -727,11 +727,7 @@ const setDirectory = (directoryDetails) => {
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-<<<<<<< HEAD
-      base_path: file.basePath,
-=======
       basePath: file.basePath,
->>>>>>> origin/dev
       relativePath: file.relativePath,
     });
     directorySize += file.size;
