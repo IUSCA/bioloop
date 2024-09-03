@@ -293,6 +293,9 @@ const onDirectorySelection = (e) => {
       file.relativePath = getFileRelativePath(file);
       file.basePath = directoryName.value;
 
+      console.log("file rel path", file.relativePath);
+      console.log("file base path", file.basePath);
+
       return file;
     }),
   });

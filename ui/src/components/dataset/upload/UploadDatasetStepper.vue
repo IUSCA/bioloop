@@ -127,7 +127,10 @@
             "
             @file-removed="removeFile"
             @directory-added="
-              (directoryDetails) => setDirectory(directoryDetails)
+              (directoryDetails) => {
+                setDirectory(directoryDetails)
+                isSubmissionAlertVisible = false;
+              }
             "
             :submit-attempted="submitAttempted"
             :submission-alert-color="submissionAlertColor"
