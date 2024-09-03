@@ -668,8 +668,6 @@ const preUpload = async () => {
             checksum: e.fileChecksum,
             num_chunks: e.numChunks,
             path: e.path,
-            base_path: e.basePath,
-            relative_path: e.relativePath,
           };
         }),
       };
@@ -736,8 +734,7 @@ const setDirectory = (directoryDetails) => {
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: undefined,
-      basePath: file.basePath,
-      relativePath: file.relativePath,
+      path: file.path,
     });
     directorySize += file.size;
   });

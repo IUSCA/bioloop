@@ -290,8 +290,7 @@ const onDirectorySelection = (e) => {
   emit("directory-added", {
     directoryName: directoryName.value,
     files: Array.from(e.target.files).map((file) => {
-      file.relativePath = getFileRelativePath(file);
-      file.basePath = directoryName.value;
+      file.path = `${directoryName.value}/${getFileRelativePath(file)}`;
 
       // console.log("file name", file.name);
       // console.log("file rel path", file.relativePath);
