@@ -268,8 +268,10 @@ const onDirectorySelection = (e) => {
 
   const getFilePath = (file) => {
     return isUnix(file.webkitRelativePath)
-      ? file.webkitRelativePath
-      : file.webkitRelativePath.replace(/\\/g, "/");
+      ? file.webkitRelativePath.slice(0, filePath.lastIndexOf("/"))
+      : file.webkitRelativePath
+          .slice(0, filePath.lastIndexOf("\\"))
+          .replace(/\\/g, "/");
   };
 
   // all files will have the same base path (the name of the containing folder)
