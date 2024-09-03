@@ -514,8 +514,9 @@ router.get(
 
 const UPLOAD_PATH = config.upload.path;
 
-const getDatasetOriginPath = (datasetName) => path.join(
+const getDataProductOriginPath = (datasetName) => path.join(
   UPLOAD_PATH,
+  'data_products',
   datasetName,
   'merged_chunks',
 );
@@ -549,16 +550,16 @@ router.post(
           // console.log('relative_path:', file.relative_path);
           // console.log('file_base_path:', file.base_path);
 
-          ({
-            name: file.name,
-            md5: file.checksum,
-            num_chunks: file.num_chunks,
-            path: file.path,
-            // chunks_path: getFileChunksStorageDir(data_product_name,
-            // file.checksum), destination_path: path.join(
-            // getDatasetOriginPath(data_product_name), file.name, ),
-            status: config.upload_status.UPLOADING,
-          })),
+            ({
+              name: file.name,
+              md5: file.checksum,
+              num_chunks: file.num_chunks,
+              path: file.path,
+              // chunks_path: getFileChunksStorageDir(data_product_name,
+              // file.checksum), destination_path: path.join(
+              // getDataProductOriginPath(data_product_name), file.name, ),
+              status: config.upload_status.UPLOADING,
+            })),
         },
         dataset: {
           create: {
@@ -568,7 +569,7 @@ router.post(
               }],
             },
             name: data_product_name,
-            origin_path: getDatasetOriginPath(data_product_name),
+            origin_path: getDataProductOriginPath(data_product_name),
             type: config.dataset_types[1],
             file_type: file_type.id === undefined ? {
               create: {
