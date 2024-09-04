@@ -123,6 +123,26 @@ config = {
                     'task': 'setup_dataset_download'
                 }
             ]
+        },
+        'fix_tar_paths': {
+            'steps': [
+                {
+                    'name': 'stage',
+                    'task': 'stage_dataset'
+                },
+                {
+                    'name': 'fix paths',
+                    'task': 'fix_paths'
+                },
+                {
+                    'name': 'update bundle checksum',
+                    'task': 'update_bundle_checksum'
+                },
+                {
+                    'name': 'replace SDA archive',
+                    'task': 'replace_sda_archive'
+                }
+            ]
         }
     },
     'celery': {

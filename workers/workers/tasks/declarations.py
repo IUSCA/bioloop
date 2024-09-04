@@ -120,3 +120,12 @@ def delete_source(celery_task, dataset_id, **kwargs):
 def delete_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.mark_archived_and_delete import mark_archived_and_delete as task_body
     return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='update_bundle_checksum',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def archive_dataset(celery_task, dataset_id, **kwargs):
+    from workers.tasks.update_bundle_checksum import update_bundle_checksum as task_body
+    return task_body(celery_task, dataset_id, **kwargs)

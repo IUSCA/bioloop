@@ -10,7 +10,6 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from dataset import get_bundle_staged_path
 from workers.config import config
 
 app = Celery("tasks")
@@ -45,9 +44,9 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
     return tar_path
 
 
-def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
+def compute_updated_checksum(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    bundle = Path(f'{get_bundle_staged_path(dataset)}')
+    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
@@ -77,9 +76,9 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     return sda_bundle_path, bundle_attrs
 
 
-def archive_dataset(celery_task, dataset_id, **kwargs):
+def update_bundle_checksum(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
-    sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
+    sda_bundle_path, bundle_attrs = compute_updated_checksum(celery_task, dataset)
     update_data = {
         'archive_path': sda_bundle_path,
         'bundle': bundle_attrs
