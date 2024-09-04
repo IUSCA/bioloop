@@ -1,8 +1,7 @@
-import api from "./api";
+import UploadApi from "./uploadApi";
 
 class UploadService {
   constructor() {
-    console.log("uploadService instantiated");
     this.uploadApi = new UploadApi();
     this.axios = this.uploadApi.axiosInstance;
   }
