@@ -1,4 +1,5 @@
 import UploadApi from "./uploadApi";
+import api from "../api";
 
 class UploadService {
   constructor() {
