@@ -3,6 +3,7 @@
     v-model:searchTerm="searchTerm"
     :search-results="datasets"
     :selected-results="props.selectedResults"
+    :selectMode="props.selectMode"
     :search-result-count="totalResultCount"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
@@ -59,6 +60,10 @@ const props = defineProps({
   columnWidths: {
     type: Object,
     required: true,
+  },
+  selectMode: {
+    type: String,
+    default: () => "multiple",
   },
 });
 

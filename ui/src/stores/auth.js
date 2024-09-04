@@ -1,5 +1,6 @@
 import config from "@/config";
 import authService from "@/services/auth";
+import uploadTokenService from "@/services/upload/token";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
@@ -8,9 +9,11 @@ export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
+  const uploadToken = ref(useLocalStorage("uploadToken", ""));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
+  let refreshUploadTokenTimer = null;
   const canOperate = computed(() => {
     return hasRole("operator") || hasRole("admin");
   });
@@ -36,6 +39,7 @@ export const useAuthStore = defineStore("auth", () => {
     loggedIn.value = false;
     user.value = {};
     token.value = "";
+    uploadToken.value = "";
   }
 
   function casLogin({ ticket }) {
@@ -98,7 +102,7 @@ export const useAuthStore = defineStore("auth", () => {
         if (now < expiresAt) {
           // token is still alive
           const delay =
-            expiresAt - now - config.refreshTokenTMinusSeconds * 1000;
+            expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
           console.log(
             "auth store: refreshTokenBeforeExpiry: trigerring refreshToken in ",
             delay / 1000,
@@ -113,8 +117,38 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  function refreshUploadTokenBeforeExpiry(fileName) {
+    // idempotent method - will not create a timeout if one already exists
+    if (!refreshUploadTokenTimer) {
+      // timer is not running
+      try {
+        const payload = jwtDecode(uploadToken.value);
+        const expiresAt = new Date(payload.exp * 1000);
+        const now = new Date();
+        if (now < expiresAt) {
+          // token is still alive
+          const delay =
+            expiresAt -
+            now -
+            config.refreshTokenTMinusSeconds.uploadToken * 1000;
+          console.log("delay: ", delay);
+          console.log(
+            "auth store: refreshUploadTokenBeforeExpiry: triggering refreshToken in ",
+            delay / 1000,
+            "seconds",
+          );
+          refreshUploadTokenTimer = setInterval(() => {
+            refreshUploadToken(fileName);
+          }, delay);
+        }
+        // else - do nothing, navigation guard will redirect to /auth
+      } catch (err) {
+        console.error("Errored trying to decode upload token", err);
+      }
+    }
+  }
+
   function refreshToken() {
-    console.log("refreshing token");
     refreshTokenTimer = null; // reset timer state
     authService
       .refreshToken()
@@ -123,6 +157,19 @@ export const useAuthStore = defineStore("auth", () => {
       })
       .catch((err) => {
         console.error("Unable to refresh token", err);
+      });
+  }
+
+  function refreshUploadToken(fileName) {
+    refreshUploadTokenTimer = null; // reset upload timer state
+
+    uploadTokenService
+      .getUploadToken({ data: { file_name: fileName } })
+      .then((res) => {
+        uploadToken.value = res.data.accessToken;
+      })
+      .catch((err) => {
+        console.error("Unable to refresh upload token", err);
       });
   }
 
@@ -158,6 +205,22 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
+  const onFileUpload = async (fileName) => {
+    return uploadTokenService
+      .getUploadToken({ data: { file_name: fileName } })
+      .then((res) => {
+        uploadToken.value = res.data.accessToken;
+        refreshUploadTokenBeforeExpiry(fileName);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  };
+
+  const postFileUpload = () => {
+    clearInterval(refreshUploadTokenTimer);
+  };
+
   return {
     user,
     loggedIn,
@@ -176,6 +239,8 @@ export const useAuthStore = defineStore("auth", () => {
     ciLogin,
     env,
     setEnv,
+    onFileUpload,
+    postFileUpload,
   };
 });
 

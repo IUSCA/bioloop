@@ -187,6 +187,11 @@ const operator_items = ref([
     test_id: "sidebar-stats-tracking",
   },
   {
+    icon: "mdi:folder-upload",
+    title: "Dataset Upload",
+    path: "/datasetUpload",
+  },
+  {
     icon: "mdi:map-marker-path",
     title: "Workflows",
     path: "/workflows",

@@ -1,5 +1,8 @@
 {
   "auth": {
     "jwks_uri": "JWKS_URI"
+  },
+  "upload_path": {
+    "data_products": "UPLOAD_PATH_DATA_PRODUCTS"
   }
 }
