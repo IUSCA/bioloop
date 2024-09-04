@@ -177,7 +177,6 @@
 import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
 import config from "@/config";
 import datasetService from "@/services/dataset";
-import uploadService from "@/services/upload";
 import toast from "@/services/toast";
 import UploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
