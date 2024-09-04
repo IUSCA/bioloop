@@ -21,6 +21,16 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Data Products uploads - UI
+router.get(
+  '/file-types',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const dataset_file_types = await prisma.dataset_file_type.findMany();
+    res.json(dataset_file_types);
+  }),
+);
+
 // stats - UI
 router.get(
   '/stats',
@@ -29,8 +39,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -566,7 +576,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
@@ -763,16 +773,6 @@ router.get(
       ...req.query,
     });
     res.json(files);
-  }),
-);
-
-// Data Products - UI
-router.get(
-  '/file-types',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const dataset_file_types = await prisma.dataset_file_type.findMany();
-    res.json(dataset_file_types);
   }),
 );
 
