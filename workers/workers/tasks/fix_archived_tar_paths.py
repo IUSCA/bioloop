@@ -10,7 +10,7 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from dataset import get_bundle_staged_path
+from dataset import get_bundle_staged_path, compute_staging_path
 from workers.config import config
 
 app = Celery("tasks")
@@ -77,8 +77,10 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     return sda_bundle_path, bundle_attrs
 
 
-def archive_dataset(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+def fix_tar_paths(celery_task, dataset_id, **kwargs):
+    dataset = api.get_dataset(dataset_id=dataset_id)
+    staging_dir = compute_staging_path(dataset)
+
     sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
     update_data = {
         'archive_path': sda_bundle_path,
