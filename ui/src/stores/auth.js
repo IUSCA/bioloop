@@ -131,7 +131,6 @@ export const useAuthStore = defineStore("auth", () => {
             expiresAt -
             now -
             config.refreshTokenTMinusSeconds.uploadToken * 1000;
-          console.log("delay: ", delay);
           console.log(
             "auth store: refreshUploadTokenBeforeExpiry: triggering refreshToken in ",
             delay / 1000,

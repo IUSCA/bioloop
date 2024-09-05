@@ -8,11 +8,9 @@ class UploadService {
   }
 
   setToken(token) {
-    console.log("uploadService setToken() called");
-    console.log(token);
     this.uploadApi.setToken(token);
-    console.log("---");
   }
+
   getUploadLogs({ status = null, dataset_name = null } = {}) {
     return api.get(`/upload/logs`, {
       params: {
@@ -39,4 +37,4 @@ class UploadService {
   }
 }
 
-export default UploadService;
+export default new UploadService();

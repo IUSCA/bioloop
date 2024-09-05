@@ -100,7 +100,6 @@
 
 <script setup>
 import config from "@/config";
-import datasetService from "@/services/dataset";
 import uploadService from "@/services/upload";
 import { useNavStore } from "@/stores/nav";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";

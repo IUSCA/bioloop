@@ -178,7 +178,7 @@ import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploa
 import config from "@/config";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import UploadService from "@/services/upload";
+import uploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
@@ -219,7 +219,6 @@ const steps = [
   { label: "Select Files", icon: "material-symbols:folder" },
 ];
 
-let uploadService = null;
 const loading = ref(true);
 const datasetName = ref("");
 const fileTypeSelected = ref(null);
@@ -484,8 +483,6 @@ const uploadFileChunks = async (fileDetails) => {
 const uploadFile = async (fileDetails) => {
   // persist token in store
   await auth.onFileUpload(fileDetails.name);
-
-  uploadService = new UploadService();
 
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
