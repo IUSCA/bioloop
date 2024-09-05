@@ -45,7 +45,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
     return tar_path
 
 
-def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
+def fix_tar_paths(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
     bundle = Path(f'{get_bundle_staged_path(dataset)}')
 
@@ -79,7 +79,7 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
 def fix_tar_paths(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    staging_dir = compute_staging_path(dataset)
+    bundle_staged_path = get_bundle_staged_path(dataset)
 
     sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
     update_data = {
