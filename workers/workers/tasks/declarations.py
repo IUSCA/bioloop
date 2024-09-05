@@ -131,10 +131,19 @@ def archive_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='fix_tar_paths',
+@app.task(base=WorkflowTask, bind=True, name='fix_staged_dataset_path',
           autoretry_for=(Exception,),
           max_retries=3,
           default_retry_delay=5)
-def fix_tar_paths(celery_task, dataset_id, **kwargs):
-    from workers.tasks.fix_archived_tar_paths import fix_tar_paths as task_body
+def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
+    from workers.tasks.fix_staged_dataset_path import fix_staged_dataset_path as task_body
+    return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='un_stage_dataset',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def un_stage_dataset(celery_task, dataset_id, **kwargs):
+    from workers.tasks.unstage_dataset import un_stage_dataset as task_body
     return task_body(celery_task, dataset_id, **kwargs)

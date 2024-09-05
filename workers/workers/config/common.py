@@ -127,16 +127,20 @@ config = {
         'fix_tar_paths': {
             'steps': [
                 {
-                    'name': 'stage',
-                    'task': 'stage_dataset'
+                    'name': 'un-stage',
+                    'task': 'un_stage_dataset'
                 },
                 {
-                    'name': 'fix tar paths',
-                    'task': 'fix_tar_paths'
+                    'name': 'fix staged dataset path',
+                    'task': 'fix_staged_dataset_path'
                 },
                 {
-                    'name': 'update bundle checksum',
-                    'task': 'update_bundle_checksum'
+                    'name': 'validate',
+                    'task': 'validate_dataset'
+                },
+                {
+                    'name': 'recompute bundle checksum',
+                    'task': 'recompute_bundle_checksum'
                 },
                 {
                     'name': 'replace SDA archive',

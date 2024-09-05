@@ -18,33 +18,6 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, source_size: int):
-    """
-
-    @param celery_task:
-    @param tar_path:
-    @param source_dir:
-    @param source_size:
-    @return:
-    """
-    logger.info(f'creating tar of {source_dir} at {tar_path}')
-    # if the tar file already exists, delete it
-    if tar_path.exists():
-        tar_path.unlink()
-
-    with wf_utils.track_progress_parallel(celery_task=celery_task,
-                                          name='tar',
-                                          progress_fn=lambda: tar_path.stat().st_size,
-                                          total=source_size,
-                                          units='bytes'):
-        # using python to create tar files does not support --sparse
-        # SDA has trouble uploading sparse tar files
-        cmd.tar(tar_path=tar_path, source_dir=source_dir)
-
-    # TODO: validate files inside tar
-    return tar_path
-
-
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
     bundle = Path(f'{get_bundle_staged_path(dataset)}')
