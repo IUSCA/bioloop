@@ -25,7 +25,8 @@ class ArchivedTarPathFixManager:
         Stage archived datasets from the SDA
         """
         archived_datasets = api.get_all_datasets(archived=True)
-        raise Exception('test exception')
+
+        # raise Exception('test exception')
 
         logger.info(f'Found {len(archived_datasets)} archived datasets')
 

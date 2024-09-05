@@ -9,6 +9,13 @@ from datetime import datetime, timezone, date, time
 from enum import Enum, unique
 from itertools import islice
 from pathlib import Path
+import shutil
+import tarfile
+import tempfile
+from sca_rhythm import WorkflowTask
+
+import workflow_utils as wf_utils
+import workers.cmd as cmd
 
 
 def str_func_call(func, args, kwargs):
@@ -149,3 +156,66 @@ class DateTimeEncoder(json.JSONEncoder):
         #     # Encode bytes as base64
         #     return obj.decode('utf-8')
         return super().default(obj)
+
+
+def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
+    """
+    tar_path: path to the tar file to extract
+    target_dir: path to the top level directory after extraction
+
+    extracts the tar file to  target_dir.parent directory.
+
+    The directory created here after extraction will have the same name as the top level directory inside the archive.
+
+    If that is not desired and the name of the directory created needs to be the same as target_dir.name,
+    then set override_arcname = True
+
+    If a directory with the same name as extracted dir already exists, it will be deleted.
+    @param tar_path:
+    @param target_dir:
+    @param override_arcname:
+    """
+    with tarfile.open(tar_path, mode='r') as archive:
+        # find the top-level directory in the extracted archive
+        archive_name = os.path.commonprefix(archive.getnames())
+        extraction_dir = target_dir if override_arcname else (target_dir.parent / archive_name)
+
+        # if extraction_dir exists then delete it
+        if extraction_dir.exists():
+            shutil.rmtree(extraction_dir)
+
+        # create parent directories if missing
+        extraction_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        # extracts the tar contents to a temp directory
+        # move the contents to the extraction_dir
+        with tempfile.TemporaryDirectory(dir=extraction_dir.parent) as tmp_dir:
+            archive.extractall(path=tmp_dir)
+            shutil.move(Path(tmp_dir) / archive_name, extraction_dir)
+
+
+def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, source_size: int):
+    """
+
+    @param celery_task:
+    @param tar_path:
+    @param source_dir:
+    @param source_size:
+    @return:
+    """
+    print(f'creating tar of {source_dir} at {tar_path}')
+    # if the tar file already exists, delete it
+    if tar_path.exists():
+        tar_path.unlink()
+
+    with wf_utils.track_progress_parallel(celery_task=celery_task,
+                                          name='tar',
+                                          progress_fn=lambda: tar_path.stat().st_size,
+                                          total=source_size,
+                                          units='bytes'):
+        # using python to create tar files does not support --sparse
+        # SDA has trouble uploading sparse tar files
+        cmd.tar(tar_path=tar_path, source_dir=source_dir)
+
+    # TODO: validate files inside tar
+    return tar_path
