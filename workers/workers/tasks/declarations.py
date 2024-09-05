@@ -147,3 +147,12 @@ def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
 def un_stage_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.unstage_dataset import un_stage_dataset as task_body
     return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='replace_sda_archive',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def replace_sda_archive(celery_task, dataset_id, **kwargs):
+    from workers.tasks.replace_sda_archive import replace_sda_archive as task_body
+    return task_body(celery_task, dataset_id, **kwargs)
