@@ -30,9 +30,9 @@ def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
         shutil.rmtree(bundle_path)
         print(f"deleted bundle path {str(bundle_path)}")
 
-    sda_retrieved_bundles_path = bundle_path.parent / 'sda_retrieved_bundles'
-    sda_retrieved_bundles_path.mkdir(exist_ok=True)
-    print(f"sda_retrieved_bundles_path: {sda_retrieved_bundles_path.exists()}")
+    # sda_retrieved_bundles_path = bundle_path.parent / 'sda_retrieved_bundles'
+    # sda_retrieved_bundles_path.mkdir(exist_ok=True)
+    # print(f"sda_retrieved_bundles_path: {sda_retrieved_bundles_path.exists()}")
 
     sda_archive_path = dataset['archive_path']
     downloaded_sda_bundle_path = Path(f'{get_bundle_staged_path(dataset)}')
