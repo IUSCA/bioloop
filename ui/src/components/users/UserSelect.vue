@@ -28,6 +28,6 @@ const filterFn = (text) => (user) => {
 };
 
 userService.getAll().then((data) => {
-  users.value = data;
+  users.value = data.users;
 });
 </script>
