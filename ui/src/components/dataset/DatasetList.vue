@@ -50,7 +50,7 @@
 
       <template #cell(file_type)="{ rowData }">
         <va-chip v-if="rowData" outline size="small">
-          {{ rowData.name }}
+          {{ rowData.file_type?.name }}
         </va-chip>
       </template>
 
