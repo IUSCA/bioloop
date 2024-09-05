@@ -131,8 +131,8 @@ config = {
                     'task': 'stage_dataset'
                 },
                 {
-                    'name': 'fix paths',
-                    'task': 'fix_paths'
+                    'name': 'fix tar paths',
+                    'task': 'fix_tar_paths'
                 },
                 {
                     'name': 'update bundle checksum',
