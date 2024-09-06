@@ -122,15 +122,6 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='update_bundle_checksum',
-          autoretry_for=(Exception,),
-          max_retries=3,
-          default_retry_delay=5)
-def archive_dataset(celery_task, dataset_id, **kwargs):
-    from workers.tasks.update_bundle_checksum import update_bundle_checksum as task_body
-    return task_body(celery_task, dataset_id, **kwargs)
-
-
 @app.task(base=WorkflowTask, bind=True, name='un_stage_dataset',
           autoretry_for=(Exception,),
           max_retries=3,
@@ -140,12 +131,12 @@ def un_stage_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='fix_staged_dataset_path',
+@app.task(base=WorkflowTask, bind=True, name='fix_staged_dataset_absolute_path',
           autoretry_for=(Exception,),
           max_retries=3,
           default_retry_delay=5)
-def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
-    from workers.tasks.fix_staged_dataset_path import fix_staged_dataset_path as task_body
+def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
+    from workers.tasks.fix_staged_dataset_absolute_path import fix_staged_dataset_absolute_path as task_body
     return task_body(celery_task, dataset_id, **kwargs)
 
 
@@ -155,6 +146,15 @@ def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
           default_retry_delay=5)
 def recreate_bundle(celery_task, dataset_id, **kwargs):
     from workers.tasks.recreate_bundle import recreate_bundle as task_body
+    return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='update_bundle_checksum',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def archive_dataset(celery_task, dataset_id, **kwargs):
+    from workers.tasks.update_bundle_checksum import update_bundle_checksum as task_body
     return task_body(celery_task, dataset_id, **kwargs)
 
 

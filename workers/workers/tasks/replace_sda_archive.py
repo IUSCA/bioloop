@@ -21,6 +21,8 @@ logger = get_task_logger(__name__)
 
 def replace_sda_archive(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+    bundle = dataset['bundle']
+
     bundle_path = Path(get_bundle_staged_path(dataset))
 
     sda_archive_path = wf_utils.get_archive_dir(dataset['type'])
@@ -31,16 +33,28 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
     sda_updated_bundle_path = f'{sda_archive_path}/updated_{bundle_path.name}'
     print(f"SDA updated bundle path: {sda_updated_bundle_path}")
 
-    # no need to verify checksum, since the current tar on the SDA will have a
-    # different checksum than the newly created tar, due to incorrect nested
-    # paths in the current tar on the SDA.
+    # no need to verify checksum, since the current bundle on the SDA will have a
+    # different checksum than the newly created bundle, due to incorrect nested
+    # paths in the current bundle on the SDA.
     wf_utils.upload_file_to_sda(local_file_path=bundle_path,
                                 sda_file_path=sda_updated_bundle_path,
                                 celery_task=celery_task,
                                 verify_checksum=False)
     print(f"Uploaded archive {bundle_path} to SDA at {sda_updated_bundle_path}")
 
-    # todo - verify that the replaced SDA bundle has the same checksum as the newly created tar
+    # verify that the replaced SDA bundle has the same checksum as the newly created bundle
+    updated_sda_bundle_checksum = sda.get_hash(str(bundle_path))
+    print(f"Updated bundle checksum: {updated_sda_bundle_checksum}")
+
+    # The checksum computed in the 'recreate_bundle' step
+    persisted_bundle_checksum = bundle['md5']
+    print(f"Persisted bundle checksum: {persisted_bundle_checksum}")
+
+    if updated_sda_bundle_checksum!= persisted_bundle_checksum:
+        raise Exception(f"Checksum validation failed for updated SDA bundle: {sda_updated_bundle_path},\
+ dataset_id: {dataset_id}")
+        # raise exc.ValidationFailed(f'Checksum validation failed for updated SDA bundle: {bundle_path.name}')
+        # return config['upload_status']['PROCESSING_FAILED']
 
     sda.rename(sda_current_bundle_path, f'original_{sda_current_bundle_path}')
     print(f"Renamed SDA bundle {sda_current_bundle_path} to original_{sda_updated_bundle_path}")
