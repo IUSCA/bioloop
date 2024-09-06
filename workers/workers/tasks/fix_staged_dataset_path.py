@@ -47,7 +47,7 @@ def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
     print(f'Extracted {str(downloaded_sda_bundle_path)} to {str(staging_dir)}')
 
     # verify if the extracted tar already has the correct root path
-    if str(staging_dir) != dataset['name']:
+    if staging_dir.name != dataset['name']:
         extracted_dataset_dir = next(Path(staging_dir).glob(f'**/{dataset["name"]}'))
         print(f'found {str(extracted_dataset_dir)} inside {str(staging_dir)}')
         shutil.rmtree(staging_dir)

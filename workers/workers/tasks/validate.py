@@ -47,4 +47,7 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='STAGED')
+
+    print(f'validate successful for dataset id: {dataset_id}')
+
     return dataset_id, validation_errors
