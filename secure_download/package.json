@@ -16,13 +16,13 @@
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-lodash-fp": "2.2.0-a1",
     "git-hooks": "^1.1.10",
-    "nodemon": "^3.0.1",
-    "cors": "^2.8.5"
+    "nodemon": "^3.0.1"
   },
   "dependencies": {
     "axios": "^1.7.4",
     "config": "^3.3.9",
     "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
     "dotenv-safe": "^8.2.0",
     "express": "^4.19.2",
     "express-validator": "^7.0.1",
