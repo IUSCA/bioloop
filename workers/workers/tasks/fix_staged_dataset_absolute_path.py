@@ -18,7 +18,7 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
+def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
 
     bundle_path = Path(f'{get_bundle_staged_path(dataset)}')
@@ -46,7 +46,7 @@ def fix_staged_dataset_path(celery_task, dataset_id, **kwargs):
     utils.extract_tarfile(tar_path=downloaded_sda_bundle_path, target_dir=staging_dir, override_arcname=True)
     print(f'Extracted {str(downloaded_sda_bundle_path)} to {str(staging_dir)}')
 
-    # verify if the extracted tar already has the correct root path
+    # verify if the extracted bundle already has the correct root path
     if staging_dir.name != dataset['name']:
         extracted_dataset_dir = next(Path(staging_dir).glob(f'**/{dataset["name"]}'))
         print(f'found {str(extracted_dataset_dir)} inside {str(staging_dir)}')

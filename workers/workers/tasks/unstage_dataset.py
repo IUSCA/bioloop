@@ -15,9 +15,9 @@ def un_stage_dataset(celery_task, dataset_id, **kwargs):
     }
 
     dataset = api.get_dataset(dataset_id=dataset_id)
-    if not dataset['is_staged']:
+    if dataset['is_staged']:
         api.update_dataset(dataset_id=dataset_id, update_data=payload)
 
-    print(f"Unstaged dataset {dataset_id}")
+    print(f"Un-staged dataset {dataset_id}")
 
     api.add_state_to_dataset(dataset_id=dataset_id, state='READY')

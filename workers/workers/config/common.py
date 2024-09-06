@@ -124,7 +124,7 @@ config = {
                 }
             ]
         },
-        'fix_tar_paths': {
+        'fix_bundle_absolute_paths': {
             'steps': [
                 {
                     'name': 'un-stage',
@@ -132,7 +132,7 @@ config = {
                 },
                 {
                     'name': 'fix staged dataset path',
-                    'task': 'fix_staged_dataset_path'
+                    'task': 'fix_staged_dataset_absolute_path'
                 },
                 {
                     'name': 'validate',
