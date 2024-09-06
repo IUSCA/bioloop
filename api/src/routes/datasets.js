@@ -30,8 +30,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -554,7 +554,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
@@ -751,5 +751,172 @@ router.get(
     res.json(files);
   }),
 );
+
+
+
+
+router.get('/:id/metadata',
+  dataset_access_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Update dataset metadata
+    const { id } = req.params;
+
+    console.log('ID', id);
+    const results = await prisma.keyword_value.findMany({
+      where: {
+
+        dataset_id: parseInt(id),
+        keyword: {
+          visible: true,
+        },
+
+      },
+      include: {
+        keyword: true,
+      },
+    });
+
+    console.log('KEYWORD VALUE', results);
+
+    res.json(results);
+
+  })
+);
+
+router.get('/metadata/all/:type',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Get unique metadata possibilities
+    const { type } = req.params;
+
+    // Get the dataset IDs for the given type
+    const dataset_ids = await prisma.dataset.findMany({
+      where: {
+        type,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+
+    // Filter by the dataset IDs, getting unique values for the given type
+    const keyword_value = await prisma.keyword_value.findMany({
+      where: {
+        dataset_id: {
+          in: dataset_ids.map((d) => d.id),
+        },
+        keyword: {
+          visible: true,
+        },
+      },
+      distinct: ['value'],
+      include: {
+        keyword: true,
+      },
+    });
+
+    let results = {}
+
+    for(const kv of keyword_value) {
+      const name = kv.keyword.name;
+
+      console.log('KV', kv);
+      if (!results[name]) {
+        results[name] = [];
+      } 
+      if(!results[name].includes(kv.value)) {
+        results[name].push(kv.value);
+      }
+    }
+
+    console.log('SOMETHING', results);
+
+
+
+
+    // Convert the Set to an array and return it
+    res.json(results)
+  })
+);
+
+router.patch('/:id/metadata', asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = Update dataset metadata
+  const { id } = req.params;
+  const { metadata } = req.body;
+
+
+  const upsertPromises = metadata.map(mdata => {
+    const keyword_id = parseInt(mdata.keyword_id);
+
+
+    return prisma.keyword_value.upsert({
+      where: {
+        keyword_id_dataset_id: {
+          dataset_id: parseInt(id),
+          keyword_id: keyword_id
+        }
+      },
+      update: { value: mdata.data },
+      create: { dataset_id: parseInt(id), keyword_id: keyword_id, value: mdata.data },
+    });
+  });
+
+  try {
+    const results = await Promise.all(upsertPromises);
+    console.log('Upsert results:', results);
+    res.json(results);
+  } catch (error) {
+    console.error('Error during upsert:', error);
+    res.status(500).json({ error: 'Error during update/create' });
+  }
+}));
+
+router.post('/metadata/keyword', asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = Update dataset metadata
+  const { keyword, description } = req.body;
+  const results = await prisma.keyword.create({
+    data: {
+      keyword,
+      description,
+      datatype: 'STRING',
+    },
+  });
+  res.json(results);
+}));
+
+router.get('/metadata/fields', asyncHandler(async (req, res, next) => {
+
+  const results = await prisma.keyword.findMany({
+    where: {
+      visible: true,
+    },
+  });
+
+  console.log("RESULTS", results)
+
+  res.json(results);
+
+}));
+
+router.post('/metadata/fields', asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = Update dataset metadata
+  const { name, description } = req.body;
+  const results = await prisma.keyword.create({
+    data: {
+      name,
+      description,
+      datatype: 'STRING',
+    },
+  });
+  res.json(results);
+
+
+}));
 
 module.exports = router;

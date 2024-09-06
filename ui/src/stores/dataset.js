@@ -86,12 +86,20 @@ export const useDatasetStore = defineStore("dataset", () => {
     resetQuery();
   }
 
+  const type = ref("");
+  function setType(newType) {
+    type.value = newType;
+  }
+
+
   return {
     params,
     filters,
     query,
     filterStatus,
     activeFilters,
+    type,
+    setType,
     defaultFilters,
     defaultQuery,
     defaultParams,

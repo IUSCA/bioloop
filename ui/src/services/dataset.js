@@ -100,6 +100,27 @@ class DatasetService {
     });
   }
 
+  get_metadata( id ) {
+    return api.get(`/datasets/${id}/metadata`);
+  }
+
+  get_all_metadata(type) {
+    console.log("getting metadata for", type);
+    return api.get(`/datasets/metadata/all/${type}`);
+  }
+
+  save_metadata({ id, metadata }) {
+    return api.patch(`/datasets/${id}/metadata`, {metadata});
+  }
+
+  get_metadata_fields() {
+    return api.get("/datasets/metadata/fields");
+  }
+
+  create_metadata_field({ name, description }) {
+    return api.post("/datasets/metadata/fields", { name, description });
+  }
+
   search_files({
     id,
     name,
