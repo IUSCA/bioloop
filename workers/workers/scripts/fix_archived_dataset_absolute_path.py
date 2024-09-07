@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class ArchivedBundlePathFixManager:
+class ArchivedDatasetPathFixManager:
     WORKFLOW_COLLECTION_NAME = 'workflow_meta'
     TASK_COLLECTION_NAME = 'celery_taskmeta'
 
@@ -48,6 +48,7 @@ class ArchivedBundlePathFixManager:
                                                    workflows_type=self.workflow_name)
         mongo_wf_ids = [wf['_id'] for wf in mongo_workflows]
 
+        # Verify that this workflow is not already running on any of the archived datasets
         for wf_id in mongo_wf_ids:
             mongo_wf_index = [i for (i, wf) in enumerate(mongo_workflows) if wf['_id'] == wf_id][0]
             mongo_wf = mongo_workflows[mongo_wf_index]
@@ -66,8 +67,10 @@ class ArchivedBundlePathFixManager:
                 if not self.dry_run:
                     wf_body = wf_utils.get_wf_body(wf_name=self.workflow_name)
                     wf = Workflow(celery_app=celery_app, **wf_body)
-                    api.add_workflow_to_dataset(dataset_id=None, workflow_id=wf.workflow['_id'])
-                    wf.start(dataset_id=None)
+                    api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+                    wf.start(dataset_id=dataset_id)
+                else:
+                    print(f"Dry run: would start workflow: {self.workflow_name} for dataset: {dataset_id}")
 
     def get_mongo_workflows(
             self,
@@ -87,19 +90,21 @@ class ArchivedBundlePathFixManager:
         return list(cursor)
 
 
-def stage_archived_bundles(app_id: str = config['app_id'], dry_run=False):
+def fix_dataset_nested_paths(app_id: str = config['app_id'], dry_run=False):
     """
-    Purge orphaned workflows and associated tasks from the result backend.
+    Kicks off workflow 'fix_bundle_absolute_paths' on all archived datasets
+    for a given app_id, which will fix any nested paths inside each archived
+    dataset, recreate its bundle, and archive the recreated bundle to the SDA.
 
     @param app_id: app_id to purge workflows for
     @param dry_run: if True, do not delete workflows
 
     example usage:
 
-    python -m workers.scripts.fix_bundle_absolute_paths --app_id='bioloop-dev.sca.iu.edu --dry_run
+    python -m workers.scripts.fix_archived_dataset_absolute_path --app_id='bioloop-dev.sca.iu.edu --dry_run
     """
-    ArchivedBundlePathFixManager(app_id, dry_run).fix_bundle_absolute_paths()
+    ArchivedDatasetPathFixManager(app_id, dry_run).fix_bundle_absolute_paths()
 
 
 if __name__ == "__main__":
-    fire.Fire(stage_archived_bundles)
+    fire.Fire(fix_dataset_nested_paths)
