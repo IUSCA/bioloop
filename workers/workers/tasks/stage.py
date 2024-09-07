@@ -51,7 +51,7 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
 
     # extract the tar file to stage directory
     logger.info(f'extracting tar {bundle_download_path} to {staging_dir}')
-    utils.extract_tarfile(tar_path=bundle_download_path, target_dir=staging_dir, override_arcname=True)
+    wf_utils.extract_tarfile(tar_path=bundle_download_path, target_dir=staging_dir, override_arcname=True)
 
     # delete the local tar copy after extraction
     # bundle_path.unlink()

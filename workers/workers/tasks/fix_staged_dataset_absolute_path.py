@@ -42,7 +42,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     (staging_dir) = compute_staging_path(dataset)
 
     print(f'Extracting {str(bundle_path)} to {str(staging_dir)}')
-    utils.extract_tarfile(tar_path=bundle_path, target_dir=staging_dir, override_arcname=True)
+    wf_utils.extract_tarfile(tar_path=bundle_path, target_dir=staging_dir, override_arcname=True)
     print(f'Extracted {str(bundle_path)} to {str(staging_dir)}')
 
     # verify if the extracted bundle already has the correct root path

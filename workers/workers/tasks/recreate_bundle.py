@@ -35,7 +35,7 @@ def recreate_bundle(celery_task, dataset_id, **kwargs):
     dataset_staging_dir = compute_staging_path(dataset)
 
     print(f'Creating bundle for dataset_id {dataset_id} from {str(dataset_staging_dir)}')
-    utils.make_tarfile(celery_task=celery_task,
+    wf_utils.make_tarfile(celery_task=celery_task,
                        tar_path=downloaded_bundle_path,
                        source_dir=str(dataset_staging_dir),
                        source_size=dataset['du_size'])
