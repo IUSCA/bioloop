@@ -22,7 +22,7 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     # Tar the dataset directory and compute checksum
     bundle = Path(f'{get_bundle_staged_path(dataset)}')
 
-    utils.make_tarfile(celery_task=celery_task,
+    wf_utils.make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
                  source_dir=dataset['origin_path'],
                  source_size=dataset['du_size'])
