@@ -9,6 +9,8 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
+# un-stages a dataset, so that it cannot be downloaded while its bundle's
+# contents' paths are being fixed.
 def un_stage_dataset(celery_task, dataset_id, **kwargs):
     payload = {
         'is_staged': False,

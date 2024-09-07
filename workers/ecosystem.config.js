@@ -81,14 +81,14 @@ module.exports = {
       autorestart: false,
     },
     {
-      name: "fix_archived_tars_absolute_path",
+      name: "fix_archived_dataset_absolute_path",
       script: "python",
-      args: "-u -m workers.scripts.fix_archived_tars_absolute_path",
+      args: "-u -m workers.scripts.fix_archived_dataset_absolute_path",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "../logs/workers/fix_archived_tars_absolute_path.err",
-      out_file: "../logs/workers/fix_archived_tars_absolute_path.log",
+      error_file: "../logs/workers/fix_archived_dataset_absolute_path.err",
+      out_file: "../logs/workers/fix_archived_dataset_absolute_path.log",
       autorestart: false,
     }
   ]
