@@ -116,7 +116,7 @@ def download_file_from_sda(sda_file_path: str,
                            *,
                            celery_task: WorkflowTask = None,
                            verify_checksum: bool = True,
-                           preflight_check: bool = True) -> None:
+                           preflight_check: bool = False) -> None:
     """
     Before downloading, check if the file exists and the checksums match.
     If not, download from SDA and validate if the checksums match.
