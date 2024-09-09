@@ -236,9 +236,9 @@ router.get(
         dataset_id: 42,
       }];
 
-      const mongo_res = api_res.data;
+      const nosql_workflows = api_res.data;
 
-      const results = mongo_res.results.map((wf) => {
+      const results = (nosql_workflows.results || []).map((wf) => {
         const app_wf = app_workflows.find((aw) => aw.id === wf.id);
         return {
           ...wf,
@@ -246,9 +246,7 @@ router.get(
         };
       });
 
-      res.json({
-
-      });
+      res.json(results);
     },
   ),
 );

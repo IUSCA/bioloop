@@ -125,6 +125,30 @@
 
     <!-- workflows -->
     <div class="md:w-5/6 space-y-2">
+      <!-- filters container -->
+      <div class="flex flex-row gap-2">
+        <!-- Search filters     -->
+        <div class="flex w-full gap-2">
+          <va-select
+            class="flex-none"
+            v-model="selected_search_option"
+            :options="search_by_options"
+            label="Search by"
+            inner-label
+            :auto-select-first-option="true"
+            :track-by="(option) => option.key"
+            :text-by="(option) => option.label"
+          >
+          </va-select>
+
+          <va-input
+            class="flex-1"
+            v-model="search_text"
+            :placeholder="`Search by ${selected_search_option?.label}`"
+          />
+        </div>
+      </div>
+
       <collapsible
         v-for="workflow in filtered_workflows"
         :key="workflow.id"
@@ -204,6 +228,22 @@ const auto_refresh_options = [
 const workflows = ref([]);
 const total_results = ref(0);
 const status_counts = ref({});
+const search_text = ref("");
+const search_by_options = ref([
+  {
+    label: "Dataset ID",
+    key: "dataset_id",
+  },
+  {
+    label: "Workflow ID",
+    key: "workflow_id",
+  },
+  {
+    label: "Dataset Name",
+    key: "dataset_name",
+  },
+]);
+const selected_search_option = ref(search_by_options.value[0]);
 
 const query_params = ref(default_query_params());
 useQueryPersistence({
