@@ -34,7 +34,7 @@
                 >
               </span>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 w-16">
               <span>
                 Initiated by: {{ workflow?.initiator?.name }} (
                 {{ workflow.initiator?.username }} )
