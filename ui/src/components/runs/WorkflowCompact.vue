@@ -25,12 +25,22 @@
         </span>
 
         <div v-if="props.show_dataset && dataset_id">
-          <span class="text-sm">
-            Dataset:
-            <router-link :to="`/datasets/${dataset_id}`" class="va-link"
-              >#{{ dataset_id }}</router-link
-            >
-          </span>
+          <div class="text-sm flex gap-x-3">
+            <div>
+              <span>
+                Dataset:
+                <router-link :to="`/datasets/${dataset_id}`" class="va-link"
+                  >#{{ dataset_id }}</router-link
+                >
+              </span>
+            </div>
+            <div class="flex gap-2">
+              <span>
+                Initiated by: {{ workflow?.initiator?.name }} (
+                {{ workflow.initiator?.username }} )
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

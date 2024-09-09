@@ -302,6 +302,7 @@ function getWorkflows() {
       status: query_params.value.status,
       skip: skip.value,
       limit: query_params.value.page_size,
+      include_initiator: true,
     })
     .then((res) => {
       // keep workflows open that were open

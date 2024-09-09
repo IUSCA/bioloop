@@ -10,6 +10,7 @@ class WorkflowService {
     status = null,
     skip = 0,
     limit = 10,
+    include_initiator = False,
   } = {}) {
     return api.get("/workflows", {
       params: {
@@ -19,6 +20,7 @@ class WorkflowService {
         workflow_id: workflow_ids,
         skip,
         limit,
+        include_initiator,
       },
       paramsSerializer: {
         // to create workflow_id=123&workflow_id=456

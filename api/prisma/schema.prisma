@@ -154,6 +154,7 @@ model user {
   project_users_assigned    project_user[]      @relation("project_user_assignor")
   project_datasets_assigned project_dataset[]
   project_contacts_assigned project_contact[]
+  initiated_workflows       workflow[]       @relation("initiated_workflows")
 }
 
 model user_password {
@@ -213,6 +214,8 @@ model workflow {
   id         String   @id
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  initiator_id Int?
+  initiator user?     @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: Cascade)
 }
 
 model metric {
