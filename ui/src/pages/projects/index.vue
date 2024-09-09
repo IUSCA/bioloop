@@ -232,10 +232,10 @@ const row_items = computed(() => {
 // but the order of columns would not be preserved
 const columns = [
   { key: "name", sortable: true },
-  ...(auth.canOperate ? [{ key: "users", sortable: true, width: "30%" }] : []),
+  ...(auth.canOperate ? [{ key: "users", sortable: false, width: "30%" }] : []),
   {
     key: "datasets",
-    sortable: true,
+    sortable: false,
     width: "80px",
     thAlign: "center",
     tdAlign: "center",
