@@ -328,7 +328,7 @@ const columns = ref([
   },
   {
     key: "login_method",
-    sortable: true,
+    sortable: false,
     label: "Auth",
     width: "75px",
   },
