@@ -145,6 +145,7 @@
             class="flex-1"
             v-model="search_text"
             :placeholder="`Search by ${selected_search_option?.label}`"
+            clearable
           />
         </div>
       </div>
@@ -284,7 +285,13 @@ const filtered_workflows = computed(() => {
 });
 
 watch(search_text, () => {
-  query_params.value.search_by = selected_search_option.value.key;
+  console.log("search_text changed", search_text.value);
+  if (search_text.value.trim() === "") {
+    query_params.value.search_by = null;
+  } else {
+    query_params.value.search_by = selected_search_option.value.key;
+    console.dir(query_params.value);
+  }
   // workflowService.getAll();
 });
 
@@ -294,6 +301,7 @@ watch(
     () => query_params.value.status,
     () => query_params.value.page,
     () => query_params.value.page_size,
+    () => query_params.value.search_by,
   ],
   (newVals, oldVals) => {
     // set page to 1 when page_size changes
@@ -349,9 +357,9 @@ function getWorkflows() {
       limit: query_params.value.page_size,
       include_initiator: true,
       ...(query_params.value?.search_by === "workflow_id"
-        ? { workflow_ids: [query_params.value.search_text] }
+        ? { workflow_ids: [search_text.value] }
         : query_params.value?.search_by === "dataset_id" && {
-            dataset_id: query_params.value.search_text,
+            dataset_id: search_text.value,
           }),
     })
     .then((res) => {
