@@ -297,7 +297,7 @@ router.get(
 
       res.json({
         metadata: {
-          total: nosql_workflows.results.length,
+          total: filtered_nosql_workflows.results.length,
           limit: req.query.limit,
           skip: req.query.skip,
         },
