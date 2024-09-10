@@ -50,7 +50,7 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
     persisted_bundle_checksum = bundle['md5']
     print(f"Persisted bundle checksum: {persisted_bundle_checksum}")
 
-    if updated_sda_bundle_checksum!= persisted_bundle_checksum:
+    if updated_sda_bundle_checksum != persisted_bundle_checksum:
         raise Exception(f"Checksum validation failed for updated SDA bundle: {sda_updated_bundle_path},\
  dataset_id: {dataset_id}")
         # raise exc.ValidationFailed(f'Checksum validation failed for updated SDA bundle: {bundle_path.name}')
