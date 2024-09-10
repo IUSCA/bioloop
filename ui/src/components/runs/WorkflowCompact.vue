@@ -34,7 +34,7 @@
                 >
               </span>
             </div>
-            <div v-if="workflow?.initiator" class="flex gap-2 w-16">
+            <div v-if="workflow?.initiator" class="gap-2 w-16">
               <span>
                 Initiated by: {{ workflow.initiator?.name }} (
                 {{ workflow.initiator?.username }} )
