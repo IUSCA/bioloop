@@ -239,7 +239,7 @@ router.get(
       //   dataset_id: 42,
       // }];
 
-      console.log('query')
+      console.log('query');
       console.dir(req.query, { depth: null });
 
       console.log('query dataset_id: ', req.query.dataset_id);
@@ -249,11 +249,20 @@ router.get(
       // console.log('nosql_workflows:');
       // console.dir(nosql_workflows.results[0], { depth: null });
 
+      const workflow_ids = req.query.workflow_id;
+      console.log('Array.isArray: ', Array.isArray(workflow_ids));
+
       let filter_query = {};
-      if (req.query.workflow_id) {
+      if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
         filter_query = {
           id: {
             in: req.query.workflow_id,
+          },
+        };
+      } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
+        filter_query = {
+          id: {
+            equals: workflow_ids,
           },
         };
       } else if (req.query.dataset_id) {
