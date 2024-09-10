@@ -267,7 +267,7 @@ router.get(
       const app_workflows = await prisma.workflow.findMany({
         where: { ...filter_query },
         include: {
-          dataset: true,
+          initiator: true,
         },
       });
 
