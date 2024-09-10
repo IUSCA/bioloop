@@ -25,8 +25,8 @@
         </span>
 
         <div v-if="props.show_dataset && dataset_id">
-          <div class="text-sm flex gap-x-3">
-            <div>
+          <div class="flex text-sm gap-x-3">
+            <div class="grow">
               <span>
                 Dataset:
                 <router-link :to="`/datasets/${dataset_id}`" class="va-link"
@@ -34,7 +34,8 @@
                 >
               </span>
             </div>
-            <div v-if="workflow?.initiator" class="gap-2 w-16">
+
+            <div v-if="workflow?.initiator" class="grow gap-2">
               <span>
                 Initiated by: {{ workflow.initiator?.name }} (
                 {{ workflow.initiator?.username }} )
