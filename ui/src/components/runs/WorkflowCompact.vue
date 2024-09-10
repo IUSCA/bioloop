@@ -109,8 +109,8 @@
 
 <script setup>
 import WorkflowStatusIcon from "@/components/runs/WorkflowStatusIcon.vue";
-import workflowService from "@/services/workflow";
 import * as datetime from "@/services/datetime";
+import workflowService from "@/services/workflow";
 
 const props = defineProps({
   workflow: Object,
