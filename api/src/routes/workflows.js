@@ -14,209 +14,12 @@ const isPermittedTo = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// const api_res = {
-//   metadata: {
-//     total: 1499,
-//     limit: 10,
-//     skip: 0,
-//   },
-//   results: [
-//     {
-//       id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-//       name: 'integrated',
-//       app_id: 'bioloop-dev.sca.iu.edu',
-//       description: null,
-//       created_at: '2024-09-07T02:33:52.955000Z',
-//       updated_at: '2024-09-07T02:39:19.109000Z',
-//       status: 'SUCCESS',
-//       steps_done: 6,
-//       total_steps: 6,
-//       steps: [
-//         {
-//           name: 'await stability',
-//           task: 'await_stability',
-//           status: 'SUCCESS',
-//           last_task_run: {
-//             _id: 'f38c8472-1757-47e2-81d2-6061f3b02221',
-//             status: 'SUCCESS',
-//             result: [
-//               42,
-//             ],
-//             traceback: null,
-//             children: [],
-//             date_done: '2024-09-07T02:38:53.408917Z',
-//             name: 'await_stability',
-//             args: [
-//               42,
-//             ],
-//             kwargs: {
-//               workflow_id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-//               step: 'await stability',
-//               app_id: 'bioloop-dev.sca.iu.edu',
-//             },
-//             worker: 'bioloop-dev-celery-w1@colo25.carbonate.uits.iu.edu',
-//             retries: 0,
-//             queue: 'bioloop-dev.sca.iu.edu.q',
-//             date_start: '2024-09-07T02:33:53.102000Z',
-//           },
-//         },
-//         {
-//           name: 'inspect',
-//           task: 'inspect_dataset',
-//           status: 'SUCCESS',
-//           last_task_run: {
-//             _id: '19552e36-77d5-4772-abaf-37d68054e427',
-//             status: 'SUCCESS',
-//             result: [
-//               42,
-//             ],
-//             traceback: null,
-//             children: [],
-//             date_done: '2024-09-07T02:38:56.523910Z',
-//             parent_id: 'f38c8472-1757-47e2-81d2-6061f3b02221',
-//             name: 'inspect_dataset',
-//             args: [
-//               42,
-//             ],
-//             kwargs: {
-//               workflow_id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-//               step: 'inspect',
-//               app_id: 'bioloop-dev.sca.iu.edu',
-//             },
-//             worker: 'bioloop-dev-celery-w1@colo25.carbonate.uits.iu.edu',
-//             retries: 0,
-//             queue: 'bioloop-dev.sca.iu.edu.q',
-//             date_start: '2024-09-07T02:38:53.519000Z',
-//           },
-//         },
-//         {
-//           name: 'archive',
-//           task: 'archive_dataset',
-//           status: 'SUCCESS',
-//           last_task_run: {
-//             _id: 'fd33e478-5749-4609-9d10-7de25643ceac',
-//             status: 'SUCCESS',
-//             result: [
-//               42,
-//             ],
-//             traceback: null,
-//             children: [],
-//             date_done: '2024-09-07T02:39:05.426538Z',
-//             parent_id: '19552e36-77d5-4772-abaf-37d68054e427',
-//             name: 'archive_dataset',
-//             args: [
-//               42,
-//             ],
-//             kwargs: {
-//               workflow_id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-//               step: 'archive',
-//               app_id: 'bioloop-dev.sca.iu.edu',
-//             },
-//             worker: 'bioloop-dev-celery-w1@colo25.carbonate.uits.iu.edu',
-//             retries: 0,
-//             queue: 'bioloop-dev.sca.iu.edu.q',
-//             date_start: '2024-09-07T02:38:56.636000Z',
-//           },
-//         },
-//         {
-//           name: 'stage',
-//           task: 'stage_dataset',
-//           status: 'SUCCESS',
-//           last_task_run: {
-//             _id: '457a23aa-8c30-4bf0-979a-0cad68cb948d',
-//             status: 'SUCCESS',
-//             result: [
-//               42,
-//             ],
-//             traceback: null,
-//             children: [],
-//             date_done: '2024-09-07T02:39:15.469600Z',
-//             parent_id: 'fd33e478-5749-4609-9d10-7de25643ceac',
-//             name: 'stage_dataset',
-//             args: [
-//               42,
-//             ],
-//             kwargs: {
-//               workflow_id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-//               step: 'stage',
-//               app_id: 'bioloop-dev.sca.iu.edu',
-//             },
-//             worker: 'bioloop-dev-celery-w1@colo25.carbonate.uits.iu.edu',
-//             retries: 0,
-//             queue: 'bioloop-dev.sca.iu.edu.q',
-//             date_start: '2024-09-07T02:39:05.541000Z',
-//           },
-//         },
-//         {
-//           name: 'validate',
-//           task: 'validate_dataset',
-//           status: 'SUCCESS',
-//           last_task_run: {
-//             _id: '6526de42-f60e-4499-bbcd-acf5d8078c87',
-//             status: 'SUCCESS',
-//             result: [
-//               42,
-//               [],
-//             ],
-//             traceback: null,
-//             children: [],
-//             date_done: '2024-09-07T02:39:18.721248Z',
-//             parent_id: '457a23aa-8c30-4bf0-979a-0cad68cb948d',
-//             name: 'validate_dataset',
-//             args: [
-//               42,
-//             ],
-//             kwargs: {
-//               workflow_id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-//               step: 'validate',
-//               app_id: 'bioloop-dev.sca.iu.edu',
-//             },
-//             worker: 'bioloop-dev-celery-w1@colo25.carbonate.uits.iu.edu',
-//             retries: 0,
-//             queue: 'bioloop-dev.sca.iu.edu.q',
-//             date_start: '2024-09-07T02:39:15.722000Z',
-//           },
-//         },
-//         {
-//           name: 'setup_download',
-//           task: 'setup_dataset_download',
-//           status: 'SUCCESS',
-//           last_task_run: {
-//             _id: 'b16f2f6c-20d9-426f-8433-44fd26389b5b',
-//             status: 'SUCCESS',
-//             result: [
-//               42,
-//             ],
-//             traceback: null,
-//             children: [],
-//             date_done: '2024-09-07T02:39:19.098031Z',
-//             parent_id: '6526de42-f60e-4499-bbcd-acf5d8078c87',
-//             name: 'setup_dataset_download',
-//             args: [
-//               42,
-//             ],
-//             kwargs: {
-//               workflow_id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-//               step: 'setup_download',
-//               app_id: 'bioloop-dev.sca.iu.edu',
-//             },
-//             worker: 'bioloop-dev-celery-w1@colo25.carbonate.uits.iu.edu',
-//             retries: 0,
-//             queue: 'bioloop-dev.sca.iu.edu.q',
-//             date_start: '2024-09-07T02:39:18.904000Z',
-//           },
-//         },
-//       ],
-//       resume_lock: null,
-//     }],
-// };
-
 router.get(
   '/',
   isPermittedTo('read'),
   asyncHandler(
     async (req, res, next) => {
-      // // #swagger.tags = ['Workflow']
+      // #swagger.tags = ['Workflow']
       const api_res = await wf_service.getAll({
         last_task_run: req.query.last_task_run,
         prev_task_runs: req.query.prev_task_runs,
@@ -226,15 +29,7 @@ router.get(
         limit: req.query.limit,
         workflow_ids: req.query.workflow_id,
       });
-
       // res.json(api_res.data);
-
-      // const app_workflows = [{
-      //   id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-      //   initiator_id: 58,
-      //   initiator: 'Rishi Pandey',
-      //   dataset_id: 42,
-      // }];
 
       const nosql_workflows = api_res.data;
 
@@ -276,7 +71,18 @@ router.get(
         };
       });
 
-      res.json(results);
+      // console.log('NoSQL Workflows:');
+      // console.dir(nosql_workflows, {depth: null});
+      // console.log('NoSQL Workflows length', nosql_workflows.results.length);
+
+      res.json({
+        metadata: {
+          total: nosql_workflows.results.length,
+          limit: req.query.limit,
+          skip: req.query.skip
+        },
+        results
+      });
     },
   ),
 );
