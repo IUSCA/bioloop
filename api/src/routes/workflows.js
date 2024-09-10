@@ -259,7 +259,7 @@ router.get(
       } else if (req.query.dataset_id) {
         filter_query = {
           dataset_id: {
-            equals: req.query.dataset_id,
+            equals: Number(req.query.dataset_id),
           },
         };
       } else if (req.query.dataset_name) {
@@ -306,7 +306,7 @@ router.get(
 
       res.json({
         metadata: {
-          total: filtered_nosql_workflows.results.length,
+          total: filtered_nosql_workflows.length,
           limit: req.query.limit,
           skip: req.query.skip,
         },
