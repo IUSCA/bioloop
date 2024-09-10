@@ -458,6 +458,8 @@ router.post(
     body('workflow_id').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // console.log('req.user.id', req.user.id);
+
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate workflow_id to a dataset
     await prisma.workflow.create({
