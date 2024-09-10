@@ -283,6 +283,11 @@ const filtered_workflows = computed(() => {
   });
 });
 
+watch(search_text, () => {
+  query_params.value.search_by = selected_search_option.value.key;
+  // workflowService.getAll();
+});
+
 // fetch data when query params change
 watch(
   [
@@ -343,6 +348,11 @@ function getWorkflows() {
       skip: skip.value,
       limit: query_params.value.page_size,
       include_initiator: true,
+      ...(query_params.value?.search_by === "workflow_id"
+        ? { workflow_ids: [query_params.value.search_text] }
+        : query_params.value?.search_by === "dataset_id" && {
+            dataset_id: query_params.value.search_text,
+          }),
     })
     .then((res) => {
       // keep workflows open that were open
