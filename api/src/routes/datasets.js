@@ -459,6 +459,8 @@ router.post(
   ]),
   asyncHandler(async (req, res, next) => {
     // console.log('req.user.id', req.user.id);
+    // console.log('req.user')
+    // console.dir(req.user, { depth: null });
 
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate workflow_id to a dataset
