@@ -64,7 +64,7 @@ function get_wf_body(wf_name) {
   return wf_body;
 }
 
-async function create_workflow(dataset, wf_name) {
+async function create_workflow(dataset, wf_name, initiator_id) {
   const wf_body = get_wf_body(wf_name);
 
   // check if a workflow with the same name is not already running / pending on this dataset
@@ -85,6 +85,7 @@ async function create_workflow(dataset, wf_name) {
     data: {
       id: wf.workflow_id,
       dataset_id: dataset.id,
+      ...(initiator_id && { initiator_id }),
     },
   });
 
@@ -95,7 +96,7 @@ async function soft_delete(dataset, user_id) {
   if (dataset.archive_path) {
     // if archived, starts a delete archive workflow which will
     // mark the dataset as deleted on success.
-    await create_workflow(dataset, 'delete');
+    await create_workflow(dataset, 'delete', user_id);
   } else {
     // if not archived, mark the dataset as deleted
     await prisma.dataset.update({

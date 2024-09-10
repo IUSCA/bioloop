@@ -464,6 +464,7 @@ router.post(
       data: {
         id: req.body.workflow_id,
         dataset_id: req.params.id,
+        initiator_id: req.user.id,
       },
     });
     res.sendStatus(200);
@@ -564,7 +565,7 @@ router.post(
     });
 
     const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
     return res.json(wf);
   }),
 );
