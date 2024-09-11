@@ -288,21 +288,6 @@ const filtered_workflows = computed(() => {
   });
 });
 
-// watch(search_text, () => {
-//   console.log("search_text changed", search_text.value);
-//   if (search_text.value.trim() === "") {
-//     delete query_params.value.search_by;
-//   } else {
-//     query_params.value.search_by = selected_search_option.value.key;
-//     console.dir(query_params.value);
-//   }
-//   // workflowService.getAll();
-// });
-
-// watch(selected_search_option, () => {
-//   search_text.value = "";
-// });
-
 // fetch data when query params change
 watch(
   [
