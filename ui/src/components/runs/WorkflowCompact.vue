@@ -49,10 +49,9 @@
               <span>
                 Initiated by: {{ workflow.initiator?.name }} (
                 {{ workflow.initiator?.username }} )
-
-</span>
-</div>
-</div>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
