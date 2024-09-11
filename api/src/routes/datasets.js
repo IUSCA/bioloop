@@ -303,6 +303,7 @@ router.get(
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
+    query('include_initiator').optional().toBoolean(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -318,6 +319,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
+      includeInitiator: req.query.include_initiator || false,
     });
     res.json(dataset);
   }),

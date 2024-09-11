@@ -43,6 +43,17 @@
             </div>
           </div>
         </div>
+        <div v-else>
+          <div class="flex text-sm gap-x-3">
+            <div class="grow">
+              <span>
+                Initiated by: {{ workflow.initiator?.name }} (
+                {{ workflow.initiator?.username }} )
+
+</span>
+</div>
+</div>
+        </div>
       </div>
     </div>
 
@@ -120,6 +131,8 @@ const props = defineProps({
     default: false,
   },
 });
+
+console.dir(props.workflow, { depth: null });
 
 // eslint-disable-next-line vue/no-dupe-keys
 const workflow = ref({});

@@ -132,6 +132,7 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   includeProjects = false,
+  includeInitiator = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -145,11 +146,18 @@ async function get_dataset({
     },
   } : false;
 
-  const dataset = await prisma.dataset.findFirstOrThrow({
+  const workflow_include = includeInitiator ? {  workflows: {
+    select: {
+      id: true,
+      initiator: true
+    },
+  } } : INCLUDE_WORKFLOWS
+
+  const params = {
     where: { id },
     include: {
       files: fileSelect,
-      ...INCLUDE_WORKFLOWS,
+      ...workflow_include,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
       bundle,
@@ -157,7 +165,13 @@ async function get_dataset({
       derived_datasets: true,
       projects: includeProjects,
     },
-  });
+  }
+
+  console.dir(params, {depth: null});
+
+
+  const dataset = await prisma.dataset.findFirstOrThrow(params);
+  const dataset_workflows = dataset.workflows;
 
   if (workflows && dataset.workflows.length > 0) {
     // include workflow objects with dataset
@@ -168,7 +182,13 @@ async function get_dataset({
         prev_task_runs,
         workflow_ids: dataset.workflows.map((x) => x.id),
       });
-      dataset.workflows = wf_res.data.results;
+      dataset.workflows = wf_res.data.results.map((wf) => {
+        const dataset_wf = dataset_workflows.find((dw) => dw.id === wf.id);
+        return {
+          ...wf,
+          ...dataset_wf
+        }
+      });
     } catch (error) {
       log_axios_error(error);
       dataset.workflows = [];
