@@ -146,14 +146,16 @@ async function get_dataset({
     },
   } : false;
 
-  const workflow_include = includeInitiator ? {  workflows: {
-    select: {
-      id: true,
-      initiator: true
+  const workflow_include = includeInitiator ? {
+    workflows: {
+      select: {
+        id: true,
+        initiator: true,
+      },
     },
-  } } : INCLUDE_WORKFLOWS
+  } : INCLUDE_WORKFLOWS;
 
-  const params = {
+  const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
       files: fileSelect,
@@ -165,12 +167,7 @@ async function get_dataset({
       derived_datasets: true,
       projects: includeProjects,
     },
-  }
-
-  console.dir(params, {depth: null});
-
-
-  const dataset = await prisma.dataset.findFirstOrThrow(params);
+  });
   const dataset_workflows = dataset.workflows;
 
   if (workflows && dataset.workflows.length > 0) {
@@ -186,8 +183,8 @@ async function get_dataset({
         const dataset_wf = dataset_workflows.find((dw) => dw.id === wf.id);
         return {
           ...wf,
-          ...dataset_wf
-        }
+          ...dataset_wf,
+        };
       });
     } catch (error) {
       log_axios_error(error);
