@@ -148,7 +148,7 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
-  return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+  const query = lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
     ? {
         type: checkboxes.value.rawData
           ? "RAW_DATA"
@@ -156,7 +156,13 @@ const filterQuery = computed(() => {
             ? "DATA_PRODUCT"
             : undefined,
       }
-    : undefined;
+    : {};
+  return {
+    ...query,
+    is_duplicate: false,
+    include_action_items: false,
+    include_states: false,
+  };
 });
 
 const batchingQuery = computed(() => {
