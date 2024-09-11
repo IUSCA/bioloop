@@ -1,0 +1,15 @@
+```
+sequenceDiagram
+    User ->> Browser : /dashboard
+    Browser -->> Browser : redirect: /auth
+    Browser ->> CAS : redirect: IU login
+    User ->> CAS: Credentials
+    CAS ->> Browser: redirect: /auth?ticket
+    Browser ->> API: verify ticket
+    API ->> CAS: verify ticket
+    CAS ->> API: username
+    API ->> Browser: JWT
+    Browser -->> Browser: redirect: /dashboard
+```
+
+[![](https://mermaid.ink/img/pako:eNp1UsFOwzAM_ZUo507ccxga4zIkEFKZkFAvXuOuEU0y3IRpqvrvOCvd1g1ycvze87Nsd7L0GqWSLX5FdCU-GtgS2MIJfusWSczmc_FAfp9iJe40tPXGA-mBMiKzKY1QG8IysABiqK-4TF0u8glttRaN3xp3Zcw0JZZMQxcMNO0AJ_GF343dfTDlJ4Zb18XrSolvJFMdxCWH82e7P_DR8KiPXM2Bxan01MvT-9v_o5m0ehqlzKRFsmA0b6JL6kKGGtlCKg41VhCbUMhsgMZdJbRL_9rv89_cS7QbpDZBgSKKvnA9l-ep-PzgSqlSNpNxpyGMy5aq4tFydgfuw_vzn1sNnp6HCzkeSv8DmLu1Mw?type=png)](https://mermaid.live/edit#pako:eNp1UsFOwzAM_ZUo507ccxga4zIkEFKZkFAvXuOuEU0y3IRpqvrvOCvd1g1ycvze87Nsd7L0GqWSLX5FdCU-GtgS2MIJfusWSczmc_FAfp9iJe40tPXGA-mBMiKzKY1QG8IysABiqK-4TF0u8glttRaN3xp3Zcw0JZZMQxcMNO0AJ_GF343dfTDlJ4Zb18XrSolvJFMdxCWH82e7P_DR8KiPXM2Bxan01MvT-9v_o5m0ehqlzKRFsmA0b6JL6kKGGtlCKg41VhCbUMhsgMZdJbRL_9rv89_cS7QbpDZBgSKKvnA9l-ep-PzgSqlSNpNxpyGMy5aq4tFydgfuw_vzn1sNnp6HCzkeSv8DmLu1Mw)

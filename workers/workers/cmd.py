@@ -7,6 +7,7 @@ import subprocess
 import time
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
+from email.message import EmailMessage
 from pathlib import Path
 from queue import Queue
 from subprocess import Popen, PIPE
@@ -15,6 +16,7 @@ from sca_rhythm import WorkflowTask
 
 from workers import api
 from workers import utils
+from workers.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +160,7 @@ def total_size(dir_path: Path | str):
 
 
 def tar(tar_path: Path | str, source_dir: Path | str) -> None:
-    command = ['tar', 'cf', str(tar_path), '--sparse', str(source_dir)]
+    command = ['tar', 'cf', str(tar_path), '--sparse', '-C', str(source_dir), '.']
     execute(command)
 
 
@@ -184,3 +186,14 @@ def multiqc(source_dir: Path | str, output_dir: Path | str) -> None:
     """
     cmd = ['multiqc', str(source_dir), '-o', str(output_dir)]
     execute(cmd)
+
+
+def send_email(from_addr, to_addrs, msg_subject, msg_body,
+               sendmail_path=config['email']['sendmail_path']):
+    msg = EmailMessage()
+    msg.set_content(msg_body)
+    msg['From'] = from_addr
+    msg['To'] = to_addrs
+    msg['Subject'] = msg_subject
+
+    subprocess.run([sendmail_path, "-t", "-oi"], input=msg.as_bytes())

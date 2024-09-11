@@ -38,6 +38,7 @@ In the developement environment, the API calls from the UI are proxied by the vi
 - Docker
 - Dark mode (TODO)
 - [Rollup Dependencies Visualizer](https://www.npmjs.com/package/rollup-plugin-visualizer) - Visualize and analyze your Rollup bundle to see which modules are taking up space. Run `npm run build` and open `stats.html`
+- Feature flags
 
 ## Icons
 
@@ -141,7 +142,7 @@ Add the name and value of the environment variable to the `.env` file. This file
 
 ## Authentication
 
-Users are authenticated using IU CAS. [More on auth module](docs/auth_explained.md).
+Users are authenticated using IU CAS. [More on auth module](/ui/auth_explained.md).
 
 Authentication with google OpenID Connect is implemented following this guide https://developers.google.com/identity/openid-connect/openid-connect
 
@@ -200,7 +201,7 @@ meta:
 
 ## Utility Components
 
-Vue Components developed in house to be reused in the app. [Documentation](docs/util_components.md)
+Vue Components developed in house to be reused in the app. [Documentation](/ui/util_components.md)
 
 ## Coding Conventions
 - Use custom component names as `<CustomComponent>`
@@ -230,6 +231,31 @@ datetime.formatDuration(12000 * 1000) // "3h 20m"
 ```
 
 If you have a usecase to display in formats other than above in more than one component, add a function to [datetime](src/services/datetime.js) service and use it.
+
+## Feature Flags
+
+Features can be enabled or disabled at the UI level. Components can determine whether a feature is enabled by reading it from `./config.js`, which in turn reads this config from `./.env`.
+
+```
+// ./config.js
+
+  ...
+  enabledFeatures: {
+    genomeBrowser: import.meta.env.VITE_ENABLED_GENOME_BROWSER === "true",
+  },
+  ...
+
+```
+```
+# ./.env
+
+VITE_ENABLED_GENOME_BROWSER=true
+```
+
+Reading the feature flag from `.env` allows for features to be toggled without changing the code.
+
+Once a feature's status has been changed in `.env`, the app will need to be redeployed for those changes to come into effect.
+
 
 ## Navigational Breadcrumbs
 

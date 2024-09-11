@@ -12,7 +12,7 @@ To make adjustments to the way the application runs, edit and review [docker-com
 
 The UI and API containers have been set to run on start up to install / update dependencies.
 
-Set up the [front-end ui client](ui/README.md) or [back-end api server](api/README.md) as needed.
+Set up the [front-end ui client](/ui/) or [back-end api server](/api/) as needed.
 
 ### .env files
 

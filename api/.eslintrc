@@ -6,7 +6,8 @@
     "no-multi-str": 0,
     "consistent-return": 0,
     "camelcase": 0,
-    "no-console": ["error", { "allow": ["warn", "error"] }]
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "max-len": ["error", { "ignoreComments": true, "code": 120 }]
   },
   "env": {
     "node": true,

@@ -65,6 +65,9 @@ const exports = {
     },
   },
   alertForEnvironments: ["ci"],
+  enabledFeatures: {
+    genomeBrowser: true,
+  },
   featureFlags: {
     notifications: {
       enabledForRoles: ["admin", "operator"],

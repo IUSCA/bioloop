@@ -1,11 +1,10 @@
-<div align="center">
-<img width="100" height="100" src="ui/public/logo.svg" >
-</div>
 
-<h1 align="center">Bioloop</h1>
-<p align="center">Data Management Portal and Pipeline Application for Research Teams</p>
 
-**Overview:**
+
+# Bioloop
+Data Management Portal and Pipeline Application for Research Teams
+
+## Overview
 Bioloop is a web-based portal to simplify the management of large-scale datasets shared among research teams in scientific domains. This platform optimizes data handling by effectively utilizing both cold and hot storage solutions, like tape and disk storage, to reduce overall storage costs.
 
 **Key Features:**
@@ -40,6 +39,6 @@ Bioloop leverages a few other projects to get up and running.
 
 
 ## Architecture
-<img src="docs/architecture.png" >
-
-<img src="docs/app-celery-communication-diagram.png" >
+<img src="docs/public/architecture.png" >
+<br />
+<img src="docs/public/app-celery-communication-diagram.png" >
