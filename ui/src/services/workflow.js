@@ -8,6 +8,7 @@ class WorkflowService {
     prev_task_runs = false,
     workflow_ids = null,
     dataset_id = null,
+    dataset_name = null,
     status = null,
     skip = 0,
     limit = 10,
@@ -22,6 +23,7 @@ class WorkflowService {
         skip,
         limit,
         dataset_id,
+        dataset_name,
         include_initiator,
       },
       paramsSerializer: {
