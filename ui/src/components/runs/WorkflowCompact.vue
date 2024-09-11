@@ -45,7 +45,7 @@
         </div>
         <div v-else>
           <div class="flex text-sm gap-x-3">
-            <div class="grow">
+            <div v-if="workflow?.initiator" class="grow">
               <span>
                 Initiated by: {{ workflow.initiator?.name }} (
                 {{ workflow.initiator?.username }} )
