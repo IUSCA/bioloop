@@ -126,10 +126,10 @@ config = {
         },
         'fix_bundle_absolute_paths': {
             'steps': [
-                {
-                    'name': 'un-stage',
-                    'task': 'un_stage_dataset'
-                },
+                # {
+                #     'name': 'un-stage',
+                #     'task': 'un_stage_dataset'
+                # },
                 {
                     'name': 'fix staged dataset path',
                     'task': 'fix_staged_dataset_absolute_path'

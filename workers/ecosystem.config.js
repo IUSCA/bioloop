@@ -90,6 +90,7 @@ module.exports = {
       error_file: "../logs/workers/fix_archived_dataset_absolute_path.err",
       out_file: "../logs/workers/fix_archived_dataset_absolute_path.log",
       autorestart: false,
+      max_restarts: 3,
     }
   ]
 }

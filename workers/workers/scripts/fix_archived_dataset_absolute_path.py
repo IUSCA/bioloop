@@ -61,16 +61,17 @@ class ArchivedDatasetPathFixManager:
                 app_wf = app_workflows[app_wf_index]
                 dataset_id = app_wf['dataset_id']
 
-                print(f"Found app workflow: {app_wf['id']} for dataset: {dataset_id}")
-                print(f"Will start workflow: {self.workflow_name} for dataset: {dataset_id}")
+                if dataset_id == 48:
+                  print(f"Found app workflow: {app_wf['id']} for dataset: {dataset_id}")
+                  print(f"Will start workflow: {self.workflow_name} for dataset: {dataset_id}")
 
-                if not self.dry_run:
-                    wf_body = wf_utils.get_wf_body(wf_name=self.workflow_name)
-                    wf = Workflow(celery_app=celery_app, **wf_body)
-                    api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
-                    wf.start(dataset_id=dataset_id)
-                else:
-                    print(f"Dry run: would start workflow: {self.workflow_name} for dataset: {dataset_id}")
+                  if not self.dry_run:
+                      wf_body = wf_utils.get_wf_body(wf_name=self.workflow_name)
+                      wf = Workflow(celery_app=celery_app, **wf_body)
+                      api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+                      wf.start(dataset_id=dataset_id)
+                  else:
+                      print(f"Dry run: would start workflow: {self.workflow_name} for dataset: {dataset_id}")
 
     def get_mongo_workflows(
             self,
