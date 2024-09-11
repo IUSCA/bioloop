@@ -78,6 +78,9 @@ const exports = {
     OVERWRITTEN: "OVERWRITTEN",
     DELETED: "DELETED",
   },
+  enabledFeatures: {
+    genomeBrowser: true,
+  },
 };
 
 export default exports;

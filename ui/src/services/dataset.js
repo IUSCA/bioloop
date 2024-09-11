@@ -22,35 +22,9 @@ class DatasetService {
    * @param include_states Boolean field to include dataset's state history
    * @returns          Object containing matching datasets, and count of matching datasets
    */
-  getAll({
-    deleted = null,
-    processed = null,
-    archived = null,
-    staged = null,
-    type = null,
-    name = null,
-    limit = null,
-    offset = null,
-    sortBy = null,
-    is_duplicate = false,
-    include_action_items = false,
-    include_states = false,
-  } = {}) {
+  getAll(params) {
     return api.get("/datasets", {
-      params: {
-        deleted,
-        processed,
-        archived,
-        staged,
-        type,
-        name,
-        limit,
-        offset,
-        sortBy,
-        is_duplicate,
-        include_action_items,
-        include_states,
-      },
+      params,
     });
   }
 
@@ -65,6 +39,7 @@ class DatasetService {
     include_duplications = false,
     include_states = false,
     include_action_items = false,
+    include_projects = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -77,6 +52,7 @@ class DatasetService {
         include_duplications,
         include_states,
         include_action_items,
+        include_projects,
       },
     });
   }

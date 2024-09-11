@@ -1,12 +1,12 @@
 import { useRoute, useRouter } from "vue-router";
 
-function safeDecodeURI(uri) {
-  try {
-    return decodeURI(uri);
-  } catch (error) {
-    return null;
-  }
-}
+// function safeDecodeURI(uri) {
+//   try {
+//     return decodeURI(uri);
+//   } catch (error) {
+//     return null;
+//   }
+// }
 
 function safeJSONParse(json) {
   try {
@@ -24,7 +24,7 @@ function safeJSONParse(json) {
  *
  * @param {object} options - Configuration options.
  * @param {Ref} options.refObject - A Vue ref object that stores the query parameter state.
- * @param {object} options.defaultValue - The default value for the query parameters.
+ * @param {object} options.defaultValueFn - The function that returns the default value for the query parameters.
  * @param {string} [options.key="q"] - The key to use in the URL for the query parameters.
  * @param {boolean} [options.history_push=true] - Set to `true` to use `router.push` for navigation;
  *                                                `false` to use `router.replace`.
@@ -32,7 +32,7 @@ function safeJSONParse(json) {
  */
 export default function useQueryPersistence({
   refObject,
-  defaultValue,
+  defaultValueFn,
   key = "q",
   history_push = true,
 }) {
@@ -46,14 +46,22 @@ export default function useQueryPersistence({
     // this allows vue to trigger watches correctly
     return Object.assign(
       {},
-      defaultValue,
-      safeJSONParse(safeDecodeURI(route.query[key] || "") || "{}") || {},
+      defaultValueFn(),
+      safeJSONParse(route.query[key] || "{}") || {},
     );
   };
 
   const set = (state) => {
+    // if state is the same as defaultValue, remove the query param
+    if (JSON.stringify(state) === JSON.stringify(defaultValueFn())) {
+      const query = Object.assign({}, route.query);
+      delete query[key];
+      return router_nav({
+        query,
+      });
+    }
     const query = {
-      [key]: encodeURI(JSON.stringify(state)),
+      [key]: JSON.stringify(state),
     };
     return router_nav({
       query: Object.assign({}, route.query, query),
@@ -67,6 +75,7 @@ export default function useQueryPersistence({
   watch(
     refObject,
     async (newValue) => {
+      console.log("refObject changed", newValue);
       updating_route = true;
       await set(newValue);
       updating_route = false;

@@ -197,7 +197,10 @@
                     <i-mdi-harddisk class="text-xl" />
                     <span> {{ formatBytes(dataset.du_size) }} </span>
                   </div>
-                  <div class="flex items-center gap-1">
+                  <div
+                    class="flex items-center gap-1"
+                    v-if="config.enabledFeatures.genomeBrowser"
+                  >
                     <i-mdi-file-multiple class="text-xl" />
                     <span> {{ dataset.metadata?.num_genome_files }} </span>
                   </div>
@@ -258,13 +261,15 @@
       />
 
       <!-- Audit logs -->
-      <div v-if="dataset.audit_logs && dataset.audit_logs.length > 0">
+      <div v-if="dataset?.audit_logs?.length">
         <va-card>
-          <va-card-title>
-            <span class="text-xl font-bold"> AUDIT LOG </span>
+          <va-card-title class="">
+            <div class="flex flex-nowrap items-center w-full">
+              <span class="text-lg"> Audit Logs </span>
+            </div>
           </va-card-title>
           <va-card-content>
-            <dataset-audit-logs :logs="dataset.audit_logs" />
+            <AuditLogs :logs="dataset.audit_logs" />
           </va-card-content>
         </va-card>
       </div>

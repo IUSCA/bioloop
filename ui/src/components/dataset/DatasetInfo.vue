@@ -43,7 +43,7 @@
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
-        <tr>
+        <tr v-if="config.enabledFeatures.genomeBrowser">
           <td>Genome Files</td>
           <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
@@ -67,6 +67,7 @@
 <script setup>
 import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
+import config from "@/config";
 
 const props = defineProps({ dataset: Object });
 </script>

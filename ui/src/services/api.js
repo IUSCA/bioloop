@@ -43,7 +43,8 @@ window.addEventListener("unhandledrejection", (event) => {
       // if status is 4xx show toast called Request Failed
       if (err.response.status >= 400 && err.response.status < 500) {
         console.error("Error: Request Failed", err);
-        toast.error("Request Failed");
+        const reason = err.response.data?.message || err.response.data?.error;
+        toast.error("Request Failed" + (reason ? `: ${reason}` : ""));
       }
 
       // if status if 5xx show toast called Server Error

@@ -32,8 +32,7 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name) {
   const wf_body = get_wf_body(wf_name);
 
-  // check if a workflow with the same name is not already running / pending on
-  // this dataset
+  // check if a workflow with the same name is not already running / pending on this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
     .filter((_wf) => !CONSTANTS.DONE_STATUSES.includes(_wf.status));
@@ -64,7 +63,7 @@ async function soft_delete(dataset, user_id) {
     await create_workflow(dataset, 'delete');
   } else {
     // if not archived, mark the dataset as deleted
-    console.log('soft_delete');
+    // console.log('soft_delete');
 
     await prisma.dataset.update({
       data: {
@@ -100,6 +99,7 @@ async function get_dataset({
   bundle = false,
   include_duplications = false,
   include_action_items = false,
+  includeProjects = false,
 }) {
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
@@ -111,6 +111,7 @@ async function get_dataset({
       bundle,
       source_datasets: true,
       derived_datasets: true,
+      projects: includeProjects,
       ...(include_duplications && CONSTANTS.INCLUDE_DUPLICATIONS),
       action_items: include_action_items ? {
         where: {
@@ -173,8 +174,8 @@ async function get_dataset({
 //   `;
 
 //   /**
-// * Find directories of a dataset which are immediate children of `base` path
-// *
+//    * Find directories of a dataset which are immediate children of `base` path
+//    *
 //    * Query: filter rows by dataset_id, rows starting with `base`,
 //    * and rows where the path after `base` does have / (these files are not immediate children)
 //    *
