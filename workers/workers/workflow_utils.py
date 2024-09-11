@@ -17,7 +17,6 @@ from sca_rhythm.progress import Progress
 from workers import sda, utils
 from workers.config import config
 
-import workflow_utils as wf_utils
 import workers.cmd as cmd
 
 
@@ -215,7 +214,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
     if tar_path.exists():
         tar_path.unlink()
 
-    with wf_utils.track_progress_parallel(celery_task=celery_task,
+    with track_progress_parallel(celery_task=celery_task,
                                           name='tar',
                                           progress_fn=lambda: tar_path.stat().st_size,
                                           total=source_size,

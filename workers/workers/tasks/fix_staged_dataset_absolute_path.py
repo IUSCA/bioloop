@@ -57,4 +57,4 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
         shutil.rmtree(staging_dir)
         print(f'deleted {str(staging_dir)}')
 
-    return dataset_id,
+    return dataset_id, str(staging_dir)
