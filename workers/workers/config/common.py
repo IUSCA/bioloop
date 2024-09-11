@@ -139,13 +139,13 @@ config = {
                     'task': 'validate_dataset'
                 },
                 {
+                    'name': 'replace SDA archive',
+                    'task': 'replace_sda_archive'
+                },
+                {
                     'name': 'recompute bundle checksum',
                     'task': 'recompute_bundle_checksum'
                 },
-                {
-                    'name': 'replace SDA archive',
-                    'task': 'replace_sda_archive'
-                }
             ]
         }
     },
