@@ -83,6 +83,7 @@ module.exports = {
     {
       name: "fix_archived_dataset_absolute_path",
       script: "python",
+      // args: "-u -m workers.scripts.fix_archived_dataset_absolute_path --app_id='bioloop-dev.sca.iu.edu ",
       args: "-u -m workers.scripts.fix_archived_dataset_absolute_path --app_id='bioloop-dev.sca.iu.edu --dry_run",
       watch: false,
       interpreter: "",
