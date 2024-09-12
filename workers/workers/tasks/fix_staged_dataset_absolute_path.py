@@ -3,14 +3,16 @@ from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
-import json
+import os
+import pprint
 
+from workers.exceptions import ValidationFailed
 import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from dataset import get_bundle_staged_path, compute_staging_path
+from workers.dataset import get_bundle_staged_path, compute_staging_path
 from workers.config import config
 
 app = Celery("tasks")
@@ -18,43 +20,79 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
+def get_bundle_stage_temp_path(dataset: dict, path: Path) -> Path:
+    bundle_path = Path(f'{get_bundle_staged_path(dataset)}')
+    
+    temp_bundles_staging_dir = bundle_path.parent.parent / 'temp_bundles'
+    temp_bundles_staging_dir.mkdir(exist_ok=True)
+
+    print(f'temp_bundles_staging_dir: {str(temp_bundles_staging_dir)}')
+    return temp_bundles_staging_dir
+
+
+
 def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
 
-    bundle_path = Path(f'{get_bundle_staged_path(dataset)}')
-    print(f'bundle path: {str(bundle_path)}')
+    temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
+    print(f'temp_bundles_extraction_dir: {str(temp_bundles_extraction_dir)}')
+    temp_bundles_extraction_dir.mkdir(exist_ok=True)
+
+    temp_bundle_download_path = temp_bundles_extraction_dir / dataset['bundle']['name']
+    print(f'temp_bundle_download_path: {str(temp_bundle_download_path)}')
 
     # delete bundle if it already exists
-    if bundle_path.exists():
-        print(f"deleting bundle path {str(bundle_path)}")
-        shutil.rmtree(bundle_path)
-        print(f"deleted bundle path {str(bundle_path)}")
+    if temp_bundle_download_path.exists():
+        print(f"temp_bundle_download_path {temp_bundle_download_path} already exists, deleting path {str(temp_bundle_download_path)}")
+        shutil.rmtree(temp_bundle_download_path)
+        print(f"deleted temp_bundle_download_path {str(temp_bundle_download_path)}")
 
     # sda_retrieved_bundles_path = bundle_path.parent / 'sda_retrieved_bundles'
     # sda_retrieved_bundles_path.mkdir(exist_ok=True)
     # print(f"sda_retrieved_bundles_path: {sda_retrieved_bundles_path.exists()}")
 
     sda_archive_path = dataset['archive_path']
-    print(f'Downloading {sda_archive_path} to {str(bundle_path)}')
-    wf_utils.download_file_from_sda(sda_archive_path, bundle_path)
-    print(f'Downloaded {sda_archive_path} to {str(bundle_path)}')
+    print(f'Downloading {sda_archive_path} to {str(temp_bundle_download_path)}')
+    wf_utils.download_file_from_sda(sda_archive_path, temp_bundle_download_path)
+    print(f'Downloaded {sda_archive_path} to {str(temp_bundle_download_path)}')
 
-    (staging_dir) = compute_staging_path(dataset)
+    # temp_bundles_extracted_dir = compute_staging_path(dataset)
+    temp_bundle_extracted_dir = temp_bundles_extraction_dir / f"{dataset['name']}_extracted"
+    if temp_bundle_extracted_dir.exists():
+        shutil.rmtree(temp_bundle_extracted_dir)
+    
+    temp_bundle_extracted_dir.mkdir()
 
-    print(f'Extracting {str(bundle_path)} to {str(staging_dir)}')
-    wf_utils.extract_tarfile(tar_path=bundle_path, target_dir=staging_dir, override_arcname=True)
-    print(f'Extracted {str(bundle_path)} to {str(staging_dir)}')
+    # print(f'temp_bundle_download_path: {str(bundle_path)} to {str(staging_dir)}')
+    wf_utils.extract_tarfile(tar_path=temp_bundle_download_path, target_dir=temp_bundle_extracted_dir, override_arcname=True)
+    print(f'Extracted {str(temp_bundle_download_path)} inside {str(temp_bundle_extracted_dir)}')
 
-    # verify if the extracted bundle already has the correct root path
-    if staging_dir.name != dataset['name']:
-        print(f'Expected staging_dir {str(staging_dir)}\'s root directory to be {dataset["name"]}, but found {staging_dir.name}')
-        extracted_dataset_dir = next(Path(staging_dir).glob(f'**/{dataset["name"]}'))
-        print(f'found {str(extracted_dataset_dir)} inside {str(staging_dir)}')
-        shutil.move(extracted_dataset_dir, staging_dir)
-        print(f'moved {str(extracted_dataset_dir)} to {str(staging_dir)}')
+    # bundle_temp_extraction_path = temp_bundles_extraction_dir / f"{dataset['name']}_extracted"
 
-        print(f'deleting {str(staging_dir)}')
-        shutil.rmtree(staging_dir)
-        print(f'deleted {str(staging_dir)}')
+    # if not bundle_temp_extraction_path.exists():
+    #     print(f'No directory found inside {str(temp_bundles_extraction_dir)} with name {dataset["name"]}')
 
-    return dataset_id, str(staging_dir)
+
+    # print(f'bundle_temp_extraction_path: {str(bundle_temp_extraction_path)}')
+
+    extracted_bundle_dirs = [dir for dir in os.listdir(temp_bundle_extracted_dir) if os.isdir(os.path.join(temp_bundle_extracted_dir, dir))]
+    print(f'extracted_bundle_dirs: {pprint(extracted_bundle_dirs)}')
+    
+    if len(extracted_bundle_dirs) > 1:
+        raise ValidationFailed(f'Expected one, but found more than one directories inside extracted_bundle_dirs: {extracted_bundle_dirs}')
+    
+    extracted_bundle_root_dir = extracted_bundle_dirs[0]
+    if extracted_bundle_root_dir != dataset['name']:
+        nested_dataset_dir = next(Path(extracted_bundle_root_dir).glob(f'**/{dataset["name"]}'))
+    
+        print(f'Expected {str(extracted_bundle_root_dir)}\'s root directory to be {dataset["name"]}, but found {extracted_bundle_root_dir.name}')
+
+        print(f'found {str(nested_dataset_dir)} inside {str(extracted_bundle_root_dir)}')
+        shutil.move(nested_dataset_dir, temp_bundles_extraction_dir)
+        print(f'moved {str(nested_dataset_dir)} to {str(temp_bundles_extraction_dir)}')
+
+        print(f'deleting {str(extracted_bundle_root_dir)}')
+        shutil.rmtree(extracted_bundle_root_dir)
+        print(f'deleted {str(extracted_bundle_root_dir)}')
+
+    return dataset_id, str(temp_bundles_extraction_dir)
