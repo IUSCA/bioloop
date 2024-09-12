@@ -59,6 +59,8 @@ class ArchivedDatasetPathFixManager:
         # dataset_id = None
 
         logger.info(f"len(app_workflows): {len(app_workflows)}")
+        logger.info(f"app_workflow_ids: {app_workflow_ids}")
+
 
         for app_wf_id in app_workflow_ids:
             app_wf = [_wf for (i, _wf) in enumerate(app_workflows) if _wf['id'] == app_wf_id][0] if len(app_workflows) > 0 else None                
@@ -66,13 +68,13 @@ class ArchivedDatasetPathFixManager:
 
             print(f"Iterating over app_workflow_ids: id {app_wf_id}, dataset_id: {dataset_id}")
 
-
             mongo_wf_index = [i for (i, wf) in enumerate(mongo_workflows) if wf['_id'] == app_wf_id][0] if len(mongo_workflows) > 0 else []
             print(f"Mongo wf index: {mongo_wf_index}")
             mongo_wf = mongo_workflows[mongo_wf_index] if len(mongo_workflows) > 0 else None
 
+            # Verify that this workflow is not already running for this dataset
             if mongo_wf is not None:
-                logger.info(f'Found mongo workflow: {mongo_wf["_id"]}, name: {mongo_wf["name"]}, for app_id: {mongo_wf["app_id"]}')
+                logger.info(f'Found mongo workflow: {mongo_wf["_id"]}, name: {mongo_wf["name"]}, with status {mongo_wf['_status']} for app_id: {mongo_wf["app_id"]}')
                 if mongo_wf['_status'] not in ['SUCCESS', 'PENDING', 'RETRY']:
                     logger.info(f"Mongo wf status: {mongo_wf['_status']}")
                     app_wf_index = app_workflow_ids.index(mongo_wf['_id'])
@@ -80,20 +82,21 @@ class ArchivedDatasetPathFixManager:
             else:
                 logger.info(f"No mongo workflow found for app_wf_id: {app_wf_id}, dataset_id: {dataset_id}")
                 app_wf_index = app_workflow_ids.index(app_wf_id)              
-            logger.info(f"App wf index: {app_wf_index}")
+            
+            logger.info(f"App wf index for wf id {app_wf_id}: {app_wf_index}")
 
             # todo - checking if dataset_id is not None is sufficient
             if app_wf_index is not None and dataset_id is not None:
                 logger.info(f"Found app workflow: {app_workflows[app_wf_index]['id']} for dataset: {dataset_id}")
             else:
                 logger.info(f"No app workflow found for app_wf_id: {app_wf_id} for dataset: {dataset_id}")                    
-                logger.info(f"Will start workflow: {self.workflow_name} for dataset: {dataset_id}")
-
+                
                 if not self.dry_run:
                     wf_body = wf_utils.get_wf_body(wf_name=self.workflow_name)
                     wf = Workflow(celery_app=celery_app, **wf_body)
                     api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
                     wf.start(dataset_id=dataset_id)
+                    logger.info(f"Started workflow: {self.workflow_name} for dataset_id: {dataset_id}")
                 else:
                     logger.info(f"Dry run: would start workflow: {self.workflow_name} for dataset: {dataset_id}")
 
