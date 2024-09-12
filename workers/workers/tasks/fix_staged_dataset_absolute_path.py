@@ -12,22 +12,12 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from workers.dataset import get_bundle_staged_path, compute_staging_path
+from workers.dataset import get_bundle_stage_temp_path
 from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
-
-
-def get_bundle_stage_temp_path(dataset: dict, path: Path) -> Path:
-    bundle_path = Path(f'{get_bundle_staged_path(dataset)}')
-    
-    temp_bundles_staging_dir = bundle_path.parent.parent / 'temp_bundles'
-    temp_bundles_staging_dir.mkdir(exist_ok=True)
-
-    print(f'temp_bundles_staging_dir: {str(temp_bundles_staging_dir)}')
-    return temp_bundles_staging_dir
 
 
 
@@ -83,9 +73,8 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     
     extracted_bundle_root_dir = extracted_bundle_dirs[0]
     if extracted_bundle_root_dir != dataset['name']:
-        nested_dataset_dir = next(Path(extracted_bundle_root_dir).glob(f'**/{dataset["name"]}'))
-    
         print(f'Expected {str(extracted_bundle_root_dir)}\'s root directory to be {dataset["name"]}, but found {extracted_bundle_root_dir.name}')
+        nested_dataset_dir = next(Path(extracted_bundle_root_dir).glob(f'**/{dataset["name"]}'))
 
         print(f'found {str(nested_dataset_dir)} inside {str(extracted_bundle_root_dir)}')
         shutil.move(nested_dataset_dir, temp_bundles_extraction_dir)
@@ -95,4 +84,16 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
         shutil.rmtree(extracted_bundle_root_dir)
         print(f'deleted {str(extracted_bundle_root_dir)}')
 
-    return dataset_id, str(temp_bundles_extraction_dir)
+        new_tar_path = Path(temp_bundles_extraction_dir) / dataset['bundle']['name']
+        # make archive from fixed dataset
+        print(f'Making archive for dataset id: {dataset_id} to {str(new_tar_path)}')
+        
+        updated_dataset_extracted_path = str(temp_bundles_extraction_dir / nested_dataset_dir)
+        
+        wf_utils.make_tarfile(celery_task=celery_task,
+                           tar_path=new_tar_path,
+                           source_dir=updated_dataset_extracted_path,
+                           source_size=dataset['du_size'])
+        print(f'Made archive from fixed dataset')
+
+    return dataset_id, str(updated_dataset_extracted_path)

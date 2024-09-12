@@ -11,6 +11,8 @@ import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from workers.config import config
+from workers.dataset import get_bundle_stage_temp_path
+from workers.sda import sda
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -19,41 +21,39 @@ logger = get_task_logger(__name__)
 
 def compute_updated_checksum(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
+    bundle_archive_path = dataset['archive_path']
 
-    wf_utils.make_tarfile(celery_task=celery_task,
-                 tar_path=bundle,
-                 source_dir=dataset['origin_path'],
-                 source_size=dataset['du_size'])
+    temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
+    # updated_dataset_extracted_path = str(temp_bundles_extraction_dir / dataset['name'])
+    new_bundle_path = Path(temp_bundles_extraction_dir) / dataset['bundle']['name']
 
-    bundle_size = bundle.stat().st_size
-    bundle_checksum = utils.checksum(bundle)
+    updated_sda_bundle_checksum = sda.get_hash(f"{dataset['archive_path']}")
+
+    bundle_size = new_bundle_path.stat().st_size
     bundle_attrs = {
-        'name': bundle.name,
         'size': bundle_size,
-        'md5': bundle_checksum,
+        'md5': updated_sda_bundle_checksum,
     }
 
-    sda_dir = wf_utils.get_archive_dir(dataset['type'])
-    sda_bundle_path = f'{sda_dir}/{bundle.name}'
+    # sda_dir = wf_utils.get_archive_dir(dataset['type'])
+    # sda_bundle_path = f'{sda_dir}/{bundle_archive_path.name}'
 
-    wf_utils.upload_file_to_sda(local_file_path=bundle,
-                                sda_file_path=sda_bundle_path,
-                                celery_task=celery_task)
+    # wf_utils.upload_file_to_sda(local_file_path=bundle_archive_path,
+    #                             sda_file_path=sda_bundle_path,
+    #                             celery_task=celery_task)
 
     if delete_local_file:
-        # file successfully uploaded to SDA, delete the local copy
-        print("deleting local bundle")
-        bundle.unlink()
+        # bundle successfully uploaded to SDA, delete the local copy
+        print(f"deleting local bundle at {str(new_bundle_path)}")
+        new_bundle_path.unlink()
 
-    return sda_bundle_path, bundle_attrs
+    return bundle_attrs
 
 
 def update_bundle_checksum(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
-    sda_bundle_path, bundle_attrs = compute_updated_checksum(celery_task, dataset)
+    bundle_attrs = compute_updated_checksum(celery_task, dataset)
     update_data = {
-        'archive_path': sda_bundle_path,
         'bundle': bundle_attrs
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)

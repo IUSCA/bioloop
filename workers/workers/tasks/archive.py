@@ -10,7 +10,7 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from dataset import get_bundle_staged_path
+from workers.dataset import get_bundle_staged_path
 from workers.config import config
 
 app = Celery("tasks")
