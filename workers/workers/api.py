@@ -149,7 +149,7 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False, workflows: bool = False,):
+def get_dataset(dataset_id: str, include_upload_log: bool = False, files: bool = False, bundle: bool = False, workflows: bool = False,):
     with APIServerSession() as s:
         payload = {
             'files': files,
