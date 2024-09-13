@@ -4,7 +4,7 @@ const exports = {
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
   uploadApiBasePath:
-    import.meta.env.UPLOAD_API_BASE_PATH || "https://localhost",
+    import.meta.env.VITE_UPLOAD_API_BASE_PATH || "https://localhost",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   googleReturn:
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
