@@ -14,64 +14,68 @@ const isPermittedTo = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const build_query = async (req) => {
+  const workflow_ids = req.query.workflow_id;
+  const filter_results = (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0)
+        || (typeof workflow_ids === 'string' && workflow_ids.trim() !== '')
+        || req.query.dataset_id
+        || req.query.dataset_name;
+
+  let query_by_wf_ids;
+  let app_workflows;
+
+  if (filter_results) {
+    let filter_query = {};
+    if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
+      filter_query = {
+        id: {
+          in: workflow_ids,
+        },
+      };
+    } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
+      filter_query = {
+        id: {
+          equals: workflow_ids,
+        },
+      };
+    } else if (req.query.dataset_id) {
+      filter_query = {
+        dataset_id: {
+          equals: Number(req.query.dataset_id),
+        },
+      };
+    } else if (req.query.dataset_name) {
+      filter_query = {
+        dataset: {
+          name: {
+            contains: req.query.dataset_name,
+          },
+        },
+      };
+    }
+
+    app_workflows = await prisma.workflow.findMany({
+      where: { ...filter_query },
+      include: {
+        initiator: true,
+      },
+    });
+
+    query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
+  } else {
+    query_by_wf_ids = null;
+  }
+
+  return query_by_wf_ids;
+};
+
 router.get(
   '/',
   isPermittedTo('read'),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      const workflow_ids = req.query.workflow_id;
-
-      const filter_results = (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0)
-        || (typeof workflow_ids === 'string' && workflow_ids.trim() !== '')
-        || req.query.dataset_id
-        || req.query.dataset_name;
-
-      let query_by_wf_ids;
-      let app_workflows;
-
-      if (filter_results) {
-        let filter_query = {};
-        if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
-          filter_query = {
-            id: {
-              in: workflow_ids,
-            },
-          };
-        } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
-          filter_query = {
-            id: {
-              equals: workflow_ids,
-            },
-          };
-        } else if (req.query.dataset_id) {
-          filter_query = {
-            dataset_id: {
-              equals: Number(req.query.dataset_id),
-            },
-          };
-        } else if (req.query.dataset_name) {
-          filter_query = {
-            dataset: {
-              name: {
-                contains: req.query.dataset_name,
-              },
-            },
-          };
-        }
-
-        app_workflows = await prisma.workflow.findMany({
-          where: { ...filter_query },
-          include: {
-            initiator: true,
-          },
-        });
-        // console.log('app_workflows len', app_workflows.length);
-
-        query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
-      } else {
-        query_by_wf_ids = null;
-      }
+      const query_by_wf_ids = build_query(req);
 
       const api_res = await wf_service.getAll({
         last_task_run: req.query.last_task_run,
@@ -85,8 +89,8 @@ router.get(
 
       const nosql_workflows = api_res.data.results;
 
-      const results = filter_results ? (nosql_workflows || []).map((wf) => {
-        const app_wf = (app_workflows || []).find((aw) => aw.id === wf.id);
+      const results = (query_by_wf_ids || []).length > 0 ? (nosql_workflows || []).map((wf) => {
+        const app_wf = (query_by_wf_ids || []).find((wf_id) => wf_id === wf.id);
         return {
           ...wf,
           ...app_wf,

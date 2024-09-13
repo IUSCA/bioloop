@@ -131,8 +131,6 @@ const props = defineProps({
   },
 });
 
-console.dir(props.workflow, { depth: null });
-
 // eslint-disable-next-line vue/no-dupe-keys
 const workflow = ref({});
 const dataset_id = computed(() => {

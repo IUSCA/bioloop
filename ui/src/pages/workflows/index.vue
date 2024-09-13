@@ -353,15 +353,13 @@ function getWorkflows() {
       ? "workflow_ids"
       : query_params.value.search_by;
 
-  const _search_text = search_text.value.trim() !== "";
-
   const search_params = {
     last_task_run: true,
     status: query_params.value.status,
     skip: skip.value,
     limit: query_params.value.page_size,
     include_initiator: true,
-    ...(_search_text && {
+    ...(search_text.value.trim() !== "" && {
       [search_by_key]: search_text.value,
     }),
   };
