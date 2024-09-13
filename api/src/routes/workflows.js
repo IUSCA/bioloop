@@ -22,42 +22,57 @@ router.get(
       // // #swagger.tags = ['Workflow']
       const workflow_ids = req.query.workflow_id;
 
-      let filter_query = {};
-      if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
-        filter_query = {
-          id: {
-            in: req.query.workflow_id,
-          },
-        };
-      } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
-        filter_query = {
-          id: {
-            equals: workflow_ids,
-          },
-        };
-      } else if (req.query.dataset_id) {
-        filter_query = {
-          dataset_id: {
-            equals: Number(req.query.dataset_id),
-          },
-        };
-      } else if (req.query.dataset_name) {
-        filter_query = {
-          dataset: {
-            name: {
-              contains: req.query.dataset_name,
-            },
-          },
-        };
-      }
+      const filter_results = Array.isArray(workflow_ids) && (workflow_ids || []).length > 0 ||
+        typeof workflow_ids === 'string' && workflow_ids.trim() !== '' ||
+        req.query.dataset_id ||
+        req.query.dataset_name
 
-      const app_workflows = await prisma.workflow.findMany({
-        where: { ...filter_query },
-        include: {
-          initiator: true,
-        },
-      });
-      const app_workflows_ids = (app_workflows || []).map((wf) => wf.id);
+      let query_by_wf_ids
+      let app_workflows;
+
+      if (filter_results) {
+
+        let filter_query = {};
+        if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
+          filter_query = {
+            id: {
+              in: workflow_ids,
+            },
+          };
+        } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
+          filter_query = {
+            id: {
+              equals: workflow_ids,
+            },
+          };
+        } else if (req.query.dataset_id) {
+          filter_query = {
+            dataset_id: {
+              equals: Number(req.query.dataset_id),
+            },
+          };
+        } else if (req.query.dataset_name) {
+          filter_query = {
+            dataset: {
+              name: {
+                contains: req.query.dataset_name,
+              },
+            },
+          };
+        }
+
+        app_workflows = await prisma.workflow.findMany({
+          where: { ...filter_query },
+          include: {
+            initiator: true,
+          },
+        });
+        console.log('app_workflows len', app_workflows.length);
+
+        query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
+      } else {
+        query_by_wf_ids = null;
+      }
 
       const api_res = await wf_service.getAll({
         last_task_run: req.query.last_task_run,
@@ -66,23 +81,30 @@ router.get(
         app_id: config.app_id,
         skip: req.query.skip,
         limit: req.query.limit,
-        workflow_ids: app_workflows_ids,
+        workflow_ids: query_by_wf_ids,
       });
 
-      const nosql_workflows_metadata = api_res.data.metadata;
+      console.dir(api_res.results, { depth: null });
+
+      // const nosql_workflows_metadata = api_res.data.metadata;
       const nosql_workflows = api_res.data.results;
 
-      const results = (nosql_workflows || []).map((wf) => {
+      const results = filter_results ? (nosql_workflows || []).map((wf) => {
         const app_wf = (app_workflows || []).find((aw) => aw.id === wf.id);
         return {
           ...wf,
           ...app_wf,
         };
-      });
+      }) : nosql_workflows;
 
       res.json({
-        metadata: nosql_workflows_metadata,
-        results,
+        // metadata: {
+        //   total: nosql_workflows.length,
+        //   skip: Number(req.query.skip || 0),
+        //   limit: Number(req.query.limit || 0),
+        // },
+        metadata: api_res.data.metadata,
+        results
       });
     },
   ),
@@ -200,8 +222,8 @@ router.get(
   validate([query('pid').isInt().toInt().optional()]),
   asyncHandler(
     async (req, res, next) => {
-    // #swagger.tags = ['Workflow']
-    // #swagger.summary = get processes
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = get processes
 
       const filters = _.flow([
         _.pick(['step', 'task_id', 'pid', 'workflow_id']),

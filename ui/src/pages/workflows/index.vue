@@ -377,7 +377,7 @@ function getWorkflows() {
     limit: _search_text ? null : query_params.value.page_size,
     include_initiator: true,
     ...(_search_text && {
-      [search_by_key]: _search_text,
+      [search_by_key]: search_text.value,
     }),
   };
 
