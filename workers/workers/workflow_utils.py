@@ -16,7 +16,7 @@ from sca_rhythm import WorkflowTask
 from sca_rhythm.progress import Progress
 from workers import sda, utils
 from workers.config import config
-
+import workers.exceptions as exc
 import workers.cmd as cmd
 
 
@@ -184,11 +184,16 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
     with tarfile.open(tar_path, mode='r') as archive:
         # find the top-level directory in the extracted archive
         archive_name = os.path.commonprefix(archive.getnames())
+        logger.info(f'extract_tarfile: archive_name: {archive_name}')
+        
         extraction_dir = target_dir if override_arcname else (target_dir.parent / archive_name)
 
         # if extraction_dir exists then delete it
         if extraction_dir.exists():
+            logger.info(f'extract_tarfile: deleting existing extraction directory {str(extraction_dir)}')
             shutil.rmtree(extraction_dir)
+        else:
+            logger.info(f'extract_tarfile: extraction directory {str(extraction_dir)} does not exist')
 
         # create parent directories if missing
         extraction_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -225,3 +230,52 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
     # TODO: validate files inside tar
     return tar_path
+
+
+def generate_metadata(celery_task, source: Path):
+    """
+    source is a directory that exists and has to readable and executable (see files inside)
+    all the files and directories under source should be readable
+    returns:    number of files, 
+                number of directories, 
+                sum of stat size of all files, 
+                number of genome data files,
+                the md5 digest and relative filenames of genome data files
+    """
+    num_files, num_directories, size, num_genome_files = 0, 0, 0, 0
+    metadata = []
+    errors = []
+    if not utils.is_readable(source):
+        msg = f'source {source} is either not readable or not traversable'
+        raise exc.InspectionFailed(msg)
+
+    paths = list(source.rglob('*'))
+    progress = Progress(celery_task=celery_task, name='', units='items')
+
+    for p in progress(paths):
+        if utils.is_readable(p):
+            if p.is_file():
+                num_files += 1
+                # if symlink, only add the size of the symlink, not the pointed file
+                file_size = p.lstat().st_size
+                size += file_size
+                # do not compute checksum for symlinks
+                hex_digest = utils.checksum(p) if not p.is_symlink() else None
+                relpath = p.relative_to(source)
+                metadata.append({
+                    'path': str(relpath),
+                    'md5': hex_digest,
+                    'size': file_size,
+                    'type': utils.filetype(p)
+                })
+                if ''.join(p.suffixes) in config['genome_file_types'] and not p.is_symlink():
+                    num_genome_files += 1
+            elif p.is_dir():
+                num_directories += 1
+        else:
+            errors.append(f'{p} is not readable/traversable')
+
+    if len(errors) > 0:
+        raise exc.InspectionFailed(errors)
+
+    return num_files, num_directories, size, num_genome_files, metadata

@@ -79,8 +79,6 @@ def validate_dataset(celery_task, dataset_id, **kwargs):
         raise
     except Exception as e:
         raise exc.RetryableException(e)
-
-
 @app.task(base=WorkflowTask, bind=True, name='setup_dataset_download',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
@@ -122,12 +120,20 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='un_stage_dataset',
+# @app.task(base=WorkflowTask, bind=True, name='update_dataset_metadata',
+#           autoretry_for=(Exception,),
+#           max_retries=3,
+#           default_retry_delay=5)
+# def update_dataset_metadata(celery_task, dataset_id, **kwargs):
+#     from workers.tasks.update_dataset_metadata import update_metadata as task_body
+#     return task_body(celery_task, dataset_id, **kwargs)
+
+@app.task(base=WorkflowTask, bind=True, name='update_dataset_metadata',
           autoretry_for=(Exception,),
           max_retries=3,
           default_retry_delay=5)
-def un_stage_dataset(celery_task, dataset_id, **kwargs):
-    from workers.tasks.unstage_dataset import un_stage_dataset as task_body
+def update(celery_task, dataset_id, **kwargs):
+    from workers.tasks.update_dataset_metadata import update_metadata as task_body
     return task_body(celery_task, dataset_id, **kwargs)
 
 

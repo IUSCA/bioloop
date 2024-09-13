@@ -24,6 +24,9 @@ logger = get_task_logger(__name__)
 def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
 
+    print(f'fix_staged_dataset_absolute_path called for dataset_id: {dataset_id}')
+
+
     temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
     print(f'temp_bundles_extraction_dir: {str(temp_bundles_extraction_dir)}')
     temp_bundles_extraction_dir.mkdir(exist_ok=True)
@@ -34,7 +37,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     # delete bundle if it already exists
     if temp_bundle_download_path.exists():
         print(f"temp_bundle_download_path {temp_bundle_download_path} already exists, deleting path {str(temp_bundle_download_path)}")
-        shutil.rmtree(temp_bundle_download_path)
+        temp_bundle_download_path.unlink()
         print(f"deleted temp_bundle_download_path {str(temp_bundle_download_path)}")
 
     # sda_retrieved_bundles_path = bundle_path.parent / 'sda_retrieved_bundles'
@@ -47,14 +50,22 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     print(f'Downloaded {sda_archive_path} to {str(temp_bundle_download_path)}')
 
     # temp_bundles_extracted_dir = compute_staging_path(dataset)
-    temp_bundle_extracted_dir = temp_bundles_extraction_dir / f"{dataset['name']}_extracted"
+    temp_bundle_extracted_dir = temp_bundles_extraction_dir / 'extracted' / f"{dataset['name']}"
     if temp_bundle_extracted_dir.exists():
+        print(f"temp_bundle_extracted_dir {temp_bundle_extracted_dir} already exists, deleting path {str(temp_bundle_extracted_dir)}")
         shutil.rmtree(temp_bundle_extracted_dir)
-    
-    temp_bundle_extracted_dir.mkdir()
+        print(f"Deleted temp_bundle_extracted_dir {str(temp_bundle_extracted_dir)}")
+    else:
+        print(f'Directory {temp_bundle_extracted_dir} does not exist')
+
+    print(f'temp_bundle_extracted_dir: {str(temp_bundle_extracted_dir)}, exists: {temp_bundle_extracted_dir.exists()}')
+
+
+    # temp_bundle_extracted_dir.mkdir(parents=True)
+    # print(f'Created temp_bundle_extracted_dir {str(temp_bundle_extracted_dir)}')
 
     # print(f'temp_bundle_download_path: {str(bundle_path)} to {str(staging_dir)}')
-    wf_utils.extract_tarfile(tar_path=temp_bundle_download_path, target_dir=temp_bundle_extracted_dir, override_arcname=True)
+    wf_utils.extract_tarfile(tar_path=temp_bundle_download_path, target_dir=temp_bundle_extracted_dir, override_arcname=False)
     print(f'Extracted {str(temp_bundle_download_path)} inside {str(temp_bundle_extracted_dir)}')
 
     # bundle_temp_extraction_path = temp_bundles_extraction_dir / f"{dataset['name']}_extracted"
@@ -96,4 +107,4 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
                            source_size=dataset['du_size'])
         print(f'Made archive from fixed dataset')
 
-    return dataset_id, str(updated_dataset_extracted_path)
+    return dataset_id

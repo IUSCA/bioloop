@@ -135,6 +135,10 @@ config = {
                     'task': 'fix_staged_dataset_absolute_path'
                 },
                 {
+                    'name': 'update dataset metaada',
+                    'task': 'update_dataset_metadata'
+                },
+                {
                     'name': 'validate',
                     'task': 'validate_dataset'
                 },
