@@ -21,11 +21,8 @@ const build_query = async (req) => {
         || req.query.dataset_id
         || req.query.dataset_name;
 
-  let query_by_wf_ids;
-  let app_workflows;
-
+  let filter_query = {};
   if (filter_results) {
-    let filter_query = {};
     if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
       filter_query = {
         id: {
@@ -53,20 +50,16 @@ const build_query = async (req) => {
         },
       };
     }
-
-    app_workflows = await prisma.workflow.findMany({
-      where: { ...filter_query },
-      include: {
-        initiator: true,
-      },
-    });
-
-    query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
-  } else {
-    query_by_wf_ids = null;
   }
 
-  return query_by_wf_ids;
+  const app_workflows = await prisma.workflow.findMany({
+    where: { ...filter_query },
+    include: {
+      initiator: true,
+    },
+  });
+
+  return app_workflows;
 };
 
 router.get(
@@ -75,7 +68,8 @@ router.get(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      const query_by_wf_ids = build_query(req);
+      const app_workflows = build_query(req);
+      const query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
 
       const api_res = await wf_service.getAll({
         last_task_run: req.query.last_task_run,
@@ -89,8 +83,8 @@ router.get(
 
       const nosql_workflows = api_res.data.results;
 
-      const results = (query_by_wf_ids || []).length > 0 ? (nosql_workflows || []).map((wf) => {
-        const app_wf = (query_by_wf_ids || []).find((wf_id) => wf_id === wf.id);
+      const results = (app_workflows || []).length > 0 ? (nosql_workflows || []).map((wf) => {
+        const app_wf = (app_workflows || []).find((wf_id) => wf_id === wf.id);
         return {
           ...wf,
           ...app_wf,
@@ -168,7 +162,8 @@ router.post(
   ),
 );
 
-// make sure that the request body is array of objects which at least will have a "message" key
+// make sure that the request body is array of objects which at least will have
+// a "message" key
 const append_log_schema = {
   '0.message': {
     in: ['body'],
@@ -303,7 +298,8 @@ router.delete(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      // #swagger.summary = delete all processes, its logs registered under a workflow
+      // #swagger.summary = delete all processes, its logs registered under a
+      // workflow
 
       const result = await prisma.worker_process.deleteMany({
         where: {
@@ -361,7 +357,8 @@ router.delete(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      // #swagger.summary = delete workflow and then delete dataset-workflow association
+      // #swagger.summary = delete workflow and then delete dataset-workflow
+      // association
       const api_res = await wf_service.deleteOne(req.params.id);
       await prisma.workflow.delete({
         where: {
@@ -374,4 +371,5 @@ router.delete(
     },
   ),
 );
+
 module.exports = router;
