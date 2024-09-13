@@ -120,3 +120,17 @@ def delete_source(celery_task, dataset_id, **kwargs):
 def delete_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.mark_archived_and_delete import mark_archived_and_delete as task_body
     return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='process_upload',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def process_upload(celery_task, dataset_id, **kwargs):
+    from workers.tasks.process_upload import chunks_to_files as task_body
+    try:
+        return task_body(celery_task, dataset_id, **kwargs)
+    except exc.RetryableException:
+        raise
+    except Exception:
+        raise

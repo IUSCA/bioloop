@@ -1,4 +1,5 @@
 {
+  "mode": "default",
   "express": {
     "port": 3060,
     "host": "localhost"
@@ -9,5 +10,9 @@
   "auth": {
     "jwks_uri": "http://127.0.0.1:5050/oauth/jwks"
   },
-  "scope_prefix": "download_file:"
+  "scope_prefix": "download_file:",
+  "upload_scope": "upload_file",
+  "upload_path": {
+    "data_products": "/path/to/uploaded/data_products"
+  }
 }
