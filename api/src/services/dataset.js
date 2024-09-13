@@ -148,6 +148,8 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   includeProjects = false,
+  include_uploading_derived_datasets = false,
+  include_upload_log = false,
   includeInitiator = false,
 }) {
   const fileSelect = files ? {
