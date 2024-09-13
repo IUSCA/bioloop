@@ -6,6 +6,7 @@ const requestLogger = require('morgan');
 // const compression = require('compression');
 const cors = require('cors');
 // const swaggerUi = require('swagger-ui-express');
+const config = require('config');
 
 const indexRouter = require('./routes/index');
 const {

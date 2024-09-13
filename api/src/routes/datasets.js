@@ -776,6 +776,16 @@ router.get(
   }),
 );
 
+// Data Products - UI
+router.get(
+  '/file-types',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const dataset_file_types = await prisma.dataset_file_type.findMany();
+    res.json(dataset_file_types);
+  }),
+);
+
 // Initiate the processing of uploaded files - worker
 router.post(
   '/:id/upload/process',

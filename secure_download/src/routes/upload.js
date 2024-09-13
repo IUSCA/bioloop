@@ -98,10 +98,4 @@ router.post(
   }),
 );
 
-// router.get(
-//   '/test',
-//   asyncHandler(async (req, res, next) => {
-//     res.send('OK');
-//   }))
-
 module.exports = router;
