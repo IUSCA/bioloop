@@ -14,12 +14,12 @@ const isPermittedTo = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const build_query = async (req) => {
+const get_app_workflows = async (req) => {
   const workflow_ids = req.query.workflow_id;
   const filter_results = (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0)
-        || (typeof workflow_ids === 'string' && workflow_ids.trim() !== '')
-        || req.query.dataset_id
-        || req.query.dataset_name;
+    || (typeof workflow_ids === 'string' && workflow_ids.trim() !== '')
+    || req.query.dataset_id
+    || req.query.dataset_name;
 
   let filter_query = {};
   if (filter_results) {
@@ -68,7 +68,8 @@ router.get(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      const app_workflows = build_query(req);
+      const app_workflows = await get_app_workflows(req);
+
       const query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
 
       const api_res = await wf_service.getAll({
