@@ -20,17 +20,6 @@ router.get(
   asyncHandler(
     async (req, res, next) => {
       // // #swagger.tags = ['Workflow']
-      const api_res = await wf_service.getAll({
-        last_task_run: req.query.last_task_run,
-        prev_task_runs: req.query.prev_task_runs,
-        status: req.query.status,
-        app_id: config.app_id,
-        skip: req.query.skip,
-        limit: req.query.limit,
-        workflow_ids: req.query.workflow_id,
-      });
-
-      const nosql_workflows = api_res.data;
       const workflow_ids = req.query.workflow_id;
 
       let filter_query = {};
@@ -70,11 +59,20 @@ router.get(
       });
       const app_workflows_ids = (app_workflows || []).map((wf) => wf.id);
 
-      const filtered_nosql_workflows = app_workflows_ids.length > 0
-        ? (nosql_workflows.results || []).filter((wf) => app_workflows_ids.includes(wf.id))
-        : nosql_workflows.results;
+      const api_res = await wf_service.getAll({
+        last_task_run: req.query.last_task_run,
+        prev_task_runs: req.query.prev_task_runs,
+        status: req.query.status,
+        app_id: config.app_id,
+        skip: req.query.skip,
+        limit: req.query.limit,
+        workflow_ids: app_workflows_ids,
+      });
 
-      const results = (filtered_nosql_workflows || []).map((wf) => {
+      const nosql_workflows_metadata = api_res.data.metadata;
+      const nosql_workflows = api_res.data.results;
+
+      const results = (nosql_workflows || []).map((wf) => {
         const app_wf = (app_workflows || []).find((aw) => aw.id === wf.id);
         return {
           ...wf,
@@ -83,11 +81,7 @@ router.get(
       });
 
       res.json({
-        metadata: {
-          total: filtered_nosql_workflows.length,
-          limit: req.query.limit,
-          skip: req.query.skip,
-        },
+        metadata: nosql_workflows_metadata,
         results,
       });
     },
