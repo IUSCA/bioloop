@@ -4,6 +4,7 @@ from celery import Celery
 from celery.utils.log import get_task_logger
 from celery import current_app
 from sca_rhythm import WorkflowTask, Workflow
+import json
 
 from workers import exceptions as exc
 import workers.api as api
@@ -75,13 +76,28 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
 
 
 def chunks_to_files(celery_task, dataset_id, **kwargs):
+    # dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
+    # # json.dumps(dataset, indent=2)
+    # upload_log = dataset['upload_log']
+    
+    # upload_log_id = upload_log['id']
+    # print(f'upload_log is none: {upload_log is None}')
+    # print(f'upload_log id: {upload_log["id"]}, status: {upload_log["status"]}')
+    # # json.dumps(upload_log, indent=2)
+    # print(f'upload_log files: {len(upload_log["files"])}')
+
+    upload_log_files = None
+
     try:
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
         upload_log = dataset['upload_log']
         upload_log_id = upload_log['id']
+        upload_log_files = upload_log['files']
+
+        # json.dumps(upload_log['files'], indent=2)
 
         file_log_updates = []
-        for file_log in upload_log['files']:
+        for file_log in upload_log_files:
             if file_log['status'] != config['upload_status']['COMPLETE']:
                 file_log_updates.append({
                     'id': file_log['id'],
@@ -103,8 +119,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         raise Exception(f"Upload directory {dataset_path} does not exist for\
  dataset id {dataset_id} (upload_log_id: {upload_log_id})")
 
-    files = upload_log['files']
-    pending_files = [file for file in files if file['status'] != config['upload_status']['COMPLETE']]
+    pending_files = [file for file in upload_log_files if file['status'] != config['upload_status']['COMPLETE']]
 
     dataset_merged_chunks_path = dataset_path / 'merged_chunks'
     if not dataset_merged_chunks_path.exists():
@@ -179,3 +194,5 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         })
     except Exception as e:
         raise exc.RetryableException(e)
+
+    return dataset_id,

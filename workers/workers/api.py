@@ -155,6 +155,7 @@ def get_dataset(dataset_id: str, include_upload_log: bool = False, files: bool =
             'files': files,
             'bundle': bundle,
             'workflows': workflows,
+            'include_upload_log': include_upload_log
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 

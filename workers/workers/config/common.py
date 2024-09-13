@@ -144,7 +144,7 @@ config = {
             'steps': [
                 {
                     'name': 'process uploaded chunks',
-                    'task': 'process_uploaded_chunks'
+                    'task': 'process_upload'
                 }
             ]
         }

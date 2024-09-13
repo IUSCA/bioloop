@@ -122,12 +122,12 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='process_uploaded_chunks',
+@app.task(base=WorkflowTask, bind=True, name='process_upload',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
-def process_uploaded_chunks(celery_task, dataset_id, **kwargs):
-    from workers.tasks.process_uploaded_chunks import chunks_to_files as task_body
+def process_upload(celery_task, dataset_id, **kwargs):
+    from workers.tasks.process_upload import chunks_to_files as task_body
     try:
         return task_body(celery_task, dataset_id, **kwargs)
     except exc.RetryableException:

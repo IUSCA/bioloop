@@ -192,7 +192,7 @@ async function get_dataset({
         include: {
           files: true,
         },
-      } : undefined,
+      } : false,
     },
   });
 
