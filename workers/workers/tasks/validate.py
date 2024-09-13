@@ -32,9 +32,8 @@ def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: li
 
 def validate_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, files=True)
-    _, bundle_staged_path = kwargs
 
-    staged_path = Path(bundle_staged_path) if bundle_staged_path is not None else Path(dataset['staged_path'])
+    staged_path = Path(dataset['staged_path'])
     print(f'Dataset is staged at, {staged_path}')
 
     validation_errors = check_files(celery_task=celery_task,

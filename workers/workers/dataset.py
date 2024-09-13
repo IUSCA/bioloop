@@ -49,7 +49,7 @@ def get_bundle_staged_path(dataset: dict) -> str:
     return f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{dataset["bundle"]["name"]}'
 
 
-def get_bundle_stage_temp_path(dataset: dict, path: Path) -> Path:
+def get_bundle_stage_temp_path(dataset: dict) -> Path:
     bundle_path = Path(f'{get_bundle_staged_path(dataset)}')
     
     temp_bundles_staging_dir = bundle_path.parent.parent / 'temp_bundles'
