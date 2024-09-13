@@ -66,6 +66,12 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
 
     # print(f'temp_bundle_download_path: {str(bundle_path)} to {str(staging_dir)}')
     wf_utils.extract_tarfile(tar_path=temp_bundle_download_path, target_dir=temp_bundle_extracted_dir, override_arcname=False)
+    # 'temp' subdirectory is not needed after extraction - point to the root dir of the extracted tar file
+    temp_bundle_extracted_dir = temp_bundle_extracted_dir.parent
+
+    # print(f'Extracted dir exists: {temp_bundle_extracted_dir.exists()}')
+
+    # TODO - verify that the origin path is embedded in the extracted tar file
 
     # bundle_temp_extraction_path = temp_bundles_extraction_dir / f"{dataset['name']}_extracted"
 
@@ -75,15 +81,17 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
 
     # print(f'bundle_temp_extraction_path: {str(bundle_temp_extraction_path)}')
 
-    extracted_bundle_dirs = [dir for dir in os.listdir(temp_bundle_extracted_dir) if os.isdir(os.path.join(temp_bundle_extracted_dir, dir))]
-    print(f'extracted_bundle_dirs: {pprint(extracted_bundle_dirs)}')
+    extracted_bundle_dirs = [dir for dir in os.listdir(temp_bundle_extracted_dir) if os.path.isdir(os.path.join(temp_bundle_extracted_dir, dir))]
+    # print(f'extracted_bundle_dirs: {pprint(extracted_bundle_dirs)}')
     
     if len(extracted_bundle_dirs) > 1:
         raise ValidationFailed(f'Expected one, but found more than one directories inside extracted_bundle_dirs: {extracted_bundle_dirs}')
     
     extracted_bundle_root_dir = extracted_bundle_dirs[0]
+    print(f'extracted_bundle_root_dir: {extracted_bundle_root_dir}')
+
     if extracted_bundle_root_dir != dataset['name']:
-        print(f'Expected {str(extracted_bundle_root_dir)}\'s root directory to be {dataset["name"]}, but found {extracted_bundle_root_dir.name}')
+        print(f'Expected dataset {dataset_id}\'s root directory after extraction to be {dataset["name"]}, but found {extracted_bundle_root_dir}')
         nested_dataset_dir = next(Path(extracted_bundle_root_dir).glob(f'**/{dataset["name"]}'))
 
         print(f'found {str(nested_dataset_dir)} inside {str(extracted_bundle_root_dir)}')
@@ -106,4 +114,4 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
                            source_size=dataset['du_size'])
         print(f'Made archive from fixed dataset')
 
-    return dataset_id
+    return dataset_id,
