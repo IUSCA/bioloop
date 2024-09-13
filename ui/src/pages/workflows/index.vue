@@ -373,8 +373,8 @@ function getWorkflows() {
   const search_params = {
     last_task_run: true,
     status: query_params.value.status,
-    skip: _search_text ? null : skip.value,
-    limit: _search_text ? null : query_params.value.page_size,
+    skip: skip.value,
+    limit: query_params.value.page_size,
     include_initiator: true,
     ...(_search_text && {
       [search_by_key]: search_text.value,
