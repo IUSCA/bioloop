@@ -97,6 +97,7 @@
               @remove="removeDataset"
               :column-widths="columnWidths"
               select-mode="single"
+              :dataset-type="config.dataset.types.RAW_DATA.key"
             ></DatasetSelect>
           </va-form-field>
 

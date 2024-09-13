@@ -22,6 +22,7 @@
   >
     <template #filters>
       <va-button-dropdown
+        v-if="props.datasetType"
         :label="`Filters${activeCountText}`"
         :close-on-content-click="false"
       >
@@ -53,6 +54,9 @@ const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
+  datasetType: {
+    type: String,
+  },
   selectedResults: {
     type: Array,
     default: () => [],
@@ -153,15 +157,21 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
-  return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
-    ? {
-        type: checkboxes.value.rawData
-          ? "RAW_DATA"
-          : checkboxes.value.dataProduct
-            ? "DATA_PRODUCT"
-            : undefined,
-      }
-    : undefined;
+  if (props.datasetType) {
+    return {
+      type: props.datasetType,
+    };
+  } else {
+    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+      ? {
+          type: checkboxes.value.rawData
+            ? "RAW_DATA"
+            : checkboxes.value.dataProduct
+              ? "DATA_PRODUCT"
+              : undefined,
+        }
+      : undefined;
+  }
 });
 
 const batchingQuery = computed(() => {

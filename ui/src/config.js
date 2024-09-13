@@ -31,11 +31,13 @@ const exports = {
   dataset: {
     types: {
       RAW_DATA: {
+        key: "RAW_DATA",
         label: "Raw Data",
         collection_path: "rawdata",
         icon: "mdi-dna",
       },
       DATA_PRODUCT: {
+        key: "DATA_PRODUCT",
         label: "Data Product",
         collection_path: "dataproducts",
         icon: "mdi-package-variant-closed",
