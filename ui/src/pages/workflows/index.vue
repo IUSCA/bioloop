@@ -326,21 +326,9 @@ watch(
       query_params.value.page = 1;
     }
 
-    console.log("search_text changed:", search_text.value);
-    if (newVals[3].trim() === "") {
-      // delete query_params.value.search_by;
-      console.log('if (newVals[3].trim() === "")');
-      console.log("query_params.value");
-      console.dir(query_params.value);
-    }
-
     if (newVals[4] !== oldVals[4]) {
-      console.log("if (newVals[4] !== oldVals[4])");
       search_text.value = "";
-      console.log("search_text changed", newVals[3]);
       query_params.value.search_by = newVals[4];
-      console.log("query_params.value");
-      console.dir(query_params.value);
     }
 
     getData().then(() => {
@@ -393,28 +381,23 @@ watch(
 // });
 
 function getWorkflows() {
-  console.log("getWorkflows called");
-  console.log("search_text", search_text.value);
-  console.log("query_params search_by", query_params.value.search_by);
-
   const search_by_key =
     query_params.value.search_by === "workflow_id"
       ? "workflow_ids"
       : query_params.value.search_by;
 
+  const _search_text = search_text.value.trim() !== "";
+
   const search_params = {
     last_task_run: true,
     status: query_params.value.status,
-    skip: skip.value,
-    limit: query_params.value.page_size,
+    skip: _search_text ? null : skip.value,
+    limit: _search_text ? null : query_params.value.page_size,
     include_initiator: true,
-    ...(search_text.value.trim() !== "" && {
-      [search_by_key]: search_text.value,
+    ...(_search_text && {
+      [search_by_key]: _search_text,
     }),
   };
-
-  console.log("search_params");
-  console.dir(search_params, { depth: null });
 
   return workflowService
     .getAll(search_params)
@@ -446,12 +429,14 @@ function getCounts() {
 }
 
 function getData() {
-  // loading.value = true;
-  return Promise.allSettled([getWorkflows(), getCounts()]);
-  // all_settled.then(() => {
-  //   loading.value = false;
-  // });
-  // return all_settled;
+  loading.value = true;
+
+  return new Promise((resolve) => {
+    Promise.allSettled([getWorkflows(), getCounts()]).then((results) => {
+      loading.value = false;
+      resolve(results);
+    });
+  });
 }
 
 function reset_query_params() {

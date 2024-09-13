@@ -217,40 +217,7 @@ router.get(
   asyncHandler(
     async (req, res, next) => {
       // // #swagger.tags = ['Workflow']
-      const api_res = await wf_service.getAll({
-        last_task_run: req.query.last_task_run,
-        prev_task_runs: req.query.prev_task_runs,
-        status: req.query.status,
-        app_id: config.app_id,
-        skip: req.query.skip,
-        limit: req.query.limit,
-        workflow_ids: req.query.workflow_id,
-      });
-      //
-      // // res.json(api_res.data);
-      //
-      // const app_workflows = [{
-      //   id: 'c0bbac2b-2b95-4575-b6be-28d86492cde2',
-      //   initiator_id: 58,
-      //   initiator: {
-      //     name: 'Rishi Pandey',
-      //     username: 'ripandey',
-      //   },
-      //   dataset_id: 42,
-      // }];
-
-      console.log('query');
-      console.dir(req.query, { depth: null });
-
-      console.log('query dataset_id: ', req.query.dataset_id);
-      console.log('workflows_ids:', req.query.workflow_id);
-
-      const nosql_workflows = api_res.data;
-      // console.log('nosql_workflows:');
-      // console.dir(nosql_workflows.results[0], { depth: null });
-
       const workflow_ids = req.query.workflow_id;
-      console.log('Array.isArray: ', Array.isArray(workflow_ids));
 
       let filter_query = {};
       if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
@@ -268,7 +235,7 @@ router.get(
       } else if (req.query.dataset_id) {
         filter_query = {
           dataset_id: {
-            equals: req.query.dataset_id,
+            equals: Number(req.query.dataset_id),
           },
         };
       } else if (req.query.dataset_name) {
@@ -289,18 +256,20 @@ router.get(
       });
       const app_workflows_ids = (app_workflows || []).map((wf) => wf.id);
 
-      // console.log('app_workflows:');
-      // console.dir(app_workflows, { depth: null });
+      const api_res = await wf_service.getAll({
+        last_task_run: req.query.last_task_run,
+        prev_task_runs: req.query.prev_task_runs,
+        status: req.query.status,
+        app_id: config.app_id,
+        skip: req.query.skip,
+        limit: req.query.limit,
+        workflow_ids: app_workflows_ids,
+      });
 
-      // const nosql_filtered_wf = nosql_workflows.results.filter(wf => wf.id === '4cddc813-3b3d-4cca-b287-84a0c7a0c48f')
-      // console.log('nosql_filtered_wf:');
-      // console.dir(nosql_filtered_wf, { depth: null });
+      const nosql_workflows_metadata = api_res.data.metadata;
+      const nosql_workflows = api_res.data.results;
 
-      const filtered_nosql_workflows = app_workflows_ids.length > 0
-        ? (nosql_workflows.results || []).filter((wf) => app_workflows_ids.includes(wf.id))
-        : nosql_workflows.results;
-
-      const results = (filtered_nosql_workflows || []).map((wf) => {
+      const results = (nosql_workflows || []).map((wf) => {
         const app_wf = (app_workflows || []).find((aw) => aw.id === wf.id);
         return {
           ...wf,
@@ -308,17 +277,8 @@ router.get(
         };
       });
 
-      // res.json({
-      //   metadata: nosql_workflows.metadata,
-      //   results,
-      // });
-
       res.json({
-        metadata: {
-          total: filtered_nosql_workflows.length,
-          limit: req.query.limit,
-          skip: req.query.skip,
-        },
+        metadata: nosql_workflows_metadata,
         results,
       });
     },

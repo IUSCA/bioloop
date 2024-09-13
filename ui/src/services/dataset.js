@@ -34,6 +34,7 @@ class DatasetService {
     only_active = false,
     bundle = false,
     include_projects = false,
+    include_initiator = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -44,6 +45,7 @@ class DatasetService {
         only_active,
         bundle,
         include_projects,
+        include_initiator,
       },
     });
   }
