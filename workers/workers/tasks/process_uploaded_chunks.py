@@ -1,5 +1,3 @@
-from json import dumps
-from traceback import print_tb, format_exc
 import shutil
 from pathlib import Path
 from celery import Celery
@@ -7,7 +5,6 @@ from celery.utils.log import get_task_logger
 from celery import current_app
 from sca_rhythm import WorkflowTask, Workflow
 
-import workers.utils as utils
 from workers import exceptions as exc
 import workers.api as api
 from workers.config import config

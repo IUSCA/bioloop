@@ -121,6 +121,7 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.mark_archived_and_delete import mark_archived_and_delete as task_body
     return task_body(celery_task, dataset_id, **kwargs)
 
+
 @app.task(base=WorkflowTask, bind=True, name='process_uploaded_chunks',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
