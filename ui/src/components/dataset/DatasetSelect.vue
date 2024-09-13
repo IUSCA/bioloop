@@ -22,7 +22,7 @@
   >
     <template #filters>
       <va-button-dropdown
-        v-if="props.datasetType"
+        v-if="!props.datasetType"        
         :label="`Filters${activeCountText}`"
         :close-on-content-click="false"
       >
@@ -45,11 +45,10 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
-import { formatBytes, lxor } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
+import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
-
+import { useBreakpoint } from "vuestic-ui";
 const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
 
