@@ -50,7 +50,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     print(f'Downloaded {sda_archive_path} to {str(temp_bundle_download_path)}')
 
     # temp_bundles_extracted_dir = compute_staging_path(dataset)
-    temp_bundle_extracted_dir = temp_bundles_extraction_dir / 'extracted' / f"{dataset['name']}"
+    temp_bundle_extracted_dir = temp_bundles_extraction_dir / f"{dataset['name']}" / 'temp'
     if temp_bundle_extracted_dir.exists():
         print(f"temp_bundle_extracted_dir {temp_bundle_extracted_dir} already exists, deleting path {str(temp_bundle_extracted_dir)}")
         shutil.rmtree(temp_bundle_extracted_dir)
@@ -66,7 +66,6 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
 
     # print(f'temp_bundle_download_path: {str(bundle_path)} to {str(staging_dir)}')
     wf_utils.extract_tarfile(tar_path=temp_bundle_download_path, target_dir=temp_bundle_extracted_dir, override_arcname=False)
-    print(f'Extracted {str(temp_bundle_download_path)} inside {str(temp_bundle_extracted_dir)}')
 
     # bundle_temp_extraction_path = temp_bundles_extraction_dir / f"{dataset['name']}_extracted"
 

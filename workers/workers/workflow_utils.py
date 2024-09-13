@@ -204,6 +204,8 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
             archive.extractall(path=tmp_dir)
             shutil.move(Path(tmp_dir) / archive_name, extraction_dir)
 
+        print(f'extract tarfile: Extracted {str(tar_path)} to {str(extraction_dir)}')
+
 
 def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, source_size: int):
     """
