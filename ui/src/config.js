@@ -3,12 +3,17 @@ const exports = {
   // vite server redirects traffic on starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
+  uploadApiBasePath:
+    import.meta.env.VITE_UPLOAD_API_BASE_PATH || "https://localhost",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   googleReturn:
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
-  refreshTokenTMinusSeconds: 300,
+  refreshTokenTMinusSeconds: {
+    appToken: 300,
+    uploadToken: 10,
+  },
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
@@ -26,11 +31,13 @@ const exports = {
   dataset: {
     types: {
       RAW_DATA: {
+        key: "RAW_DATA",
         label: "Raw Data",
         collection_path: "rawdata",
         icon: "mdi-dna",
       },
       DATA_PRODUCT: {
+        key: "DATA_PRODUCT",
         label: "Data Product",
         collection_path: "dataproducts",
         icon: "mdi-package-variant-closed",
@@ -67,6 +74,23 @@ const exports = {
   alertForEnvironments: ["ci"],
   enabledFeatures: {
     genomeBrowser: true,
+  },
+  upload_status: {
+    UPLOADING: "UPLOADING",
+    UPLOAD_FAILED: "UPLOAD_FAILED",
+    UPLOADED: "UPLOADED",
+    PROCESSING: "PROCESSING",
+    PROCESSING_FAILED: "PROCESSING_FAILED",
+    COMPLETE: "COMPLETE",
+    FAILED: "FAILED",
+  },
+  SUBMISSION_STATES: {
+    UNINITIATED: "Uninitiated",
+    PROCESSING: "Processing",
+    PROCESSING_FAILED: "Processing Failed",
+    UPLOADING: "Uploading",
+    UPLOAD_FAILED: "Upload Failed",
+    UPLOADED: "Uploaded",
   },
 };
 

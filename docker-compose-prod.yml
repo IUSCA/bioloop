@@ -19,6 +19,7 @@ services:
         APP_UID: ${APP_UID} # read from .env file
         APP_GID: ${APP_GID} # read from .env file
     volumes:
+      - /opt/sca/uploads:/opt/sca/uploads
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
     expose:
@@ -29,6 +30,7 @@ services:
     networks:
       network:
         ipv4_address: 172.19.0.2
+
 
   postgres:
     image: postgres:14.5
