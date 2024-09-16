@@ -23,6 +23,7 @@ def compute_updated_checksum(celery_task: WorkflowTask, dataset: dict, delete_lo
     # Tar the dataset directory and compute checksum
     bundle_archive_path = dataset['archive_path']
 
+    # TODO - Move method to utils
     temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
     # updated_dataset_extracted_path = str(temp_bundles_extraction_dir / dataset['name'])
     new_bundle_path = Path(temp_bundles_extraction_dir) / dataset['bundle']['name']

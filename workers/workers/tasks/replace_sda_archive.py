@@ -76,5 +76,8 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
 
         raise ValidationFailed(f"Checksum validation failed for updated SDA bundle: {sda_archive_path}/{bundle_path.name},\
  for dataset_id: {dataset_id}. Updated SDA bundle checksum: {updated_sda_bundle_checksum}, new tar checksum: {new_tar_checksum}")
+    else:
+        # remove the original SDA bundle
+        sda.delete(bundle_path.name)
 
     return dataset_id,
