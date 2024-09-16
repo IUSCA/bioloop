@@ -22,17 +22,17 @@ def update_metadata(celery_task, dataset_id, **kwargs):
 
     print(f"Updating metadata for dataset {dataset_id}")
 
-    # dataset = api.get_dataset(dataset_id=dataset_id)
+    dataset = api.get_dataset(dataset_id=dataset_id)
 
-    # temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
-    # updated_dataset_extracted_path = str(temp_bundles_extraction_dir / dataset['name'])
+    temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
+    updated_dataset_extracted_path = str(temp_bundles_extraction_dir / dataset['name'])
 
-    # source = Path(updated_dataset_extracted_path).resolve()
-    # num_files, num_directories, size, num_genome_files, metadata = generate_metadata(celery_task, source)
+    source = Path(updated_dataset_extracted_path).resolve()
+    num_files, num_directories, size, num_genome_files, metadata = generate_metadata(celery_task, source)
 
-    # update_data = {
-    #     'num_directories': num_directories,
-    # }
-    # api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+    update_data = {
+        'num_directories': num_directories,
+    }
+    api.update_dataset(dataset_id=dataset_id, update_data=update_data)
 
     return dataset_id,

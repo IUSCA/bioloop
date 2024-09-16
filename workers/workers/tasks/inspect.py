@@ -10,7 +10,7 @@ import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 from workers import exceptions as exc
 from workers.config import config
-from workers.utils import generate_metadata
+from workers.workflow_utils import generate_metadata
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)

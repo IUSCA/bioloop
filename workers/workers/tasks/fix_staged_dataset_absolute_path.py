@@ -94,6 +94,8 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
         print(f'Expected dataset {dataset_id}\'s root directory after extraction to be {dataset["name"]}, but found {extracted_bundle_root_dir}')
         nested_dataset_dir = next(Path(extracted_bundle_root_dir).glob(f'**/{dataset["name"]}'))
 
+        #TODO - throw if nested directory with dataset's name is not found
+
         print(f'found {str(nested_dataset_dir)} inside {str(extracted_bundle_root_dir)}')
         shutil.move(nested_dataset_dir, temp_bundles_extraction_dir)
         print(f'moved {str(nested_dataset_dir)} to {str(temp_bundles_extraction_dir)}')
@@ -104,7 +106,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
 
         new_tar_path = Path(temp_bundles_extraction_dir) / dataset['bundle']['name']
         # make archive from fixed dataset
-        print(f'Making archive for dataset id: {dataset_id} to {str(new_tar_path)}')
+        print(f'Making archive for dataset id: {dataset_id}, source {str(updated_dataset_extracted_path)} at {str(new_tar_path)}')
         
         updated_dataset_extracted_path = str(temp_bundles_extraction_dir / nested_dataset_dir)
         

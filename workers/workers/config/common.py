@@ -134,14 +134,18 @@ config = {
                     'name': 'fix staged dataset path',
                     'task': 'fix_staged_dataset_absolute_path'
                 },
-                # {
-                #     'name': 'update dataset metaada',
-                #     'task': 'update_dataset_metadata'
-                # },
                 {
-                    'name': 'validate',
-                    'task': 'validate_dataset'
+                  'name': 'validate file checksums',
+                  'task': 'validate_dataset_file_checksums'
                 },
+                {
+                    'name': 'update dataset metaada',
+                    'task': 'update_dataset_metadata'
+                },
+                # {
+                #     'name': 'validate',
+                #     'task': 'validate_dataset'
+                # },
                 {
                     'name': 'replace SDA archive',
                     'task': 'replace_sda_archive'
