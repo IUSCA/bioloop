@@ -25,13 +25,14 @@ def compute_updated_checksum(celery_task: WorkflowTask, dataset: dict, delete_lo
     bundle_attrs = {
         'size': bundle_size,
         'md5': updated_sda_bundle_checksum,
+        'name': dataset['bundle']['name']
     }
 
     return bundle_attrs
 
 
 def update_metadata(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id)
+    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     print(f"Old number of directories: {dataset['num_directories']}")
 
     working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
