@@ -137,17 +137,17 @@ config = {
                   'task': 'validate_dataset_file_checksums'
                 },
                 {
-                    'name': 'update dataset metadata',
-                    'task': 'update_dataset_metadata'
-                },
-                {
                     'name': 'replace SDA archive',
                     'task': 'replace_sda_archive'
                 },
                 {
-                    'name': 'recompute bundle checksum',
-                    'task': 'recompute_bundle_checksum'
+                    'name': 'update dataset metadata',
+                    'task': 'update_dataset_metadata'
                 },
+                # {
+                #     'name': 'recompute bundle checksum',
+                #     'task': 'recompute_bundle_checksum'
+                # },
             ]
         }
     },
