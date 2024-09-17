@@ -20,7 +20,7 @@ logger = get_task_logger(__name__)
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    bundle = Path(f'{get_bundle_staged_path(dataset)}')
+    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
 
     wf_utils.make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
