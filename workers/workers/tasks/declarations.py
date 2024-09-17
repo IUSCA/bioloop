@@ -121,7 +121,7 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
 
 
 @app.task(base=WorkflowTask, bind=True, name='fix_staged_dataset_absolute_path',
-          autoretry_for=(Exception,),
+          autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
 def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
@@ -130,7 +130,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
 
 
 @app.task(base=WorkflowTask, bind=True, name='replace_sda_archive',
-          autoretry_for=(Exception,),
+          autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
 def replace_sda_archive(celery_task, ret_val, **kwargs):
@@ -139,7 +139,7 @@ def replace_sda_archive(celery_task, ret_val, **kwargs):
 
 
 @app.task(base=WorkflowTask, bind=True, name='update_dataset_metadata',
-          autoretry_for=(Exception,),
+          autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
 def update_dataset_metadata(celery_task, ret_val, **kwargs):
@@ -148,7 +148,7 @@ def update_dataset_metadata(celery_task, ret_val, **kwargs):
 
 
 @app.task(base=WorkflowTask, bind=True, name='validate_dataset_file_checksums',
-          autoretry_for=(Exception,),
+          autoretry_for=(exc.RetryableException,),
           max_retries=3,
           default_retry_delay=5)
 def validate_dataset_file_checksums(celery_task, ret_val, **kwargs):

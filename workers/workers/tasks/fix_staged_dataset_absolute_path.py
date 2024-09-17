@@ -35,7 +35,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     sda_archive_path = dataset['archive_path']
     wf_utils.download_file_from_sda(sda_archive_path, archive_download_path)
 
-    archive_extracted_to_dir = Path(working_dir / f"{dataset['name']}_fix_paths")
+    archive_extracted_to_dir = Path(working_dir / f"{dataset['name']}_temp_extract_location")
     if archive_extracted_to_dir.exists():
         shutil.rmtree(archive_extracted_to_dir)
 
@@ -45,23 +45,17 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
                              target_dir=archive_extracted_to_dir / 'fixed_paths',
                              override_arcname=False)
 
-    extracted_archive_dirs = [dir for dir in os.listdir(archive_extracted_to_dir) if os.path.isdir(os.path.join(archive_extracted_to_dir, dir))]
-    if len(extracted_archive_dirs) > 1:
-        raise ValidationFailed(f'Expected one, but found more than one directories inside extracted_bundle_dirs: {extracted_archive_dirs}')
-    
-    extracted_archive_root_dir = extracted_archive_dirs[0]
+    incorrect_nested_path = archive_extracted_to_dir / config['registration'][dataset['type']]['source_dir'][1:] / dataset["name"]
+    has_incorrect_path = incorrect_nested_path.exists()
 
-    has_incorrect_paths = extracted_archive_root_dir != dataset['name']
-    # todo - the subsequent step of the wf should not kick off for these datasets
-    if has_incorrect_paths:
-        root_dir = archive_extracted_to_dir / extracted_archive_root_dir
-        nested_dataset_dir = next(Path(root_dir).glob(f'**/{dataset["name"]}'))
+    if has_incorrect_path:
+        print(f'Incorrect nested path: {incorrect_nested_path} found')
 
         if (working_dir / dataset['name']).exists():
             shutil.rmtree(working_dir / dataset['name'])
-        shutil.move(nested_dataset_dir, working_dir)
+        shutil.move(incorrect_nested_path, working_dir)
 
-        shutil.rmtree(root_dir)
+        shutil.rmtree(archive_extracted_to_dir)
 
         new_tar_path = working_dir / dataset['bundle']['name']
         # make archive from fixed dataset
@@ -71,7 +65,6 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
                                 source_dir=updated_dataset_path,
                                 source_size=dataset['du_size'])
     else:
-        print(f'Dataset_id {dataset_id}\'s root directory ({extracted_archive_root_dir})\
- is already the same as the dataset\'s name')
+        print(f'Directory {str(incorrect_nested_path)} does not exist.')
 
-    return (dataset_id, has_incorrect_paths), 
+    return (dataset_id, has_incorrect_path), 
