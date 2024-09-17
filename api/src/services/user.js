@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { Prisma, PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 
 const prisma = new PrismaClient();
@@ -83,13 +83,48 @@ async function updateLastLogin({ id, method }) {
     },
   });
 }
+/** The function `findAll` is used to retrieve a list of users from the database with various filtering, sorting,
+ * and pagination options. */
+async function findAll({
+  search, sortBy, sort_order, skip, take,
+}) {
+  const sort_sql = Prisma.raw(`"${sortBy}" ${sort_order}`);
+  /**
+ * Constructs a SQL query to:
+ * 1. Join `user`, `user_login`, `user_role`, and `role` tables to retrieve user details, roles, and last login info.
+ * 2. Filter users based on the search term.
+ * 3. Group results by user ID and login method.
+ * 4. Sort results by the specified column and order, with nulls last.
+ * 5. Apply pagination using limit and offset.
+ * Executes the query and returns the total user count and details.
+ */
+  const sql = Prisma.sql`
+  with results as (
+      select u.*, ul.last_login, ul."method", array_agg(r."name") as roles from "user" u
+      left join user_login ul on u.id = ul.user_id
+      left join user_role ur on ur.user_id = u.id
+      left join "role" r on r.id = ur.role_id
+      where u."name" ilike ${`%${search}%`} or u."email" ilike ${`%${search}%`} or u."username" ilike ${`%${search}%`}
+      group by u.id, ul.last_login, ul."method"
+    )
+    select *, count(*) over() as total_count from results
+    order by ${sort_sql} nulls last
+    ${take !== undefined ? Prisma.sql`limit ${take}  offset ${skip}` : Prisma.empty}
+  `;
 
-async function findAll(sort) {
-  const users = await prisma.user.findMany({
-    include: INCLUDE_ROLES_LOGIN,
-    orderBy: sort.map(({ key, dir }) => ({ [key]: dir })),
-  });
-  return users.map(transformUser);
+  const users = await prisma.$queryRaw(sql);
+  const total_count = Number(users.length ? users[0].total_count : 0);
+
+  return {
+    count: total_count,
+    users: users.map(({ last_login, method, ...rest }) => ({
+      ...rest,
+      login: {
+        last_login,
+        method,
+      },
+    })),
+  };
 }
 
 async function createUser(data) {
