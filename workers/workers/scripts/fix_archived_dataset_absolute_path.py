@@ -88,7 +88,7 @@ class ArchivedDatasetPathFixManager:
         return list(cursor)
     
     def initiate_workflow(self, dataset_id: str, dataset_nosql_workflows: list[dict]) -> None:
-        if dataset_id == 3:
+        if dataset_id == 28:
             if len(dataset_nosql_workflows) == 0:
                 logger.info(f"No workflows of type {self.workflow_name} are running on dataset_id {dataset_id}. Starting a new one.")
                 self.start_workflow(dataset_id)

@@ -281,3 +281,18 @@ def generate_metadata(celery_task, source: Path):
         raise exc.InspectionFailed(errors)
 
     return num_files, num_directories, size, num_genome_files, metadata
+
+
+def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: list[dict]):
+    progress = Progress(celery_task=celery_task, units='files')
+    validation_errors = []
+    for file_metadata in progress(files_metadata):
+        rel_path = file_metadata['path']
+        path = dataset_dir / rel_path
+        if path.exists():
+            digest = utils.checksum(path)
+            if digest != file_metadata['md5']:
+                validation_errors.append((str(path), 'checksum mismatch'))
+        else:
+            validation_errors.append((str(path), 'file does not exist'))
+    return validation_errors
