@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 from celery import Celery
@@ -40,14 +41,17 @@ def update_metadata(celery_task, ret_val, **kwargs):
         return dataset_id, has_incorrect_paths
 
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
-    print(f"Old number of directories: {dataset['num_directories']}")
-
+    
     working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
     updated_dataset_extracted_path = working_dir / dataset['name']
 
+    archive_download_path = working_dir / dataset['bundle']['name']
+    archive_extracted_to_dir = Path(working_dir / f"{dataset['name']}_fix_paths")
+    
     source = Path(updated_dataset_extracted_path).resolve()
     num_files, num_directories, size, num_genome_files, metadata = generate_metadata(celery_task, source)
 
+    print(f"Old number of directories: {dataset['num_directories']}")
     print(f"New Number of directories: {num_directories}")
 
     bundle_attrs = compute_updated_checksum(celery_task, dataset)
@@ -66,5 +70,9 @@ def update_metadata(celery_task, ret_val, **kwargs):
     wf.start(dataset_id)
     logger.info(
         f"Started workflow 'stage' for dataset_id: {dataset_id}. Workflow ID: {wf.workflow['_id']}")
+    
+    # Delete local files
+    archive_download_path.unlink()
+    shutil.rmtree(archive_extracted_to_dir)
 
     return (dataset_id, has_incorrect_paths),

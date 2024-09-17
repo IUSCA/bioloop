@@ -75,7 +75,7 @@ def replace_sda_archive(celery_task, ret_val, **kwargs):
  for dataset_id: {dataset_id}. Updated SDA bundle checksum: {new_sda_checksum}, new tar checksum: {local_tar_checksum}")
     else:
         # remove the original SDA bundle
-        print(f"Deleting original SDA bundle: {sda_original_bundle_clone}")
+        print(f"Checksum validation passed. Deleting original SDA bundle: {sda_original_bundle_clone}")
         sda.delete(sda_original_bundle_clone)
 
     return (dataset_id, has_incorrect_paths),
