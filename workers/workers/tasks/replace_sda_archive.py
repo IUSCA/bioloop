@@ -31,35 +31,45 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
     sda_archive_path = wf_utils.get_archive_dir(dataset['type'])
 
     sda_current_bundle_path = f"{dataset['archive_path']}"
-    sda_updated_bundle_path = f'{sda_archive_path}/{bundle_path.name}_updated'
+    print(f"SDA current bundle path: {sda_current_bundle_path}")
 
-    if sda.exists(sda_updated_bundle_path):
-        sda.delete(sda_updated_bundle_path)    
+    sda_new_bundle_path = f"{sda_archive_path}/{bundle['name']}_updated"
+    print(f"SDA updated bundle path: {sda_new_bundle_path}")
+
+    if sda.exists(sda_new_bundle_path):
+        sda.delete(sda_new_bundle_path)
 
     wf_utils.upload_file_to_sda(local_file_path=new_tar_path,
-                                sda_file_path=sda_updated_bundle_path,
+                                sda_file_path=sda_new_bundle_path,
                                 celery_task=celery_task)
 
     persisted_bundle_checksum = bundle['md5']
-    sda.rename(sda_current_bundle_path, f'{sda_current_bundle_path}_original')
 
-    sda.rename(sda_updated_bundle_path, bundle_path.name)
+    # make a copy of the original SDA bundle
+    sda_original_bundle_clone = f'{sda_current_bundle_path}_original'
+    sda.rename(sda_current_bundle_path, sda_original_bundle_clone)
+    print(f"Renamed SDA bundle {sda_current_bundle_path} to {sda_original_bundle_clone}")
+
+    # rename the updated SDA bundle to its original name
+    sda.rename(sda_new_bundle_path, sda_current_bundle_path)
+    print(f"Renamed SDA bundle {sda_new_bundle_path} to {sda_current_bundle_path}")
 
     # verify that the replaced SDA bundle has the same checksum as the newly created bundle
-    updated_sda_bundle_checksum = sda.get_hash(f"{sda_archive_path}/{bundle_path.name}")
-
-    new_tar_checksum = utils.checksum(Path(new_tar_path))
+    new_sda_checksum = sda.get_hash(f"{sda_current_bundle_path}")
+    local_tar_checksum = utils.checksum(Path(new_tar_path))
     
-    if updated_sda_bundle_checksum != new_tar_checksum:
+    if new_sda_checksum != local_tar_checksum:
         # rename the original SDA bundle back to its original name
-        sda.rename(f'original_{sda_updated_bundle_path}', dataset['bundle']['name'])
-        print(f"Checksum validation failed. Renaming original SDA bundle 'original_{sda_updated_bundle_path}'\
-               back to its original name: {dataset['bundle']['name']}")
+        sda.rename(sda_current_bundle_path, sda_new_bundle_path)
+        sda.rename(sda_original_bundle_clone, sda_current_bundle_path)
+        print(f"Checksum validation failed. Renaming original SDA bundle '{sda_original_bundle_clone}'\
+               back to its original name: {sda_current_bundle_path}")
 
-        raise ValidationFailed(f"Checksum validation failed for updated SDA bundle: {sda_archive_path}/{bundle_path.name},\
- for dataset_id: {dataset_id}. Updated SDA bundle checksum: {updated_sda_bundle_checksum}, new tar checksum: {new_tar_checksum}")
+        raise ValidationFailed(f"Checksum validation failed for updated SDA bundle: {sda_current_bundle_path},\
+ for dataset_id: {dataset_id}. Updated SDA bundle checksum: {new_sda_checksum}, new tar checksum: {local_tar_checksum}")
     else:
         # remove the original SDA bundle
-        sda.delete(bundle_path.name)
+        print(f"Deleting original SDA bundle: {sda_original_bundle_clone}")
+        sda.delete(sda_original_bundle_clone)
 
     return dataset_id,
