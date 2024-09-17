@@ -10,7 +10,7 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
-from workers.dataset import get_bundle_staged_path, get_bundle_stage_temp_path
+from workers.dataset import get_bundle_staged_path
 from workers.config import config
 import workers.sda as sda
 from workers.exceptions import ValidationFailed
@@ -25,47 +25,28 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
     bundle = dataset['bundle']
 
     working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
-    dataset_path = working_dir / dataset['name']
     new_tar_path = working_dir / dataset['bundle']['name']
 
     bundle_path = Path(get_bundle_staged_path(dataset))
     sda_archive_path = wf_utils.get_archive_dir(dataset['type'])
 
     sda_current_bundle_path = f"{dataset['archive_path']}"
-    print(f"SDA current bundle path: {sda_current_bundle_path}")
-
     sda_updated_bundle_path = f'{sda_archive_path}/{bundle_path.name}_updated'
-    print(f"SDA updated bundle path: {sda_updated_bundle_path}")
 
     if sda.exists(sda_updated_bundle_path):
         sda.delete(sda_updated_bundle_path)    
 
-    print(f"Uploading archive {new_tar_path} to SDA at {sda_updated_bundle_path}")
-    # no need to verify checksum, since the current bundle on the SDA will have a
-    # different checksum than the newly created bundle, due to incorrect nested
-    # paths in the current bundle on the SDA.
     wf_utils.upload_file_to_sda(local_file_path=new_tar_path,
                                 sda_file_path=sda_updated_bundle_path,
-                                celery_task=celery_task,
-                                verify_checksum=False)
-    print(f"Uploaded archive {new_tar_path} to SDA at {sda_updated_bundle_path}")
+                                celery_task=celery_task)
 
     persisted_bundle_checksum = bundle['md5']
-    print(f"Persisted bundle checksum: {persisted_bundle_checksum}")
-
-#     if updated_sda_bundle_checksum != persisted_bundle_checksum:
-#         raise Exception(f"Checksum validation failed for updated SDA bundle: {sda_updated_bundle_path},\
-#  dataset_id: {dataset_id}")
-
     sda.rename(sda_current_bundle_path, f'{sda_current_bundle_path}_original')
-    print(f"Renamed SDA bundle {sda_current_bundle_path} to {sda_updated_bundle_path}_original")
 
     sda.rename(sda_updated_bundle_path, bundle_path.name)
-    print(f"Renamed SDA bundle {sda_updated_bundle_path} to {bundle_path.name}")
 
     # verify that the replaced SDA bundle has the same checksum as the newly created bundle
     updated_sda_bundle_checksum = sda.get_hash(f"{sda_archive_path}/{bundle_path.name}")
-    print(f"Updated SDA bundle checksum: {updated_sda_bundle_checksum}")
 
     new_tar_checksum = utils.checksum(Path(new_tar_path))
     

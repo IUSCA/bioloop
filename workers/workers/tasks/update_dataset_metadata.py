@@ -11,7 +11,6 @@ import workers.utils as utils
 from workers import exceptions as exc
 from workers.config import config
 from workers.workflow_utils import generate_metadata
-from workers.dataset import get_bundle_stage_temp_path
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -19,13 +18,9 @@ logger = get_task_logger(__name__)
 
 
 def update_metadata(celery_task, dataset_id, **kwargs):
-
-    print(f"Updating metadata for dataset {dataset_id}")
-
     dataset = api.get_dataset(dataset_id=dataset_id)
 
     working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
-
     updated_dataset_extracted_path = working_dir / dataset['name']
 
     source = Path(updated_dataset_extracted_path).resolve()

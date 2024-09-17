@@ -128,10 +128,6 @@ config = {
         },
         'fix_bundle_absolute_paths': {
             'steps': [
-                # {
-                #     'name': 'un-stage',
-                #     'task': 'un_stage_dataset'
-                # },
                 {
                     'name': 'fix staged dataset path',
                     'task': 'fix_staged_dataset_absolute_path'
@@ -141,13 +137,9 @@ config = {
                   'task': 'validate_dataset_file_checksums'
                 },
                 {
-                    'name': 'update dataset metaada',
+                    'name': 'update dataset metadata',
                     'task': 'update_dataset_metadata'
                 },
-                # {
-                #     'name': 'validate',
-                #     'task': 'validate_dataset'
-                # },
                 {
                     'name': 'replace SDA archive',
                     'task': 'replace_sda_archive'

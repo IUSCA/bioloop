@@ -28,24 +28,17 @@ def recreate_bundle(celery_task, dataset_id, **kwargs):
     }
     api.update_dataset(dataset_id=dataset_id, update_data=bundle_update_payload)
 
-    print(f'set is_staged to False for dataset {dataset_id}')
-
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     downloaded_bundle_path = Path(f'{get_bundle_staged_path(dataset)}')
     dataset_staging_dir = compute_staging_path(dataset)
 
-    print(f'Creating bundle for dataset_id {dataset_id} from {str(dataset_staging_dir)}')
     wf_utils.make_tarfile(celery_task=celery_task,
                        tar_path=downloaded_bundle_path,
                        source_dir=str(dataset_staging_dir),
                        source_size=dataset['du_size'])
-    print(f'Created bundle for dataset_id {dataset_id} at {str(downloaded_bundle_path)}')
 
     recomputed_bundle_size = downloaded_bundle_path.stat().st_size
     recomputed_bundle_checksum = utils.checksum(downloaded_bundle_path)
-
-    print(f'Recomputed bundle size: {recomputed_bundle_size}')
-    print(f'Recomputed bundle checksum: {recomputed_bundle_checksum}')
 
     bundle_update_payload = {
         'bundle': {
@@ -54,7 +47,5 @@ def recreate_bundle(celery_task, dataset_id, **kwargs):
         },
     }
     api.update_dataset(dataset_id=dataset_id, update_data=bundle_update_payload)
-
-    print(f'Updated dataset {dataset_id} with recomputed bundle size and md5')
 
     return dataset_id,

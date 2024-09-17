@@ -37,8 +37,6 @@ class ArchivedDatasetPathFixManager:
         """
         archived_datasets = api.get_all_datasets(archived=True)
 
-        # raise Exception('test exception')
-
         logger.info(f'Found {len(archived_datasets)} archived datasets')
 
         app_workflows = api.get_all_workflows()
@@ -88,14 +86,13 @@ class ArchivedDatasetPathFixManager:
         return list(cursor)
     
     def initiate_workflow(self, dataset_id: str, dataset_nosql_workflows: list[dict]) -> None:
-        if dataset_id == 28:
-            if len(dataset_nosql_workflows) == 0:
-                logger.info(f"No workflows of type {self.workflow_name} are running on dataset_id {dataset_id}. Starting a new one.")
-                self.start_workflow(dataset_id)
-            else:
-                logger.info(f"The following workflows of type {self.workflow_name} are already running on dataset_id {dataset_id}, and a new one will not be started.")
-                for wf in dataset_nosql_workflows:
-                    logger.info(f"Workflow: {wf['_id']}, status: {wf['_status']}")
+        if len(dataset_nosql_workflows) == 0:
+            logger.info(f"No workflows of type {self.workflow_name} are running on dataset_id {dataset_id}. Starting a new one.")
+            self.start_workflow(dataset_id)
+        else:
+            logger.info(f"The following workflows of type {self.workflow_name} are already running on dataset_id {dataset_id}, and a new one will not be started.")
+            for wf in dataset_nosql_workflows:
+                logger.info(f"Workflow: {wf['_id']}, status: {wf['_status']}")
 
     def start_workflow(self, dataset_id: str) -> None:
         wf_body = wf_utils.get_wf_body(wf_name=self.workflow_name)

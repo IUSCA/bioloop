@@ -8,7 +8,6 @@ from sca_rhythm.progress import Progress
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
-from workers.dataset import get_bundle_stage_temp_path
 from workers import exceptions as exc
 from workers.workflow_utils import check_files
 from workers.config import config
