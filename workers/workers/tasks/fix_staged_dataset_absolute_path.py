@@ -51,7 +51,9 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     
     extracted_archive_root_dir = extracted_archive_dirs[0]
 
-    if extracted_archive_root_dir != dataset['name']:
+    has_incorrect_paths = extracted_archive_root_dir != dataset['name']
+    # todo - the subsequent step of the wf should not kick off for these datasets
+    if has_incorrect_paths:
         root_dir = archive_extracted_to_dir / extracted_archive_root_dir
         nested_dataset_dir = next(Path(root_dir).glob(f'**/{dataset["name"]}'))
 
@@ -68,5 +70,8 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
                                 tar_path=new_tar_path,
                                 source_dir=updated_dataset_path,
                                 source_size=dataset['du_size'])
+    else:
+        print(f'Dataset_id {dataset_id}\'s root directory ({extracted_archive_root_dir})\
+ is already the same as the dataset\'s name')
 
-    return dataset_id,
+    return dataset_id, has_incorrect_paths

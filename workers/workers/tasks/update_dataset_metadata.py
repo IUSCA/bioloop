@@ -33,7 +33,12 @@ def compute_updated_checksum(celery_task: WorkflowTask, dataset: dict, delete_lo
     return bundle_attrs
 
 
-def update_metadata(celery_task, dataset_id, **kwargs):
+def update_metadata(celery_task, ret_val, **kwargs):
+    dataset_id, has_incorrect_paths = ret_val
+    if not has_incorrect_paths:
+        print(f"No incorrect paths found for dataset {dataset_id}. Metadata will not be updated.")
+        return dataset_id, has_incorrect_paths
+
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     print(f"Old number of directories: {dataset['num_directories']}")
 
@@ -62,4 +67,4 @@ def update_metadata(celery_task, dataset_id, **kwargs):
     logger.info(
         f"Started workflow 'stage' for dataset_id: {dataset_id}. Workflow ID: {wf.workflow['_id']}")
 
-    return dataset_id,
+    return dataset_id, has_incorrect_paths

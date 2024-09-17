@@ -20,7 +20,13 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def replace_sda_archive(celery_task, dataset_id, **kwargs):
+def replace_sda_archive(celery_task, ret_val, **kwargs):
+    dataset_id, has_incorrect_paths = ret_val
+
+    if not has_incorrect_paths:
+        print(f"No incorrect paths found for dataset {dataset_id}. SDA Archive will not be replaced.")
+        return dataset_id, has_incorrect_paths
+
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     bundle = dataset['bundle']
 
@@ -72,4 +78,4 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
         print(f"Deleting original SDA bundle: {sda_original_bundle_clone}")
         sda.delete(sda_original_bundle_clone)
 
-    return dataset_id,
+    return dataset_id, has_incorrect_paths

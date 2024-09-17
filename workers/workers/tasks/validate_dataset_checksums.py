@@ -17,7 +17,13 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def validate_dataset_file_checksums(celery_task, dataset_id, **kwargs):
+def validate_dataset_file_checksums(celery_task, ret_val, **kwargs):
+    dataset_id, has_incorrect_paths = ret_val
+
+    if not has_incorrect_paths:
+        print(f"No incorrect paths found for dataset {dataset_id}. File checksums will not be validated.")
+        return dataset_id, has_incorrect_paths
+
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True, files=True)
 
     working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
@@ -33,4 +39,4 @@ def validate_dataset_file_checksums(celery_task, dataset_id, **kwargs):
         logger.warning(f'{len(validation_errors)} validation errors for dataset id: {dataset_id} path: {dataset_path}')
         raise exc.ValidationFailed(validation_errors)
 
-    return dataset_id,
+    return dataset_id, has_incorrect_paths
