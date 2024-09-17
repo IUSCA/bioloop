@@ -67,4 +67,4 @@ def update_metadata(celery_task, ret_val, **kwargs):
     logger.info(
         f"Started workflow 'stage' for dataset_id: {dataset_id}. Workflow ID: {wf.workflow['_id']}")
 
-    return dataset_id, has_incorrect_paths
+    return (dataset_id, has_incorrect_paths),

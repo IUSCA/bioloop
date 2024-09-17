@@ -78,4 +78,4 @@ def replace_sda_archive(celery_task, ret_val, **kwargs):
         print(f"Deleting original SDA bundle: {sda_original_bundle_clone}")
         sda.delete(sda_original_bundle_clone)
 
-    return dataset_id, has_incorrect_paths
+    return (dataset_id, has_incorrect_paths),
