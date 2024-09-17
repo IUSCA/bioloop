@@ -39,4 +39,4 @@ def validate_dataset_file_checksums(celery_task, ret_val, **kwargs):
         logger.warning(f'{len(validation_errors)} validation errors for dataset id: {dataset_id} path: {dataset_path}')
         raise exc.ValidationFailed(validation_errors)
 
-    return dataset_id, has_incorrect_paths
+    return (dataset_id, has_incorrect_paths),

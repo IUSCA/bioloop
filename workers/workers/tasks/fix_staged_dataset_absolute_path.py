@@ -74,4 +74,4 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
         print(f'Dataset_id {dataset_id}\'s root directory ({extracted_archive_root_dir})\
  is already the same as the dataset\'s name')
 
-    return dataset_id, has_incorrect_paths
+    return (dataset_id, has_incorrect_paths), 

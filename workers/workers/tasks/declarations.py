@@ -129,15 +129,6 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='recreate_bundle',
-          autoretry_for=(Exception,),
-          max_retries=3,
-          default_retry_delay=5)
-def recreate_bundle(celery_task, dataset_id, **kwargs):
-    from workers.tasks.recreate_bundle import recreate_bundle as task_body
-    return task_body(celery_task, dataset_id, **kwargs)
-
-
 @app.task(base=WorkflowTask, bind=True, name='replace_sda_archive',
           autoretry_for=(Exception,),
           max_retries=3,
