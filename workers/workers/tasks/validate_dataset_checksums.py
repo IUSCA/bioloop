@@ -10,31 +10,20 @@ import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 from workers.dataset import get_bundle_stage_temp_path
 from workers import exceptions as exc
+from workers.workflow_utils import check_files
+from workers.config import config
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: list[dict]):
-    progress = Progress(celery_task=celery_task, units='files')
-    validation_errors = []
-    for file_metadata in progress(files_metadata):
-        rel_path = file_metadata['path']
-        path = dataset_dir / rel_path
-        if path.exists():
-            digest = utils.checksum(path)
-            if digest != file_metadata['md5']:
-                validation_errors.append((str(path), 'checksum mismatch'))
-        else:
-            validation_errors.append((str(path), 'file does not exist'))
-    return validation_errors
-
-
 def validate_dataset_file_checksums(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id, files=True)
+    dataset = api.get_dataset(dataset_id=dataset_id, bundle=True, files=True)
 
-    dataset_path = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir' / dataset['name']
+    working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
+    dataset_path = working_dir / dataset['name']
+
     print(f'Dataset is present at, {str(dataset_path)}')
 
     validation_errors = check_files(celery_task=celery_task,

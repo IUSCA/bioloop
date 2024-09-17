@@ -24,8 +24,9 @@ def update_metadata(celery_task, dataset_id, **kwargs):
 
     dataset = api.get_dataset(dataset_id=dataset_id)
 
-    temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
-    updated_dataset_extracted_path = str(temp_bundles_extraction_dir / dataset['name'])
+    working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
+
+    updated_dataset_extracted_path = working_dir / dataset['name']
 
     source = Path(updated_dataset_extracted_path).resolve()
     num_files, num_directories, size, num_genome_files, metadata = generate_metadata(celery_task, source)

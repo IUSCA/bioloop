@@ -24,8 +24,9 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     bundle = dataset['bundle']
 
-    temp_bundles_extraction_dir = get_bundle_stage_temp_path(dataset).parent / 'temp_extraction_dir'
-    new_tar_path = Path(temp_bundles_extraction_dir) / dataset['bundle']['name']
+    working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
+    dataset_path = working_dir / dataset['name']
+    new_tar_path = working_dir / dataset['bundle']['name']
 
     bundle_path = Path(get_bundle_staged_path(dataset))
     sda_archive_path = wf_utils.get_archive_dir(dataset['type'])
@@ -33,7 +34,7 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
     sda_current_bundle_path = f"{dataset['archive_path']}"
     print(f"SDA current bundle path: {sda_current_bundle_path}")
 
-    sda_updated_bundle_path = f'{sda_archive_path}/updated_{bundle_path.name}'
+    sda_updated_bundle_path = f'{sda_archive_path}/{bundle_path.name}_updated'
     print(f"SDA updated bundle path: {sda_updated_bundle_path}")
 
     if sda.exists(sda_updated_bundle_path):
@@ -56,8 +57,8 @@ def replace_sda_archive(celery_task, dataset_id, **kwargs):
 #         raise Exception(f"Checksum validation failed for updated SDA bundle: {sda_updated_bundle_path},\
 #  dataset_id: {dataset_id}")
 
-    sda.rename(sda_current_bundle_path, f'original_{sda_current_bundle_path}')
-    print(f"Renamed SDA bundle {sda_current_bundle_path} to original_{sda_updated_bundle_path}")
+    sda.rename(sda_current_bundle_path, f'{sda_current_bundle_path}_original')
+    print(f"Renamed SDA bundle {sda_current_bundle_path} to {sda_updated_bundle_path}_original")
 
     sda.rename(sda_updated_bundle_path, bundle_path.name)
     print(f"Renamed SDA bundle {sda_updated_bundle_path} to {bundle_path.name}")

@@ -44,7 +44,8 @@ config = {
                 'generate': '/path/for/raw_data/bundle/generation',
                 'stage': '/path/for/raw_data/bundle/staging',
             },
-            'qc': '/path/to/qc'
+            'qc': '/path/to/qc',
+            'fix_nested_paths': '/path/to/temp/download/location'
         },
         'DATA_PRODUCT': {
             'archive': f'development/{YEAR}/data_products',
@@ -53,6 +54,7 @@ config = {
                 'generate': '/path/for/data_products/bundle/generation',
                 'stage': '/path/for/data_products/bundle/staging',
             },
+            'fix_nested_paths': '/path/to/temp/download/location'
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
