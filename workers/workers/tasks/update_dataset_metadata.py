@@ -2,13 +2,15 @@ from pathlib import Path
 
 from celery import Celery
 from celery.utils.log import get_task_logger
-from sca_rhythm import WorkflowTask
+from sca_rhythm import WorkflowTask, Workflow
 
+import workers.workflow_utils as wf_utils
 import workers.api as api
 import workers.sda as sda
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
 from workers.workflow_utils import generate_metadata
+from workers.celery_app import app as celery_app
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -51,4 +53,13 @@ def update_metadata(celery_task, dataset_id, **kwargs):
     }
 
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
+
+    # Finally, kick off Stage workflow
+    wf_body = wf_utils.get_wf_body(wf_name='stage')
+    wf = Workflow(celery_app=celery_app, **wf_body)
+    api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+    wf.start(dataset_id)
+    logger.info(
+        f"Started workflow 'stage' for dataset_id: {dataset_id}. Workflow ID: {wf.workflow['_id']}")
+
     return dataset_id,
