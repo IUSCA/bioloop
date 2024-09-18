@@ -108,6 +108,12 @@
       </span>
     </va-chip>
 
+    <!-- active metadata filters -->
+    <DatasetMetadataChips
+      :metadata="filters.metadata"
+      @reset="reset('metadata')"
+    />
+
     <!-- reset search -->
     <va-button
       @click="resetSearch"

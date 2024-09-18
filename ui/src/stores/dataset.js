@@ -14,6 +14,7 @@ export const useDatasetStore = defineStore("dataset", () => {
       name: null,
       created_at: null,
       updated_at: null,
+      metadata: {},
     };
   }
 
