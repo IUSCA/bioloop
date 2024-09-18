@@ -41,6 +41,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
 
     print(f'archive_extracted_to_dir: {str(archive_extracted_to_dir)}, exists: {archive_extracted_to_dir.exists()}')
 
+    # Extracts the dataset inside the `archive_extracted_to_dir` directory. The `fixed_paths` subdirectory is never actually used.
     wf_utils.extract_tarfile(tar_path=archive_download_path,
                              target_dir=archive_extracted_to_dir / 'fixed_paths',
                              override_arcname=False)

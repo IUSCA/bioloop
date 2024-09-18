@@ -18,15 +18,10 @@ app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
 
-def compute_updated_checksum(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
-    working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
-    new_bundle_path = working_dir / dataset['bundle']['name']
-
+def compute_updated_bundle_checksum(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     updated_sda_bundle_checksum = sda.get_hash(f"{dataset['archive_path']}")
 
-    bundle_size = new_bundle_path.stat().st_size
     bundle_attrs = {
-        'size': bundle_size,
         'md5': updated_sda_bundle_checksum,
         'name': dataset['bundle']['name']
     }
@@ -54,7 +49,7 @@ def update_metadata(celery_task, ret_val, **kwargs):
     print(f"Old number of directories: {dataset['num_directories']}")
     print(f"New Number of directories: {num_directories}")
 
-    bundle_attrs = compute_updated_checksum(celery_task, dataset)
+    bundle_attrs = compute_updated_bundle_checksum(celery_task, dataset)
 
     update_data = {
         'num_directories': num_directories,
@@ -63,6 +58,8 @@ def update_metadata(celery_task, ret_val, **kwargs):
 
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
 
+    shutil.rmtree(working_dir)
+
     # Finally, kick off Stage workflow
     wf_body = wf_utils.get_wf_body(wf_name='stage')
     wf = Workflow(celery_app=celery_app, **wf_body)
@@ -70,9 +67,5 @@ def update_metadata(celery_task, ret_val, **kwargs):
     wf.start(dataset_id)
     logger.info(
         f"Started workflow 'stage' for dataset_id: {dataset_id}. Workflow ID: {wf.workflow['_id']}")
-    
-    # Delete local files
-    archive_download_path.unlink()
-    shutil.rmtree(archive_extracted_to_dir)
 
     return (dataset_id, has_incorrect_paths),

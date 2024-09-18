@@ -86,5 +86,5 @@ def ensure_directory(dir_path: str) -> None:
     # 1. Both paths are file objects;
     # 2. Both paths are directories and the sink directory is empty.
 def rename(src_path: str, sink_path: str) -> None:
-    command = ['hsi', 'rename', f'{src_path} {sink_path}']
+    command = ['hsi', '-P', 'rename', f'{src_path} {sink_path}']
     cmd.execute(command)
