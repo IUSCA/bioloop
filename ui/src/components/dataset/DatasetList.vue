@@ -351,6 +351,9 @@ function fetch_items() {
     filters_api.updated_at_end = filters_api.updated_at.end;
     delete filters_api.updated_at;
   }
+
+  // tranform metadata filters to API format
+
   DatasetService.getAll({
     limit: query.value.page_size,
     offset: offset.value,

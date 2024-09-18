@@ -127,6 +127,9 @@
           placeholder="filter by updated date range"
           label="Updated At"
         />
+
+        <!-- metadata -->
+        <DatasetMetadataForm v-model="form.metadata" />
       </va-form>
     </div>
 
