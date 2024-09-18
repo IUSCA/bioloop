@@ -23,6 +23,8 @@ logger = get_task_logger(__name__)
 def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
 
+    print(f"Processing dataset {dataset_id}...")
+
     working_dir = Path(config['paths'][dataset['type']]['fix_nested_paths']) / f"{dataset['name']}"
     working_dir.mkdir(parents=True, exist_ok=True)
 
@@ -35,11 +37,11 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     sda_archive_path = dataset['archive_path']
     wf_utils.download_file_from_sda(sda_archive_path, archive_download_path)
 
-    archive_extracted_to_dir = Path(working_dir / f"{dataset['name']}_temp_extract_location")
+    archive_extracted_to_dir = Path(working_dir / f"{dataset['name']}_extracted")
     if archive_extracted_to_dir.exists():
         shutil.rmtree(archive_extracted_to_dir)
 
-    print(f'archive_extracted_to_dir: {str(archive_extracted_to_dir)}, exists: {archive_extracted_to_dir.exists()}')
+    # print(f'archive_extracted_to_dir: {str(archive_extracted_to_dir)}, exists: {archive_extracted_to_dir.exists()}')
 
     # Extracts the dataset inside the `archive_extracted_to_dir` directory. The `fixed_paths` subdirectory is never actually used.
     wf_utils.extract_tarfile(tar_path=archive_download_path,
@@ -50,7 +52,7 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
     has_incorrect_path = incorrect_nested_path.exists()
 
     if has_incorrect_path:
-        print(f'Incorrect nested path: {incorrect_nested_path} found')
+        print(f'Found directory with incorrect nested path {str(incorrect_nested_path)} inside the extracted archive.')
 
         if (working_dir / dataset['name']).exists():
             shutil.rmtree(working_dir / dataset['name'])
@@ -66,6 +68,6 @@ def fix_staged_dataset_absolute_path(celery_task, dataset_id, **kwargs):
                                 source_dir=updated_dataset_path,
                                 source_size=dataset['du_size'])
     else:
-        print(f'Directory {str(incorrect_nested_path)} does not exist.')
+        print(f'Did not find directory with incorrect nested path {str(incorrect_nested_path)} inside the extracted archive.')
 
     return (dataset_id, has_incorrect_path), 

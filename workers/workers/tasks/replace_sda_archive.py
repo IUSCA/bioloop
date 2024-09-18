@@ -24,8 +24,8 @@ def replace_sda_archive(celery_task, ret_val, **kwargs):
     dataset_id, has_incorrect_paths = ret_val
 
     if not has_incorrect_paths:
-        print(f"No incorrect paths found for dataset {dataset_id}. SDA Archive will not be replaced.")
-        return dataset_id, has_incorrect_paths
+        print(f"No incorrect nested paths found for dataset {dataset_id}. SDA Archive will not be replaced.")
+        return (dataset_id, has_incorrect_paths),
 
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     bundle = dataset['bundle']
