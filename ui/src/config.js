@@ -57,6 +57,14 @@ const exports = {
       refresh_interval_ms: 10000,
     },
   },
+  SUBMISSION_STATES: {
+    UNINITIATED: "Uninitiated",
+    PROCESSING: "Processing",
+    PROCESSING_FAILED: "Processing Failed",
+    UPLOADING: "Uploading",
+    UPLOAD_FAILED: "Upload Failed",
+    UPLOADED: "Uploaded",
+  },
   DATASET_STATES: {
     REGISTERED: "REGISTERED",
     READY: "READY",
