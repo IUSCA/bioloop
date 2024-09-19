@@ -142,6 +142,14 @@ config = {
                 }
             ]
         },
+        'process_upload': {
+            'steps': [
+                {
+                    'name': 'process uploaded chunks',
+                    'task': 'process_upload'
+                }
+            ]
+        },
         'fix_bundle_absolute_paths': {
             'steps': [
                 {
