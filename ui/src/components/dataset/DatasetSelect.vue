@@ -31,17 +31,14 @@
       </va-button-dropdown>
     </template>
 
-    <template #name="slotProps">
-      <va-popover placement="top" :message="slotProps['value'].raw">
-        {{ slotProps["value"].formatted }}
-      </va-popover>
-    </template>
+    <!--    <template #name="slotProps">-->
+    <!--      <va-popover placement="top" :message="slotProps['value'].raw">-->
+    <!--        {{ slotProps["value"].formatted }}-->
+    <!--      </va-popover>-->
+    <!--    </template>-->
 
     <template #type="slotProps">
-      <DatasetType
-        :type="slotProps['value'].formatted"
-        :show-icon="!(breakpoint.sm || breakpoint.xs)"
-      />
+      <DatasetType :type="slotProps['value'].formatted" :show-type="false" />
     </template>
   </SearchAndSelect>
 </template>
@@ -115,27 +112,28 @@ const primaryColumns = computed(() => {
   ];
 });
 
-const secondaryColumns = computed(() => {
-  return [
-    {
-      key: "size",
-      label: "Size",
-      formatFn: (val) => formatBytes(val),
-      width: props.columnWidths.size,
-    },
-    {
-      key: "created_at",
-      label: "Registered On",
-      formatFn: (val) => date(val),
-      width: props.columnWidths.created_at,
-    },
-  ];
-});
+// const secondaryColumns = computed(() => {
+//   return [
+//     {
+//       key: "size",
+//       label: "Size",
+//       formatFn: (val) => formatBytes(val),
+//       width: props.columnWidths.size,
+//     },
+//     {
+//       key: "created_at",
+//       label: "Registered On",
+//       formatFn: (val) => date(val),
+//       width: props.columnWidths.created_at,
+//     },
+//   ];
+// });
 
 const retrievedDatasetColumns = computed(() => {
-  return breakpoint.sm || breakpoint.xs
-    ? primaryColumns.value
-    : primaryColumns.value.concat(secondaryColumns.value);
+  // return breakpoint.sm || breakpoint.xs
+  //   ? primaryColumns.value
+  //   : primaryColumns.value.concat(secondaryColumns.value);
+  return primaryColumns.value;
 });
 
 const selectedDatasetColumns = computed(() =>
