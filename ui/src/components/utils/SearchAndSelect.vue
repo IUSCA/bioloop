@@ -1,7 +1,7 @@
 <template>
   <div class="flex gap-2 search" :style="styles">
     <!-- Search, and search results   -->
-    <div>
+    <div class="flex-auto">
       <!-- Container for search controls, and search results table -->
       <div class="flex flex-col gap-2">
         <!-- Container for controls -->
@@ -115,7 +115,6 @@
                 <!-- template for Actions column -->
                 <template #cell(actions)="{ rowData }">
                   <va-button
-                    class="w-full"
                     :icon="isSelected(rowData) ? 'remove' : 'add'"
                     :color="isSelected(rowData) ? 'danger' : 'success'"
                     size="small"
@@ -137,7 +136,7 @@
     <va-divider class="flex-none" vertical></va-divider>
 
     <!-- Selected results -->
-    <div>
+    <div class="flex-auto">
       <div class="flex flex-col gap-2">
         <!-- Container for Controls -->
         <div class="flex flex-col gap-2 --controls-height --controls-margin">
@@ -221,7 +220,6 @@
               <!-- template for Actions column -->
               <template #cell(actions)="{ rowData }">
                 <va-button
-                  class="w-full"
                   :icon="isSelected(rowData) ? 'remove' : 'add'"
                   :color="isSelected(rowData) ? 'danger' : 'success'"
                   size="small"
@@ -330,6 +328,8 @@ const selectedResultSelections = ref([]);
 const ACTIONS_COLUMN_CONFIG = {
   key: "actions",
   label: "Actions",
+  thAlign: "right",
+  tdAlign: "right",
 };
 
 const _searchResultColumns = computed(() => {
