@@ -11,6 +11,10 @@
     "download": {
       "client_id": "OAUTH_DOWNLOAD_CLIENT_ID",
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
+    },
+    "upload": {
+      "client_id": "OAUTH_UPLOAD_CLIENT_ID",
+      "client_secret": "OAUTH_UPLOAD_CLIENT_SECRET"
     }
   },
   "auth": {
@@ -26,6 +30,7 @@
   "download_server": {
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
   },
+  "upload_path": "UPLOAD_PATH",
   "e2e": {
     "users": {
       "admin": {

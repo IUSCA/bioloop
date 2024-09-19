@@ -7,9 +7,12 @@ class WorkflowService {
     last_task_run = false,
     prev_task_runs = false,
     workflow_ids = null,
+    dataset_id = null,
+    dataset_name = null,
     status = null,
     skip = 0,
     limit = 10,
+    include_initiator = false,
   } = {}) {
     return api.get("/workflows", {
       params: {
@@ -19,6 +22,9 @@ class WorkflowService {
         workflow_id: workflow_ids,
         skip,
         limit,
+        dataset_id,
+        dataset_name,
+        include_initiator,
       },
       paramsSerializer: {
         // to create workflow_id=123&workflow_id=456

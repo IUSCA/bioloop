@@ -44,7 +44,13 @@
       "client_id": "",
       "client_secret": "",
       "scope_prefix": "download_file:"
+    },
+    "upload": {
+      "scope_prefix": "upload_file:"
     }
+  },
+  "upload": {
+    "path": ""
   },
   "download_server": {
     "base_url": ""
@@ -54,30 +60,30 @@
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
-            "name": "await stability",
-            "task": "await_stability"
+          "name": "await stability",
+          "task": "await_stability"
         },
         {
-            "name": "inspect",
-            "task": "inspect_dataset"
+          "name": "inspect",
+          "task": "inspect_dataset"
         },
         {
-            "name": "archive",
-            "task": "archive_dataset"
+          "name": "archive",
+          "task": "archive_dataset"
         },
         {
-            "name": "stage",
-            "task": "stage_dataset"
+          "name": "stage",
+          "task": "stage_dataset"
         },
         {
-            "name": "validate",
-            "task": "validate_dataset"
+          "name": "validate",
+          "task": "validate_dataset"
         },
         {
-            "name": "setup_download",
-            "task": "setup_dataset_download"
+          "name": "setup_download",
+          "task": "setup_dataset_download"
         }
-    ]
+      ]
     },
     "stage": {
       "steps": [
@@ -102,9 +108,20 @@
           "task": "delete_dataset"
         }
       ]
+    },
+    "process_upload": {
+      "steps": [
+        {
+          "name": "process uploaded chunks",
+          "task": "process_upload"
+        }
+      ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "dataset_types": [
+    "RAW_DATA",
+    "DATA_PRODUCT"
+  ],
   "e2e": {
     "users": {
       "admin": {
@@ -117,5 +134,26 @@
         "username": ""
       }
     }
+  },
+  "WORKFLOW_STATUS": {
+    "PENDING": "PENDING",
+    "STARTED": "STARTED",
+    "SUCCESS": "SUCCESS",
+    "FAILURE": "FAILURE",
+    "REVOKED": "REVOKED"
+  },
+  "DONE_STATUSES": {
+    "REVOKED": "REVOKED",
+    "FAILURE": "FAILURE",
+    "SUCCESS": "SUCCESS"
+  },
+  "upload_status": {
+    "UPLOADING": "UPLOADING",
+    "UPLOAD_FAILED": "UPLOAD_FAILED",
+    "UPLOADED": "UPLOADED",
+    "PROCESSING": "PROCESSING",
+    "PROCESSING_FAILED": "PROCESSING_FAILED",
+    "COMPLETE": "COMPLETE",
+    "FAILED": "FAILED"
   }
 }
