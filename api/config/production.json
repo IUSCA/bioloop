@@ -7,6 +7,9 @@
   "workflow_server": {
     "base_url": "http://172.19.0.4:5001"
   },
+  "upload": {
+    "path": "/opt/sca/uploads"
+  },
   "auth": {
     "mode": "prod",
     "jwt": {

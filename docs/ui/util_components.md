@@ -88,7 +88,7 @@ The `SearchAndSelect` widget offers these features:
 2. Applying additional filters for the search
 3. Fetching results in batches via infinite-scrolling (the ability to load more results once the user has scrolled past
    the currently retrieved results)
-4. Selecting / unselecting individual or multiple entities.
+4. Selecting / unselecting individual entities, or multiple entities at once.
 5. Emitting events to make client aware of entities being selected/unselected, or of the search being reset.
 6. Load this widget with certain results pre-selected
 
@@ -585,6 +585,7 @@ the string is looked up in the target argument, and returned.
 - `selectedResults`: Array - the array of currently selected search results. Can be used to load the widget with some items
   pre-selected. Defaults to [].
 - `selectedLabel`: String - The label to show for the table of selected results. Default - "Selected Results"
+- `selectMode`: String - Determines if the component will allow selecting only a single result, or multiple results at once. Can be one of 'single' or 'multiple'. Defaults to 'multiple'.
 - `searchResultColumns`: Array - The display config for the `<va-data-table>` of search results. Extends the `columns`
   prop provided to `<va-data-table>`. A `formatFn` function can be provided in a column's config to format the column's
   value a certain way. Moreover, `{ slotted: true }` can be added to the column's config to embed the column's value in

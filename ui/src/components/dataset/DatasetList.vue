@@ -48,6 +48,12 @@
         }}</router-link>
       </template>
 
+      <template #cell(file_type)="{ rowData }">
+        <va-chip v-if="rowData" outline size="small">
+          {{ rowData.file_type?.name }}
+        </va-chip>
+      </template>
+
       <template #cell(created_at)="{ value }">
         <span>{{ datetime.date(value) }}</span>
       </template>
@@ -240,7 +246,8 @@ const delete_modal = ref({
 const searchModal = ref(null);
 const total_results = ref(0);
 
-// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch
+// of results
 const offset = computed(() => (query.value.page - 1) * query.value.page_size);
 
 useQueryPersistence({
@@ -261,6 +268,12 @@ const columns = [
     label: "size",
     sortable: true,
     width: "100px",
+  },
+  {
+    key: "file_type",
+    label: "File Type",
+    thAlign: "center",
+    tdAlign: "center",
   },
   {
     key: "archive_path",
@@ -357,6 +370,7 @@ function fetch_items() {
     sort_by: query.value.sort_by,
     sort_order: query.value.sort_order,
     ...filters_api,
+    include_file_type: true,
   })
     .then((res) => {
       datasets.value = res.data?.datasets || [];
@@ -382,7 +396,8 @@ watch(
     if (query.value.page === 1) {
       fetch_items();
     } else {
-      // change current page to 1 triggers the watch on currPage and fetches items
+      // change current page to 1 triggers the watch on currPage and fetches
+      // items
       query.value.page = 1;
     }
   },
@@ -404,7 +419,8 @@ const handleMainFilter = useDebounceFn((value) => {
 }, 300);
 
 function handleSearch() {
-  // clear the search input when search is emitted either from filter chips or from search modal
+  // clear the search input when search is emitted either from filter chips or
+  // from search modal
   params.value.inclusive_query = null;
   if (query.value.page === 1) {
     fetch_items();

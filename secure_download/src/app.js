@@ -4,9 +4,9 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const requestLogger = require('morgan');
 // const compression = require('compression');
-// const cors = require('cors');
+const cors = require('cors');
 // const swaggerUi = require('swagger-ui-express');
-// const config = require('config');
+const config = require('config');
 
 const indexRouter = require('./routes/index');
 const {
@@ -39,7 +39,7 @@ app.use(cookieParser());
 // app.use(compression());
 
 // enable CORS - cross origin resource sharing
-// app.use(cors());
+app.use(cors());
 
 // if (!['production', 'test'].includes(config.get('mode'))) {
 //   // mount swagger ui

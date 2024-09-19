@@ -47,6 +47,21 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const INCLUDE_UPLOAD_LOG_RELATIONS = {
+  files: true,
+  user: true,
+  dataset: {
+    include: {
+      source_datasets: {
+        include: {
+          source_dataset: true,
+        },
+      },
+      file_type: true,
+    },
+  },
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 function get_wf_body(wf_name) {
@@ -67,7 +82,8 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name) {
   const wf_body = get_wf_body(wf_name);
 
-  // check if a workflow with the same name is not already running / pending on this dataset
+  // check if a workflow with the same name is not already running / pending on
+  // this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
     .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
@@ -131,6 +147,8 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   includeProjects = false,
+  include_uploading_derived_datasets = false,
+  include_upload_log = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -153,8 +171,28 @@ async function get_dataset({
       ...INCLUDE_STATES,
       bundle,
       source_datasets: true,
-      derived_datasets: true,
+      derived_datasets: include_uploading_derived_datasets ? true : {
+        where: {
+          derived_dataset: {
+            OR: [
+              {
+                upload_log: null,
+              },
+              {
+                upload_log: {
+                  status: config.upload_status.COMPLETE,
+                },
+              },
+            ],
+          },
+        },
+      },
       projects: includeProjects,
+      upload_log: include_upload_log ? {
+        include: {
+          files: true,
+        },
+      } : false,
     },
   });
 
@@ -211,8 +249,8 @@ async function get_dataset({
 //   `;
 
 //   /**
-//    * Find directories of a dataset which are immediate children of `base` path
-//    *
+// * Find directories of a dataset which are immediate children of `base` path
+// *
 //    * Query: filter rows by dataset_id, rows starting with `base`,
 //    * and rows where the path after `base` does have / (these files are not immediate children)
 //    *
@@ -487,6 +525,7 @@ module.exports = {
   soft_delete,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
+  INCLUDE_UPLOAD_LOG_RELATIONS,
   get_dataset,
   create_workflow,
   create_filetree,

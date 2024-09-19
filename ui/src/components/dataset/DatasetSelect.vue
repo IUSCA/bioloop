@@ -3,6 +3,7 @@
     v-model:searchTerm="searchTerm"
     :search-results="datasets"
     :selected-results="props.selectedResults"
+    :selectMode="props.selectMode"
     :search-result-count="totalResultCount"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
@@ -21,6 +22,7 @@
   >
     <template #filters>
       <va-button-dropdown
+        v-if="!props.datasetType"        
         :label="`Filters${activeCountText}`"
         :close-on-content-click="false"
       >
@@ -43,15 +45,17 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import { date } from "@/services/datetime";
-import { formatBytes, lxor } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
+import { formatBytes, lxor } from "@/services/utils";
 import _ from "lodash";
-
+import { useBreakpoint } from "vuestic-ui";
 const NAME_TRIM_THRESHOLD = 13;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
+  datasetType: {
+    type: String,
+  },
   selectedResults: {
     type: Array,
     default: () => [],
@@ -59,6 +63,10 @@ const props = defineProps({
   columnWidths: {
     type: Object,
     required: true,
+  },
+  selectMode: {
+    type: String,
+    default: () => "multiple",
   },
 });
 
@@ -148,15 +156,21 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
-  return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
-    ? {
-        type: checkboxes.value.rawData
-          ? "RAW_DATA"
-          : checkboxes.value.dataProduct
-            ? "DATA_PRODUCT"
-            : undefined,
-      }
-    : undefined;
+  if (props.datasetType) {
+    return {
+      type: props.datasetType,
+    };
+  } else {
+    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+      ? {
+          type: checkboxes.value.rawData
+            ? "RAW_DATA"
+            : checkboxes.value.dataProduct
+              ? "DATA_PRODUCT"
+              : undefined,
+        }
+      : undefined;
+  }
 });
 
 const batchingQuery = computed(() => {
