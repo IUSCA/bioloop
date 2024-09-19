@@ -215,7 +215,7 @@ model workflow {
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   initiator_id Int?
-  initiator user?     @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: Cascade)
+  initiator    user? @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
 }
 
 model metric {
