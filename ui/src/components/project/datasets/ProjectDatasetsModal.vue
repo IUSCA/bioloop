@@ -64,10 +64,8 @@ const modalSize = computed(() =>
 
 const columnWidths = computed(() => {
   return {
-    name: breakpoint.xs || breakpoint.sm ? "175px" : "180px",
+    name: breakpoint.xs || breakpoint.sm ? "175px" : "200px",
     type: "130px",
-    size: "100px",
-    created_at: "105px",
   };
 });
 
