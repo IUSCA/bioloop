@@ -139,6 +139,18 @@
     <template #cell(updated_at)="{ value }">
       <span>{{ datetime.date(value) }}</span>
     </template>
+
+    <template #cell(assigned)="{ rowData }">
+      <div class="text-sm">
+        <div v-if="rowData?.assignor">
+          by
+          <span class="font-semibold">
+            {{ rowData.assignor.username }}
+          </span>
+        </div>
+        <div>on {{ datetime.date(rowData.assigned_at) }}</div>
+      </div>
+    </template>
   </va-data-table>
 
   <Pagination
@@ -165,13 +177,13 @@ import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
+import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";
-import toast from "@/services/toast";
 
 const { colors } = useColors();
 const auth = useAuthStore();
@@ -311,11 +323,17 @@ watch(datasets_retrieval_query, (newQuery, oldQuery) => {
 });
 
 const rows = computed(() => {
-  return Object.values(_datasets.value).map((ds) => ({
-    ...ds,
-    is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
-    is_archival_pending: wfService.is_step_pending("ARCHIVE", ds.workflows),
-  }));
+  return Object.values(_datasets.value).map((ds) => {
+    const assoc = getCurrentProjAssoc(ds.projects) || {};
+    const { assigned_at, assignor } = assoc;
+    return {
+      ...ds,
+      assigned_at,
+      assignor,
+      is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
+      is_archival_pending: wfService.is_step_pending("ARCHIVE", ds.workflows)
+    };
+  });
 });
 
 const tracking = computed(() => {
@@ -326,7 +344,7 @@ const tracking = computed(() => {
 
 function fetch_and_update_dataset(id) {
   // console.log("fetch_and_update_dataset", id);
-  DatasetService.getById({ id })
+  DatasetService.getById({ id, include_projects: true })
     .then((res) => {
       _datasets.value[id] = res.data;
     })
@@ -376,7 +394,7 @@ watch(tracking, () => {
  * va-data-table's 'sorted' event, and added to the sorting criteria maintained in the
  * `datasets_sort_query` reactive variable.
  */
-const columns = [
+const columns = computed(() => [
   {
     key: "name",
     sortable: true,
@@ -408,7 +426,14 @@ const columns = [
     sortable: true,
     sortingFn: () => {}, // overrides va-data-table's default sorting behavior
   },
-];
+  ...(auth.canOperate
+    ? [
+        {
+          key: "assigned",
+        },
+      ]
+    : []),
+]);
 
 // download modal
 const downloadModal = ref(null);
@@ -427,5 +452,9 @@ function openModalToStageProject(dataset) {
   // console.log("openModalToStageProject", dataset);
   datasetToStage.value = dataset;
   stageModal.value.show();
+}
+
+function getCurrentProjAssoc(assocs) {
+  return assocs?.filter((obj) => obj.project_id === props.project.id)?.[0];
 }
 </script>

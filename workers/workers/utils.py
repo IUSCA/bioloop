@@ -1,10 +1,11 @@
 from __future__ import annotations  # type unions by | are only available in versions > 3.10
 
 import hashlib
+import json
 import os
 from collections.abc import Iterable
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, time
 from enum import Enum, unique
 from itertools import islice
 from pathlib import Path
@@ -138,3 +139,13 @@ def filetype(p: Path) -> FileType:
 
 def current_time_iso8601() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime, date, time)):
+            return obj.isoformat()
+        # if isinstance(obj, bytes):
+        #     # Encode bytes as base64
+        #     return obj.decode('utf-8')
+        return super().default(obj)

@@ -130,6 +130,7 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   bundle = false,
+  includeProjects = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -153,6 +154,7 @@ async function get_dataset({
       bundle,
       source_datasets: true,
       derived_datasets: true,
+      projects: includeProjects,
     },
   });
 

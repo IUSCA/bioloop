@@ -39,6 +39,6 @@ Bioloop leverages a few other projects to get up and running.
 
 
 ## Architecture
-<img src="../architecture.png" >
+<img src="docs/public/architecture.png" >
 <br />
-<img src="../app-celery-communication-diagram.png" >
+<img src="docs/public/app-celery-communication-diagram.png" >
