@@ -44,7 +44,8 @@ config = {
                 'generate': '/path/for/raw_data/bundle/generation',
                 'stage': '/path/for/raw_data/bundle/staging',
             },
-            'qc': '/path/to/qc'
+            'qc': '/path/to/qc',
+            'fix_nested_paths': '/path/to/temp/download/location'
         },
         'DATA_PRODUCT': {
             'upload': '/path/to/data_product/upload',
@@ -55,6 +56,7 @@ config = {
                 'generate': '/path/for/data_products/bundle/generation',
                 'stage': '/path/for/data_products/bundle/staging',
             },
+            'fix_nested_paths': '/path/to/temp/download/location'
         },
         'download_dir': '/path/to/download_dir',
         'root': '/path/to/root'
@@ -140,12 +142,24 @@ config = {
                 }
             ]
         },
-        'process_upload': {
+        'fix_bundle_absolute_paths': {
             'steps': [
                 {
-                    'name': 'process uploaded chunks',
-                    'task': 'process_upload'
-                }
+                    'name': 'fix staged dataset path',
+                    'task': 'fix_staged_dataset_absolute_path'
+                },
+                {
+                  'name': 'validate file checksums',
+                  'task': 'validate_dataset_file_checksums'
+                },
+                {
+                    'name': 'replace SDA archive',
+                    'task': 'replace_sda_archive'
+                },
+                {
+                    'name': 'update dataset metadata',
+                    'task': 'update_dataset_metadata'
+                },
             ]
         }
     },

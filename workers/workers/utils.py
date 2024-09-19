@@ -149,3 +149,4 @@ class DateTimeEncoder(json.JSONEncoder):
         #     # Encode bytes as base64
         #     return obj.decode('utf-8')
         return super().default(obj)
+

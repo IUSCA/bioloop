@@ -79,3 +79,12 @@ def exists(path: str) -> bool:
 def ensure_directory(dir_path: str) -> None:
     command = ['hsi', '-P', f'mkdir -p {dir_path}']
     cmd.execute(command)
+
+
+# CAUTION:
+# The sink path `sink_path` will be overwritten without warning if:
+    # 1. Both paths are file objects;
+    # 2. Both paths are directories and the sink directory is empty.
+def rename(src_path: str, sink_path: str) -> None:
+    command = ['hsi', '-P', 'rename', f'{src_path} {sink_path}']
+    cmd.execute(command)
