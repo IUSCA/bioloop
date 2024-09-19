@@ -18,7 +18,7 @@ tzdata = "^2023.4"
 fire = "^0.5.0"
 
 [tool.poetry.group.dev.dependencies]
-jupyterlab = "^4.0.9"
+jupyterlab = "^4.2.5"
 diagrams = "^0.23.3"
 
 [build-system]
