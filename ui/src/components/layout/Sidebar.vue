@@ -169,6 +169,11 @@ const operator_items = ref([
     test_id: "sidebar-raw-data",
   },
   {
+    icon: "mdi-file-cog-outline",
+    title: "Ingest",
+    path: "/ingest",
+  },
+  {
     icon: "mdi-package-variant-closed",
     title: "Data Products",
     path: "/dataproducts",

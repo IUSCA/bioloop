@@ -11,6 +11,8 @@ model dataset {
   id               Int                 @id @default(autoincrement())
   name             String
   type             String
+  file_type        dataset_file_type? @relation(fields: [file_type_id], references: [id])
+  file_type_id     Int?
   num_directories  Int?
   num_files        Int?
   du_size          BigInt?
@@ -307,6 +309,15 @@ model about {
   created_at         DateTime @default(now()) @db.Timestamp(6)
   last_updated_by    user     @relation(fields: [last_updated_by_id], references: [id])
   last_updated_by_id Int
+}
+
+model dataset_file_type {
+  id        Int       @id @default(autoincrement())
+  name      String
+  extension String
+  datasets  dataset[]
+
+  @@unique([name, extension])
 }
 
 enum access_type {
