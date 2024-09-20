@@ -132,7 +132,7 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   includeProjects = false,
-  includeInitiator = false,
+  initiator = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -146,7 +146,7 @@ async function get_dataset({
     },
   } : false;
 
-  const workflow_include = includeInitiator ? {
+  const workflow_include = initiator ? {
     workflows: {
       select: {
         id: true,

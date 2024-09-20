@@ -361,7 +361,7 @@ function fetch_dataset(show_loading = false) {
   DatasetService.getById({
     id: props.datasetId,
     bundle: true,
-    include_initiator: true,
+    initiator: true,
   })
     .then((res) => {
       const _dataset = res.data;
