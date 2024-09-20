@@ -98,7 +98,7 @@
             ></confirm-button>
 
             <confirm-hold-button
-              v-if="auth.user.roles.includes('admin')"
+              v-if="auth.canAdmin"
               action="Delete Workflow"
               icon="mdi-delete"
               color="danger"
@@ -108,7 +108,7 @@
 
           <div v-else-if="workflow.status == 'SUCCESS'">
             <confirm-hold-button
-              v-if="auth.user.roles.includes('admin')"
+              v-if="auth.canAdmin"
               action="Delete Workflow"
               icon="mdi-delete"
               color="danger"
@@ -125,7 +125,7 @@
                 @click="pause_workflow"
               ></confirm-button>
               <confirm-hold-button
-                v-if="auth.user.roles.includes('admin')"
+                v-if="auth.canAdmin"
                 action="Delete Workflow"
                 icon="mdi-delete"
                 color="danger"
