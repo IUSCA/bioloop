@@ -303,6 +303,7 @@ router.get(
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
+    query('include_initiator').optional().toBoolean(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -318,6 +319,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
+      includeInitiator: req.query.include_initiator || false,
     });
     res.json(dataset);
   }),
@@ -464,6 +466,7 @@ router.post(
       data: {
         id: req.body.workflow_id,
         dataset_id: req.params.id,
+        initiator_id: req.user.id,
       },
     });
     res.sendStatus(200);
@@ -564,7 +567,7 @@ router.post(
     });
 
     const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
     return res.json(wf);
   }),
 );

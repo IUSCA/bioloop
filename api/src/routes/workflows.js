@@ -14,12 +14,64 @@ const isPermittedTo = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const get_app_workflows = async (req) => {
+  const workflow_ids = req.query.workflow_id;
+  const filter_results = (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0)
+    || (typeof workflow_ids === 'string' && workflow_ids.trim() !== '')
+    || req.query.dataset_id
+    || req.query.dataset_name;
+
+  let filter_query = {};
+  if (filter_results) {
+    if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
+      filter_query = {
+        id: {
+          in: workflow_ids,
+        },
+      };
+    } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
+      filter_query = {
+        id: {
+          equals: workflow_ids,
+        },
+      };
+    } else if (req.query.dataset_id) {
+      filter_query = {
+        dataset_id: {
+          equals: Number(req.query.dataset_id),
+        },
+      };
+    } else if (req.query.dataset_name) {
+      filter_query = {
+        dataset: {
+          name: {
+            contains: req.query.dataset_name,
+          },
+        },
+      };
+    }
+  }
+
+  const app_workflows = await prisma.workflow.findMany({
+    where: { ...filter_query },
+    include: {
+      initiator: true,
+    },
+  });
+
+  return app_workflows;
+};
+
 router.get(
   '/',
   isPermittedTo('read'),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
+      const app_workflows = await get_app_workflows(req);
+
+      const query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
+
       const api_res = await wf_service.getAll({
         last_task_run: req.query.last_task_run,
         prev_task_runs: req.query.prev_task_runs,
@@ -27,9 +79,23 @@ router.get(
         app_id: config.app_id,
         skip: req.query.skip,
         limit: req.query.limit,
-        workflow_ids: req.query.workflow_id,
+        workflow_ids: query_by_wf_ids,
       });
-      res.json(api_res.data);
+
+      const nosql_workflows = api_res.data.results;
+
+      const results = (app_workflows || []).length > 0 ? (nosql_workflows || []).map((wf) => {
+        const app_wf = (app_workflows || []).find((aw) => aw.id === wf.id);
+        return {
+          ...wf,
+          ...app_wf,
+        };
+      }) : nosql_workflows;
+
+      res.json({
+        metadata: api_res.data.metadata,
+        results,
+      });
     },
   ),
 );
@@ -97,7 +163,8 @@ router.post(
   ),
 );
 
-// make sure that the request body is array of objects which at least will have a "message" key
+// make sure that the request body is array of objects which at least will have
+// a "message" key
 const append_log_schema = {
   '0.message': {
     in: ['body'],
@@ -146,8 +213,8 @@ router.get(
   validate([query('pid').isInt().toInt().optional()]),
   asyncHandler(
     async (req, res, next) => {
-    // #swagger.tags = ['Workflow']
-    // #swagger.summary = get processes
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = get processes
 
       const filters = _.flow([
         _.pick(['step', 'task_id', 'pid', 'workflow_id']),
@@ -232,7 +299,8 @@ router.delete(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      // #swagger.summary = delete all processes, its logs registered under a workflow
+      // #swagger.summary = delete all processes, its logs registered under a
+      // workflow
 
       const result = await prisma.worker_process.deleteMany({
         where: {
@@ -290,7 +358,8 @@ router.delete(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      // #swagger.summary = delete workflow and then delete dataset-workflow association
+      // #swagger.summary = delete workflow and then delete dataset-workflow
+      // association
       const api_res = await wf_service.deleteOne(req.params.id);
       await prisma.workflow.delete({
         where: {
@@ -303,4 +372,5 @@ router.delete(
     },
   ),
 );
+
 module.exports = router;
