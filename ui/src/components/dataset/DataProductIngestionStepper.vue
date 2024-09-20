@@ -94,6 +94,7 @@
             @remove="removeDataset"
             :column-widths="columnWidths"
             select-mode="single"
+            :dataset-type="config.types.RAW_DATA.key"
           ></DatasetSelect>
         </va-form-field>
 
@@ -145,6 +146,7 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
+import workflowService from "@/services/workflow";
 import config from "@/config";
 import dataImportService from "@/services/dataImport";
 import { useForm } from "vuestic-ui";
@@ -196,6 +198,7 @@ const fileTypeList = ref([]);
 const rawDataSelected = ref();
 const rawDataSelected_search = ref("");
 
+const datasetId = ref();
 const datasetName = ref("");
 const loading = ref(false);
 const filesInPath = ref([]);
@@ -231,11 +234,58 @@ const isFormValid = () => {
   // return false;
 };
 
-const handleSubmit = () => {};
+const preIngestion = () => {
+  return datasetService.createDataset({
+    name: datasetName.value,
+    type: config.dataset.types.DATA_PRODUCT.key,
+  });
+};
+
+const initiateIngestion = () => {
+  return datasetService.register_dataset(datasetId.value);
+};
+
+const onSubmit = () => {
+  return new Promise((resolve, reject) => {
+    preIngestion()
+      .then(async (res) => {
+        datasetId.value = res.data.id;
+        const ingestionInitiated = await initiateIngestion();
+        if (ingestionInitiated) {
+          resolve();
+        } else {
+          reject(new Error("Unable to register the dataset"));
+        }
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
+};
+
+// const handleSubmit = () => {
+//   onSubmit() // resolves once all files have been uploaded
+//     .then(() => {
+//       return datasetService.processUpload(uploadLog.value.dataset_id);
+//     })
+//     .catch((err) => {
+//       console.error(err);
+//     })
+//     .finally(() => {
+//       postSubmit();
+//     });
+// };
 
 const onNextClick = (nextStep) => {
-  if (isLastStep.value && isValid.value) {
-    handleSubmit();
+  if (isLastStep.value) {
+    // if (noFilesSelected.value) {
+    //   isSubmissionAlertVisible.value = true;
+    //   submissionAlert.value =
+    //     "At least one file must be selected to create a Data Product";
+    //   submissionAlertColor.value = "warning";
+    // } else {
+    onSubmit();
+    // }
   } else {
     nextStep();
   }

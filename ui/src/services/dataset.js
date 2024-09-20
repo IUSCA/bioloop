@@ -85,6 +85,19 @@ class DatasetService {
     return api.get("/datasets/dataset-file-types");
   }
 
+  register_dataset(id) {
+    return api
+      .post(`/datasets/${id}/workflow/integrated`)
+      .then(() => {
+        toast.success("A workflow has started to register the dataset");
+      })
+      .catch((err) => {
+        console.error("unable to register the dataset", err);
+        toast.error("Unable to register the dataset");
+        return Promise.reject(err);
+      });
+  }
+
   stage_dataset(id) {
     return api
       .post(`/datasets/${id}/workflow/stage`)
@@ -172,6 +185,10 @@ class DatasetService {
         max_file_size: maxSize,
       },
     });
+  }
+
+  createDataset(payload) {
+    return api.post("/datasets", payload);
   }
 
   getActionItem({ action_item_id } = {}) {
