@@ -358,7 +358,7 @@ function getWorkflows() {
     status: query_params.value.status,
     skip: skip.value,
     limit: query_params.value.page_size,
-    include_initiator: true,
+    initiator: true,
     ...(search_text.value.trim() !== "" && {
       [search_by_key]: search_text.value,
     }),
