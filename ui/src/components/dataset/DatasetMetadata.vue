@@ -7,11 +7,18 @@ const isModalOpen = ref(false);
 onMounted(async () => {
   metadata.value = {};
 
-  console.log("ID", id);
-  const { data } = await DatasetService.get_metadata(id);
-  metadata.value = data;
+  await getMetadata()
 });
 
+const getMetadata = async () => {
+  const { data } = await DatasetService.get_metadata(id);
+  metadata.value = data;
+};
+
+const updatedMetadata = async() => {
+  await getMetadata()
+  isModalOpen.value = false;
+};
 
 </script>
 
@@ -22,6 +29,7 @@ onMounted(async () => {
     <div class="flex justify-end">
       <AddEditButton class="flex-none" :edit="Object.keys(metadata).length !== 0" :add="Object.keys(metadata).length > 0" @click="isModalOpen = true" />
     </div>
+
     <!-- Display key pair values as table -->
     <table class="table">
       <tbody>
@@ -31,14 +39,15 @@ onMounted(async () => {
         </tr>
       </tbody>
     </table>
-    <va-modal hide-default-actions v-model="isModalOpen" @close="isModalOpen = false">
 
+    <va-modal hide-default-actions v-model="isModalOpen" @close="isModalOpen = false">
       <template #default>
         <div class="p-4">
-          <EditDatasetMetadata :metadata="metadata" :id="id" />
+          <EditDatasetMetadata :metadata="metadata" :id="id" @update="updatedMetadata" />
         </div>
       </template>
     </va-modal>
+
   </div>
 
 </template>

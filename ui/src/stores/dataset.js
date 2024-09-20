@@ -14,6 +14,7 @@ export const useDatasetStore = defineStore("dataset", () => {
       name: null,
       created_at: null,
       updated_at: null,
+      metaData: {}
     };
   }
 
@@ -61,23 +62,39 @@ export const useDatasetStore = defineStore("dataset", () => {
     params.value.query = defaultQuery();
   }
 
-  function resetFilterByKey(key) {
+  function resetFilterByKey(key, metaData = false) {
     const defaults = defaultFilters();
     // console.log("resetting", key, params.value.filters[key], defaults[key]);
-    params.value.filters[key] = defaults[key];
+
+    if (metaData) {
+      delete params.value.filters.metaData[key]
+    } else {
+      params.value.filters[key] = defaults[key];
+    }
   }
 
   const filterStatus = computed(() => {
     const defaults = defaultFilters();
     return mapValues(
       params.value.filters,
-      (key, value) => value !== defaults[key],
+      (key, value) => {
+        console.log(key, value, defaults[key]);
+        if (key === 'metaData' && Object.keys(params.value.filters.metaData).length === 0) {
+          return false;
+        }
+        return value !== defaults[key];
+      }
     );
   });
 
   const activeFilters = computed(() => {
     return Object.keys(filterStatus.value).filter(
-      (key) => filterStatus.value[key],
+      (key) => {
+        if (key === "metaData" && Object.keys(params.value.filters.metaData).length > 0) {
+          return filterStatus.value[key] 
+        }
+        return filterStatus.value[key] 
+      }
     );
   });
 

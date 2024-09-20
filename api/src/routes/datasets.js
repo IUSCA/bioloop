@@ -111,7 +111,7 @@ const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
-}) => {
+}, metaData = {}) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     is_staged: staged,
@@ -121,6 +121,9 @@ const buildQueryObject = ({
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
+
+
+
 
   // has_workflows=true: datasets with one or more workflows associated
   // has_workflows=false: datasets with no workflows associated
@@ -178,21 +181,6 @@ const buildQueryObject = ({
   return query_obj;
 };
 
-// const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-//   const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
-
-//   if (!field || !sortOrder) {
-//     return {};
-//   }
-//   if (nullable_order_by_fields.includes(field)) {
-//     return {
-//       [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-//     };
-//   }
-//   return {
-//     [field]: sortOrder,
-//   };
-// };
 
 router.post(
   '/associations',
@@ -209,6 +197,146 @@ router.post(
     res.sendStatus(200);
   }),
 );
+
+router.post('/search',
+  isPermittedTo('read'),
+  // validate([
+  //   body('deleted').toBoolean().default(false),
+  //   body('has_workflows').toBoolean().optional(),
+  //   body('has_derived_data').toBoolean().optional(),
+  //   body('has_source_data').toBoolean().optional(),
+  //   body('archived').toBoolean().optional(),
+  //   body('staged').toBoolean().optional(),
+  //   body('type').isIn(config.dataset_types).optional(),
+  //   body('name').notEmpty().escape().optional(),
+  //   body('days_since_last_staged').isInt().toInt().optional(),
+  //   body('bundle').optional().toBoolean(),
+  //   body('created_at_start').isISO8601().optional(),
+  //   body('created_at_end').isISO8601().optional(),
+  //   body('updated_at_start').isISO8601().optional(),
+  //   body('updated_at_end').isISO8601().optional(),
+  //   body('limit').isInt({ min: 1 }).toInt().optional(), // optional because watch script needs all datasets at once
+  //   body('offset').isInt({ min: 0 }).toInt().optional(),
+  //   body('sort_by').default('updated_at'),
+  //   body('sort_order').default('desc').isIn(['asc', 'desc']),
+  // ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+
+    const { metaData } = req.body
+    delete req.body.metaData
+
+    for (const [key, value] of Object.entries(req.body)) {
+      if (value === null) {
+        delete req.body[key]
+      }
+    }
+
+    const query_obj = buildQueryObject(req.body, metaData);
+
+    console.log('QUERY OBJ', query_obj);
+
+    const filterQuery = { where: query_obj };
+
+    const orderBy = {
+      [req.body.sort_by]: req.body.sort_order,
+    };
+    const datasetRetrievalQuery = {
+      skip: req.body.offset,
+      take: req.body.limit,
+      ...filterQuery,
+      orderBy,
+      include: {
+        ...datasetService.INCLUDE_WORKFLOWS,
+        source_datasets: true,
+        derived_datasets: true,
+        bundle: 'bundle' in req.body ? req.body.bundle : false
+      },
+    };
+
+    if (Object.keys(metaData).length > 0) {
+
+      let keywords = metaDataQuery(metaData)
+
+      datasetRetrievalQuery.where = {
+        ...datasetRetrievalQuery.where,
+        keywords
+      }
+
+
+    }
+
+    console.log('QUERY', JSON.stringify(datasetRetrievalQuery));
+    console.log('FILTER', filterQuery);
+
+    // console.log(JSON.stringify(filterQuery, null, 2));
+    const [datasets, count] = await prisma.$transaction([
+      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
+      prisma.dataset.count({ ...filterQuery }),
+    ]);
+
+    // console.log(datasets)
+
+    res.json({
+      metadata: { count },
+      datasets,
+    });
+  }),
+);
+
+const metaDataQuery = (metaData) => {
+
+  console.log('META DATA', metaData);
+
+  let keywords = { some: {} }
+
+  if (Object.keys(metaData).length === 1) {
+    for (const key of Object.keys(metaData)) {
+      const value = metaData[key]['data']['value']
+      keywords['some'] = {
+        value: {
+          [metaData[key]['op'] === '' ? 'equals' : getOp(metaData[key]['op'])]: value
+        }
+
+      }
+    }
+  } else {
+
+    for (const key of Object.keys(metaData)) {
+      const value = metaData[key]['data']['value'];
+      const condition = {
+        value: {
+          [metaData[key]['op'] === '' ? 'contains' : getOp(metaData[key]['op'])]: value
+        }
+      };
+      if(! ('AND' in keywords.some)) 
+        keywords.some = { AND: [] }
+
+      keywords.some.AND.push(condition);
+    }
+  }
+
+
+  console.log('KEYWORDS', keywords);
+
+  return keywords;
+}
+
+const getOp = (op) => {
+  switch (op) {
+    case '<':
+      return 'lt';
+    case '<=':
+      return 'lte';
+    case '>':
+      return 'gt';
+    case '>=':
+      return 'gte';
+    case '=':
+      return 'equals';
+  }
+}
+
 
 // Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
 // the criteria specified.
@@ -235,10 +363,11 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
+
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-
+    console.log('QUERY', req.query);
     const query_obj = buildQueryObject(req.query);
 
     const filterQuery = { where: query_obj };
@@ -762,7 +891,7 @@ router.get('/:id/metadata',
     // #swagger.summary = Update dataset metadata
     const { id } = req.params;
 
-    console.log('ID', id);
+    // console.log('ID', id);
     const results = await prisma.keyword_value.findMany({
       where: {
 
@@ -777,7 +906,7 @@ router.get('/:id/metadata',
       },
     });
 
-    console.log('KEYWORD VALUE', results);
+    // console.log('KEYWORD VALUE', results);
 
     res.json(results);
 
@@ -820,22 +949,17 @@ router.get('/metadata/all/:type',
 
     let results = {}
 
-    for(const kv of keyword_value) {
+    for (const kv of keyword_value) {
       const name = kv.keyword.name;
 
-      console.log('KV', kv);
+      // console.log('KV', kv);
       if (!results[name]) {
         results[name] = [];
-      } 
-      if(!results[name].includes(kv.value)) {
-        results[name].push(kv.value);
+      }
+      if (!results[name].includes(kv.value)) {
+        results[name].push(kv);
       }
     }
-
-    console.log('SOMETHING', results);
-
-
-
 
     // Convert the Set to an array and return it
     res.json(results)
@@ -848,25 +972,33 @@ router.patch('/:id/metadata', asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { metadata } = req.body;
 
+  let updateMetadata = []
 
-  const upsertPromises = metadata.map(mdata => {
+  // delete all metadata for the dataset
+  updateMetadata.push(await prisma.keyword_value.deleteMany({
+    where: {
+      dataset_id: parseInt(id),
+    }
+  }));
+
+  // create new metadata
+  const createMetadataPromises = metadata.map(mdata => {
     const keyword_id = parseInt(mdata.keyword_id);
+    const value = mdata.data;
 
-
-    return prisma.keyword_value.upsert({
-      where: {
-        keyword_id_dataset_id: {
-          dataset_id: parseInt(id),
-          keyword_id: keyword_id
-        }
-      },
-      update: { value: mdata.data },
-      create: { dataset_id: parseInt(id), keyword_id: keyword_id, value: mdata.data },
+    return prisma.keyword_value.create({
+      data: {
+        dataset_id: parseInt(id),
+        keyword_id: keyword_id,
+        value: value,
+      }
     });
-  });
+  })
+
+  updateMetadata = updateMetadata.concat(createMetadataPromises);
 
   try {
-    const results = await Promise.all(upsertPromises);
+    const results = await Promise.all(updateMetadata);
     console.log('Upsert results:', results);
     res.json(results);
   } catch (error) {
@@ -916,6 +1048,28 @@ router.post('/metadata/fields', asyncHandler(async (req, res, next) => {
   });
   res.json(results);
 
+
+}));
+
+router.patch('/metadata/fields/:id', asyncHandler(async (req, res, next) => {
+
+  const { id } = req.params;
+  const { name, description, datatype, visible, locked } = req.body;
+
+  const results = await prisma.keyword.update({
+    where: {
+      id: parseInt(id),
+    },
+    data: {
+      name,
+      description,
+      visible,
+      locked,
+      datatype
+    },
+  });
+
+  res.json(results);
 
 }));
 

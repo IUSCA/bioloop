@@ -93,16 +93,7 @@
         </va-form>
       </div>
       <div v-if="view === 'meta'">
-        <va-form class="flex flex-col gap-3 md:gap-5">
-          <va-select v-for="meta in Object.keys(metaData)" :key="meta" v-model="form[meta.id]"  :options="metaData[meta]" :label="meta"
-            text-by="name" value-by="id"  placeholder="Choose a value">
-            <template #prependInner>
-              <Icon :icon="meta.icon" class="text-xl" />
-            </template>
-          </va-select>
-        </va-form>
-
-
+        <DatasetMetadataFilters @updateMetaData="updateMetaData" />
       </div>
     </div>
 
@@ -127,16 +118,14 @@
 </template>
 
 <script setup>
-import DatasetService from "@/services/dataset";
+
 import { useDatasetStore } from "@/stores/dataset";
 import { storeToRefs } from "pinia";
+import DatasetMetadataFilters from "./DatasetMetadataFilters.vue";
 // const emit = defineEmits(["update"]);
 
 // get type from route url
 const type = useRoute().params.type;
-
-
-
 
 // parent component can invoke these methods through the template ref
 defineExpose({
@@ -150,7 +139,7 @@ const store = useDatasetStore();
 const { filters } = storeToRefs(store);
 
 const visible = ref(false);
-const form = ref({});
+const form = ref({metaData: {}});
 const view = ref("info");
 
 function hide() {
@@ -174,15 +163,9 @@ function handleReset() {
   form.value = store.defaultFilters();
 }
 
-const metaData = ref([]);
 
-
-onMounted(async () => {
-  console.log(store.type);
-
-const results = await DatasetService.get_all_metadata(store.type);
-console.log('RESULTS', results);
-metaData.value = results.data
-});
+const updateMetaData = (metaData) => {
+  form.value['metaData'] = metaData;
+};
 
 </script>

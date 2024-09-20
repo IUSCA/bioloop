@@ -17,7 +17,7 @@
             <va-card-content>
               <DatasetInfo :dataset="dataset"></DatasetInfo>
               <VaCollapse v-model="showMetadata" class="min-w-96" header="Metadata" icon="sell">
-                <DatasetMetadata v-if="showMetadata"  :id="dataset.id" />
+                <DatasetMetadata v-if="showMetadata" :id="dataset.id" />
               </VaCollapse>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->

@@ -20,9 +20,11 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    return api.get("/datasets", {
-      params,
-    });
+    // return api.get("/datasets", {
+    //   params,
+    // });
+
+    return api.post("/datasets/search", params );
   }
 
   getById({
@@ -119,6 +121,10 @@ class DatasetService {
 
   create_metadata_field({ name, description }) {
     return api.post("/datasets/metadata/fields", { name, description });
+  }
+
+  update_metadata_field({ id, name, description, datatype, visible, locked }) {
+    return api.patch(`/datasets/metadata/fields/${id}`, { id, name, description, datatype, visible, locked });
   }
 
   search_files({
