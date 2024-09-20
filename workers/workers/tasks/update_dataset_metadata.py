@@ -56,14 +56,7 @@ def update_metadata(celery_task, ret_val, **kwargs):
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
 
     # Delete the working directory
+    print(f"Deleting working directory: {working_dir}... Done")
     shutil.rmtree(working_dir)
-
-    # Finally, kick off Stage workflow
-    wf_body = wf_utils.get_wf_body(wf_name='stage')
-    wf = Workflow(celery_app=celery_app, **wf_body)
-    api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
-    wf.start(dataset_id)
-    logger.info(
-        f"Started workflow 'stage' for dataset_id: {dataset_id}. Workflow ID: {wf.workflow['_id']}")
 
     return (dataset_id, has_incorrect_paths),
