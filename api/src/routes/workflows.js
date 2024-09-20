@@ -85,7 +85,7 @@ router.get(
       const nosql_workflows = api_res.data.results;
 
       const results = (app_workflows || []).length > 0 ? (nosql_workflows || []).map((wf) => {
-        const app_wf = (app_workflows || []).find((wf_id) => wf_id === wf.id);
+        const app_wf = (app_workflows || []).find((aw) => aw.id === wf.id);
         return {
           ...wf,
           ...app_wf,
