@@ -5,6 +5,7 @@
     :selected-results="props.selectedResults"
     :selectMode="props.selectMode"
     :search-result-count="totalResultCount"
+    :selectMode="props.selectMode"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
     @scroll-end="loadNextPage"

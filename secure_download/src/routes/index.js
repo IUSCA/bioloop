@@ -12,5 +12,6 @@ router.use(authenticate);
 
 router.use('/download', require('./download'));
 router.use('/upload', require('./upload'));
+router.use('/fs', require('./fs'));
 
 module.exports = router;

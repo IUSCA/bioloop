@@ -6,6 +6,7 @@ const requestLogger = require('morgan');
 const compression = require('compression');
 const swaggerUi = require('swagger-ui-express');
 const config = require('config');
+const cors = require('cors');
 
 const indexRouter = require('./routes/index');
 const {
@@ -29,16 +30,17 @@ app.use(requestLogger('dev'));
 // request parsing middleware
 app.use(express.json({ limit: '50mb' }));
 
-// extended: false -> use querystring instead of qs library to parse urlencoded query string
-// removes ? ex: ?a=b will be {a: b}
-// does not parse nested objects:
-// ?person[name]=bobby&person[age]=3 will be { 'person[age]': '3', 'person[name]': 'bobby' }
-// see https://stackoverflow.com/questions/29960764/what-does-extended-mean-in-express-4-0
+// extended: false -> use querystring instead of qs library to parse urlencoded
+// query string removes ? ex: ?a=b will be {a: b} does not parse nested objects:
+// ?person[name]=bobby&person[age]=3 will be { 'person[age]': '3',
+// 'person[name]': 'bobby' } see https://stackoverflow.com/questions/29960764/what-does-extended-mean-in-express-4-0
 app.use(express.urlencoded({ limit: '50mb', extended: false }));
 app.use(cookieParser());
 
 // compress all responses
 app.use(compression());
+
+app.use(cors());
 
 if (!['production', 'test'].includes(config.get('mode'))) {
   // mount swagger ui
