@@ -63,6 +63,10 @@ const grantsObject = {
     workflow: {
       'create:any': ['stage'], // can only create a stage workflow
     },
+    statistics: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+    },
   },
 
   // operator role permissions
@@ -76,7 +80,6 @@ const grantsObject = {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
-      'delete:any': ['*'],
     },
     datasets: {
       'create:any': ['*'],
@@ -94,6 +97,7 @@ const grantsObject = {
       'read:any': ['*'],
     },
     statistics: {
+      'create:any': ['*'],
       'read:any': ['*'],
     },
     metrics: {

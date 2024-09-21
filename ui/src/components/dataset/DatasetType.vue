@@ -5,7 +5,7 @@
       class="text-2xl flex-none mr-2 va-text-secondary"
       v-if="props.showIcon"
     />
-    <span class="capitalize">
+    <span class="capitalize" v-if="props.showType">
       {{ props.type?.toLowerCase()?.split("_")?.join(" ") }}
     </span>
   </div>
@@ -22,6 +22,10 @@ const props = defineProps({
   showIcon: {
     type: Boolean,
     default: false,
+  },
+  showType: {
+    type: Boolean,
+    default: true,
   },
 });
 </script>
