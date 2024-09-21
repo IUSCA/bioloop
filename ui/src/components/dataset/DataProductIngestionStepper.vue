@@ -70,9 +70,7 @@
                 fileTypeList.push(newFileType);
               }
             "
-            :allow-create-new="
-              submissionStatus === SUBMISSION_STATES.UNINITIATED
-            "
+            :allow-create-new="submitAttempted"
             :file-type-list="fileTypeList"
           />
         </va-form-field>
@@ -152,8 +150,6 @@ import dataImportService from "@/services/dataImport";
 import { useForm } from "vuestic-ui";
 import toast from "@/services/toast";
 
-const { SUBMISSION_STATES } = config;
-
 const validateNotExists = (value) => {
   return new Promise((resolve) => {
     // Vuestic claims that it should not run async validation if synchronous
@@ -192,7 +188,7 @@ const filePath = computed(() =>
 //   console.log(`selectedFile.value`);
 //   console.log(selectedFile.value);
 // });
-const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
+// const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
 const rawDataSelected = ref();
@@ -294,7 +290,7 @@ const onNextClick = (nextStep) => {
 // Log (or update) upload status
 
 onMounted(() => {
-  datasetService.getDatasetFileTypes().then((res) => {
+  datasetService.get_file_types().then((res) => {
     fileTypeList.value = res.data;
   });
   datasetService.getAll({ type: "RAW_DATA" }).then((res) => {

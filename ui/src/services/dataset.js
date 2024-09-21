@@ -124,6 +124,10 @@ class DatasetService {
       },
     });
   }
+
+  get_file_types() {
+    return api.get("/datasets/file-types");
+  }
 }
 
 export default new DatasetService();
