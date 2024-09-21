@@ -36,6 +36,7 @@ class DatasetService {
     only_active = false,
     bundle = false,
     include_projects = false,
+    initiator = false,
     include_uploading_derived_datasets = false,
   }) {
     return api.get(`/datasets/${id}`, {
@@ -47,13 +48,10 @@ class DatasetService {
         only_active,
         bundle,
         include_projects,
+        initiator,
         include_uploading_derived_datasets,
       },
     });
-  }
-
-  getDatasetFileTypes() {
-    return api.get("/datasets/file-types");
   }
 
   stage_dataset(id) {
@@ -136,6 +134,9 @@ class DatasetService {
   processUpload(dataset_id) {
     return api.post(`/datasets/${dataset_id}/upload/process`);
   }
-}
 
+  get_file_types() {
+    return api.get("/datasets/file-types");
+  }
+}
 export default new DatasetService();
