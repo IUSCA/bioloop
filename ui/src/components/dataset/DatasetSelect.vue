@@ -5,7 +5,6 @@
     :selected-results="props.selectedResults"
     :selectMode="props.selectMode"
     :search-result-count="totalResultCount"
-    :selectMode="props.selectMode"
     placeholder="Search Datasets by name"
     selected-label="Datasets to assign"
     @scroll-end="loadNextPage"
@@ -52,11 +51,9 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
-import { date } from "@/services/datetime";
 import toast from "@/services/toast";
-import _ from "lodash";
 import { lxor } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
+import _ from "lodash";
 
 const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;

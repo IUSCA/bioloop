@@ -301,7 +301,7 @@ const validateNotExists = (value) => {
 onMounted(() => {
   loading.value = true;
   Promise.all([
-    datasetService.getDatasetFileTypes(),
+    datasetService.get_file_types(),
     datasetService.getAll({ type: "RAW_DATA" }),
   ])
     .then(([res1, res2]) => {

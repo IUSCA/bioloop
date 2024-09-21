@@ -24,7 +24,7 @@ const prisma = new PrismaClient();
 
 // Data Product ingestion - UI
 router.get(
-  '/dataset-file-types',
+  '/file-types',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const dataset_file_types = await prisma.dataset_file_type.findMany();
@@ -40,8 +40,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -572,7 +572,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
