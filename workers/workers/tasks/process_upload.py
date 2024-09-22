@@ -46,29 +46,28 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
     file_destination_path.touch()
     print('Destination path created: ', file_destination_path.exists())
 
-    try:
-        num_chunks_found = len([p for p in chunks_path.iterdir()])
-        if num_chunks_found != num_chunks_expected:
-            raise Exception(f'Expected number of chunks for file\
- {file_upload_log_id} ({num_chunks_expected}) don\'t\
+    num_chunks_found = len([p for p in chunks_path.iterdir()])
+    if num_chunks_found != num_chunks_expected:
+        processing_error = True
+        print(f'Expected number of chunks for file\
+ id {file_upload_log_id} ({num_chunks_expected}) don\'t\
  equal number of chunks found {num_chunks_found}.\
  This file\'s chunks will not be merged')
+    else:
+        for i in range(num_chunks_found):
+            chunk_file = chunks_path / f'{file_md5}-{i}'
+            print(f'Processing chunk {chunk_file}')
+            with open(chunk_file, 'rb') as chunk:
+                with open(file_destination_path, 'ab') as destination:
+                    destination.write(chunk.read())
+        print(f'Chunks for file id {file_upload_log_id} ({file_name}) merged successfully')
 
-        if not processing_error:
-            for i in range(num_chunks_found):
-                chunk_file = chunks_path / f'{file_md5}-{i}'
-                print(f'Processing chunk {chunk_file}')
-                with open(chunk_file, 'rb') as chunk:
-                    with open(file_destination_path, 'ab') as destination:
-                        destination.write(chunk.read())
 
-        # evaluated_checksum = utils.checksum(dataset_path)
-        # print(f'evaluated_checksum: {evaluated_checksum}')
-        # print("Failed checksum validation")
-        # processing_error = evaluated_checksum != file_md5
-    except Exception as e:
-        processing_error = True
-        print(e)
+    # if not processing_error:
+    #     evaluated_checksum = utils.checksum(dataset_path)
+    #     print(f'evaluated_checksum: {evaluated_checksum}')
+    #     print("Failed checksum validation")
+    #     processing_error = evaluated_checksum != file_md5
 
     return config['upload_status']['PROCESSING_FAILED'] \
         if processing_error \
@@ -140,51 +139,53 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         if not chunks_path.exists():
             raise Exception(f"Chunks directory {chunks_path} does not exist\
  for file {file_name} (file_upload_log_id: {file_upload_log_id})")
-        if f['status'] != config['upload_status']['COMPLETE']:
-            try:
-                f['status'] = merge_file_chunks(file_upload_log_id, file_name, file_path,
-                                                file_md5, chunks_path, dataset_merged_chunks_path,
-                                                num_chunks_expected)
-            except Exception as e:
-                f['status'] = config['upload_status']['PROCESSING_FAILED']
-                print(e)
-            finally:
-                print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
 
-            try:
-                api.update_file_upload_log(file_upload_log_id, {
-                    'status': f['status']
-                })
-            except Exception as e:
-                raise exc.RetryableException(e)
+        try:
+            f['status'] = merge_file_chunks(file_upload_log_id, file_name, file_path,
+                                            file_md5, chunks_path, dataset_merged_chunks_path,
+                                            num_chunks_expected)
+        except Exception as e:
+            f['status'] = config['upload_status']['PROCESSING_FAILED']
+            print(e)
+        finally:
+            print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
+
+        try:
+            api.update_file_upload_log(file_upload_log_id, {
+                'status': f['status']
+            })
+        except Exception as e:
+            raise exc.RetryableException(e)
 
     failed_files = [file for file in pending_files if file['status'] != config['upload_status']['COMPLETE']]
     has_errors = len(failed_files) > 0
 
     if not has_errors:
+        print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
+ have been processed successfully.')
         # delete subdirectory containing all chunked files
-        chunked_files_path = Path(dataset_path) / 'chunked_files'
-        if chunked_files_path.exists():
-            print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
- have been processed successfully. Deleting chunked files directory\
- {chunked_files_path}')
-            shutil.rmtree(chunked_files_path)
-            print(f'Deleted chunked files directory {chunked_files_path}')
+        # chunked_files_path = Path(dataset_path) / 'chunked_files'
+        # if chunked_files_path.exists():
+#             print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
+#  have been processed successfully. Deleting chunked files directory\
+#  {chunked_files_path}')
+#             shutil.rmtree(chunked_files_path)
+#             print(f'Deleted chunked files directory {chunked_files_path}')
 
         workflow_name = 'integrated'
-        duplicate_workflows = [
-            wf for wf in dataset['workflows']
-            if wf['name'] == workflow_name and
-               wf['status'] not in DONE_STATUSES
-        ]
-        if len(duplicate_workflows) == 0:
-            print(f"Beginning {workflow_name} workflow for dataset {dataset['id']} (upload_log_id: {upload_log_id})")
-            integrated_wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
-            int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
-            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
-            int_wf.start(dataset_id)
-        else:
-            print(f'Found active workflow {workflow_name} for dataset {dataset_id}')
+        # duplicate_workflows = [
+        #     wf for wf in dataset['workflows']
+        #     if wf['name'] == workflow_name and
+        #        wf['status'] not in DONE_STATUSES
+        # ]
+        # if len(duplicate_workflows) == 0:
+        print(f"Beginning {workflow_name} workflow for dataset {dataset['id']} (upload_log_id: {upload_log_id})")
+        integrated_wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
+        int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
+        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
+        int_wf.start(dataset_id)
+        # else:
+        #     print(f'Found active workflow {workflow_name} for dataset {dataset_id}')
 
     # Update status of upload log
     try:
