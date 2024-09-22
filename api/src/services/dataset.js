@@ -82,7 +82,8 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name, initiator_id) {
   const wf_body = get_wf_body(wf_name);
 
-  // check if a workflow with the same name is not already running / pending on this dataset
+  // check if a workflow with the same name is not already running / pending on
+  // this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
     .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
@@ -148,6 +149,8 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
+  include_uploading_derived_datasets = false,
+  include_upload_log = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -179,8 +182,28 @@ async function get_dataset({
       ...INCLUDE_STATES,
       bundle,
       source_datasets: true,
-      derived_datasets: true,
+      derived_datasets: include_uploading_derived_datasets ? true : {
+        where: {
+          derived_dataset: {
+            OR: [
+              {
+                upload_log: null,
+              },
+              {
+                upload_log: {
+                  status: config.upload_status.COMPLETE,
+                },
+              },
+            ],
+          },
+        },
+      },
       projects: includeProjects,
+      upload_log: include_upload_log ? {
+        include: {
+          files: true,
+        },
+      } : false,
     },
   });
   const dataset_workflows = dataset.workflows;
@@ -244,8 +267,8 @@ async function get_dataset({
 //   `;
 
 //   /**
-//    * Find directories of a dataset which are immediate children of `base` path
-//    *
+// * Find directories of a dataset which are immediate children of `base` path
+// *
 //    * Query: filter rows by dataset_id, rows starting with `base`,
 //    * and rows where the path after `base` does have / (these files are not immediate children)
 //    *
