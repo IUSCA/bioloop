@@ -245,6 +245,8 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('match_name_exact').toBoolean().optional(),
+    query('include_file_type').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -265,6 +267,7 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
+        file_type: req.query.include_file_type || false,
       },
     };
 
@@ -314,6 +317,8 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
+    query('include_uploading_derived_datasets').toBoolean().default(false),
+    query('include_upload_log').toBoolean().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -331,6 +336,8 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
+      include_uploading_derived_datasets: req.query.include_uploading_derived_datasets,
+      include_upload_log: req.query.include_upload_log,
     });
     res.json(dataset);
   }),
@@ -769,6 +776,25 @@ router.get(
       ...req.query,
     });
     res.json(files);
+  }),
+);
+
+// Initiate the processing of uploaded files - worker
+router.post(
+  '/:id/upload/process',
+  isPermittedTo('update'),
+  asyncHandler(async (req, res, next) => {
+    const dataset = await prisma.dataset.findFirst({
+      where: {
+        id: Number(req.params.id),
+      },
+      include: {
+        workflows: true,
+      },
+    });
+
+    const workflow = await datasetService.create_workflow(dataset, 'process_upload');
+    res.json(workflow);
   }),
 );
 

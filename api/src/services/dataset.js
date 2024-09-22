@@ -47,6 +47,21 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const INCLUDE_UPLOAD_LOG_RELATIONS = {
+  files: true,
+  user: true,
+  dataset: {
+    include: {
+      source_datasets: {
+        include: {
+          source_dataset: true,
+        },
+      },
+      file_type: true,
+    },
+  },
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 function get_wf_body(wf_name) {
@@ -505,6 +520,7 @@ module.exports = {
   soft_delete,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
+  INCLUDE_UPLOAD_LOG_RELATIONS,
   get_dataset,
   create_workflow,
   create_filetree,
