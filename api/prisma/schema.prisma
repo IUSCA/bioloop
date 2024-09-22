@@ -37,7 +37,7 @@ model dataset {
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
   bundle           bundle?
-
+  upload_log       upload_log?
   @@unique([name, type, is_deleted])
 }
 
@@ -78,6 +78,38 @@ model dataset_file_hierarchy {
 
   @@id([parent_id, child_id])
   @@index([child_id])
+}
+
+model dataset_file_type {
+  id        Int       @id @default(autoincrement())
+  name      String
+  extension String
+  datasets  dataset[]
+
+  @@unique([name, extension])
+}
+
+model upload_log {
+  id                       Int               @id @default(autoincrement())
+  status                   upload_status
+  dataset_id               Int?              @unique
+  dataset                  dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  files                    file_upload_log[]
+  last_updated             DateTime          @default(now()) @db.Timestamp(6)
+  processing_attempt_count Int               @default(0)
+  user_id                  Int
+  user                     user              @relation(fields: [user_id], references: [id])
+}
+
+model file_upload_log {
+  id            Int           @id @default(autoincrement())
+  name          String
+  md5           String
+  num_chunks    Int
+  status        upload_status
+  path          String?
+  upload_log    upload_log?   @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
+  upload_log_id Int?
 }
 
 model dataset_audit {
@@ -157,6 +189,7 @@ model user {
   project_datasets_assigned project_dataset[]
   project_contacts_assigned project_contact[]
   initiated_workflows       workflow[]       @relation("initiated_workflows")
+  uploads                   upload_log[]
 }
 
 model user_password {
@@ -314,16 +347,17 @@ model about {
   last_updated_by_id Int
 }
 
-model dataset_file_type {
-  id        Int       @id @default(autoincrement())
-  name      String
-  extension String
-  datasets  dataset[]
-
-  @@unique([name, extension])
-}
-
 enum access_type {
   BROWSER
   SLATE_SCRATCH
+}
+
+enum upload_status {
+  UPLOADING
+  UPLOAD_FAILED
+  UPLOADED
+  PROCESSING
+  PROCESSING_FAILED
+  COMPLETE
+  FAILED
 }
