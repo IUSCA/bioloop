@@ -162,9 +162,4 @@ def validate_dataset_file_checksums(celery_task, ret_val, **kwargs):
           default_retry_delay=5)
 def process_upload(celery_task, dataset_id, **kwargs):
     from workers.tasks.process_upload import chunks_to_files as task_body
-    try:
-        return task_body(celery_task, dataset_id, **kwargs)
-    except exc.RetryableException:
-        raise
-    except Exception:
-        raise
+    return task_body(celery_task, dataset_id, **kwargs)
