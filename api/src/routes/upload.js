@@ -161,9 +161,9 @@ router.patch(
       last_updated: new Date(),
       ...(increment_processing_count && {
         processing_attempt_count:
-            {
-              increment: 1,
-            },
+        {
+          increment: 1,
+        },
       }),
       ...(status === config.upload_status.FAILED && {
         dataset: {
@@ -204,7 +204,6 @@ router.patch(
     param('id').isInt().toInt(),
     body('status').notEmpty().escape(),
   ]),
-  isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     const { status } = req.body;
 
