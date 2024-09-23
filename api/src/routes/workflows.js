@@ -14,53 +14,62 @@ const isPermittedTo = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const get_app_workflows = async (req) => {
-  const workflow_ids = req.query.workflow_id;
-  const filter_results = (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0)
-    || (typeof workflow_ids === 'string' && workflow_ids.trim() !== '')
-    || req.query.dataset_id
-    || req.query.dataset_name;
-
+const get_app_workflows = async (filters = {}) => {
+  const { workflow_ids, dataset_id, dataset_name } = filters;
   let app_workflows = [];
   let filter_query = {};
-  if (filter_results) {
-    if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
-      filter_query = {
-        id: {
-          in: workflow_ids,
-        },
-      };
-    } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
-      filter_query = {
-        id: {
-          equals: workflow_ids,
-        },
-      };
-    } else if (req.query.dataset_id) {
-      filter_query = {
-        dataset_id: {
-          equals: Number(req.query.dataset_id),
-        },
-      };
-    } else if (req.query.dataset_name) {
-      filter_query = {
-        dataset: {
-          name: {
-            contains: req.query.dataset_name,
-          },
-        },
-      };
-    }
-
-    app_workflows = await prisma.workflow.findMany({
-      where: { ...filter_query },
-      include: {
-        initiator: true,
+  if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
+    filter_query = {
+      id: {
+        in: workflow_ids,
       },
-    });
+    };
+  } else if (typeof workflow_ids === 'string' && workflow_ids.trim() !== '') {
+    filter_query = {
+      id: {
+        equals: workflow_ids,
+      },
+    };
+  } else if (dataset_id) {
+    filter_query = {
+      dataset_id: {
+        equals: Number(dataset_id),
+      },
+    };
+  } else if (dataset_name) {
+    filter_query = {
+      dataset: {
+        name: {
+          contains: dataset_name,
+        },
+      },
+    };
   }
 
+  app_workflows = await prisma.workflow.findMany({
+    where: { ...filter_query },
+    include: {
+      initiator: true,
+    },
+  });
+
   return app_workflows;
+};
+
+const get_nosql_workflows = async ({
+  last_task_run, prev_task_runs, status, skip, limit, workflow_ids = [],
+} = {}) => {
+  const api_res = await wf_service.getAll({
+    last_task_run,
+    prev_task_runs,
+    status,
+    app_id: config.app_id,
+    skip,
+    limit,
+    workflow_ids,
+  });
+
+  return api_res.data;
 };
 
 router.get(
@@ -69,32 +78,57 @@ router.get(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      const app_workflows = await get_app_workflows(req);
+      const { workflow_id: workflow_ids, dataset_id, dataset_name } = req.query;
+      let nosql_wf_data;
+      let app_workflows;
+      let nosql_workflows;
 
-      const query_by_wf_ids = (app_workflows || []).map((wf) => wf.id);
+      const filter_results = (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0)
+        || (typeof workflow_ids === 'string' && workflow_ids.trim() !== '')
+        || !!dataset_id
+        || !!dataset_name;
 
-      const api_res = await wf_service.getAll({
-        last_task_run: req.query.last_task_run,
-        prev_task_runs: req.query.prev_task_runs,
-        status: req.query.status,
-        app_id: config.app_id,
-        skip: req.query.skip,
-        limit: req.query.limit,
-        workflow_ids: query_by_wf_ids,
-      });
+      if (!filter_results) {
+        // Get results from NoSql first, then filter app workflows by the wf ids retrieved from NoSql
+        nosql_wf_data = await get_nosql_workflows({
+          last_task_run: req.query.last_task_run,
+          prev_task_runs: req.query.prev_task_runs,
+          status: req.query.status,
+          skip: req.query.skip,
+          limit: req.query.limit,
+        });
+        nosql_workflows = nosql_wf_data.results;
+        const nosql_workflow_ids = nosql_workflows.map((wf) => wf.id);
+        app_workflows = await get_app_workflows({ workflow_ids: nosql_workflow_ids });
+      } else {
+        // Get results from app first, then filter NoSql workflows by the wf ids retrieved from the app
+        app_workflows = await get_app_workflows({
+          workflow_ids,
+          dataset_id,
+          dataset_name,
+        });
+        const app_workflow_ids = app_workflows.map((wf) => wf.id);
+        nosql_wf_data = await get_nosql_workflows({
+          last_task_run: req.query.last_task_run,
+          prev_task_runs: req.query.prev_task_runs,
+          status: req.query.status,
+          skip: req.query.skip,
+          limit: req.query.limit,
+          workflow_ids: app_workflow_ids,
+        });
+        nosql_workflows = nosql_wf_data.results;
+      }
 
-      const nosql_workflows = api_res.data.results;
-
-      const results = (app_workflows || []).length > 0 ? (nosql_workflows || []).map((wf) => {
+      const results = (nosql_workflows || []).map((wf) => {
         const app_wf = (app_workflows || []).find((aw) => aw.id === wf.id);
         return {
           ...wf,
           ...app_wf,
         };
-      }) : nosql_workflows;
+      });
 
       res.json({
-        metadata: api_res.data.metadata,
+        metadata: nosql_wf_data.metadata,
         results,
       });
     },
