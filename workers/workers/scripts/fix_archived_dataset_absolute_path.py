@@ -64,7 +64,7 @@ class ArchivedDatasetPathFixManager:
             dataset_nosql_workflows = [wf for (i, wf) in enumerate(nosql_workflows) if wf['_id'] in dataset_app_workflow_ids]
             logger.info(f"len(dataset_nosql_workflows): {len(dataset_nosql_workflows)}")
 
-            logger.info(f"typeof dataset_id: {type(dataset_id)}")
+            # logger.info(f"typeof dataset_id: {type(dataset_id)}")
 
             self.initiate_workflow(dataset_id, dataset_nosql_workflows)
                 
