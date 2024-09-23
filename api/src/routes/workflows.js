@@ -21,6 +21,7 @@ const get_app_workflows = async (req) => {
     || req.query.dataset_id
     || req.query.dataset_name;
 
+  let app_workflows = [];
   let filter_query = {};
   if (filter_results) {
     if (Array.isArray(workflow_ids) && (workflow_ids || []).length > 0) {
@@ -50,14 +51,14 @@ const get_app_workflows = async (req) => {
         },
       };
     }
-  }
 
-  const app_workflows = await prisma.workflow.findMany({
-    where: { ...filter_query },
-    include: {
-      initiator: true,
-    },
-  });
+    app_workflows = await prisma.workflow.findMany({
+      where: { ...filter_query },
+      include: {
+        initiator: true,
+      },
+    });
+  }
 
   return app_workflows;
 };
