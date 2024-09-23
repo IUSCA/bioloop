@@ -44,13 +44,12 @@ class ArchivedDatasetPathFixManager:
 
         logger.info(f"len(app_workflows): {len(app_workflows)}")
         logger.info(f"len(app_workflow_ids): {len(app_workflow_ids)}")
-        logger.info(f"app_workflow_ids: {pprint(app_workflow_ids)}")
-
+        # logger.info(f"app_workflow_ids: {app_workflow_ids}")
 
         nosql_workflows = self.get_mongo_workflows(app_id=self.app_id,
                                                    workflow_ids=app_workflow_ids,
                                                    workflows_type=self.workflow_name)
-        logger.info(f"Found {len(nosql_workflows)} nosql workflows of type {self.workflow_name}")
+        logger.info(f"Found {len(nosql_workflows)} nosql workflows of type {self.workflow_name}, for app_id: {self.app_id} matching {len(app_workflow_ids)} app workflows.")
 
         for dataset in archived_datasets:
             dataset_id = dataset['id']
@@ -75,7 +74,9 @@ class ArchivedDatasetPathFixManager:
             workflows_type: str,
     ) -> list[dict]:
         cursor = self.workflow_collection.find({
-            'app_id': app_id,
+            'app_id': {
+                '$eq': app_id
+            },
             'name': {
                 '$eq': workflows_type
             },
