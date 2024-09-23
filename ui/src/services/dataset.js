@@ -128,6 +128,14 @@ class DatasetService {
   get_file_types() {
     return api.get("/datasets/file-types");
   }
+
+  create_dataset(data) {
+    return api.post("/datasets", data);
+  }
+
+  initiate_workflow_on_dataset({ dataset_id, workflow }) {
+    return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
+  }
 }
 
 export default new DatasetService();
