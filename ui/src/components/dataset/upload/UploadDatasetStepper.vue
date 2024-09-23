@@ -95,7 +95,6 @@
               :selected-results="v.ref"
               @select="addDataset"
               @remove="removeDataset"
-              :column-widths="columnWidths"
               select-mode="single"
               :dataset-type="config.dataset.types.RAW_DATA.key"
             ></DatasetSelect>
@@ -203,15 +202,6 @@ const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // ways.
 const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
-
-const columnWidths = computed(() => {
-  return {
-    name: breakpoint.xs || breakpoint.sm ? "230px" : "190px",
-    type: "130px",
-    size: "100px",
-    created_at: "105px",
-  };
-});
 
 const steps = [
   { label: "Name", icon: "material-symbols:description-outline" },
