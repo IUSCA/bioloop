@@ -46,6 +46,9 @@ const grantsObject = {
     auth: {
       'create:any': ['*'],
     },
+    fs: {
+      'read:any': ['*'],
+    },
   },
 
   // user role permissions
@@ -104,6 +107,9 @@ const grantsObject = {
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
+    },
+    fs: {
+      'read:any': ['*'],
     },
   },
 };

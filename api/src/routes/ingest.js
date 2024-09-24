@@ -3,9 +3,11 @@ const express = require('express');
 const path = require('node:path');
 const { exec } = require('child_process');
 
+const config = require('config');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
-const config = require('config');
+
+const isPermittedTo = accessControl('fs');
 
 const router = express.Router();
 
@@ -13,9 +15,9 @@ const BASE_PATH = config.dataset_ingestion_source_dir;
 const DATASET_INGESTION_SOURCE_MOUNT = config.dataset_ingestion_source_mount;
 
 function validatePath(req, res, next) {
-  const query_path = req.query.path
-  // const query_path = req_path.slice(req.path.indexOf(BASE_PATH) + path_prefix.length + 1);
-
+  const query_path = req.query.path;
+  // const query_path = req_path.slice(req.path.indexOf(BASE_PATH) +
+  // path_prefix.length + 1);
 
   let p = query_path ? path.normalize(query_path) : null;
   console.log(`Normalized path: ${p}`);
@@ -28,35 +30,61 @@ function validatePath(req, res, next) {
   p = path.resolve(p);
   console.log(`Resolved path: ${p}`);
 
+  // /N/scratch/scadev
   // Ensure the path is within the base path
   if (!p.startsWith(BASE_PATH)) {
     res.status(403).send('Forbidden');
   }
 
   req.query.path = p;
-  console.log('next()')
+  console.log('req.query.path: ', req.query.path);
+  console.log('next()');
   next();
 }
 
+// router.get(
+//   '/',
+//   (req, res) => {
+//     res.send('ok');
+//   },
+// );
+
 router.get(
   '/',
-  validatePath,
-  // isPermittedTo('create'),
+  // validatePath,
+  isPermittedTo('read'),
   asyncHandler(async (req, res) => {
-    console.log('current path: ', __dirname)
+    console.log('current path: ', __dirname);
 
-    const path_prefix = `${BASE_PATH}/`
-    const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix) + path_prefix.length);
-    console.log(`query_path: ${query_path}`);
+    // const path_prefix = `${BASE_PATH}/`;
+    // const query_path =
+    // req.query.path.slice(req.query.path.indexOf(path_prefix) +
+    // path_prefix.length); console.log(`query_path: ${query_path}`);
+    //
+    // const dir_path = path.join(DATASET_INGESTION_SOURCE_MOUNT, query_path);
+    //
+    // const files = await fsPromises.readdir(dir_path, { withFileTypes: true
+    // }); const filesData = files.map((f) => ({ name: f.name, isDir:
+    // f.isDirectory(), path: path.join(path_prefix, f.name), }));
 
-    const dir_path = path.join(DATASET_INGESTION_SOURCE_MOUNT, query_path);
+    const filesData = [
+      {
+        name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
+        isDir: false,
+        path: '/path/1',
+      },
+      {
+        name: 'Landing',
+        isDir: true,
+        path: '/path/2',
+      },
+      {
+        name: 'bioloop',
+        isDir: true,
+        path: '/path/3',
+      },
+    ];
 
-    const files = await fsPromises.readdir(dir_path, { withFileTypes: true });
-    const filesData = files.map((f) => ({
-      name: f.name,
-      isDir: f.isDirectory(),
-      path: path.join(path_prefix, f.name),
-    }));
     res.json(filesData);
   }),
 );
@@ -72,13 +100,15 @@ router.get(
     }
 
     // As du -sb /path is a long running command,
-    // we will use SSE to keep connection alive and send the size when it's ready
+    // we will use SSE to keep connection alive and send the size when it's
+    // ready
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders(); // flush the headers to establish SSE with client
 
-    // get the size of the directory by spawning a child process to run "du -sb /path"
+    // get the size of the directory by spawning a child process to run "du -sb
+    // /path"
     exec(`du -s ${req.query.path}`, (err, stdout) => {
       if (err) {
         console.error(err);
