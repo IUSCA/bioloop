@@ -43,5 +43,7 @@
         "username": "E2E_USER"
       }
     }
-  }
+  },
+  "slate_scratch_base_path": "SLATE_SCRATCH_BASE_PATH",
+  "slate_scratch_mount_path": "SLATE_SCRATCH_MOUNT_PATH"
 }

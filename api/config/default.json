@@ -155,5 +155,7 @@
     "PROCESSING_FAILED": "PROCESSING_FAILED",
     "COMPLETE": "COMPLETE",
     "FAILED": "FAILED"
-  }
+  },
+  "slate_scratch_base_path": "",
+  "slate_scratch_mount_path": ""
 }
