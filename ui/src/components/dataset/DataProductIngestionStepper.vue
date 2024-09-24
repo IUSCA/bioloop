@@ -68,6 +68,7 @@
           >
             <FileTypeSelect
               v-model="v.ref"
+              class="w-full"
               @file-type-created="
                 (newFileType) => {
                   fileTypeList.push(newFileType);
