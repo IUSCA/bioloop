@@ -39,6 +39,6 @@
       }
     }
   },
-  "slate_scratch_base_path": "SLATE_SCRATCH_BASE_PATH",
-  "slate_scratch_mount_path": "SLATE_SCRATCH_MOUNT_PATH"
+  "dataset_ingestion_source_dir": "DATASET_INGESTION_SOURCE_DIR",
+  "dataset_ingestion_source_mount": "DATASET_INGESTION_SOURCE_MOUNT"
 }
