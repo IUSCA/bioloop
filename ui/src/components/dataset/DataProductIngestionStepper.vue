@@ -67,6 +67,7 @@
             ]"
           >
             <FileTypeSelect
+              class="w-full"
               v-model="v.ref"
               @file-type-created="
                 (newFileType) => {
