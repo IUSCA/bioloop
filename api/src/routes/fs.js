@@ -9,8 +9,8 @@ const config = require('config');
 
 const router = express.Router();
 
-const BASE_PATH = config.slate_scratch_base_path;
-const SLATE_SCRATCH_MOUNT_PATH = config.slate_scratch_mount_path;
+const BASE_PATH = config.dataset_ingestion_source_dir;
+const DATASET_INGESTION_SOURCE_MOUNT = config.dataset_ingestion_source_mount;
 
 function validatePath(req, res, next) {
   const query_path = req.query.path
@@ -49,7 +49,7 @@ router.get(
     const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix) + path_prefix.length);
     console.log(`query_path: ${query_path}`);
 
-    const dir_path = path.join(SLATE_SCRATCH_MOUNT_PATH, query_path);
+    const dir_path = path.join(DATASET_INGESTION_SOURCE_MOUNT, query_path);
 
     const files = await fsPromises.readdir(dir_path, { withFileTypes: true });
     const filesData = files.map((f) => ({

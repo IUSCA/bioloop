@@ -22,7 +22,7 @@ services:
       - /opt/sca/uploads:/opt/sca/uploads
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
-      - ${SLATE_SCRATCH_BASE_PATH}:${SLATE_SCRATCH_MOUNT_PATH}
+      - ${DATASET_INGESTION_SOURCE_DIR}:${DATASET_INGESTION_SOURCE_MOUNT}
     expose:
       - 3030
     # entrypoint: [ "tail", "-f", "/dev/null" ]
