@@ -24,7 +24,7 @@ const prisma = new PrismaClient();
 
 // Data Product ingestion - UI
 router.get(
-  '/dataset-file-types',
+  '/file-types',
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     const dataset_file_types = await prisma.dataset_file_type.findMany();
