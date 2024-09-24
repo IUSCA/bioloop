@@ -111,21 +111,22 @@
             <!--              v-model:selected-file="selectedFile"-->
             <FileListAutoComplete
               class="w-full"
-              @update:selected-file="
+              @select="
                 (newFile) => {
                   setSelectedFile(newFile);
                 }
               "
-              @clear="fileList = []"
-              @update:search-text="
-                (updatedSearchText) => {
-                  setSelectedFile(null);
-                  fileListSearchText = updatedSearchText;
-                  searchFiles();
-                }
-              "
-              :options="fileList"
+              @files-retrieved="setRetrievedFiles"
             />
+
+            <FileList :selected-files="fileList" />
+            <!--            @update:search-text="-->
+            <!--                (updatedSearchText) => {-->
+            <!--                  setSelectedFile(null);-->
+            <!--                  fileListSearchText = updatedSearchText;-->
+            <!--                  // searchFiles();-->
+            <!--                }-->
+            <!--              "-->
             <!--            :required="true"-->
             <!--              v-model:selected="selectedFile"-->
           </va-inner-loading>
@@ -189,6 +190,7 @@ const selectedFile = ref(null);
 const setSelectedFile = (file) => {
   console.log("Selected file:", file);
   selectedFile.value = file;
+  fileList.value = [selectedFile.value];
   // fileList.value = [selectedFile.value];
 };
 
@@ -215,6 +217,10 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
+
+const setRetrievedFiles = (files) => {
+  fileList.value = files;
+};
 
 const searchFiles = async () => {
   if (fileListSearchText.value.trim() === "") {

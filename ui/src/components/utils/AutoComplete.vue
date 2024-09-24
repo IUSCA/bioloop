@@ -6,9 +6,11 @@
         <va-input
           outline
           clearable
+          @clear="emit('clear')"
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
+          @update:model-value="(newVal) => emit('update:searchText', newVal)"
           class="w-full autocomplete-input"
           @click="openResults"
         />
@@ -71,9 +73,13 @@ const props = defineProps({
     type: String,
     default: "name",
   },
+  async: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["select"]);
+const emit = defineEmits(["select", "clear", "update:searchText"]);
 
 const text = ref("");
 const visible = ref(false);
@@ -83,7 +89,7 @@ const visible = ref(false);
 // when clicked on a search result, clear text and hide the results ul
 
 const search_results = computed(() => {
-  if (text.value === "") return props.data;
+  if (text.value === "" || props.async) return props.data;
 
   const filterFn =
     props.filterFn instanceof Function
