@@ -11,8 +11,7 @@
     :disabled="disabled"
     :label="'Dataset Path'"
   >
-    <va-badge class="base-path-badge" :text="props.basePath" transparent>
-    </va-badge>
+    <va-badge class="base-path-badge" :text="basePath"> </va-badge>
   </AutoComplete>
 </template>
 
@@ -30,6 +29,7 @@ const emit = defineEmits(["select", "filesRetrieved"]);
 const fileList = ref([]);
 const loading = ref(false);
 const searchText = ref("");
+const basePath = computed(() => props.basePath + "/");
 
 const onFileSelect = (file) => {
   searchText.value = file.path;
@@ -39,14 +39,16 @@ const onFileSelect = (file) => {
 const searchFiles = async (searchText) => {
   console.log("Searching for files matching:", searchText);
 
-  if (searchText.trim() === "") {
+  const _searchText = basePath.value + searchText;
+
+  if (_searchText.trim() === "") {
     return;
   }
 
   loading.value = true;
   ingestionService
     .getPathFiles({
-      path: searchText,
+      path: _searchText,
     })
     .then((response) => {
       fileList.value = response.data;
