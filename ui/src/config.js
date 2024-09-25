@@ -21,7 +21,7 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    download: "/N/scratch/bioloop/production/download",
+    download: "",
   },
   file_browser: {
     enable_downloads: true,
@@ -75,6 +75,8 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
   },
+  dataset_ingestion_source_dir:
+    import.meta.env.VITE_DATASET_INGESTION_SOURCE_DIR || "/",
   upload_status: {
     UPLOADING: "UPLOADING",
     UPLOAD_FAILED: "UPLOAD_FAILED",

@@ -10,7 +10,10 @@
     @select="(file) => onFileSelect(file)"
     :disabled="disabled"
     :label="'Dataset Path'"
-  />
+  >
+    <va-badge class="base-path-badge" :text="props.basePath" transparent>
+    </va-badge>
+  </AutoComplete>
 </template>
 
 <script setup>
@@ -19,6 +22,7 @@ import toast from "@/services/toast";
 
 const props = defineProps({
   disabled: { type: Boolean, default: false },
+  basePath: { type: String },
 });
 
 const emit = defineEmits(["select", "filesRetrieved"]);
@@ -64,4 +68,9 @@ const searchFiles = async (searchText) => {
 // };
 </script>
 
-<style scoped></style>
+<style lang="scss" scoped>
+.base-path-badge {
+  --va-badge-font-size: 0.8em;
+  --va-badge-line-height: 1.8;
+}
+</style>
