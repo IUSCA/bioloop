@@ -9,11 +9,11 @@
           @clear="emit('clear')"
           type="text"
           :placeholder="props.placeholder"
-          v-model="text"
-          @update:model-value="(newVal) => emit('update:searchText', newVal)"
+          v-model="searchText"
           class="w-full autocomplete-input"
           @click="openResults"
         />
+        <!--          @update:model-value="(newVal) => emit('update:searchText', newVal)"-->
       </va-form>
 
       <ul
@@ -53,6 +53,10 @@
 import { OnClickOutside } from "@vueuse/components";
 
 const props = defineProps({
+  searchText: {
+    type: String,
+    default: "",
+  },
   placeholder: {
     type: String,
     default: "Type here",
@@ -80,6 +84,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["select", "clear", "update:searchText"]);
+
+const searchText = computed({
+  get: () => props.searchText,
+  set: (value) => {
+    emit("update:searchText", value);
+    // visible.value = value.length > 0;
+  },
+});
 
 const text = ref("");
 const visible = ref(false);

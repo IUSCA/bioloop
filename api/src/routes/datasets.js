@@ -351,7 +351,29 @@ router.post(
     * workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
-    const { workflow_id, state, ...data } = req.body;
+    const {
+      workflow_id, state, file_type, ...data
+    } = req.body;
+
+    // create workflow association
+    if (workflow_id) {
+      data.workflows = {
+        create: [
+          {
+            id: workflow_id,
+          },
+        ],
+      };
+    }
+
+    if (file_type) {
+      data.file_type = file_type.id === undefined ? {
+        create: {
+          name: file_type.name,
+          extension: file_type.extension,
+        },
+      } : { connect: { id: file_type.id } };
+    }
 
     // create workflow association
     if (workflow_id) {
