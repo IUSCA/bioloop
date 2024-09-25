@@ -2,7 +2,7 @@
   <AutoComplete
     v-model:search-text="searchText"
     @update:search-text="searchFiles"
-    placeholder="Search directories by path"
+    :placeholder="`Search directories in ${basePath}`"
     :data="fileList"
     :async="true"
     :display-by="'path'"
@@ -11,7 +11,8 @@
     :disabled="disabled"
     :label="'Dataset Path'"
   >
-    <va-badge class="base-path-badge" :text="basePath"> </va-badge>
+    <va-badge class="base-path-badge" :text="basePath" color="secondary">
+    </va-badge>
   </AutoComplete>
 </template>
 
