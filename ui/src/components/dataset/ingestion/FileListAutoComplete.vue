@@ -32,7 +32,9 @@ const searchText = ref("");
 const basePath = computed(() => props.basePath + "/");
 
 const onFileSelect = (file) => {
-  searchText.value = file.path;
+  searchText.value = file.path.slice(
+    file.path.indexOf(basePath.value) + basePath.value.length,
+  );
   emit("select", file);
 };
 
