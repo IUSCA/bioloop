@@ -1,12 +1,13 @@
 <template>
   <AutoComplete
+    v-model:search-text="searchText"
+    @update:search-text="searchFiles"
     placeholder="Search directories"
     :data="fileList"
     :async="true"
-    @update:search-text="searchFiles"
     :display-by="'path'"
     @clear="fileList = []"
-    @select="(file) => emit('select', file)"
+    @select="(file) => onFileSelect(file)"
   />
 </template>
 
@@ -18,8 +19,16 @@ const emit = defineEmits(["select", "filesRetrieved"]);
 
 const fileList = ref([]);
 const loading = ref(false);
+const searchText = ref("");
+
+const onFileSelect = (file) => {
+  searchText.value = file.path;
+  emit("select", file);
+};
 
 const searchFiles = async (searchText) => {
+  console.log("Searching for files matching:", searchText);
+
   if (searchText.trim() === "") {
     return;
   }
