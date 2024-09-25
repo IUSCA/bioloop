@@ -117,6 +117,7 @@
                 }
               "
               @files-retrieved="setRetrievedFiles"
+              :disabled="submitAttempted"
             />
 
             <!--            <FileList :selected-files="fileList" />-->
