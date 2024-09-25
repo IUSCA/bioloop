@@ -10,10 +10,7 @@ const exports = {
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
-  refreshTokenTMinusSeconds: {
-    appToken: 300,
-    uploadToken: 25,
-  },
+  refreshTokenTMinusSeconds: 300,
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
