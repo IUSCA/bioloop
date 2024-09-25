@@ -2,18 +2,23 @@
   <AutoComplete
     v-model:search-text="searchText"
     @update:search-text="searchFiles"
-    placeholder="Search directories"
+    placeholder="Search directories by path"
     :data="fileList"
     :async="true"
     :display-by="'path'"
     @clear="fileList = []"
     @select="(file) => onFileSelect(file)"
+    :disabled="disabled"
   />
 </template>
 
 <script setup>
 import ingestionService from "@/services/ingest";
 import toast from "@/services/toast";
+
+const props = defineProps({
+  disabled: { type: Boolean, default: false },
+});
 
 const emit = defineEmits(["select", "filesRetrieved"]);
 

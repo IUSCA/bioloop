@@ -12,6 +12,7 @@
           v-model="searchText"
           class="w-full autocomplete-input"
           @click="openResults"
+          :disabled="props.disabled"
         />
         <!--          @update:model-value="(newVal) => emit('update:searchText', newVal)"-->
       </va-form>
@@ -78,6 +79,10 @@ const props = defineProps({
     default: "name",
   },
   async: {
+    type: Boolean,
+    default: false,
+  },
+  disabled: {
     type: Boolean,
     default: false,
   },
