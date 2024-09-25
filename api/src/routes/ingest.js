@@ -1,3 +1,4 @@
+const fs = require('fs');
 const fsPromises = require('fs').promises;
 const express = require('express');
 const path = require('node:path');
@@ -49,6 +50,7 @@ function validatePath(req, res, next) {
 //   },
 // );
 
+// TODO - validatePath,
 router.get(
   '/',
   // validatePath,
@@ -56,34 +58,47 @@ router.get(
   asyncHandler(async (req, res) => {
     console.log('current path: ', __dirname);
 
-    // const path_prefix = `${BASE_PATH}/`;
-    // const query_path =
-    // req.query.path.slice(req.query.path.indexOf(path_prefix) +
-    // path_prefix.length); console.log(`query_path: ${query_path}`);
-    //
-    // const dir_path = path.join(DATASET_INGESTION_SOURCE_MOUNT, query_path);
-    //
+    const path_prefix = `${BASE_PATH}/`;
+    const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
+      + path_prefix.length); console.log(`query_path: ${query_path}`);
+
+    const dir_path = path.join(DATASET_INGESTION_SOURCE_MOUNT, query_path);
+
     // const files = await fsPromises.readdir(dir_path, { withFileTypes: true
     // }); const filesData = files.map((f) => ({ name: f.name, isDir:
     // f.isDirectory(), path: path.join(path_prefix, f.name), }));
 
-    const filesData = [
-      {
-        name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
-        isDir: false,
-        path: '/path/1',
-      },
-      {
-        name: 'Landing',
-        isDir: true,
-        path: '/path/2',
-      },
-      {
-        name: 'bioloop',
-        isDir: true,
-        path: '/path/3',
-      },
-    ];
+    if (!fs.existsSync(dir_path)) {
+      res.json([]);
+    }
+
+    const files = fs.readdirSync(dir_path, { withFileTypes: true });
+    const filesData = files.map((f) => {
+      console.dir(f, { depth: null });
+      return {
+        name: f.name,
+        isDir: f.isDirectory(),
+        path: path.join(req.query.path, f.name),
+      };
+    });
+
+    // const filesData = [
+    //   {
+    //     name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
+    //     isDir: false,
+    //     path: '/path/1',
+    //   },
+    //   {
+    //     name: 'Landing',
+    //     isDir: true,
+    //     path: '/path/2',
+    //   },
+    //   {
+    //     name: 'bioloop',
+    //     isDir: true,
+    //     path: '/path/3',
+    //   },
+    // ];
 
     res.json(filesData);
   }),
