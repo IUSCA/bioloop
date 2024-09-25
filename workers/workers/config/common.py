@@ -45,7 +45,8 @@ config = {
                 'stage': '/path/for/raw_data/bundle/staging',
             },
             'qc': '/path/to/qc',
-            'fix_nested_paths': '/path/to/temp/download/location'
+            'fix_nested_paths': '/path/to/temp/download/location',
+            'archive_path_verification': '/path/to/archive_path_verification',
         },
         'DATA_PRODUCT': {
             'upload': '/path/to/data_product/upload',
@@ -56,10 +57,11 @@ config = {
                 'generate': '/path/for/data_products/bundle/generation',
                 'stage': '/path/for/data_products/bundle/staging',
             },
-            'fix_nested_paths': '/path/to/temp/download/location'
+            'fix_nested_paths': '/path/to/temp/download/location',
+            'archive_path_verification': '/path/to/archive_path_verification',
         },
         'download_dir': '/path/to/download_dir',
-        'root': '/path/to/root'
+        'root': '/path/to/root',
     },
     'registration': {
         'RAW_DATA': {
