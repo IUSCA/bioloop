@@ -13,6 +13,7 @@
           class="w-full autocomplete-input"
           @click="openResults"
           :disabled="props.disabled"
+          :label="props.label"
         />
         <!--          @update:model-value="(newVal) => emit('update:searchText', newVal)"-->
       </va-form>
@@ -55,6 +56,10 @@ import { OnClickOutside } from "@vueuse/components";
 
 const props = defineProps({
   searchText: {
+    type: String,
+    default: "",
+  },
+  label: {
     type: String,
     default: "",
   },
