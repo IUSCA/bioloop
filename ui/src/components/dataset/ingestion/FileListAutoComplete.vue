@@ -9,6 +9,7 @@
     @clear="fileList = []"
     @select="(file) => onFileSelect(file)"
     :disabled="disabled"
+    :label="'Dataset Path'"
   />
 </template>
 
