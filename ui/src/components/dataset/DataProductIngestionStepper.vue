@@ -30,7 +30,7 @@
           </va-button>
         </template>
 
-        <template #step-content-3>
+        <template #step-content-0>
           <va-form-field
             v-model="datasetName"
             :rules="[
@@ -103,7 +103,7 @@
           </div>
         </template>
 
-        <template #step-content-0>
+        <template #step-content-3>
           <!--          <va-input class="w-full" v-model="filePath" />-->
 
           <va-inner-loading :loading="loading">
@@ -176,9 +176,9 @@ import { useForm } from "vuestic-ui";
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
 const steps = [
-  // { label: "Name", icon: "material-symbols:description-outline" },
-  // { label: "File Type", icon: "material-symbols:category" },
-  // { label: "Source Raw Data", icon: "mdi:dna" },
+  { label: "Name", icon: "material-symbols:description-outline" },
+  { label: "File Type", icon: "material-symbols:category" },
+  { label: "Source Raw Data", icon: "mdi:dna" },
   { label: "Select Directory", icon: "material-symbols:folder" },
 ];
 
