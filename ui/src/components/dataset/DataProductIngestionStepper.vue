@@ -30,7 +30,7 @@
           </va-button>
         </template>
 
-        <template #step-content-3>
+        <template #step-content-0>
           <va-form-field
             v-model="datasetName"
             :rules="[
@@ -103,7 +103,7 @@
           </div>
         </template>
 
-        <template #step-content-0>
+        <template #step-content-3>
           <!--          <va-input class="w-full" v-model="filePath" />-->
 
           <va-inner-loading :loading="loading">
@@ -119,7 +119,7 @@
               @files-retrieved="setRetrievedFiles"
             />
 
-            <FileList :selected-files="fileList" />
+            <!--            <FileList :selected-files="fileList" />-->
             <!--            @update:search-text="-->
             <!--                (updatedSearchText) => {-->
             <!--                  setSelectedFile(null);-->
@@ -174,9 +174,9 @@ import { useForm } from "vuestic-ui";
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
 const steps = [
-  // { label: "Name", icon: "material-symbols:description-outline" },
-  // { label: "File Type", icon: "material-symbols:category" },
-  // { label: "Source Raw Data", icon: "mdi:dna" },
+  { label: "Name", icon: "material-symbols:description-outline" },
+  { label: "File Type", icon: "material-symbols:category" },
+  { label: "Source Raw Data", icon: "mdi:dna" },
   { label: "Select Directory", icon: "material-symbols:folder" },
 ];
 
@@ -281,7 +281,8 @@ const preIngestion = () => {
   return datasetService.create_dataset({
     name: datasetName.value,
     type: config.dataset.types.DATA_PRODUCT.key,
-    // origin_path: filePath.value,
+    file_type: fileTypeSelected.value,
+    origin_path: selectedFile.value.path,
   });
 };
 
