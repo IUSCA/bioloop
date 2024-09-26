@@ -16,7 +16,7 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    download: "/N/scratch/bioloop/production/download",
+    download: "",
   },
   file_browser: {
     enable_downloads: true,
