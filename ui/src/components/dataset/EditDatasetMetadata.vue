@@ -125,17 +125,8 @@ const updatedField = () => {
 
 
 
-        <va-input v-if="row.keyword_id
-          && (checkDataType(row.keyword_id, 'STRING')
-            || checkDataType(row.keyword_id, 'NUMBER'))" v-model="row.data" :label="`Data`" placeholder="Enter data" />
+        <va-input  v-model="row.data" :label="`Data`" placeholder="Enter data" />
 
-        <div v-else-if="row.keyword_id && checkDataType(row.keyword_id, 'DATE')">
-          <va-date-input v-model="row.data" :label="`Data`" />
-        </div>
-
-        <div v-else-if="row.keyword_id && checkDataType(row.keyword_id, 'BOOLEAN')">
-          <va-switch v-model="row.data" :label="`Data`" />
-        </div>
 
 
         <va-button class="mx-2 h-2 mt-4" round color="danger" border-color="danger" preset="secondary"

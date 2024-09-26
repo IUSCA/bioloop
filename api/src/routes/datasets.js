@@ -208,7 +208,7 @@ router.post('/search',
   //   body('archived').toBoolean().optional(),
   //   body('staged').toBoolean().optional(),
   //   body('type').isIn(config.dataset_types).optional(),
-  //   body('name').notEmpty().escape().optional(),
+  //   body('name').optional(),
   //   body('days_since_last_staged').isInt().toInt().optional(),
   //   body('bundle').optional().toBoolean(),
   //   body('created_at_start').isISO8601().optional(),
@@ -226,6 +226,8 @@ router.post('/search',
     const { metaData } = req.body
     delete req.body.metaData
 
+
+
     for (const [key, value] of Object.entries(req.body)) {
       if (value === null) {
         delete req.body[key]
@@ -233,8 +235,6 @@ router.post('/search',
     }
 
     const query_obj = buildQueryObject(req.body, metaData);
-
-    console.log('QUERY OBJ', query_obj);
 
     const filterQuery = { where: query_obj };
 

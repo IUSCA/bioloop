@@ -18,7 +18,13 @@ const createField = async () => {
 };
 
 
-const types = ['STRING', 'NUMBER', 'DATE', 'BOOLEAN'];
+onMounted(() => {
+  if(! metadata['visible']) {
+    metadata['visible'] = true;
+  }
+})
+
+
 </script>
 
 <template>
@@ -26,7 +32,7 @@ const types = ['STRING', 'NUMBER', 'DATE', 'BOOLEAN'];
   <div class="w-full flex flex-col items-baseline gap-4">
     <va-input v-model="metadata['name']" label="Name" class="w-full" />
     <va-textarea v-model="metadata['description']" label="Description" class="w-full" />
-    <va-select v-model="metadata['datatype']" label="Type" :options="types" text-by="name" value-by="id" class="w-full" />
+
     <va-switch v-model="metadata['visible']" label="Visible" class="w-full" />
     <va-switch v-model="metadata['locked']" label="Locked" class="w-full" />
 
