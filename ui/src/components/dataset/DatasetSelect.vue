@@ -31,10 +31,17 @@
       </va-button-dropdown>
     </template>
 
+    <template #name="slotProps">
+      <va-popover placement="top" :message="slotProps['value'].raw">
+        {{ slotProps["value"].formatted }}
+      </va-popover>
+    </template>
+
     <template #type="slotProps">
       <DatasetType
-        :type="slotProps['value']"
-        :show-icon="!(breakpoint.sm || breakpoint.xs)"
+        :type="slotProps['value'].raw"
+        :show-icon="true"
+        :show-type="false"
       />
     </template>
   </SearchAndSelect>
@@ -42,13 +49,11 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
-import { date } from "@/services/datetime";
-import { formatBytes, lxor } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
 import _ from "lodash";
+import { lxor } from "@/services/utils";
 
-const NAME_TRIM_THRESHOLD = 13;
+const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
@@ -65,8 +70,6 @@ const props = defineProps({
 const emit = defineEmits(["loading", "loaded"]);
 
 const loadingResources = inject("loadingResources");
-
-const breakpoint = useBreakpoint();
 
 const page = ref(1);
 const skip = computed(() => {
@@ -96,39 +99,21 @@ const primaryColumns = computed(() => {
     {
       key: "name",
       label: "Name",
-      width: props.columnWidths.name,
+      width: props.columnWidths?.name,
       formatFn: trimName,
+      slotted: true,
     },
     {
       key: "type",
       label: "Type",
       slotted: true,
-      width: props.columnWidths.type,
-    },
-  ];
-});
-
-const secondaryColumns = computed(() => {
-  return [
-    {
-      key: "size",
-      label: "Size",
-      formatFn: (val) => formatBytes(val),
-      width: props.columnWidths.size,
-    },
-    {
-      key: "created_at",
-      label: "Registered On",
-      formatFn: (val) => date(val),
-      width: props.columnWidths.created_at,
+      width: props.columnWidths?.type,
     },
   ];
 });
 
 const retrievedDatasetColumns = computed(() => {
-  return breakpoint.sm || breakpoint.xs
-    ? primaryColumns.value
-    : primaryColumns.value.concat(secondaryColumns.value);
+  return primaryColumns.value;
 });
 
 const selectedDatasetColumns = computed(() =>

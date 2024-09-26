@@ -14,7 +14,6 @@
       :selected-results="selectedDatasets"
       @select="(datasets) => updateDatasetsToAdd(datasets)"
       @remove="(datasets) => updateDatasetsToRemove(datasets)"
-      :column-widths="columnWidths"
       @loading="loadingSearchableDatasets = true"
       @loaded="loadingSearchableDatasets = false"
     />
@@ -61,15 +60,6 @@ const selectedDatasets = computed(() =>
 const modalSize = computed(() =>
   breakpoint.xs || breakpoint.sm ? "medium" : "large",
 );
-
-const columnWidths = computed(() => {
-  return {
-    name: breakpoint.xs || breakpoint.sm ? "175px" : "180px",
-    type: "130px",
-    size: "100px",
-    created_at: "105px",
-  };
-});
 
 const projectFormStore = useProjectFormStore();
 

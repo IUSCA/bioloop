@@ -292,7 +292,7 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, processed, is_duplicate, archived, staged, type, name, days_since_last_staged,
+  deleted, is_duplicate, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
 }) => {
@@ -512,6 +512,7 @@ router.get(
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
+    query('initiator').optional().toBoolean(),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
   ]),
@@ -529,6 +530,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
+      initiator: req.query.initiator || false,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
     });
@@ -801,6 +803,7 @@ router.post(
       data: {
         id: req.body.workflow_id,
         dataset_id: req.params.id,
+        initiator_id: req.user.id,
       },
     });
     res.sendStatus(200);
@@ -962,7 +965,7 @@ router.post(
     });
 
     const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
     return res.json(wf);
   }),
 );

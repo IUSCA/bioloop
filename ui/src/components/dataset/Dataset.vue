@@ -371,6 +371,7 @@ function fetch_dataset(show_loading = false) {
   DatasetService.getById({
     id: props.datasetId,
     bundle: true,
+    initiator: true,
     include_duplications: true,
     include_states: true,
     include_action_items: true,

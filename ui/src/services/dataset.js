@@ -40,6 +40,7 @@ class DatasetService {
     include_states = false,
     include_action_items = false,
     include_projects = false,
+    initiator = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -53,6 +54,7 @@ class DatasetService {
         include_states,
         include_action_items,
         include_projects,
+        initiator,
       },
     });
   }

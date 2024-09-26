@@ -34,10 +34,7 @@
 
       <!-- dataset select -->
       <template #step-content-1>
-        <ProjectDatasetsForm
-          :selected-results="selectedDatasets"
-          :column-widths="columnWidths"
-        />
+        <ProjectDatasetsForm :selected-results="selectedDatasets" />
       </template>
 
       <!-- user select -->
@@ -125,23 +122,11 @@
 <script setup>
 import projectService from "@/services/projects";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
-import { useBreakpoint } from "vuestic-ui";
 
 const emit = defineEmits(["update"]);
 
-const breakpoint = useBreakpoint();
-
 const projectFormStore = useProjectFormStore();
 const selectedDatasets = computed(() => projectFormStore.datasets);
-
-const columnWidths = computed(() => {
-  return {
-    name: breakpoint.xs || breakpoint.sm ? "230px" : "190px",
-    type: "130px",
-    size: "100px",
-    created_at: "105px",
-  };
-});
 
 const step = ref(0);
 const loading = ref(false);

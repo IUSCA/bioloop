@@ -136,9 +136,9 @@ def get_all_datasets(
         name=None,
         days_since_last_staged=None,
         deleted=False,
-        archived=False,
-        is_duplicate=False,
+        archived=None,
         bundle=False,
+        is_duplicate=False,
         include_duplications=False):
     with APIServerSession() as s:
         payload = {
