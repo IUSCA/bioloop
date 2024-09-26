@@ -94,6 +94,14 @@ const exports = {
     UPLOAD_FAILED: "Upload Failed",
     UPLOADED: "Uploaded",
   },
+  featureFlags: {
+    notifications: {
+      enabledForRoles: ["admin", "operator"],
+    },
+  },
+  notifications: {
+    pollingInterval: 5000, // milliseconds
+  },
 };
 
 export default exports;
