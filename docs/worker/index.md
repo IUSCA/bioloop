@@ -29,6 +29,16 @@
 - Config / settings are in `workers/config/*.py` and `.env`
 - Test code is in `tests/`
 
+### Parallel tasks limit
+
+The maximum number of active (i.e. not 'PENDING') tasks that can run at a time is determined by the number of Celery workers, which is currently set to 8.
+
+This config can be found in `ecosystem.config.js`, under app `celery_worker`:
+
+```
+-m celery -A workers.celery_app worker ... --autoscale=8,2
+```
+
 ### Hot Module Replacement
 
 Worker automatically run with updated code except for the code in
