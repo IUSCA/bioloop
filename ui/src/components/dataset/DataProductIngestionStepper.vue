@@ -112,6 +112,12 @@
             <div class="flex">
               <va-select
                 v-model="searchSpace"
+                @update:modelValue="
+                  () => {
+                    fileListSearchText = '';
+                    setRetrievedFiles([]);
+                  }
+                "
                 :options="filesystemSearchSpaces"
                 label="Search space"
               />
