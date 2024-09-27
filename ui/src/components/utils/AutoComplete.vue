@@ -9,7 +9,7 @@
           @clear="emit('clear')"
           type="text"
           :placeholder="props.placeholder"
-          v-model="searchText"
+          v-model="text"
           class="w-full autocomplete-input"
           @click="openResults"
           :disabled="props.disabled"
@@ -97,7 +97,7 @@ const props = defineProps({
 
 const emit = defineEmits(["select", "clear", "update:searchText"]);
 
-const searchText = computed({
+const text = computed({
   get: () => props.searchText,
   set: (value) => {
     emit("update:searchText", value);
@@ -105,7 +105,7 @@ const searchText = computed({
   },
 });
 
-const text = ref("");
+// const text = ref("");
 const visible = ref(false);
 
 // when clicked outside, hide the results ul

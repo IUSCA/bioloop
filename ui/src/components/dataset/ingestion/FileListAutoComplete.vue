@@ -7,7 +7,12 @@
     :async="true"
     :display-by="'path'"
     @clear="fileList = []"
-    @select="(file) => onFileSelect(file)"
+    @select="
+      (file) => {
+        console.log('@select: selected file:', file);
+        onFileSelect(file);
+      }
+    "
     :disabled="disabled"
     :label="'Dataset Path'"
   >
@@ -28,7 +33,7 @@ import toast from "@/services/toast";
 const props = defineProps({
   disabled: { type: Boolean, default: false },
   basePath: { type: String },
-  selected: { type: String },
+  selected: { type: [String, Object] },
   searchText: { type: String, default: "" },
   options: { type: Array, default: () => [] },
 });
@@ -43,7 +48,10 @@ const emit = defineEmits([
 ]);
 
 const searchText = computed({
-  get: () => props.searchText,
+  get: () => {
+    console.log("getting searchText,", props.searchText);
+    return props.searchText;
+  },
   set: (value) => {
     // searchText.value = value;
     // const _searchText = +value.path;
@@ -60,8 +68,10 @@ const basePath = computed(() => {
 });
 
 const onFileSelect = (file) => {
+  console.log("onFileSelect:", file);
+  console.dir(file, { depth: null });
   // const _searchText = basePath.value + value.path;
-  emit("update:searchText", file);
+  emit("update:searchText", file.name);
 
   // searchText.value = file.path.slice(
   //   file.path.indexOf(basePath.value) + basePath.value.length,
@@ -69,12 +79,12 @@ const onFileSelect = (file) => {
   emit("update:selected", file);
 };
 
-const setRetrievedFiles = (files) => {
-  fileList.value = files;
-  console.log("retrieved file list");
-  console.log(fileList.value);
-  emit("filesRetrieved", fileList.value);
-};
+// const setRetrievedFiles = (files) => {
+//   fileList.value = files;
+//   console.log("retrieved file list");
+//   console.log(fileList.value);
+//   emit("filesRetrieved", fileList.value);
+// };
 
 // const selectFile = (file) => {
 //   console.log("Selected file:", file);

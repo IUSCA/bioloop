@@ -126,8 +126,10 @@
                 @clear="setRetrievedFiles"
                 v-model:selected="selectedFile"
                 @update:selected="
-                  (newFile) => {
-                    setSelectedFile(newFile);
+                  (file) => {
+                    console.log('@update:selected, Selected file:', file);
+                    selectedFile = file;
+                    console.log('Selected file:', selectedFile);
                   }
                 "
                 v-model:search-text="fileListSearchText"
@@ -204,12 +206,12 @@ const selectedFile = ref(null);
 //   Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
 // );
 
-const setSelectedFile = (file) => {
-  console.log("Selected file:", file);
-  selectedFile.value = file;
-  fileList.value = [selectedFile.value];
-  // fileList.value = [selectedFile.value];
-};
+// const setSelectedFile = (file) => {
+//   console.log("Selected file:", file);
+//   selectedFile.value = file;
+//   fileList.value = [selectedFile.value];
+//   // fileList.value = [selectedFile.value];
+// };
 
 console.log(config.filesystem_search_spaces);
 // const filesystemSearchSpaces =
