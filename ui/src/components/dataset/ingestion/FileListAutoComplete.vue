@@ -6,7 +6,7 @@
     :data="props.options"
     :async="true"
     :display-by="'path'"
-    @clear="fileList = []"
+    @clear="emit('clear')"
     @select="
       (file) => {
         console.log('@select: selected file:', file);
@@ -45,6 +45,7 @@ const emit = defineEmits([
   "filesRetrieved",
   "loading",
   "loaded",
+  "clear",
 ]);
 
 const searchText = computed({
