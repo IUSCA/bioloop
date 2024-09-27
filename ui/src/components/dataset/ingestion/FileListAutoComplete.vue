@@ -25,7 +25,7 @@ const props = defineProps({
   basePath: { type: String },
 });
 
-const emit = defineEmits(["select", "filesRetrieved"]);
+const emit = defineEmits(["select", "filesRetrieved", "loading", "loaded"]);
 
 const fileList = ref([]);
 const loading = ref(false);
@@ -56,6 +56,8 @@ const searchFiles = async (searchText) => {
   }
 
   loading.value = true;
+  emit("loading", loading.value);
+
   ingestionService
     .getPathFiles({
       path: _searchText,
@@ -74,6 +76,7 @@ const searchFiles = async (searchText) => {
     })
     .finally(() => {
       loading.value = false;
+      emit("loaded", loading.value);
     });
 };
 

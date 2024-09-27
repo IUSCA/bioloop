@@ -135,6 +135,7 @@
       }
     }
   },
+  "filesystem_search_spaces": "",
   "WORKFLOW_STATUS": {
     "PENDING": "PENDING",
     "STARTED": "STARTED",
