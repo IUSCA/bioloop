@@ -169,7 +169,6 @@
 <script setup>
 import config from "@/config";
 import datasetService from "@/services/dataset";
-import ingestionService from "@/services/ingest";
 import toast from "@/services/toast";
 import { useForm } from "vuestic-ui";
 
@@ -222,30 +221,6 @@ const isLastStep = computed(() => {
 
 const setRetrievedFiles = (files) => {
   fileList.value = files;
-};
-
-const searchFiles = async () => {
-  if (fileListSearchText.value.trim() === "") {
-    return;
-  }
-
-  loading.value = true;
-  ingestionService
-    .getPathFiles({
-      path: fileListSearchText.value,
-    })
-    .then((response) => {
-      fileList.value = response.data;
-      console.log("retrieved file list");
-      console.log(fileList.value);
-    })
-    .catch((error) => {
-      toast.error("Error fetching files from the provided path");
-      console.error(error);
-    })
-    .finally(() => {
-      loading.value = false;
-    });
 };
 
 const addDataset = (selectedDatasets) => {

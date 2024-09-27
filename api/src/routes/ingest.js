@@ -53,23 +53,32 @@ function validatePath(req, res, next) {
 // TODO - validatePath,
 router.get(
   '/',
-  // validatePath,
+  validatePath,
   isPermittedTo('read'),
   asyncHandler(async (req, res) => {
     console.log('current path: ', __dirname);
 
     const path_prefix = `${BASE_PATH}/`;
     const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
-      + path_prefix.length); console.log(`query_path: ${query_path}`);
+      + path_prefix.length);
+    console.log('query_path: ', query_path);
+
+    console.log('DATASET_INGESTION_SOURCE_MOUNT: ', DATASET_INGESTION_SOURCE_MOUNT);
+
+    // TODO - if dir_path doesn't start with '/opt/sca', don't return any dirs
 
     const dir_path = path.join(DATASET_INGESTION_SOURCE_MOUNT, query_path);
+    console.log('dir_path: ', dir_path);
 
-    // const files = await fsPromises.readdir(dir_path, { withFileTypes: true
-    // }); const filesData = files.map((f) => ({ name: f.name, isDir:
-    // f.isDirectory(), path: path.join(path_prefix, f.name), }));
+    // if (dir_path !== DATASET_INGESTION_SOURCE_MOUNT) {
+    //   res.json()
+    //   res.json([]);
+    //   return
+    // }
 
     if (!fs.existsSync(dir_path)) {
       res.json([]);
+      return;
     }
 
     const files = fs.readdirSync(dir_path, { withFileTypes: true });

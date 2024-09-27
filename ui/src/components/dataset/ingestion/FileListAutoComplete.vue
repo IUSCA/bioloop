@@ -39,6 +39,13 @@ const onFileSelect = (file) => {
   emit("select", file);
 };
 
+const setRetrievedFiles = (files) => {
+  fileList.value = files;
+  console.log("retrieved file list");
+  console.log(fileList.value);
+  emit("filesRetrieved", fileList.value);
+};
+
 const searchFiles = async (searchText) => {
   console.log("Searching for files matching:", searchText);
 
@@ -54,14 +61,16 @@ const searchFiles = async (searchText) => {
       path: _searchText,
     })
     .then((response) => {
-      fileList.value = response.data;
-      console.log("retrieved file list");
-      console.log(fileList.value);
-      emit("filesRetrieved", fileList.value);
+      setRetrievedFiles(response.data);
     })
-    .catch((error) => {
-      toast.error("Error fetching files from the provided path");
-      console.error(error);
+    .catch((err) => {
+      console.log(err.response.status);
+      console.error(err);
+      if (err.response.status === 403) {
+        setRetrievedFiles([]);
+      } else {
+        toast.error("Error fetching files");
+      }
     })
     .finally(() => {
       loading.value = false;
