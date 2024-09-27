@@ -102,6 +102,8 @@ const exports = {
   notifications: {
     pollingInterval: 5000, // milliseconds
   },
+  filesystem_search_spaces:
+    import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES || "/bioloop/user",
 };
 
 export default exports;
