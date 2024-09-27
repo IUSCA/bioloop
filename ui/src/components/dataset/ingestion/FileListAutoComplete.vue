@@ -1,9 +1,9 @@
 <template>
+  <!--    @update:search-text="searchFiles"-->
   <AutoComplete
     v-model:search-text="searchText"
-    @update:search-text="searchFiles"
     :placeholder="`Search directories in ${basePath}`"
-    :data="fileList"
+    :data="props.options"
     :async="true"
     :display-by="'path'"
     @clear="fileList = []"
@@ -11,7 +11,12 @@
     :disabled="disabled"
     :label="'Dataset Path'"
   >
-    <va-badge class="base-path-badge" :text="basePath" color="secondary">
+    <va-badge
+      v-if="props.basePath"
+      class="base-path-badge"
+      :text="basePath"
+      color="secondary"
+    >
     </va-badge>
   </AutoComplete>
 </template>
@@ -23,20 +28,45 @@ import toast from "@/services/toast";
 const props = defineProps({
   disabled: { type: Boolean, default: false },
   basePath: { type: String },
+  selected: { type: String },
+  searchText: { type: String, default: "" },
+  options: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(["select", "filesRetrieved", "loading", "loaded"]);
+const emit = defineEmits([
+  // "select",
+  "update:selected",
+  "update:searchText",
+  "filesRetrieved",
+  "loading",
+  "loaded",
+]);
+
+const searchText = computed({
+  get: () => props.searchText,
+  set: (value) => {
+    // searchText.value = value;
+    // const _searchText = +value.path;
+    console.log("emitting searchText,", value);
+    emit("update:searchText", value);
+  },
+});
 
 const fileList = ref([]);
 const loading = ref(false);
-const searchText = ref("");
-const basePath = computed(() => props.basePath + "/");
+// const searchText = ref("");
+const basePath = computed(() => {
+  return props.basePath.endsWith("/") ? props.basePath : props.basePath + "/";
+});
 
 const onFileSelect = (file) => {
-  searchText.value = file.path.slice(
-    file.path.indexOf(basePath.value) + basePath.value.length,
-  );
-  emit("select", file);
+  // const _searchText = basePath.value + value.path;
+  emit("update:searchText", file);
+
+  // searchText.value = file.path.slice(
+  //   file.path.indexOf(basePath.value) + basePath.value.length,
+  // );
+  emit("update:selected", file);
 };
 
 const setRetrievedFiles = (files) => {
@@ -44,40 +74,6 @@ const setRetrievedFiles = (files) => {
   console.log("retrieved file list");
   console.log(fileList.value);
   emit("filesRetrieved", fileList.value);
-};
-
-const searchFiles = async (searchText) => {
-  console.log("Searching for files matching:", searchText);
-
-  const _searchText = basePath.value + searchText;
-
-  if (_searchText.trim() === "") {
-    return;
-  }
-
-  loading.value = true;
-  emit("loading", loading.value);
-
-  ingestionService
-    .getPathFiles({
-      path: _searchText,
-    })
-    .then((response) => {
-      setRetrievedFiles(response.data);
-    })
-    .catch((err) => {
-      console.log(err.response.status);
-      console.error(err);
-      if (err.response.status === 403) {
-        setRetrievedFiles([]);
-      } else {
-        toast.error("Error fetching files");
-      }
-    })
-    .finally(() => {
-      loading.value = false;
-      emit("loaded", loading.value);
-    });
 };
 
 // const selectFile = (file) => {

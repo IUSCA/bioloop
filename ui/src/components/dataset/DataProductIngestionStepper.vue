@@ -118,16 +118,21 @@
 
               <FileListAutoComplete
                 class="w-full"
-                @select="
+                @files-retrieved="setRetrievedFiles"
+                :disabled="submitAttempted"
+                :base-path="searchSpace"
+                @loading="loading = true"
+                @loaded="loading = false"
+                @clear="setRetrievedFiles"
+                v-model:selected="selectedFile"
+                @update:selected="
                   (newFile) => {
                     setSelectedFile(newFile);
                   }
                 "
-                @files-retrieved="setRetrievedFiles"
-                :disabled="submitAttempted"
-                :base-path="config.dataset_ingestion_source_dir"
-                @loading="loading = true"
-                @loaded="loading = false"
+                v-model:search-text="fileListSearchText"
+                @update:search-text="searchFiles"
+                :options="fileList"
               />
             </div>
 
@@ -181,6 +186,7 @@ import config from "@/config";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useForm } from "vuestic-ui";
+import ingestionService from "@/services/ingest";
 
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
@@ -208,12 +214,12 @@ const setSelectedFile = (file) => {
 console.log(config.filesystem_search_spaces);
 // const filesystemSearchSpaces =
 // ref(config.filesystem_search_spaces.split(","));
-const filesystemSearchSpaces = config.filesystem_search_spaces.split(",");
+const filesystemSearchSpaces = config.filesystem_search_spaces?.split(",");
 
 console.log(
   "fileSystemSpaces.value: ",
   filesystemSearchSpaces,
-  filesystemSearchSpaces instanceof Array
+  filesystemSearchSpaces instanceof Array,
 );
 // const searchSpace=computed(() => filesystemSearchSpaces.value[0])
 console.log(
@@ -227,7 +233,11 @@ console.log(
 //     filesystemSearchSpaces.value = [value];
 //   },
 // });
-const searchSpace = ref(filesystemSearchSpaces[0]);
+const searchSpace = ref(
+  filesystemSearchSpaces instanceof Array && filesystemSearchSpaces.length > 0
+    ? filesystemSearchSpaces[0]
+    : "",
+);
 // const searchSpace = ref("");
 
 const fileListSearchText = ref("");
@@ -253,6 +263,46 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
+
+const searchFiles = async () => {
+  console.log("Searching for files matching:", fileListSearchText.value);
+
+  console.log("searchSpace.value: ", searchSpace.value);
+  console.log("searchText: ", fileListSearchText.value);
+  const _searchText =
+    (searchSpace.value.endsWith("/")
+      ? searchSpace.value
+      : searchSpace.value + "/") + fileListSearchText.value;
+  console.log("_searchText: ", _searchText);
+
+  if (_searchText.trim() === "") {
+    return;
+  }
+
+  loading.value = true;
+  // emit("loading", loading.value);
+
+  ingestionService
+    .getPathFiles({
+      path: _searchText,
+    })
+    .then((response) => {
+      setRetrievedFiles(response.data);
+    })
+    .catch((err) => {
+      console.log(err.response.status);
+      console.error(err);
+      if (err.response.status === 403) {
+        setRetrievedFiles([]);
+      } else {
+        toast.error("Error fetching files");
+      }
+    })
+    .finally(() => {
+      loading.value = false;
+      // emit("loaded", loading.value);
+    });
+};
 
 const setRetrievedFiles = (files) => {
   fileList.value = files;
