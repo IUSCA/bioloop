@@ -76,38 +76,39 @@ router.get(
     //   return
     // }
 
-    if (!fs.existsSync(dir_path)) {
-      res.json([]);
-      return;
-    }
+    // if (!fs.existsSync(dir_path)) {
+    //   res.json([]);
+    //   return;
+    // }
 
-    const files = fs.readdirSync(dir_path, { withFileTypes: true });
-    const filesData = files.map((f) => {
-      console.dir(f, { depth: null });
-      return {
-        name: f.name,
-        isDir: f.isDirectory(),
-        path: path.join(req.query.path, f.name),
-      };
-    });
+    // const files = fs.readdirSync(dir_path, { withFileTypes: true });
 
-    // const filesData = [
-    //   {
-    //     name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
-    //     isDir: false,
-    //     path: '/path/1',
-    //   },
-    //   {
-    //     name: 'Landing',
-    //     isDir: true,
-    //     path: '/path/2',
-    //   },
-    //   {
-    //     name: 'bioloop',
-    //     isDir: true,
-    //     path: '/path/3',
-    //   },
-    // ];
+    // const filesData = files.map((f) => {
+    //   console.dir(f, { depth: null });
+    //   return {
+    //     name: f.name,
+    //     isDir: f.isDirectory(),
+    //     path: path.join(req.query.path, f.name),
+    //   };
+    // });
+
+    const filesData = [
+      {
+        name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
+        isDir: false,
+        path: '/path/1',
+      },
+      {
+        name: 'Landing',
+        isDir: true,
+        path: '/path/2',
+      },
+      {
+        name: 'bioloop',
+        isDir: true,
+        path: '/path/3',
+      },
+    ];
 
     res.json(filesData);
   }),
