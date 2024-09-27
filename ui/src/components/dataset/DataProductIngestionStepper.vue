@@ -111,6 +111,7 @@
             <!--              v-model:selected-file="selectedFile"-->
             <div class="flex">
               <va-select
+                class="mr-2"
                 v-model="searchSpace"
                 @update:modelValue="
                   () => {
