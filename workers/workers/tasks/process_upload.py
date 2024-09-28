@@ -27,8 +27,6 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
     print(f'Processing file {file_name}')
     processing_error = False
 
-    file_destination_path = None
-
     if file_path is not None:
         file_base_path = Path(dataset_merged_chunks_path) / file_path
         file_base_path.mkdir(parents=True, exist_ok=True)
@@ -62,38 +60,17 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
                     destination.write(chunk.read())
         print(f'Chunks for file id {file_upload_log_id} ({file_name}) merged successfully')
 
-
-    # if not processing_error:
-    #     evaluated_checksum = utils.checksum(dataset_path)
-    #     print(f'evaluated_checksum: {evaluated_checksum}')
-    #     print("Failed checksum validation")
-    #     processing_error = evaluated_checksum != file_md5
-
     return config['upload_status']['PROCESSING_FAILED'] \
         if processing_error \
         else config['upload_status']['COMPLETE']
 
 
 def chunks_to_files(celery_task, dataset_id, **kwargs):
-    # dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
-    # # json.dumps(dataset, indent=2)
-    # upload_log = dataset['upload_log']
-    
-    # upload_log_id = upload_log['id']
-    # print(f'upload_log is none: {upload_log is None}')
-    # print(f'upload_log id: {upload_log["id"]}, status: {upload_log["status"]}')
-    # # json.dumps(upload_log, indent=2)
-    # print(f'upload_log files: {len(upload_log["files"])}')
-
-    upload_log_files = None
-
     try:
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
         upload_log = dataset['upload_log']
         upload_log_id = upload_log['id']
         upload_log_files = upload_log['files']
-
-        # json.dumps(upload_log['files'], indent=2)
 
         file_log_updates = []
         for file_log in upload_log_files:
@@ -163,29 +140,12 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     if not has_errors:
         print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
  have been processed successfully.')
-        # delete subdirectory containing all chunked files
-        # chunked_files_path = Path(dataset_path) / 'chunked_files'
-        # if chunked_files_path.exists():
-#             print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
-#  have been processed successfully. Deleting chunked files directory\
-#  {chunked_files_path}')
-#             shutil.rmtree(chunked_files_path)
-#             print(f'Deleted chunked files directory {chunked_files_path}')
-
         workflow_name = 'integrated'
-        # duplicate_workflows = [
-        #     wf for wf in dataset['workflows']
-        #     if wf['name'] == workflow_name and
-        #        wf['status'] not in DONE_STATUSES
-        # ]
-        # if len(duplicate_workflows) == 0:
         print(f"Beginning {workflow_name} workflow for dataset {dataset['id']} (upload_log_id: {upload_log_id})")
         integrated_wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
         int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
         int_wf.start(dataset_id)
-        # else:
-        #     print(f'Found active workflow {workflow_name} for dataset {dataset_id}')
 
     # Update status of upload log
     try:
