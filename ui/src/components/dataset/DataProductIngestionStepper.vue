@@ -221,9 +221,11 @@ const selectedFile = ref(null);
 // };
 
 console.log(config.filesystem_search_spaces);
-// const filesystemSearchSpaces =
-// ref(config.filesystem_search_spaces.split(","));
-const filesystemSearchSpaces = config.filesystem_search_spaces?.split(",");
+const filesystemSearchSpaces = (config.filesystem_search_spaces || []).map(
+  (space) => space[Object.keys(space)[0]]?.base_path,
+  // x: "y",
+);
+// const filesystemSearchSpaces = [];
 
 console.log(
   "fileSystemSpaces.value: ",
@@ -248,6 +250,8 @@ const searchSpace = ref(
     : "",
 );
 // const searchSpace = ref("");
+
+// console.log("vute: ", import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES);
 
 const fileListSearchText = ref("");
 const submitted = ref(false);
@@ -290,6 +294,31 @@ const searchFiles = async () => {
 
   loading.value = true;
   // emit("loading", loading.value);
+
+  const search_space_base_dir = (config.filesystem_search_spaces || []).find(
+    (space) => space[searchSpace.value] === searchSpace.value,
+  )?.base_path;
+  const search_space_mount_dir = (config.filesystem_search_spaces || []).find(
+    (space) => {
+      console.log("space: ", space);
+      console.log("Object.keys(space)[0]: ", Object.keys(space)[0]);
+      console.log("searchSpace", searchSpace.value);
+      return Object.keys(space)[0] === searchSpace.value;
+    },
+  );
+  // const base_dir = search_space_mount_dir[searchSpace].base_path;
+  // const mount_path = search_space_mount_dir[searchSpace].mount_path;
+
+  const base_dir = search_space_mount_dir[searchSpace.value].base_path;
+  const mount_dir = search_space_mount_dir[searchSpace.value].mount_path;
+
+  console.log("search_space_mount_dir: ", search_space_mount_dir);
+  // console.log("search_space_mount_path: ",
+  // search_space_mount_dir.mount_path);
+  console.log(
+    "search_space_mount_dir[searchSpace]",
+    search_space_mount_dir[searchSpace.value],
+  );
 
   ingestionService
     .getPathFiles({

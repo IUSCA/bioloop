@@ -42,9 +42,9 @@
       <va-navbar-item class="flex items-center" v-if="auth.user?.username">
         <HeaderUserDropdown />
       </va-navbar-item>
-      <va-navbar-item class="flex items-center" v-if="areNotificationsEnabled">
-        <NotificationDropdown />
-      </va-navbar-item>
+      <!--      <va-navbar-item class="flex items-center" v-if="areNotificationsEnabled">-->
+      <!--        <NotificationDropdown />-->
+      <!--      </va-navbar-item>-->
       <va-navbar-item class="flex items-center">
         <ThemeToggle />
       </va-navbar-item>

@@ -44,7 +44,15 @@
       }
     }
   },
-  "dataset_ingestion_source_dir": "DATASET_INGESTION_SOURCE_DIR",
-  "dataset_ingestion_source_mount": "DATASET_INGESTION_SOURCE_MOUNT",
-  "filesystem_search_spaces": "FILESYSTEM_SEARCH_SPACES"
+  "filesystem": {
+    "search_spaces": "FILESYSTEM_SEARCH_SPACES",
+    "base_dir": {
+      "scratch": "FILESYSTEM_BASE_DIR_SCRATCH",
+      "project": "FILESYSTEM_BASE_DIR_PROJECT"
+    },
+    "mount_dir": {
+      "scratch": "FILESYSTEM_MOUNT_DIR_SCRATCH",
+      "project": "FILESYSTEM_MOUNT_DIR_PROJECT"
+    }
+  }
 }

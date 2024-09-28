@@ -12,8 +12,11 @@ const isPermittedTo = accessControl('fs');
 
 const router = express.Router();
 
-const BASE_PATH = config.dataset_ingestion_source_dir;
-const DATASET_INGESTION_SOURCE_MOUNT = config.dataset_ingestion_source_mount;
+// // todo - these must be sent with the request
+// const BASE_PATH = config.filesystem_scratch_source_dir;
+// const FILESYSTEM_BASE_DIR_PROJECT = config.dataset_ingestion_source_mount;
+
+const base_dirs = Object.values(config.filesystem.base_dir);
 
 function validatePath(req, res, next) {
   const query_path = req.query.path;
@@ -31,10 +34,12 @@ function validatePath(req, res, next) {
   p = path.resolve(p);
   console.log(`Resolved path: ${p}`);
 
-  // /N/scratch/scadev
-  // Ensure the path is within the base path
-  if (!p.startsWith(BASE_PATH)) {
+  const filtered_base_dirs = base_dirs.filter((dir) => p.startsWith(dir));
+  console.log('filtered_base_dirs: ', filtered_base_dirs);
+
+  if (filtered_base_dirs.length === 0) {
     res.status(403).send('Forbidden');
+    return;
   }
 
   req.query.path = p;
@@ -50,6 +55,20 @@ function validatePath(req, res, next) {
 //   },
 // );
 
+const get_mount_dir = (base_dir) => {
+  console.log('get_mount_dir(): base_dir:', base_dir);
+  console.log('config.filesystem.base_dir.scratch:', config.filesystem.base_dir.scratch);
+  console.log('config.filesystem.base_dir.project:', config.filesystem.base_dir.project);
+  switch (base_dir) {
+    case config.filesystem.base_dir.scratch:
+      return config.filesystem.mount_dir.scratch;
+    case config.filesystem.base_dir.project:
+      return config.filesystem.mount_dir.project;
+    default:
+      return null;
+  }
+};
+
 // TODO - validatePath,
 router.get(
   '/',
@@ -58,19 +77,24 @@ router.get(
   asyncHandler(async (req, res) => {
     console.log('current path: ', __dirname);
 
-    const path_prefix = `${BASE_PATH}/`;
-    const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
-      + path_prefix.length);
-    console.log('query_path: ', query_path);
+    const base_dir = Object.values(config.filesystem.base_dir).filter((dir) => req.query.path.startsWith(dir))[0];
+    console.log('base_dir: ', base_dir);
+    const path_prefix = `${base_dir}/`;
 
-    console.log('DATASET_INGESTION_SOURCE_MOUNT: ', DATASET_INGESTION_SOURCE_MOUNT);
+    const query_rel_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
+      + path_prefix.length);
+    console.log('query_rel_path: ', query_rel_path);
+
+    const mount_dir = get_mount_dir(base_dir);
+
+    console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
 
     // TODO - if dir_path doesn't start with '/opt/sca', don't return any dirs
 
-    const dir_path = path.join(DATASET_INGESTION_SOURCE_MOUNT, query_path);
+    const dir_path = path.join(mount_dir, query_rel_path);
     console.log('dir_path: ', dir_path);
 
-    // if (dir_path !== DATASET_INGESTION_SOURCE_MOUNT) {
+    // if (dir_path !== FILESYSTEM_BASE_DIR_PROJECT) {
     //   res.json()
     //   res.json([]);
     //   return
@@ -96,17 +120,17 @@ router.get(
       {
         name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
         isDir: false,
-        path: '/path/1',
+        path: `/${dir_path}/${req.query.path}/dir-1`,
       },
       {
         name: 'Landing',
         isDir: true,
-        path: '/path/2',
+        path: `/${dir_path}/${req.query.path}/dir-2`,
       },
       {
         name: 'bioloop',
         isDir: true,
-        path: '/path/3',
+        path: `/${dir_path}/${req.query.path}/dir-3`,
       },
     ];
 

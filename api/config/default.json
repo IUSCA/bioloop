@@ -157,6 +157,15 @@
     "COMPLETE": "COMPLETE",
     "FAILED": "FAILED"
   },
-  "dataset_ingestion_source_dir": "",
-  "dataset_ingestion_source_mount": ""
+  "filesystem": {
+    "search_spaces": "",
+    "base_dir": {
+      "scratch": "",
+      "project": ""
+    },
+    "mount_dir": {
+      "scratch": "",
+      "project": ""
+    }
+  }
 }
