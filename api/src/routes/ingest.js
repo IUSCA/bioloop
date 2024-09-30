@@ -69,29 +69,34 @@ const get_mount_dir = (base_dir) => {
   }
 };
 
+const get_search_dir = (req) => {
+  const base_dir = Object.values(config.filesystem.base_dir).filter((dir) => req.query.path.startsWith(dir))[0];
+  console.log('base_dir: ', base_dir);
+  const path_prefix = `${base_dir}/`;
+
+  const query_rel_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
+    + path_prefix.length);
+  console.log('query_rel_path: ', query_rel_path);
+
+  const mount_dir = get_mount_dir(base_dir);
+
+  console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
+
+  const dir_path = path.join(mount_dir, query_rel_path);
+  console.log('dir_path: ', dir_path);
+
+  return dir_path;
+};
+
 // TODO - validatePath,
 router.get(
   '/',
   validatePath,
   isPermittedTo('read'),
   asyncHandler(async (req, res) => {
-    console.log('current path: ', __dirname);
+    // console.log('current path: ', __dirname);
 
-    const base_dir = Object.values(config.filesystem.base_dir).filter((dir) => req.query.path.startsWith(dir))[0];
-    console.log('base_dir: ', base_dir);
-    const path_prefix = `${base_dir}/`;
-
-    const query_rel_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
-      + path_prefix.length);
-    console.log('query_rel_path: ', query_rel_path);
-
-    const mount_dir = get_mount_dir(base_dir);
-
-    console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
-
-    // TODO - if dir_path doesn't start with '/opt/sca', don't return any dirs
-
-    const dir_path = path.join(mount_dir, query_rel_path);
+    const dir_path = get_search_dir(req);
     console.log('dir_path: ', dir_path);
 
     // if (dir_path !== FILESYSTEM_BASE_DIR_PROJECT) {
@@ -100,39 +105,39 @@ router.get(
     //   return
     // }
 
-    // if (!fs.existsSync(dir_path)) {
-    //   res.json([]);
-    //   return;
-    // }
+    if (!fs.existsSync(dir_path)) {
+      res.json([]);
+      return;
+    }
 
-    // const files = fs.readdirSync(dir_path, { withFileTypes: true });
+    const files = fs.readdirSync(dir_path, { withFileTypes: true });
 
-    // const filesData = files.map((f) => {
-    //   console.dir(f, { depth: null });
-    //   return {
-    //     name: f.name,
-    //     isDir: f.isDirectory(),
-    //     path: path.join(req.query.path, f.name),
-    //   };
-    // });
+    const filesData = files.map((f) => {
+      console.dir(f, { depth: null });
+      return {
+        name: f.name,
+        isDir: f.isDirectory(),
+        path: path.join(req.query.path, f.name),
+      };
+    });
 
-    const filesData = [
-      {
-        name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
-        isDir: false,
-        path: `/${dir_path}/${req.query.path}/dir-1`,
-      },
-      {
-        name: 'Landing',
-        isDir: true,
-        path: `/${dir_path}/${req.query.path}/dir-2`,
-      },
-      {
-        name: 'bioloop',
-        isDir: true,
-        path: `/${dir_path}/${req.query.path}/dir-3`,
-      },
-    ];
+    // const filesData = [
+    //   {
+    //     name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
+    //     isDir: false,
+    //     path: `/${dir_path}/${req.query.path}/dir-1`,
+    //   },
+    //   {
+    //     name: 'Landing',
+    //     isDir: true,
+    //     path: `/${dir_path}/${req.query.path}/dir-2`,
+    //   },
+    //   {
+    //     name: 'bioloop',
+    //     isDir: true,
+    //     path: `/${dir_path}/${req.query.path}/dir-3`,
+    //   },
+    // ];
 
     res.json(filesData);
   }),
@@ -142,9 +147,13 @@ router.get(
   '/dir-size',
   validatePath,
   asyncHandler(async (req, res) => {
+    const dir_path = get_search_dir(req);
+    console.log('dir_path: ', dir_path);
+
     // check if the path is a directory
-    const stats = await fsPromises.stat(req.query.path);
+    const stats = await fsPromises.stat(dir_path);
     if (!stats.isDirectory()) {
+      console.log(dir_path, 'is not a directory');
       res.status(400).send('Not a directory');
     }
 
@@ -156,18 +165,24 @@ router.get(
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders(); // flush the headers to establish SSE with client
 
+    console.log('sse started');
+
     // get the size of the directory by spawning a child process to run "du -sb
     // /path"
-    exec(`du -s ${req.query.path}`, (err, stdout) => {
+    exec(`du -s ${dir_path}`, (err, stdout) => {
       if (err) {
+        console.error(`du -s`);
         console.error(err);
         res.status(500).end();
         return;
       }
       const size = parseInt(stdout.split('\t')[0], 10);
       // send "message" type event to the client
+      console.log('before write')
       res.write(`data: ${JSON.stringify({ size })}\n\n`);
       res.write('event: done\ndata: \n\n');
+      console.log('before write')
+
       res.end();
     });
   }),
