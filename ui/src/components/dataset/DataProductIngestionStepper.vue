@@ -120,6 +120,7 @@
                   }
                 "
                 :options="filesystemSearchSpaces"
+                :text-by="'label'"
                 label="Search space"
               />
 
@@ -127,7 +128,7 @@
                 class="w-full"
                 @files-retrieved="setRetrievedFiles"
                 :disabled="submitAttempted"
-                :base-path="searchSpace"
+                :base-path="base_path"
                 @loading="loading = true"
                 @loaded="loading = false"
                 @clear="setRetrievedFiles"
@@ -193,9 +194,9 @@
 <script setup>
 import config from "@/config";
 import datasetService from "@/services/dataset";
+import ingestionService from "@/services/ingest";
 import toast from "@/services/toast";
 import { useForm } from "vuestic-ui";
-import ingestionService from "@/services/ingest";
 
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
@@ -221,8 +222,13 @@ const selectedFile = ref(null);
 // };
 
 console.log(config.filesystem_search_spaces);
+const filesystemSearchLabels = (config.filesystem_search_spaces || []).map(
+  (space) => space[Object.keys(space)[0]]?.label,
+  // x: "y",
+);
+
 const filesystemSearchSpaces = (config.filesystem_search_spaces || []).map(
-  (space) => space[Object.keys(space)[0]]?.base_path,
+  (space) => space[Object.keys(space)[0]],
   // x: "y",
 );
 // const filesystemSearchSpaces = [];
@@ -249,6 +255,19 @@ const searchSpace = ref(
     ? filesystemSearchSpaces[0]
     : "",
 );
+
+console.log("searchSpace.value: ", searchSpace.value);
+const base_path = computed({
+  get: () => searchSpace.value.base_path,
+  set: (value) => {
+    console.log("set: () => searchSpace.value: ", value);
+    searchSpace.value = value;
+    fileListSearchText.value = "";
+    setRetrievedFiles([]);
+  },
+})
+
+
 // const searchSpace = ref("");
 
 // console.log("vute: ", import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES);
@@ -280,12 +299,10 @@ const isLastStep = computed(() => {
 const searchFiles = async () => {
   console.log("Searching for files matching:", fileListSearchText.value);
 
-  console.log("searchSpace.value: ", searchSpace.value);
-  console.log("searchText: ", fileListSearchText.value);
-  const _searchText =
-    (searchSpace.value.endsWith("/")
-      ? searchSpace.value
-      : searchSpace.value + "/") + fileListSearchText.value;
+   const _searchText =
+    (searchSpace.value.base_path.endsWith("/")
+      ? searchSpace.value.base_path
+      : searchSpace.value.base_path + "/") + fileListSearchText.value;
   console.log("_searchText: ", _searchText);
 
   if (_searchText.trim() === "") {
@@ -295,22 +312,22 @@ const searchFiles = async () => {
   loading.value = true;
   // emit("loading", loading.value);
 
-  const search_space_base_dir = (config.filesystem_search_spaces || []).find(
-    (space) => space[searchSpace.value] === searchSpace.value,
-  )?.base_path;
+  // const search_space_base_dir = (config.filesystem_search_spaces || []).find(
+  //   (space) => space[searchSpace.value] === searchSpace.value,
+  // )?.base_path;
   const search_space_mount_dir = (config.filesystem_search_spaces || []).find(
     (space) => {
       console.log("space: ", space);
       console.log("Object.keys(space)[0]: ", Object.keys(space)[0]);
-      console.log("searchSpace", searchSpace.value);
-      return Object.keys(space)[0] === searchSpace.value;
+      console.log("searchSpace", searchSpace.value.base_path);
+      return Object.keys(space)[0] === searchSpace.value.base_path;
     },
   );
   // const base_dir = search_space_mount_dir[searchSpace].base_path;
   // const mount_path = search_space_mount_dir[searchSpace].mount_path;
 
-  const base_dir = search_space_mount_dir[searchSpace.value].base_path;
-  const mount_dir = search_space_mount_dir[searchSpace.value].mount_path;
+  // const base_dir = search_space_mount_dir[searchSpace.value].base_path;
+  // const mount_dir = search_space_mount_dir[searchSpace.value].mount_path;
 
   console.log("search_space_mount_dir: ", search_space_mount_dir);
   // console.log("search_space_mount_path: ",

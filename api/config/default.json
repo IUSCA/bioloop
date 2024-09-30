@@ -166,6 +166,10 @@
     "mount_dir": {
       "scratch": "",
       "project": ""
+    },
+    "restricted_dirs": {
+      "scratch": "",
+      "project": ""
     }
   }
 }

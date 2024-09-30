@@ -3,6 +3,7 @@ const fsPromises = require('fs').promises;
 const express = require('express');
 const path = require('node:path');
 const { exec } = require('child_process');
+const _ = require('lodash');
 
 const config = require('config');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -16,7 +17,8 @@ const router = express.Router();
 // const BASE_PATH = config.filesystem_scratch_source_dir;
 // const FILESYSTEM_BASE_DIR_PROJECT = config.dataset_ingestion_source_mount;
 
-const base_dirs = Object.values(config.filesystem.base_dir);
+const BASE_DIRS = Object.values(config.filesystem.base_dir);
+const RESTRICTED_DIRS = Object.values(config.filesystem.restricted_dirs);
 
 function validatePath(req, res, next) {
   const query_path = req.query.path;
@@ -34,13 +36,28 @@ function validatePath(req, res, next) {
   p = path.resolve(p);
   console.log(`Resolved path: ${p}`);
 
-  const filtered_base_dirs = base_dirs.filter((dir) => p.startsWith(dir));
-  console.log('filtered_base_dirs: ', filtered_base_dirs);
 
+  // const is_search_dir_restricted = RESTRICTED_DIRS.some((dir) => p === dir);
+  // if (is_search_dir_restricted) {
+  //   console.error(`Path ${req.query.path} is restricted`);
+  //   res.status(403).send('Forbidden');
+  //   return;
+  // }
+
+  const filtered_base_dirs = BASE_DIRS.filter((dir) => p.startsWith(dir));
+  console.log('filtered_base_dirs: ', filtered_base_dirs);
   if (filtered_base_dirs.length === 0) {
+    console.error(`Expected one base directory for path ${req.query.path}, but found none`);
     res.status(403).send('Forbidden');
     return;
   }
+  if (filtered_base_dirs.length > 1) {
+    console.error(`Expected one base directory for path ${req.query.path}, but found multiple: ${filtered_base_dirs}`);
+    res.status(500);
+    return;
+  }
+
+  const search_dir = filtered_base_dirs[0];
 
   req.query.path = p;
   console.log('req.query.path: ', req.query.path);
@@ -82,10 +99,10 @@ const get_search_dir = (req) => {
 
   console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
 
-  const dir_path = path.join(mount_dir, query_rel_path);
-  console.log('dir_path: ', dir_path);
+  const search_dir = path.join(mount_dir, query_rel_path);
+  console.log('search_dir: ', search_dir);
 
-  return dir_path;
+  return search_dir;
 };
 
 // TODO - validatePath,
@@ -96,46 +113,54 @@ router.get(
   asyncHandler(async (req, res) => {
     // console.log('current path: ', __dirname);
 
-    const dir_path = get_search_dir(req);
-    console.log('dir_path: ', dir_path);
+    const search_dir = get_search_dir(req);
+    console.log('search_dir: ', search_dir);
 
-    // if (dir_path !== FILESYSTEM_BASE_DIR_PROJECT) {
+    // if (search_dir !== FILESYSTEM_BASE_DIR_PROJECT) {
     //   res.json()
     //   res.json([]);
     //   return
     // }
 
-    if (!fs.existsSync(dir_path)) {
+    if (!fs.existsSync(search_dir)) {
       res.json([]);
       return;
     }
 
-    const files = fs.readdirSync(dir_path, { withFileTypes: true });
+    const files = fs.readdirSync(search_dir, { withFileTypes: true });
 
-    const filesData = files.map((f) => {
+    let filesData = files.map((f) => {
       console.dir(f, { depth: null });
-      return {
-        name: f.name,
-        isDir: f.isDirectory(),
-        path: path.join(req.query.path, f.name),
-      };
+      const file_path = path.join(req.query.path, f.name)
+      console.log('file_path: ', file_path);
+      const is_file_restricted = RESTRICTED_DIRS.some((dir) => file_path === dir);
+      if (!is_file_restricted) {
+        return {
+          name: f.name,
+          isDir: f.isDirectory(),
+          path: file_path,
+        };
+      }
     });
+    filesData = _.compact(filesData);
+
+    console.log('filesData: ', filesData);
 
     // const filesData = [
     //   {
     //     name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
     //     isDir: false,
-    //     path: `/${dir_path}/${req.query.path}/dir-1`,
+    //     path: `/${search_dir}/${req.query.path}/dir-1`,
     //   },
     //   {
     //     name: 'Landing',
     //     isDir: true,
-    //     path: `/${dir_path}/${req.query.path}/dir-2`,
+    //     path: `/${search_dir}/${req.query.path}/dir-2`,
     //   },
     //   {
     //     name: 'bioloop',
     //     isDir: true,
-    //     path: `/${dir_path}/${req.query.path}/dir-3`,
+    //     path: `/${search_dir}/${req.query.path}/dir-3`,
     //   },
     // ];
 
@@ -147,13 +172,13 @@ router.get(
   '/dir-size',
   validatePath,
   asyncHandler(async (req, res) => {
-    const dir_path = get_search_dir(req);
-    console.log('dir_path: ', dir_path);
+    const search_dir = get_search_dir(req);
+    console.log('search_dir: ', search_dir);
 
     // check if the path is a directory
-    const stats = await fsPromises.stat(dir_path);
+    const stats = await fsPromises.stat(search_dir);
     if (!stats.isDirectory()) {
-      console.log(dir_path, 'is not a directory');
+      console.log(search_dir, 'is not a directory');
       res.status(400).send('Not a directory');
     }
 
@@ -169,19 +194,19 @@ router.get(
 
     // get the size of the directory by spawning a child process to run "du -sb
     // /path"
-    exec(`du -s ${dir_path}`, (err, stdout) => {
+    exec(`du -s ${search_dir}`, (err, stdout) => {
       if (err) {
-        console.error(`du -s`);
+        console.error('du -s');
         console.error(err);
         res.status(500).end();
         return;
       }
       const size = parseInt(stdout.split('\t')[0], 10);
       // send "message" type event to the client
-      console.log('before write')
+      console.log('before write');
       res.write(`data: ${JSON.stringify({ size })}\n\n`);
       res.write('event: done\ndata: \n\n');
-      console.log('before write')
+      console.log('before write');
 
       res.end();
     });
