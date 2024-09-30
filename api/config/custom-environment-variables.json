@@ -48,6 +48,10 @@
     "mount_dir": {
       "scratch": "FILESYSTEM_MOUNT_DIR_SCRATCH",
       "project": "FILESYSTEM_MOUNT_DIR_PROJECT"
+    },
+    "restricted_dirs": {
+      "scratch": "FILESYSTEM_SCRATCH_RESTRICTED_DIRS",
+      "project": "FILESYSTEM_PROJECT_RESTRICTED_DIRS"
     }
   }
 }
