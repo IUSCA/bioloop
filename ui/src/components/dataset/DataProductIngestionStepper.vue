@@ -128,10 +128,10 @@
                 class="w-full"
                 @files-retrieved="setRetrievedFiles"
                 :disabled="submitAttempted"
-                :base-path="base_path"
+                :base-path="searchSpaceBasePath"
                 @loading="loading = true"
                 @loaded="loading = false"
-                @clear="setRetrievedFiles"
+                @clear="setRetrievedFiles([])"
                 v-model:selected="selectedFile"
                 @update:selected="
                   (file) => {
@@ -222,10 +222,6 @@ const selectedFile = ref(null);
 // };
 
 console.log(config.filesystem_search_spaces);
-const filesystemSearchLabels = (config.filesystem_search_spaces || []).map(
-  (space) => space[Object.keys(space)[0]]?.label,
-  // x: "y",
-);
 
 const filesystemSearchSpaces = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -257,7 +253,7 @@ const searchSpace = ref(
 );
 
 console.log("searchSpace.value: ", searchSpace.value);
-const base_path = computed({
+const searchSpaceBasePath = computed({
   get: () => searchSpace.value.base_path,
   set: (value) => {
     console.log("set: () => searchSpace.value: ", value);
@@ -265,14 +261,12 @@ const base_path = computed({
     fileListSearchText.value = "";
     setRetrievedFiles([]);
   },
-})
-
+});
 
 // const searchSpace = ref("");
 
 // console.log("vute: ", import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES);
 
-const fileListSearchText = ref("");
 const submitted = ref(false);
 const submissionSuccess = ref(false);
 const fileTypeSelected = ref();
@@ -296,10 +290,19 @@ const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
 
+// const fileListSearchText = computed({
+//   get: () => fileListSearchText.value.toLowerCase(),
+//   set: (value) => {
+//     fileListSearchText.value = value;
+//     // console.log("searchFiles: ", fileListSearchText.value);
+//   },
+// });
+const fileListSearchText = ref("");
+
 const searchFiles = async () => {
   console.log("Searching for files matching:", fileListSearchText.value);
 
-   const _searchText =
+  const _searchText =
     (searchSpace.value.base_path.endsWith("/")
       ? searchSpace.value.base_path
       : searchSpace.value.base_path + "/") + fileListSearchText.value;
