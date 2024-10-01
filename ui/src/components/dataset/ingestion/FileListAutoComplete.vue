@@ -27,8 +27,6 @@
 </template>
 
 <script setup>
-import ingestionService from "@/services/ingest";
-import toast from "@/services/toast";
 
 const props = defineProps({
   disabled: { type: Boolean, default: false },
@@ -56,7 +54,13 @@ const searchText = computed({
   set: (value) => {
     // searchText.value = value;
     // const _searchText = +value.path;
+    
+
     console.log("emitting searchText,", value);
+    console.dir(value, { depth: null });
+    console.log(typeof value);
+    console.log('----')
+
     emit("update:searchText", value);
   },
 });
@@ -72,7 +76,8 @@ const onFileSelect = (file) => {
   console.log("onFileSelect:", file);
   console.dir(file, { depth: null });
   // const _searchText = basePath.value + value.path;
-  emit("update:searchText", file.name);
+  emit("update:searchText", file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length));
+  console.log("update:searchText", file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length))
 
   // searchText.value = file.path.slice(
   //   file.path.indexOf(basePath.value) + basePath.value.length,

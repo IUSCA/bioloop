@@ -3,7 +3,6 @@ const fsPromises = require('fs').promises;
 const express = require('express');
 const path = require('node:path');
 const { exec } = require('child_process');
-const _ = require('lodash');
 
 const config = require('config');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -36,18 +35,18 @@ function validatePath(req, res, next) {
   p = path.resolve(p);
   console.log(`Resolved path: ${p}`);
 
-
-  // const is_search_dir_restricted = RESTRICTED_DIRS.some((dir) => p === dir);
-  // if (is_search_dir_restricted) {
-  //   console.error(`Path ${req.query.path} is restricted`);
-  //   res.status(403).send('Forbidden');
-  //   return;
-  // }
-
   const filtered_base_dirs = BASE_DIRS.filter((dir) => p.startsWith(dir));
   console.log('filtered_base_dirs: ', filtered_base_dirs);
+  const search_dir = filtered_base_dirs[0];
+  console.log('search_dir: ', search_dir);
+
+  const is_search_dir_restricted = RESTRICTED_DIRS.some((dir) => p.startsWith(dir));
+  if (is_search_dir_restricted) {
+    res.status(403).send('Forbidden');
+    return;
+  }
+
   if (filtered_base_dirs.length === 0) {
-    console.error(`Expected one base directory for path ${req.query.path}, but found none`);
     res.status(403).send('Forbidden');
     return;
   }
@@ -56,8 +55,6 @@ function validatePath(req, res, next) {
     res.status(500);
     return;
   }
-
-  const search_dir = filtered_base_dirs[0];
 
   req.query.path = p;
   console.log('req.query.path: ', req.query.path);
@@ -129,22 +126,14 @@ router.get(
 
     const files = fs.readdirSync(search_dir, { withFileTypes: true });
 
-    let filesData = files.map((f) => {
+    const filesData = files.map((f) => {
       console.dir(f, { depth: null });
-      const file_path = path.join(req.query.path, f.name)
-      console.log('file_path: ', file_path);
-      const is_file_restricted = RESTRICTED_DIRS.some((dir) => file_path === dir);
-      if (!is_file_restricted) {
-        return {
-          name: f.name,
-          isDir: f.isDirectory(),
-          path: file_path,
-        };
-      }
+      return {
+        name: f.name,
+        isDir: f.isDirectory(),
+        path: path.join(req.query.path, f.name),
+      };
     });
-    filesData = _.compact(filesData);
-
-    console.log('filesData: ', filesData);
 
     // const filesData = [
     //   {
