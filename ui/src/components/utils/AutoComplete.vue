@@ -2,7 +2,7 @@
 <template>
   <div class="relative">
     <OnClickOutside @trigger="closeResults">
-      <va-form>
+      <va-form ref="autocompleteFormRef">
         <va-input
           outline
           clearable
@@ -19,7 +19,6 @@
         </va-input>
         <!--          @update:model-value="(newVal) => emit('update:searchText', newVal)"-->
       </va-form>
-
       <ul
         v-if="visible"
         class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
