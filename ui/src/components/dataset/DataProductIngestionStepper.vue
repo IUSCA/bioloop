@@ -30,7 +30,7 @@
           </va-button>
         </template>
 
-        <template #step-content-3>
+        <template #step-content-0>
           <va-form-field
             v-model="datasetName"
             :rules="[
@@ -103,7 +103,7 @@
           </div>
         </template>
 
-        <template #step-content-0>
+        <template #step-content-3>
           <!--          <va-input class="w-full" v-model="filePath" />-->
 
           <va-inner-loading :loading="loading">
@@ -122,6 +122,7 @@
                 :options="filesystemSearchSpaces"
                 :text-by="'label'"
                 label="Search space"
+                :disabled="submitAttempted"
               />
 
               <FileListAutoComplete
@@ -201,9 +202,9 @@ import { useForm } from "vuestic-ui";
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
 const steps = [
-  // { label: "Name", icon: "material-symbols:description-outline" },
-  // { label: "File Type", icon: "material-symbols:category" },
-  // { label: "Source Raw Data", icon: "mdi:dna" },
+  { label: "Name", icon: "material-symbols:description-outline" },
+  { label: "File Type", icon: "material-symbols:category" },
+  { label: "Source Raw Data", icon: "mdi:dna" },
   { label: "Select Directory", icon: "material-symbols:folder" },
 ];
 
@@ -318,31 +319,32 @@ const searchFiles = async () => {
   // const search_space_base_dir = (config.filesystem_search_spaces || []).find(
   //   (space) => space[searchSpace.value] === searchSpace.value,
   // )?.base_path;
-  const search_space_mount_dir = (config.filesystem_search_spaces || []).find(
-    (space) => {
-      console.log("space: ", space);
-      console.log("Object.keys(space)[0]: ", Object.keys(space)[0]);
-      console.log("searchSpace", searchSpace.value.base_path);
-      return Object.keys(space)[0] === searchSpace.value.base_path;
-    },
-  );
-  // const base_dir = search_space_mount_dir[searchSpace].base_path;
-  // const mount_path = search_space_mount_dir[searchSpace].mount_path;
-
-  // const base_dir = search_space_mount_dir[searchSpace.value].base_path;
-  // const mount_dir = search_space_mount_dir[searchSpace.value].mount_path;
-
-  console.log("search_space_mount_dir: ", search_space_mount_dir);
-  // console.log("search_space_mount_path: ",
-  // search_space_mount_dir.mount_path);
-  console.log(
-    "search_space_mount_dir[searchSpace]",
-    search_space_mount_dir[searchSpace.value],
-  );
+  // const search_space_mount_dir = (config.filesystem_search_spaces || []).find(
+  //   (space) => {
+  //     console.log("space: ", space);
+  //     console.log("Object.keys(space)[0]: ", Object.keys(space)[0]);
+  //     console.log("searchSpace", searchSpace.value.base_path);
+  //     return Object.keys(space)[0] === searchSpace.value.base_path;
+  //   },
+  // );
+  // // const base_dir = search_space_mount_dir[searchSpace].base_path;
+  // // const mount_path = search_space_mount_dir[searchSpace].mount_path;
+  //
+  // // const base_dir = search_space_mount_dir[searchSpace.value].base_path;
+  // // const mount_dir = search_space_mount_dir[searchSpace.value].mount_path;
+  //
+  // console.log("search_space_mount_dir: ", search_space_mount_dir);
+  // // console.log("search_space_mount_path: ",
+  // // search_space_mount_dir.mount_path);
+  // console.log(
+  //   "search_space_mount_dir[searchSpace]",
+  //   search_space_mount_dir[searchSpace.value],
+  // );
 
   ingestionService
     .getPathFiles({
       path: _searchText,
+      dirs_only: true,
     })
     .then((response) => {
       setRetrievedFiles(response.data);
@@ -406,13 +408,14 @@ const preIngestion = () => {
   });
 };
 
-const initiateIngestion = () => {
+const initiateIngestion = async () => {
   return datasetService
     .initiate_workflow_on_dataset({
       dataset_id: datasetId.value,
       workflow: "integrated",
     })
     .then(() => {
+      console.log("initiateIngestion successfully");
       submissionSuccess.value = true;
     });
 };
@@ -424,14 +427,19 @@ const onSubmit = () => {
     preIngestion()
       .then(async (res) => {
         datasetId.value = res.data.id;
-        const ingestionInitiated = await initiateIngestion();
-        if (ingestionInitiated) {
-          resolve();
-        } else {
-          reject(new Error("Unable to register the dataset"));
-        }
+
+        resolve(initiateIngestion);
+
+        // if (ingestionInitiated) {
+        //   console.log("Dataset registered successfully");
+        //   resolve();
+        // } else {
+        //   console.error("Unable to initiate ingestion");
+        //   reject(new Error("Unable to register the dataset"));
+        // }
       })
       .catch((err) => {
+        console.error(err);
         reject(err);
       });
   });
