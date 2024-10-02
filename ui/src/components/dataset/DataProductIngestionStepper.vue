@@ -118,6 +118,7 @@
               "
               @files-retrieved="setRetrievedFiles"
               :disabled="submitAttempted"
+              :base-path="config.dataset_ingestion_source_dir"
             />
 
             <!--            <FileList :selected-files="fileList" />-->
