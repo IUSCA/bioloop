@@ -347,18 +347,7 @@ router.post(
     // error
     const restricted_dataset_paths = Object.values(config.restricted_ingestion_dirs).map((paths) => paths.split(',')).flat();
     console.log('restricted_dataset_paths:', restricted_dataset_paths);
-    const origin_path_is_restricted = restricted_dataset_paths.some((path) => {
-      console.log('regex path:', path);
-      const regex = new RegExp(path);
-      return regex.test(origin_path);
-    });
-    // const restricted_paths = restricted_dataset_paths.map((paths) => {
-    //   const restricted_path_patterns = paths.split(',');
-    //
-    //   const regex = new RegExp(paths);
-    //   return regex.match(paths);
-    // });
-    // console.log('restricted paths:', restricted_paths);
+    const origin_path_is_restricted = restricted_dataset_paths.some((path) => origin_path === path);
 
     if (origin_path_is_restricted) {
       return next(createError.Forbidden());

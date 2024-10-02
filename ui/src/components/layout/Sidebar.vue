@@ -80,10 +80,10 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { storeToRefs } from "pinia";
-import config from "@/config";
 
 const props = defineProps({ isSidebarCollapsed: Boolean });
 
@@ -170,7 +170,7 @@ const operator_items = ref([
   },
   {
     icon: "mdi-file-cog-outline",
-    title: "Ingest",
+    title: "Ingest Dataset",
     path: "/ingest",
   },
   {

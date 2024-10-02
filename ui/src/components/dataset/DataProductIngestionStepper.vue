@@ -113,41 +113,53 @@
               <va-select
                 class="mr-2"
                 v-model="searchSpace"
-                @update:modelValue="
-                  () => {
-                    fileListSearchText = '';
-                    setRetrievedFiles([]);
-                  }
-                "
+                @update:modelValue="resetSearch"
                 :options="FILESYSTEM_SEARCH_SPACES"
                 :text-by="'label'"
                 label="Search space"
                 :disabled="submitAttempted"
               />
 
-              <va-form-field v-model="selectedFile" v-slot="{ value: v }">
-                <!--                :rules="[-->
-                <!--                  (v) => {-->
-                <!--                    console.log('File validation:', v);-->
-                <!--                    console.dir(v, { depth: null });-->
-                <!--                    RESTRICTED_INGESTION_PATHS.includes(v.path);-->
-                <!--                  },-->
-                <!--                ]"-->
+              <div class="w-full">
+                <!--                <va-form-field-->
+                <!--                  v-model="selectedFile"-->
+                <!--                  v-slot="{ value: v }"-->
+                <!--                  :rules="[-->
+                <!--                    (v) => {-->
+                <!--                      console.log('File validation:', v);-->
+                <!--                      // console.log('v.ref:', v.ref);-->
+                <!--                      console.log('typeof v:', typeof v);-->
+                <!--                      // console.log('File path:', v.path);-->
+                <!--                      console.dir(v, { depth: null });-->
+                <!--                      return (-->
+                <!--                        typeof v !== 'object' ||-->
+                <!--                        'Selected file cannot be ingested as a dataset'-->
+                <!--                      );-->
+                <!--                    },-->
+                <!--                  ]"-->
+                <!--                >-->
                 <FileListAutoComplete
-                  class="w-full"
                   @files-retrieved="setRetrievedFiles"
                   :disabled="submitAttempted"
                   :base-path="searchSpaceBasePath"
                   @loading="loading = true"
                   @loaded="loading = false"
-                  @clear="setRetrievedFiles([])"
+                  @clear="resetSearch"
                   @open="
                     () => {
                       console.log('open emitted');
+                      isFileSearchAutocompleteOpen = true;
+                      selectedFile = null;
                       searchFiles();
                     }
                   "
-                  v-model:selected="v.ref"
+                  @close="
+                    () => {
+                      fileListSearchText = '';
+                      isFileSearchAutocompleteOpen = false;
+                    }
+                  "
+                  v-model:selected="selectedFile"
                   @update:selected="
                     (file) => {
                       console.log('@update:selected, Selected file:', file);
@@ -159,7 +171,9 @@
                   @update:search-text="searchFiles"
                   :options="fileList"
                 />
-              </va-form-field>
+                <!--                </va-form-field>-->
+              </div>
+              {{ submissionError }}
             </div>
 
             <!--            <FileList :selected-files="fileList" />-->
@@ -195,7 +209,7 @@
               class="flex-none"
               @click="onNextClick(nextStep)"
               :color="isLastStep ? 'success' : 'primary'"
-              :disabled="submissionSuccess"
+              :disabled="submissionError || submissionSuccess"
             >
               <!--            :disabled="!isFormValid()"-->
               {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
@@ -223,7 +237,57 @@ const steps = [
   { label: "Select Directory", icon: "material-symbols:folder" },
 ];
 
+const submissionError = ref("");
+const isFileSearchAutocompleteOpen = ref(false);
+
 const selectedFile = ref(null);
+
+const setSubmissionError = () => {
+  console.log("Selected file updated:", selectedFile.value);
+
+  if (isFileSearchAutocompleteOpen.value) {
+    submissionError.value = "";
+    return;
+  }
+
+  if (selectedFile.value === null) {
+    console.log("Selected file is null.");
+    submissionError.value = "A file must be selected for ingestion.";
+    return;
+  }
+  const restricted_dataset_paths = Object.values(
+    config.restricted_ingestion_dirs,
+  )
+    .map((paths) => paths.split(","))
+    .flat();
+  console.log("restricted_dataset_paths:", restricted_dataset_paths);
+  console.log("selectedFile.value.path:", selectedFile.value.path);
+  const origin_path_is_restricted = restricted_dataset_paths.some((path) => {
+    console.log("regex path:", path);
+    // const regex = new RegExp(path);
+    return selectedFile.value.path === path;
+    // ? true
+    // : regex.test(selectedFile.value.path);
+  });
+  // const restricted_paths = restricted_dataset_paths.map((paths) => {
+  //   const restricted_path_patterns = paths.split(',');
+  //
+  //   const regex = new RegExp(paths);
+  //   return regex.match(paths);
+  // });
+  // console.log('restricted paths:', restricted_paths);
+
+  if (origin_path_is_restricted) {
+    submissionError.value = "Selected file cannot be ingested as a dataset";
+  } else {
+    submissionError.value = "";
+  }
+};
+
+watch(selectedFile, () => {
+  setSubmissionError();
+});
+
 // const filePath = computed(() =>
 //   Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
 // );
@@ -273,10 +337,16 @@ const searchSpaceBasePath = computed({
   set: (value) => {
     console.log("set: () => searchSpace.value: ", value);
     searchSpace.value = value;
-    fileListSearchText.value = "";
-    setRetrievedFiles([]);
+    resetSearch();
   },
 });
+
+const resetSearch = () => {
+  selectedFile.value = null;
+  fileListSearchText.value = "";
+  setRetrievedFiles([]);
+  submissionError.value = "";
+};
 
 // const searchSpace = ref("");
 
@@ -379,6 +449,7 @@ const searchFiles = async () => {
 };
 
 const setRetrievedFiles = (files) => {
+  // selectedFile.value = null;
   fileList.value = files;
 };
 
@@ -436,6 +507,7 @@ const initiateIngestion = async () => {
 
 const onSubmit = () => {
   if (!selectedFile.value) {
+    setSubmissionError();
     return Promise.reject("No file selected for ingestion");
   }
   submitAttempted.value = true;
@@ -457,6 +529,7 @@ const onSubmit = () => {
         return initiateIngestion();
       })
       .catch((err) => {
+        toast.error("Failed to initiate ingestion");
         console.error(err);
         reject(err);
       });
