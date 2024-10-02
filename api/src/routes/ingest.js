@@ -6,13 +6,15 @@ const path = require('node:path');
 // const { exec } = require('child_process');
 
 const config = require('config');
-const _ = require('lodash');
+const _ = require('lodash/fp');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 
 const isPermittedTo = accessControl('fs');
 
 const router = express.Router();
+
+const BASE_DIRS = Object.values(config.filesystem.base_dir);
 
 function validatePath(req, res, next) {
   const query_path = req.query.path;
