@@ -131,10 +131,10 @@
     "mount_dir": {
       "scratch": "",
       "project": ""
-    },
-    "restricted_dirs": {
-      "scratch": "",
-      "project": ""
     }
+  },
+  "restricted_ingestion_dirs": {
+    "scratch": "",
+    "project": ""
   }
 }

@@ -188,23 +188,6 @@ const buildQueryObject = ({
   return query_obj;
 };
 
-// const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-// const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size',
-// 'size'];
-
-//   if (!field || !sortOrder) {
-//     return {};
-//   }
-//   if (nullable_order_by_fields.includes(field)) {
-//     return {
-//       [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-//     };
-//   }
-//   return {
-//     [field]: sortOrder,
-//   };
-// };
-
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -352,11 +335,34 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, file_type, ...data
+      workflow_id, state, file_type, origin_path, ...data
     } = req.body;
+
+    console.log('origin_path:', origin_path);
 
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('');
+
+    // if dataset's origin_path is a restricted for dataset creation, throw
+    // error
+    const restricted_dataset_paths = Object.values(config.restricted_ingestion_dirs).map((paths) => paths.split(',')).flat();
+    console.log('restricted_dataset_paths:', restricted_dataset_paths);
+    const origin_path_is_restricted = restricted_dataset_paths.some((path) => {
+      console.log('regex path:', path);
+      const regex = new RegExp(path);
+      return regex.test(origin_path);
+    });
+    // const restricted_paths = restricted_dataset_paths.map((paths) => {
+    //   const restricted_path_patterns = paths.split(',');
+    //
+    //   const regex = new RegExp(paths);
+    //   return regex.match(paths);
+    // });
+    // console.log('restricted paths:', restricted_paths);
+
+    if (origin_path_is_restricted) {
+      return next(createError.Forbidden());
+    }
 
     // create workflow association
     if (workflow_id) {

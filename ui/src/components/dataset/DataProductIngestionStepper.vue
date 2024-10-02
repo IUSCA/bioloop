@@ -237,7 +237,7 @@ const selectedFile = ref(null);
 
 // console.log(config.filesystem_search_spaces);
 
-const RESTRICTED_INGESTION_PATHS = config.restricted_ingestion_paths || [];
+const RESTRICTED_INGESTION_PATHS = config.restricted_ingestion_dirs;
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
 );
@@ -435,6 +435,9 @@ const initiateIngestion = async () => {
 };
 
 const onSubmit = () => {
+  if (!selectedFile.value) {
+    return Promise.reject("No file selected for ingestion");
+  }
   submitAttempted.value = true;
 
   return new Promise((resolve, reject) => {

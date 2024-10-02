@@ -8,7 +8,7 @@ const path = require('node:path');
 const { exec } = require('child_process');
 
 const config = require('config');
-const _ = require('lodash/fp');
+const _ = require('lodash');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 
@@ -21,7 +21,8 @@ const router = express.Router();
 // const FILESYSTEM_BASE_DIR_PROJECT = config.dataset_ingestion_source_mount;
 
 const BASE_DIRS = Object.values(config.filesystem.base_dir);
-const RESTRICTED_DIRS = Object.values(config.filesystem.restricted_dirs);
+console.log('BASE_DIRS: ', BASE_DIRS);
+const RESTRICTED_INGESTION_DIRS = config.filesystem.PROJECT_INGESTION_RESTRICTED_DIRS;
 
 function validatePath(req, res, next) {
   const query_path = req.query.path;
@@ -97,15 +98,15 @@ const get_mounted_search_dir = (req) => {
   console.log('base_dir: ', base_dir);
   const path_prefix = `${base_dir}/`;
 
-  const query_rel_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
+  const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
     + path_prefix.length);
-  console.log('query_rel_path: ', query_rel_path);
+  console.log('query_path: ', query_path);
 
   const mount_dir = get_mount_dir(base_dir);
 
   console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
 
-  const mounted_search_dir = path.join(mount_dir, query_rel_path);
+  const mounted_search_dir = path.join(mount_dir, query_path);
   console.log('mounted_search_dir: ', mounted_search_dir);
 
   return mounted_search_dir;
@@ -123,14 +124,10 @@ router.get(
     const { dirs_only, path: query_path } = req.query;
     // const query_path = req.query.path;
 
+    const base_dir = Object.values(config.filesystem.base_dir).filter((dir) => req.query.path.startsWith(dir))[0];
+    console.log('base_dir: ', base_dir);
     const mounted_search_dir = get_mounted_search_dir(req);
     console.log('mounted_search_dir: ', mounted_search_dir);
-
-    // if (mounted_search_dir !== FILESYSTEM_BASE_DIR_PROJECT) {
-    //   res.json()
-    //   res.json([]);
-    //   return
-    // }
 
     if (!fs.existsSync(mounted_search_dir)) {
       res.json([]);
@@ -160,17 +157,17 @@ router.get(
     //   {
     //     name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
     //     isDir: false,
-    //     path: `/${mounted_search_dir}/${req.query.path}/dir-1`,
+    //     path: `${req.query.path}`,
     //   },
     //   {
     //     name: 'Landing',
     //     isDir: true,
-    //     path: `/${mounted_search_dir}/${req.query.path}/dir-2`,
+    //     path: `${req.query.path}`,
     //   },
     //   {
     //     name: 'bioloop',
     //     isDir: true,
-    //     path: `/${mounted_search_dir}/${req.query.path}/dir-3`,
+    //     path: `${req.query.path}`,
     //   },
     // ];
 
