@@ -364,6 +364,9 @@ router.post(
       workflow_id, state, file_type, ...data
     } = req.body;
 
+    // remove whitespaces from dataset name
+    data.name = data.name.split(' ').join('');
+
     // create workflow association
     if (workflow_id) {
       data.workflows = {
