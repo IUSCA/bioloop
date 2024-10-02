@@ -105,7 +105,6 @@ const text = computed({
   },
 });
 
-// const text = ref("");
 const visible = ref(false);
 
 // when clicked outside, hide the results ul

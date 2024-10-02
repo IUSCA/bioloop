@@ -54,7 +54,7 @@ const searchText = computed({
   set: (value) => {
     // searchText.value = value;
     // const _searchText = +value.path;
-    
+
 
     console.log("emitting searchText,", value);
     console.dir(value, { depth: null });

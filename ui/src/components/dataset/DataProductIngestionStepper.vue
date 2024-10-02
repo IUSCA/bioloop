@@ -285,19 +285,13 @@ const submissionAlert = ref(); // For handling network errors before upload begi
 const submissionAlertColor = ref();
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
+const dataProductFiles = ref([]);
 const rawDataList = ref([]);
 const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
 
-// const fileListSearchText = computed({
-//   get: () => fileListSearchText.value.toLowerCase(),
-//   set: (value) => {
-//     fileListSearchText.value = value;
-//     // console.log("searchFiles: ", fileListSearchText.value);
-//   },
-// });
 const fileListSearchText = ref("");
 
 const searchFiles = async () => {

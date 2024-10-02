@@ -16,13 +16,6 @@ const isPermittedTo = accessControl('fs');
 
 const router = express.Router();
 
-// // todo - these must be sent with the request
-// const BASE_PATH = config.filesystem_scratch_source_dir;
-// const FILESYSTEM_BASE_DIR_PROJECT = config.dataset_ingestion_source_mount;
-
-const BASE_DIRS = Object.values(config.filesystem.base_dir);
-const RESTRICTED_DIRS = Object.values(config.filesystem.restricted_dirs);
-
 function validatePath(req, res, next) {
   const query_path = req.query.path;
   // const query_path = req_path.slice(req.path.indexOf(BASE_PATH) +
@@ -43,17 +36,6 @@ function validatePath(req, res, next) {
   console.log('filtered_base_dirs: ', filtered_base_dirs);
   // const search_dir = filtered_base_dirs[0];
   // console.log('search_dir: ', search_dir);
-
-  // TODO - separation of concerns b/w dirs restricted for search vs ingestion
-  //  - exclude directories from search based on paths glob
-  //  - if certain directories are returned, have a config on the UI and API
-  //    side to disallow ingestion on them.
-
-  // const is_search_dir_restricted = RESTRICTED_DIRS.some((dir) => p === dir);
-  // if (is_search_dir_restricted) {
-  //   res.status(403).send('Forbidden');
-  //   return;
-  // }
 
   if (filtered_base_dirs.length === 0) {
     res.status(403).send('Forbidden');
@@ -126,52 +108,52 @@ router.get(
     const mounted_search_dir = get_mounted_search_dir(req);
     console.log('mounted_search_dir: ', mounted_search_dir);
 
-    // if (mounted_search_dir !== FILESYSTEM_BASE_DIR_PROJECT) {
-    //   res.json()
-    //   res.json([]);
-    //   return
-    // }
+    if (mounted_search_dir !== FILESYSTEM_BASE_DIR_PROJECT) {
+      res.json()
+      res.json([]);
+      return
+    }
 
-    // if (!fs.existsSync(mounted_search_dir)) {
-    //   res.json([]);
-    //   return;
-    // }
-    //
-    // const files = fs.readdirSync(mounted_search_dir, { withFileTypes: true
-    // });
-    //
-    // let filesData = files.map((f) => {
-    //   console.dir(f, { depth: null });
-    //   const file = {
-    //     name: f.name,
-    //     isDir: f.isDirectory(),
-    //     path: path.join(query_path, f.name),
-    //   };
-    //
-    //   if (dirs_only) {
-    //     return file.isDir ? file : null;
-    //   }
-    //   return file;
-    // });
-    // filesData = _.compact(filesData);
+    if (!fs.existsSync(mounted_search_dir)) {
+      res.json([]);
+      return;
+    }
 
-    const filesData = [
-      {
-        name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
-        isDir: false,
-        path: `/${mounted_search_dir}/${req.query.path}/dir-1`,
-      },
-      {
-        name: 'Landing',
-        isDir: true,
-        path: `/${mounted_search_dir}/${req.query.path}/dir-2`,
-      },
-      {
-        name: 'bioloop',
-        isDir: true,
-        path: `/${mounted_search_dir}/${req.query.path}/dir-3`,
-      },
-    ];
+    const files = fs.readdirSync(mounted_search_dir, { withFileTypes: true
+    });
+
+    let filesData = files.map((f) => {
+      console.dir(f, { depth: null });
+      const file = {
+        name: f.name,
+        isDir: f.isDirectory(),
+        path: path.join(query_path, f.name),
+      };
+
+      if (dirs_only) {
+        return file.isDir ? file : null;
+      }
+      return file;
+    });
+    filesData = _.compact(filesData);
+
+    // const filesData = [
+    //   {
+    //     name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
+    //     isDir: false,
+    //     path: `/${mounted_search_dir}/${req.query.path}/dir-1`,
+    //   },
+    //   {
+    //     name: 'Landing',
+    //     isDir: true,
+    //     path: `/${mounted_search_dir}/${req.query.path}/dir-2`,
+    //   },
+    //   {
+    //     name: 'bioloop',
+    //     isDir: true,
+    //     path: `/${mounted_search_dir}/${req.query.path}/dir-3`,
+    //   },
+    // ];
 
     res.json(filesData);
   }),
@@ -215,7 +197,7 @@ router.get(
       console.log('before write');
       res.write(`data: ${JSON.stringify({ size })}\n\n`);
       res.write('event: done\ndata: \n\n');
-      console.log('before write');
+      console.log('after write');
 
       res.end();
     });

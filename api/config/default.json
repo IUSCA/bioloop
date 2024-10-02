@@ -104,7 +104,10 @@
       ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "dataset_types": [
+    "RAW_DATA",
+    "DATA_PRODUCT"
+  ],
   "e2e": {
     "users": {
       "admin": {
