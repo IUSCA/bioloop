@@ -68,6 +68,10 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
   },
+  dataset_ingestion_source_dir:
+    import.meta.env.VITE_DATASET_INGESTION_SOURCE_DIR || "/",
+  filesystem_search_spaces:
+    import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES || "/bioloop/user",
 };
 
 export default exports;

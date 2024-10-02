@@ -112,7 +112,7 @@
             <div class="flex">
               <va-select
                 v-model="searchSpace"
-                :options="config.filesystem_search_spaces"
+                :options="filesystemSearchSpaces"
                 label="Search space"
               />
 
@@ -204,6 +204,31 @@ const setSelectedFile = (file) => {
   fileList.value = [selectedFile.value];
   // fileList.value = [selectedFile.value];
 };
+
+console.log(config.filesystem_search_spaces);
+// const filesystemSearchSpaces =
+// ref(config.filesystem_search_spaces.split(","));
+const filesystemSearchSpaces = config.filesystem_search_spaces.split(",");
+
+console.log(
+  "fileSystemSpaces.value: ",
+  filesystemSearchSpaces,
+  filesystemSearchSpaces instanceof Array
+);
+// const searchSpace=computed(() => filesystemSearchSpaces.value[0])
+console.log(
+  "fileSystemSearchSpaces.value[0]: ",
+  filesystemSearchSpaces[0],
+  // typeof filesystemSearchSpaces.value[0],
+);
+// const searchSpace = computed({
+//   get: () => filesystemSearchSpaces[0],
+//   set: (value) => {
+//     filesystemSearchSpaces.value = [value];
+//   },
+// });
+const searchSpace = ref(filesystemSearchSpaces[0]);
+// const searchSpace = ref("");
 
 const fileListSearchText = ref("");
 const submitted = ref(false);
