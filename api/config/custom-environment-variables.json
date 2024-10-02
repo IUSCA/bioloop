@@ -40,5 +40,6 @@
     }
   },
   "dataset_ingestion_source_dir": "DATASET_INGESTION_SOURCE_DIR",
-  "dataset_ingestion_source_mount": "DATASET_INGESTION_SOURCE_MOUNT"
+  "dataset_ingestion_source_mount": "DATASET_INGESTION_SOURCE_MOUNT",
+  "filesystem_search_spaces": "FILESYSTEM_SEARCH_SPACES"
 }

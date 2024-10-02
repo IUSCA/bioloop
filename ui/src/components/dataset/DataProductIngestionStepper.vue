@@ -109,17 +109,27 @@
           <va-inner-loading :loading="loading">
             <!--              @update:selected-file="(file) => setSelectedFile(file)"-->
             <!--              v-model:selected-file="selectedFile"-->
-            <FileListAutoComplete
-              class="w-full"
-              @select="
-                (newFile) => {
-                  setSelectedFile(newFile);
-                }
-              "
-              @files-retrieved="setRetrievedFiles"
-              :disabled="submitAttempted"
-              :base-path="config.dataset_ingestion_source_dir"
-            />
+            <div class="flex">
+              <va-select
+                v-model="searchSpace"
+                :options="config.filesystem_search_spaces"
+                label="Search space"
+              />
+
+              <FileListAutoComplete
+                class="w-full"
+                @select="
+                  (newFile) => {
+                    setSelectedFile(newFile);
+                  }
+                "
+                @files-retrieved="setRetrievedFiles"
+                :disabled="submitAttempted"
+                :base-path="config.dataset_ingestion_source_dir"
+                @loading="loading = true"
+                @loaded="loading = false"
+              />
+            </div>
 
             <!--            <FileList :selected-files="fileList" />-->
             <!--            @update:search-text="-->
