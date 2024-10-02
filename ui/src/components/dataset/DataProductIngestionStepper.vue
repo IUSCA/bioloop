@@ -441,9 +441,7 @@ const onSubmit = () => {
     preIngestion()
       .then(async (res) => {
         datasetId.value = res.data.id;
-
-        resolve(initiateIngestion);
-
+        return datasetId.value;
         // if (ingestionInitiated) {
         //   console.log("Dataset registered successfully");
         //   resolve();
@@ -451,6 +449,9 @@ const onSubmit = () => {
         //   console.error("Unable to initiate ingestion");
         //   reject(new Error("Unable to register the dataset"));
         // }
+      })
+      .then(() => {
+        return initiateIngestion();
       })
       .catch((err) => {
         console.error(err);
