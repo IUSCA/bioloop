@@ -136,9 +136,9 @@
                 v-model:selected="selectedFile"
                 @update:selected="
                   (file) => {
-                    console.log('@update:selected, Selected file:', file);
+                    // console.log('@update:selected, Selected file:', file);
                     selectedFile = file;
-                    console.log('Selected file:', selectedFile);
+                    // console.log('Selected file:', selectedFile);
                   }
                 "
                 v-model:search-text="fileListSearchText"
@@ -208,7 +208,7 @@ const steps = [
   { label: "Select Directory", icon: "material-symbols:folder" },
 ];
 
-const filePath = ref("");
+// const filePath = ref("");
 
 const selectedFile = ref(null);
 // const filePath = computed(() =>
@@ -222,25 +222,12 @@ const selectedFile = ref(null);
 //   // fileList.value = [selectedFile.value];
 // };
 
-console.log(config.filesystem_search_spaces);
-
 const filesystemSearchSpaces = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
   // x: "y",
 );
 // const filesystemSearchSpaces = [];
 
-console.log(
-  "fileSystemSpaces.value: ",
-  filesystemSearchSpaces,
-  filesystemSearchSpaces instanceof Array,
-);
-// const searchSpace=computed(() => filesystemSearchSpaces.value[0])
-console.log(
-  "fileSystemSearchSpaces.value[0]: ",
-  filesystemSearchSpaces[0],
-  // typeof filesystemSearchSpaces.value[0],
-);
 // const searchSpace = computed({
 //   get: () => filesystemSearchSpaces[0],
 //   set: (value) => {
@@ -253,11 +240,9 @@ const searchSpace = ref(
     : "",
 );
 
-console.log("searchSpace.value: ", searchSpace.value);
 const searchSpaceBasePath = computed({
   get: () => searchSpace.value.base_path,
   set: (value) => {
-    console.log("set: () => searchSpace.value: ", value);
     searchSpace.value = value;
     fileListSearchText.value = "";
     setRetrievedFiles([]);
@@ -268,24 +253,17 @@ const searchSpaceBasePath = computed({
 
 // console.log("vute: ", import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES);
 
-const submitted = ref(false);
 const submissionSuccess = ref(false);
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
 const rawDataSelected = ref();
-const rawDataSelected_search = ref("");
 
 const fileList = ref([]);
 const datasetId = ref();
 const datasetName = ref("");
 const loading = ref(false);
-const filesInPath = ref([]);
-const statusChipColor = ref();
-const submissionAlert = ref(); // For handling network errors before upload begins
-const submissionAlertColor = ref();
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
-const dataProductFiles = ref([]);
 const rawDataList = ref([]);
 const step = ref(0);
 const isLastStep = computed(() => {
@@ -295,45 +273,19 @@ const isLastStep = computed(() => {
 const fileListSearchText = ref("");
 
 const searchFiles = async () => {
-  console.log("Searching for files matching:", fileListSearchText.value);
+  // console.log("Searching for files matching:", fileListSearchText.value);
 
   const _searchText =
     (searchSpace.value.base_path.endsWith("/")
       ? searchSpace.value.base_path
       : searchSpace.value.base_path + "/") + fileListSearchText.value;
-  console.log("_searchText: ", _searchText);
+  // console.log("_searchText: ", _searchText);
 
   if (_searchText.trim() === "") {
     return;
   }
 
   loading.value = true;
-  // emit("loading", loading.value);
-
-  // const search_space_base_dir = (config.filesystem_search_spaces || []).find(
-  //   (space) => space[searchSpace.value] === searchSpace.value,
-  // )?.base_path;
-  // const search_space_mount_dir = (config.filesystem_search_spaces || []).find(
-  //   (space) => {
-  //     console.log("space: ", space);
-  //     console.log("Object.keys(space)[0]: ", Object.keys(space)[0]);
-  //     console.log("searchSpace", searchSpace.value.base_path);
-  //     return Object.keys(space)[0] === searchSpace.value.base_path;
-  //   },
-  // );
-  // // const base_dir = search_space_mount_dir[searchSpace].base_path;
-  // // const mount_path = search_space_mount_dir[searchSpace].mount_path;
-  //
-  // // const base_dir = search_space_mount_dir[searchSpace.value].base_path;
-  // // const mount_dir = search_space_mount_dir[searchSpace.value].mount_path;
-  //
-  // console.log("search_space_mount_dir: ", search_space_mount_dir);
-  // // console.log("search_space_mount_path: ",
-  // // search_space_mount_dir.mount_path);
-  // console.log(
-  //   "search_space_mount_dir[searchSpace]",
-  //   search_space_mount_dir[searchSpace.value],
-  // );
 
   ingestionService
     .getPathFiles({

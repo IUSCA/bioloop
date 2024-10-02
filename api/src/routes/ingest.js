@@ -1,11 +1,9 @@
 const fs = require('fs');
-const fsPromises = require('fs').promises;
+// const fsPromises = require('fs').promises;
 const express = require('express');
-const {
-  query, param, body, checkSchema,
-} = require('express-validator');
+const { query } = require('express-validator');
 const path = require('node:path');
-const { exec } = require('child_process');
+// const { exec } = require('child_process');
 
 const config = require('config');
 const _ = require('lodash');
@@ -18,11 +16,7 @@ const router = express.Router();
 
 function validatePath(req, res, next) {
   const query_path = req.query.path;
-  // const query_path = req_path.slice(req.path.indexOf(BASE_PATH) +
-  // path_prefix.length + 1);
-
   let p = query_path ? path.normalize(query_path) : null;
-  console.log(`Normalized path: ${p}`);
 
   if (!p || !path.isAbsolute(p)) {
     res.status(400).send('Invalid path');
@@ -30,12 +24,8 @@ function validatePath(req, res, next) {
   }
 
   p = path.resolve(p);
-  console.log(`Resolved path: ${p}`);
 
   const filtered_base_dirs = BASE_DIRS.filter((dir) => p.startsWith(dir));
-  console.log('filtered_base_dirs: ', filtered_base_dirs);
-  // const search_dir = filtered_base_dirs[0];
-  // console.log('search_dir: ', search_dir);
 
   if (filtered_base_dirs.length === 0) {
     res.status(403).send('Forbidden');
@@ -48,22 +38,10 @@ function validatePath(req, res, next) {
   }
 
   req.query.path = p;
-  console.log('req.query.path: ', req.query.path);
-  console.log('next()');
   next();
 }
 
-// router.get(
-//   '/',
-//   (req, res) => {
-//     res.send('ok');
-//   },
-// );
-
 const get_mount_dir = (base_dir) => {
-  console.log('get_mount_dir(): base_dir:', base_dir);
-  console.log('config.filesystem.base_dir.scratch:', config.filesystem.base_dir.scratch);
-  console.log('config.filesystem.base_dir.project:', config.filesystem.base_dir.project);
   switch (base_dir) {
     case config.filesystem.base_dir.scratch:
       return config.filesystem.mount_dir.scratch;
@@ -76,24 +54,16 @@ const get_mount_dir = (base_dir) => {
 
 const get_mounted_search_dir = (req) => {
   const base_dir = Object.values(config.filesystem.base_dir).filter((dir) => req.query.path.startsWith(dir))[0];
-  console.log('base_dir: ', base_dir);
   const path_prefix = `${base_dir}/`;
 
   const query_rel_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
     + path_prefix.length);
-  console.log('query_rel_path: ', query_rel_path);
 
   const mount_dir = get_mount_dir(base_dir);
-
-  console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
-
   const mounted_search_dir = path.join(mount_dir, query_rel_path);
-  console.log('mounted_search_dir: ', mounted_search_dir);
-
   return mounted_search_dir;
 };
 
-// TODO - validatePath,
 router.get(
   '/',
   validatePath,
@@ -106,30 +76,20 @@ router.get(
     // const query_path = req.query.path;
 
     const mounted_search_dir = get_mounted_search_dir(req);
-    console.log('mounted_search_dir: ', mounted_search_dir);
-
-    if (mounted_search_dir !== FILESYSTEM_BASE_DIR_PROJECT) {
-      res.json()
-      res.json([]);
-      return
-    }
 
     if (!fs.existsSync(mounted_search_dir)) {
       res.json([]);
       return;
     }
 
-    const files = fs.readdirSync(mounted_search_dir, { withFileTypes: true
-    });
+    const files = fs.readdirSync(mounted_search_dir, { withFileTypes: true });
 
     let filesData = files.map((f) => {
-      console.dir(f, { depth: null });
       const file = {
         name: f.name,
         isDir: f.isDirectory(),
         path: path.join(query_path, f.name),
       };
-
       if (dirs_only) {
         return file.isDir ? file : null;
       }
@@ -159,49 +119,49 @@ router.get(
   }),
 );
 
-router.get(
-  '/dir-size',
-  validatePath,
-  asyncHandler(async (req, res) => {
-    const mounted_search_dir = get_mounted_search_dir(req);
-    console.log('mounted_search_dir: ', mounted_search_dir);
-
-    // check if the path is a directory
-    const stats = await fsPromises.stat(mounted_search_dir);
-    if (!stats.isDirectory()) {
-      console.log(mounted_search_dir, 'is not a directory');
-      res.status(400).send('Not a directory');
-    }
-
-    // As du -sb /path is a long running command,
-    // we will use SSE to keep connection alive and send the size when it's
-    // ready
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders(); // flush the headers to establish SSE with client
-
-    console.log('sse started');
-
-    // get the size of the directory by spawning a child process to run "du -sb
-    // /path"
-    exec(`du -s ${mounted_search_dir}`, (err, stdout) => {
-      if (err) {
-        console.error('du -s');
-        console.error(err);
-        res.status(500).end();
-        return;
-      }
-      const size = parseInt(stdout.split('\t')[0], 10);
-      // send "message" type event to the client
-      console.log('before write');
-      res.write(`data: ${JSON.stringify({ size })}\n\n`);
-      res.write('event: done\ndata: \n\n');
-      console.log('after write');
-
-      res.end();
-    });
-  }),
-);
+// router.get(
+//   '/dir-size',
+//   validatePath,
+//   asyncHandler(async (req, res) => {
+//     const mounted_search_dir = get_mounted_search_dir(req);
+//     console.log('mounted_search_dir: ', mounted_search_dir);
+//
+//     // check if the path is a directory
+//     const stats = await fsPromises.stat(mounted_search_dir);
+//     if (!stats.isDirectory()) {
+//       console.log(mounted_search_dir, 'is not a directory');
+//       res.status(400).send('Not a directory');
+//     }
+//
+//     // As du -sb /path is a long running command,
+//     // we will use SSE to keep connection alive and send the size when it's
+//     // ready
+//     res.setHeader('Content-Type', 'text/event-stream');
+//     res.setHeader('Cache-Control', 'no-cache');
+//     res.setHeader('Connection', 'keep-alive');
+//     res.flushHeaders(); // flush the headers to establish SSE with client
+//
+//     console.log('sse started');
+//
+//     // get the size of the directory by spawning a child process to run "du -sb
+//     // /path"
+//     exec(`du -s ${mounted_search_dir}`, (err, stdout) => {
+//       if (err) {
+//         console.error('du -s');
+//         console.error(err);
+//         res.status(500).end();
+//         return;
+//       }
+//       const size = parseInt(stdout.split('\t')[0], 10);
+//       // send "message" type event to the client
+//       console.log('before write');
+//       res.write(`data: ${JSON.stringify({ size })}\n\n`);
+//       res.write('event: done\ndata: \n\n');
+//       console.log('after write');
+//
+//       res.end();
+//     });
+//   }),
+// );
 
 module.exports = router;

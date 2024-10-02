@@ -6,7 +6,6 @@ const requestLogger = require('morgan');
 const compression = require('compression');
 const swaggerUi = require('swagger-ui-express');
 const config = require('config');
-const cors = require('cors');
 
 const indexRouter = require('./routes/index');
 const {
@@ -39,8 +38,6 @@ app.use(cookieParser());
 
 // compress all responses
 app.use(compression());
-
-app.use(cors());
 
 if (!['production', 'test'].includes(config.get('mode'))) {
   // mount swagger ui
