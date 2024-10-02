@@ -1,8 +1,8 @@
 import api from "./api";
 
 class IngestionService {
-  getPathFiles({ path }) {
-    return api.get("/ingest", { params: { path } });
+  getPathFiles({ path, dirs_only }) {
+    return api.get("/ingest", { params: { path, dirs_only } });
   }
 }
 
