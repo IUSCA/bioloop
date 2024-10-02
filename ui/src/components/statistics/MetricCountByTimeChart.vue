@@ -1,15 +1,11 @@
-<!-- 
-  This component serves as a time-based chart for 3 different metrics that are tracked in Bioloop
-  hourly - SDA space utilization, Slate-Scratch space utilization, and Slate-Scratch file quota 
-  utilization. The metric whose chart is to be rendered is controlled through a prop.
--->
 <template>
   <div class="flex flex-col gap-5">
     <div>
-      <LineChart
-        :chart-data="chartData"
-        :chart-options="chartOptions"
-      ></LineChart>
+      <v-chart
+        :option="chartOptions"
+        autoresize
+        style="height: 400px; width: 100%"
+      />
     </div>
     <div class="flex flex-row justify-center">
       <div class="max-w-max">
@@ -23,15 +19,32 @@
 
 <script setup>
 import config from "@/config";
-import { getDefaultChartColors } from "@/services/charts";
-import { absolute } from "@/services/datetime";
 import MetricsService from "@/services/metrics";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
-import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
-import dayjs from "dayjs";
-import "dayjs/locale/en";
-import _ from "lodash";
+import { LineChart } from "echarts/charts";
+import {
+  DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+} from "echarts/components";
+import { use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { computed, onMounted, ref } from "vue";
+import VChart from "vue-echarts";
+
+// Register ECharts components
+use([
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  DataZoomComponent,
+  CanvasRenderer,
+]);
 
 const props = defineProps({
   measurement: {
@@ -46,38 +59,105 @@ const props = defineProps({
   },
 });
 
-const isDark = useDark();
-
-const defaultChartColors = computed(() => {
-  return getDefaultChartColors(isDark.value);
-});
-
-const chartData = ref({});
-
-const chartOptions = computed(() => {
-  return getChartOptions({
-    colors: defaultChartColors.value,
-  });
-});
-
 const _being_used = ref(); // (unformatted) latest measure for given metric
 const _limit = ref(); // (unformatted) limit (max possible value) for given metric
 
-// Contains the formatted latest measure for given metric, and the title used to display said metric
+const chartData = ref([]);
+const chartOptions = computed(() => {
+  return {
+    title: {
+      text: chartTitleCallBack(),
+    },
+    tooltip: {
+      trigger: "axis",
+      formatter: (params) => {
+        if (!params || params.length === 0) return "No data available"; // Handle no data
+
+        // Access the timestamp from the first data point in `params`
+        const firstDataPoint = params[0].data;
+        const timestamp = firstDataPoint.value
+          ? firstDataPoint.value[0]
+          : firstDataPoint[0];
+
+        // Convert timestamp to a readable date
+        const formattedDate = new Date(timestamp).toLocaleString();
+        let tooltipText = `${formattedDate}<br/>`; // Display date & time
+
+        // Loop through each line's data point
+        params.forEach((param) => {
+          // console.log("Tooltip param object:", param); // Debugging log
+
+          // Check if `param` and `param.data` exist
+          if (!param || !param.data || !param.data.value) {
+            tooltipText += `${param.seriesName}: No data available<br/>`;
+            return; // Continue to the next iteration
+          }
+
+          // Extract the `usage` value from `param.data.value[1]`
+          const usageValue = param.data.value[1];
+          // console.log("Extracted usage value:", usageValue); // Debugging log
+
+          // Handle different measurement types
+          let formattedValue;
+          switch (props.measurement) {
+            case config.metric_measurements.SDA:
+            case config.metric_measurements.SLATE_SCRATCH:
+              formattedValue = formatBytes(usageValue); // Convert usage to human-readable format
+              break;
+            case config.metric_measurements.SLATE_SCRATCH_FILES:
+              formattedValue = usageValue; // Display raw usage value
+              break;
+            default:
+              console.log("Measurement type did not match expected values");
+              formattedValue = "Unknown measurement";
+          }
+          tooltipText += `${param.seriesName}: ${formattedValue}<br/>`;
+        });
+
+        return tooltipText;
+      },
+    },
+    xAxis: {
+      type: "time",
+    },
+    yAxis: {
+      type: "category",
+      data: getUniqueSortedYAxisValues(), // Provide the unique sorted y-axis values as categories
+      axisLabel: {
+        formatter: (value) => yAxisTicksCallback(value), // Use the yAxisTicksCallback function here
+      },
+    },
+    grid: {
+      left: "10%",
+      right: "10%",
+      bottom: "15%",
+      containLabel: true,
+    },
+    series: [
+      {
+        name: getDatasetLabel(),
+        type: "line",
+        data: chartData.value.map((item) => ({
+          value: [
+            item.timestamp,
+            getUniqueSortedYAxisValues().indexOf(item.usage), // Use the index in the y-axis categories
+          ],
+        })),
+      },
+    ],
+  };
+});
+
 const currentUsage = computed(() => {
   let metricTitle, metricCount;
   switch (props.measurement) {
     case config.metric_measurements.SDA:
       metricTitle = "Current SDA Space Usage";
-      metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(
-        _limit.value,
-      )}`;
+      metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(_limit.value)}`;
       break;
     case config.metric_measurements.SLATE_SCRATCH:
       metricTitle = "Current Slate-Scratch Space Usage";
-      metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(
-        _limit.value,
-      )}`;
+      metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(_limit.value)}`;
       break;
     case config.metric_measurements.SLATE_SCRATCH_FILES:
       metricTitle = "Current Slate-Scratch File Quota Usage";
@@ -90,59 +170,6 @@ const currentUsage = computed(() => {
     metricTitle,
     metricCount,
   };
-});
-
-const getChartOptions = ({ colors }) => ({
-  color: colors.FONT,
-  scales: {
-    x: {
-      ticks: {
-        color: colors.FONT,
-      },
-      type: "time", // https://www.chartjs.org/docs/latest/axes/cartesian/time.html#configuration-options
-      time: {
-        unit: "month",
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-    y: {
-      ticks: {
-        color: colors.FONT,
-        callback: yAxisTicksCallback,
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-  },
-  adapters: {
-    date: {
-      locale: dayjs().locale("en"),
-    },
-  },
-  plugins: {
-    tooltip: {
-      backgroundColor: colors.TOOLTIP.BACKGROUND,
-      titleColor: colors.TOOLTIP.FONT,
-      bodyColor: colors.TOOLTIP.FONT,
-      callbacks: {
-        title: (arr) => {
-          return absolute(arr[0].dataset.data[arr[0].dataIndex].x);
-        },
-        label: toolTipLabelCallback,
-      },
-    },
-    title: {
-      display: true,
-      text: chartTitleCallBack,
-      color: colors.FONT,
-      font: {
-        size: 18,
-      },
-    },
-  },
 });
 
 const chartTitleCallBack = () => {
@@ -158,13 +185,30 @@ const chartTitleCallBack = () => {
   }
 };
 
-const yAxisTicksCallback = (val) => {
-  // https://www.chartjs.org/docs/latest/axes/labelling.html#creating-custom-tick-formats
+const getUniqueSortedYAxisValues = () => {
+  // Extract 'usage' values from chartData and create a Set to get unique values
+  const uniqueValues = [...new Set(chartData.value.map((item) => item.usage))];
+  // console.log(uniqueValues);
 
-  // If the range of data-point values provided to chart.js is small enough (say starting
-  // value is 1, and ending value is 2), chart.js's default behavior is to try and
-  // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
-  // the axis's ticks. To avoid this, round values down
+  // Sort the values in ascending order
+  return uniqueValues.sort((a, b) => a - b);
+};
+
+const getDatasetLabel = () => {
+  switch (props.measurement) {
+    case config.metric_measurements.SDA:
+      return "SDA Usage";
+    case config.metric_measurements.SLATE_SCRATCH:
+      return "Slate-Scratch Usage";
+    case config.metric_measurements.SLATE_SCRATCH_FILES:
+      return "Slate-Scratch Files Usage";
+    default:
+      return "Unknown Measurement";
+  }
+};
+
+const yAxisTicksCallback = (val) => {
+  // If the range of data-point values provided to chart.js is small enough
   switch (props.measurement) {
     case config.metric_measurements.SDA:
     case config.metric_measurements.SLATE_SCRATCH:
@@ -176,85 +220,10 @@ const yAxisTicksCallback = (val) => {
   }
 };
 
-const toolTipLabelCallback = (context) => {
-  // https://www.chartjs.org/docs/latest/configuration/tooltip.html#label-callback
-  switch (props.measurement) {
-    case config.metric_measurements.SDA:
-    case config.metric_measurements.SLATE_SCRATCH:
-      return formatBytes(context.dataset.data[context.dataIndex].y);
-    case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return context.dataset.data[context.dataIndex].y;
-    default:
-      console.log("Provided measurement value did not match expected values");
-  }
-};
-
-const getDatasetLabel = () => {
-  switch (props.measurement) {
-    case config.metric_measurements.SDA:
-      return "SDA Space Utilized";
-    case config.metric_measurements.SLATE_SCRATCH:
-      return "Slate-Scratch Space Utilized";
-    case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return "Slate-Scratch File Count";
-    default:
-      console.log("Provided measurement value did not match expected values");
-  }
-};
-
-const getDatasetColorsByTheme = (isDark) => {
-  const DATA_POINT_COLORS = {
-    [config.metric_measurements.SDA]: {
-      light: "rgba(249, 205, 214, 1)",
-      dark: "rgba(94, 40, 55, 1)",
-    },
-    [config.metric_measurements.SLATE_SCRATCH]: {
-      light: "rgba(203, 189, 232, 1)",
-      dark: "rgba(71, 50, 123, 1)",
-    },
-    [config.metric_measurements.SLATE_SCRATCH_FILES]: {
-      light: "rgba(157, 205, 241, 1)",
-      dark: "rgba(26, 78, 114, 1)",
-    },
-  };
-
-  return {
-    backgroundColor: isDark
-      ? DATA_POINT_COLORS[props.measurement].dark
-      : DATA_POINT_COLORS[props.measurement].light,
-    borderColor: isDark
-      ? DATA_POINT_COLORS[props.measurement].dark
-      : DATA_POINT_COLORS[props.measurement].light,
-  };
-};
-
-const configureChartStatistics = (datasets) => {
-  const chartColors = getDatasetColorsByTheme(isDark.value);
-
-  let ret = {
-    datasets: datasets.map((dataset) => {
-      return {
-        data: dataset.map((log) => ({
-          x: log.timestamp,
-          y: log.usage,
-        })),
-        backgroundColor: chartColors.backgroundColor,
-        borderColor: chartColors.borderColor,
-      };
-    }),
-  };
-
-  return ret;
-};
-
 const retrieveAndConfigureChartData = () => {
   MetricsService.getSpaceUtilizationByTimeAndMeasurement(props.measurement)
     .then((res) => {
-      chartData.value = configureChartStatistics([res.data]);
-      chartData.value.datasets[0].label = getDatasetLabel();
-
-      // Get most recent metric measurement (which is the first element, given that retrieved
-      // metrics are ordered (descending) by timestamps).
+      chartData.value = res.data;
       _being_used.value = res.data.length > 0 ? res.data[0].usage : 0;
       _limit.value = res.data.length > 0 ? res.data[0].limit : 0;
     })
@@ -268,16 +237,6 @@ const retrieveAndConfigureChartData = () => {
       );
     });
 };
-
-watch(isDark, (newIsDark) => {
-  const colors = getDatasetColorsByTheme(newIsDark);
-  let updatedChartData = _.cloneDeep(chartData.value);
-  // update colors for metrics based on theme
-  updatedChartData.datasets[0].backgroundColor = colors.backgroundColor;
-  updatedChartData.datasets[0].borderColor = colors.borderColor;
-
-  chartData.value = updatedChartData;
-});
 
 onMounted(() => {
   retrieveAndConfigureChartData();
