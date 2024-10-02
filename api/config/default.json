@@ -118,6 +118,6 @@
       }
     }
   },
-  "slate_scratch_base_path": "",
-  "slate_scratch_mount_path": ""
+  "dataset_ingestion_source_dir": "",
+  "dataset_ingestion_source_mount": ""
 }
