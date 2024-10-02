@@ -30,7 +30,7 @@
           </va-button>
         </template>
 
-        <template #step-content-0>
+        <template #step-content-3>
           <va-form-field
             v-model="datasetName"
             :rules="[
@@ -103,15 +103,32 @@
           </div>
         </template>
 
-        <template #step-content-3>
-          <va-input class="w-full" v-model="filePath" />
+        <template #step-content-0>
+          <!--          <va-input class="w-full" v-model="filePath" />-->
 
-          <!--          <va-inner-loading :loading="loading">-->
-          <!--          <FileListAutoComplete-->
-          <!--            v-model:selected="selectedFile"-->
-          <!--            :required="true"-->
-          <!--          />-->
-          <!--          </va-inner-loading>-->
+          <va-inner-loading :loading="loading">
+            <!--              @update:selected-file="(file) => setSelectedFile(file)"-->
+            <!--              v-model:selected-file="selectedFile"-->
+            <FileListAutoComplete
+              class="w-full"
+              @update:selected-file="
+                (newFile) => {
+                  setSelectedFile(newFile);
+                }
+              "
+              @clear="fileList = []"
+              @update:search-text="
+                (updatedSearchText) => {
+                  setSelectedFile(null);
+                  fileListSearchText = updatedSearchText;
+                  searchFiles();
+                }
+              "
+              :options="fileList"
+            />
+            <!--            :required="true"-->
+            <!--              v-model:selected="selectedFile"-->
+          </va-inner-loading>
         </template>
 
         <!-- custom controls -->
@@ -149,25 +166,33 @@
 <script setup>
 import config from "@/config";
 import datasetService from "@/services/dataset";
+import ingestionService from "@/services/ingest";
 import toast from "@/services/toast";
 import { useForm } from "vuestic-ui";
 
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
 const steps = [
-  { label: "Name", icon: "material-symbols:description-outline" },
-  { label: "File Type", icon: "material-symbols:category" },
-  { label: "Source Raw Data", icon: "mdi:dna" },
+  // { label: "Name", icon: "material-symbols:description-outline" },
+  // { label: "File Type", icon: "material-symbols:category" },
+  // { label: "Source Raw Data", icon: "mdi:dna" },
   { label: "Select Directory", icon: "material-symbols:folder" },
 ];
 
 const filePath = ref("");
 
-const selectedFile = ref({});
+const selectedFile = ref(null);
 // const filePath = computed(() =>
 //   Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
 // );
 
+const setSelectedFile = (file) => {
+  console.log("Selected file:", file);
+  selectedFile.value = file;
+  // fileList.value = [selectedFile.value];
+};
+
+const fileListSearchText = ref("");
 const submitted = ref(false);
 const submissionSuccess = ref(false);
 const fileTypeSelected = ref();
@@ -175,6 +200,7 @@ const fileTypeList = ref([]);
 const rawDataSelected = ref();
 const rawDataSelected_search = ref("");
 
+const fileList = ref([]);
 const datasetId = ref();
 const datasetName = ref("");
 const loading = ref(false);
@@ -189,6 +215,30 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
+
+const searchFiles = async () => {
+  if (fileListSearchText.value.trim() === "") {
+    return;
+  }
+
+  loading.value = true;
+  ingestionService
+    .getPathFiles({
+      path: fileListSearchText.value,
+    })
+    .then((response) => {
+      fileList.value = response.data;
+      console.log("retrieved file list");
+      console.log(fileList.value);
+    })
+    .catch((error) => {
+      toast.error("Error fetching files from the provided path");
+      console.error(error);
+    })
+    .finally(() => {
+      loading.value = false;
+    });
+};
 
 const addDataset = (selectedDatasets) => {
   rawDataSelected.value = selectedDatasets;
@@ -225,7 +275,7 @@ const preIngestion = () => {
   return datasetService.create_dataset({
     name: datasetName.value,
     type: config.dataset.types.DATA_PRODUCT.key,
-    origin_path: filePath.value,
+    // origin_path: filePath.value,
   });
 };
 
