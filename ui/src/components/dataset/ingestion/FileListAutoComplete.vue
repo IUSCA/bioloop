@@ -1,50 +1,52 @@
 <template>
-  <va-select
-    v-model="searchText"
-    @update:model-value="
-      (newVal) => {
-        console.log('updating v-model');
-        emit('update:selectedFile', newVal);
-      }
-    "
-    v-model:search="autoCompleteSearchValue"
-    @update:search="
-      (newVal) => {
-        console.log('searchText updated:', newVal);
-        emit('update:searchText', newVal);
-      }
-    "
-    placeholder="Search directory"
-    :options="props.options"
-    autocomplete
-    clearable
-    :track-by="'path'"
-    :text-by="'path'"
+  <AutoComplete
+    placeholder="Search directories"
+    :data="fileList"
+    :async="true"
+    @update:search-text="searchFiles"
+    :display-by="'path'"
+    @clear="fileList = []"
+    @select="(file) => emit('select', file)"
   />
 </template>
 
 <script setup>
-const props = defineProps({
-  selectedFile: {
-    type: Object,
-  },
-  options: {
-    type: Array,
-    default: () => [],
-  },
-});
+import ingestionService from "@/services/ingest";
+import toast from "@/services/toast";
 
-// const selectedFile = computed({
-//   get: () => props.selectedFile,
-//   set: (newValue) => {
-//     emit("update:selectedFile", newValue);
-//   },
-// });
+const emit = defineEmits(["select", "filesRetrieved"]);
 
-const emit = defineEmits(["update:searchText", "update:selectedFile"]);
+const fileList = ref([]);
+const loading = ref(false);
 
-const searchText = ref("");
-const autoCompleteSearchValue = ref("");
+const searchFiles = async (searchText) => {
+  if (searchText.trim() === "") {
+    return;
+  }
+
+  loading.value = true;
+  ingestionService
+    .getPathFiles({
+      path: searchText,
+    })
+    .then((response) => {
+      fileList.value = response.data;
+      console.log("retrieved file list");
+      console.log(fileList.value);
+      emit("filesRetrieved", fileList.value);
+    })
+    .catch((error) => {
+      toast.error("Error fetching files from the provided path");
+      console.error(error);
+    })
+    .finally(() => {
+      loading.value = false;
+    });
+};
+
+// const selectFile = (file) => {
+//   console.log("Selected file:", file);
+// };
 </script>
 
 <style scoped></style>
