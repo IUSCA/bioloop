@@ -68,10 +68,26 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
   },
-  dataset_ingestion_source_dir:
-    import.meta.env.VITE_DATASET_INGESTION_SOURCE_DIR || "/",
-  filesystem_search_spaces:
-    import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES || "/bioloop/user",
+  filesystem_search_spaces: [
+    {
+      [import.meta.env.VITE_SCRATCH_BASE_DIR]: {
+        base_path:
+          import.meta.env.VITE_SCRATCH_BASE_DIR || "/bioloop/scratch/space",
+        mount_path:
+          import.meta.env.VITE_SCRATCH_MOUNT_DIR ||
+          "/bioloop/user/scratch/mount/dir",
+      },
+    },
+    {
+      [import.meta.env.VITE_PROJECT_BASE_DIR]: {
+        base_path:
+          import.meta.env.VITE_PROJECT_BASE_DIR || "/bioloop/project/space",
+        mount_path:
+          import.meta.env.VITE_PROJECT_MOUNT_DIR ||
+          "bioloop/user/project/mount/dir",
+      },
+    },
+  ],
 };
 
 export default exports;
