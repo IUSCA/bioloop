@@ -15,6 +15,8 @@
     "
     :disabled="disabled"
     :label="'Dataset Path'"
+    @open="emit('open')"
+    @close="emit('close')"
   >
     <va-badge
       v-if="props.basePath"
@@ -27,7 +29,6 @@
 </template>
 
 <script setup>
-
 const props = defineProps({
   disabled: { type: Boolean, default: false },
   basePath: { type: String },
@@ -44,6 +45,8 @@ const emit = defineEmits([
   "loading",
   "loaded",
   "clear",
+  "open",
+  "close",
 ]);
 
 const searchText = computed({
@@ -54,12 +57,6 @@ const searchText = computed({
   set: (value) => {
     // searchText.value = value;
     // const _searchText = +value.path;
-    
-
-    console.log("emitting searchText,", value);
-    console.dir(value, { depth: null });
-    console.log(typeof value);
-    console.log('----')
 
     emit("update:searchText", value);
   },
@@ -76,8 +73,14 @@ const onFileSelect = (file) => {
   console.log("onFileSelect:", file);
   console.dir(file, { depth: null });
   // const _searchText = basePath.value + value.path;
-  emit("update:searchText", file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length));
-  console.log("update:searchText", file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length))
+  emit(
+    "update:searchText",
+    file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length),
+  );
+  console.log(
+    "update:searchText",
+    file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length),
+  );
 
   // searchText.value = file.path.slice(
   //   file.path.indexOf(basePath.value) + basePath.value.length,

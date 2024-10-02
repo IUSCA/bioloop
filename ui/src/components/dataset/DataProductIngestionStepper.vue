@@ -35,7 +35,7 @@
             v-model="datasetName"
             :rules="[
               (v) => v.length >= 3 || 'Min length is 3 characters',
-              // (v) => v?.indexof(' ') === -1 || 'Name cannot contain spaces',
+              (v) => v?.indexOf(' ') === -1 || 'Name cannot contain spaces',
               validateNotExists,
             ]"
           >
@@ -119,32 +119,47 @@
                     setRetrievedFiles([]);
                   }
                 "
-                :options="filesystemSearchSpaces"
+                :options="FILESYSTEM_SEARCH_SPACES"
                 :text-by="'label'"
                 label="Search space"
                 :disabled="submitAttempted"
               />
 
-              <FileListAutoComplete
-                class="w-full"
-                @files-retrieved="setRetrievedFiles"
-                :disabled="submitAttempted"
-                :base-path="searchSpaceBasePath"
-                @loading="loading = true"
-                @loaded="loading = false"
-                @clear="setRetrievedFiles([])"
-                v-model:selected="selectedFile"
-                @update:selected="
-                  (file) => {
-                    console.log('@update:selected, Selected file:', file);
-                    selectedFile = file;
-                    console.log('Selected file:', selectedFile);
-                  }
-                "
-                v-model:search-text="fileListSearchText"
-                @update:search-text="searchFiles"
-                :options="fileList"
-              />
+              <va-form-field v-model="selectedFile" v-slot="{ value: v }">
+                <!--                :rules="[-->
+                <!--                  (v) => {-->
+                <!--                    console.log('File validation:', v);-->
+                <!--                    console.dir(v, { depth: null });-->
+                <!--                    RESTRICTED_INGESTION_PATHS.includes(v.path);-->
+                <!--                  },-->
+                <!--                ]"-->
+                <FileListAutoComplete
+                  class="w-full"
+                  @files-retrieved="setRetrievedFiles"
+                  :disabled="submitAttempted"
+                  :base-path="searchSpaceBasePath"
+                  @loading="loading = true"
+                  @loaded="loading = false"
+                  @clear="setRetrievedFiles([])"
+                  @open="
+                    () => {
+                      console.log('open emitted');
+                      searchFiles();
+                    }
+                  "
+                  v-model:selected="v.ref"
+                  @update:selected="
+                    (file) => {
+                      console.log('@update:selected, Selected file:', file);
+                      // selectedFile = file;
+                      console.log('Selected file:', selectedFile);
+                    }
+                  "
+                  v-model:search-text="fileListSearchText"
+                  @update:search-text="searchFiles"
+                  :options="fileList"
+                />
+              </va-form-field>
             </div>
 
             <!--            <FileList :selected-files="fileList" />-->
@@ -208,8 +223,6 @@ const steps = [
   { label: "Select Directory", icon: "material-symbols:folder" },
 ];
 
-const filePath = ref("");
-
 const selectedFile = ref(null);
 // const filePath = computed(() =>
 //   Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
@@ -222,34 +235,35 @@ const selectedFile = ref(null);
 //   // fileList.value = [selectedFile.value];
 // };
 
-console.log(config.filesystem_search_spaces);
+// console.log(config.filesystem_search_spaces);
 
-const filesystemSearchSpaces = (config.filesystem_search_spaces || []).map(
+const RESTRICTED_INGESTION_PATHS = config.restricted_ingestion_paths || [];
+const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
-  // x: "y",
 );
-// const filesystemSearchSpaces = [];
+// const FILESYSTEM_SEARCH_SPACES = [];
 
-console.log(
-  "fileSystemSpaces.value: ",
-  filesystemSearchSpaces,
-  filesystemSearchSpaces instanceof Array,
-);
-// const searchSpace=computed(() => filesystemSearchSpaces.value[0])
-console.log(
-  "fileSystemSearchSpaces.value[0]: ",
-  filesystemSearchSpaces[0],
-  // typeof filesystemSearchSpaces.value[0],
-);
+// console.log(
+//   "fileSystemSpaces.value: ",
+//   FILESYSTEM_SEARCH_SPACES,
+//   FILESYSTEM_SEARCH_SPACES instanceof Array,
+// );
+// const searchSpace=computed(() => FILESYSTEM_SEARCH_SPACES.value[0])
+// console.log(
+//   "fileSystemSearchSpaces.value[0]: ",
+//   FILESYSTEM_SEARCH_SPACES[0],
+//   // typeof FILESYSTEM_SEARCH_SPACES.value[0],
+// );
 // const searchSpace = computed({
-//   get: () => filesystemSearchSpaces[0],
+//   get: () => FILESYSTEM_SEARCH_SPACES[0],
 //   set: (value) => {
-//     filesystemSearchSpaces.value = [value];
+//     FILESYSTEM_SEARCH_SPACES.value = [value];
 //   },
 // });
 const searchSpace = ref(
-  filesystemSearchSpaces instanceof Array && filesystemSearchSpaces.length > 0
-    ? filesystemSearchSpaces[0]
+  FILESYSTEM_SEARCH_SPACES instanceof Array &&
+    FILESYSTEM_SEARCH_SPACES.length > 0
+    ? FILESYSTEM_SEARCH_SPACES[0]
     : "",
 );
 
@@ -309,9 +323,9 @@ const searchFiles = async () => {
       : searchSpace.value.base_path + "/") + fileListSearchText.value;
   console.log("_searchText: ", _searchText);
 
-  if (_searchText.trim() === "") {
-    return;
-  }
+  // if (fileListSearchText.value.trim() === "") {
+  //   return;
+  // }
 
   loading.value = true;
   // emit("loading", loading.value);

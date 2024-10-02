@@ -8,7 +8,7 @@ const path = require('node:path');
 const { exec } = require('child_process');
 
 const config = require('config');
-const _ = require('lodash');
+const _ = require('lodash/fp');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 
@@ -132,46 +132,47 @@ router.get(
     //   return
     // }
 
-    // if (!fs.existsSync(mounted_search_dir)) {
-    //   res.json([]);
-    //   return;
-    // }
-    //
-    // const files = fs.readdirSync(mounted_search_dir, { withFileTypes: true
-    // });
-    //
-    // let filesData = files.map((f) => {
-    //   console.dir(f, { depth: null });
-    //   const file = {
-    //     name: f.name,
-    //     isDir: f.isDirectory(),
-    //     path: path.join(query_path, f.name),
-    //   };
-    //
-    //   if (dirs_only) {
-    //     return file.isDir ? file : null;
-    //   }
-    //   return file;
-    // });
-    // filesData = _.compact(filesData);
+    if (!fs.existsSync(mounted_search_dir)) {
+      res.json([]);
+      return;
+    }
 
-    const filesData = [
-      {
-        name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
-        isDir: false,
-        path: `/${mounted_search_dir}/${req.query.path}/dir-1`,
-      },
-      {
-        name: 'Landing',
-        isDir: true,
-        path: `/${mounted_search_dir}/${req.query.path}/dir-2`,
-      },
-      {
-        name: 'bioloop',
-        isDir: true,
-        path: `/${mounted_search_dir}/${req.query.path}/dir-3`,
-      },
-    ];
+    const files = fs.readdirSync(mounted_search_dir, {
+      withFileTypes: true
+    });
+
+    let filesData = files.map((f) => {
+      console.dir(f, { depth: null });
+      const file = {
+        name: f.name,
+        isDir: f.isDirectory(),
+        path: path.join(query_path, f.name),
+      };
+
+      if (dirs_only) {
+        return file.isDir ? file : null;
+      }
+      return file;
+    });
+    filesData = _.compact(filesData);
+
+    // const filesData = [
+    //   {
+    //     name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
+    //     isDir: false,
+    //     path: `/${mounted_search_dir}/${req.query.path}/dir-1`,
+    //   },
+    //   {
+    //     name: 'Landing',
+    //     isDir: true,
+    //     path: `/${mounted_search_dir}/${req.query.path}/dir-2`,
+    //   },
+    //   {
+    //     name: 'bioloop',
+    //     isDir: true,
+    //     path: `/${mounted_search_dir}/${req.query.path}/dir-3`,
+    //   },
+    // ];
 
     res.json(filesData);
   }),

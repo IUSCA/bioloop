@@ -95,7 +95,13 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["select", "clear", "update:searchText"]);
+const emit = defineEmits([
+  "select",
+  "clear",
+  "update:searchText",
+  "open",
+  "close",
+]);
 
 const text = computed({
   get: () => props.searchText,
@@ -128,10 +134,12 @@ const search_results = computed(() => {
 
 function closeResults() {
   visible.value = false;
+  emit("close");
 }
 
 function openResults() {
   visible.value = true;
+  emit("open");
 }
 
 function handleSelect(item) {

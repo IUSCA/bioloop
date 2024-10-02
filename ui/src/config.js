@@ -124,6 +124,12 @@ const exports = {
       },
     },
   ],
+  restricted_ingestion_paths: [
+    import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+    "/scratch/space/restricted",
+    import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
+    "/project/space/restricted",
+  ],
 };
 
 export default exports;
