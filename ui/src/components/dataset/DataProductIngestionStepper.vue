@@ -120,24 +120,24 @@
                 :disabled="submitAttempted"
               />
 
-              <div class="w-full">
-                <!--                <va-form-field-->
-                <!--                  v-model="selectedFile"-->
-                <!--                  v-slot="{ value: v }"-->
-                <!--                  :rules="[-->
-                <!--                    (v) => {-->
-                <!--                      console.log('File validation:', v);-->
-                <!--                      // console.log('v.ref:', v.ref);-->
-                <!--                      console.log('typeof v:', typeof v);-->
-                <!--                      // console.log('File path:', v.path);-->
-                <!--                      console.dir(v, { depth: null });-->
-                <!--                      return (-->
-                <!--                        typeof v !== 'object' ||-->
-                <!--                        'Selected file cannot be ingested as a dataset'-->
-                <!--                      );-->
-                <!--                    },-->
-                <!--                  ]"-->
-                <!--                >-->
+              <!--                <va-form-field-->
+              <!--                  v-model="selectedFile"-->
+              <!--                  v-slot="{ value: v }"-->
+              <!--                  :rules="[-->
+              <!--                    (v) => {-->
+              <!--                      console.log('File validation:', v);-->
+              <!--                      // console.log('v.ref:', v.ref);-->
+              <!--                      console.log('typeof v:', typeof v);-->
+              <!--                      // console.log('File path:', v.path);-->
+              <!--                      console.dir(v, { depth: null });-->
+              <!--                      return (-->
+              <!--                        typeof v !== 'object' ||-->
+              <!--                        'Selected file cannot be ingested as a dataset'-->
+              <!--                      );-->
+              <!--                    },-->
+              <!--                  ]"-->
+              <!--                >-->
+              <div class="flex flex-col w-full">
                 <FileListAutoComplete
                   @files-retrieved="setRetrievedFiles"
                   :disabled="submitAttempted"
@@ -155,7 +155,9 @@
                   "
                   @close="
                     () => {
-                      fileListSearchText = '';
+                      if (!selectedFile) {
+                        fileListSearchText = '';
+                      }
                       isFileSearchAutocompleteOpen = false;
                     }
                   "
@@ -170,10 +172,12 @@
                   v-model:search-text="fileListSearchText"
                   @update:search-text="searchFiles"
                   :options="fileList"
+                  :error="!!submissionError"
                 />
                 <!--                </va-form-field>-->
+
+                <div class="text-xs va-text-danger">{{ submissionError }}</div>
               </div>
-              {{ submissionError }}
             </div>
 
             <!--            <FileList :selected-files="fileList" />-->
@@ -288,42 +292,10 @@ watch(selectedFile, () => {
   setSubmissionError();
 });
 
-// const filePath = computed(() =>
-//   Object.keys(selectedFile.value).length > 0 ? selectedFile.value.path : "",
-// );
-
-// const setSelectedFile = (file) => {
-//   console.log("Selected file:", file);
-//   selectedFile.value = file;
-//   fileList.value = [selectedFile.value];
-//   // fileList.value = [selectedFile.value];
-// };
-
-// console.log(config.filesystem_search_spaces);
-
-const RESTRICTED_INGESTION_PATHS = config.restricted_ingestion_dirs;
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
 );
-// const FILESYSTEM_SEARCH_SPACES = [];
 
-// console.log(
-//   "fileSystemSpaces.value: ",
-//   FILESYSTEM_SEARCH_SPACES,
-//   FILESYSTEM_SEARCH_SPACES instanceof Array,
-// );
-// const searchSpace=computed(() => FILESYSTEM_SEARCH_SPACES.value[0])
-// console.log(
-//   "fileSystemSearchSpaces.value[0]: ",
-//   FILESYSTEM_SEARCH_SPACES[0],
-//   // typeof FILESYSTEM_SEARCH_SPACES.value[0],
-// );
-// const searchSpace = computed({
-//   get: () => FILESYSTEM_SEARCH_SPACES[0],
-//   set: (value) => {
-//     FILESYSTEM_SEARCH_SPACES.value = [value];
-//   },
-// });
 const searchSpace = ref(
   FILESYSTEM_SEARCH_SPACES instanceof Array &&
     FILESYSTEM_SEARCH_SPACES.length > 0
@@ -348,25 +320,15 @@ const resetSearch = () => {
   submissionError.value = "";
 };
 
-// const searchSpace = ref("");
-
-// console.log("vute: ", import.meta.env.VITE_FILESYSTEM_SEARCH_SPACES);
-
-const submitted = ref(false);
 const submissionSuccess = ref(false);
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
 const rawDataSelected = ref();
-const rawDataSelected_search = ref("");
 
 const fileList = ref([]);
 const datasetId = ref();
 const datasetName = ref("");
 const loading = ref(false);
-const filesInPath = ref([]);
-const statusChipColor = ref();
-const submissionAlert = ref(); // For handling network errors before upload begins
-const submissionAlertColor = ref();
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
 const rawDataList = ref([]);
@@ -375,13 +337,6 @@ const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
 
-// const fileListSearchText = computed({
-//   get: () => fileListSearchText.value.toLowerCase(),
-//   set: (value) => {
-//     fileListSearchText.value = value;
-//     // console.log("searchFiles: ", fileListSearchText.value);
-//   },
-// });
 const fileListSearchText = ref("");
 
 const searchFiles = async () => {
@@ -393,37 +348,7 @@ const searchFiles = async () => {
       : searchSpace.value.base_path + "/") + fileListSearchText.value;
   console.log("_searchText: ", _searchText);
 
-  // if (fileListSearchText.value.trim() === "") {
-  //   return;
-  // }
-
   loading.value = true;
-  // emit("loading", loading.value);
-
-  // const search_space_base_dir = (config.filesystem_search_spaces || []).find(
-  //   (space) => space[searchSpace.value] === searchSpace.value,
-  // )?.base_path;
-  // const search_space_mount_dir = (config.filesystem_search_spaces || []).find(
-  //   (space) => {
-  //     console.log("space: ", space);
-  //     console.log("Object.keys(space)[0]: ", Object.keys(space)[0]);
-  //     console.log("searchSpace", searchSpace.value.base_path);
-  //     return Object.keys(space)[0] === searchSpace.value.base_path;
-  //   },
-  // );
-  // // const base_dir = search_space_mount_dir[searchSpace].base_path;
-  // // const mount_path = search_space_mount_dir[searchSpace].mount_path;
-  //
-  // // const base_dir = search_space_mount_dir[searchSpace.value].base_path;
-  // // const mount_dir = search_space_mount_dir[searchSpace.value].mount_path;
-  //
-  // console.log("search_space_mount_dir: ", search_space_mount_dir);
-  // // console.log("search_space_mount_path: ",
-  // // search_space_mount_dir.mount_path);
-  // console.log(
-  //   "search_space_mount_dir[searchSpace]",
-  //   search_space_mount_dir[searchSpace.value],
-  // );
 
   ingestionService
     .getPathFiles({
@@ -500,7 +425,7 @@ const initiateIngestion = async () => {
       workflow: "integrated",
     })
     .then(() => {
-      console.log("initiateIngestion successfully");
+      toast.success("Initiated dataset ingestion");
       submissionSuccess.value = true;
     });
 };
@@ -517,13 +442,6 @@ const onSubmit = () => {
       .then(async (res) => {
         datasetId.value = res.data.id;
         return datasetId.value;
-        // if (ingestionInitiated) {
-        //   console.log("Dataset registered successfully");
-        //   resolve();
-        // } else {
-        //   console.error("Unable to initiate ingestion");
-        //   reject(new Error("Unable to register the dataset"));
-        // }
       })
       .then(() => {
         return initiateIngestion();

@@ -15,6 +15,7 @@
     "
     :disabled="disabled"
     :label="'Dataset Path'"
+    :error="props.error"
     @open="emit('open')"
     @close="emit('close')"
   >
@@ -35,6 +36,7 @@ const props = defineProps({
   selected: { type: [String, Object] },
   searchText: { type: String, default: "" },
   options: { type: Array, default: () => [] },
+  error: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -64,7 +66,6 @@ const searchText = computed({
 
 const fileList = ref([]);
 const loading = ref(false);
-// const searchText = ref("");
 const basePath = computed(() => {
   return props.basePath.endsWith("/") ? props.basePath : props.basePath + "/";
 });
@@ -72,7 +73,6 @@ const basePath = computed(() => {
 const onFileSelect = (file) => {
   console.log("onFileSelect:", file);
   console.dir(file, { depth: null });
-  // const _searchText = basePath.value + value.path;
   emit(
     "update:searchText",
     file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length),
@@ -81,23 +81,9 @@ const onFileSelect = (file) => {
     "update:searchText",
     file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length),
   );
-
-  // searchText.value = file.path.slice(
-  //   file.path.indexOf(basePath.value) + basePath.value.length,
-  // );
   emit("update:selected", file);
 };
 
-// const setRetrievedFiles = (files) => {
-//   fileList.value = files;
-//   console.log("retrieved file list");
-//   console.log(fileList.value);
-//   emit("filesRetrieved", fileList.value);
-// };
-
-// const selectFile = (file) => {
-//   console.log("Selected file:", file);
-// };
 </script>
 
 <style lang="scss" scoped>
