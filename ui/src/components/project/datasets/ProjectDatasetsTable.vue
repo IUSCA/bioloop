@@ -318,7 +318,7 @@ const refresh_downloaded_dataset = () => {
 watch(props.triggerDatasetsRetrieval, () => {
   if (props.triggerDatasetsRetrieval) {
     currentPageIndex.value = 1;
-    fetch_project_datasets("watch triggerDatasetsRetrieval");
+    fetch_project_datasets();
   }
 });
 
@@ -346,7 +346,7 @@ watch([datasets_sort_query, datasets_filter_query], () => {
 watch(datasets_retrieval_query, (newQuery, oldQuery) => {
   // Retrieve updated results whenever retrieval criteria changes
   if (!_.isEqual(newQuery, oldQuery)) {
-    fetch_project_datasets("watch datasets_retrieval_query");
+    fetch_project_datasets();
   }
 });
 
@@ -397,7 +397,7 @@ const poll = useIntervalFn(
 
 // Once a project id has been obtained, fetch the associated datasets
 watch(projectIdRef, () => {
-  fetch_project_datasets("watch projectIdRef");
+  fetch_project_datasets();
 });
 
 watch(tracking, () => {

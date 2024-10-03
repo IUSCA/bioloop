@@ -25,9 +25,6 @@
 import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
-import { useNotificationStore } from "@/stores/notification";
-
-const notificationStore = useNotificationStore();
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
