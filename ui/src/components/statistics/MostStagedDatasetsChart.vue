@@ -127,7 +127,7 @@ const chartOptions = computed(() => ({
     type: "category",
     name: "Dataset Name",
     nameLocation: "middle",
-    nameGap: 130,
+    nameGap: 230,
     nameTextStyle: {
       fontSize: 16, // Increase font size
       fontWeight: "bold", // Make it bold

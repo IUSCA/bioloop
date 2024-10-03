@@ -116,7 +116,7 @@ const chartOptions = computed(() => ({
     type: "category",
     name: "Dataset Name",
     nameLocation: "middle",
-    nameGap: 160, // Increase the gap between axis title and axis line
+    nameGap: 230, // Increase the gap between axis title and axis line
     nameTextStyle: {
       fontSize: 16, // Increase font size
       fontWeight: "bold", // Make it bold

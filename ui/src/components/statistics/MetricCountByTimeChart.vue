@@ -188,7 +188,7 @@ const chartTitleCallBack = () => {
 const getUniqueSortedYAxisValues = () => {
   // Extract 'usage' values from chartData and create a Set to get unique values
   const uniqueValues = [...new Set(chartData.value.map((item) => item.usage))];
-  // console.log(uniqueValues);
+  console.log(uniqueValues);
 
   // Sort the values in ascending order
   return uniqueValues.sort((a, b) => a - b);
