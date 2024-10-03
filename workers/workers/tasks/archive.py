@@ -1,9 +1,7 @@
-import shutil
 from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
-import json
 
 import workers.api as api
 import workers.cmd as cmd
@@ -52,6 +50,7 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
+
     sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
     update_data = {
         'archive_path': sda_bundle_path,

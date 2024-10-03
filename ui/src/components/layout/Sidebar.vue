@@ -180,6 +180,12 @@ const operator_items = ref([
     test_id: "sidebar-data-products",
   },
   {
+    icon: "mdi-content-copy",
+    title: "Duplicate Datasets",
+    path: "/duplicateDatasets",
+    test_id: "sidebar-duplicate-datasets",
+  },
+  {
     icon: "mdi-table-account",
     title: "User Management",
     path: "/users",

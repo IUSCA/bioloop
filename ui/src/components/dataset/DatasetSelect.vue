@@ -142,12 +142,13 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
+  let query;
   if (props.datasetType) {
-    return {
+    query = {
       type: props.datasetType,
     };
   } else {
-    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+    query = lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
       ? {
           type: checkboxes.value.rawData
             ? "RAW_DATA"
@@ -157,6 +158,12 @@ const filterQuery = computed(() => {
         }
       : undefined;
   }
+  return {
+    ...query,
+    is_duplicate: false,
+    include_action_items: false,
+    include_states: false,
+  };
 });
 
 const batchingQuery = computed(() => {

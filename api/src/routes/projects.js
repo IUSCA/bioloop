@@ -13,6 +13,7 @@ const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
 const datasetService = require('../services/dataset');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -97,7 +98,8 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects.
-    // #swagger.description = admin and operator roles are allowed and user role is forbidden
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
     const { search, sort_order, sort_by } = req.query;
 
     const filters = search
@@ -226,6 +228,10 @@ router.get(
     query('skip').isInt().toInt().optional(),
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
+    query('include_duplicates').toBoolean().optional(),
+    query('include_deleted').toBoolean().optional(),
+    query('include_dataset_states').toBoolean().optional(),
+    query('include_dataset_duplications').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -269,6 +275,8 @@ router.get(
         mode: 'insensitive', // case-insensitive search
       } : undefined,
       is_staged: req.query.staged,
+      is_duplicate: req.query.include_duplicates || false,
+      is_deleted: req.query.include_deleted || false,
     });
 
     const filterQuery = { where: query_obj };
@@ -278,7 +286,10 @@ router.get(
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
+        ...(req.query.include_dataset_states && CONSTANTS.INCLUDE_STATES),
+        ...(req.query.include_dataset_duplications
+            && CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS),
         bundle: true,
         projects: {
           include: {
@@ -532,6 +543,19 @@ router.post(
       };
     }
 
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
+
     if ((dataset_ids || []).length > 0) {
       data.datasets = {
         create: dataset_ids.map((id) => ({
@@ -584,6 +608,19 @@ router.post(
     const target_dataset_ids = new Set(_.flatten(
       target_projects.map((p) => p.datasets.map((obj) => obj.dataset.id)),
     ));
+
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: target_dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
 
     // find dataset ids which are not already associated with the source project
     const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
@@ -744,6 +781,19 @@ router.patch(
 
     const add_dataset_ids = req.body.add_dataset_ids || [];
     const remove_dataset_ids = req.body.remove_dataset_ids || [];
+
+    const duplicate_datasets = await prisma.dataset.findMany({
+      where: {
+        id: {
+          in: add_dataset_ids,
+        },
+        is_duplicate: true,
+      },
+    });
+    if (duplicate_datasets.length > 0) {
+      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+          + `${duplicate_datasets.map((ds) => ds.id)}`));
+    }
 
     const create_data = add_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,

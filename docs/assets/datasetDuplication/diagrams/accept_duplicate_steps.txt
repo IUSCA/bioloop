@@ -1,0 +1,26 @@
+stateDiagram
+    accept_ui: (UI) Accept action performed
+    accept_api: (API) Accept
+    note left of accept_api
+        Acknowledge action item/notification
+        Create audit logs
+        Transfer entity associations of original dataset to duplicate dataset
+        Update state of original dataset to OVERWRITTEN
+    end note
+    acceptance_wf: 'accept_duplicate_dataset' workflow launched
+    archive_step: (worker) Archive
+    stage_step: (worker) Stage
+    validate_step: (worker) Validate
+    setup_download_step: (worker) Setup Download
+    note right of setup_download_step
+        Accepted dataset is ready for download.
+    end note
+
+    accept_ui --> accept_api
+    accept_api --> acceptance_wf
+    acceptance_wf --> archive_step
+    archive_step --> stage_step
+    stage_step --> validate_step
+    validate_step --> setup_download_step
+
+[![](https://mermaid.live/edit#pako:eNp1k01PwzAMhv-KlQsg8XHvAWkCDlwAsQGXSpWVuF20NKkSd9WE-O8kbbeWbeTU2q_t-LHzLaRTJDIRGJkeNVYe69xCPCglNVy0OoPLj-crWPT_0czaWWjIl87XpP6IsUnqxdtBPnitYwJDJYMrZ9LBmc5CbqzrDKmK9gU0U30XA3WpJSbLpH7wFC8L2CrNYFwVJtfKow0leSDLmneAITip-_iQijuvK23RgELGQAzsQLWNSTVob5zSfTQq2Xs4_4W_fj69f70_r1ZPL0MgWdV3PCeDVlLRlRlcjO0fihZjqgvonN-UxnVgsLVyfUDr5VpvqQhMTYSbVOQj38E8aOIFqxPFMhkH_xaNTp0cSz5H-5iFuG0K5TprHKqTdMkLj6N3NtjIZN1P9kz8fMSpb1IHdDpAnKPaQdwj2AfdHiM82kW4ubk_2aDpf-YeiZ8ZwiCaUT3l3EsmqMeQe_cfpmcwDznOIRHXoiZfo1bx4X2n0FzwmmrKRRY_FfpNLnL7E3XYslvurBQZ-5auRdsv5PhORVaiCfTzC1FYSzE)]

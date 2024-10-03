@@ -159,7 +159,19 @@
   />
 
   <!-- Download Modal -->
-  <DatasetDownloadModal ref="downloadModal" :dataset="datasetToDownload" />
+  <DatasetDownloadModal
+    ref="downloadModal"
+    :dataset="datasetToDownload"
+    @download-initiated="
+      () => {
+        // refresh dataset after initiating download, in case a
+        // user triggered the dataset being overwritten by a duplicate
+        // before the download begins. This way, the user knows
+        // that the dataset they are downloading will soon be outdated.
+        refresh_downloaded_dataset();
+      }
+    "
+  />
 
   <!-- Stage Modal -->
   <StageDatasetModal
@@ -196,14 +208,13 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["datasets-retrieved"]);
+const emit = defineEmits(["datasets-retrieved", "download-initiated"]);
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const pageSize = ref(10);
 const total_results = ref(0);
 
-const _triggerDatasetsRetrieval = toRef(() => props.triggerDatasetsRetrieval);
 const projectIdRef = toRef(() => props.project.id);
 const loading = ref(false);
 
@@ -219,7 +230,8 @@ const defaultSortOrder = ref("desc");
 
 const currentPageIndex = ref(1);
 
-// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch
+// of results
 const offset = computed(() => (currentPageIndex.value - 1) * pageSize.value);
 
 // Criterion based on search input
@@ -227,8 +239,8 @@ const search_query = computed(() => {
   return filterInput.value?.length > 0 && { name: filterInput.value };
 });
 
-// Aggregation of all filtering criteria. Used for retrieving results, and configuring number of
-// pages for pagination.
+// Aggregation of all filtering criteria. Used for retrieving results, and
+// configuring number of pages for pagination.
 const datasets_filter_query = computed(() => {
   return {
     ...filters_group_query.value,
@@ -236,22 +248,23 @@ const datasets_filter_query = computed(() => {
   };
 });
 
-// Criterion for sorting. Initial sorting order is based on the `updated_at` field. The sorting
-// criterion can be updated, which will trigger a call to retrieve the updated search results.
-// Note - va-data-table supports sorting by one column at a time, so this object should always have
-// a single key-value pair.
+// Criterion for sorting. Initial sorting order is based on the `updated_at`
+// field. The sorting criterion can be updated, which will trigger a call to
+// retrieve the updated search results. Note - va-data-table supports sorting by
+// one column at a time, so this object should always have a single key-value
+// pair.
 let datasets_sort_query = computed(() => {
   return { [defaultSortField.value]: defaultSortOrder.value };
 });
 
-// Criteria used to limit the number of results retrieved, and to define the offset starting at
-// which the next batch of results will be retrieved.
+// Criteria used to limit the number of results retrieved, and to define the
+// offset starting at which the next batch of results will be retrieved.
 const datasets_batching_query = computed(() => {
   return { offset: offset.value, limit: pageSize.value };
 });
 
-// Aggregate of all other criteria. Used for retrieving results according to the criteria
-// specified.
+// Aggregate of all other criteria. Used for retrieving results according to
+// the criteria specified.
 const datasets_retrieval_query = computed(() => {
   return {
     ...datasets_filter_query.value,
@@ -270,30 +283,47 @@ const fetch_project_datasets = () => {
   projectService
     .getDatasets({
       id: props.project.id,
-      params: datasets_retrieval_query.value,
+      params: {
+        include_duplicates: false,
+        include_deleted: false,
+        ...datasets_retrieval_query.value,
+        include_dataset_states: true,
+        include_dataset_duplications: true,
+      },
     })
     .then((res) => {
       projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
-      emit("datasets-retrieved");
     })
-    .catch(() => {
+    .catch((err) => {
+      console.log(err);
       toast.error("Failed to retrieve datasets");
     })
     .finally(() => {
       loading.value = false;
+      emit("datasets-retrieved");
     });
 };
 
-watch(_triggerDatasetsRetrieval, () => {
-  if (_triggerDatasetsRetrieval.value) {
+const refresh_downloaded_dataset = () => {
+  DatasetService.getById({
+    id: datasetToDownload.value.id,
+    include_states: true,
+    include_duplications: true,
+  }).then((res) => {
+    datasetToDownload.value = res.data;
+  });
+};
+
+watch(props.triggerDatasetsRetrieval, () => {
+  if (props.triggerDatasetsRetrieval) {
     currentPageIndex.value = 1;
     fetch_project_datasets();
   }
 });
 
-// _datasets is a mapping of dataset_ids to dataset objects. While polling one or more datasets,
-// this object is updated with latest dataset values.
+// _datasets is a mapping of dataset_ids to dataset objects. While polling one
+// or more datasets, this object is updated with latest dataset values.
 watch(
   projectDatasets,
   () => {
@@ -308,7 +338,8 @@ watch(
 );
 
 watch([datasets_sort_query, datasets_filter_query], () => {
-  // when sorting or filtering criteria changes, show results starting from the first page
+  // when sorting or filtering criteria changes, show results starting from the
+  // first page
   currentPageIndex.value = 1;
 });
 
@@ -381,14 +412,16 @@ watch(tracking, () => {
 });
 
 /**
- * Results are fetched in batches for efficient pagination, but the sorting criteria specified
- * needs to query all of persistent storage (as opposed to the current batch of retrieved results).
- * Hence, va-data-table's default sorting behavior (which would normally only sort the current
- * batch of results) is overridden (by providing each column with a `sortingFn` prop that does
- * nothing), and instead, network calls are made to run the sorting criteria across all of
- * persistent storage. The field to sort the results by and the sort order are captured in
- * va-data-table's 'sorted' event, and added to the sorting criteria maintained in the
- * `datasets_sort_query` reactive variable.
+ * Results are fetched in batches for efficient pagination,
+ * but the sorting criteria specified needs to query all of persistent storage
+ * (as opposed to the current batch of retrieved results). Hence,
+ * va-data-table's default sorting behavior (which would normally only sort the
+ * current batch of results) is overridden (by providing each column with a
+ * `sortingFn` prop that does nothing), and instead,
+ * network calls are made to run the sorting criteria across all of persistent
+ * storage. The field to sort the results by and the sort order are captured in
+ * va-data-table's 'sorted' event, and added to the sorting criteria maintained
+ * in the `datasets_sort_query` reactive variable.
  */
 const columns = computed(() => [
   {
@@ -445,7 +478,6 @@ const stageModal = ref(null);
 const datasetToStage = ref({});
 
 function openModalToStageProject(dataset) {
-  // console.log("openModalToStageProject", dataset);
   datasetToStage.value = dataset;
   stageModal.value.show();
 }

@@ -19,6 +19,7 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
+    query('by_active_action_items').optional().toBoolean(),
     query('active').optional().toBoolean(),
     query('status').optional().escape().notEmpty(),
   ]),
@@ -36,6 +37,13 @@ router.get(
     const notifications = await prisma.notification.findMany({
       where: {
         ...filterQuery,
+      },
+      include: {
+        dataset_action_items: {
+          include: {
+            dataset: true,
+          },
+        },
       },
       orderBy: {
         created_at: 'desc',

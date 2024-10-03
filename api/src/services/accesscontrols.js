@@ -43,17 +43,17 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
-    auth: {
-      'create:any': ['*'],
-    },
-    fs: {
-      'read:any': ['*'],
-    },
     notifications: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
+    },
+    auth: {
+      'create:any': ['*'],
+    },
+    fs: {
+      'read:any': ['*'],
     },
   },
 
@@ -119,7 +119,6 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     notifications: {
-      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],

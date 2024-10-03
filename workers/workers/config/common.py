@@ -35,6 +35,10 @@ config = {
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
     },
+    'dataset_types': {
+        'RAW_DATA': 'RAW_DATA',
+        'DATA_PRODUCT': 'DATA_PRODUCT',
+    },
     'paths': {
         'scratch': '/path/to/scratch',
         'RAW_DATA': {
@@ -116,6 +120,50 @@ config = {
                 }
             ]
         },
+        'accept_duplicate_dataset': {
+            'steps': [
+                {
+                    'name': 'archive',
+                    'task': 'archive_dataset'
+                },
+                {
+                    'name': 'stage',
+                    'task': 'stage_dataset'
+                },
+                {
+                    'name': 'validate',
+                    'task': 'validate_dataset'
+                },
+                {
+                    'name': 'setup_download',
+                    'task': 'setup_dataset_download'
+                }
+            ]
+        },
+        'reject_duplicate_dataset': {
+            'steps': [
+                {
+                    'name': 'purge resources',
+                    'task': 'purge_duplicate_dataset_resources'
+                },
+            ]
+        },
+        'handle_duplicate_dataset': {
+            'steps': [
+                {
+                    'name': 'await stability',
+                    'task': 'await_stability'
+                },
+                {
+                    'name': 'inspect',
+                    'task': 'inspect_dataset'
+                },
+                {
+                    'name': 'compare duplicate datasets',
+                    'task': 'compare_duplicate_datasets'
+                },
+            ]
+        },
         'integrated': {
             'steps': [
                 {
@@ -193,6 +241,21 @@ config = {
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
+    },
+    'DATASET_STATES': {
+        'REGISTERED': 'REGISTERED',
+        'READY': 'READY',
+        'INSPECTED': 'INSPECTED',
+        'ARCHIVED': 'ARCHIVED',
+        'FETCHED': 'FETCHED',
+        'STAGED': 'STAGED',
+        'DUPLICATE_REGISTERED': 'DUPLICATE_REGISTERED',
+        'DUPLICATE_READY': 'DUPLICATE_READY',
+        'DUPLICATE_REJECTED': 'DUPLICATE_REJECTED',
+        'OVERWRITTEN': 'OVERWRITTEN',
+        'DELETED': 'DELETED',
+    },
+    'ACTION_ITEM_TYPES': {
+        'DUPLICATE_DATASET_INGESTION': 'DUPLICATE_DATASET_INGESTION',
     }
-
 }
