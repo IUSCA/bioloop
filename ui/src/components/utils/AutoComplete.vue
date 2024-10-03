@@ -2,7 +2,7 @@
 <template>
   <div class="relative">
     <OnClickOutside @trigger="closeResults">
-      <va-form ref="autocompleteFormRef">
+      <va-form>
         <va-input
           outline
           clearable
@@ -14,6 +14,7 @@
           @click="openResults"
           :disabled="props.disabled"
           :label="props.label"
+          :error="props.error"
         >
           <template #prependInner><slot></slot></template>
         </va-input>
@@ -89,6 +90,10 @@ const props = defineProps({
     default: false,
   },
   disabled: {
+    type: Boolean,
+    default: false,
+  },
+  error: {
     type: Boolean,
     default: false,
   },
