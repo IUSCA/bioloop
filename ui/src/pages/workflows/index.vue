@@ -129,26 +129,10 @@
       <!-- filters container -->
       <div class="flex flex-row gap-2">
         <!-- Search filters     -->
-        <div class="flex w-full gap-2">
-          <va-select
-            class="flex-none"
-            v-model="selected_search_option"
-            :options="search_by_options"
-            label="Search by"
-            inner-label
-            :auto-select-first-option="true"
-            :track-by="(option) => option.key"
-            :text-by="(option) => option.label"
-          >
-          </va-select>
-
-          <va-input
-            class="flex-1"
-            v-model="search_text"
-            :placeholder="`Search by ${selected_search_option?.label}`"
-            clearable
-          />
-        </div>
+        <WorkflowSearchInputFilter
+          v-model:search_by="query_params.search_by"
+          v-model:search_text="query_params.search_text"
+        />
       </div>
 
       <!-- loading -->
@@ -202,6 +186,7 @@
 
 <script setup>
 import useQueryPersistence from "@/composables/useQueryPersistence";
+import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import { useNavStore } from "@/stores/nav";
 import { useBreakpoint } from "vuestic-ui";
@@ -222,6 +207,8 @@ const default_query_params = () => ({
   auto_refresh: 10,
   failure_mode: null,
   page_size: 10,
+  search_by: "dataset_name",
+  search_text: "",
 });
 const auto_refresh_options = [
   { valueBy: 0, text: "Off" },
@@ -236,22 +223,6 @@ const loading = ref(false);
 const workflows = ref([]);
 const total_results = ref(0);
 const status_counts = ref({});
-const search_text = ref("");
-const search_by_options = ref([
-  {
-    label: "Dataset ID",
-    key: "dataset_id",
-  },
-  {
-    label: "Workflow ID",
-    key: "workflow_id",
-  },
-  {
-    label: "Dataset Name",
-    key: "dataset_name",
-  },
-]);
-const selected_search_option = ref(search_by_options.value[0]);
 
 const query_params = ref(default_query_params());
 useQueryPersistence({
@@ -291,24 +262,27 @@ const filtered_workflows = computed(() => {
   });
 });
 
+const getData = useThrottleFn(function () {
+  loading.value = true;
+
+  // remove loading when all promises are settled
+  return Promise.allSettled([getWorkflows(), getCounts()]).then(() => {
+    loading.value = false;
+  });
+}, 500);
+
 // fetch data when query params change
 watch(
   [
     () => query_params.value.status,
     () => query_params.value.page,
     () => query_params.value.page_size,
-    () => search_text.value,
-    () => selected_search_option.value.key,
   ],
   (newVals, oldVals) => {
     // set page to 1 when page_size changes
-    if (newVals[2] !== oldVals[2]) {
+    // on initial load, page_size is null, do not reset page
+    if (oldVals[2] != null && newVals[2] !== oldVals[2]) {
       query_params.value.page = 1;
-    }
-
-    if (newVals[4] !== oldVals[4]) {
-      search_text.value = "";
-      query_params.value.search_by = newVals[4];
     }
 
     getData().then(() => {
@@ -319,6 +293,20 @@ watch(
   {
     deep: true,
     immediate: true,
+  },
+);
+
+// fetch data when search text changes
+// reset page to 1
+watchDebounced(
+  () => query_params.value.search_text,
+  () => {
+    query_params.value.page = 1;
+    getData();
+  },
+  {
+    immediate: false,
+    debounce: 500,
   },
 );
 
@@ -351,19 +339,14 @@ watch(
 );
 
 function getWorkflows() {
-  const search_by_key =
-    query_params.value.search_by === "workflow_id"
-      ? "workflow_ids"
-      : query_params.value.search_by;
-
   const search_params = {
     last_task_run: true,
     status: query_params.value.status,
     skip: skip.value,
     limit: query_params.value.page_size,
     initiator: true,
-    ...(search_text.value.trim() !== "" && {
-      [search_by_key]: search_text.value,
+    ...(query_params.value.search_text.trim() !== "" && {
+      [query_params.value.search_by]: query_params.value.search_text,
     }),
   };
 
@@ -381,6 +364,7 @@ function getWorkflows() {
         res.data?.metadata?.total || workflows.value?.length || 0;
     })
     .catch((err) => {
+      toast.error("Failed to fetch workflows");
       console.error(err);
     });
 }
@@ -394,17 +378,6 @@ function getCounts() {
     .catch((err) => {
       console.error(err);
     });
-}
-
-function getData() {
-  loading.value = true;
-
-  return new Promise((resolve) => {
-    Promise.allSettled([getWorkflows(), getCounts()]).then((results) => {
-      loading.value = false;
-      resolve(results);
-    });
-  });
 }
 
 function reset_query_params() {
