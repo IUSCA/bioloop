@@ -70,17 +70,6 @@ module.exports = {
       max_restarts: 3,
     },
     {
-      name: "populate_bundles",
-      script: "python",
-      args: "-u -m workers.scripts.populate_bundles",
-      watch: false,
-      interpreter: "",
-      log_date_format: "YYYY-MM-DD HH:mm Z",
-      error_file: "../logs/workers/populate_bundles.err",
-      out_file: "../logs/workers/populate_bundles.log",
-      autorestart: false,
-    },
-    {
       name: "fix_archived_dataset_absolute_path",
       script: "python",
       args: "-u -m workers.scripts.fix_archived_dataset_absolute_path --app_id='bioloop-dev.sca.iu.edu ",
