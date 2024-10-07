@@ -6,7 +6,7 @@ class WorkflowService {
   getAll({
     last_task_run = false,
     prev_task_runs = false,
-    workflow_ids = null,
+    workflow_id = null,
     dataset_id = null,
     dataset_name = null,
     status = null,
@@ -19,7 +19,7 @@ class WorkflowService {
         last_task_run,
         prev_task_runs,
         status,
-        workflow_id: workflow_ids,
+        workflow_id: workflow_id,
         skip,
         limit,
         dataset_id,
