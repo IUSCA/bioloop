@@ -1,7 +1,8 @@
 /*
   Warnings:
 
-  - A unique constraint covering the columns `[name,type,is_deleted,is_duplicate,version]` on the table `dataset` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[name,type,is_deleted,is_duplicate]` on the table `dataset` will be added. If there are existing duplicate values, this will fail.
+  - Added the required column `type` to the `notification` table without a default value. This is not possible if the table is not empty.
 
 */
 -- CreateEnum
@@ -9,9 +10,6 @@ CREATE TYPE "DATASET_ACTION_ITEM_TYPE" AS ENUM ('DUPLICATE_DATASET_INGESTION');
 
 -- CreateEnum
 CREATE TYPE "DATASET_ACTION_ITEM_STATUS" AS ENUM ('CREATED', 'ACKNOWLEDGED', 'RESOLVED');
-
--- CreateEnum
-CREATE TYPE "NOTIFICATION_STATUS" AS ENUM ('CREATED', 'ACKNOWLEDGED', 'RESOLVED');
 
 -- CreateEnum
 CREATE TYPE "NOTIFICATION_TYPE" AS ENUM ('INCOMING_DUPLICATE_DATASET');
@@ -23,8 +21,10 @@ CREATE TYPE "DATASET_INGESTION_CHECK_TYPE" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MAT
 DROP INDEX "dataset_name_type_is_deleted_key";
 
 -- AlterTable
-ALTER TABLE "dataset" ADD COLUMN     "is_duplicate" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "version" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "dataset" ADD COLUMN     "is_duplicate" BOOLEAN NOT NULL DEFAULT false;
+
+-- AlterTable
+ALTER TABLE "notification" ADD COLUMN     "type" "NOTIFICATION_TYPE" NOT NULL;
 
 -- CreateTable
 CREATE TABLE "dataset_duplication" (
@@ -33,20 +33,6 @@ CREATE TABLE "dataset_duplication" (
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "dataset_duplication_pkey" PRIMARY KEY ("duplicate_dataset_id")
-);
-
--- CreateTable
-CREATE TABLE "notification" (
-    "id" SERIAL NOT NULL,
-    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "type" "NOTIFICATION_TYPE" NOT NULL,
-    "label" TEXT NOT NULL,
-    "text" TEXT,
-    "active" BOOLEAN NOT NULL DEFAULT true,
-    "status" "NOTIFICATION_STATUS" NOT NULL DEFAULT 'CREATED',
-    "acknowledged_by_id" INTEGER,
-
-    CONSTRAINT "notification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -80,16 +66,13 @@ CREATE TABLE "dataset_ingestion_check" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "dataset_name_type_is_deleted_is_duplicate_version_key" ON "dataset"("name", "type", "is_deleted", "is_duplicate", "version");
+CREATE UNIQUE INDEX "dataset_name_type_is_deleted_is_duplicate_key" ON "dataset"("name", "type", "is_deleted", "is_duplicate");
 
 -- AddForeignKey
 ALTER TABLE "dataset_duplication" ADD CONSTRAINT "dataset_duplication_duplicate_dataset_id_fkey" FOREIGN KEY ("duplicate_dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "dataset_duplication" ADD CONSTRAINT "dataset_duplication_original_dataset_id_fkey" FOREIGN KEY ("original_dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "notification" ADD CONSTRAINT "notification_acknowledged_by_id_fkey" FOREIGN KEY ("acknowledged_by_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "notification"("id") ON DELETE CASCADE ON UPDATE CASCADE;
