@@ -70,8 +70,6 @@ import * as datetime from "@/services/datetime";
 import config from "@/config";
 
 const props = defineProps({ dataset: Object });
-
-console.log("in dataset info");
 </script>
 
 <style lang="scss" scoped>

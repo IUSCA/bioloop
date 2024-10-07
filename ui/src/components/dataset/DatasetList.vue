@@ -90,6 +90,7 @@
 
       <template #cell(actions)="{ rowData }">
         <div class="flex gap-2">
+          <!-- Archive Button -->
           <va-popover
             message="Archive"
             placement="left"
@@ -109,7 +110,7 @@
           </va-popover>
 
           <!-- Delete button -->
-          <!-- Only show when the dataset has no workflows, is not archived, and has no workflows -->
+          <!-- Only show when the dataset has no workflows, is not archived, and is not deleted -->
           <va-popover
             message="Delete entry"
             placement="left"
@@ -240,7 +241,8 @@ const delete_modal = ref({
 const searchModal = ref(null);
 const total_results = ref(0);
 
-// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch
+// of results
 const offset = computed(() => (query.value.page - 1) * query.value.page_size);
 
 useQueryPersistence({
@@ -340,6 +342,9 @@ function fetch_items() {
       ? { name: params.value.inclusive_query }
       : null),
     type: props.dtype,
+    is_duplicate: false,
+    include_action_items: false,
+    include_states: false,
   };
   if (filters_api.created_at) {
     filters_api.created_at_start = filters_api.created_at.start;
@@ -382,7 +387,8 @@ watch(
     if (query.value.page === 1) {
       fetch_items();
     } else {
-      // change current page to 1 triggers the watch on currPage and fetches items
+      // change current page to 1 triggers the watch on currPage and fetches
+      // items
       query.value.page = 1;
     }
   },
@@ -404,7 +410,8 @@ const handleMainFilter = useDebounceFn((value) => {
 }, 300);
 
 function handleSearch() {
-  // clear the search input when search is emitted either from filter chips or from search modal
+  // clear the search input when search is emitted either from filter chips or
+  // from search modal
   params.value.inclusive_query = null;
   if (query.value.page === 1) {
     fetch_items();

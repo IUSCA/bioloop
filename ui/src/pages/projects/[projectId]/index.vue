@@ -74,7 +74,11 @@
           <va-card-content>
             <ProjectDatasetsTable
               :project="project"
-              @datasets-retrieved="triggerDatasetsRetrieval = false"
+              @datasets-retrieved="
+                () => {
+                  triggerDatasetsRetrieval = false;
+                }
+              "
               :trigger-datasets-retrieval="triggerDatasetsRetrieval"
             />
           </va-card-content>
@@ -180,6 +184,10 @@ const projectId = computed(() => {
   return project.value?.id || toRef(() => props.projectId).value;
 });
 const data_loading = ref(false);
+
+// triggerDatasetsRetrieval can be set to true in situations where the list of
+// datasets associated with this project needs to be refreshed without
+// refreshing the page.
 const triggerDatasetsRetrieval = ref(false);
 
 watch(project, () => {
@@ -251,7 +259,8 @@ function handleEditUpdate() {
         path: `/projects/${new_slug}`,
       });
     } else {
-      // update prop which will trigger re-fetching of project-dataset associations
+      // update prop which will trigger re-fetching of project-dataset
+      // associations
       triggerDatasetsRetrieval.value = true;
     }
   });

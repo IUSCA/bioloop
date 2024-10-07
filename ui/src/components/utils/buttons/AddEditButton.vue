@@ -7,6 +7,7 @@
     preset="primary"
     :border-color="color"
     class="shadow"
+    :disabled="props.disabled"
   >
     {{ text }}
   </va-button>
@@ -18,6 +19,7 @@
     :border-color="color"
     class="shadow"
     v-else
+    :disabled="props.disabled"
   />
 </template>
 
@@ -28,6 +30,10 @@ const props = defineProps({
     default: false,
   },
   showText: {
+    type: Boolean,
+    default: false,
+  },
+  disabled: {
     type: Boolean,
     default: false,
   },

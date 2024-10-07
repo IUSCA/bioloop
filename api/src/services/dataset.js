@@ -5,49 +5,14 @@ const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
 
+const dayjs = require('dayjs');
 const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
+const CONSTANTS = require('../constants');
 
 const prisma = new PrismaClient();
-
-const INCLUDE_STATES = {
-  states: {
-    select: {
-      state: true,
-      timestamp: true,
-      metadata: true,
-    },
-    orderBy: {
-      timestamp: 'desc',
-    },
-  },
-};
-
-const INCLUDE_WORKFLOWS = {
-  workflows: {
-    select: {
-      id: true,
-    },
-  },
-};
-
-const INCLUDE_AUDIT_LOGS = {
-  audit_logs: {
-    include: {
-      user: {
-        include: {
-          user_role: {
-            select: { roles: true },
-          },
-        },
-      },
-    },
-  },
-};
-
-const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
@@ -70,7 +35,7 @@ async function create_workflow(dataset, wf_name, initiator_id) {
   // check if a workflow with the same name is not already running / pending on this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
-    .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
+    .filter((_wf) => !CONSTANTS.DONE_STATUSES.includes(_wf.status));
 
   assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
 
@@ -99,6 +64,8 @@ async function soft_delete(dataset, user_id) {
     await create_workflow(dataset, 'delete', user_id);
   } else {
     // if not archived, mark the dataset as deleted
+    // console.log('soft_delete');
+
     await prisma.dataset.update({
       data: {
         is_deleted: true,
@@ -131,21 +98,12 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   bundle = false,
+  include_duplications = false,
+  include_action_items = false,
   includeProjects = false,
   initiator = false,
 }) {
-  const fileSelect = files ? {
-    select: {
-      path: true,
-      md5: true,
-    },
-    where: {
-      NOT: {
-        filetype: 'directory',
-      },
-    },
-  } : false;
-
+  const fileSelect = files ? CONSTANTS.INCLUDE_FILES : false;
   const workflow_include = initiator ? {
     workflows: {
       select: {
@@ -153,19 +111,25 @@ async function get_dataset({
         initiator: true,
       },
     },
-  } : INCLUDE_WORKFLOWS;
+  } : CONSTANTS.INCLUDE_WORKFLOWS;
 
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
       files: fileSelect,
       ...workflow_include,
-      ...INCLUDE_AUDIT_LOGS,
-      ...INCLUDE_STATES,
+      ...CONSTANTS.INCLUDE_AUDIT_LOGS,
+      ...CONSTANTS.INCLUDE_STATES,
       bundle,
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
+      ...(include_duplications && CONSTANTS.INCLUDE_DUPLICATIONS),
+      action_items: include_action_items ? {
+        where: {
+          active: true,
+        },
+      } : undefined,
     },
   });
   const dataset_workflows = dataset.workflows;
@@ -501,12 +465,62 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+/**
+ * Get workflows for a dataset
+ * @param dataset_id    the id of the dataset whose workflows are to be retrieved
+ * @param last_run_only if true, only the last run of each workflow is returned
+ * @param statuses      an array of workflow statuses to filter retrieved workflows by
+ * @returns Array of workflows
+ */
+async function get_workflows({ dataset_id, last_run_only = false, statuses = [] }) {
+  const workflows = await prisma.workflow.findMany({
+    where: {
+      dataset_id,
+    },
+  });
+  const workflow_ids = workflows.map((w) => w.id);
+
+  const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
+
+  const retrievedWorkflowsResponses = await Promise.all(wf_promises);
+  let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
+
+  if (last_run_only) {
+    // filter last successful runs
+    let workflow_names = retrievedWorkflows
+      .map((wf) => wf.name);
+    // get distinct workflow names
+    workflow_names = workflow_names
+      .filter((name, i) => workflow_names.indexOf(name) === i);
+
+    // group workflows by distinct workflow names
+    const workflows_grouped_by_name = workflow_names.map((wf_name) => (
+      retrievedWorkflows
+        .filter((wf) => wf.name === wf_name)));
+
+    retrievedWorkflows = workflows_grouped_by_name.map(
+      (wfs_grouped_by_name) => wfs_grouped_by_name.reduce(
+        (acc, curr) => (dayjs(acc.updated_at).diff(dayjs(curr.updated_at)) >= 0 ? acc : curr),
+      ),
+    );
+
+    // console.log('retrievedWorkflows');
+    // console.dir(retrievedWorkflows, { depth: null });
+  }
+
+  // filter by status
+  if ((statuses || []).length > 0) {
+    retrievedWorkflows = retrievedWorkflows.filter((wf) => statuses.includes(wf.status));
+  }
+
+  return retrievedWorkflows;
+}
+
 module.exports = {
   soft_delete,
-  INCLUDE_STATES,
-  INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
+  get_workflows,
   create_filetree,
   has_dataset_assoc,
   files_ls,

@@ -42,6 +42,12 @@
       <va-navbar-item class="flex items-center" v-if="auth.user?.username">
         <HeaderUserDropdown />
       </va-navbar-item>
+      <va-navbar-item
+        class="flex items-center"
+        v-if="areNotificationsEnabled && (auth.canAdmin || auth.canOperate)"
+      >
+        <NotificationDropdown />
+      </va-navbar-item>
       <va-navbar-item class="flex items-center">
         <ThemeToggle />
       </va-navbar-item>
@@ -50,12 +56,21 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 
+const { hasRole } = auth;
+
 const props = defineProps({
   isSidebarCollapsed: Boolean,
+});
+
+const areNotificationsEnabled = computed(() => {
+  return config.featureFlags.notifications.enabledForRoles.some((role) =>
+    hasRole(role),
+  );
 });
 </script>
 

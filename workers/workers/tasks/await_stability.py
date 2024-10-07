@@ -52,6 +52,7 @@ def update_progress(celery_task, mod_time, delta):
 
 def await_stability(celery_task, dataset_id, wait_seconds: int = None, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
+
     origin_path = Path(dataset['origin_path'])
 
     while origin_path.exists():
