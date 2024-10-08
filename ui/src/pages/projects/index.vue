@@ -5,6 +5,7 @@
       <!-- search bar -->
       <div class="flex-1">
         <va-input
+          data-testid="project-search-input"
           v-model="params.search"
           @update:model-value="debouncedUpdate"
           class="w-full"
@@ -41,6 +42,7 @@
     <!-- projects table -->
     <div>
       <va-data-table
+        data-testid="project-search-results"
         :items="row_items"
         :columns="columns"
         v-model:sort-by="params.sortBy"

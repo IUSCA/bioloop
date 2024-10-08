@@ -72,6 +72,12 @@ module.exports = {
         dependencies: ['user_login'],
         testMatch: '/view/authenticated/user_*_view.spec.js',
       },
+      {
+        name: 'projects',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/projects/*.spec.js',
+      },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
       //
