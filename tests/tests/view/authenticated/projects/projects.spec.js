@@ -2,6 +2,8 @@ const { test, expect } = require('@playwright/test');
 
 const PROJECT_URL_PREFIX = '/projects';
 const SEARCH_TEXT = 'sense';
+let defaultSearchURL;
+let searchURL;
 
 const searchProjects = async ({ requestContext, token, searchText }) => requestContext.get('/api/projects/all', {
   params: {
@@ -16,8 +18,20 @@ const searchProjects = async ({ requestContext, token, searchText }) => requestC
   },
 });
 
+const addRequestListener = (page) => {
+  // todo - searchURL is only set when a search request is made, not when the
+  //   page initially loads
+  page.on('request', (request) => {
+    searchURL = request.url();
+    console.log(`Search request: ${request.url()}`);
+  });
+};
+
 test('project search', async ({ page }) => {
   await page.goto('/projects');
+
+  // addRequestListener(page);
+
   // retrieve token for making API calls
   const token = await page.evaluate(() => localStorage.getItem('token'));
   // create context for making API calls
@@ -45,7 +59,7 @@ test('project search', async ({ page }) => {
   let searchResults = await searchResultsLocator;
   await expect(searchResults).toHaveCount(Number(apiDefaultSearchResults.metadata.count));
 
-  // todo - compare UI's search URL with expected search URL
+  // todo - compare UI's search URL with the expected search URL
   await page.getByTestId('project-search-input').fill(SEARCH_TEXT);
   await page.waitForTimeout(100);
 
