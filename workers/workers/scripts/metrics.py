@@ -43,8 +43,11 @@ def main():
         ]
     )
 
-    # print(metrics)
+    #print(metrics)
     api.send_metrics(metrics)
+
+
+    #config['metric_threshold_percentages']['SDA']
 
 
 if __name__ == '__main__':

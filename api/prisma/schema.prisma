@@ -191,6 +191,19 @@ model notification {
   status             NOTIFICATION_STATUS @default(CREATED)
   acknowledged_by_id Int?
   acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
+  metrics_action_item metrics_action_item?  
+}
+
+model metrics_action_item {
+  id              Int                      @id @default(autoincrement())
+  created_at      DateTime                 @default(now()) @db.Timestamp(6)
+  title           String?
+  text            String?
+  redirect_url    String?
+  type            METRICS_ACTION_ITEM_TYPE
+  status          NOTIFICATION_STATUS      @default(CREATED)
+  notification_id Int                      @unique
+  notification    notification             @relation(fields: [notification_id], references: [id], onDelete: Cascade)
 }
 
 model contact {
@@ -327,6 +340,10 @@ model about {
 enum access_type {
   BROWSER
   SLATE_SCRATCH
+}
+
+enum METRICS_ACTION_ITEM_TYPE {
+  METRICS_THRESHOLD_EXCEEDED
 }
 
 enum NOTIFICATION_STATUS {
