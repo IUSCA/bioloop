@@ -20,9 +20,11 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    return api.get("/datasets", {
-      params,
-    });
+    // return api.get("/datasets", {
+    //   params,
+    // });
+
+    return api.post("/datasets/search", params );
   }
 
   getById({
@@ -98,6 +100,31 @@ class DatasetService {
     return api.get(`/datasets/download/${dataset_id}`, {
       params: { file_id },
     });
+  }
+
+  get_metadata( id ) {
+    return api.get(`/datasets/${id}/metadata`);
+  }
+
+  get_all_metadata(type) {
+    console.log("getting metadata for", type);
+    return api.get(`/datasets/metadata/all/${type}`);
+  }
+
+  save_metadata({ id, metadata }) {
+    return api.patch(`/datasets/${id}/metadata`, {metadata});
+  }
+
+  get_metadata_fields() {
+    return api.get("/datasets/metadata/fields");
+  }
+
+  create_metadata_field({ name, description }) {
+    return api.post("/datasets/metadata/fields", { name, description });
+  }
+
+  update_metadata_field({ id, name, description, datatype, visible, locked }) {
+    return api.patch(`/datasets/metadata/fields/${id}`, { id, name, description, datatype, visible, locked });
   }
 
   search_files({

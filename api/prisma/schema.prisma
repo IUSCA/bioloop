@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+
 model dataset {
   id               Int                 @id @default(autoincrement())
   name             String
@@ -35,10 +37,41 @@ model dataset {
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
   bundle           bundle?
-
+  keywords         keyword_value[]
   @@unique([name, type, is_deleted])
 }
 
+model keyword {
+  id            Int              @id @default(autoincrement())
+  name          String
+  description   String?
+  visible       Boolean          @default(true)
+  locked       Boolean           @default(false)
+  created_at    DateTime         @default(now()) @db.Timestamp(6)
+  datatype      KeyValueDataType
+  keyword_value keyword_value[]
+}
+
+enum KeyValueDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  JSON
+}
+
+model keyword_value {
+  id         Int       @id @default(autoincrement())
+  value      String
+  keyword_id Int
+  keyword    keyword   @relation(fields: [keyword_id], references: [id])
+  dataset_id Int
+  dataset    dataset   @relation(fields: [dataset_id], references: [id])
+  deleted_at DateTime? // For soft delete
+  
+  @@unique([keyword_id, dataset_id])
+  // add indexes for faster search based on access patterns
+}
 model dataset_hierarchy {
   source_id       Int
   derived_id      Int

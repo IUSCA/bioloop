@@ -11,24 +11,18 @@
               <!-- <span class="text-xl">Info</span> -->
               <div class="flex flex-nowrap items-center w-full">
                 <span class="flex-auto text-lg"> Info </span>
-                <AddEditButton
-                  class="flex-none"
-                  edit
-                  @click="openModalToEditDataset"
-                />
+                <AddEditButton class="flex-none" edit @click="openModalToEditDataset" />
               </div>
             </va-card-title>
             <va-card-content>
               <DatasetInfo :dataset="dataset"></DatasetInfo>
+              <VaCollapse v-model="showMetadata" class="min-w-96" header="Metadata" icon="sell">
+                <DatasetMetadata v-if="showMetadata" :id="dataset.id" />
+              </VaCollapse>
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
-                <va-button
-                  :disabled="!dataset.num_files"
-                  preset="primary"
-                  @click="navigateToFileBrowser"
-                  class="flex-none"
-                  :color="isDark ? '#9171f8' : '#A020F0'"
-                >
+                <va-button :disabled="!dataset.num_files" preset="primary" @click="navigateToFileBrowser"
+                  class="flex-none" :color="isDark ? '#9171f8' : '#A020F0'">
                   <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
                 </va-button>
 
@@ -46,10 +40,7 @@
         </div>
 
         <!-- Status Cards -->
-        <div
-          class="flex flex-col gap-3 justify-start"
-          v-if="!dataset.is_deleted"
-        >
+        <div class="flex flex-col gap-3 justify-start" v-if="!dataset.is_deleted">
           <!-- Archived -->
           <div class="flex-none" v-if="dataset.archive_path">
             <va-card>
@@ -87,11 +78,8 @@
               <va-card-content>
                 <div class="flex flex-nowrap gap-3 justify-start items-center">
                   <i-mdi-chart-box-outline class="flex-initial text-2xl" />
-                  <a
-                    class="va-link flex items-center justify-start"
-                    target="_blank"
-                    :href="`/api/reports/${dataset?.metadata?.report_id}/multiqc_report.html`"
-                  >
+                  <a class="va-link flex items-center justify-start" target="_blank"
+                    :href="`/api/reports/${dataset?.metadata?.report_id}/multiqc_report.html`">
                     <span class="flex-initial">MultiQC Report</span>
                     <i-mdi-open-in-new class="flex-initial inline-block pl-1" />
                   </a>
@@ -109,41 +97,23 @@
               <va-card-content>
                 <div class="flex justify-start gap-3">
                   <!-- Stage Action Button-->
-                  <va-button
-                    v-if="dataset.archive_path"
-                    :disabled="is_stage_pending || dataset.is_staged"
-                    color="primary"
-                    border-color="primary"
-                    preset="secondary"
-                    class="flex-initial"
-                    @click="stage_modal = true"
-                  >
+                  <va-button v-if="dataset.archive_path" :disabled="is_stage_pending || dataset.is_staged"
+                    color="primary" border-color="primary" preset="secondary" class="flex-initial"
+                    @click="stage_modal = true">
                     <i-mdi-cloud-sync class="pr-2 text-2xl" />
                     Stage Files
                   </va-button>
 
                   <!-- Delete Action Button-->
-                  <va-button
-                    v-if="config.enable_delete_archive && dataset.archive_path"
-                    :disabled="is_delete_pending"
-                    color="danger"
-                    border-color="danger"
-                    class="flex-initial"
-                    preset="secondary"
-                    @click="delete_archive_modal.visible = true"
-                  >
+                  <va-button v-if="config.enable_delete_archive && dataset.archive_path" :disabled="is_delete_pending"
+                    color="danger" border-color="danger" class="flex-initial" preset="secondary"
+                    @click="delete_archive_modal.visible = true">
                     <i-mdi-delete class="pr-2 text-2xl" />
                     Delete Archive
                   </va-button>
 
-                  <va-button
-                    :disabled="!dataset.is_staged"
-                    class="flex-initial"
-                    color="primary"
-                    border-color="primary"
-                    preset="secondary"
-                    @click="openModalToDownloadDataset"
-                  >
+                  <va-button :disabled="!dataset.is_staged" class="flex-initial" color="primary" border-color="primary"
+                    preset="secondary" @click="openModalToDownloadDataset">
                     <i-mdi-download class="pr-2 text-2xl" /> Download
                   </va-button>
                 </div>
@@ -152,27 +122,14 @@
           </div>
 
           <!-- stage modal -->
-          <va-modal
-            :model-value="stage_modal"
-            message="Stage all files in this dataset from the SDA?"
-            size="small"
-            @ok="stage_dataset"
-            @cancel="stage_modal = !stage_modal"
-          />
+          <va-modal :model-value="stage_modal" message="Stage all files in this dataset from the SDA?" size="small"
+            @ok="stage_dataset" @cancel="stage_modal = !stage_modal" />
 
           <!-- delete archive modal -->
-          <va-modal
-            :model-value="delete_archive_modal.visible"
-            blur
-            hide-default-actions
-          >
+          <va-modal :model-value="delete_archive_modal.visible" blur hide-default-actions>
             <template #header>
               <div class="flex justify-end">
-                <va-button
-                  class="flex-initial"
-                  preset="plain"
-                  @click="delete_archive_modal.visible = false"
-                >
+                <va-button class="flex-initial" preset="plain" @click="delete_archive_modal.visible = false">
                   <i-mdi-close />
                 </va-button>
               </div>
@@ -194,10 +151,7 @@
                     <i-mdi-harddisk class="text-xl" />
                     <span> {{ formatBytes(dataset.du_size) }} </span>
                   </div>
-                  <div
-                    class="flex items-center gap-1"
-                    v-if="config.enabledFeatures.genomeBrowser"
-                  >
+                  <div class="flex items-center gap-1" v-if="config.enabledFeatures.genomeBrowser">
                     <i-mdi-file-multiple class="text-xl" />
                     <span> {{ dataset.metadata?.num_genome_files }} </span>
                   </div>
@@ -207,11 +161,7 @@
               <va-divider class="my-4" />
 
               <div>
-                <va-alert
-                  color="#fdeae7"
-                  text-color="#940909"
-                  class="text-center"
-                >
+                <va-alert color="#fdeae7" text-color="#940909" class="text-center">
                   <span>
                     Unexpected bad things will happen if you don't read this!
                   </span>
@@ -234,15 +184,9 @@
 
               <div class="flex flex-col">
                 <p>To confirm, type "{{ dataset.name }}" in the box below</p>
-                <va-input
-                  v-model="delete_archive_modal.input"
-                  class="my-2 w-full"
-                />
-                <va-button
-                  color="danger"
-                  :disabled="delete_archive_modal.input !== dataset.name"
-                  @click="delete_archive"
-                >
+                <va-input v-model="delete_archive_modal.input" class="my-2 w-full" />
+                <va-button color="danger" :disabled="delete_archive_modal.input !== dataset.name"
+                  @click="delete_archive">
                   Delete this dataset
                 </va-button>
               </div>
@@ -252,10 +196,8 @@
       </div>
 
       <!-- Associated datasets -->
-      <assoc-datasets
-        :source_datasets_meta="dataset?.source_datasets"
-        :derived_datasets_meta="dataset?.derived_datasets"
-      />
+      <assoc-datasets :source_datasets_meta="dataset?.source_datasets"
+        :derived_datasets_meta="dataset?.derived_datasets" />
 
       <!-- Audit logs -->
       <div v-if="dataset?.audit_logs?.length">
@@ -277,27 +219,17 @@
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
         <div v-if="(dataset.workflows || []).length > 0" class="space-y-2">
-          <collapsible
-            v-for="workflow in dataset.workflows"
-            :key="workflow.id"
-            v-model="workflow.collapse_model"
-          >
+          <collapsible v-for="workflow in dataset.workflows" :key="workflow.id" v-model="workflow.collapse_model">
             <template #header-content>
               <WorkflowCompact :workflow="workflow" />
             </template>
 
             <div>
-              <workflow
-                :workflow="workflow"
-                @update="fetch_dataset(true)"
-              ></workflow>
+              <workflow :workflow="workflow" @update="fetch_dataset(true)"></workflow>
             </div>
           </collapsible>
         </div>
-        <div
-          v-else
-          class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow"
-        >
+        <div v-else class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow">
           <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
           <span class="text-lg">
             There are no workflows associated with this datatset.
@@ -309,12 +241,7 @@
     <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
   </va-inner-loading>
 
-  <EditDatasetModal
-    :key="dataset"
-    :data="dataset"
-    ref="editModal"
-    @update="fetch_dataset(true)"
-  />
+  <EditDatasetModal :key="dataset" :data="dataset" ref="editModal" @update="fetch_dataset(true)" />
 </template>
 
 <script setup>
@@ -336,6 +263,8 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
+
+const showMetadata = ref(false);
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
