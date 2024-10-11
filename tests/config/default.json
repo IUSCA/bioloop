@@ -1,0 +1,17 @@
+{
+  "baseURL": "https://localhost",
+  "apiBasePath": "https://localhost/api",
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": ""
+      },
+      "operator": {
+        "username": ""
+      },
+      "user": {
+        "username": ""
+      }
+    }
+  }
+}
