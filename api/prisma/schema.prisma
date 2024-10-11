@@ -42,8 +42,9 @@ model dataset {
   is_duplicate     Boolean               @default(false)
   duplicated_from  dataset_duplication?  @relation("duplicated_from")
   duplicated_by    dataset_duplication[] @relation("duplicated_by")
+  version          Int                   @default(1)
 
-  @@unique([name, type, is_deleted, is_duplicate])
+  @@unique([name, type, is_deleted, is_duplicate, version])
 }
 
 model dataset_duplication {

@@ -1,7 +1,7 @@
 /*
   Warnings:
 
-  - A unique constraint covering the columns `[name,type,is_deleted,is_duplicate]` on the table `dataset` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[name,type,is_deleted,is_duplicate,version]` on the table `dataset` will be added. If there are existing duplicate values, this will fail.
   - Added the required column `type` to the `notification` table without a default value. This is not possible if the table is not empty.
 
 */
@@ -21,7 +21,8 @@ CREATE TYPE "DATASET_INGESTION_CHECK_TYPE" AS ENUM ('FILE_COUNT', 'CHECKSUMS_MAT
 DROP INDEX "dataset_name_type_is_deleted_key";
 
 -- AlterTable
-ALTER TABLE "dataset" ADD COLUMN     "is_duplicate" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "dataset" ADD COLUMN     "is_duplicate" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "version" INTEGER NOT NULL DEFAULT 1;
 
 -- AlterTable
 ALTER TABLE "notification" ADD COLUMN     "type" "NOTIFICATION_TYPE" NOT NULL;
@@ -66,7 +67,7 @@ CREATE TABLE "dataset_ingestion_check" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "dataset_name_type_is_deleted_is_duplicate_key" ON "dataset"("name", "type", "is_deleted", "is_duplicate");
+CREATE UNIQUE INDEX "dataset_name_type_is_deleted_is_duplicate_version_key" ON "dataset"("name", "type", "is_deleted", "is_duplicate", "version");
 
 -- AddForeignKey
 ALTER TABLE "dataset_duplication" ADD CONSTRAINT "dataset_duplication_duplicate_dataset_id_fkey" FOREIGN KEY ("duplicate_dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;

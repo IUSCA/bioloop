@@ -115,8 +115,8 @@ async function validate_state_before_overwrite(duplicate_dataset_id) {
   if (latest_state !== config.DATASET_STATES.DUPLICATE_READY) {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in state `
-        + `${config.DATASET_STATES.DUPLICATE_READY}, but current state is `
-        + `${latest_state}.`);
+      + `${config.DATASET_STATES.DUPLICATE_READY}, but current state is `
+      + `${latest_state}.`);
   }
 
   return {
@@ -367,7 +367,8 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
     original_dataset,
     duplicate_dataset,
   } = await validate_state_before_overwrite(duplicate_dataset_id);
-  await check_for_pending_workflows({ dataset_id: original_dataset.id, statuses: ['PENDING', 'STARTED', 'FAILURE'] });
+  await check_for_pending_workflows({ dataset_id: original_dataset.id, statuses: ['PENDING', 'STARTED', 'FAILURE', 'RETRY'] });
+  await check_for_pending_workflows({ dataset_id: duplicate_dataset.id, statuses: ['PENDING', 'STARTED', 'FAILURE', 'RETRY'] });
 
   // assumes states are sorted descending by timestamp
   // const original_dataset_state = original_dataset.states[0].state;
@@ -383,9 +384,9 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
       is_duplicate: false,
       // if incoming duplicate's version is not already updated, update it
       version:
-          !original_dataset.is_deleted
-            ? original_dataset.version + 1
-            : undefined,
+        !original_dataset.is_deleted
+          ? original_dataset.version + 1
+          : undefined,
     },
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));
@@ -466,9 +467,9 @@ async function reject_duplicate_dataset({ duplicate_dataset_id, rejected_by_id }
     data: {
       is_deleted: true,
       version:
-          (!duplicate_dataset.is_deleted)
-            ? latest_rejected_duplicate_version + 1
-            : undefined,
+        (!duplicate_dataset.is_deleted)
+          ? latest_rejected_duplicate_version + 1
+          : undefined,
     },
     include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
   }));

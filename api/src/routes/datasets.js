@@ -149,6 +149,7 @@ router.patch(
               id: req.params.action_item_id,
             },
             data: {
+              redirect_url: `/duplicateDatasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
               ingestion_checks: {
                 createMany: { data: ingestion_checks },
               },
@@ -557,9 +558,10 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, file_type, origin_path, ...data
+      workflow_id, state, file_type, ...data
     } = req.body;
 
+    const origin_path = data.origin_path
     console.log('origin_path:', origin_path);
 
     // remove whitespaces from dataset name
@@ -724,7 +726,6 @@ router.post(
               type: action_item.type,
               title: action_item.title,
               text: action_item.text,
-              to: action_item.to,
               metadata: action_item.metadata,
               notification: {
                 create: notification,
@@ -1228,18 +1229,12 @@ router.post(
     // duplicate
 
     let duplicate_dataset;
-    try {
-      duplicate_dataset = await datasetDuplicationService.accept_duplicate_dataset(
-        {
-          duplicate_dataset_id: req.params.id,
-          accepted_by_id: req.user.id,
-        },
-      );
-    } catch (err) {
-      // console.log(err);
-      return next(createError.BadRequest(err.message));
-    }
-
+    duplicate_dataset = await datasetDuplicationService.accept_duplicate_dataset(
+      {
+        duplicate_dataset_id: req.params.id,
+        accepted_by_id: req.user.id,
+      },
+    );
     const wf = await datasetService.create_workflow(duplicate_dataset, 'accept_duplicate_dataset');
     return res.json(wf);
   }),
