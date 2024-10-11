@@ -103,7 +103,7 @@ async function get_dataset({
   includeProjects = false,
   initiator = false,
 }) {
-  const fileSelect = files ? CONSTANTS.INCLUDE_FILES : false;
+  const fileSelect = files ? CONSTANTS.INCLUDE_FILES : { files: false };
   const workflow_include = initiator ? {
     workflows: {
       select: {
@@ -116,7 +116,7 @@ async function get_dataset({
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
-      files: fileSelect,
+      ...fileSelect,
       ...workflow_include,
       ...CONSTANTS.INCLUDE_AUDIT_LOGS,
       ...CONSTANTS.INCLUDE_STATES,
@@ -478,6 +478,7 @@ async function get_workflows({ dataset_id, last_run_only = false, statuses = [] 
       dataset_id,
     },
   });
+
   const workflow_ids = workflows.map((w) => w.id);
 
   const wf_promises = workflow_ids.map((id) => wfService.getOne(id));

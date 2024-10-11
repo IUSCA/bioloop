@@ -28,7 +28,10 @@
           v-for="(notification, index) in notifications"
           :key="index"
         >
-          <notification :notification="notification"></notification>
+          <notification
+            :notification="notification"
+            :to="`${notification.dataset_action_items[0].redirect_url}`"
+          ></notification>
           <va-divider />
         </va-menu-item>
       </div>
@@ -58,8 +61,6 @@ const { resume } = useIntervalFn(
 onMounted(() => {
   resume();
 });
-
-const open = ref(true);
 </script>
 
 <style lang="scss" scoped>

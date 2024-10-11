@@ -27,6 +27,16 @@ const isPermittedToWorkflow = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Data Product ingestion - UI
+router.get(
+  '/file-types',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const dataset_file_types = await prisma.dataset_file_type.findMany();
+    res.json(dataset_file_types);
+  }),
+);
+
 router.post(
   '/:id/action-item',
   isPermittedTo('update'),
@@ -139,6 +149,7 @@ router.patch(
               id: req.params.action_item_id,
             },
             data: {
+              redirect_url: `/duplicateDatasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
               ingestion_checks: {
                 createMany: { data: ingestion_checks },
               },
@@ -214,8 +225,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -363,22 +374,6 @@ const buildQueryObject = ({
   return query_obj;
 };
 
-// const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-//   const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
-
-//   if (!field || !sortOrder) {
-//     return {};
-//   }
-//   if (nullable_order_by_fields.includes(field)) {
-//     return {
-//       [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-//     };
-//   }
-//   return {
-//     [field]: sortOrder,
-//   };
-// };
-
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -423,6 +418,8 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('match_name_exact').toBoolean().optional(),
+    query('include_file_type').toBoolean().optional(),
     query('include_action_items').optional().toBoolean(),
     query('include_duplications').optional().toBoolean(),
     query('include_states').toBoolean().optional(),
@@ -446,6 +443,7 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
+        file_type: req.query.include_file_type || false,
         action_items: req.query.include_action_items || false,
         ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
         ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DUPLICATIONS }),
@@ -513,6 +511,8 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
+    query('include_uploading_derived_datasets').toBoolean().default(false),
+    query('include_upload_log').toBoolean().default(false),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
   ]),
@@ -531,6 +531,8 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
+      include_uploading_derived_datasets: req.query.include_uploading_derived_datasets,
+      include_upload_log: req.query.include_upload_log,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
     });
@@ -550,10 +552,25 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
+    /*
+    * #swagger.description = 'workflow_id is optional. If the request body has
+    * workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
-    const { workflow_id, state, ...data } = req.body;
+    const {
+      workflow_id, state, ...data
+    } = req.body;
+
+    // create workflow association
+    if (workflow_id) {
+      data.workflows = {
+        create: [
+          {
+            id: workflow_id,
+          },
+        ],
+      };
+    }
 
     if (data.is_duplicate) {
       next(createError.BadRequest('Created datasets cannot be duplicate.'));
@@ -684,7 +701,6 @@ router.post(
               type: action_item.type,
               title: action_item.title,
               text: action_item.text,
-              to: action_item.to,
               metadata: action_item.metadata,
               notification: {
                 create: notification,
@@ -1032,7 +1048,8 @@ router.get(
       base: req.query.basepath,
     });
     // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+    // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -1072,7 +1089,8 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of a token being returned.
+    // Catch errors to ensure that logging does not get in the way of a token
+    // being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -1112,8 +1130,8 @@ router.get(
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
 
-      // use url.pathname instead of download_file_path to deal with spaces in the file path
-      // oauth scope cannot contain spaces
+      // use url.pathname instead of download_file_path to deal with spaces in
+      // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
       res.json({
         url: url.href,
@@ -1166,19 +1184,12 @@ router.post(
     // #swagger.summary = Overwrites an active dataset with its
     // duplicate
 
-    let duplicate_dataset;
-    try {
-      duplicate_dataset = await datasetDuplicationService.accept_duplicate_dataset(
-        {
-          duplicate_dataset_id: req.params.id,
-          accepted_by_id: req.user.id,
-        },
-      );
-    } catch (err) {
-      // console.log(err);
-      return next(createError.BadRequest(err.message));
-    }
-
+    const duplicate_dataset = await datasetDuplicationService.accept_duplicate_dataset(
+      {
+        duplicate_dataset_id: req.params.id,
+        accepted_by_id: req.user.id,
+      },
+    );
     const wf = await datasetService.create_workflow(duplicate_dataset, 'accept_duplicate_dataset');
     return res.json(wf);
   }),

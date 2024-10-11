@@ -56,6 +56,16 @@
               :check-type="rowData.type"
             >
             </missing-files-diff>
+
+            <number-of-files-diff
+              v-if="rowData.type === 'FILE_COUNT'"
+              :num-files-duplicate-dataset="
+                rowData.report.num_files_duplicate_dataset
+              "
+              :num-files-original-dataset="
+                rowData.report.num_files_original_dataset
+              "
+            />
           </div>
         </template>
       </va-data-table>
@@ -64,6 +74,8 @@
 </template>
 
 <script setup>
+import NumberOfFilesDiff from "@/components/dataset/actionItems/duplication/report/diff/NumberOfFilesDiff.vue";
+
 const props = defineProps({
   actionItem: {
     type: Object,
