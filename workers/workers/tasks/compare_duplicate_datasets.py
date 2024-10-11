@@ -186,6 +186,16 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
 
     passed_checksum_validation = len(conflicting_checksum_files) == 0
     comparison_checks.append({
+        'type': 'FILE_COUNT',
+        'label': 'Number of Files match',
+        'passed': len(original_dataset_files) == len(duplicate_dataset_files),
+        'report': {
+            'num_files_original_dataset': len(original_dataset_files),
+            'num_files_duplicate_dataset': len(duplicate_dataset_files),
+        }
+    })
+
+    comparison_checks.append({
         'type': 'CHECKSUMS_MATCH',
         'label': 'Checksums Validated',
         'passed': passed_checksum_validation,
