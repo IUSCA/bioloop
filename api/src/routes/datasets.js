@@ -150,7 +150,7 @@ router.patch(
               id: req.params.action_item_id,
             },
             data: {
-              redirect_url: `/duplicateDatasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
+              redirect_url: `/datasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
               ingestion_checks: {
                 createMany: { data: ingestion_checks },
               },
