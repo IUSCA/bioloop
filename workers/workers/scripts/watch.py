@@ -116,7 +116,9 @@ class Register:
         # If a candidate's name is in self.completed, it could potentially be a duplicate.
         # In such cases, we create a dataset of duplicate dataset, which is later accepted or
         # rejected by an authorized user.
-        duplicate_candidates: list[Path] = [p for p in new_dirs if slugify_(p.name) in self.completed]
+        duplicate_candidates: list[Path] = [p for p in new_dirs if (
+            slugify_(p.name) in self.completed
+            )]
 
         for candidate in candidates:
             logger.info(f'processing candidate: {str(candidate.name)}')
@@ -124,18 +126,20 @@ class Register:
             self.completed.add(candidate.name)
 
         for candidate in duplicate_candidates:
+            # logger.info(f'processing duplicate candidate: {str(candidate.name)}')
             # some duplicates might already be under processing when this script is run
             if slugify_(candidate.name) not in self.duplicates:
+                # logger.info(f'Registering duplicate candidate: {str(candidate.name)}')
                 self.register_duplicate_candidate(candidate)
                 self.duplicates.add(candidate.name)
             else:
                 logger.warning(f'Attempted to process another duplicate candidate'
                             f' named {str(candidate.name)} when a duplicate candidate'
                             f' named {str(candidate.name)} is already being processed.')
-                pass
 
     def register_candidate(self, candidate: Path):
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
+        # logger.info(f'origin_path: {str(candidate.resolve())}')
         dataset = {
             'name': slugify_(candidate.name),
             'type': self.dataset_type,
@@ -160,6 +164,8 @@ class Register:
             return
 
         original_dataset = matching_datasets[0]
+        # logger.info(f'Found matching dataset - {original_dataset["id"]}')
+        
         created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=original_dataset['id'])
 
         self.run_workflows(
