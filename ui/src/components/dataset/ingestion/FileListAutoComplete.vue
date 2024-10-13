@@ -15,10 +15,10 @@
     "
     :disabled="disabled"
     :label="'Dataset Path'"
-    :error="props.error"
     @open="emit('open')"
     @close="emit('close')"
   >
+    <!--    :error="props.error"-->
     <va-badge
       v-if="props.basePath"
       class="base-path-badge"
@@ -83,7 +83,6 @@ const onFileSelect = (file) => {
   );
   emit("update:selected", file);
 };
-
 </script>
 
 <style lang="scss" scoped>

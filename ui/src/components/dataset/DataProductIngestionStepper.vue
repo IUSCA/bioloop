@@ -172,11 +172,13 @@
                   v-model:search-text="fileListSearchText"
                   @update:search-text="searchFiles"
                   :options="fileList"
-                  :error="!!submissionError"
                 />
+                <!--                :error="!formErrors[STEP_KEYS.DIRECTORY]"-->
                 <!--                </va-form-field>-->
 
-                <div class="text-xs va-text-danger">{{ submissionError }}</div>
+                <div class="text-xs va-text-danger">
+                  {{ formErrors[STEP_KEYS.DIRECTORY] }}
+                </div>
               </div>
             </div>
 
@@ -213,7 +215,7 @@
               class="flex-none"
               @click="onNextClick(nextStep)"
               :color="isLastStep ? 'success' : 'primary'"
-              :disabled="submissionError || submissionSuccess"
+              :disabled="formHasErrors || submissionSuccess"
             >
               <!--            :disabled="!isFormValid()"-->
               {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
@@ -228,35 +230,65 @@
 <script setup>
 import config from "@/config";
 import datasetService from "@/services/dataset";
-import ingestionService from "@/services/ingest";
+import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
 import { useForm } from "vuestic-ui";
 
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
+const STEP_KEYS = {
+  NAME: "name",
+  FILE_TYPE: "fileType",
+  RAW_DATA: "rawData",
+  DIRECTORY: "directory",
+};
+
 const steps = [
-  { label: "Name", icon: "material-symbols:description-outline" },
-  { label: "File Type", icon: "material-symbols:category" },
-  { label: "Source Raw Data", icon: "mdi:dna" },
-  { label: "Select Directory", icon: "material-symbols:folder" },
+  {
+    key: STEP_KEYS.NAME,
+    label: "Name",
+    icon: "material-symbols:description-outline",
+  },
+  {
+    key: STEP_KEYS.FILE_TYPE,
+    label: "File Type",
+    icon: "material-symbols:category",
+  },
+  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
+  {
+    key: STEP_KEYS.DIRECTORY,
+    label: "Select Directory",
+    icon: "material-symbols:folder",
+  },
 ];
 
-const submissionError = ref("");
+const formErrors = ref({
+  [STEP_KEYS.NAME]: null,
+  [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.RAW_DATA]: null,
+  [STEP_KEYS.DIRECTORY]: null,
+});
+const formHasErrors = computed(() => {
+  return Object.values(formErrors.value).some((error) => !!error);
+});
+
 const isFileSearchAutocompleteOpen = ref(false);
 
 const selectedFile = ref(null);
 
 const setSubmissionError = () => {
-  console.log("Selected file updated:", selectedFile.value);
+  console.log("selectedFile:", selectedFile.value);
+  console.log("fileListSearchText:", fileListSearchText.value);
 
   if (isFileSearchAutocompleteOpen.value) {
-    submissionError.value = "";
+    formErrors.value[STEP_KEYS.DIRECTORY] = null;
     return;
   }
 
-  if (selectedFile.value === null) {
-    console.log("Selected file is null.");
-    submissionError.value = "A file must be selected for ingestion.";
+  if (!selectedFile.value || !fileListSearchText.value.split(" ").join) {
+    console.log("Selected file or fileListSearchText is null.");
+    formErrors.value[STEP_KEYS.DIRECTORY] =
+      "A file must be selected for ingestion.";
     return;
   }
   const restricted_dataset_paths = Object.values(
@@ -282,15 +314,12 @@ const setSubmissionError = () => {
   // console.log('restricted paths:', restricted_paths);
 
   if (origin_path_is_restricted) {
-    submissionError.value = "Selected file cannot be ingested as a dataset";
+    formErrors.value[STEP_KEYS.DIRECTORY] =
+      "Selected file cannot be ingested as a dataset";
   } else {
-    submissionError.value = "";
+    formErrors.value[STEP_KEYS.DIRECTORY] = null;
   }
 };
-
-watch(selectedFile, () => {
-  setSubmissionError();
-});
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -317,7 +346,7 @@ const resetSearch = () => {
   selectedFile.value = null;
   fileListSearchText.value = "";
   setRetrievedFiles([]);
-  submissionError.value = "";
+  formErrors.value[STEP_KEYS.DIRECTORY] = null;
 };
 
 const submissionSuccess = ref(false);
@@ -462,7 +491,10 @@ const onNextClick = (nextStep) => {
   }
 };
 
-// Log (or update) upload status
+watch([selectedFile, fileListSearchText, isFileSearchAutocompleteOpen], () => {
+  console.log("watch, setSubmissionError()");
+  setSubmissionError();
+});
 
 onMounted(() => {
   loading.value = true;
