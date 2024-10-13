@@ -350,7 +350,7 @@ const searchFiles = async () => {
 
   loading.value = true;
 
-  ingestionService
+  fileSystemService
     .getPathFiles({
       path: _searchText,
       dirs_only: true,
