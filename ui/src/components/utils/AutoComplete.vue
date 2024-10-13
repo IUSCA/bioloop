@@ -14,8 +14,8 @@
           @click="openResults"
           :disabled="props.disabled"
           :label="props.label"
-          :error="props.error"
         >
+          <!--          :error="props.error"-->
           <template #prependInner><slot></slot></template>
         </va-input>
         <!--          @update:model-value="(newVal) => emit('update:searchText', newVal)"-->
