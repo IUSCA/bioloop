@@ -121,13 +121,14 @@ const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
+  match_name_exact,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     is_staged: staged,
     type,
     name: name ? {
-      contains: name,
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
