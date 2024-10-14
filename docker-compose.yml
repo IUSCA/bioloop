@@ -1,4 +1,3 @@
-version: "3"
 name: bioloop
 services:
   ui:
@@ -79,6 +78,85 @@ services:
         - ./data:/opt/sca/data
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
+
+  workers:
+    build:
+      context: ./workers
+    volumes:
+      - ./workers/:/opt/sca/app
+    # entrypoint:
+    #   - tail
+    #   - -f
+    #   - /dev/null
+
+
+
+#  This is only for rhythm_api
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    # includes web gui ?
+    image: rabbitmq:3-management
+    # image: rabbitmq:3
+    ports:
+      - 127.0.0.1:5672:5672
+      - 127.0.0.1:15672:15672
+    volumes:
+      - ./db/queue/data/:/var/lib/rabbitmq/
+      # - ./db/queue/log/:/var/log/rabbitmq/
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
+
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    ports:
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./db/db_mongo:/data/db
+      # for importing database files
+      - ./db/mongodump:/opt/sca/app/mongodump
+
+
+  rhythm:
+    restart: unless-stopped
+    build:
+      context: ./rhythm
+    expose:
+      - 5001
+    ports:
+      - 5001:5001
+    environment:
+      - PORT=5001
+    depends_on:
+      - queue
+      - mongo
+
+
+
+  # docker compose run --rm mongobackup
+  # mongobackup:
+  #   image: mongo:5
+  #   environment:
+  #     - MONGO_HOST=${MONGO_HOST}
+  #     - MONGO_PORT=${MONGO_PORT}
+  #     - MONGO_DB=${MONGO_DB}
+  #     - MONGO_AUTH_SOURCE=${MONGO_AUTH_SOURCE}
+  #     - MONGO_USER=${MONGO_USER}
+  #     - MONGO_PASS=${MONGO_PASS}
+  #     - PROJ_NAME=${COMPOSE_PROJECT_NAME}
+  #   volumes:
+  #     - ./db/backups:/backup
+  #   command: >
+  #     bash -c 'mongodump --uri="mongodb://$MONGO_USER:$MONGO_PASS@$MONGO_HOST:$MONGO_PORT/$MONGO_DB?authSource=$MONGO_AUTH_SOURCE" --archive=/backup/$$PROJ_NAME.mongo.$(date +%F).gz --gzip'
+
+
 
 
 volumes:

@@ -241,5 +241,12 @@ def get_all_workflows():
         return r.json()
 
 
+def create_metadata(dataset_id: str, keywords: dict):
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/{dataset_id}/metadata', json=keywords)
+        r.raise_for_status()
+        return r.json()
+
+
 if __name__ == '__main__':
     pass

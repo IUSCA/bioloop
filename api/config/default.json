@@ -9,7 +9,7 @@
     "level": "debug"
   },
   "workflow_server": {
-    "base_url": "http://127.0.0.1:5001",
+    "base_url": "http://rhythm:5001",
     "auth_token": ""
   },
   "auth": {
@@ -100,6 +100,14 @@
         {
           "name": "delete",
           "task": "delete_dataset"
+        }
+      ]
+    },
+    "metadata": {
+      "steps": [
+        {
+          "name": "metadata",
+          "task": "bc2_metadata"
         }
       ]
     }

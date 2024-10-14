@@ -103,9 +103,14 @@ config = {
                     'task': 'await_stability'
                 },
                 {
+                  'name': 'metadata',
+                  'task': 'bc2_metadata'
+                },
+                {
                     'name': 'inspect',
                     'task': 'inspect_dataset'
                 },
+
                 {
                     'name': 'archive',
                     'task': 'archive_dataset'
@@ -123,6 +128,15 @@ config = {
                     'task': 'setup_dataset_download'
                 }
             ]
+        },
+        'metadata': {
+          'steps': [
+            {
+              'name': 'metadata',
+              'task': 'bc2_metadata'
+            },
+
+          ]
         }
     },
     'celery': {

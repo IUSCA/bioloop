@@ -496,6 +496,8 @@ router.post(
         ...datasetService.INCLUDE_WORKFLOWS,
       },
     });
+
+
     res.json(dataset);
   }),
 );
@@ -972,6 +974,15 @@ router.patch('/:id/metadata', asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { metadata } = req.body;
 
+
+  const dataset = await prisma.dataset.findFirst({where: {id: parseInt(id)}});
+
+  dataset.workflows = []
+
+  console.log('DATASET', dataset);
+
+  await datasetService.create_workflow(dataset, 'metadata');
+
   let updateMetadata = []
 
   // delete all metadata for the dataset
@@ -1011,6 +1022,9 @@ router.post('/metadata/keyword', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']
   // #swagger.summary = Update dataset metadata
   const { keyword, description } = req.body;
+
+
+  
   const results = await prisma.keyword.create({
     data: {
       keyword,
@@ -1039,6 +1053,12 @@ router.post('/metadata/fields', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']
   // #swagger.summary = Update dataset metadata
   const { name, description } = req.body;
+
+  console.log('BODY', req.body);
+
+
+
+  
   const results = await prisma.keyword.create({
     data: {
       name,
@@ -1050,6 +1070,9 @@ router.post('/metadata/fields', asyncHandler(async (req, res, next) => {
 
 
 }));
+
+
+
 
 router.patch('/metadata/fields/:id', asyncHandler(async (req, res, next) => {
 
