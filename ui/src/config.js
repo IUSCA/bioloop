@@ -16,7 +16,7 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    download: "/N/scratch/bioloop/production/download",
+    download: "",
   },
   file_browser: {
     enable_downloads: true,
@@ -26,11 +26,13 @@ const exports = {
   dataset: {
     types: {
       RAW_DATA: {
+        key: "RAW_DATA",
         label: "Raw Data",
         collection_path: "rawdata",
         icon: "mdi-dna",
       },
       DATA_PRODUCT: {
+        key: "DATA_PRODUCT",
         label: "Data Product",
         collection_path: "dataproducts",
         icon: "mdi-package-variant-closed",
@@ -68,6 +70,34 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
   },
+  filesystem_search_spaces: [
+    {
+      [import.meta.env.VITE_SCRATCH_BASE_DIR]: {
+        base_path:
+          import.meta.env.VITE_SCRATCH_BASE_DIR || "/bioloop/scratch/space",
+        mount_path:
+          import.meta.env.VITE_SCRATCH_MOUNT_DIR ||
+          "/bioloop/user/scratch/mount/dir",
+        label: "Slate-Scratch",
+      },
+    },
+    {
+      [import.meta.env.VITE_PROJECT_BASE_DIR]: {
+        base_path:
+          import.meta.env.VITE_PROJECT_BASE_DIR || "/bioloop/project/space",
+        mount_path:
+          import.meta.env.VITE_PROJECT_MOUNT_DIR ||
+          "bioloop/user/project/mount/dir",
+        label: "Slate-Project",
+      },
+    },
+  ],
+  restricted_ingestion_dirs: [
+    import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+    "/scratch/space/restricted",
+    import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
+    "/project/space/restricted",
+  ],
 };
 
 export default exports;

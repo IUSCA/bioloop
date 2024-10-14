@@ -22,6 +22,16 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Data Product ingestion - UI
+router.get(
+  '/file-types',
+  isPermittedTo('read'),
+  asyncHandler(async (req, res, next) => {
+    const dataset_file_types = await prisma.dataset_file_type.findMany();
+    res.json(dataset_file_types);
+  }),
+);
+
 // stats - UI
 router.get(
   '/stats',
@@ -111,13 +121,14 @@ const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
+  match_name_exact,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     is_staged: staged,
     type,
     name: name ? {
-      contains: name,
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
@@ -178,22 +189,6 @@ const buildQueryObject = ({
   return query_obj;
 };
 
-// const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-//   const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
-
-//   if (!field || !sortOrder) {
-//     return {};
-//   }
-//   if (nullable_order_by_fields.includes(field)) {
-//     return {
-//       [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-//     };
-//   }
-//   return {
-//     [field]: sortOrder,
-//   };
-// };
-
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -210,9 +205,8 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
-// the criteria specified.
-// Used by workers + UI.
+// Get all datasets, and the count of datasets. Results can optionally be
+// filtered and sorted by the criteria specified. Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -308,7 +302,8 @@ router.get(
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the dataset_file table if files is true
+    // only select path and md5 columns from the dataset_file table if files is
+    // true
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -337,10 +332,49 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
+    /*
+    * #swagger.description = 'workflow_id is optional. If the request body has
+    * workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
-    const { workflow_id, state, ...data } = req.body;
+    const {
+      workflow_id, state, file_type, origin_path, ...data
+    } = req.body;
+
+    console.log('origin_path:', origin_path);
+
+    // remove whitespaces from dataset name
+    data.name = data.name.split(' ').join('');
+
+    // if dataset's origin_path is a restricted for dataset creation, throw
+    // error
+    const restricted_dataset_paths = Object.values(config.restricted_ingestion_dirs).map((paths) => paths.split(',')).flat();
+    console.log('restricted_dataset_paths:', restricted_dataset_paths);
+    const origin_path_is_restricted = restricted_dataset_paths.some((path) => origin_path === path);
+
+    if (origin_path_is_restricted) {
+      return next(createError.Forbidden());
+    }
+
+    // create workflow association
+    if (workflow_id) {
+      data.workflows = {
+        create: [
+          {
+            id: workflow_id,
+          },
+        ],
+      };
+    }
+
+    if (file_type) {
+      data.file_type = file_type.id === undefined ? {
+        create: {
+          name: file_type.name,
+          extension: file_type.extension,
+        },
+      } : { connect: { id: file_type.id } };
+    }
 
     // create workflow association
     if (workflow_id) {
@@ -533,14 +567,16 @@ router.post(
     // user role can only run stage workflows
 
     // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true value
+    // filter only works on objects not arrays, so we use an object with true
+    // value
     const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
     if (allowed_wfs[req.params.wf]) {
       return next();
     }
     next(createError.Forbidden());
   },
-  // user role can only run wf on the datasets they can access through project associations
+  // user role can only run wf on the datasets they can access through project
+  // associations
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -634,7 +670,8 @@ router.get(
       base: req.query.basepath,
     });
     // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+    // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -674,7 +711,8 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of a token being returned.
+    // Catch errors to ensure that logging does not get in the way of a token
+    // being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -714,8 +752,8 @@ router.get(
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
 
-      // use url.pathname instead of download_file_path to deal with spaces in the file path
-      // oauth scope cannot contain spaces
+      // use url.pathname instead of download_file_path to deal with spaces in
+      // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
       res.json({
         url: url.href,
