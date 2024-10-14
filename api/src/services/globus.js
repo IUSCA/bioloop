@@ -25,7 +25,7 @@ const getToken = ({ code }) => {
     }
   }).then(response => {
     console.log('Received token:', response.data);
-    return response
+    return response.data
   });
 };
 

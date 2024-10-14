@@ -16,13 +16,9 @@ router.post(
   ]),
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
-    globusService.getToken({ code: req.body.code }).then(({ data }) => {
-      console.log(data); // Log the token for debugging purposes.
-      res.json(data);
+    globusService.getToken({ code: req.body.code }).then((response) => {
+      res.json(response);
     })
-    // .catch(error => {
-    //   console.log(error);
-    // })
   }),
 );
 
