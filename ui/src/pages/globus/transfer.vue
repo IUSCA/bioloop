@@ -3,7 +3,6 @@
 <script setup>
 // const router = useRouter();
 import globusService from "@/services/globusAuth";
-import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
@@ -17,9 +16,9 @@ onMounted(() => {
   console.log("Auth code", globusAuthCode.value);
   globusService
     .getToken({
-      grant_type: "authorization_code",
+      // grant_type: "authorization_code",
       code: globusAuthCode.value,
-      redirect_uri: config.globus.redirect_uri,
+      // redirect_uri: config.globus.redirect_uri,
     })
     .then((res) => {
       console.log("Globus Auth Response token:", res.data.access_token);

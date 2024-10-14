@@ -1,8 +1,8 @@
-import globusApi from "./globusApi";
+import api from "./api";
 
 class GlobusAuthService {
-  getToken({ data }) {
-    return globusApi.post("/", { data });
+  getToken(data) {
+    return api.post("/globus/token", data);
   }
 }
 

@@ -11,6 +11,10 @@
     "download": {
       "client_id": "OAUTH_DOWNLOAD_CLIENT_ID",
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
+    },
+    "upload": {
+      "client_id": "OAUTH_UPLOAD_CLIENT_ID",
+      "client_secret": "OAUTH_UPLOAD_CLIENT_SECRET"
     }
   },
   "auth": {
@@ -38,5 +42,11 @@
         "username": "E2E_USER"
       }
     }
+  },
+  "globus": {
+    "token_url": "GLOBUS_OAUTH_TOKEN_URL",
+    "client_id": "GLOBUS_OAUTH_CLIENT_ID",
+    "client_secret": "GLOBUS_OAUTH_CLIENT_SECRET",
+    "redirect_uri": "GLOBUS_OAUTH_REDIRECT_URI"
   }
 }
