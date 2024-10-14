@@ -20,7 +20,7 @@
               'step-button--completed': isCompleted,
             }"
             @click="setStep(i)"
-            :disabled="submitAttempted"
+            :disabled="submitAttempted || formHasErrors"
             preset="secondary"
           >
             <div class="flex flex-col items-center">
@@ -33,11 +33,7 @@
         <template #step-content-0>
           <va-form-field
             v-model="datasetName"
-            :rules="[
-              (v) => v.length >= 3 || 'Min length is 3 characters',
-              (v) => v?.indexOf(' ') === -1 || 'Name cannot contain spaces',
-              validateNotExists,
-            ]"
+            :rules="datasetNameValidationRules"
           >
             <template #default="{ value }">
               <va-input
@@ -46,6 +42,7 @@
                 class="w-full"
                 v-model="value.ref"
               />
+              <!--              :error="!stepIsPristine"-->
             </template>
           </va-form-field>
         </template>
@@ -82,11 +79,6 @@
 
         <template #step-content-2>
           <va-form-field v-model="rawDataSelected" v-slot="{ value: v }">
-            <!--            :rules="[-->
-            <!--              (v) => {-->
-            <!--                return typeof v.length > 0 || 'Source dataset is required';-->
-            <!--              },-->
-            <!--            ]"-->
             <DatasetSelect
               :selected-results="v.ref"
               @select="addDataset"
@@ -104,95 +96,59 @@
         </template>
 
         <template #step-content-3>
-          <!--          <va-input class="w-full" v-model="filePath" />-->
+          <div class="flex">
+            <va-select
+              class="mr-2"
+              v-model="searchSpace"
+              @update:modelValue="resetSearch"
+              :options="FILESYSTEM_SEARCH_SPACES"
+              :text-by="'label'"
+              label="Search space"
+              :disabled="submitAttempted"
+            />
 
-          <va-inner-loading :loading="loading">
-            <!--              @update:selected-file="(file) => setSelectedFile(file)"-->
-            <!--              v-model:selected-file="selectedFile"-->
-            <div class="flex">
-              <va-select
-                class="mr-2"
-                v-model="searchSpace"
-                @update:modelValue="resetSearch"
-                :options="FILESYSTEM_SEARCH_SPACES"
-                :text-by="'label'"
-                label="Search space"
+            <div class="flex flex-col w-full">
+              <FileListAutoComplete
+                @files-retrieved="setRetrievedFiles"
                 :disabled="submitAttempted"
+                :base-path="searchSpaceBasePath"
+                @loading="loading = true"
+                @loaded="loading = false"
+                @clear="resetSearch"
+                @open="
+                  () => {
+                    console.log('open emitted');
+                    isFileSearchAutocompleteOpen = true;
+                    selectedFile = null;
+                    searchFiles();
+                  }
+                "
+                @close="
+                  () => {
+                    if (!selectedFile) {
+                      fileListSearchText = '';
+                    }
+                    isFileSearchAutocompleteOpen = false;
+                  }
+                "
+                v-model:selected="selectedFile"
+                @update:selected="
+                  (file) => {
+                    console.log('@update:selected, Selected file:', file);
+                    // selectedFile = file;
+                    console.log('Selected file:', selectedFile);
+                  }
+                "
+                v-model:search-text="fileListSearchText"
+                @update:search-text="searchFiles"
+                :options="fileList"
               />
 
-              <!--                <va-form-field-->
-              <!--                  v-model="selectedFile"-->
-              <!--                  v-slot="{ value: v }"-->
-              <!--                  :rules="[-->
-              <!--                    (v) => {-->
-              <!--                      console.log('File validation:', v);-->
-              <!--                      // console.log('v.ref:', v.ref);-->
-              <!--                      console.log('typeof v:', typeof v);-->
-              <!--                      // console.log('File path:', v.path);-->
-              <!--                      console.dir(v, { depth: null });-->
-              <!--                      return (-->
-              <!--                        typeof v !== 'object' ||-->
-              <!--                        'Selected file cannot be ingested as a dataset'-->
-              <!--                      );-->
-              <!--                    },-->
-              <!--                  ]"-->
-              <!--                >-->
-              <div class="flex flex-col w-full">
-                <FileListAutoComplete
-                  @files-retrieved="setRetrievedFiles"
-                  :disabled="submitAttempted"
-                  :base-path="searchSpaceBasePath"
-                  @loading="loading = true"
-                  @loaded="loading = false"
-                  @clear="resetSearch"
-                  @open="
-                    () => {
-                      console.log('open emitted');
-                      isFileSearchAutocompleteOpen = true;
-                      selectedFile = null;
-                      searchFiles();
-                    }
-                  "
-                  @close="
-                    () => {
-                      if (!selectedFile) {
-                        fileListSearchText = '';
-                      }
-                      isFileSearchAutocompleteOpen = false;
-                    }
-                  "
-                  v-model:selected="selectedFile"
-                  @update:selected="
-                    (file) => {
-                      console.log('@update:selected, Selected file:', file);
-                      // selectedFile = file;
-                      console.log('Selected file:', selectedFile);
-                    }
-                  "
-                  v-model:search-text="fileListSearchText"
-                  @update:search-text="searchFiles"
-                  :options="fileList"
-                />
-                <!--                :error="!formErrors[STEP_KEYS.DIRECTORY]"-->
-                <!--                </va-form-field>-->
-
-                <div class="text-xs va-text-danger">
-                  {{ formErrors[STEP_KEYS.DIRECTORY] }}
-                </div>
+              <div class="text-xs va-text-danger">
+                {{ formErrors[STEP_KEYS.DIRECTORY] }}
               </div>
             </div>
-
-            <!--            <FileList :selected-files="fileList" />-->
-            <!--            @update:search-text="-->
-            <!--                (updatedSearchText) => {-->
-            <!--                  setSelectedFile(null);-->
-            <!--                  fileListSearchText = updatedSearchText;-->
-            <!--                  // searchFiles();-->
-            <!--                }-->
-            <!--              "-->
-            <!--            :required="true"-->
-            <!--              v-model:selected="selectedFile"-->
-          </va-inner-loading>
+          </div>
         </template>
 
         <!-- custom controls -->
@@ -207,7 +163,7 @@
                   prevStep();
                 }
               "
-              :disabled="step === 0 || submitAttempted"
+              :disabled="step === 0 || formHasErrors || submitAttempted"
             >
               Previous
             </va-button>
@@ -217,7 +173,6 @@
               :color="isLastStep ? 'success' : 'primary'"
               :disabled="formHasErrors || submissionSuccess"
             >
-              <!--            :disabled="!isFormValid()"-->
               {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
             </va-button>
           </div>
@@ -236,12 +191,33 @@ import { useForm } from "vuestic-ui";
 
 const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 
+// error shown - step has errors, and is not pristine
+//  - onMounted - setFormErrors()
+//      - all fields pristine
+//  - no need = step changes - current step is pristine
+//  - next and previous disabled when step has errors
+
 const STEP_KEYS = {
   NAME: "name",
   FILE_TYPE: "fileType",
   RAW_DATA: "rawData",
   DIRECTORY: "directory",
 };
+const DATASET_EXISTS_ERROR = "Dataset with the same name already exists";
+const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
+const DATASET_NAME_MAX_LENGTH_ERROR = "Min length is 3 characters";
+const HAS_SPACES_ERROR = "cannot contain spaces";
+const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
+const FILE_TYPE_REQUIRED_ERROR = "A file type must be selected";
+const RAW_DATA_REQUIRED_ERROR = "Source Raw Data must be selected";
+const INGESTION_NOT_ALLOWED_ERROR =
+  "Selected file cannot be ingested as a dataset";
+
+const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
+  (space) => space[Object.keys(space)[0]],
+);
+
+const hasSpacesError = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
 
 const steps = [
   {
@@ -262,68 +238,105 @@ const steps = [
   },
 ];
 
+// Tracks if a step's form fields are pristine (i.e. not touched by user) or
+// not. Errors are only shown when a step's form fields are not pristine.
+// For steps 0 to 2, <va-form-field> components track the pristine state of
+// their respective input fields. For step 3, pristine state is maintained by
+// this component.
+const stepPristineStates = ref([
+  {
+    [STEP_KEYS.NAME]: true,
+  },
+  { [STEP_KEYS.FILE_TYPE]: true },
+  { [STEP_KEYS.RAW_DATA]: true },
+  { [STEP_KEYS.DIRECTORY]: true },
+]);
+
+const stepIsPristine = computed(() => {
+  return !!Object.values(stepPristineStates.value[step.value])[0];
+});
+
 const formErrors = ref({
   [STEP_KEYS.NAME]: null,
-  [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.FILE_TYPE]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.DIRECTORY]: null,
 });
 const formHasErrors = computed(() => {
-  return Object.values(formErrors.value).some((error) => !!error);
+  console.log("formErrors:", formErrors.value);
+  const errors = Object.values(formErrors.value);
+  console.log("Object.values(formErrors.value):", errors);
+  return errors.some((error) => {
+    console.log("error:", error);
+    return error !== null;
+  });
 });
 
 const isFileSearchAutocompleteOpen = ref(false);
 
 const selectedFile = ref(null);
 
-const setSubmissionError = () => {
-  console.log("selectedFile:", selectedFile.value);
-  console.log("fileListSearchText:", fileListSearchText.value);
-
-  if (isFileSearchAutocompleteOpen.value) {
-    formErrors.value[STEP_KEYS.DIRECTORY] = null;
-    return;
-  }
-
-  if (!selectedFile.value || !fileListSearchText.value.split(" ").join) {
-    console.log("Selected file or fileListSearchText is null.");
-    formErrors.value[STEP_KEYS.DIRECTORY] =
-      "A file must be selected for ingestion.";
-    return;
-  }
-  const restricted_dataset_paths = Object.values(
-    config.restricted_ingestion_dirs,
-  )
-    .map((paths) => paths.split(","))
-    .flat();
-  console.log("restricted_dataset_paths:", restricted_dataset_paths);
-  console.log("selectedFile.value.path:", selectedFile.value.path);
-  const origin_path_is_restricted = restricted_dataset_paths.some((path) => {
-    console.log("regex path:", path);
-    // const regex = new RegExp(path);
-    return selectedFile.value.path === path;
-    // ? true
-    // : regex.test(selectedFile.value.path);
-  });
-  // const restricted_paths = restricted_dataset_paths.map((paths) => {
-  //   const restricted_path_patterns = paths.split(',');
-  //
-  //   const regex = new RegExp(paths);
-  //   return regex.match(paths);
-  // });
-  // console.log('restricted paths:', restricted_paths);
-
-  if (origin_path_is_restricted) {
-    formErrors.value[STEP_KEYS.DIRECTORY] =
-      "Selected file cannot be ingested as a dataset";
-  } else {
-    formErrors.value[STEP_KEYS.DIRECTORY] = null;
-  }
+const resetFormErrors = () => {
+  formErrors.value = {
+    [STEP_KEYS.NAME]: null,
+    [STEP_KEYS.FILE_TYPE]: null,
+    [STEP_KEYS.RAW_DATA]: null,
+    [STEP_KEYS.DIRECTORY]: null,
+  };
 };
 
-const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
-  (space) => space[Object.keys(space)[0]],
-);
+const setFormErrors = async () => {
+  resetFormErrors();
+  const { isNameValid: datasetNameIsValid, error } =
+    await validateDatasetName();
+
+  if (step.value === 0) {
+    if (!datasetNameIsValid) {
+      formErrors.value[STEP_KEYS.NAME] = error;
+    }
+    return;
+  } else if (step.value === 1) {
+    if (!fileTypeSelected.value) {
+      formErrors.value[STEP_KEYS.FILE_TYPE] = FILE_TYPE_REQUIRED_ERROR;
+    }
+    return;
+  } else if (step.value === 2) {
+    if (!rawDataSelected.value[0]) {
+      formErrors.value[STEP_KEYS.RAW_DATA] = RAW_DATA_REQUIRED_ERROR;
+      return;
+    }
+  } else {
+    if (stepIsPristine.value) {
+      return;
+    }
+    if (!selectedFile.value) {
+      formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_FILE_REQUIRED_ERROR;
+      return;
+    } else {
+      const restricted_dataset_paths = Object.values(
+        config.restricted_ingestion_dirs,
+      )
+        .map((paths) => paths.split(","))
+        .flat();
+      const origin_path_is_restricted = restricted_dataset_paths.some(
+        (path) => {
+          console.log("regex path:", path);
+          // TODO - enable wildcard match
+          // const regex = new RegExp(path);
+          return selectedFile.value.path === path;
+          // ? true
+          // : regex.test(selectedFile.value.path);
+        },
+      );
+
+      if (origin_path_is_restricted) {
+        formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
+      } else {
+        formErrors.value[STEP_KEYS.DIRECTORY] = null;
+      }
+    }
+  }
+};
 
 const searchSpace = ref(
   FILESYSTEM_SEARCH_SPACES instanceof Array &&
@@ -332,11 +345,9 @@ const searchSpace = ref(
     : "",
 );
 
-console.log("searchSpace.value: ", searchSpace.value);
 const searchSpaceBasePath = computed({
   get: () => searchSpace.value.base_path,
   set: (value) => {
-    console.log("set: () => searchSpace.value: ", value);
     searchSpace.value = value;
     resetSearch();
   },
@@ -352,8 +363,7 @@ const resetSearch = () => {
 const submissionSuccess = ref(false);
 const fileTypeSelected = ref();
 const fileTypeList = ref([]);
-const rawDataSelected = ref();
-
+const rawDataSelected = ref([]);
 const fileList = ref([]);
 const datasetId = ref();
 const datasetName = ref("");
@@ -369,16 +379,12 @@ const isLastStep = computed(() => {
 const fileListSearchText = ref("");
 
 const searchFiles = async () => {
-  console.log("Searching for files matching:", fileListSearchText.value);
-
   const _searchText =
     (searchSpace.value.base_path.endsWith("/")
       ? searchSpace.value.base_path
       : searchSpace.value.base_path + "/") + fileListSearchText.value;
-  console.log("_searchText: ", _searchText);
 
   loading.value = true;
-
   fileSystemService
     .getPathFiles({
       path: _searchText,
@@ -398,12 +404,10 @@ const searchFiles = async () => {
     })
     .finally(() => {
       loading.value = false;
-      // emit("loaded", loading.value);
     });
 };
 
 const setRetrievedFiles = (files) => {
-  // selectedFile.value = null;
   fileList.value = files;
 };
 
@@ -424,14 +428,20 @@ const validateNotExists = (value) => {
     if (!value) {
       resolve(true);
     } else {
+      loading.value = true;
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
         .then((res) => {
-          resolve(
-            res.data.datasets.length !== 0
-              ? "Data Product with provided name already exists"
-              : true,
-          );
+          // Vuestic expects this Promise to resolve with an error message, for
+          // it to show the error message.
+          resolve(res.data.datasets.length !== 0 ? DATASET_EXISTS_ERROR : true);
+        })
+        .catch((err) => {
+          console.error(err);
+          // resolve(true);
+        })
+        .finally(() => {
+          loading.value = false;
         });
     }
   });
@@ -456,13 +466,18 @@ const initiateIngestion = async () => {
     .then(() => {
       toast.success("Initiated dataset ingestion");
       submissionSuccess.value = true;
+    })
+    .catch((err) => {
+      toast.error("Failed to initiate ingestion");
+      console.error(err);
+      submissionSuccess.value = false;
     });
 };
 
-const onSubmit = () => {
+const onSubmit = async () => {
   if (!selectedFile.value) {
-    setSubmissionError();
-    return Promise.reject("No file selected for ingestion");
+    await setFormErrors();
+    return Promise.reject();
   }
   submitAttempted.value = true;
 
@@ -491,9 +506,69 @@ const onNextClick = (nextStep) => {
   }
 };
 
-watch([selectedFile, fileListSearchText, isFileSearchAutocompleteOpen], () => {
-  console.log("watch, setSubmissionError()");
-  setSubmissionError();
+const datasetNameHasMinimumChars = (name) => {
+  return name?.length >= 3;
+};
+
+const datasetNameIsNull = (name) => {
+  return !name;
+};
+
+const stringHasSpaces = (name) => {
+  return name?.indexOf(" ") > -1;
+};
+
+const datasetNameValidationRules = [
+  (v) => {
+    return datasetNameIsNull(v) ? DATASET_NAME_REQUIRED_ERROR : true;
+  },
+  (v) => {
+    return datasetNameHasMinimumChars(v) ? true : DATASET_NAME_MAX_LENGTH_ERROR;
+  },
+  (v) => {
+    return stringHasSpaces(v) ? hasSpacesError("Dataset name") : true;
+  },
+  validateNotExists,
+];
+
+const validateDatasetName = async () => {
+  if (datasetNameIsNull(datasetName.value)) {
+    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
+  } else if (!datasetNameHasMinimumChars(datasetName.value)) {
+    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
+  } else if (stringHasSpaces(datasetName.value)) {
+    return { isNameValid: false, error: hasSpacesError("Dataset name") };
+  }
+
+  return datasetNameValidationRules[3](datasetName.value).then((res) => {
+    return {
+      isNameValid: res !== DATASET_EXISTS_ERROR,
+      error: DATASET_EXISTS_ERROR,
+    };
+  });
+};
+
+watch(
+  [
+    datasetName,
+    fileTypeSelected,
+    rawDataSelected,
+    selectedFile,
+    fileListSearchText,
+    isFileSearchAutocompleteOpen,
+  ],
+  async () => {
+    // mark step's form fields as not pristine, for fields' errors to be shown
+    const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
+    stepPristineStates.value[step.value][stepKey] = false;
+    await setFormErrors();
+  },
+);
+
+// Form errors are set when this component mounts, but not shown if a step's
+// form fields are pristine.
+watch(step, () => {
+  setFormErrors();
 });
 
 onMounted(() => {
@@ -514,11 +589,15 @@ onMounted(() => {
       loading.value = false;
     });
 });
+
+onMounted(() => {
+  setFormErrors();
+});
 </script>
 
 <style lang="scss" scoped>
 .stepper {
-  .step-button {
+  .stepbutton {
     color: var(--va-secondary);
   }
   .step-button--active {
