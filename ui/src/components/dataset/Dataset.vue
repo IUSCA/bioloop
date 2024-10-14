@@ -118,11 +118,23 @@
                     color="primary"
                     border-color="primary"
                     preset="secondary"
-                    class="flex-initial"
+                    class="flex-auto"
                     @click="stage_modal = true"
                   >
                     <i-mdi-cloud-sync class="pr-2 text-2xl" />
                     Stage Files
+                  </va-button>
+
+                  <!--                  :disabled="is_stage_pending || dataset.is_staged"-->
+                  <va-button
+                    color="primary"
+                    border-color="primary"
+                    preset="secondary"
+                    class="flex-auto"
+                    @click="initiateGlobusAuth"
+                  >
+                    <i-mdi-share-variant-outline class="pr-2 text-2xl" />
+                    Share
                   </va-button>
 
                   <!-- Delete Action Button-->
@@ -131,7 +143,7 @@
                     :disabled="is_delete_pending"
                     color="danger"
                     border-color="danger"
-                    class="flex-initial"
+                    class="flex-auto"
                     preset="secondary"
                     @click="delete_archive_modal.visible = true"
                   >
@@ -141,7 +153,7 @@
 
                   <va-button
                     :disabled="!dataset.is_staged"
-                    class="flex-initial"
+                    class="flex-auto"
                     color="primary"
                     border-color="primary"
                     preset="secondary"
@@ -328,8 +340,10 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import { formatBytes } from "@/services/utils";
+import { formatBytes, lxor } from "@/services/utils";
 import workflowService from "@/services/workflow";
+import { v4 as uuidv4 } from "uuid";
+import { redirectToGlobusAuth } from "@/services/globus/globus";
 const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
@@ -494,6 +508,12 @@ const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
+
+const initiateGlobusAuth = () => {
+  console.log("Initiating Globus Auth");
+  console.log("route: ", route.path);
+  redirectToGlobusAuth({ persistInState: [route.path] });
+};
 
 watch(trigger_dataset_retrieval, () => {
   fetch_dataset(true);

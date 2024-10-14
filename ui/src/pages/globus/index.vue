@@ -2,41 +2,23 @@
 import config from "@/config";
 import { lxor } from "@/services/utils";
 import { v4 as uuidv4 } from "uuid";
+import { redirectToGlobusAuth } from "@/services/globus/globus";
+import GlobusAuthService from "@/services/globus/globusAuth";
+import { useAuthStore } from "@/stores/auth";
 
+const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const globusAuthStoredState = ref(useLocalStorage("globus.auth.state", ""));
 const globusAuthCode = ref(useLocalStorage("globus.auth.code", ""));
 // const queryParams = route.params;
 
-const constructGlobusAuthURL = () => {
-  const globusAuthBaseURL = config.globus.auth_url;
-  const clientId = config.globus.client_id;
-  const redirectUri = config.globus.redirect_uri;
-  const scopes = config.globus.scopes.split(",").join(" ");
-  const response_type = "code";
-  globusAuthStoredState.value = uuidv4();
-  console.log("Pre-auth Stored State", globusAuthStoredState.value);
-  return (
-    `${globusAuthBaseURL}?` +
-    `client_id=${clientId}` +
-    `&redirect_uri=${redirectUri}` +
-    `&response_type=${response_type}` +
-    `&scope=${scopes}` +
-    `&state=${globusAuthStoredState.value}`
-  );
-};
-
-const redirectToGlobusAuth = () => {
-  // router.push(constructGlobusAuthURL());
-  window.location.replace(constructGlobusAuthURL());
-};
-
 onMounted(() => {
   // reset code if already exists in local storage
-  globusAuthCode.value = ""
+  globusAuthCode.value = "";
 
-  // If neither code nor state is present in the route query, redirect to Globus Auth
+  // If neither code nor state is present in the route query, redirect to
+  // Globus Auth
   if (!route.query.code && !route.query.state) {
     redirectToGlobusAuth();
     return;
@@ -50,18 +32,31 @@ onMounted(() => {
     // auth request matches the state returned by Globus auth
     if (route.query.state === globusAuthStoredState.value) {
       console.log("State matches");
+      console.log("state:", globusAuthStoredState.value);
       globusAuthCode.value = route.query.code;
       // console.log("Post-auth code", globusAuthCode.value);
-      router.push("/globus/transfer");
+      GlobusAuthService.getToken({
+        code: globusAuthCode.value,
+      })
+        .then((response) => {
+          auth.setGlobusAccessToken(response.data.access_token);
+          const stateRedirectURL = atob(
+            globusAuthStoredState.value.split(":")[1],
+          );
+          console.log("Redirecting to", stateRedirectURL);
+          router.push(stateRedirectURL);
+        })
+        .catch((err) => {
+          console.error(err);
+          router.push("/");
+        });
+
+      // router.push("/globus/transfer");
     } else {
       console.log("State does not match");
       // Todo - redirect to error page if state does not match
     }
   }
-});
-
-onBeforeUnmount(() => {
-  // todo - clear access token from local storage
 });
 </script>
 
