@@ -131,7 +131,7 @@
                     border-color="primary"
                     preset="secondary"
                     class="flex-auto"
-                    @click="initiateGlobusAuth"
+                    @click="onShare"
                   >
                     <i-mdi-share-variant-outline class="pr-2 text-2xl" />
                     Share
@@ -263,6 +263,12 @@
               </div>
             </div>
           </va-modal>
+
+          <va-modal v-model="showGlobusShareModal"
+            ><va-button @click="shareDataset"
+              >Share via Globus</va-button
+            ></va-modal
+          >
         </div>
       </div>
 
@@ -343,13 +349,17 @@ import toast from "@/services/toast";
 import { formatBytes, lxor } from "@/services/utils";
 import workflowService from "@/services/workflow";
 import { v4 as uuidv4 } from "uuid";
-import { redirectToGlobusAuth } from "@/services/globus/globus";
+import { redirectToGlobusAuth } from "@/services/globus";
+import { useAuthStore } from "@/stores/auth";
 const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
+const auth = useAuthStore();
+const globusAccessToken = auth.globusAccessToken;
+const isGlobusAccessTokenValid = auth.isGlobusAccessTokenValid();
 const dataset = ref({});
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -509,11 +519,27 @@ function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
 
+const showGlobusShareModal = ref(false);
+
+const onShare = () => {
+  console.log("onShare()");
+  console.log("globusAccessToken: ", globusAccessToken.value);
+  console.log("isGlobusAccessTokenValid: ", isGlobusAccessTokenValid);
+  // isGlobusAccessTokenValid.value);
+  if (!globusAccessToken.value || isGlobusAccessTokenValid) {
+    initiateGlobusAuth();
+  } else {
+    showGlobusShareModal.value = true;
+  }
+};
+
 const initiateGlobusAuth = () => {
-  console.log("Initiating Globus Auth");
-  console.log("route: ", route.path);
+  // console.log("Initiating Globus Auth");
+  // console.log("route: ", route.path);
   redirectToGlobusAuth({ persistInState: [route.path] });
 };
+
+const shareDataset = () => {};
 
 watch(trigger_dataset_retrieval, () => {
   fetch_dataset(true);

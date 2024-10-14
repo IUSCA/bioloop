@@ -209,6 +209,19 @@ export const useAuthStore = defineStore("auth", () => {
     globusAccessToken.value = token;
   };
 
+  const isGlobusAccessTokenValid = () => {
+    if (!globusAccessToken.value) {
+      return false;
+    } else {
+      return true;
+    }
+    // const payload = jwtDecode(globusAccessToken.value);
+    // const expiresAt = new Date(payload.exp * 1000);
+    // const now = new Date();
+    // return now > expiresAt;
+    // return false;
+  };
+
   const onFileUpload = async (fileName) => {
     return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
@@ -245,7 +258,9 @@ export const useAuthStore = defineStore("auth", () => {
     setEnv,
     onFileUpload,
     postFileUpload,
+    globusAccessToken,
     setGlobusAccessToken,
+    isGlobusAccessTokenValid,
   };
 });
 

@@ -17,8 +17,9 @@ router.post(
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
     globusService.getToken({ code: req.body.code }).then((response) => {
+      console.log('Globus token received:', response.data);
       res.json(response.data);
-    })
+    });
   }),
 );
 

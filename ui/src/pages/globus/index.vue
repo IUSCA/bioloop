@@ -2,7 +2,7 @@
 import config from "@/config";
 import { lxor } from "@/services/utils";
 import { v4 as uuidv4 } from "uuid";
-import { redirectToGlobusAuth } from "@/services/globus/globus";
+import { redirectToGlobusAuth } from "@/services/globus";
 import GlobusAuthService from "@/services/globus/globusAuth";
 import { useAuthStore } from "@/stores/auth";
 
@@ -39,6 +39,10 @@ onMounted(() => {
         code: globusAuthCode.value,
       })
         .then((response) => {
+          console.log(
+            "globus/index.vue: Globus Auth token received:",
+            response.data.access_token,
+          );
           auth.setGlobusAccessToken(response.data.access_token);
           const stateRedirectURL = atob(
             globusAuthStoredState.value.split(":")[1],
