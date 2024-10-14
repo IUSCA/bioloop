@@ -186,6 +186,12 @@ const operator_items = ref([
     test_id: "sidebar-duplicate-datasets",
   },
   {
+    icon: "mdi-dna",
+    title: "Globus Transfer",
+    path: "/globus",
+    test_id: "sidebar-raw-data",
+  },
+  {
     icon: "mdi-table-account",
     title: "User Management",
     path: "/users",

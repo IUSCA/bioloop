@@ -10,6 +10,7 @@ export const useAuthStore = defineStore("auth", () => {
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
   const uploadToken = ref(useLocalStorage("uploadToken", ""));
+  const globusAccessToken = ref(useLocalStorage("globusAccessToken", ""));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
@@ -204,6 +205,10 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
+  const setGlobusAccessToken = (token) => {
+    globusAccessToken.value = token;
+  };
+
   const onFileUpload = async (fileName) => {
     return uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
@@ -240,6 +245,7 @@ export const useAuthStore = defineStore("auth", () => {
     setEnv,
     onFileUpload,
     postFileUpload,
+    setGlobusAccessToken,
   };
 });
 
