@@ -7,16 +7,13 @@ import fire
 import workers.api as api
 import workers.workflow_utils as wf_utils
 from workers.config import config
+import workers.exceptions as exc
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def verify():
-    archive_path_verification_dir = Path(config['paths'][dataset['type']]['archive_path_verification'])
-    logger.info(f"Archive path verification dir: {archive_path_verification_dir}")
-    archive_path_verification_dir.mkdir(exist_ok=True, parents=True)
-
     incorrect_path_dataset_ids = []
     correct_path_dataset_ids = []
     unprocessed_dataset_ids = []
@@ -24,16 +21,20 @@ def verify():
     datasets = api.get_all_datasets(archived=True, bundle=True)
 
     for dataset in datasets:
+        archive_path_verification_dir = Path(config['paths'][dataset['type']]['archive_path_verification'])
+        logger.info(f"Archive path verification dir: {archive_path_verification_dir}")
+        archive_path_verification_dir.mkdir(exist_ok=True, parents=True)
+
         logger.info(f"Verifying dataset {dataset['id']}")
-        
+
         bundle = dataset['bundle']
         if bundle is None:
             logger.info(f"No bundle for dataset {dataset['id']}. Will not process. Skipping...")
             unprocessed_dataset_ids.append(dataset['id'])
             continue
-        
+
         archive_path = dataset['archive_path']
-        
+
         working_dir = archive_path_verification_dir / dataset['name']
         if working_dir.exists():
             shutil.rmtree(working_dir)
@@ -44,9 +45,13 @@ def verify():
 
         logger.info(f"Tar file download path: {tar_file_download_path}")
 
-
         wf_utils.download_file_from_sda(sda_file_path=archive_path,
                                         local_file_path=tar_file_download_path)
+
+        if len(dataset['source_datasets']) > 1:
+            raise exc.ValidationFailed(f"Expected one source Raw Data for dataset {dataset['id']}, but found multiple")
+        source_dataset_id = dataset['source_datasets'][0]['source_id']
+        source_dataset = api.get_dataset(dataset_id=source_dataset_id)
 
         extraction_path = working_dir / f"{dataset['name']}_extracted" / dataset['name']
         logger.info(f"Extraction path: {extraction_path}")
@@ -56,16 +61,16 @@ def verify():
         dataset_origin_path = config['registration'][dataset['type']]['source_dir']
         logger.info(f"Dataset origin path: {dataset_origin_path}")
 
-        incorrect_nested_path = extraction_path / dataset_origin_path[1:] / dataset["name"]
+        incorrect_nested_path = extraction_path / dataset_origin_path[1:] / source_dataset['name'] / dataset["name"]
         logger.info(f"Looking for incorrect nested path: {incorrect_nested_path}")
-        
+
         has_incorrect_path = incorrect_nested_path.exists()
         logger.info(f"Has incorrect path: {has_incorrect_path}")
 
         if not has_incorrect_path:
             extracted_dirs = [x[0] for x in os.walk(extraction_path)]
             logger.info(f"Extracted dataset dirs: {extracted_dirs}")
-        
+
         if has_incorrect_path:
             logger.info(f"Dataset {dataset['name']} has incorrect nested path {incorrect_nested_path}")
             incorrect_path_dataset_ids.append(dataset['id'])

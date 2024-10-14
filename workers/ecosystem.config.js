@@ -82,6 +82,18 @@ module.exports = {
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
-    }
+    },
+    {
+      name: "verify_archive_paths",
+      script: "python",
+      args: "-u -m workers.scripts.verify_archive_paths",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/workers/verify_archive_paths.err",
+      out_file: "../logs/workers/verify_archive_paths.log",
+      autorestart: false,
+      exp_backoff_restart_delay: 100,
+    },
   ]
 }
