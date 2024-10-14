@@ -68,6 +68,21 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
   },
+  globus: {
+    auth_url:
+      import.meta.env.VITE_GLOBUS_OAUTH_AUTH_URL ||
+      "https://localhost/globus/authorize",
+    token_url:
+      import.meta.env.VITE_GLOBUS_OAUTH_TOKEN_URL ||
+      "https://localhost/globus/token",
+    client_id: import.meta.env.VITE_GLOBUS_OAUTH_CLIENT_ID || "client_id",
+    client_secret:
+      import.meta.env.VITE_GLOBUS_OAUTH_CLIENT_SECRET || "client_secret",
+    scopes: import.meta.env.VITE_GLOBUS_OAUTH_SCOPES || "scopes",
+    redirect_uri:
+      import.meta.env.VITE_GLOBUS_OAUTH_REDIRECT_URI ||
+      "https://localhost/globus/post-login-redirect",
+  },
 };
 
 export default exports;

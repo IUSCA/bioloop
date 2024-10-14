@@ -8,6 +8,7 @@ export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
+  const globusAccessToken = ref(useLocalStorage("globusAccessToken", ""));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
@@ -156,6 +157,10 @@ export const useAuthStore = defineStore("auth", () => {
     user.value.theme = theme;
   };
 
+  const setGlobusAccessToken = (token) => {
+    globusAccessToken.value = token;
+  };
+
   const getTheme = () => user.value.theme;
 
   return {
@@ -176,6 +181,7 @@ export const useAuthStore = defineStore("auth", () => {
     ciLogin,
     env,
     setEnv,
+    setGlobusAccessToken,
   };
 });
 
