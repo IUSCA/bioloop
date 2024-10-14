@@ -80,10 +80,10 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { storeToRefs } from "pinia";
-import config from "@/config";
 
 const props = defineProps({ isSidebarCollapsed: Boolean });
 

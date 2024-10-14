@@ -16,7 +16,7 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    download: "/N/scratch/bioloop/production/download",
+    download: "",
   },
   file_browser: {
     enable_downloads: true,
@@ -77,6 +77,9 @@ const exports = {
     redirect_uri:
       import.meta.env.VITE_GLOBUS_OAUTH_REDIRECT_URI ||
       "https://localhost/globus/post-login-redirect",
+    transfer_endpoint_url:
+      import.meta.env.VITE_GLOBUS_TRANSFER_ENDPOINT_URL ||
+      "https://localhost/globus/transfer",
   },
 };
 
