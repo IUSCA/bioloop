@@ -24,8 +24,8 @@ const getToken = ({ code }) => {
       redirect_uri: config.get('globus.redirect_uri'),
     }
   }).then(response => {
-    console.log('Received token:', response.data);
-    return response.data
+    console.log('Received token:', response);
+    return response
   });
 };
 
