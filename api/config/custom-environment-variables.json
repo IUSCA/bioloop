@@ -58,5 +58,11 @@
   "restricted_ingestion_dirs": {
     "scratch": "SCRATCH_INGESTION_RESTRICTED_DIRS",
     "project": "PROJECT_INGESTION_RESTRICTED_DIRS"
+  },
+  "globus": {
+    "token_url": "GLOBUS_OAUTH_TOKEN_URL",
+    "client_id": "GLOBUS_OAUTH_CLIENT_ID",
+    "client_secret": "GLOBUS_OAUTH_CLIENT_SECRET",
+    "redirect_uri": "GLOBUS_OAUTH_REDIRECT_URI"
   }
 }
