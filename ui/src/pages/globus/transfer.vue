@@ -9,9 +9,6 @@ const auth = useAuthStore();
 // const route = useRoute();
 const globusAuthCode = ref(useLocalStorage("globus.auth.code", ""));
 
-// route.
-// const queryParams = route.params;
-
 onMounted(() => {
   console.log("Auth code", globusAuthCode.value);
   globusService
@@ -23,6 +20,8 @@ onMounted(() => {
     .then((res) => {
       console.log("Globus Auth Response token:", res.data.access_token);
       auth.setGlobusAccessToken(res.data.access_token);
+      globusAuthCode.value = "";
+      // console.log("Globus Auth Code is now:", globusAuthCode.value);
     })
     .catch((err) => {
       console.error("Globus Auth Error:", err);
