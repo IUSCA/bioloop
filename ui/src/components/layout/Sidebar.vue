@@ -186,7 +186,7 @@ const operator_items = ref([
     test_id: "sidebar-duplicate-datasets",
   },
   {
-    icon: "mdi-dna",
+    icon: "ri:folder-transfer-line",
     title: "Globus Transfer",
     path: "/globus",
     test_id: "sidebar-raw-data",

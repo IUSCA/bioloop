@@ -1,13 +1,28 @@
-<template>Globus Authentication succeeded</template>
+<template>
+  <va-button @click="submitTask">Start Transfer</va-button>
+</template>
 
 <script setup>
 // const router = useRouter();
 import globusService from "@/services/globusAuth";
+import globusTransferService from "@/services/globusTransfer";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 // const route = useRoute();
 const globusAuthCode = ref(useLocalStorage("globus.auth.code", ""));
+
+const submitTask = () => {
+  globusTransferService
+    .submitTask()
+    .then((res) => {
+      console.log("Task submitted successfully:", res.data);
+      // router.push("/globus/transfers");
+    })
+    .catch((err) => {
+      console.error("Task submission failed:", err);
+    });
+};
 
 onMounted(() => {
   console.log("Auth code", globusAuthCode.value);

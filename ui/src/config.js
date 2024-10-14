@@ -139,9 +139,9 @@ const exports = {
   ],
   restricted_ingestion_dirs: [
     import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
-    "/scratch/space/restricted",
+      "/scratch/space/restricted",
     import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
-    "/project/space/restricted",
+      "/project/space/restricted",
   ],
   globus: {
     auth_url:
@@ -152,6 +152,9 @@ const exports = {
     redirect_uri:
       import.meta.env.VITE_GLOBUS_OAUTH_REDIRECT_URI ||
       "https://localhost/globus/post-login-redirect",
+    transfer_endpoint_url:
+      import.meta.env.VITE_GLOBUS_TRANSFER_ENDPOINT_URL ||
+      "https://localhost/globus/transfer",
   },
 };
 
