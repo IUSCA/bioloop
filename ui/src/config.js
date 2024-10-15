@@ -87,6 +87,9 @@ const exports = {
   },
   enabledFeatures: {
     genomeBrowser: true,
+    notifications: {
+      enabledForRoles: ["admin", "operator"],
+    },
   },
   // filesystem_scratch_source_dir:
   //   import.meta.env.VITE_DATASET_INGESTION_SOURCE_DIR || "/",
@@ -106,11 +109,6 @@ const exports = {
     UPLOADING: "Uploading",
     UPLOAD_FAILED: "Upload Failed",
     UPLOADED: "Uploaded",
-  },
-  featureFlags: {
-    notifications: {
-      enabledForRoles: [],
-    },
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
