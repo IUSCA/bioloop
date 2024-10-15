@@ -19,7 +19,6 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('active').optional().toBoolean(),
     query('status').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -29,7 +28,6 @@ router.get(
     // req.query.by_active_action_items: fetch notifications whose action items
     // have not been acknowledged
     const filterQuery = _.omitBy(_.isUndefined)({
-      active: req.query.active || true,
       status: req.query.status || 'CREATED',
     });
 

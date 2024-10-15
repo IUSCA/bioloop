@@ -7,7 +7,6 @@ CREATE TABLE "notification" (
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "label" TEXT NOT NULL,
     "text" TEXT,
-    "active" BOOLEAN NOT NULL DEFAULT true,
     "status" "NOTIFICATION_STATUS" NOT NULL DEFAULT 'CREATED',
     "acknowledged_by_id" INTEGER,
 

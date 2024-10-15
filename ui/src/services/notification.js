@@ -1,10 +1,9 @@
 import api from "@/services/api";
 
 class NotificationService {
-  getNotifications({ active = true, status = null } = {}) {
+  getNotifications({ status = null } = {}) {
     return api.get("/notifications", {
       params: {
-        active,
         status,
       },
     });
