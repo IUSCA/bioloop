@@ -66,7 +66,7 @@ const props = defineProps({
 });
 
 const areNotificationsEnabled = computed(() => {
-  return config.featureFlags.notifications.enabledForRoles.some((role) =>
+  return config.enabledFeatures.notifications.enabledForRoles.some((role) =>
     hasRole(role),
   );
 });
