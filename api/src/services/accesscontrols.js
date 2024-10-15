@@ -119,7 +119,6 @@ const grantsObject = {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
-      'delete:any': ['*'],
     },
   },
 };
