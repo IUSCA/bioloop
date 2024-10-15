@@ -13,5 +13,10 @@
         "username": ""
       }
     }
+  },
+  "enabledFeatures": {
+    "notifications": {
+      "enabledForRoles": ["operator"]
+    }
   }
 }
