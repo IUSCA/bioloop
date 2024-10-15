@@ -47,7 +47,11 @@ const redirectToGlobusAuth = ({ persistentStateAttributes = [] } = {}) => {
   window.location.replace(getGlobusAuthURL(stateAttributesToPersist));
 };
 
-const getGlobusTransferRequestBody = ({ submissionId, file }) => {
+const getGlobusTransferRequestBody = ({
+  submissionId,
+  file,
+  destinationEndpointId,
+}) => {
   return {
     DATA: [
       {
@@ -57,7 +61,7 @@ const getGlobusTransferRequestBody = ({ submissionId, file }) => {
       },
     ],
     DATA_TYPE: "transfer",
-    destination_endpoint: config.globus.destination_endpoint_id,
+    destination_endpoint: destinationEndpointId,
     source_endpoint: config.globus.source_endpoint_id,
     submission_id: submissionId,
   };

@@ -131,7 +131,7 @@
                     border-color="primary"
                     preset="secondary"
                     class="flex-auto"
-                    @click="onShare"
+                    @click="onGlobusShareClick"
                   >
                     <i-mdi-share-variant-outline class="pr-2 text-2xl" />
                     Share
@@ -270,8 +270,13 @@
             max-height="350x"
             class="collection-search-modal"
             fixed-layout
+            @cancel="beforeGlobusShareModalClose"
+            @ok="onGlobusShareModalOk"
+            ok-text="Share"
           >
-            <div class="w-full autocomplete-container">
+            <!--            @before-cancel="beforeGlobusShareModalClose"-->
+            <!--            @before-ok="beforeGlobusShareModalOk"-->
+            <div class="flex flex-col w-full autocomplete-container">
               <AutoComplete
                 :async="true"
                 v-model:search-text="endpointSearchText"
@@ -283,6 +288,8 @@
                 @select="
                   (item) => {
                     selectedGlobusEndpoint = item;
+                    endpointSearchText = item.display_name;
+                    globusShareModalError = '';
                   }
                 "
                 @clear="
@@ -293,11 +300,12 @@
                 @open="
                   () => {
                     selectedGlobusEndpoint = null;
+                    searchGlobusEndpoints();
                   }
                 "
                 @close="
                   () => {
-                    endpointSearchText = '';
+                    // endpointSearchText = '';
                     retrievedEndpoints = [];
                   }
                 "
@@ -306,6 +314,9 @@
                 <!--                <span class></span>-->
                 <!--                </template>-->
               </AutoComplete>
+              <div class="text-sm va-text-danger">
+                {{ globusShareModalError }}
+              </div>
             </div>
           </va-modal>
           <!--          </div>-->
@@ -404,6 +415,7 @@ const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 // const { globusAccessToken, isGlobusAccessTokenValid } = storeToRefs(auth);
 // const isGlobusAccessTokenValid = auth.isGlobusAccessTokenValid();
 // const submissionId = ref("");
+const globusShareModalError = ref("");
 const endpointSearchText = ref("");
 const retrievedEndpoints = ref([]);
 const selectedGlobusEndpoint = ref(null);
@@ -568,8 +580,42 @@ function openModalToDownloadDataset() {
 
 const showGlobusShareModal = ref(false);
 
-const onShare = () => {
-  console.log("onShare()");
+const beforeGlobusShareModalClose = () => {
+  console.log("onGlobusShareModalClose()");
+  if (!endpointSearchText.value) {
+    selectedGlobusEndpoint.value = null;
+  }
+  globusShareModalError.value = "";
+  endpointSearchText.value = "";
+  showGlobusShareModal.value = false;
+};
+
+const beforeGlobusShareModalOk = (hide) => {
+  console.log("beforeGlobusShareModalOk()");
+  if (selectedGlobusEndpoint.value) {
+    endpointSearchText.value = "";
+    hide();
+  } else {
+    globusShareModalError.value = "Please select a Globus endpoint";
+  }
+};
+
+const onGlobusShareModalOk = () => {
+  console.log("onGlobusShareModalOk()");
+  // endpointSearchText.value = "";
+  if (selectedGlobusEndpoint.value) {
+    globusShareModalError.value = "";
+    endpointSearchText.value = "";
+    initiateGlobusTransfer();
+  } else {
+    globusShareModalError.value = "Please select a Globus endpoint";
+    // keep modal open
+    showGlobusShareModal.value = true;
+  }
+};
+
+const onGlobusShareClick = () => {
+  console.log("onGlobusShareClick()");
   console.log("globusAccessToken: ", auth.globusAccessToken);
   console.log("isGlobusAccessTokenValid: ", auth.isGlobusAccessTokenValid());
   if (!auth.globusAccessToken || !auth.isGlobusAccessTokenValid()) {
@@ -614,6 +660,7 @@ const initiateGlobusTransfer = () => {
       const transferRequestBody = globusService.getGlobusTransferRequestBody({
         submissionId,
         file,
+        destinationEndpointId: selectedGlobusEndpoint.value.id,
       });
       console.log("transferRequestBody: ", transferRequestBody);
       return transferRequestBody;
@@ -623,10 +670,11 @@ const initiateGlobusTransfer = () => {
     })
     .then(() => {
       showGlobusShareModal.value = false;
-      toast.success(`Initiated transfer for dataset ${props.datasetId}`);
+      toast.success(`Initiated Globus transfer`);
     })
     .catch((err) => {
       console.error(err);
+      toast.error("Failed to initiate Globus transfer");
     })
     .finally(() => {
       loading.value = false;
