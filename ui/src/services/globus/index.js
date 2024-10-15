@@ -4,14 +4,13 @@ import { v4 as uuidv4 } from "uuid";
 const globusAuthStoredState = ref(useLocalStorage("globus.auth.state", ""));
 // const globusAuthCode = ref(useLocalStorage("globus.auth.code", ""));
 
-const getGlobusAuthURL = (persistentStateAttributes) => {
+const getGlobusAuthURL = (delimitedStateAttributes) => {
   const globusAuthBaseURL = config.globus.auth_url;
   const clientId = config.globus.client_id;
   const redirectUri = config.globus.redirect_uri;
   const scopes = encodeURIComponent(config.globus.scopes);
   const response_type = "code";
-  globusAuthStoredState.value =
-    uuidv4() + ":" + btoa(persistentStateAttributes); // base64 encoded state attributes
+  globusAuthStoredState.value = uuidv4() + ":" + btoa(delimitedStateAttributes); // base64 encoded state attributes
   // console.log("Pre-auth Stored State", globusAuthStoredState.value);
   const url =
     `${globusAuthBaseURL}?` +
@@ -27,12 +26,14 @@ const getGlobusAuthURL = (persistentStateAttributes) => {
 
 /**
  *
- * @param persistentStateAttributes Array of attributes (strings) to persist in the state
- * that will be used to request an authorization code.
+ * @param persistentStateAttributes Array of attributes to persist in the state
+ * that will be used to request an authorization code. Attributes encoded in
+ * the state can later be decoded and used after an authorization code has been
+ * granted.
  */
 const redirectToGlobusAuth = ({ persistentStateAttributes = [] } = {}) => {
   // const _persistInState = ["A", "B"];
-  const stateAttributesToPersist = persistentStateAttributes.reduce(
+  const delimitedStateAttributes = persistentStateAttributes.reduce(
     (total, currentVal, index) => {
       return (
         total +
@@ -42,9 +43,9 @@ const redirectToGlobusAuth = ({ persistentStateAttributes = [] } = {}) => {
     },
     "",
   );
-  console.log("Persistent Attributes", stateAttributesToPersist);
-  // getGlobusAuthURL(stateAttributesToPersist);
-  window.location.replace(getGlobusAuthURL(stateAttributesToPersist));
+  console.log("Persistent Attributes", delimitedStateAttributes);
+  // getGlobusAuthURL(delimitedStateAttributes);
+  window.location.replace(getGlobusAuthURL(delimitedStateAttributes));
 };
 
 const getGlobusTransferRequestBody = ({
