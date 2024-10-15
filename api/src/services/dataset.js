@@ -67,6 +67,7 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name, initiator_id) {
   const wf_body = get_wf_body(wf_name);
 
+
   // check if a workflow with the same name is not already running / pending on this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
@@ -74,11 +75,15 @@ async function create_workflow(dataset, wf_name, initiator_id) {
 
   assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
 
+  console.log('Creating workflow', wf_body, 'for dataset', dataset.id);
+
   // create the workflow
   const wf = (await wfService.create({
     ...wf_body,
     args: [dataset.id],
   })).data;
+
+  console.log('Created workflow', wf, 'for dataset', dataset.id);
 
   // add association to the dataset
   await prisma.workflow.create({
@@ -88,6 +93,8 @@ async function create_workflow(dataset, wf_name, initiator_id) {
       ...(initiator_id && { initiator_id }),
     },
   });
+
+  console.log('Added association to dataset', dataset.id, 'for workflow', wf.workflow_id);
 
   return wf;
 }

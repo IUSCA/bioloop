@@ -30,10 +30,10 @@ config = {
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'base_url': 'http://localhost:3030',
+        'base_url': 'http://api:3030',
         'auth_token': APP_API_TOKEN,
-        'conn_timeout': 5,  # seconds
-        'read_timeout': 30  # seconds
+        'conn_timeout': 60,  # seconds
+        'read_timeout': 60  # seconds
     },
     'paths': {
         'scratch': '/path/to/scratch',
@@ -103,9 +103,14 @@ config = {
                     'task': 'await_stability'
                 },
                 {
+                  'name': 'metadata',
+                  'task': 'metadata'
+                },
+                {
                     'name': 'inspect',
                     'task': 'inspect_dataset'
                 },
+
                 {
                     'name': 'archive',
                     'task': 'archive_dataset'
@@ -123,6 +128,15 @@ config = {
                     'task': 'setup_dataset_download'
                 }
             ]
+        },
+        'metadata': {
+          'steps': [
+            {
+              'name': 'metadata',
+              'task': 'metadata'
+            },
+
+          ]
         }
     },
     'celery': {

@@ -120,3 +120,12 @@ def delete_source(celery_task, dataset_id, **kwargs):
 def delete_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.mark_archived_and_delete import mark_archived_and_delete as task_body
     return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='metadata',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def metadata(celery_task, dataset_id, **kwargs):
+    from workers.tasks.bc2_metadata import get_metadata_from_csv as task_body
+    return task_body(celery_task, dataset_id, **kwargs)
