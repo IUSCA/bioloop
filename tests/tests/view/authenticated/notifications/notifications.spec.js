@@ -110,7 +110,7 @@ const createNotification = async ({
 };
 
 const deleteActiveNotifications = async (request, token) => {
-  const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?active=true`, {
+  const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?status=CREATED`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

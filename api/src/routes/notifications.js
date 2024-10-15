@@ -67,7 +67,7 @@ router.delete(
   '/',
   isPermittedTo('delete'),
   validate([
-    query('active').isBoolean().toBoolean().optional(),
+    query('status').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
