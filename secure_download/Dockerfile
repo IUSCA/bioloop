@@ -1,4 +1,4 @@
-FROM docker.io/library/node:19
+FROM node:19
 
 ARG APP_GID
 ARG APP_UID 
@@ -30,7 +30,7 @@ ENV PATH="/home/appuser/.local/bin/:${PATH}"
 # install pnpm and install packages from pnpm-lock.yaml
 RUN npm install pm2 -g
 # RUN npm install -g pnpm
-ENTRYPOINT npm ci && npx prisma generate client && exec pm2-runtime ecosystem.config.js
+ENTRYPOINT npm ci && exec pm2-runtime ecosystem.config.js
 # ENTRYPOINT pnpm fetch && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
 
 # Entrypoint will be run in the shell mode - https://docs.docker.com/engine/reference/builder/#shell-form-entrypoint-example
