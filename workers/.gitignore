@@ -101,3 +101,5 @@ requirements.txt
 
 workers/scripts/get_size.py
 workers/config/production.py
+
+workers/__pycache__/

@@ -496,6 +496,8 @@ router.post(
         ...datasetService.INCLUDE_WORKFLOWS,
       },
     });
+
+
     res.json(dataset);
   }),
 );
@@ -972,6 +974,8 @@ router.patch('/:id/metadata', asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { metadata } = req.body;
 
+  console.log(id, metadata)
+
   let updateMetadata = []
 
   // delete all metadata for the dataset
@@ -982,10 +986,23 @@ router.patch('/:id/metadata', asyncHandler(async (req, res, next) => {
   }));
 
   // create new metadata
-  const createMetadataPromises = metadata.map(mdata => {
-    const keyword_id = parseInt(mdata.keyword_id);
+  const createMetadataPromises = metadata.map(async (mdata) => {
+
+
+    // set the keyword_id
+    const keyword_id = 'keyword_id' in mdata 
+      ? parseInt(mdata.keyword_id) 
+      : (await prisma.keyword.findFirst({where: {name: mdata.name}})).id;
+
+
+
+
+    // set the value
     const value = mdata.data;
 
+    console.log(keyword_id, id, value)
+
+    // create the actual metadata
     return prisma.keyword_value.create({
       data: {
         dataset_id: parseInt(id),
@@ -999,18 +1016,62 @@ router.patch('/:id/metadata', asyncHandler(async (req, res, next) => {
 
   try {
     const results = await Promise.all(updateMetadata);
-    console.log('Upsert results:', results);
+    console.log('Upsert:', results);
     res.json(results);
   } catch (error) {
-    console.error('Error during upsert:', error);
+    console.error('Error:', error);
     res.status(500).json({ error: 'Error during update/create' });
   }
 }));
+
+// Make sure we have all metadata fields from csv
+router.patch('/metadata/keyword', asyncHandler(async (req, res, next) => {
+
+  const keywords = req.body;
+
+  console.log('KEYWORDS', keywords);
+
+  for(const keyword of keywords) {
+
+
+    await prisma.keyword.upsert({
+      where: {
+        name: keyword,
+      },
+      update: {},
+      create: {
+        name: keyword,
+        datatype: 'STRING',
+      }
+    });
+  }
+
+  res.json({message: 'success'});
+
+}))
+
+router.get('/:id/test', asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const dataset = await prisma.dataset.findFirst({where: {id: parseInt(id)}});
+
+  dataset.workflows = []
+
+  console.log('DATASET', dataset);
+
+  await datasetService.create_workflow(dataset, 'metadata');
+
+
+  return res.json({message: 'success'});
+}))
 
 router.post('/metadata/keyword', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']
   // #swagger.summary = Update dataset metadata
   const { keyword, description } = req.body;
+
+
+  
   const results = await prisma.keyword.create({
     data: {
       keyword,
@@ -1039,6 +1100,12 @@ router.post('/metadata/fields', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']
   // #swagger.summary = Update dataset metadata
   const { name, description } = req.body;
+
+  console.log('BODY', req.body);
+
+
+
+  
   const results = await prisma.keyword.create({
     data: {
       name,
@@ -1050,6 +1117,9 @@ router.post('/metadata/fields', asyncHandler(async (req, res, next) => {
 
 
 }));
+
+
+
 
 router.patch('/metadata/fields/:id', asyncHandler(async (req, res, next) => {
 

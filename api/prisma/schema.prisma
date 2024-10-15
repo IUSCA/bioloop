@@ -43,7 +43,7 @@ model dataset {
 
 model keyword {
   id            Int              @id @default(autoincrement())
-  name          String
+  name          String           @unique
   description   String?
   visible       Boolean          @default(true)
   locked       Boolean           @default(false)
