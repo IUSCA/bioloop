@@ -86,7 +86,6 @@ router.delete(
       where: filterQuery,
       data: {
         status: 'RESOLVED',
-        active: false,
       },
     });
     res.json(updatedCount);
