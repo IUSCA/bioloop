@@ -49,7 +49,7 @@
       </template>
 
       <template #cell(file_type)="{ rowData }">
-        <va-chip v-if="rowData" outline size="small">
+        <va-chip v-if="rowData.file_type?.id" outline size="small">
           {{ rowData.file_type?.name }}
         </va-chip>
       </template>
@@ -374,6 +374,7 @@ function fetch_items() {
   })
     .then((res) => {
       datasets.value = res.data?.datasets || [];
+      console.log("Fetched datasets:", datasets.value);
       total_results.value = res.data?.metadata?.count || 0;
     })
     .finally(() => {
@@ -461,4 +462,9 @@ function delete_dataset(id) {
       data_loading.value = false;
     });
 }
+
+// onMounted(() => {
+//   console.log("Mounted DatasetTable");
+//   console.log(datasets.value);
+// });
 </script>
