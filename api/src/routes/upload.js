@@ -9,7 +9,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const authService = require('../services/auth');
-const { INCLUDE_UPLOAD_LOG_RELATIONS } = require('../services/dataset');
+const { INCLUDE_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
@@ -62,10 +62,10 @@ router.get(
   }),
 );
 
-const getDataProductOriginPath = (datasetName) => path.join(
+const getDataProductOriginPath = (datasetId) => path.join(
   UPLOAD_PATH,
   'data_products',
-  datasetName,
+  datasetId,
   'merged_chunks',
 );
 
@@ -81,7 +81,7 @@ router.post(
   ]),
   asyncHandler(async (req, res, next) => {
     const {
-      data_product_name, source_dataset_id, file_type, files_metadata,
+      data_product_id, data_product_name, source_dataset_id, file_type, files_metadata,
     } = req.body;
 
     const upload_log = await prisma.upload_log.create({
@@ -109,7 +109,7 @@ router.post(
               }],
             },
             name: data_product_name,
-            origin_path: getDataProductOriginPath(data_product_name),
+            origin_path: getDataProductOriginPath(data_product_id),
             type: config.dataset_types[1],
             file_type: file_type.id === undefined ? {
               create: {

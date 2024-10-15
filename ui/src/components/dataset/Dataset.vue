@@ -264,11 +264,51 @@
             </div>
           </va-modal>
 
-          <va-modal v-model="showGlobusShareModal"
-            ><va-button @click="initiateGlobusTransfer"
-              >Share via Globus</va-button
-            ></va-modal
+          <!--          <div class="sm:min-h-[50vh] sm:max-h-[65vh]">-->
+          <va-modal
+            v-model="showGlobusShareModal"
+            max-height="350x"
+            class="collection-search-modal"
+            fixed-layout
           >
+            <div class="w-full autocomplete-container">
+              <AutoComplete
+                :async="true"
+                v-model:search-text="endpointSearchText"
+                @update:search-text="searchGlobusEndpoints"
+                label="Search Globus Endpoints"
+                placeholder="Begin typing to search"
+                :data="retrievedEndpoints"
+                display-by="display_name"
+                @select="
+                  (item) => {
+                    selectedGlobusEndpoint = item;
+                  }
+                "
+                @clear="
+                  () => {
+                    selectedGlobusEndpoint = null;
+                  }
+                "
+                @open="
+                  () => {
+                    selectedGlobusEndpoint = null;
+                  }
+                "
+                @close="
+                  () => {
+                    endpointSearchText = '';
+                    retrievedEndpoints = [];
+                  }
+                "
+              >
+                <!--                <template #filtered="{ item }">-->
+                <!--                <span class></span>-->
+                <!--                </template>-->
+              </AutoComplete>
+            </div>
+          </va-modal>
+          <!--          </div>-->
         </div>
       </div>
 
@@ -364,6 +404,9 @@ const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 // const { globusAccessToken, isGlobusAccessTokenValid } = storeToRefs(auth);
 // const isGlobusAccessTokenValid = auth.isGlobusAccessTokenValid();
 // const submissionId = ref("");
+const endpointSearchText = ref("");
+const retrievedEndpoints = ref([]);
+const selectedGlobusEndpoint = ref(null);
 const dataset = ref({});
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -544,6 +587,19 @@ const initiateGlobusAuth = () => {
   });
 };
 
+const searchGlobusEndpoints = () => {
+  if (!endpointSearchText.value) {
+    return [];
+  }
+  return globusTransferService
+    .searchEndpoints({
+      filter_fulltext: encodeURIComponent(endpointSearchText.value),
+    })
+    .then((res) => {
+      retrievedEndpoints.value = res.data["DATA"];
+    });
+};
+
 const initiateGlobusTransfer = () => {
   loading.value = true;
   globusTransferService
@@ -595,6 +651,16 @@ watch(trigger_dataset_retrieval, () => {
 //   console.log("onBeforeRouteUpdate", to, from);
 // });
 </script>
+
+<style lang="scss">
+.collection-search-modal {
+  --va-modal-dialog-min-height: 350px;
+}
+
+.autocomplete-container {
+  min-height: 300px;
+}
+</style>
 
 <route lang="yaml">
 meta:
