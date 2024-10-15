@@ -25,8 +25,6 @@ router.get(
     // #swagger.tags = ['notifications']
     // #swagger.summary = Get filtered notifications
 
-    // req.query.by_active_action_items: fetch notifications whose action items
-    // have not been acknowledged
     const filterQuery = _.omitBy(_.isUndefined)({
       status: req.query.status || 'CREATED',
     });
@@ -75,7 +73,7 @@ router.delete(
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    const filterQuery = buildFilterQuery(req.query);
+    const filterQuery = req.query;
 
     if (Object.keys(filterQuery).length === 0) {
       res.send({
@@ -94,9 +92,5 @@ router.delete(
     res.json(updatedCount);
   }),
 );
-
-const buildFilterQuery = ({ active }) => _.omitBy(_.isUndefined)({
-  active,
-});
 
 module.exports = router;
