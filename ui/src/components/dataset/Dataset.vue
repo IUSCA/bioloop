@@ -131,7 +131,7 @@
                     border-color="primary"
                     preset="secondary"
                     class="flex-auto"
-                    @click="onShare"
+                    @click="onGlobusShareClick"
                   >
                     <i-mdi-share-variant-outline class="pr-2 text-2xl" />
                     Share
@@ -264,11 +264,62 @@
             </div>
           </va-modal>
 
-          <va-modal v-model="showGlobusShareModal"
-            ><va-button @click="initiateGlobusTransfer"
-              >Share via Globus</va-button
-            ></va-modal
+          <!--          <div class="sm:min-h-[50vh] sm:max-h-[65vh]">-->
+          <va-modal
+            v-model="showGlobusShareModal"
+            max-height="350x"
+            class="collection-search-modal"
+            fixed-layout
+            @cancel="beforeGlobusShareModalClose"
+            @ok="onGlobusShareModalOk"
+            ok-text="Share"
           >
+            <!--            @before-cancel="beforeGlobusShareModalClose"-->
+            <!--            @before-ok="beforeGlobusShareModalOk"-->
+            <div class="flex flex-col w-full autocomplete-container">
+              <AutoComplete
+                :async="true"
+                v-model:search-text="endpointSearchText"
+                @update:search-text="searchGlobusEndpoints"
+                label="Search Globus Endpoints"
+                placeholder="Begin typing to search"
+                :data="retrievedEndpoints"
+                display-by="display_name"
+                @select="
+                  (item) => {
+                    selectedGlobusEndpoint = item;
+                    endpointSearchText = item.display_name;
+                    globusShareModalError = '';
+                  }
+                "
+                @clear="
+                  () => {
+                    selectedGlobusEndpoint = null;
+                  }
+                "
+                @open="
+                  () => {
+                    selectedGlobusEndpoint = null;
+                    searchGlobusEndpoints();
+                  }
+                "
+                @close="
+                  () => {
+                    // endpointSearchText = '';
+                    retrievedEndpoints = [];
+                  }
+                "
+              >
+                <!--                <template #filtered="{ item }">-->
+                <!--                <span class></span>-->
+                <!--                </template>-->
+              </AutoComplete>
+              <div class="text-sm va-text-danger">
+                {{ globusShareModalError }}
+              </div>
+            </div>
+          </va-modal>
+          <!--          </div>-->
         </div>
       </div>
 
@@ -364,6 +415,10 @@ const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 // const { globusAccessToken, isGlobusAccessTokenValid } = storeToRefs(auth);
 // const isGlobusAccessTokenValid = auth.isGlobusAccessTokenValid();
 // const submissionId = ref("");
+const globusShareModalError = ref("");
+const endpointSearchText = ref("");
+const retrievedEndpoints = ref([]);
+const selectedGlobusEndpoint = ref(null);
 const dataset = ref({});
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -525,8 +580,42 @@ function openModalToDownloadDataset() {
 
 const showGlobusShareModal = ref(false);
 
-const onShare = () => {
-  console.log("onShare()");
+const beforeGlobusShareModalClose = () => {
+  console.log("onGlobusShareModalClose()");
+  if (!endpointSearchText.value) {
+    selectedGlobusEndpoint.value = null;
+  }
+  globusShareModalError.value = "";
+  endpointSearchText.value = "";
+  showGlobusShareModal.value = false;
+};
+
+const beforeGlobusShareModalOk = (hide) => {
+  console.log("beforeGlobusShareModalOk()");
+  if (selectedGlobusEndpoint.value) {
+    endpointSearchText.value = "";
+    hide();
+  } else {
+    globusShareModalError.value = "Please select a Globus endpoint";
+  }
+};
+
+const onGlobusShareModalOk = () => {
+  console.log("onGlobusShareModalOk()");
+  // endpointSearchText.value = "";
+  if (selectedGlobusEndpoint.value) {
+    globusShareModalError.value = "";
+    endpointSearchText.value = "";
+    initiateGlobusTransfer();
+  } else {
+    globusShareModalError.value = "Please select a Globus endpoint";
+    // keep modal open
+    showGlobusShareModal.value = true;
+  }
+};
+
+const onGlobusShareClick = () => {
+  console.log("onGlobusShareClick()");
   console.log("globusAccessToken: ", auth.globusAccessToken);
   console.log("isGlobusAccessTokenValid: ", auth.isGlobusAccessTokenValid());
   if (!auth.globusAccessToken || !auth.isGlobusAccessTokenValid()) {
@@ -544,6 +633,19 @@ const initiateGlobusAuth = () => {
   });
 };
 
+const searchGlobusEndpoints = () => {
+  if (!endpointSearchText.value) {
+    return [];
+  }
+  return globusTransferService
+    .searchEndpoints({
+      filter_fulltext: encodeURIComponent(endpointSearchText.value),
+    })
+    .then((res) => {
+      retrievedEndpoints.value = res.data["DATA"];
+    });
+};
+
 const initiateGlobusTransfer = () => {
   loading.value = true;
   globusTransferService
@@ -558,6 +660,7 @@ const initiateGlobusTransfer = () => {
       const transferRequestBody = globusService.getGlobusTransferRequestBody({
         submissionId,
         file,
+        destinationEndpointId: selectedGlobusEndpoint.value.id,
       });
       console.log("transferRequestBody: ", transferRequestBody);
       return transferRequestBody;
@@ -567,10 +670,11 @@ const initiateGlobusTransfer = () => {
     })
     .then(() => {
       showGlobusShareModal.value = false;
-      toast.success(`Initiated transfer for dataset ${props.datasetId}`);
+      toast.success(`Initiated Globus transfer`);
     })
     .catch((err) => {
       console.error(err);
+      toast.error("Failed to initiate Globus transfer");
     })
     .finally(() => {
       loading.value = false;
@@ -595,6 +699,16 @@ watch(trigger_dataset_retrieval, () => {
 //   console.log("onBeforeRouteUpdate", to, from);
 // });
 </script>
+
+<style lang="scss">
+.collection-search-modal {
+  --va-modal-dialog-min-height: 350px;
+}
+
+.autocomplete-container {
+  min-height: 300px;
+}
+</style>
 
 <route lang="yaml">
 meta:

@@ -8,6 +8,10 @@ class GlobusTransferService {
   transfer(data) {
     return globusTransferApi.post("/transfer", data);
   }
+
+  searchEndpoints(params) {
+    return globusTransferApi.get("/endpoint_search", { params });
+  }
 }
 
 export default new GlobusTransferService();
