@@ -264,7 +264,6 @@
             </div>
           </va-modal>
 
-          <!--          <div class="sm:min-h-[50vh] sm:max-h-[65vh]">-->
           <va-modal
             v-model="showGlobusShareModal"
             max-height="350x"
@@ -274,8 +273,6 @@
             @ok="onGlobusShareModalOk"
             ok-text="Share"
           >
-            <!--            @before-cancel="beforeGlobusShareModalClose"-->
-            <!--            @before-ok="beforeGlobusShareModalOk"-->
             <div class="flex flex-col w-full autocomplete-container">
               <AutoComplete
                 :async="true"
@@ -285,6 +282,7 @@
                 placeholder="Begin typing to search"
                 :data="retrievedEndpoints"
                 display-by="display_name"
+                :messages="['Use hyphens between search terms']"
                 @select="
                   (item) => {
                     selectedGlobusEndpoint = item;
@@ -314,9 +312,15 @@
                 <!--                <span class></span>-->
                 <!--                </template>-->
               </AutoComplete>
+
               <div class="text-sm va-text-danger">
                 {{ globusShareModalError }}
               </div>
+
+              <GlobusCollectionInfo
+                v-if="selectedGlobusEndpoint"
+                :collection="selectedGlobusEndpoint"
+              />
             </div>
           </va-modal>
           <!--          </div>-->
@@ -588,16 +592,7 @@ const beforeGlobusShareModalClose = () => {
   globusShareModalError.value = "";
   endpointSearchText.value = "";
   showGlobusShareModal.value = false;
-};
-
-const beforeGlobusShareModalOk = (hide) => {
-  console.log("beforeGlobusShareModalOk()");
-  if (selectedGlobusEndpoint.value) {
-    endpointSearchText.value = "";
-    hide();
-  } else {
-    globusShareModalError.value = "Please select a Globus endpoint";
-  }
+  selectedGlobusEndpoint.value = null;
 };
 
 const onGlobusShareModalOk = () => {
@@ -607,6 +602,7 @@ const onGlobusShareModalOk = () => {
     globusShareModalError.value = "";
     endpointSearchText.value = "";
     initiateGlobusTransfer();
+    // selectedGlobusEndpoint.value = null;
   } else {
     globusShareModalError.value = "Please select a Globus endpoint";
     // keep modal open
@@ -678,6 +674,7 @@ const initiateGlobusTransfer = () => {
     })
     .finally(() => {
       loading.value = false;
+      selectedGlobusEndpoint.value = null;
     });
 };
 
