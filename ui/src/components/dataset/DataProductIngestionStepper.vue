@@ -428,7 +428,7 @@ const validateNotExists = (value) => {
     if (!value) {
       resolve(true);
     } else {
-      loading.value = true;
+      // loading.value = true;
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
         .then((res) => {
@@ -438,10 +438,6 @@ const validateNotExists = (value) => {
         })
         .catch((err) => {
           console.error(err);
-          // resolve(true);
-        })
-        .finally(() => {
-          loading.value = false;
         });
     }
   });
