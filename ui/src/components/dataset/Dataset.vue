@@ -271,7 +271,7 @@
             fixed-layout
             @cancel="beforeGlobusShareModalClose"
             @ok="onGlobusShareModalOk"
-            ok-text="Share"
+            ok-text="Share via Globus"
           >
             <div class="flex flex-col w-full autocomplete-container">
               <AutoComplete
