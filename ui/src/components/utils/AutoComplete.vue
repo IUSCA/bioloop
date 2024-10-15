@@ -14,6 +14,7 @@
           @click="openResults"
           :disabled="props.disabled"
           :label="props.label"
+          :messages="props.messages"
         >
           <!--          :error="props.error"-->
           <template #prependInner><slot></slot></template>
@@ -96,6 +97,10 @@ const props = defineProps({
   error: {
     type: Boolean,
     default: false,
+  },
+  messages: {
+    type: Array,
+    default: () => [],
   },
 });
 
