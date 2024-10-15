@@ -27,22 +27,24 @@ const getGlobusAuthURL = (persistentStateAttributes) => {
 
 /**
  *
- * @param persistInState Array of attributes (strings) to persist in the state
+ * @param persistentStateAttributes Array of attributes (strings) to persist in the state
  * that will be used to request an authorization code.
  */
-const redirectToGlobusAuth = ({ persistInState = [] } = {}) => {
+const redirectToGlobusAuth = ({ persistentStateAttributes = [] } = {}) => {
   // const _persistInState = ["A", "B"];
-  const persistentStateAttributes = persistInState.reduce(
+  const stateAttributesToPersist = persistentStateAttributes.reduce(
     (total, currentVal, index) => {
       return (
-        total + currentVal + (index < persistInState.length - 1 ? ":" : "")
+        total +
+        currentVal +
+        (index < persistentStateAttributes.length - 1 ? ":" : "")
       );
     },
     "",
   );
-  console.log("Persistent Attributes", persistentStateAttributes);
-  // getGlobusAuthURL(persistentStateAttributes);
-  window.location.replace(getGlobusAuthURL(persistentStateAttributes));
+  console.log("Persistent Attributes", stateAttributesToPersist);
+  // getGlobusAuthURL(stateAttributesToPersist);
+  window.location.replace(getGlobusAuthURL(stateAttributesToPersist));
 };
 
 const getGlobusTransferRequestBody = ({ submissionId, file }) => {

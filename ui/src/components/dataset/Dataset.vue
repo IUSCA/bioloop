@@ -539,7 +539,9 @@ const onShare = () => {
 const initiateGlobusAuth = () => {
   // console.log("Initiating Globus Auth");
   // console.log("route: ", route.path);
-  globusService.redirectToGlobusAuth({ persistInState: [route.path] });
+  globusService.redirectToGlobusAuth({
+    persistentStateAttributes: [route.path],
+  });
 };
 
 const shareDataset = () => {
