@@ -109,7 +109,7 @@ const exports = {
   },
   featureFlags: {
     notifications: {
-      enabledForRoles: ["admin", "operator"],
+      enabledForRoles: [],
     },
   },
   notifications: {
@@ -155,6 +155,15 @@ const exports = {
     transfer_endpoint_url:
       import.meta.env.VITE_GLOBUS_TRANSFER_ENDPOINT_URL ||
       "https://localhost/globus/transfer",
+    source_endpoint_id:
+      import.meta.env.VITE_GLOBUS_SOURCE_ENDPOINT_ID || "source_endpoint_uuid",
+    destination_endpoint_id:
+      import.meta.env.VITE_GLOBUS_DESTINATION_ENDPOINT_ID ||
+      "destination_endpoint_uuid",
+    source_endpoint_path:
+      import.meta.env.VITE_GLOBUS_SOURCE_ENDPOINT_PATH || "/path",
+    destination_endpoint_path:
+      import.meta.env.VITE_GLOBUS_DESTINATION_ENDPOINT_PATH || "/path",
   },
 };
 

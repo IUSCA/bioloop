@@ -3,7 +3,7 @@ import config from "@/config";
 import { lxor } from "@/services/utils";
 import { v4 as uuidv4 } from "uuid";
 import { redirectToGlobusAuth } from "@/services/globus";
-import GlobusAuthService from "@/services/globus/globusAuth";
+import GlobusAuthService from "@/services/globus/auth";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();

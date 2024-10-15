@@ -4,8 +4,8 @@
 
 <script setup>
 // const router = useRouter();
-import globusService from "@/services/globus/globusAuth";
-import globusTransferService from "@/services/globus/globusTransfer";
+import globusService from "@/services/globus/auth";
+import globusTransferService from "@/services/globus/transfer";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();

@@ -8,10 +8,10 @@ const getGlobusAuthURL = (persistentStateAttributes) => {
   const globusAuthBaseURL = config.globus.auth_url;
   const clientId = config.globus.client_id;
   const redirectUri = config.globus.redirect_uri;
-  const scopes = encodeURIComponent(config.globus.scopes.split(",").join(" "));
+  const scopes = encodeURIComponent(config.globus.scopes);
   const response_type = "code";
   globusAuthStoredState.value =
-    uuidv4() + ":" + btoa(persistentStateAttributes);
+    uuidv4() + ":" + btoa(persistentStateAttributes); // base64 encoded state attributes
   // console.log("Pre-auth Stored State", globusAuthStoredState.value);
   const url =
     `${globusAuthBaseURL}?` +
@@ -45,4 +45,20 @@ const redirectToGlobusAuth = ({ persistInState = [] } = {}) => {
   window.location.replace(getGlobusAuthURL(persistentStateAttributes));
 };
 
-export { redirectToGlobusAuth };
+const getGlobusTransferRequestBody = ({ submissionId, file }) => {
+  return {
+    DATA: [
+      {
+        DATA_TYPE: "transfer_item",
+        destination_path: file,
+        source_path: `${config.globus.source_endpoint_path}/${file}`,
+      },
+    ],
+    DATA_TYPE: "transfer",
+    destination_endpoint: config.globus.destination_endpoint_id,
+    source_endpoint: config.globus.source_endpoint_id,
+    submission_id: submissionId,
+  };
+};
+
+export { redirectToGlobusAuth, getGlobusTransferRequestBody };

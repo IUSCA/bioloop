@@ -41,6 +41,7 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = {};
     token.value = "";
     uploadToken.value = "";
+    globusAccessToken.value = "";
   }
 
   function casLogin({ ticket }) {
@@ -210,13 +211,27 @@ export const useAuthStore = defineStore("auth", () => {
   };
 
   const isGlobusAccessTokenValid = () => {
+    console.log(
+      "isGlobusAccessTokenValid(): globusAccessToken.value ",
+      globusAccessToken.value,
+    );
     if (!globusAccessToken.value) {
       return false;
     } else {
       return true;
     }
-    // const payload = jwtDecode(globusAccessToken.value);
+    // console.log("authStoere");
+    // console.log("Globus Access Token:", globusAccessToken.value);
+    // try {
+    //   const payload = jwtDecode(globusAccessToken.value, { payload: true });
+    //   console.log("Globus Access Token Payload", payload);
+    // } catch (err) {
+    //   console.error("Error decoding Globus Access Token", err);
+    //   return false;
+    // }
+    // console.log("Globus Access Token Payload", payload);
     // const expiresAt = new Date(payload.exp * 1000);
+    // console.log("Globus Access Token Expires At", expiresAt);
     // const now = new Date();
     // return now > expiresAt;
     // return false;

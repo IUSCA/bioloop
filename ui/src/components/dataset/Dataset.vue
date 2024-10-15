@@ -348,18 +348,22 @@ import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { formatBytes, lxor } from "@/services/utils";
 import workflowService from "@/services/workflow";
+import globusTransferService from "@/services/globus/transfer";
 import { v4 as uuidv4 } from "uuid";
-import { redirectToGlobusAuth } from "@/services/globus";
 import { useAuthStore } from "@/stores/auth";
+import { storeToRefs } from "pinia";
+import * as globusService from "@/services/globus";
+
+const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
-const auth = useAuthStore();
-const globusAccessToken = auth.globusAccessToken;
-const isGlobusAccessTokenValid = auth.isGlobusAccessTokenValid();
+// const { globusAccessToken, isGlobusAccessTokenValid } = storeToRefs(auth);
+// const isGlobusAccessTokenValid = auth.isGlobusAccessTokenValid();
+// const submissionId = ref("");
 const dataset = ref({});
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -523,10 +527,9 @@ const showGlobusShareModal = ref(false);
 
 const onShare = () => {
   console.log("onShare()");
-  console.log("globusAccessToken: ", globusAccessToken.value);
-  console.log("isGlobusAccessTokenValid: ", isGlobusAccessTokenValid);
-  // isGlobusAccessTokenValid.value);
-  if (!globusAccessToken.value || isGlobusAccessTokenValid) {
+  console.log("globusAccessToken: ", auth.globusAccessToken);
+  console.log("isGlobusAccessTokenValid: ", auth.isGlobusAccessTokenValid());
+  if (!auth.globusAccessToken || !auth.isGlobusAccessTokenValid()) {
     initiateGlobusAuth();
   } else {
     showGlobusShareModal.value = true;
@@ -536,10 +539,33 @@ const onShare = () => {
 const initiateGlobusAuth = () => {
   // console.log("Initiating Globus Auth");
   // console.log("route: ", route.path);
-  redirectToGlobusAuth({ persistInState: [route.path] });
+  globusService.redirectToGlobusAuth({ persistInState: [route.path] });
 };
 
-const shareDataset = () => {};
+const shareDataset = () => {
+  globusTransferService
+    .submitTask()
+    .then((res) => {
+      let submissionId = res.data.value;
+      console.log("submissionId", submissionId);
+      return submissionId;
+    })
+    .then((submissionId) => {
+      const file = "multiprocessing_jumpstart";
+      const transferRequestBody = globusService.getGlobusTransferRequestBody({
+        submissionId,
+        file,
+      });
+      console.log("transferRequestBody: ", transferRequestBody);
+      return transferRequestBody;
+    })
+    .then((transferRequestBody) => {
+      return globusTransferService.transfer(transferRequestBody);
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+};
 
 watch(trigger_dataset_retrieval, () => {
   fetch_dataset(true);
