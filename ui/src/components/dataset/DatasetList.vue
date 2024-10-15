@@ -49,7 +49,7 @@
       </template>
 
       <template #cell(file_type)="{ rowData }">
-        <va-chip v-if="rowData" outline size="small">
+        <va-chip v-if="rowData.file_type?.id" outline size="small">
           {{ rowData.file_type?.name }}
         </va-chip>
       </template>
