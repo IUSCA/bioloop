@@ -127,6 +127,10 @@ class DatasetService {
     return api.patch(`/datasets/metadata/fields/${id}`, { id, name, description, datatype, visible, locked });
   }
 
+  test_worker(id) {
+    return api.get(`/datasets/${id}/test`);
+  }
+
   search_files({
     id,
     name,

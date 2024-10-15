@@ -107,7 +107,7 @@
       "steps": [
         {
           "name": "metadata",
-          "task": "bc2_metadata"
+          "task": "metadata"
         }
       ]
     }

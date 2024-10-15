@@ -47,15 +47,17 @@ watch(form, () => {
   emit('updateMetaData', tempForm);
 }, { deep: true });
 
-
+const format_tag = (tag) => {
+  return tag.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
 </script>
 
 <template>
-  <div class="w-full">
-    <div v-for="meta in Object.keys(metaData)" class='flex flex-col'>
-      <VaChip outline class="my-2">
-        {{ meta }}
-      </VaChip>
+  <div class="w-full grid grid-cols-3">
+    <div v-for="meta in Object.keys(metaData)" class='p-2 flex flex-col'>
+      <h1 outline class="mx-auto mb-2 font-bold text-base">
+        {{ format_tag(meta) }}
+      </h1>
 
       <!-- Query builder based on type -->
       <div v-if="metaData[meta][0].keyword?.datatype === 'NUMBER'">

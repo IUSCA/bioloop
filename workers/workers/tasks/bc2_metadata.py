@@ -21,29 +21,29 @@ def send_to_api(data, api_url):
       print(f"Successfully sent data: {item}")
 
 def get_metadata_from_csv(celery_task, dataset_id, **kwargs):
-  print("Getting metadata from CSV")
+
   dataset = api.get_dataset(dataset_id=dataset_id)
 
-  file_path = '/home/ryanlong/Downloads/metadata_2024_03_01.csv'
-  data = parse_csv(file_path, dataset['name'])
-  print(data)
+  file_path = '/opt/metadata.csv'
+  data = { "metadata": []}
+  parsed_data = parse_csv(file_path, dataset['name'])
 
-  print("Sending data to API")
 
-  # create test data
-  data = [
-    {
-      "name": "Name",
-      "description": "Chuck"
-    },
-    {
-      "name": "Age",
-      "description": "43"
-    }
-  ]
+  keys = []
 
-  print(data)
+  # iterate through key value pairs in data - put in format api expects
+  for key, value in parsed_data[0].items():
+    keys.append(key)
+    data['metadata'].append({
+      "name": key,
+      "data": value
+    })
+    
 
+  # check if metadata fields already exist - create it if not
+  api.update_metadata_fields(data=keys)  
+    
+  # create metadata for new dataset
   api.create_metadata(dataset_id=dataset_id, data=data)
 
-  return dataset_id
+  return dataset_id,

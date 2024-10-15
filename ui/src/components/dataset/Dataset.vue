@@ -96,6 +96,12 @@
               </va-card-title>
               <va-card-content>
                 <div class="flex justify-start gap-3">
+                  <va-button  
+                    color="primary" border-color="primary" preset="secondary" class="flex-initial"
+                    @click="test()">
+                    <i-mdi-cloud-sync class="pr-2 text-2xl" />
+                    Test Worker
+                  </va-button>
                   <!-- Stage Action Button-->
                   <va-button v-if="dataset.archive_path" :disabled="is_stage_pending || dataset.is_staged"
                     color="primary" border-color="primary" preset="secondary" class="flex-initial"
@@ -254,6 +260,8 @@ const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
 
+
+const test = async () => await DatasetService.test_worker( dataset.value.id )
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
 const dataset = ref({});

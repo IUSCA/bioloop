@@ -1,5 +1,5 @@
 <template>
-  <va-modal v-model="visible" fixed-layout hide-default-actions size="small" title="Dataset Search">
+  <va-modal v-model="visible" fixed-layout hide-default-actions size="auto" title="Dataset Search">
     <template #header>
       <div class="flex justify-between mb-2">
         <div class="flex items-center gap-3">

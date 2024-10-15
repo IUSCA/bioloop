@@ -30,10 +30,10 @@ config = {
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'base_url': 'http://localhost:3030',
+        'base_url': 'http://api:3030',
         'auth_token': APP_API_TOKEN,
-        'conn_timeout': 5,  # seconds
-        'read_timeout': 30  # seconds
+        'conn_timeout': 60,  # seconds
+        'read_timeout': 60  # seconds
     },
     'paths': {
         'scratch': '/path/to/scratch',
@@ -104,7 +104,7 @@ config = {
                 },
                 {
                   'name': 'metadata',
-                  'task': 'bc2_metadata'
+                  'task': 'metadata'
                 },
                 {
                     'name': 'inspect',
@@ -133,7 +133,7 @@ config = {
           'steps': [
             {
               'name': 'metadata',
-              'task': 'bc2_metadata'
+              'task': 'metadata'
             },
 
           ]
