@@ -265,7 +265,7 @@
           </va-modal>
 
           <va-modal v-model="showGlobusShareModal"
-            ><va-button @click="shareDataset"
+            ><va-button @click="initiateGlobusTransfer"
               >Share via Globus</va-button
             ></va-modal
           >
@@ -544,7 +544,8 @@ const initiateGlobusAuth = () => {
   });
 };
 
-const shareDataset = () => {
+const initiateGlobusTransfer = () => {
+  loading.value = true;
   globusTransferService
     .submitTask()
     .then((res) => {
@@ -564,14 +565,35 @@ const shareDataset = () => {
     .then((transferRequestBody) => {
       return globusTransferService.transfer(transferRequestBody);
     })
+    .then(() => {
+      showGlobusShareModal.value = false;
+      toast.success(`Initiated transfer for dataset ${props.datasetId}`);
+    })
     .catch((err) => {
       console.error(err);
+    })
+    .finally(() => {
+      loading.value = false;
     });
 };
 
 watch(trigger_dataset_retrieval, () => {
   fetch_dataset(true);
 });
+
+// watch(route, (to, from) => {
+//   console.log("route changed", to, from);
+// });
+
+// onMounted(() => {
+//   if (auth.globusAccessToken && auth.isGlobusAccessTokenValid()) {
+//     showGlobusShareModal.value = true;
+//   }
+// });
+//
+// onBeforeRouteUpdate(async (to, from) => {
+//   console.log("onBeforeRouteUpdate", to, from);
+// });
 </script>
 
 <route lang="yaml">
