@@ -16,7 +16,7 @@ const exports = {
   },
   dataset_polling_interval: 10000,
   paths: {
-    download: "/N/scratch/bioloop/production/download",
+    download: "",
   },
   file_browser: {
     enable_downloads: true,
@@ -67,6 +67,12 @@ const exports = {
   alertForEnvironments: ["ci"],
   enabledFeatures: {
     genomeBrowser: true,
+    notifications: {
+      enabledForRoles: [],
+    },
+  },
+  notifications: {
+    pollingInterval: 5000, // milliseconds
   },
 };
 

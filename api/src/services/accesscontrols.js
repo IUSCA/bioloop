@@ -46,6 +46,12 @@ const grantsObject = {
     auth: {
       'create:any': ['*'],
     },
+    notifications: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 
   // user role permissions
@@ -104,6 +110,12 @@ const grantsObject = {
       'read:any': ['*'],
     },
     about: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    notifications: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
