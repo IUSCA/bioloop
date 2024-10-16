@@ -1050,20 +1050,20 @@ router.patch('/metadata/keyword', asyncHandler(async (req, res, next) => {
 
 }))
 
-// router.get('/:id/test', asyncHandler(async (req, res, next) => {
-//   const { id } = req.params;
+router.post('/:id/metadata/reset', asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
 
-//   const dataset = await prisma.dataset.findFirst({where: {id: parseInt(id)}});
+  const dataset = await prisma.dataset.findFirst({where: {id: parseInt(id)}});
 
-//   dataset.workflows = []
+  if(!('workflows' in dataset)) 
+    dataset.workflows = []
+  
+  console.log('DATASET', dataset);
 
-//   console.log('DATASET', dataset);
+  await datasetService.create_workflow(dataset, 'metadata');
 
-//   await datasetService.create_workflow(dataset, 'metadata');
-
-
-//   return res.json({message: 'success'});
-// }))
+  return res.json({message: 'success'});
+}))
 
 router.post('/metadata/keyword', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['datasets']

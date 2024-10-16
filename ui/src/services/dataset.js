@@ -127,8 +127,8 @@ class DatasetService {
     return api.patch(`/datasets/metadata/fields/${id}`, { id, name, description, datatype, visible, locked });
   }
 
-  test_worker(id) {
-    return api.get(`/datasets/${id}/test`);
+  reset_metadata(id) {
+    return api.post(`/datasets/${id}/metadata/reset`);
   }
 
   search_files({
