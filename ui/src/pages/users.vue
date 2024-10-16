@@ -150,9 +150,9 @@
       <va-inner-loading :loading="modal_loading">
         <va-form class="flex flex-wrap gap-2 gap-y-6" ref="modifyFormRef">
           <va-input
+            class="w-full"
             v-model="editedUser.name"
             label="Name"
-            class="w-64"
             :rules="[
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
@@ -160,7 +160,7 @@
           <va-input
             v-model="editedUser.email"
             label="Email"
-            class="w-64"
+            class="w-full"
             :rules="[
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
@@ -169,7 +169,7 @@
             :modelValue="editedUser.username || autofill.username"
             @update:modelValue="editedUser.username = $event"
             label="Username"
-            class="w-64"
+            class="w-full"
             :rules="[
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
@@ -215,6 +215,7 @@
           </div>
 
           <va-textarea
+            class="w-full"
             v-model="editedUser.notes"
             label="Notes"
             autosize
@@ -388,8 +389,11 @@ function openModalToCreateUser() {
   editing.value = true;
   // eslint-disable-next-line no-unused-vars
   editedUser.value = {
-    status: true,
-    roles: ["user"],
+    // email: "",
+    // username: "",
+    // cas_id: "",
+    // status: true,
+    // roles: ["user"],
   };
 }
 
