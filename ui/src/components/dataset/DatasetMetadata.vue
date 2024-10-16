@@ -15,11 +15,15 @@ const getMetadata = async () => {
   metadata.value = data;
 };
 
-const updatedMetadata = async() => {
+const updatedMetadata = async () => {
   await getMetadata()
   isModalOpen.value = false;
 };
 
+const reset_metadata = async () => {
+  await DatasetService.reset_metadata(id);
+  await getMetadata()
+};
 </script>
 
 <template>
@@ -27,7 +31,8 @@ const updatedMetadata = async() => {
 
     <!-- Edit button -->
     <div class="flex justify-end">
-      <AddEditButton class="flex-none" :edit="Object.keys(metadata).length !== 0" :add="Object.keys(metadata).length > 0" @click="isModalOpen = true" />
+      <AddEditButton class="flex-none" :edit="Object.keys(metadata).length !== 0"
+        :add="Object.keys(metadata).length > 0" @click="isModalOpen = true" />
     </div>
 
     <!-- Display key pair values as table -->
@@ -39,6 +44,12 @@ const updatedMetadata = async() => {
         </tr>
       </tbody>
     </table>
+
+    <div class="flex justify-center items-center mt-2">
+      <div>
+        <va-button @click="reset_metadata()" color="warning" icon="refresh" round  preset="secondary" border-color="warning" class="shadow my-2 mx-auto" > Reset to Defaults</va-button>
+      </div>
+    </div>
 
     <va-modal hide-default-actions v-model="isModalOpen" @close="isModalOpen = false">
       <template #default>
