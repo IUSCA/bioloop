@@ -494,6 +494,9 @@ watch(
       const username = email.split("@")[0];
       autofill.value.username = username;
       autofill.value.cas_id = username;
+    } else {
+      autofill.value.username = "";
+      autofill.value.cas_id = "";
     }
   },
 );
