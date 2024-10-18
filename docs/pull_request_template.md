@@ -15,6 +15,7 @@ List the main changes made in this PR. Be as specific as possible.
 - [ ] Feature added
 - [ ] Bug fixed
 - [ ] Code refactored
+- [ ] Tests changed
 - [ ] Documentation updated
 - [ ] Other changes: [describe]
 
