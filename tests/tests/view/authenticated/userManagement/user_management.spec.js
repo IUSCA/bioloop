@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 const TEXT = 'some_text';
 
+const TEST_ID_MODAL = 'edit-user-modal';
 const TEST_ID_NAME = 'user-name-input';
 const TEST_ID_USERNAME = 'user-username-input';
 const TEST_ID_EMAIL = 'user-email-input';
@@ -9,7 +10,7 @@ const TEST_ID_CAS_ID = 'user-cas-id-input';
 const TEST_ID_NOTES = 'user-notes-input';
 
 const testIdSelector = (testId) => `data-testid="${testId}"`;
-const elementTestIdLocator = ({ elementType, testId }) => `${elementType}[${testIdSelector(testId)}]`;
+const elementTestIdLocator = ({ elementType = null, testId }) => (elementType ? `${elementType}[${testIdSelector(testId)}]` : `div[${testIdSelector(testId)}]`);
 
 test.describe.serial('User management', () => {
   let userNameInputLocator;
@@ -20,10 +21,10 @@ test.describe.serial('User management', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/users');
-    await expect(page.getByTestId('edit-user-modal')).not.toBeVisible();
+    await expect(page.getByTestId(TEST_ID_MODAL)).not.toBeVisible();
     // following tests will run with the modal open
     await page.getByTestId('create-user-button').click();
-    await expect(page.getByTestId('edit-user-modal')).toBeVisible();
+    await expect(page.getByTestId(TEST_ID_MODAL)).toBeVisible();
   });
 
   test('Create User Modal Opened', async ({ page }) => {
@@ -55,7 +56,7 @@ test.describe.serial('User management', () => {
     await expect(userNotesInputLocator).toHaveText('');
   });
 
-  test('Modal fields edited', async ({ }) => {
+  test('Modal fields edited', async () => {
     await fillAndAssertValue({
       locator: userNameInputLocator, text: TEXT,
     });
@@ -71,6 +72,15 @@ test.describe.serial('User management', () => {
     await fillAndAssertValue({
       locator: userNotesInputLocator, text: TEXT,
     });
+  });
+
+  test('Cancel Modal', async ({ page }) => {
+    console.log(`${elementTestIdLocator({ testId: TEST_ID_MODAL })} > .va-modal__default-cancel-button`);
+
+    // await page.locator(`${elementTestIdLocator({ testId: TEST_ID_MODAL })} >
+    // button[class="va-modal__default-cancel-button"]`).click();
+
+    await expect(page.getByTestId(TEST_ID_MODAL)).not.toBeVisible();
   });
 });
 
