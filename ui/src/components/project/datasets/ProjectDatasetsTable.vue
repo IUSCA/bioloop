@@ -151,6 +151,7 @@
   </va-data-table>
 
   <Pagination
+    data-testid="project-datasets-pagination"
     v-model:page="currentPageIndex"
     v-model:page_size="pageSize"
     :total_results="total_results"
