@@ -74,7 +74,7 @@ test.describe.serial('User management', () => {
     });
   });
 
-  test('Cancel Modal', async ({ page }) => {
+  test('Cancel Modal action taken', async ({ page }) => {
     // fill-in fields again
     await fillAndAssertValue({
       locator: userNameInputLocator, text: TEXT,
@@ -93,7 +93,31 @@ test.describe.serial('User management', () => {
     });
 
     // close modal
-    await page.locator(`${testIdSelector(TEST_ID_MODAL)} .va-modal__default-cancel-button`).click();
+    await page.locator(`${testIdSelector(TEST_ID_MODAL)} [va-child=cancelButton]`).click();
+    // open modal again
+    await page.getByTestId('create-user-button').click();
+    // assert fields are empty
+    await expect(page.getByTestId(TEST_ID_NAME)).toHaveText('');
+    await expect(page.getByTestId(TEST_ID_EMAIL)).toHaveText('');
+    await expect(page.getByTestId(TEST_ID_USERNAME)).toHaveText('');
+    await expect(page.getByTestId(TEST_ID_CAS_ID)).toHaveText('');
+    await expect(userNotesInputLocator).toHaveText('');
+  });
+
+  test('User created', async ({ page }) => {
+    // fill-in fields again
+    await fillAndAssertValue({
+      locator: userNameInputLocator, text: 'firstname lastname',
+    });
+    await fillAndAssertValue({
+      locator: userEmailInputLocator, text: 'firstnameLastname@example.com',
+    });
+    await fillAndAssertValue({
+      locator: userNotesInputLocator, text: 'test notes',
+    });
+
+    // submit form
+    await page.locator(`${testIdSelector(TEST_ID_MODAL)} [va-child=okButton]`).click();
     // open modal again
     await page.getByTestId('create-user-button').click();
     // assert fields are empty
