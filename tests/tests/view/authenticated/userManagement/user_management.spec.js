@@ -9,8 +9,8 @@ const TEST_ID_EMAIL = 'user-email-input';
 const TEST_ID_CAS_ID = 'user-cas-id-input';
 const TEST_ID_NOTES = 'user-notes-input';
 
-const testIdSelector = (testId) => `data-testid="${testId}"`;
-const elementTestIdLocator = ({ elementType = null, testId }) => (elementType ? `${elementType}[${testIdSelector(testId)}]` : `div[${testIdSelector(testId)}]`);
+const testIdSelector = (testId) => `[data-testid=${testId}]`;
+const elementTestIdLocator = ({ elementType = null, testId }) => (elementType ? `${elementType}${testIdSelector(testId)}` : `div${testIdSelector(testId)}`);
 
 test.describe.serial('User management', () => {
   let userNameInputLocator;
@@ -75,12 +75,33 @@ test.describe.serial('User management', () => {
   });
 
   test('Cancel Modal', async ({ page }) => {
-    console.log(`${elementTestIdLocator({ testId: TEST_ID_MODAL })} > .va-modal__default-cancel-button`);
+    // fill-in fields again
+    await fillAndAssertValue({
+      locator: userNameInputLocator, text: TEXT,
+    });
+    await fillAndAssertValue({
+      locator: userUsernameInputLocator, text: TEXT,
+    });
+    await fillAndAssertValue({
+      locator: userEmailInputLocator, text: TEXT,
+    });
+    await fillAndAssertValue({
+      locator: userCasIdInputLocator, text: TEXT,
+    });
+    await fillAndAssertValue({
+      locator: userNotesInputLocator, text: TEXT,
+    });
 
-    // await page.locator(`${elementTestIdLocator({ testId: TEST_ID_MODAL })} >
-    // button[class="va-modal__default-cancel-button"]`).click();
-
-    await expect(page.getByTestId(TEST_ID_MODAL)).not.toBeVisible();
+    // close modal
+    await page.locator(`${testIdSelector(TEST_ID_MODAL)} .va-modal__default-cancel-button`).click();
+    // open modal again
+    await page.getByTestId('create-user-button').click();
+    // assert fields are empty
+    await expect(page.getByTestId(TEST_ID_NAME)).toHaveText('');
+    await expect(page.getByTestId(TEST_ID_EMAIL)).toHaveText('');
+    await expect(page.getByTestId(TEST_ID_USERNAME)).toHaveText('');
+    await expect(page.getByTestId(TEST_ID_CAS_ID)).toHaveText('');
+    await expect(userNotesInputLocator).toHaveText('');
   });
 });
 
