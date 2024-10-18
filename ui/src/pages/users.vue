@@ -140,7 +140,6 @@
 
   <!-- edit modal -->
   <va-modal
-    id="user-modal"
     data-testid="edit-user-modal"
     :model-value="editing"
     :title="editModalTitle"
@@ -149,9 +148,6 @@
     @cancel="resetEditModal"
     no-outside-dismiss
   >
-    <div class="user-modal-div">
-      <stan>hello this ir rishi</stan>
-    </div>
     <div class="max-w-lg">
       <va-inner-loading :loading="modal_loading">
         <va-form class="flex flex-wrap gap-2 gap-y-6" ref="modifyFormRef">
@@ -399,13 +395,7 @@ function openModalToCreateUser() {
   editMode.value = "create";
   editing.value = true;
   // eslint-disable-next-line no-unused-vars
-  editedUser.value = {
-    // email: "",
-    // username: "",
-    // cas_id: "",
-    // status: true,
-    // roles: ["user"],
-  };
+  editedUser.value = {};
 }
 
 function resetEditModal() {
@@ -519,36 +509,6 @@ fetch_all_users();
 .usertable {
   --va-data-table-cell-padding: 3px;
 }
-
-#user-modal button {
-  background-color: red !important;
-  font-size: 265px !important;
-}
-
-#user-modal > .user-modal-div {
-  background-color: red;
-  font-size: 265px;
-}
-
-div[data-testid="edit-user-modal"] > .test1 {
-  width: 50px;
-  height: 50px;
-  background-color: orange;
-}
-
-div[data-testid="edit-user-modal"] > #test2 {
-  background-color: purple;
-}
-
-div[data-testid="edit-user-modal"] > #test2 {
-  background-color: blue;
-}
-
-div[data-testid="edit-user-modal"] > div[data-testid="user-notes-input"] {
-  width: 5000px !important;
-  margin-bottom: 10000px !important;
-  color: deeppink;
-}
 </style>
 
 <route lang="yaml">
@@ -557,4 +517,3 @@ meta:
   requiresRoles: ["operator", "admin"]
   nav: [{ label: "Users" }]
 </route>
-<!--//.va-modal__default-cancel-button-->
