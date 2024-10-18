@@ -27,7 +27,7 @@ test.describe.serial('User management', () => {
     await expect(page.getByTestId(TEST_ID_MODAL)).toBeVisible();
   });
 
-  test('Create User Modal Opened', async ({ page }) => {
+  test('Create User modal opened', async ({ page }) => {
     userNameInputLocator = page.locator(elementTestIdLocator({
       elementType: 'input',
       testId: TEST_ID_NAME,
@@ -75,7 +75,7 @@ test.describe.serial('User management', () => {
   });
 
   test('Cancel Modal action taken', async ({ page }) => {
-    // fill-in fields again
+    // fill-in fields
     await fillAndAssertValue({
       locator: userNameInputLocator, text: TEXT,
     });
@@ -105,7 +105,7 @@ test.describe.serial('User management', () => {
   });
 
   test('User created', async ({ page }) => {
-    // fill-in fields again
+    // fill-in fields
     await fillAndAssertValue({
       locator: userNameInputLocator, text: 'firstname lastname',
     });
