@@ -395,7 +395,10 @@ function openModalToCreateUser() {
   editMode.value = "create";
   editing.value = true;
   // eslint-disable-next-line no-unused-vars
-  editedUser.value = {};
+  editedUser.value = {
+    status: true,
+    roles: ["user"],
+  };
 }
 
 function resetEditModal() {
