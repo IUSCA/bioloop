@@ -64,6 +64,7 @@
 
         <!-- Search results table -->
         <va-inner-loading :loading="props.loading">
+          <div class="va-text-danger text-xs"></div>
           <div
             ref="infiniteScrollTarget_search"
             class="max-h-80 overflow-y-auto"
@@ -179,11 +180,20 @@
 
         <!-- Selected Results table -->
         <va-inner-loading :loading="props.loading">
-          <div class="overflow-y-auto selected-table">
+          <div
+            class="va-text-danger text-xs"
+            v-if="props.required && props.selectedResults.length === 0"
+          >
+            {{ selectionRequiredError }}
+          </div>
+
+          <div
+            class="overflow-y-auto selected-table"
+            v-if="props.selectedResults.length > 0"
+          >
             <va-data-table
               class="results-table"
               v-model="selectedResultSelections"
-              v-if="props.selectedResults.length > 0"
               :items="props.selectedResults"
               :columns="_selectedResultColumns"
               virtual-scroller
@@ -297,6 +307,21 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  resource: {
+    type: String,
+  },
+  required: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const selectionRequiredError = computed(() => {
+  return (
+    "Please select " +
+    (props.selectMode === "single" ? "a" : "at least once") +
+    ` ${props.resource ? props.resource : "result"}`
+  );
 });
 
 const _controlsMargin = toRef(() => props.controlsMargin);

@@ -89,13 +89,13 @@
         <template #step-content-1>
           <div class="flex flex-col gap-10">
             <va-checkbox
-              v-model="hasSourceRawData"
+              v-model="isAssignedSourceRawData"
               color="primary"
               label="Assign source Raw Data"
             />
 
             <va-form-field
-              v-if="hasSourceRawData"
+              v-if="isAssignedSourceRawData"
               v-model="rawDataSelected"
               v-slot="{ value: v }"
             >
@@ -108,10 +108,8 @@
               ></DatasetSelect>
             </va-form-field>
 
-            <div v-if="isDirty" class="mt-2">
-              <p v-for="error in errorMessages" :key="error">
-                {{ error }}
-              </p>
+            <div class="text-xs va-text-danger" v-if="!stepIsPristine">
+              {{ formErrors[STEP_KEYS.DIRECTORY] }}
             </div>
           </div>
         </template>
@@ -137,12 +135,7 @@
                   prevStep();
                 }
               "
-              :disabled="
-                step === 0 ||
-                formHasErrors ||
-                submitAttempted ||
-                submissionSuccess
-              "
+              :disabled="isNextStepDisabled"
             >
               Previous
             </va-button>
@@ -168,15 +161,11 @@ import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
 import { useForm } from "vuestic-ui";
 
-const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
-
 // error shown - step has errors, and is not pristine
 //  - onMounted - setFormErrors()
 //      - all fields pristine
 //  - no need = step changes - current step is pristine
 //  - next and previous disabled when step has errors
-
-const hasSourceRawData = ref(true);
 
 const STEP_KEYS = {
   RAW_DATA: "rawData",
@@ -186,6 +175,8 @@ const STEP_KEYS = {
 const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
 const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
+const SOURCE_RAW_DATA_REQUIRED_ERROR =
+  "You have requested a source Raw Data to be assigned. Please select one.";
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -204,6 +195,30 @@ const steps = [
     icon: "material-symbols:info-outline",
   },
 ];
+
+const isAssignedSourceRawData = ref(true);
+const submissionSuccess = ref(false);
+const fileTypeList = ref([]);
+const rawDataSelected = ref([]);
+const fileListSearchText = ref("");
+const fileList = ref([]);
+const datasetId = ref();
+const loading = ref(false);
+const isSubmissionAlertVisible = ref(false);
+const submitAttempted = ref(false);
+const rawDataList = ref([]);
+const step = ref(0);
+const isLastStep = computed(() => {
+  return step.value === steps.length - 1;
+});
+const isNextStepDisabled = computed(() => {
+  return (
+    step.value === 0 ||
+    formHasErrors.value ||
+    submitAttempted.value ||
+    submissionSuccess.value
+  );
+});
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine.
@@ -273,6 +288,14 @@ const setFormErrors = async () => {
         formErrors.value[STEP_KEYS.DIRECTORY] = null;
       }
     }
+  } else if (step.value === 1) {
+    if (!isAssignedSourceRawData.value) {
+      formErrors.value[STEP_KEYS.RAW_DATA] = null;
+      return;
+    }
+    if (rawDataSelected.value.length === 0) {
+      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
+    }
   }
 };
 
@@ -297,22 +320,6 @@ const resetSearch = () => {
   setRetrievedFiles([]);
   formErrors.value[STEP_KEYS.DIRECTORY] = null;
 };
-
-const submissionSuccess = ref(false);
-const fileTypeList = ref([]);
-const rawDataSelected = ref([]);
-const fileList = ref([]);
-const datasetId = ref();
-const loading = ref(false);
-const isSubmissionAlertVisible = ref(false);
-const submitAttempted = ref(false);
-const rawDataList = ref([]);
-const step = ref(0);
-const isLastStep = computed(() => {
-  return step.value === steps.length - 1;
-});
-
-const fileListSearchText = ref("");
 
 const searchFiles = async () => {
   const _searchText =
@@ -420,12 +427,18 @@ watch(
     fileListSearchText,
     isFileSearchAutocompleteOpen,
     searchSpace,
+    isAssignedSourceRawData,
   ],
-  async () => {
+  async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
     stepPristineStates.value[step.value][stepKey] = false;
     await setFormErrors();
+
+    // if Source Raw Data requirement is changed
+    if (newVals[5] !== oldVals[5]) {
+      rawDataSelected.value = [];
+    }
   },
 );
 
