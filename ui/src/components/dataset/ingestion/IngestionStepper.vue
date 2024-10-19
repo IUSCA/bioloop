@@ -136,7 +136,12 @@
                   prevStep();
                 }
               "
-              :disabled="step === 0 || formHasErrors || submitAttempted"
+              :disabled="
+                step === 0 ||
+                formHasErrors ||
+                submitAttempted ||
+                submissionSuccess
+              "
             >
               Previous
             </va-button>

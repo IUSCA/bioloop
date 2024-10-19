@@ -562,7 +562,7 @@ router.post(
       workflow_id, state, file_type, ...data
     } = req.body;
 
-    const origin_path = data.origin_path
+    const { origin_path } = data;
     console.log('origin_path:', origin_path);
 
     // remove whitespaces from dataset name
