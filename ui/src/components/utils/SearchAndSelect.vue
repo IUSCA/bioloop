@@ -138,7 +138,7 @@
 
     <!-- Selected results -->
     <div class="flex-auto">
-      <div class="flex flex-col gap-2">
+      <div class="h-full flex flex-col gap-2">
         <!-- Container for Controls -->
         <div class="flex flex-col gap-2 --controls-height --controls-margin">
           <div class="va-h6 h-9 my-0">
@@ -179,12 +179,20 @@
         </div>
 
         <!-- Selected Results table -->
-        <va-inner-loading :loading="props.loading">
+        <va-inner-loading :loading="props.loading" class="h-full">
           <div
-            class="va-text-danger text-xs"
+            class="flex va-text-danger h-full"
             v-if="props.showRequiredError && props.selectedResults.length === 0"
           >
-            {{ selectionRequiredError }}
+            <va-alert
+              class="my-auto"
+              text-color="danger"
+              color="danger"
+              icon="warning"
+              outline
+            >
+              {{ selectionRequiredError }}</va-alert
+            >
           </div>
 
           <div
