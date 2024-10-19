@@ -31,71 +31,6 @@
         </template>
 
         <template #step-content-0>
-          <va-form-field
-            v-model="datasetName"
-            :rules="datasetNameValidationRules"
-          >
-            <template #default="{ value }">
-              <va-input
-                label="Dataset Name"
-                :placeholder="'Dataset Name'"
-                class="w-full"
-                v-model="value.ref"
-              />
-              <!--              :error="!stepIsPristine"-->
-            </template>
-          </va-form-field>
-        </template>
-
-        <template #step-content-1>
-          <va-form-field
-            v-model="fileTypeSelected"
-            v-slot="{ value: v }"
-            :rules="[
-              (v) => {
-                return (
-                  (typeof v?.name === 'string' &&
-                    v?.name?.length > 0 &&
-                    typeof v?.extension === 'string' &&
-                    v?.extension?.length > 0) ||
-                  'File Type is required'
-                );
-              },
-            ]"
-          >
-            <FileTypeSelect
-              v-model="v.ref"
-              class="w-full"
-              @file-type-created="
-                (newFileType) => {
-                  fileTypeList.push(newFileType);
-                }
-              "
-              :allow-create-new="!submitAttempted"
-              :file-type-list="fileTypeList"
-            />
-          </va-form-field>
-        </template>
-
-        <template #step-content-2>
-          <va-form-field v-model="rawDataSelected" v-slot="{ value: v }">
-            <DatasetSelect
-              :selected-results="v.ref"
-              @select="addDataset"
-              @remove="removeDataset"
-              select-mode="single"
-              :dataset-type="config.dataset.types.RAW_DATA.key"
-            ></DatasetSelect>
-          </va-form-field>
-
-          <div v-if="isDirty" class="mt-2">
-            <p v-for="error in errorMessages" :key="error">
-              {{ error }}
-            </p>
-          </div>
-        </template>
-
-        <template #step-content-3>
           <div class="flex">
             <va-select
               class="mr-2"
@@ -144,9 +79,39 @@
                 :options="fileList"
               />
 
-              <div class="text-xs va-text-danger">
+              <div class="text-xs va-text-danger" v-if="!stepIsPristine">
                 {{ formErrors[STEP_KEYS.DIRECTORY] }}
               </div>
+            </div>
+          </div>
+        </template>
+
+        <template #step-content-1>
+          <div class="flex flex-col gap-10">
+            <va-checkbox
+              v-model="hasSourceRawData"
+              color="primary"
+              label="Assign source Raw Data"
+            />
+
+            <va-form-field
+              v-if="hasSourceRawData"
+              v-model="rawDataSelected"
+              v-slot="{ value: v }"
+            >
+              <DatasetSelect
+                :selected-results="v.ref"
+                @select="addDataset"
+                @remove="removeDataset"
+                select-mode="single"
+                :dataset-type="config.dataset.types.RAW_DATA.key"
+              ></DatasetSelect>
+            </va-form-field>
+
+            <div v-if="isDirty" class="mt-2">
+              <p v-for="error in errorMessages" :key="error">
+                {{ error }}
+              </p>
             </div>
           </div>
         </template>
@@ -197,19 +162,13 @@ const { errorMessages, isDirty } = useForm("dataProductIngestionForm");
 //  - no need = step changes - current step is pristine
 //  - next and previous disabled when step has errors
 
+const hasSourceRawData = ref(true);
+
 const STEP_KEYS = {
-  NAME: "name",
-  FILE_TYPE: "fileType",
   RAW_DATA: "rawData",
   DIRECTORY: "directory",
 };
-const DATASET_EXISTS_ERROR = "Dataset with the same name already exists";
-const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
-const DATASET_NAME_MAX_LENGTH_ERROR = "Min length is 3 characters";
-const HAS_SPACES_ERROR = "cannot contain spaces";
 const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
-const FILE_TYPE_REQUIRED_ERROR = "A file type must be selected";
-const RAW_DATA_REQUIRED_ERROR = "Source Raw Data must be selected";
 const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
 
@@ -217,25 +176,13 @@ const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
 );
 
-const hasSpacesError = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
-
 const steps = [
-  {
-    key: STEP_KEYS.NAME,
-    label: "Name",
-    icon: "material-symbols:description-outline",
-  },
-  {
-    key: STEP_KEYS.FILE_TYPE,
-    label: "File Type",
-    icon: "material-symbols:category",
-  },
-  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
   {
     key: STEP_KEYS.DIRECTORY,
     label: "Select Directory",
     icon: "material-symbols:folder",
   },
+  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
 ];
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
@@ -244,10 +191,6 @@ const steps = [
 // their respective input fields. For step 3, pristine state is maintained by
 // this component.
 const stepPristineStates = ref([
-  {
-    [STEP_KEYS.NAME]: true,
-  },
-  { [STEP_KEYS.FILE_TYPE]: true },
   { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.DIRECTORY]: true },
 ]);
@@ -257,17 +200,12 @@ const stepIsPristine = computed(() => {
 });
 
 const formErrors = ref({
-  [STEP_KEYS.NAME]: null,
-  [STEP_KEYS.FILE_TYPE]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.DIRECTORY]: null,
 });
 const formHasErrors = computed(() => {
-  console.log("formErrors:", formErrors.value);
   const errors = Object.values(formErrors.value);
-  console.log("Object.values(formErrors.value):", errors);
   return errors.some((error) => {
-    console.log("error:", error);
     return error !== null;
   });
 });
@@ -278,8 +216,6 @@ const selectedFile = ref(null);
 
 const resetFormErrors = () => {
   formErrors.value = {
-    [STEP_KEYS.NAME]: null,
-    [STEP_KEYS.FILE_TYPE]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.DIRECTORY]: null,
   };
@@ -287,28 +223,7 @@ const resetFormErrors = () => {
 
 const setFormErrors = async () => {
   resetFormErrors();
-  const { isNameValid: datasetNameIsValid, error } =
-    await validateDatasetName();
-
   if (step.value === 0) {
-    if (!datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.NAME] = error;
-    }
-    return;
-  } else if (step.value === 1) {
-    if (!fileTypeSelected.value) {
-      formErrors.value[STEP_KEYS.FILE_TYPE] = FILE_TYPE_REQUIRED_ERROR;
-    }
-    return;
-  } else if (step.value === 2) {
-    if (!rawDataSelected.value[0]) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = RAW_DATA_REQUIRED_ERROR;
-      return;
-    }
-  } else {
-    if (stepIsPristine.value) {
-      return;
-    }
     if (!selectedFile.value) {
       formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_FILE_REQUIRED_ERROR;
       return;
@@ -361,12 +276,10 @@ const resetSearch = () => {
 };
 
 const submissionSuccess = ref(false);
-const fileTypeSelected = ref();
 const fileTypeList = ref([]);
 const rawDataSelected = ref([]);
 const fileList = ref([]);
 const datasetId = ref();
-const datasetName = ref("");
 const loading = ref(false);
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
@@ -419,36 +332,11 @@ const removeDataset = () => {
   rawDataSelected.value = [];
 };
 
-const validateNotExists = (value) => {
-  return new Promise((resolve) => {
-    // Vuestic claims that it should not run async validation if synchronous
-    // validation fails, but it seems to be triggering async validation
-    // nonetheless when `value` is ''. Hence the explicit check for whether
-    // `value` is falsy.
-    if (!value) {
-      resolve(true);
-    } else {
-      // loading.value = true;
-      datasetService
-        .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
-        .then((res) => {
-          // Vuestic expects this Promise to resolve with an error message, for
-          // it to show the error message.
-          resolve(res.data.datasets.length !== 0 ? DATASET_EXISTS_ERROR : true);
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-    }
-  });
-};
-
 const preIngestion = () => {
   submitAttempted.value = true;
   return datasetService.create_dataset({
-    name: datasetName.value,
+    name: selectedFile.value.name,
     type: config.dataset.types.DATA_PRODUCT.key,
-    file_type: fileTypeSelected.value,
     origin_path: selectedFile.value.path,
   });
 };
@@ -502,52 +390,8 @@ const onNextClick = (nextStep) => {
   }
 };
 
-const datasetNameHasMinimumChars = (name) => {
-  return name?.length >= 3;
-};
-
-const datasetNameIsNull = (name) => {
-  return !name;
-};
-
-const stringHasSpaces = (name) => {
-  return name?.indexOf(" ") > -1;
-};
-
-const datasetNameValidationRules = [
-  (v) => {
-    return datasetNameIsNull(v) ? DATASET_NAME_REQUIRED_ERROR : true;
-  },
-  (v) => {
-    return datasetNameHasMinimumChars(v) ? true : DATASET_NAME_MAX_LENGTH_ERROR;
-  },
-  (v) => {
-    return stringHasSpaces(v) ? hasSpacesError("Dataset name") : true;
-  },
-  validateNotExists,
-];
-
-const validateDatasetName = async () => {
-  if (datasetNameIsNull(datasetName.value)) {
-    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
-  } else if (!datasetNameHasMinimumChars(datasetName.value)) {
-    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
-  } else if (stringHasSpaces(datasetName.value)) {
-    return { isNameValid: false, error: hasSpacesError("Dataset name") };
-  }
-
-  return datasetNameValidationRules[3](datasetName.value).then((res) => {
-    return {
-      isNameValid: res !== DATASET_EXISTS_ERROR,
-      error: DATASET_EXISTS_ERROR,
-    };
-  });
-};
-
 watch(
   [
-    datasetName,
-    fileTypeSelected,
     rawDataSelected,
     selectedFile,
     fileListSearchText,
