@@ -116,6 +116,14 @@
           </div>
         </template>
 
+        <template #step-content-2>
+          <IngestionInfo
+            :ingestion-dir="selectedFile"
+            :source-raw-data="rawDataSelected[0]"
+            :ingestion-space="searchSpace.label"
+          />
+        </template>
+
         <!-- custom controls -->
         <template #controls="{ nextStep, prevStep }">
           <div class="flex items-center justify-around w-full">
@@ -167,6 +175,7 @@ const hasSourceRawData = ref(true);
 const STEP_KEYS = {
   RAW_DATA: "rawData",
   DIRECTORY: "directory",
+  INFO: "info",
 };
 const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
 const INGESTION_NOT_ALLOWED_ERROR =
@@ -183,6 +192,11 @@ const steps = [
     icon: "material-symbols:folder",
   },
   { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
+  {
+    key: STEP_KEYS.INFO,
+    label: "Ingestion Details",
+    icon: "material-symbols:info-outline",
+  },
 ];
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
@@ -193,6 +207,7 @@ const steps = [
 const stepPristineStates = ref([
   { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.DIRECTORY]: true },
+  { [STEP_KEYS.INFO]: true },
 ]);
 
 const stepIsPristine = computed(() => {
@@ -202,6 +217,7 @@ const stepIsPristine = computed(() => {
 const formErrors = ref({
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.INFO]: null,
 });
 const formHasErrors = computed(() => {
   const errors = Object.values(formErrors.value);
@@ -218,6 +234,7 @@ const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.DIRECTORY]: null,
+    [STEP_KEYS.INFO]: null,
   };
 };
 
@@ -396,6 +413,7 @@ watch(
     selectedFile,
     fileListSearchText,
     isFileSearchAutocompleteOpen,
+    searchSpace,
   ],
   async () => {
     // mark step's form fields as not pristine, for fields' errors to be shown
