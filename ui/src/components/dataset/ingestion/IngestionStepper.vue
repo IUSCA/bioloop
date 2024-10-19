@@ -121,6 +121,7 @@
             :ingestion-dir="selectedFile"
             :source-raw-data="rawDataSelected[0]"
             :ingestion-space="searchSpace.label"
+            :dataset-id="datasetId"
           />
         </template>
 

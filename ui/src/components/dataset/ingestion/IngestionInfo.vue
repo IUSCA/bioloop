@@ -7,7 +7,15 @@
           <tbody>
             <tr>
               <td>Dataset Name</td>
-              <td>{{ props.ingestionDir.name }}</td>
+              <td>
+                <a
+                  :href="`/datasets/${props.datasetId}`"
+                  v-if="props.datasetId"
+                >
+                  {{ props.ingestionDir.name }}</a
+                >
+                <span v-else>{{ props.ingestionDir.name }}</span>
+              </td>
             </tr>
             <tr>
               <td>Ingestion Source Directory</td>
@@ -15,12 +23,14 @@
             </tr>
             <tr v-if="props.ingestionSpace">
               <td>Ingestion Source Space</td>
-              <td>{{ props.ingestionSpace }}</td>
+              <td>
+                <va-chip size="small">{{ props.ingestionSpace }}</va-chip>
+              </td>
             </tr>
             <tr>
               <td>Dataset Type</td>
               <td>
-                <va-chip size="small">{{
+                <va-chip size="small" outline>{{
                   config.dataset.types.DATA_PRODUCT.label
                 }}</va-chip>
               </td>
@@ -53,6 +63,9 @@ const props = defineProps({
   },
   sourceRawData: {
     type: Object,
+  },
+  datasetId: {
+    type: [String, Number],
   },
 });
 </script>
