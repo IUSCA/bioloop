@@ -11,7 +11,7 @@
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
-    :required="props.required"
+    :show-required-error="props.showRequiredError"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -75,7 +75,7 @@ const props = defineProps({
     type: String,
     default: () => "multiple",
   },
-  required: {
+  showRequiredError: {
     type: Boolean,
     default: false,
   },

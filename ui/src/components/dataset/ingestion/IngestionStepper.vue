@@ -90,6 +90,13 @@
           <div class="flex flex-col gap-10">
             <va-checkbox
               v-model="isAssignedSourceRawData"
+              @update:modelValue="
+                (val) => {
+                  if (!val) {
+                    rawDataSelected = [];
+                  }
+                }
+              "
               color="primary"
               label="Assign source Raw Data"
             />
@@ -105,12 +112,13 @@
                 @remove="removeDataset"
                 select-mode="single"
                 :dataset-type="config.dataset.types.RAW_DATA.key"
+                :show-required-error="!stepIsPristine"
               ></DatasetSelect>
             </va-form-field>
 
-            <div class="text-xs va-text-danger" v-if="!stepIsPristine">
-              {{ formErrors[STEP_KEYS.DIRECTORY] }}
-            </div>
+            <!--            <div class="text-xs va-text-danger" v-if="!stepIsPristine">-->
+            <!--              {{ formErrors[STEP_KEYS.DIRECTORY] }}-->
+            <!--            </div>-->
           </div>
         </template>
 
@@ -168,8 +176,8 @@ import { useForm } from "vuestic-ui";
 //  - next and previous disabled when step has errors
 
 const STEP_KEYS = {
-  RAW_DATA: "rawData",
   DIRECTORY: "directory",
+  RAW_DATA: "rawData",
   INFO: "info",
 };
 const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
@@ -226,8 +234,8 @@ const isNextStepDisabled = computed(() => {
 // their respective input fields. For step 3, pristine state is maintained by
 // this component.
 const stepPristineStates = ref([
-  { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.DIRECTORY]: true },
+  { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.INFO]: true },
 ]);
 
@@ -236,8 +244,8 @@ const stepIsPristine = computed(() => {
 });
 
 const formErrors = ref({
-  [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
 });
 const formHasErrors = computed(() => {
@@ -253,8 +261,8 @@ const selectedFile = ref(null);
 
 const resetFormErrors = () => {
   formErrors.value = {
-    [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.DIRECTORY]: null,
+    [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.INFO]: null,
   };
 };
@@ -432,13 +440,35 @@ watch(
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    stepPristineStates.value[step.value][stepKey] = false;
-    await setFormErrors();
-
-    // if Source Raw Data requirement is changed
-    if (newVals[5] !== oldVals[5]) {
-      rawDataSelected.value = [];
+    if (stepKey === STEP_KEYS.RAW_DATA) {
+      stepPristineStates.value[step.value][stepKey] = !oldVals[5] && newVals[5];
+    } else {
+      stepPristineStates.value[step.value][stepKey] = false;
     }
+
+    // unchecked - always set step 2's pristine = true
+    // checked
+    //     - if unchecked to checked - pristine true
+
+    // checked -
+    //    true to false - no error, reset to pristine
+    //      set pristine true
+    //    false to true - no error, should be pristine at this point
+    //      set pristine true
+    //    result unselected - show error if not pristine
+    // if Source Raw Data requirement is changed from false to true
+
+    // if old checkbox is not same as new, reset pristine?
+    // if (
+    //   !isAssignedSourceRawData.value
+    // && rawDataSelected.value.length === 0
+    // ) {
+    // && raw_data_selected
+    // rawDataSelected.value = [];
+    // stepPristineStates.value[1][STEP_KEYS.DIRECTORY] = true;
+    // }
+
+    await setFormErrors();
   },
 );
 

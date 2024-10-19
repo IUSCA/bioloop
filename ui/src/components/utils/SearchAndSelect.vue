@@ -182,7 +182,7 @@
         <va-inner-loading :loading="props.loading">
           <div
             class="va-text-danger text-xs"
-            v-if="props.required && props.selectedResults.length === 0"
+            v-if="props.showRequiredError && props.selectedResults.length === 0"
           >
             {{ selectionRequiredError }}
           </div>
@@ -309,8 +309,9 @@ const props = defineProps({
   },
   resource: {
     type: String,
+    default: "result",
   },
-  required: {
+  showRequiredError: {
     type: Boolean,
     default: false,
   },
@@ -319,8 +320,8 @@ const props = defineProps({
 const selectionRequiredError = computed(() => {
   return (
     "Please select " +
-    (props.selectMode === "single" ? "a" : "at least once") +
-    ` ${props.resource ? props.resource : "result"}`
+    (props.selectMode === "single" ? "a" : "at least one") +
+    ` ${props.resource}`
   );
 });
 
