@@ -185,7 +185,8 @@
             v-if="props.showRequiredError && props.selectedResults.length === 0"
           >
             <va-alert
-              class="my-auto"
+              dense
+              class="my-auto text-xs"
               text-color="danger"
               color="danger"
               icon="warning"
