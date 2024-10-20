@@ -9,8 +9,8 @@
       >
         <!-- Step icons and labels -->
         <template
-          v-for="(step, i) in steps"
-          :key="step.label"
+          v-for="(s, i) in steps"
+          :key="s.label"
           #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
         >
           <va-button
@@ -20,12 +20,12 @@
               'step-button--completed': isCompleted,
             }"
             @click="setStep(i)"
-            :disabled="submitAttempted || formHasErrors"
+            :disabled="submitAttempted || step < i"
             preset="secondary"
           >
             <div class="flex flex-col items-center">
-              <Icon :icon="step.icon" />
-              <span class="hidden sm:block"> {{ step.label }} </span>
+              <Icon :icon="s.icon" />
+              <span class="hidden sm:block"> {{ s.label }} </span>
             </div>
           </va-button>
         </template>
