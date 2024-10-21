@@ -436,7 +436,7 @@ const preIngestion = () => {
       type: config.dataset.types.DATA_PRODUCT.key,
       origin_path: selectedFile.value.path,
     },
-    ingestion_space: Object.keys(searchSpace.value)[0],
+    ingestion_space: searchSpace.value.key,
   });
 };
 

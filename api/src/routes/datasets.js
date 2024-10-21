@@ -561,7 +561,7 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, ingestion_space, file_type, ...data
+      workflow_id, state, ingestion_space, data
     } = req.body;
 
     const { origin_path } = data;
@@ -594,15 +594,6 @@ router.post(
           },
         ],
       };
-    }
-
-    if (file_type) {
-      data.file_type = file_type.id === undefined ? {
-        create: {
-          name: file_type.name,
-          extension: file_type.extension,
-        },
-      } : { connect: { id: file_type.id } };
     }
 
     if (data.is_duplicate) {
