@@ -45,7 +45,7 @@
             <div class="flex flex-col w-full">
               <FileListAutoComplete
                 @files-retrieved="setRetrievedFiles"
-                :disabled="submitAttempted || loading"
+                :disabled="submitAttempted"
                 :base-path="searchSpaceBasePath"
                 @loading="loading = true"
                 @loaded="loading = false"
