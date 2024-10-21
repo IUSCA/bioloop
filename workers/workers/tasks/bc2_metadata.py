@@ -24,7 +24,7 @@ def get_metadata_from_csv(celery_task, dataset_id, **kwargs):
 
   dataset = api.get_dataset(dataset_id=dataset_id)
 
-  file_path = '/opt/metadata.csv'
+  file_path = '/opt/sca/metadata.csv'
   data = { "metadata": []}
   parsed_data = parse_csv(file_path, dataset['name'])
 
