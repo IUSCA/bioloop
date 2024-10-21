@@ -20,7 +20,7 @@
               'step-button--completed': isCompleted,
             }"
             @click="setStep(i)"
-            :disabled="submitAttempted || step < i"
+            :disabled="submitAttempted || step < i || loading"
             preset="secondary"
           >
             <div class="flex flex-col items-center">
@@ -39,13 +39,13 @@
               :options="FILESYSTEM_SEARCH_SPACES"
               :text-by="'label'"
               label="Search space"
-              :disabled="submitAttempted"
+              :disabled="submitAttempted || loading"
             />
 
             <div class="flex flex-col w-full">
               <FileListAutoComplete
                 @files-retrieved="setRetrievedFiles"
-                :disabled="submitAttempted"
+                :disabled="submitAttempted || loading"
                 :base-path="searchSpaceBasePath"
                 @loading="loading = true"
                 @loaded="loading = false"
@@ -145,7 +145,7 @@
                   prevStep();
                 }
               "
-              :disabled="isNextStepDisabled"
+              :disabled="isNextStepDisabled || loading"
             >
               Previous
             </va-button>
@@ -153,7 +153,7 @@
               class="flex-none"
               @click="onNextClick(nextStep)"
               :color="isLastStep ? 'success' : 'primary'"
-              :disabled="formHasErrors || submissionSuccess"
+              :disabled="formHasErrors || submissionSuccess || loading"
             >
               {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
             </va-button>
@@ -324,7 +324,7 @@ const validateNotExists = (value) => {
     if (!value) {
       resolve(true);
     } else {
-      // loading.value = true;
+      loading.value = true;
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
         .then((res) => {
@@ -336,6 +336,9 @@ const validateNotExists = (value) => {
         })
         .catch((err) => {
           console.error(err);
+        })
+        .finally(() => {
+          loading.value = false;
         });
     }
   });
