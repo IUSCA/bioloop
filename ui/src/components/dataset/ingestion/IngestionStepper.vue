@@ -36,7 +36,7 @@
               class="mr-2"
               v-model="searchSpace"
               @update:modelValue="resetSearch"
-              :options="FILESYSTEM_SEARCH_SPACES"
+              :options="FILESYSTEM_SEARCH_SPACES.map((space) => space.label)"
               :text-by="'label'"
               label="Search space"
               :disabled="submitAttempted || loading"
@@ -397,6 +397,7 @@ const searchFiles = async () => {
     .getPathFiles({
       path: _searchText,
       dirs_only: true,
+      search_space: searchSpace.value.label,
     })
     .then((response) => {
       setRetrievedFiles(response.data);
@@ -430,9 +431,12 @@ const removeDataset = () => {
 const preIngestion = () => {
   submitAttempted.value = true;
   return datasetService.create_dataset({
-    name: selectedFile.value.name,
-    type: config.dataset.types.DATA_PRODUCT.key,
-    origin_path: selectedFile.value.path,
+    data: {
+      name: selectedFile.value.name,
+      type: config.dataset.types.DATA_PRODUCT.key,
+      origin_path: selectedFile.value.path,
+    },
+    ingestion_space: Object.keys(searchSpace.value)[0],
   });
 };
 

@@ -115,7 +115,7 @@ const exports = {
   },
   filesystem_search_spaces: [
     {
-      [import.meta.env.VITE_SCRATCH_BASE_DIR]: {
+      slateScratch: {
         base_path:
           import.meta.env.VITE_SCRATCH_BASE_DIR || "/bioloop/scratch/space",
         mount_path:
@@ -125,7 +125,7 @@ const exports = {
       },
     },
     {
-      [import.meta.env.VITE_PROJECT_BASE_DIR]: {
+      slateProject: {
         base_path:
           import.meta.env.VITE_PROJECT_BASE_DIR || "/bioloop/project/space",
         mount_path:
@@ -136,12 +136,18 @@ const exports = {
     },
   ],
   restricted_ingestion_dirs: {
-    [import.meta.env.VITE_SCRATCH_BASE_DIR]:
-      import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
-      "/scratch/space/restricted",
-    [import.meta.env.VITE_PROJECT_BASE_DIR]:
-      import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
-      "/project/space/restricted",
+    slateScratch: {
+      paths:
+        import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+        "/scratch/space/restricted",
+      key: "scratch",
+    },
+    slateProject: {
+      paths:
+        import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
+        "/project/space/restricted",
+      key: "project",
+    },
   },
   globus: {
     auth_url:

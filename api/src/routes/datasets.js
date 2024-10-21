@@ -10,6 +10,7 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 const dayjs = require('dayjs');
+const pm = require('picomatch');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -549,6 +550,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('ingestion_space').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -559,7 +561,7 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, file_type, ...data
+      workflow_id, state, ingestion_space, file_type, ...data
     } = req.body;
 
     const { origin_path } = data;
@@ -570,9 +572,14 @@ router.post(
 
     // if dataset's origin_path is a restricted for dataset creation, throw
     // error
-    const restricted_dataset_paths = Object.values(config.restricted_ingestion_dirs).map((paths) => paths.split(',')).flat();
-    console.log('restricted_dataset_paths:', restricted_dataset_paths);
-    const origin_path_is_restricted = restricted_dataset_paths.some((path) => origin_path === path);
+    const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+    console.log('restricted_ingestion_dirs:', restricted_ingestion_dirs);
+    const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+      const isMatch = pm(glob);
+      const matches = isMatch(origin_path, glob, { contains: true });
+      console.log('path:', origin_path, 'glob:', glob, 'isMatch:', matches.isMatch);
+      return matches.isMatch;
+    });
 
     if (origin_path_is_restricted) {
       return next(createError.Forbidden());
