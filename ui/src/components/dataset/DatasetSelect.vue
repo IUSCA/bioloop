@@ -6,12 +6,13 @@
     :selectMode="props.selectMode"
     :search-result-count="totalResultCount"
     placeholder="Search Datasets by name"
-    selected-label="Datasets to assign"
+    :selected-label="props.selectedLabel"
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
     :show-required-error="props.showRequiredError"
+    :messages="props.messages"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -78,6 +79,14 @@ const props = defineProps({
   showRequiredError: {
     type: Boolean,
     default: false,
+  },
+  selectedLabel: {
+    type: String,
+    default: () => "Selected Datasets",
+  },
+  messages: {
+    type: Array,
+    default: () => [],
   },
 });
 

@@ -113,6 +113,8 @@
                 select-mode="single"
                 :dataset-type="config.dataset.types.RAW_DATA.key"
                 :show-required-error="!stepIsPristine"
+                placeholder="Search Raw Data"
+                selected-label="Selected source Raw Data"
               ></DatasetSelect>
             </va-form-field>
 

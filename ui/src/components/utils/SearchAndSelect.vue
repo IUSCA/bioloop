@@ -9,6 +9,7 @@
           <div class="flex gap-2">
             <!-- Search input -->
             <va-input
+              :messages="props.messages"
               :modelValue="props.searchTerm"
               @update:modelValue="
                 (val) => {
@@ -262,6 +263,9 @@
 import _ from "lodash";
 
 const props = defineProps({
+  messages: {
+    type: Array,
+  },
   placeholder: {
     type: String,
     default: () => "Type to search",
