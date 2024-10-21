@@ -126,9 +126,8 @@ router.get(
     //   }
     //   return file;
     // });
-    // filesData = _.compact(filesData);
 
-    const filesData = [
+    let filesData = [
       {
         name: '00_SCRATCH_FILES_DELETED_AFTER_30_DAYS.txt',
         isDir: false,
@@ -145,6 +144,9 @@ router.get(
         path: `${req.query.path}`,
       },
     ];
+
+    filesData = _.compact(filesData);
+    console.log('filesData: ', filesData);
 
     res.json(filesData);
   }),

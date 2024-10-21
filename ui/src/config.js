@@ -88,7 +88,7 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
     notifications: {
-      enabledForRoles: ["admin", "operator"],
+      enabledForRoles: [],
     },
   },
   // filesystem_scratch_source_dir:
