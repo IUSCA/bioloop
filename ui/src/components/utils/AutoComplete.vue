@@ -113,14 +113,8 @@ const emit = defineEmits([
 ]);
 
 const text = computed({
-  get: () => {
-    return props.searchText;
-  },
+  get: () => props.searchText,
   set: (value) => {
-    console.log("Updating text", value);
-    if (!props.async) {
-      filterSearchResults(value);
-    }
     emit("update:searchText", value);
     // visible.value = value.length > 0;
   },
@@ -133,24 +127,19 @@ const visible = ref(false);
 // when clicked on input show the results ul
 // when clicked on a search result, clear text and hide the results ul
 
-const search_results = ref([]);
-
-const filterSearchResults = (searchVal) => {
-  if (searchVal === "") {
-    search_results.value = props.data;
-    return;
-  }
+const search_results = computed(() => {
+  if (text.value === "" || props.async) return props.data;
 
   const filterFn =
     props.filterFn instanceof Function
-      ? props.filterFn(searchVal)
+      ? props.filterFn(text.value)
       : (item) =>
           (item[props.filterBy] || "")
             .toLowerCase()
             .includes(text.value.toLowerCase());
 
-  search_results.value = (props.data || []).filter(filterFn);
-};
+  return (props.data || []).filter(filterFn);
+});
 
 function closeResults() {
   visible.value = false;
