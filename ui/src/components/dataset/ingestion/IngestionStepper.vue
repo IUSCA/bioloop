@@ -167,7 +167,6 @@ import config from "@/config";
 import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
-import { useForm } from "vuestic-ui";
 
 // error shown - step has errors, and is not pristine
 //  - onMounted - setFormErrors()
@@ -277,10 +276,7 @@ const setFormErrors = async () => {
     await validateDatasetName();
 
   if (step.value === 0) {
-    if (!selectedFile.value) {
-      formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_FILE_REQUIRED_ERROR;
-      return;
-    } else if (!datasetNameIsValid) {
+    if (!datasetNameIsValid) {
       formErrors.value[STEP_KEYS.DIRECTORY] = error;
       return;
     } else {
@@ -345,7 +341,9 @@ const validateNotExists = (value) => {
 
 const validateDatasetName = async () => {
   const datasetName = selectedFile.value?.name;
-  if (!datasetNameHasMinimumChars(datasetName)) {
+  if (datasetNameIsNull(datasetName)) {
+    return { isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR };
+  } else if (!datasetNameHasMinimumChars(datasetName)) {
     return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
   }
 
@@ -360,6 +358,10 @@ const validateDatasetName = async () => {
 
 const datasetNameHasMinimumChars = (name) => {
   return name?.length >= 3;
+};
+
+const datasetNameIsNull = (name) => {
+  return !name;
 };
 
 const searchSpace = ref(
