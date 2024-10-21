@@ -214,8 +214,8 @@ async function get_dataset({
 //   `;
 
 //   /**
-//    * Find directories of a dataset which are immediate children of `base` path
-//    *
+// * Find directories of a dataset which are immediate children of `base` path
+// *
 //    * Query: filter rows by dataset_id, rows starting with `base`,
 //    * and rows where the path after `base` does have / (these files are not immediate children)
 //    *
