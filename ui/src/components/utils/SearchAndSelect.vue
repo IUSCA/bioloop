@@ -208,7 +208,7 @@
               :columns="_selectedResultColumns"
               virtual-scroller
               selectable
-              select-mode="multiple"
+              :select-mode="props.selectMode"
             >
               <!-- dynamically generated templates for displaying columns of the selected results table  -->
               <template
