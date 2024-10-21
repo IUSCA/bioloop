@@ -7,6 +7,7 @@ const {
 } = require('express-validator');
 const path = require('node:path');
 // const { exec } = require('child_process');
+const createError = require('http-errors');
 
 const config = require('config');
 const _ = require('lodash');
@@ -20,18 +21,29 @@ const router = express.Router();
 // const BASE_DIRS = Object.values(config.filesystem.base_dir);
 // console.log('BASE_DIRS: ', BASE_DIRS);
 
-function getBaseDir(req) {
+function getBaseDirKey(req) {
   const base_dir_key = Object.keys(config.filesystem.base_dir).filter((key) => key === req.query.search_space)[0];
+  return base_dir_key;
+}
+
+function getBaseDir(req) {
+  const base_dir_key = getBaseDirKey(req);
   console.log('base_dir_key: ', base_dir_key);
   const base_dir = config.filesystem.base_dir[base_dir_key];
   console.log('base_dir: ', base_dir);
   return base_dir;
 }
 
+// function getSearchSpaceKey(req) {
+//   const base_dir_key = getBaseDirKey(req);
+//   console.log('base_dir_key: ', base_dir_key);
+//   return base_dir_key;
+// }
+
 function validatePath(req, res, next) {
   const query_path = req.query.path;
   if (!query_path) {
-    return next();
+    return next(createError.Forbidden());
   }
 
   // const query_path = req_path.slice(req.path.indexOf(BASE_PATH) +
@@ -62,12 +74,13 @@ function validatePath(req, res, next) {
   next();
 }
 
-const get_mount_dir = (base_dir) => {
-  console.log('get_mount_dir(): base_dir:', base_dir);
+const get_mount_dir = (req) => {
+  const base_dir_key = getBaseDirKey(req);
+  console.log('get_mount_dir(): base_dir:', base_dir_key);
   console.log('config.filesystem.base_dir.slateScratch:', config.filesystem.base_dir.slateScratch);
   console.log('config.filesystem.base_dir.slateProject:', config.filesystem.base_dir.slateProject);
-  console.log('config.filesystem.mount_dir[base_dir]:', config.filesystem.mount_dir[base_dir]);
-  return config.filesystem.mount_dir[base_dir];
+  console.log('config.filesystem.mount_dir[base_dir]:', config.filesystem.mount_dir[base_dir_key]);
+  return config.filesystem.mount_dir[base_dir_key];
 
   // switch (base_dir) {
   //   case config.filesystem.base_dir.slateScratch:
@@ -87,7 +100,7 @@ const get_mounted_search_dir = (req) => {
     + path_prefix.length);
   console.log('query_path: ', query_path);
 
-  const mount_dir = get_mount_dir(base_dir);
+  const mount_dir = get_mount_dir(req);
 
   console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
 

@@ -121,6 +121,7 @@ const exports = {
         mount_path:
           import.meta.env.VITE_SCRATCH_MOUNT_DIR ||
           "/bioloop/user/scratch/mount/dir",
+        key: "slateScratch",
         label: "Slate-Scratch",
       },
     },
@@ -131,6 +132,7 @@ const exports = {
         mount_path:
           import.meta.env.VITE_PROJECT_MOUNT_DIR ||
           "bioloop/user/project/mount/dir",
+        key: "slateProject",
         label: "Slate-Project",
       },
     },

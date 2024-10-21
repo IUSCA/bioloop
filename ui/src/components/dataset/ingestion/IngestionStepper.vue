@@ -397,7 +397,7 @@ const searchFiles = async () => {
     .getPathFiles({
       path: _searchText,
       dirs_only: true,
-      search_space: searchSpace.value.label,
+      search_space: searchSpace.value.key,
     })
     .then((response) => {
       setRetrievedFiles(response.data);
@@ -512,7 +512,7 @@ watch(
 );
 
 const getRestrictedIngestionPaths = () => {
-  return config.restricted_ingestion_dirs[searchSpace.value.base_path].split(
+  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(
     ",",
   );
 };
