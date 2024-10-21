@@ -34,8 +34,8 @@ services:
         ipv4_address: 172.19.0.2
       rhythm_bioloop_bridge:
         ipv4_address: 172.19.2.3
-      signet_network:
-        ipv4_address: 172.19.3.6
+      # signet_network:
+      #   ipv4_address: 172.19.3.6
 
   postgres:
     image: docker.io/library/postgres:14.5
@@ -87,6 +87,6 @@ networks:
   rhythm_bioloop_bridge:
     name: rhythm-bioloop-bridge
     external: true
-  signet_network:
-    name: signet_network
-    external: true
+  # signet_network:
+  #   name: signet_network
+  #   external: true

@@ -22,7 +22,10 @@ const updatedMetadata = async () => {
 
 const reset_metadata = async () => {
   await DatasetService.reset_metadata(id);
-  await getMetadata()
+  setTimeout(() => {
+    getMetadata();
+  }, 2000);
+
 };
 </script>
 
