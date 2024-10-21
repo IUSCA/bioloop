@@ -180,6 +180,10 @@ const STEP_KEYS = {
   RAW_DATA: "rawData",
   INFO: "info",
 };
+const DATASET_NAME_MAX_LENGTH_ERROR =
+  "Dataset name must have 3 or more characters.";
+const DATASET_NAME_EXISTS_ERROR =
+  "A Data Product with this name already exists.";
 const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
 const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
@@ -269,9 +273,15 @@ const resetFormErrors = () => {
 
 const setFormErrors = async () => {
   resetFormErrors();
+  const { isNameValid: datasetNameIsValid, error } =
+    await validateDatasetName();
+
   if (step.value === 0) {
     if (!selectedFile.value) {
       formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_FILE_REQUIRED_ERROR;
+      return;
+    } else if (!datasetNameIsValid) {
+      formErrors.value[STEP_KEYS.DIRECTORY] = error;
       return;
     } else {
       const restricted_dataset_paths = Object.values(
@@ -305,6 +315,51 @@ const setFormErrors = async () => {
       formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
     }
   }
+};
+
+const validateNotExists = (value) => {
+  return new Promise((resolve) => {
+    // Vuestic claims that it should not run async validation if synchronous
+    // validation fails, but it seems to be triggering async validation
+    // nonetheless when `value` is ''. Hence the explicit check for whether
+    // `value` is falsy.
+    if (!value) {
+      resolve(true);
+    } else {
+      // loading.value = true;
+      datasetService
+        .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
+        .then((res) => {
+          // Vuestic expects this Promise to resolve with an error message, for
+          // it to show the error message.
+          resolve(
+            res.data.datasets.length !== 0 ? DATASET_NAME_EXISTS_ERROR : true,
+          );
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
+  });
+};
+
+const validateDatasetName = async () => {
+  const datasetName = selectedFile.value?.name;
+  if (!datasetNameHasMinimumChars(datasetName)) {
+    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
+  }
+
+  return validateNotExists(datasetName).then((res) => {
+    return {
+      isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
+      error:
+        res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
+    };
+  });
+};
+
+const datasetNameHasMinimumChars = (name) => {
+  return name?.length >= 3;
 };
 
 const searchSpace = ref(
