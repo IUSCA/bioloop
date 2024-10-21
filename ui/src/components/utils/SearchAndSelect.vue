@@ -180,7 +180,14 @@
         </div>
 
         <!-- Selected Results table -->
-        <va-inner-loading :loading="props.loading" class="h-full">
+        <va-inner-loading
+          :loading="props.loading"
+          class="h-full"
+          :class="{
+            'selected-table__top-padding--hint-message-provided':
+              props.messages.length > 0,
+          }"
+        >
           <div
             class="flex va-text-danger h-full"
             v-if="props.showRequiredError && props.selectedResults.length === 0"
@@ -488,6 +495,10 @@ const addOrRemove = (rowData) => {
 
   .selected-table {
     height: 320px;
+  }
+
+  .selected-table__top-padding--hint-message-provided {
+    padding-top: 19px;
   }
 }
 </style>

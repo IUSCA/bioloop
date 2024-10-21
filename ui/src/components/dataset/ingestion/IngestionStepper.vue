@@ -115,6 +115,7 @@
                 :show-required-error="!stepIsPristine"
                 placeholder="Search Raw Data"
                 selected-label="Selected source Raw Data"
+                :messages="['Select a Source Raw Data']"
               ></DatasetSelect>
             </va-form-field>
 
