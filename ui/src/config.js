@@ -135,12 +135,14 @@ const exports = {
       },
     },
   ],
-  restricted_ingestion_dirs: [
-    import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+  restricted_ingestion_dirs: {
+    [import.meta.env.VITE_SCRATCH_BASE_DIR]:
+      import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
       "/scratch/space/restricted",
-    import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
+    [import.meta.env.VITE_PROJECT_BASE_DIR]:
+      import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
       "/project/space/restricted",
-  ],
+  },
   globus: {
     auth_url:
       import.meta.env.VITE_GLOBUS_OAUTH_AUTH_URL ||

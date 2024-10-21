@@ -170,6 +170,7 @@ import config from "@/config";
 import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
+import pm from "picomatch";
 
 // error shown - step has errors, and is not pristine
 //  - onMounted - setFormErrors()
@@ -281,21 +282,14 @@ const setFormErrors = async () => {
   if (step.value === 0) {
     if (!datasetNameIsValid) {
       formErrors.value[STEP_KEYS.DIRECTORY] = error;
-      return;
     } else {
-      const restricted_dataset_paths = Object.values(
-        config.restricted_ingestion_dirs,
-      )
-        .map((paths) => paths.split(","))
-        .flat();
+      const restricted_dataset_paths = getRestrictedIngestionPaths();
       const origin_path_is_restricted = restricted_dataset_paths.some(
-        (path) => {
-          console.log("regex path:", path);
-          // TODO - enable wildcard match
-          // const regex = new RegExp(path);
-          return selectedFile.value.path === path;
-          // ? true
-          // : regex.test(selectedFile.value.path);
+        (pattern) => {
+          const _path = selectedFile.value.path;
+          let isMatch = pm(pattern);
+          const matches = isMatch(_path, pattern, { contains: true });
+          return matches.isMatch;
         },
       );
 
@@ -509,31 +503,15 @@ watch(
       stepPristineStates.value[step.value][stepKey] = false;
     }
 
-    // unchecked - always set step 2's pristine = true
-    // checked
-    //     - if unchecked to checked - pristine true
-
-    // checked -
-    //    true to false - no error, reset to pristine
-    //      set pristine true
-    //    false to true - no error, should be pristine at this point
-    //      set pristine true
-    //    result unselected - show error if not pristine
-    // if Source Raw Data requirement is changed from false to true
-
-    // if old checkbox is not same as new, reset pristine?
-    // if (
-    //   !isAssignedSourceRawData.value
-    // && rawDataSelected.value.length === 0
-    // ) {
-    // && raw_data_selected
-    // rawDataSelected.value = [];
-    // stepPristineStates.value[1][STEP_KEYS.DIRECTORY] = true;
-    // }
-
     await setFormErrors();
   },
 );
+
+const getRestrictedIngestionPaths = () => {
+  return config.restricted_ingestion_dirs[searchSpace.value.base_path].split(
+    ",",
+  );
+};
 
 // Form errors are set when this component mounts, but not shown if a step's
 // form fields are pristine.
