@@ -9,6 +9,7 @@
           <div class="flex gap-2">
             <!-- Search input -->
             <va-input
+              :messages="props.messages"
               :modelValue="props.searchTerm"
               @update:modelValue="
                 (val) => {
@@ -64,6 +65,7 @@
 
         <!-- Search results table -->
         <va-inner-loading :loading="props.loading">
+          <div class="va-text-danger text-xs"></div>
           <div
             ref="infiniteScrollTarget_search"
             class="max-h-80 overflow-y-auto"
@@ -137,7 +139,7 @@
 
     <!-- Selected results -->
     <div class="flex-auto">
-      <div class="flex flex-col gap-2">
+      <div class="h-full flex flex-col gap-2">
         <!-- Container for Controls -->
         <div class="flex flex-col gap-2 --controls-height --controls-margin">
           <div class="va-h6 h-9 my-0">
@@ -178,17 +180,42 @@
         </div>
 
         <!-- Selected Results table -->
-        <va-inner-loading :loading="props.loading">
-          <div class="overflow-y-auto selected-table">
+        <va-inner-loading
+          :loading="props.loading"
+          class="h-full"
+          :class="{
+            'selected-table__top-padding--hint-message-provided':
+              props.messages.length > 0,
+          }"
+        >
+          <div
+            class="flex va-text-danger h-full"
+            v-if="props.showRequiredError && props.selectedResults.length === 0"
+          >
+            <va-alert
+              dense
+              class="my-auto text-xs"
+              text-color="danger"
+              color="danger"
+              icon="warning"
+              outline
+            >
+              {{ selectionRequiredError }}</va-alert
+            >
+          </div>
+
+          <div
+            class="overflow-y-auto selected-table"
+            v-if="props.selectedResults.length > 0"
+          >
             <va-data-table
               class="results-table"
               v-model="selectedResultSelections"
-              v-if="props.selectedResults.length > 0"
               :items="props.selectedResults"
               :columns="_selectedResultColumns"
               virtual-scroller
               selectable
-              select-mode="multiple"
+              :select-mode="props.selectMode"
             >
               <!-- dynamically generated templates for displaying columns of the selected results table  -->
               <template
@@ -243,6 +270,9 @@
 import _ from "lodash";
 
 const props = defineProps({
+  messages: {
+    type: Array,
+  },
   placeholder: {
     type: String,
     default: () => "Type to search",
@@ -293,6 +323,22 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  resource: {
+    type: String,
+    default: "result",
+  },
+  showRequiredError: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const selectionRequiredError = computed(() => {
+  return (
+    "Please select " +
+    (props.selectMode === "single" ? "a" : "at least one") +
+    ` ${props.resource}`
+  );
 });
 
 const _controlsMargin = toRef(() => props.controlsMargin);
@@ -445,6 +491,10 @@ const addOrRemove = (rowData) => {
 
   .selected-table {
     height: 320px;
+  }
+
+  .selected-table__top-padding--hint-message-provided {
+    padding-top: 19px;
   }
 }
 </style>

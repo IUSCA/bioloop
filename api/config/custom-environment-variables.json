@@ -42,16 +42,16 @@
   "filesystem": {
     "search_spaces": "FILESYSTEM_SEARCH_SPACES",
     "base_dir": {
-      "scratch": "FILESYSTEM_BASE_DIR_SCRATCH",
-      "project": "FILESYSTEM_BASE_DIR_PROJECT"
+      "slateScratch": "FILESYSTEM_BASE_DIR_SCRATCH",
+      "slateProject": "FILESYSTEM_BASE_DIR_PROJECT"
     },
     "mount_dir": {
-      "scratch": "FILESYSTEM_MOUNT_DIR_SCRATCH",
-      "project": "FILESYSTEM_MOUNT_DIR_PROJECT"
+      "slateScratch": "FILESYSTEM_MOUNT_DIR_SCRATCH",
+      "slateProject": "FILESYSTEM_MOUNT_DIR_PROJECT"
     }
   },
   "restricted_ingestion_dirs": {
-    "scratch": "SCRATCH_INGESTION_RESTRICTED_DIRS",
-    "project": "PROJECT_INGESTION_RESTRICTED_DIRS"
+    "slateScratch": "SCRATCH_INGESTION_RESTRICTED_DIRS",
+    "slateProject": "PROJECT_INGESTION_RESTRICTED_DIRS"
   }
 }

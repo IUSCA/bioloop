@@ -125,16 +125,16 @@
   "filesystem": {
     "search_spaces": "",
     "base_dir": {
-      "scratch": "",
-      "project": ""
+      "slateScratch": "",
+      "slateProject": ""
     },
     "mount_dir": {
-      "scratch": "",
-      "project": ""
+      "slateScratch": "",
+      "slateProject": ""
     }
   },
   "restricted_ingestion_dirs": {
-    "scratch": "",
-    "project": ""
+    "slateScratch": "",
+    "slateProject": ""
   }
 }

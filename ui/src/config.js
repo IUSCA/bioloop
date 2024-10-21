@@ -69,35 +69,51 @@ const exports = {
   alertForEnvironments: ["ci"],
   enabledFeatures: {
     genomeBrowser: true,
+    notifications: {
+      enabledForRoles: [],
+    },
+  },
+  notifications: {
+    pollingInterval: 5000, // milliseconds
   },
   filesystem_search_spaces: [
     {
-      [import.meta.env.VITE_SCRATCH_BASE_DIR]: {
+      slateScratch: {
         base_path:
           import.meta.env.VITE_SCRATCH_BASE_DIR || "/bioloop/scratch/space",
         mount_path:
           import.meta.env.VITE_SCRATCH_MOUNT_DIR ||
           "/bioloop/user/scratch/mount/dir",
+        key: "slateScratch",
         label: "Slate-Scratch",
       },
     },
     {
-      [import.meta.env.VITE_PROJECT_BASE_DIR]: {
+      slateProject: {
         base_path:
           import.meta.env.VITE_PROJECT_BASE_DIR || "/bioloop/project/space",
         mount_path:
           import.meta.env.VITE_PROJECT_MOUNT_DIR ||
           "bioloop/user/project/mount/dir",
+        key: "slateProject",
         label: "Slate-Project",
       },
     },
   ],
-  restricted_ingestion_dirs: [
-    import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
-    "/scratch/space/restricted",
-    import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
-    "/project/space/restricted",
-  ],
+  restricted_ingestion_dirs: {
+    slateScratch: {
+      paths:
+        import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+        "/scratch/space/restricted",
+      key: "scratch",
+    },
+    slateProject: {
+      paths:
+        import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
+        "/project/space/restricted",
+      key: "project",
+    },
+  },
 };
 
 export default exports;

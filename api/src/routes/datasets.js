@@ -9,6 +9,8 @@ const {
 const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
+const dayjs = require('dayjs');
+const pm = require('picomatch');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -40,8 +42,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -229,6 +231,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('match_name_exact').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -297,6 +300,7 @@ router.get(
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
+    query('initiator').optional().toBoolean(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -313,6 +317,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
+      initiator: req.query.initiator || false
     });
     res.json(dataset);
   }),
@@ -326,6 +331,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('ingestion_space').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -336,9 +342,10 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, file_type, origin_path, ...data
+      workflow_id, state, ingestion_space, data
     } = req.body;
 
+    const { origin_path } = data;
     console.log('origin_path:', origin_path);
 
     // remove whitespaces from dataset name
@@ -346,9 +353,14 @@ router.post(
 
     // if dataset's origin_path is a restricted for dataset creation, throw
     // error
-    const restricted_dataset_paths = Object.values(config.restricted_ingestion_dirs).map((paths) => paths.split(',')).flat();
-    console.log('restricted_dataset_paths:', restricted_dataset_paths);
-    const origin_path_is_restricted = restricted_dataset_paths.some((path) => origin_path === path);
+    const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+    console.log('restricted_ingestion_dirs:', restricted_ingestion_dirs);
+    const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+      const isMatch = pm(glob);
+      const matches = isMatch(origin_path, glob, { contains: true });
+      console.log('path:', origin_path, 'glob:', glob, 'isMatch:', matches.isMatch);
+      return matches.isMatch;
+    });
 
     if (origin_path_is_restricted) {
       return next(createError.Forbidden());
@@ -363,15 +375,6 @@ router.post(
           },
         ],
       };
-    }
-
-    if (file_type) {
-      data.file_type = file_type.id === undefined ? {
-        create: {
-          name: file_type.name,
-          extension: file_type.extension,
-        },
-      } : { connect: { id: file_type.id } };
     }
 
     // create workflow association
@@ -498,9 +501,34 @@ router.post(
       data: {
         id: req.body.workflow_id,
         dataset_id: req.params.id,
+        initiator_id: req.user.id,
       },
     });
     res.sendStatus(200);
+  }),
+);
+
+router.get(
+  '/:id/workflows',
+  isPermittedToWorkflow('read'),
+  validate([
+    param('id').isInt().toInt(),
+    query('status').optional().isArray(),
+    query('last_run_only').optional().isBoolean(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = get workflows associated with a dataset
+
+    const last_run_only = req.query.last_run_only || false;
+
+    const retrievedWorkflows = await datasetService.get_workflows({
+      dataset_id: req.params.id,
+      statuses: ['PENDING', 'STARTED', 'FAILURE'],
+      last_run_only,
+    });
+
+    res.send(retrievedWorkflows);
   }),
 );
 
@@ -539,7 +567,11 @@ router.delete(
     // mark the dataset as deleted on success.
     const _dataset = await datasetService.get_dataset({
       id: req.params.id,
-      workflows: true,
+      workflows: {
+        select: {
+          id: true,
+        },
+      },
     });
 
     if (_dataset) {
@@ -600,7 +632,7 @@ router.post(
     });
 
     const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
     return res.json(wf);
   }),
 );
