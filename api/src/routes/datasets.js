@@ -561,7 +561,7 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, ingestion_space, data
+      workflow_id, state, ingestion_space, data,
     } = req.body;
 
     const { origin_path } = data;
@@ -578,7 +578,8 @@ router.post(
       const origin_path_formatted = origin_path.endsWith('/') ? origin_path : `${origin_path}/`;
       const isMatch = pm(glob);
       const matches = isMatch(origin_path_formatted, glob, { contains: true });
-      // console.log('path:', origin_path_formatted, 'glob:', glob, 'isMatch:', matches.isMatch);
+      // console.log('path:', origin_path_formatted, 'glob:', glob, 'isMatch:',
+      // matches.isMatch);
       return matches.isMatch;
     });
 

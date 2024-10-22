@@ -3,27 +3,43 @@
     <table class="va-table">
       <tbody>
         <tr>
-          <td>Collection ID</td>
-          <td>{{ props.collection.id }}</td>
+          <td>Source Collection ID</td>
+          <td>{{ props.sourceCollection?.id }}</td>
         </tr>
         <tr>
-          <td>Organization</td>
-          <td>{{ props.collection.organization }}</td>
+          <td>Source Collection Name</td>
+          <td>{{ props.sourceCollection?.display_name }}</td>
         </tr>
         <tr>
-          <td>Public Collection</td>
+          <td>Destination Collection ID</td>
+          <td>{{ props.destinationCollection?.id }}</td>
+        </tr>
+        <tr>
+          <td>Destination Collection Name</td>
+          <td>{{ props.destinationCollection?.display_name }}</td>
+        </tr>
+        <tr>
+          <td>Source File Path</td>
+          <td><CopyText :text="props.filePath" }} /></td>
+        </tr>
+        <tr>
+          <td>Destination Collection Organization</td>
+          <td>{{ props.destinationCollection?.organization }}</td>
+        </tr>
+        <tr>
+          <td>Public Destination Collection</td>
           <td>
             <i-mdi-check-circle-outline
-              v-if="props.collection.public"
+              v-if="props.destinationCollection?.public"
               class="text-green-700"
             />
             <i-mdi-close-circle-outline v-else class="text-red-700" />
           </td>
         </tr>
-        <tr>
-          <td>Description</td>
-          <td>{{ props.collection.user_message }}</td>
-        </tr>
+        <!--        <tr>-->
+        <!--          <td>Description</td>-->
+        <!--          <td>{{ props.destinationCollection?.user_message }}</td>-->
+        <!--        </tr>-->
       </tbody>
     </table>
   </div>
@@ -31,8 +47,16 @@
 
 <script setup>
 const props = defineProps({
-  collection: {
+  sourceCollection: {
     type: Object,
+    required: true,
+  },
+  destinationCollection: {
+    type: Object,
+    required: true,
+  },
+  filePath: {
+    type: String,
     required: true,
   },
 });

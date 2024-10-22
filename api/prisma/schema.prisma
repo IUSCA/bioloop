@@ -43,6 +43,7 @@ model dataset {
   duplicated_from  dataset_duplication?  @relation("duplicated_from")
   duplicated_by    dataset_duplication[] @relation("duplicated_by")
   version          Int                   @default(1)
+  shares           dataset_share[]
 
   @@unique([name, type, is_deleted, is_duplicate, version])
 }
@@ -146,6 +147,19 @@ model dataset_state {
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 
   @@id([timestamp, dataset_id, state])
+}
+
+model dataset_share {
+  id                   Int      @id @default(autoincrement())
+  timestamp            DateTime @default(now()) @db.Timestamp(6)
+  dataset_id           Int
+  dataset              dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  source_collection_id Int
+  target_collection_id Int
+  user_id              Int
+  user                 user     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@id([dataset_id, state])
 }
 
 model notification {

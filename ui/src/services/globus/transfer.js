@@ -12,6 +12,10 @@ class GlobusTransferService {
   searchEndpoints(params) {
     return globusTransferApi.get("/endpoint_search", { params });
   }
+
+  getEndpointById(endpointId) {
+    return globusTransferApi.get(`/endpoint/${endpointId}`);
+  }
 }
 
 export default new GlobusTransferService();

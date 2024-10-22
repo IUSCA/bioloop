@@ -284,20 +284,17 @@
                 display-by="display_name"
                 :messages="['Use hyphens between search terms']"
                 @select="
-                  (item) => {
-                    selectedGlobusEndpoint = item;
-                    endpointSearchText = item.display_name;
-                    globusShareModalError = '';
-                  }
+                  (item) =>
+                    setGlobusCollections({ destinationCollection: item })
                 "
                 @clear="
                   () => {
-                    selectedGlobusEndpoint = null;
+                    globusDestinationEndpoint = null;
                   }
                 "
                 @open="
                   () => {
-                    selectedGlobusEndpoint = null;
+                    globusDestinationEndpoint = null;
                     searchGlobusEndpoints();
                   }
                 "
@@ -317,10 +314,16 @@
                 {{ globusShareModalError }}
               </div>
 
-              <GlobusCollectionInfo
-                v-if="selectedGlobusEndpoint"
-                :collection="selectedGlobusEndpoint"
-              />
+              <va-inner-loading :loading="loading">
+                <GlobusCollectionInfo
+                  v-if="globusDestinationEndpoint"
+                  :destination-collection="globusDestinationEndpoint"
+                  :source-collection="globusSourceEndpoint"
+                  :file-path="
+                    getDatasetSourceCollectionPath(dataset.origin_path)
+                  "
+                />
+              </va-inner-loading>
             </div>
           </va-modal>
           <!--          </div>-->
@@ -401,6 +404,7 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as globusService from "@/services/globus";
+import GlobusAppService from "@/services/globus/appApi";
 import globusTransferService from "@/services/globus/transfer";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
@@ -420,7 +424,8 @@ const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 const globusShareModalError = ref("");
 const endpointSearchText = ref("");
 const retrievedEndpoints = ref([]);
-const selectedGlobusEndpoint = ref(null);
+const globusSourceEndpoint = ref(null);
+const globusDestinationEndpoint = ref(null);
 const dataset = ref({});
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -585,18 +590,18 @@ const showGlobusShareModal = ref(false);
 const beforeGlobusShareModalClose = () => {
   console.log("onGlobusShareModalClose()");
   if (!endpointSearchText.value) {
-    selectedGlobusEndpoint.value = null;
+    globusDestinationEndpoint.value = null;
   }
   globusShareModalError.value = "";
   endpointSearchText.value = "";
   showGlobusShareModal.value = false;
-  selectedGlobusEndpoint.value = null;
+  globusDestinationEndpoint.value = null;
 };
 
 const onGlobusShareModalOk = () => {
   console.log("onGlobusShareModalOk()");
   // endpointSearchText.value = "";
-  if (selectedGlobusEndpoint.value) {
+  if (globusDestinationEndpoint.value) {
     globusShareModalError.value = "";
     endpointSearchText.value = "";
     initiateGlobusTransfer();
@@ -640,6 +645,32 @@ const searchGlobusEndpoints = () => {
     });
 };
 
+const registerGlobusShare = ({
+  datasetId,
+  sourceCollectionId,
+  destinationCollectionId,
+}) => {
+  GlobusAppService.logGlobusShare({
+    dataset_id: datasetId,
+    source_collection_id: sourceCollectionId,
+    destination_collection_id: destinationCollectionId,
+    user_id: auth.user.id,
+  });
+};
+
+const getDatasetSourceCollectionPath = (dataset_origin_path) => {
+  console.log("origin_path: ", dataset_origin_path);
+  console.log(
+    "config.globus.source_endpoint_base_path",
+    config.globus.source_endpoint_path,
+  );
+  console.log(
+    "origin_path.indexOf(config.globus.source_endpoint_path)",
+    dataset_origin_path.indexOf(config.globus.source_endpoint_path),
+  );
+  return dataset_origin_path.slice(config.globus.source_endpoint_path.length);
+};
+
 const initiateGlobusTransfer = () => {
   loading.value = true;
   globusTransferService
@@ -650,18 +681,17 @@ const initiateGlobusTransfer = () => {
       return submissionId;
     })
     .then((submissionId) => {
-      const origin_path = dataset.value.origin_path
-      console.log("origin_path: ", origin_path);
-      console.log("config.globus.source_endpoint_base_path", config.globus.source_endpoint_path)
-      console.log("origin_path.indexOf(config.globus.source_endpoint_path)", origin_path.indexOf(config.globus.source_endpoint_path))
-      const collection_file_path = origin_path.slice(config.globus.source_endpoint_path.length);
+      const collection_file_path = getDatasetSourceCollectionPath(
+        dataset.value.origin_path,
+      );
 
-      // const collection_file_path = '/home/u_otp4tsmynba3hhwlxymrnhxlmq/sub-fsm40mn-2'
+      // const collection_file_path =
+      // '/home/u_otp4tsmynba3hhwlxymrnhxlmq/sub-fsm40mn-2'
       console.log("file: ", collection_file_path);
       const transferRequestBody = globusService.getGlobusTransferRequestBody({
         submissionId,
         sourceFile: collection_file_path,
-        destinationEndpointId: selectedGlobusEndpoint.value.id,
+        destinationEndpointId: globusDestinationEndpoint.value.id,
       });
       console.log("transferRequestBody: ", transferRequestBody);
       return transferRequestBody;
@@ -679,7 +709,28 @@ const initiateGlobusTransfer = () => {
     })
     .finally(() => {
       loading.value = false;
-      selectedGlobusEndpoint.value = null;
+      globusDestinationEndpoint.value = null;
+      registerGlobusShare({
+        datasetId: dataset.value.id,
+        sourceCollectionId: config.globus.source_endpoint_id,
+        destinationCollectionId: globusDestinationEndpoint.value.id,
+      });
+    });
+};
+
+const setGlobusCollections = ({ destinationCollection }) => {
+  loading.value = false;
+  globusDestinationEndpoint.value = destinationCollection;
+  globusTransferService
+    .getEndpointById(config.globus.source_endpoint_id)
+    .then((res) => {
+      globusSourceEndpoint.value = res.data;
+    })
+    .catch((err) => {
+      console.error(err);
+    })
+    .finally(() => {
+      loading.value = false;
     });
 };
 
