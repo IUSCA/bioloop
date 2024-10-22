@@ -9,7 +9,6 @@
 </template>
 
 <script setup>
-import GlobusShareIcon from "@/components/dataset/share/globus/GlobusShareIcon.vue";
 import config from "@/config";
 
 const props = defineProps({

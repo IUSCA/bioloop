@@ -6,8 +6,6 @@
       >
         <GlobusShareIcon :status="props.share?.status" class="" />
         <div>Shared via: Globus</div>
-
-        <div class="flex flex-row"></div>
       </div>
     </div>
   </div>

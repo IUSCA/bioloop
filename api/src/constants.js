@@ -98,6 +98,7 @@ const INCLUDE_DATASET_SHARES = {
   shares: {
     select: {
       user: true,
+      timestamp: true,
       globus_share: {
         select: {
           source_collection_id: true,
