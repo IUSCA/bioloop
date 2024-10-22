@@ -400,14 +400,12 @@
 <script setup>
 import config from "@/config";
 import DatasetService from "@/services/dataset";
-import toast from "@/services/toast";
-import { formatBytes, lxor } from "@/services/utils";
-import workflowService from "@/services/workflow";
-import globusTransferService from "@/services/globus/transfer";
-import { v4 as uuidv4 } from "uuid";
-import { useAuthStore } from "@/stores/auth";
-import { storeToRefs } from "pinia";
 import * as globusService from "@/services/globus";
+import globusTransferService from "@/services/globus/transfer";
+import toast from "@/services/toast";
+import { formatBytes } from "@/services/utils";
+import workflowService from "@/services/workflow";
+import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -652,10 +650,17 @@ const initiateGlobusTransfer = () => {
       return submissionId;
     })
     .then((submissionId) => {
-      const file = "multiprocessing_jumpstart";
+      const origin_path = dataset.value.origin_path
+      console.log("origin_path: ", origin_path);
+      console.log("config.globus.source_endpoint_base_path", config.globus.source_endpoint_path)
+      console.log("origin_path.indexOf(config.globus.source_endpoint_path)", origin_path.indexOf(config.globus.source_endpoint_path))
+      const collection_file_path = origin_path.slice(config.globus.source_endpoint_path.length);
+
+      // const collection_file_path = '/home/u_otp4tsmynba3hhwlxymrnhxlmq/sub-fsm40mn-2'
+      console.log("file: ", collection_file_path);
       const transferRequestBody = globusService.getGlobusTransferRequestBody({
         submissionId,
-        file,
+        sourceFile: collection_file_path,
         destinationEndpointId: selectedGlobusEndpoint.value.id,
       });
       console.log("transferRequestBody: ", transferRequestBody);
