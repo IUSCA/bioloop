@@ -284,16 +284,16 @@ const setFormErrors = async () => {
       formErrors.value[STEP_KEYS.DIRECTORY] = error;
     } else {
       const restricted_dataset_paths = getRestrictedIngestionPaths();
-      const origin_path_is_restricted = restricted_dataset_paths.some(
-        (pattern) => {
-          const _path = selectedFile.value.path.endsWith("/")
-            ? selectedFile.value.path
-            : `${selectedFile.value.path}/`;
-          let isMatch = pm(pattern);
-          const matches = isMatch(_path, pattern, { contains: true });
-          return matches.isMatch;
-        },
-      );
+      const origin_path_is_restricted = selectedFile.value
+        ? restricted_dataset_paths.some((pattern) => {
+            const _path = selectedFile.value.path.endsWith("/")
+              ? selectedFile.value.path
+              : `${selectedFile.value.path}/`;
+            let isMatch = pm(pattern);
+            const matches = isMatch(_path, pattern, { contains: true });
+            return matches.isMatch;
+          })
+        : false;
 
       if (origin_path_is_restricted) {
         formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
