@@ -44,7 +44,10 @@ class DatasetService {
     include_projects = false,
     initiator = false,
     include_uploading_derived_datasets = false,
+    include_shares = false,
   }) {
+    console.log("include_shares", include_shares);
+
     return api.get(`/datasets/${id}`, {
       params: {
         files,
@@ -59,6 +62,7 @@ class DatasetService {
         include_projects,
         initiator,
         include_uploading_derived_datasets,
+        include_shares,
       },
     });
   }

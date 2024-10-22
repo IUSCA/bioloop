@@ -54,6 +54,27 @@
           </div>
         </div>
       </div>
+
+      <div class="col-span-1">
+        <div v-show="workflow.steps_done != workflow.total_steps">
+          <va-progress-circle
+            :thickness="0.1"
+            :indeterminate="!workflowService.is_workflow_done(workflow)"
+            :color="
+              workflowService.is_workflow_done(workflow) ? 'danger' : null
+            "
+            :model-value="
+              workflowService.is_workflow_done(workflow)
+                ? 100 * (workflow.steps_done / workflow.total_steps)
+                : null
+            "
+          >
+            <span class="">
+              {{ workflow.steps_done }} / {{ workflow.total_steps }}
+            </span>
+          </va-progress-circle>
+        </div>
+      </div>
     </div>
 
     <!-- progress circle -->

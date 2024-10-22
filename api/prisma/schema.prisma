@@ -150,16 +150,24 @@ model dataset_state {
 }
 
 model dataset_share {
-  id                   Int      @id @default(autoincrement())
-  timestamp            DateTime @default(now()) @db.Timestamp(6)
-  dataset_id           Int
-  dataset              dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  source_collection_id Int
-  target_collection_id Int
-  user_id              Int
-  user                 user     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  id              Int          @id @default(autoincrement())
+  timestamp       DateTime     @default(now()) @db.Timestamp(6)
+  dataset_id      Int?
+  dataset         dataset?     @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  user_id         Int
+  user            user         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  globus_share_id Int
+  globus_share    globus_share @relation(fields: [globus_share_id], references: [id])
 
-  @@id([dataset_id, state])
+  @@unique([globus_share_id])
+}
+
+model globus_share {
+  id                        Int            @id @default(autoincrement())
+  dataset_share             dataset_share?
+  source_collection_id      String
+  destination_collection_id String
+  status                    String         @default("PENDING")
 }
 
 model notification {
@@ -260,6 +268,7 @@ model user {
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   uploads                    upload_log[]
   acknowledged_notifications notification[]
+  dataset_share              dataset_share[]
 }
 
 model user_password {

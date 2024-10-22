@@ -448,6 +448,7 @@ router.get(
         action_items: req.query.include_action_items || false,
         ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
         ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DUPLICATIONS }),
+        ...CONSTANTS.INCLUDE_DATASET_SHARES,
       },
     };
 
@@ -516,12 +517,15 @@ router.get(
     query('include_upload_log').toBoolean().default(false),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
+    query('include_shares').toBoolean().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is
     // true
+
+    // console.log('req.query.include_shares', req.query.include_shares);
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -537,7 +541,9 @@ router.get(
       include_upload_log: req.query.include_upload_log,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
+      include_shares: req.query.include_shares || false,
     });
+    // console.dir(dataset, { depth: null });
     res.json(dataset);
   }),
 );

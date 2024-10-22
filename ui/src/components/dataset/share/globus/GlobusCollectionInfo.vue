@@ -1,10 +1,16 @@
 <template>
   <div class="va-table-responsive">
-    <table class="va-table">
+    <table class="va-table w-full">
       <tbody>
         <tr>
           <td>Source Collection ID</td>
-          <td>{{ props.sourceCollection?.id }}</td>
+          <td>
+            <a
+              :href="`${config.globus.collection_base_url}/${props.sourceCollection?.id}`"
+              target="blank"
+              >{{ props.sourceCollection?.id }}</a
+            >
+          </td>
         </tr>
         <tr>
           <td>Source Collection Name</td>
@@ -12,7 +18,13 @@
         </tr>
         <tr>
           <td>Destination Collection ID</td>
-          <td>{{ props.destinationCollection?.id }}</td>
+          <td>
+            <a
+              :href="`${config.globus.collection_base_url}/${props.destinationCollection?.id}`"
+              target="blank"
+              >{{ props.destinationCollection?.id }}</a
+            >
+          </td>
         </tr>
         <tr>
           <td>Destination Collection Name</td>
@@ -20,7 +32,7 @@
         </tr>
         <tr>
           <td>Source File Path</td>
-          <td><CopyText :text="props.filePath" }} /></td>
+          <td><CopyText :text="props.filePath" /></td>
         </tr>
         <tr>
           <td>Destination Collection Organization</td>
@@ -46,6 +58,8 @@
 </template>
 
 <script setup>
+import config from "@/config";
+
 const props = defineProps({
   sourceCollection: {
     type: Object,

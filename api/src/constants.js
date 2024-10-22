@@ -94,6 +94,22 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const INCLUDE_DATASET_SHARES = {
+  shares: {
+    select: {
+      user: true,
+      globus_share: {
+        select: {
+          source_collection_id: true,
+          destination_collection_id: true,
+          status: true,
+        },
+      },
+
+    },
+  },
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 module.exports = {
@@ -103,5 +119,6 @@ module.exports = {
   INCLUDE_AUDIT_LOGS,
   INCLUDE_DUPLICATIONS,
   DUPLICATION_PROCESSING_INCLUSIONS,
+  INCLUDE_DATASET_SHARES,
   DONE_STATUSES,
 };

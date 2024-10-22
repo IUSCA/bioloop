@@ -152,6 +152,8 @@ const exports = {
     },
   },
   globus: {
+    collection_base_url:
+      import.meta.env.VITE_GLOBUS_COLLECTION_BASE_URL || "https://globus.org",
     auth_url:
       import.meta.env.VITE_GLOBUS_OAUTH_AUTH_URL ||
       "https://localhost/globus/authorize",
@@ -167,8 +169,6 @@ const exports = {
       import.meta.env.VITE_GLOBUS_SOURCE_ENDPOINT_ID || "source_endpoint_uuid",
     source_endpoint_path:
       import.meta.env.VITE_GLOBUS_SOURCE_ENDPOINT_PATH || "/path",
-    destination_endpoint_path:
-      import.meta.env.VITE_GLOBUS_DESTINATION_ENDPOINT_PATH || "/path",
     destination_endpoint_id:
       import.meta.env.VITE_GLOBUS_DESTINATION_ENDPOINT_ID ||
       "destination_endpoint_uuid",

@@ -28,22 +28,29 @@ router.post(
 router.post(
   '/log',
   validate([
-    body('dataset_id').escape().notEmpty(),
+    body('dataset_id').isInt().toInt(),
     body('source_collection_id').escape().notEmpty(),
     body('destination_collection_id').escape().notEmpty(),
-    body('user_id').escape().notEmpty(),
+    body('user_id').isInt().toInt(),
+    body('status').optional().escape().notEmpty(),
   ]),
   isPermittedTo('create'),
   asyncHandler(async (req, res, next) => {
-    const log = await prisma.dataset_share.create({
+    console.log('req.body', req.body);
+    const logDatasetShare = await prisma.dataset_share.create({
       data: {
         dataset: { connect: { id: req.body.dataset_id } },
-        source_collection_id: req.body.source_collection_id,
-        destination_collection_id: req.body.destination_collection_id,
-        user_id: req.body.user_id,
+        user: { connect: { id: req.body.user_id } },
+        globus_share: {
+          create: {
+            source_collection_id: req.body.source_collection_id,
+            destination_collection_id: req.body.destination_collection_id,
+            status: req.body.status,
+          },
+        },
       },
     });
-    res.json(log);
+    res.json(logDatasetShare);
   }),
 );
 

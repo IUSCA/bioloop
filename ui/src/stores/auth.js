@@ -32,6 +32,7 @@ export const useAuthStore = defineStore("auth", () => {
   function onLogin(data) {
     user.value = data.profile;
     token.value = data.token;
+    console.log(token.value);
     loggedIn.value = true;
     refreshTokenBeforeExpiry();
   }

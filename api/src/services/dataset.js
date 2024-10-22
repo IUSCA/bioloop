@@ -103,7 +103,10 @@ async function get_dataset({
   initiator = false,
   include_uploading_derived_datasets = false,
   include_upload_log = false,
+  include_shares = false,
 }) {
+  // console.log('include_shares', include_shares);
+
   const fileSelect = files ? CONSTANTS.INCLUDE_FILES : { files: false };
   const workflow_include = initiator ? {
     workflows: {
@@ -114,6 +117,8 @@ async function get_dataset({
     },
   } : CONSTANTS.INCLUDE_WORKFLOWS;
 
+  // console.log('...(include_shares && { ...CONSTANTS.INCLUDE_DATASET_SHARES
+  // })', include_shares && { ...CONSTANTS.INCLUDE_DATASET_SHARES });
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
@@ -121,6 +126,7 @@ async function get_dataset({
       ...workflow_include,
       ...CONSTANTS.INCLUDE_AUDIT_LOGS,
       ...CONSTANTS.INCLUDE_STATES,
+      ...(include_shares && { ...CONSTANTS.INCLUDE_DATASET_SHARES }),
       bundle,
       source_datasets: true,
       derived_datasets: include_uploading_derived_datasets ? true : {

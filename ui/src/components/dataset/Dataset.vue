@@ -278,8 +278,8 @@
                 :async="true"
                 v-model:search-text="endpointSearchText"
                 @update:search-text="searchGlobusEndpoints"
-                label="Search Globus Endpoints"
-                placeholder="Begin typing to search"
+                label="Search Destination Endpoints"
+                placeholder="Search Destination Endpoints"
                 :data="retrievedEndpoints"
                 display-by="display_name"
                 :messages="['Use hyphens between search terms']"
@@ -314,7 +314,7 @@
                 {{ globusShareModalError }}
               </div>
 
-              <va-inner-loading :loading="loading">
+              <va-inner-loading class="mt-5" :loading="loading">
                 <GlobusCollectionInfo
                   v-if="globusDestinationEndpoint"
                   :destination-collection="globusDestinationEndpoint"
@@ -348,6 +348,27 @@
             <AuditLogs :logs="dataset.audit_logs" />
           </va-card-content>
         </va-card>
+      </div>
+
+      <!-- Globus Shares     -->
+      <div>
+        <span class="flex text-xl my-2 font-bold">SHARES</span>
+        <div v-if="(dataset.shares || []).length > 0" class="space-y-2">
+          <div v-for="share in dataset.shares" :key="share.id">
+            <div v-if="share?.globus_share">
+              <GlobusShareInfoCollapsible :share="share" />
+            </div>
+          </div>
+        </div>
+        <div
+          v-else
+          class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow"
+        >
+          <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
+          <span class="text-lg">
+            This dataset has not been shared with Globus users
+          </span>
+        </div>
       </div>
 
       <!-- Workflows -->
@@ -465,6 +486,7 @@ function fetch_dataset(show_loading = false) {
     include_duplications: true,
     include_states: true,
     include_action_items: true,
+    include_shares: true,
   })
     .then((res) => {
       const _dataset = res.data;
@@ -483,6 +505,11 @@ function fetch_dataset(show_loading = false) {
             false,
         };
       });
+      // console.dir(_dataset.shares, { depth: null });
+      _dataset.shares = (_dataset?.shares || []).map((e) => {
+        return { ...e, collapse_model: false };
+      });
+      // console.dir(_dataset, { depth: null });
       dataset.value = _dataset;
     })
     .catch((err) => {
@@ -655,6 +682,8 @@ const registerGlobusShare = ({
     source_collection_id: sourceCollectionId,
     destination_collection_id: destinationCollectionId,
     user_id: auth.user.id,
+  }).catch((err) => {
+    console.error("Unable to register Globus share", err);
   });
 };
 
@@ -704,12 +733,11 @@ const initiateGlobusTransfer = () => {
       toast.success(`Initiated Globus transfer`);
     })
     .catch((err) => {
-      console.error(err);
+      console.error("Failed to initiate Globus transfer", err);
       toast.error("Failed to initiate Globus transfer");
     })
     .finally(() => {
       loading.value = false;
-      globusDestinationEndpoint.value = null;
       registerGlobusShare({
         datasetId: dataset.value.id,
         sourceCollectionId: config.globus.source_endpoint_id,
@@ -727,7 +755,10 @@ const setGlobusCollections = ({ destinationCollection }) => {
       globusSourceEndpoint.value = res.data;
     })
     .catch((err) => {
-      console.error(err);
+      console.error(
+        `Could not retrieve collection ${config.globus.source_endpoint_id}`,
+        err,
+      );
     })
     .finally(() => {
       loading.value = false;
