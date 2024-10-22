@@ -2,7 +2,11 @@
   <collapsible v-model="collapseModel">
     <template #header-content>
       <div class="flex flex-row">
-        <GlobusShareInfoCompact :share="props.share" />
+        <GlobusShareInfoCompact
+          :globus-share="props.share.globus_share"
+          :user="props.share.user"
+          :status="props.share.globus_share.status"
+        />
 
         <div class="flex flex-col justify-center text-sm">
           <div class="flex flex-row">
@@ -16,12 +20,12 @@
               <span
                 class="hidden md:inline pl-2 lg:spacing-wider text-sm lg:text-base"
               >
-                {{ datetime.absolute(share.timestamp) }}
+                {{ datetime.absolute(props.share.timestamp) }}
               </span>
               <span
                 class="md:hidden pl-2 lg:spacing-wider text-sm lg:text-base"
               >
-                {{ datetime.date(share.timestamp) }}
+                {{ datetime.date(props.share.timestamp) }}
               </span>
             </div>
           </div>
@@ -29,7 +33,11 @@
       </div>
     </template>
 
-    <GlobusShareInfo :share="props.share.globus_share" />
+    <GlobusShareInfo
+      :globus-share="props.share.globus_share"
+      :source-file-path="props.share.source_file_path"
+      :destination-file-path="props.share.destination_file_path"
+    />
     <!--              <workflow :workflow="{}" @update="fetch_dataset(true)"></workflow>-->
   </collapsible>
 </template>

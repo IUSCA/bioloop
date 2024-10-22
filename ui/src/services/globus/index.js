@@ -51,7 +51,8 @@ const redirectToGlobusAuth = ({ persistentStateAttributes = [] } = {}) => {
 const getGlobusTransferRequestBody = ({
   submissionId,
   sourceFile,
-  destinationEndpointId,
+  destinationFile,
+  destinationCollectionId,
 }) => {
   console.log("source_file", sourceFile);
   return {
@@ -60,16 +61,16 @@ const getGlobusTransferRequestBody = ({
         DATA_TYPE: "transfer_item",
         // destination_path: config.globus.destination_endpoint_path,
         // source_path: 'multiprocessing_jumpstart',
-        destination_path: '/home/u_otp4tsmynba3hhwlxymrnhxlmq/',
+        // destination_path: "/home/u_otp4tsmynba3hhwlxymrnhxlmq/",
+        destination_path: destinationFile,
         source_path: sourceFile,
       },
     ],
     DATA_TYPE: "transfer",
-    destination_endpoint: destinationEndpointId,
-    source_endpoint: config.globus.source_endpoint_id,
+    destination_endpoint: destinationCollectionId,
+    source_endpoint: config.globus.source_collection_id,
     submission_id: submissionId,
   };
 };
 
 export { getGlobusTransferRequestBody, redirectToGlobusAuth };
-

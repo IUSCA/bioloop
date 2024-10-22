@@ -150,14 +150,16 @@ model dataset_state {
 }
 
 model dataset_share {
-  id              Int          @id @default(autoincrement())
-  timestamp       DateTime     @default(now()) @db.Timestamp(6)
-  dataset_id      Int?
-  dataset         dataset?     @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  user_id         Int
-  user            user         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  globus_share_id Int
-  globus_share    globus_share @relation(fields: [globus_share_id], references: [id])
+  id                    Int           @id @default(autoincrement())
+  timestamp             DateTime      @default(now()) @db.Timestamp(6)
+  dataset_id            Int?
+  dataset               dataset?      @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  user_id               Int
+  user                  user          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  globus_share_id       Int?
+  globus_share          globus_share? @relation(fields: [globus_share_id], references: [id])
+  source_file_path      String
+  destination_file_path String
 
   @@unique([globus_share_id])
 }

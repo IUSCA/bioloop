@@ -99,6 +99,8 @@ const INCLUDE_DATASET_SHARES = {
     select: {
       user: true,
       timestamp: true,
+      source_file_path: true,
+      destination_file_path: true,
       globus_share: {
         select: {
           source_collection_id: true,
@@ -108,6 +110,8 @@ const INCLUDE_DATASET_SHARES = {
       },
 
     },
+    orderBy: { timestamp: 'desc' },
+
   },
 };
 

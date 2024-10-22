@@ -3,36 +3,24 @@
     <table class="va-table w-full">
       <tbody>
         <tr>
-          <td>Source Collection ID</td>
+          <td>Source Collection</td>
           <td>
             <a
               :href="`${config.globus.collection_base_url}/${props.sourceCollection?.id}`"
               target="blank"
-              >{{ props.sourceCollection?.id }}</a
+              >{{ props.sourceCollection?.display_name }}</a
             >
           </td>
         </tr>
         <tr>
-          <td>Source Collection Name</td>
-          <td>{{ props.sourceCollection?.display_name }}</td>
-        </tr>
-        <tr>
-          <td>Destination Collection ID</td>
+          <td>Destination Collection</td>
           <td>
             <a
               :href="`${config.globus.collection_base_url}/${props.destinationCollection?.id}`"
               target="blank"
-              >{{ props.destinationCollection?.id }}</a
+              >{{ props.destinationCollection?.display_name }}</a
             >
           </td>
-        </tr>
-        <tr>
-          <td>Destination Collection Name</td>
-          <td>{{ props.destinationCollection?.display_name }}</td>
-        </tr>
-        <tr>
-          <td>Source File Path</td>
-          <td><CopyText :text="props.filePath" /></td>
         </tr>
         <tr>
           <td>Destination Collection Organization</td>
@@ -47,6 +35,10 @@
             />
             <i-mdi-close-circle-outline v-else class="text-red-700" />
           </td>
+        </tr>
+        <tr>
+          <td>Source File Path</td>
+          <td><CopyText :text="props.filePath" /></td>
         </tr>
         <!--        <tr>-->
         <!--          <td>Description</td>-->
