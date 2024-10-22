@@ -50,7 +50,7 @@ const reset_metadata = async () => {
 
     <div class="flex justify-center items-center mt-2">
       <div>
-        <va-button @click="reset_metadata()" color="warning" icon="refresh" round  preset="secondary" border-color="warning" class="shadow my-2 mx-auto" > Reset to Defaults</va-button>
+        <va-button @click="reset_metadata()" color="warning" icon="refresh" round  preset="secondary" border-color="warning" class="shadow my-2 mx-auto" > Reset to CSV Values</va-button>
       </div>
     </div>
 
