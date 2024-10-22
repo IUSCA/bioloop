@@ -64,7 +64,7 @@ function get_wf_body(wf_name) {
   return wf_body;
 }
 
-async function create_workflow(dataset, wf_name) {
+async function create_workflow(dataset, wf_name, initiator_id) {
   const wf_body = get_wf_body(wf_name);
 
 
@@ -90,6 +90,7 @@ async function create_workflow(dataset, wf_name) {
     data: {
       id: wf.workflow_id,
       dataset_id: dataset.id,
+      ...(initiator_id && { initiator_id }),
     },
   });
 
@@ -102,7 +103,7 @@ async function soft_delete(dataset, user_id) {
   if (dataset.archive_path) {
     // if archived, starts a delete archive workflow which will
     // mark the dataset as deleted on success.
-    await create_workflow(dataset, 'delete');
+    await create_workflow(dataset, 'delete', user_id);
   } else {
     // if not archived, mark the dataset as deleted
     await prisma.dataset.update({
@@ -138,6 +139,7 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   includeProjects = false,
+  initiator = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -151,11 +153,20 @@ async function get_dataset({
     },
   } : false;
 
+  const workflow_include = initiator ? {
+    workflows: {
+      select: {
+        id: true,
+        initiator: true,
+      },
+    },
+  } : INCLUDE_WORKFLOWS;
+
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
       files: fileSelect,
-      ...INCLUDE_WORKFLOWS,
+      ...workflow_include,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
       bundle,
@@ -164,6 +175,7 @@ async function get_dataset({
       projects: includeProjects,
     },
   });
+  const dataset_workflows = dataset.workflows;
 
   if (workflows && dataset.workflows.length > 0) {
     // include workflow objects with dataset
@@ -174,7 +186,13 @@ async function get_dataset({
         prev_task_runs,
         workflow_ids: dataset.workflows.map((x) => x.id),
       });
-      dataset.workflows = wf_res.data.results;
+      dataset.workflows = wf_res.data.results.map((wf) => {
+        const dataset_wf = dataset_workflows.find((dw) => dw.id === wf.id);
+        return {
+          ...wf,
+          ...dataset_wf,
+        };
+      });
     } catch (error) {
       log_axios_error(error);
       dataset.workflows = [];

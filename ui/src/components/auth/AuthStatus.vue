@@ -24,7 +24,7 @@
           v-if="authFailure"
         >
           <i-mdi-alert-octagon class="text-red-600 text-5xl" />
-          <span class="va-text-text-primary"> 
+          <span class="va-text-text-primary">
             Authentication Failed. Something went wrong.
           </span>
           <div>
@@ -115,6 +115,9 @@ if (paramsExist) {
     authFailure.value = true;
   }
 } else {
+  if (route.query.redirect_to) {
+    redirectPath.value = route.query.redirect_to;
+  }
   props
     .getUrl()
     .then((res) => {

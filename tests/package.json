@@ -21,6 +21,7 @@
     "axios": "^1.6.8",
     "config": "^3.3.11",
     "dotenv": "^16.4.5",
-    "@playwright/test": "1.43.0"
+    "@playwright/test": "1.43.0",
+    "lodash": "^4.17.21"
   }
 }

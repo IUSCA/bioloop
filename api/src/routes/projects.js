@@ -87,15 +87,78 @@ const build_include_object = ({
 router.get(
   '/all',
   isPermittedTo('read'),
+  validate([
+    query('take').default(25).isInt().toInt(),
+    query('skip').default(0).isInt().toInt(),
+    query('search').default(''), // Adding search query validation
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects.
     // #swagger.description = admin and operator roles are allowed and user role is forbidden
-    const projects = await prisma.project.findMany({
-      where: {},
-      include: build_include_object(),
+    const { search, sort_order, sort_by } = req.query;
+
+    const filters = search
+      ? {
+        OR: [
+          {
+            name: {
+              contains: search,
+              mode: 'insensitive', // Case-insensitive search
+            },
+          },
+          {
+            users: {
+              some: {
+                user: {
+                  username: {
+                    contains: search,
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            },
+          },
+          {
+            datasets: {
+              some: {
+                dataset: {
+                  name: {
+                    contains: search,
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            },
+          },
+        ],
+
+      }
+      : {};
+
+    const sort_obj = {
+      [sort_by]: sort_order,
+    };
+
+    const [projects, totalCount] = await prisma.$transaction([
+      prisma.project.findMany({
+        skip: req.query.skip,
+        take: req.query.take,
+        orderBy: sort_obj,
+        where: filters,
+        include: build_include_object(),
+      }),
+      prisma.project.count({
+        where: filters,
+      }), // Count all projects to get total number
+    ]);
+
+    res.json({
+      metadata: { count: totalCount },
+      projects,
     });
-    res.json(projects);
   }),
 );
 
@@ -159,8 +222,8 @@ router.get(
   validate([
     param('username').notEmpty().escape(),
     query('staged').toBoolean().optional(),
-    query('limit').isInt().toInt().optional(),
-    query('offset').isInt().toInt().optional(),
+    query('take').isInt().toInt().optional(),
+    query('skip').isInt().toInt().optional(),
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
   ]),
@@ -210,8 +273,8 @@ router.get(
 
     const filterQuery = { where: query_obj };
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
+      skip: req.query.skip,
+      take: req.query.take,
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
@@ -280,26 +343,102 @@ const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
 router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnerShip: true }),
+  validate([
+    query('take').default(25).isInt().toInt(),
+    query('skip').default(0).isInt().toInt(),
+    query('search').default(''), // Adding search query validation
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
-    // #swagger.summary = get all projects associated with a username
+    // #swagger.summary = get all projects associated with a username with pagination.
     /* #swagger.description = user role: can only see their projects.
       operator, admin: can see anyone's projects
     */
-    const projects = await prisma.project.findMany({
-      where: {
+    const { search, sort_order, sort_by } = req.query;
+    const { username } = req.params;
+
+    const filters = search
+      ? {
+        AND: [
+          {
+            users: {
+              some: {
+                user: {
+                  username,
+                },
+              },
+            },
+          },
+          {
+            OR: [
+              {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                datasets: {
+                  some: {
+                    dataset: {
+                      name: {
+                        contains: search,
+                        mode: 'insensitive',
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                users: {
+                  some: {
+                    user: {
+                      username: {
+                        contains: search,
+                        mode: 'insensitive',
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      }
+      : {
         users: {
           some: {
             user: {
-              username: req.params.username,
+              username,
             },
           },
         },
-      },
-      include: build_include_object(),
+      };
+
+    const sort_obj = {
+      [sort_by]: sort_order, // Sort by 'Name' column in the specified order
+    };
+
+    // Query to get paginated projects associated with the username
+    const [projects, totalCount] = await prisma.$transaction([
+      prisma.project.findMany({
+        where: filters,
+        skip: req.query.skip,
+        take: req.query.take,
+        orderBy: sort_obj,
+        include: build_include_object(),
+      }),
+      prisma.project.count({
+        where: filters, // Apply the search filters to the count as well
+      }),
+    ]);
+
+    res.json({
+      metadata: { count: totalCount },
+      projects: projects.map((p) => req.permission.filter(p)),
     });
-    // don't know why projects.map(req.permission.filter) wouldn't work
-    res.json(projects.map((p) => req.permission.filter(p)));
   }),
 );
 

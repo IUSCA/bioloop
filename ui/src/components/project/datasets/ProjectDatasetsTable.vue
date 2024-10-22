@@ -67,15 +67,27 @@
         />
       </div>
       <div v-else class="flex justify-center">
-        <!-- dataset is not staged and a workflow with staging is pending -->
-        <half-circle-spinner
-          class="flex-none"
-          v-if="rowData.is_staging_pending"
-          :animation-duration="1000"
-          :size="24"
-          :color="colors.warning"
+        <!-- dataset is not staged and has not been archived yet -->
+        <va-button
+          v-if="!rowData.archive_path"
+          class="shadow"
+          preset="primary"
+          color="info"
+          icon="cloud_sync"
+          disabled
         />
-
+        <!-- dataset is not staged and is being staged -->
+        <va-popover
+          v-else-if="rowData.is_staging_pending"
+          :message="'Dataset is being staged'"
+        >
+          <half-circle-spinner
+            class="flex-none"
+            :animation-duration="1000"
+            :size="24"
+            :color="colors.warning"
+          />
+        </va-popover>
         <!-- dataset is not staged and is not being staged -->
         <va-button
           v-else

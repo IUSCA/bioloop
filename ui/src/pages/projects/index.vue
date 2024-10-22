@@ -5,7 +5,8 @@
       <!-- search bar -->
       <div class="flex-1">
         <va-input
-          v-model="filterInput"
+          v-model="params.search"
+          @update:model-value="debouncedUpdate"
           class="w-full"
           placeholder="Search projects by name, associated dataset names, and user names."
           outline
@@ -15,6 +16,13 @@
             <Icon icon="material-symbols:search" class="text-xl" />
           </template>
         </va-input>
+      </div>
+
+      <!-- reset button -->
+      <div class="flex-none" v-if="isResetVisible">
+        <va-button icon="restart_alt" @click="resetSortParams" preset="primary">
+          Reset Sort
+        </va-button>
       </div>
 
       <!-- create button -->
@@ -35,8 +43,9 @@
       <va-data-table
         :items="row_items"
         :columns="columns"
-        v-model:sort-by="sortBy"
-        v-model:sorting-order="sortingOrder"
+        v-model:sort-by="params.sortBy"
+        v-model:sorting-order="params.sortingOrder"
+        disable-client-side-sorting
         hoverable
         :loading="data_loading"
       >
@@ -111,6 +120,16 @@
     </div>
   </div>
 
+  <!-- pagination -->
+  <Pagination
+    class="mt-4 px-1 lg:px-3"
+    v-model:page="params.currentPage"
+    v-model:page_size="params.itemsPerPage"
+    :total_results="totalItems"
+    :curr_items="row_items.length"
+    :page_size_options="PAGE_SIZE_OPTIONS"
+  />
+
   <!-- edit modal -->
   <EditProjectInfoModal
     ref="editModal"
@@ -130,58 +149,82 @@
 </template>
 
 <script setup>
+import useQueryPersistence from "@/composables/useQueryPersistence";
 import * as datetime from "@/services/datetime";
 import projectService from "@/services/projects";
+import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
+import { useDebounceFn } from "@vueuse/core";
 
 const auth = useAuthStore();
 const projectFormStore = useProjectFormStore();
 const router = useRouter();
 
 const projects = ref([]);
-const filterInput = ref("");
-const debouncedFilterInput = refDebounced(filterInput, 200);
 const data_loading = ref(false);
+const totalItems = ref(0);
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
-// initial sorting order
-const sortBy = ref("updated_at");
-const sortingOrder = ref("desc");
+const debouncedUpdate = useDebounceFn((val) => {
+  params.value.search = val;
+}, 300);
+
+function defaultParams() {
+  return {
+    search: "",
+    sortBy: "updated_at",
+    sortingOrder: "desc",
+    currentPage: 1,
+    itemsPerPage: 25,
+  };
+}
+
+const params = ref(defaultParams());
+
+useQueryPersistence({
+  refObject: params,
+  defaultValueFn: defaultParams,
+  key: "q",
+  history_push: true,
+});
+
+const isResetVisible = computed(() => {
+  const defaultParamsObj = defaultParams();
+  return (
+    params.value.sortBy !== defaultParamsObj.sortBy ||
+    params.value.sortingOrder !== defaultParamsObj.sortingOrder
+  );
+});
+
+function resetSortParams() {
+  // Reset params to their default values
+  params.value.sortBy = defaultParams().sortBy;
+  params.value.sortingOrder = defaultParams().sortingOrder;
+}
 
 const row_items = computed(() => {
-  return projects.value
-    .map((project) => {
-      // eslint-disable-next-line no-unused-vars
-      const { users, contacts, datasets, ...rest } = project;
-      const _users = (users || []).map((obj) => ({
-        id: obj?.user?.id,
-        username: obj?.user?.username,
-      }));
-      // const contact_values = (contacts || []).map(
-      //   (contact) => contact?.contact?.value
-      // );
-      const _datasets = (datasets || []).map((d) => ({
-        id: d?.dataset?.id,
-        name: d?.dataset?.name,
-      }));
-      return {
-        ...rest,
-        users: _users,
-        // contacts: contact_values,
-        datasets: _datasets,
-      };
-    })
-    .filter((row) => {
-      const searchText = debouncedFilterInput.value?.toLowerCase() || "";
-      return (
-        searchText === "" ||
-        customFilteringFn(searchText, {
-          name: row.name,
-          users: row.users,
-          datasets: row.datasets,
-        })
-      );
-    });
+  return projects.value.map((project) => {
+    // eslint-disable-next-line no-unused-vars
+    const { users, contacts, datasets, ...rest } = project;
+    const _users = (users || []).map((obj) => ({
+      id: obj?.user?.id,
+      username: obj?.user?.username,
+    }));
+    // const contact_values = (contacts || []).map(
+    //   (contact) => contact?.contact?.value
+    // );
+    const _datasets = (datasets || []).map((d) => ({
+      id: d?.dataset?.id,
+      name: d?.dataset?.name,
+    }));
+    return {
+      ...rest,
+      users: _users,
+      // contacts: contact_values,
+      datasets: _datasets,
+    };
+  });
 });
 
 // This could've been split into two variables user_columns and admin_columns
@@ -189,10 +232,10 @@ const row_items = computed(() => {
 // but the order of columns would not be preserved
 const columns = [
   { key: "name", sortable: true },
-  ...(auth.canOperate ? [{ key: "users", sortable: true, width: "30%" }] : []),
+  ...(auth.canOperate ? [{ key: "users", sortable: false, width: "30%" }] : []),
   {
     key: "datasets",
-    sortable: true,
+    sortable: false,
     width: "80px",
     thAlign: "center",
     tdAlign: "center",
@@ -203,27 +246,29 @@ const columns = [
   ...(auth.canOperate ? [{ key: "actions", width: "80px" }] : []),
 ];
 
-function customFilteringFn(searchText, { name, users, datasets }) {
-  return (
-    searchText === "" ||
-    (name || "").toLowerCase().includes(searchText) ||
-    users.some((user) =>
-      (user?.username || "").toLowerCase().includes(searchText),
-    ) ||
-    datasets.some((dataset) =>
-      (dataset?.name || "").toLowerCase().includes(searchText),
-    )
-  );
-}
-
 function fetch_projects() {
   data_loading.value = true;
+
+  const skip = (params.value.currentPage - 1) * params.value.itemsPerPage;
+
+  const queryparams = {
+    forSelf: !auth.canOperate,
+    search: params.value.search,
+    take: params.value.itemsPerPage,
+    skip: skip,
+    sortBy: params.value.sortBy,
+    sort_order: params.value.sortingOrder,
+  };
+
   projectService
-    .getAll({
-      forSelf: !auth.canOperate,
-    })
+    .getAll(queryparams)
     .then((res) => {
-      projects.value = res.data;
+      projects.value = res.data.projects;
+      totalItems.value = res.data.metadata.count;
+    })
+    .catch((error) => {
+      console.error(error);
+      toast.error("Error fetching Projects");
     })
     .finally(() => {
       data_loading.value = false;
@@ -232,8 +277,6 @@ function fetch_projects() {
 
 fetch_projects();
 
-// edit modal code
-// template ref binding
 const editModal = ref(null);
 const selectedId = ref(null);
 
@@ -244,15 +287,6 @@ function openModalToEditProject(rowData) {
   editModal.value.show();
 }
 
-// create modal code
-// const createModal = ref(null);
-
-// function openModalToCreateProject() {
-//   createModal.value.show();
-// }
-
-// delete modal code
-// template ref binding
 const deleteModal = ref(null);
 const selectedForDeletion = ref({});
 
@@ -260,6 +294,28 @@ function openModalToDeleteProject(rowData) {
   selectedForDeletion.value = rowData;
   deleteModal.value.show();
 }
+
+watch(
+  () => params.value.currentPage,
+  () => {
+    fetch_projects();
+  },
+);
+
+watch(
+  [
+    () => params.value.itemsPerPage,
+    () => params.value.search,
+    () => params.value.sortBy,
+    () => params.value.sortingOrder,
+  ],
+  () => {
+    if (params.value.currentPage === 1) {
+      fetch_projects();
+    }
+    params.value.currentPage = 1;
+  },
+);
 </script>
 
 <route lang="yaml">

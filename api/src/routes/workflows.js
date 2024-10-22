@@ -17,9 +17,55 @@ const prisma = new PrismaClient();
 router.get(
   '/',
   isPermittedTo('read'),
+  validate([
+    query('dataset_id').isInt().toInt().optional(),
+    query('dataset_name').isString().optional().notEmpty(),
+    query('workflow_id').isString().optional().notEmpty(),
+  ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
+
+      const { dataset_id, dataset_name, workflow_id } = req.query;
+      let workflow_ids = null;
+
+      // if workflow_id is provided, then ignore dataset_id and dataset_name filters
+      if (workflow_id) {
+        workflow_ids = workflow_id;
+      }
+
+      // if dataset_id or dataset_name is provided, then get workflow ids from the app db
+      if (dataset_id || dataset_name) {
+        const where = {};
+        if (dataset_id) {
+          where.dataset_id = dataset_id;
+        }
+        if (dataset_name) {
+          where.dataset = {
+            name: {
+              contains: dataset_name,
+              mode: 'insensitive',
+            },
+          };
+        }
+        const rows = await prisma.workflow.findMany({
+          where,
+        });
+        workflow_ids = rows.map((wf) => wf.id);
+
+        // if no workflows found, then return empty results without calling the workflow service
+        if (workflow_ids.length === 0) {
+          return res.json({
+            metadata: {
+              total: 0,
+              skip: 0,
+              limit: 0,
+            },
+            results: [],
+          });
+        }
+      }
+
       const api_res = await wf_service.getAll({
         last_task_run: req.query.last_task_run,
         prev_task_runs: req.query.prev_task_runs,
@@ -27,9 +73,37 @@ router.get(
         app_id: config.app_id,
         skip: req.query.skip,
         limit: req.query.limit,
-        workflow_ids: req.query.workflow_id,
+        workflow_ids,
       });
-      res.json(api_res.data);
+
+      // for each workflow, get initiator details from the app db
+      const wf_ids = api_res.data.results.map((wf) => wf.id);
+
+      const rows = await prisma.workflow.findMany({
+        where: {
+          id: {
+            in: wf_ids,
+          },
+        },
+        include: {
+          initiator: true,
+        },
+      });
+
+      const id_initiator_map = rows.reduce((acc, wf) => {
+        acc[wf.id] = wf.initiator;
+        return acc;
+      }, {});
+
+      // console.log('id_initiator_map', JSON.stringify(id_initiator_map, null, 2));
+
+      res.json({
+        metadata: api_res.data.metadata,
+        results: api_res.data.results.map((wf) => ({
+          ...wf,
+          initiator: id_initiator_map[wf.id],
+        })),
+      });
     },
   ),
 );
@@ -97,7 +171,8 @@ router.post(
   ),
 );
 
-// make sure that the request body is array of objects which at least will have a "message" key
+// make sure that the request body is array of objects which at least will have
+// a "message" key
 const append_log_schema = {
   '0.message': {
     in: ['body'],
@@ -146,8 +221,8 @@ router.get(
   validate([query('pid').isInt().toInt().optional()]),
   asyncHandler(
     async (req, res, next) => {
-    // #swagger.tags = ['Workflow']
-    // #swagger.summary = get processes
+      // #swagger.tags = ['Workflow']
+      // #swagger.summary = get processes
 
       const filters = _.flow([
         _.pick(['step', 'task_id', 'pid', 'workflow_id']),
@@ -232,7 +307,8 @@ router.delete(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      // #swagger.summary = delete all processes, its logs registered under a workflow
+      // #swagger.summary = delete all processes, its logs registered under a
+      // workflow
 
       const result = await prisma.worker_process.deleteMany({
         where: {
@@ -290,7 +366,8 @@ router.delete(
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
-      // #swagger.summary = delete workflow and then delete dataset-workflow association
+      // #swagger.summary = delete workflow and then delete dataset-workflow
+      // association
       const api_res = await wf_service.deleteOne(req.params.id);
       await prisma.workflow.delete({
         where: {
@@ -303,4 +380,5 @@ router.delete(
     },
   ),
 );
+
 module.exports = router;

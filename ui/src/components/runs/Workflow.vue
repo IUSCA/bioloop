@@ -98,6 +98,7 @@
             ></confirm-button>
 
             <confirm-hold-button
+              v-if="auth.canAdmin"
               action="Delete Workflow"
               icon="mdi-delete"
               color="danger"
@@ -107,6 +108,7 @@
 
           <div v-else-if="workflow.status == 'SUCCESS'">
             <confirm-hold-button
+              v-if="auth.canAdmin"
               action="Delete Workflow"
               icon="mdi-delete"
               color="danger"
@@ -123,6 +125,7 @@
                 @click="pause_workflow"
               ></confirm-button>
               <confirm-hold-button
+                v-if="auth.canAdmin"
                 action="Delete Workflow"
                 icon="mdi-delete"
                 color="danger"
@@ -142,6 +145,7 @@
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({ workflow: Object });
 const emit = defineEmits(["update"]);
@@ -149,6 +153,8 @@ const emit = defineEmits(["update"]);
 const loading = ref(false);
 const workflow = ref(props.workflow);
 // console.log(workflow.value);
+
+const auth = useAuthStore();
 
 // to watch props make them reactive or wrap them in functions
 watch(

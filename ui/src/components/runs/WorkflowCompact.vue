@@ -25,12 +25,33 @@
         </span>
 
         <div v-if="props.show_dataset && dataset_id">
-          <span class="text-sm">
-            Dataset:
-            <router-link :to="`/datasets/${dataset_id}`" class="va-link"
-              >#{{ dataset_id }}</router-link
-            >
-          </span>
+          <div class="flex text-sm gap-x-3">
+            <div class="grow">
+              <span>
+                Dataset:
+                <router-link :to="`/datasets/${dataset_id}`" class="va-link"
+                  >#{{ dataset_id }}</router-link
+                >
+              </span>
+            </div>
+
+            <div v-if="workflow?.initiator" class="grow gap-2">
+              <span>
+                Initiated by: {{ workflow.initiator?.name }} (
+                {{ workflow.initiator?.username }} )
+              </span>
+            </div>
+          </div>
+        </div>
+        <div v-else>
+          <div class="flex text-sm gap-x-3">
+            <div v-if="workflow?.initiator" class="grow">
+              <span>
+                Initiated by: {{ workflow.initiator?.name }} (
+                {{ workflow.initiator?.username }} )
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -99,8 +120,8 @@
 
 <script setup>
 import WorkflowStatusIcon from "@/components/runs/WorkflowStatusIcon.vue";
-import workflowService from "@/services/workflow";
 import * as datetime from "@/services/datetime";
+import workflowService from "@/services/workflow";
 
 const props = defineProps({
   workflow: Object,
