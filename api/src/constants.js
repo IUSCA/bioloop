@@ -101,11 +101,13 @@ const INCLUDE_DATASET_SHARES = {
       timestamp: true,
       source_file_path: true,
       destination_file_path: true,
+      dataset: true,
       globus_share: {
         select: {
           source_collection_id: true,
           destination_collection_id: true,
           status: true,
+          dataset_share: true,
         },
       },
 

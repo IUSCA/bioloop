@@ -73,4 +73,29 @@ const getGlobusTransferRequestBody = ({
   };
 };
 
-export { getGlobusTransferRequestBody, redirectToGlobusAuth };
+const getEntitySourceCollectionPath = (dataset_origin_path) => {
+  console.log(
+    "getDatasetSourceCollectionPath, origin_path: ",
+    dataset_origin_path,
+  );
+  console.log(
+    "config.globus.source_endpoint_base_path",
+    config.globus.source_endpoint_path,
+  );
+  console.log(
+    "origin_path.indexOf(config.globus.source_endpoint_path)",
+    dataset_origin_path.indexOf(config.globus.source_endpoint_path),
+  );
+
+  console.log(
+    "dataset_origin_path.slice(config.globus.source_endpoint_path.length)",
+    dataset_origin_path.slice(config.globus.source_endpoint_path.length),
+  );
+  return dataset_origin_path.slice(config.globus.source_endpoint_path.length);
+};
+
+export {
+  getGlobusTransferRequestBody,
+  redirectToGlobusAuth,
+  getEntitySourceCollectionPath,
+};

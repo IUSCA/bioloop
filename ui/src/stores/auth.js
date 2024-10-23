@@ -32,7 +32,7 @@ export const useAuthStore = defineStore("auth", () => {
   function onLogin(data) {
     user.value = data.profile;
     token.value = data.token;
-    console.log(token.value);
+    // console.log(token.value);
     loggedIn.value = true;
     refreshTokenBeforeExpiry();
   }
@@ -208,6 +208,7 @@ export const useAuthStore = defineStore("auth", () => {
   const getTheme = () => user.value.theme;
 
   const setGlobusAccessToken = (token) => {
+    console.log("setGlobusAccessToken(): globusAccessToken.value ", token);
     globusAccessToken.value = token;
   };
 

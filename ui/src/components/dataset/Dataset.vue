@@ -264,66 +264,11 @@
             </div>
           </va-modal>
 
-          <va-modal
-            v-model="showGlobusShareModal"
-            max-height="350x"
-            class="collection-search-modal"
-            fixed-layout
-            @cancel="beforeGlobusShareModalClose"
-            @ok="onGlobusShareModalOk"
-            ok-text="Share via Globus"
-          >
-            <div class="flex flex-col w-full autocomplete-container">
-              <AutoComplete
-                :async="true"
-                v-model:search-text="endpointSearchText"
-                @update:search-text="searchGlobusEndpoints"
-                label="Search Destination Endpoints"
-                placeholder="Search Destination Endpoints"
-                :data="retrievedEndpoints"
-                display-by="display_name"
-                :messages="['Use hyphens between search terms']"
-                @select="
-                  (item) =>
-                    setGlobusCollections({ destinationCollection: item })
-                "
-                @clear="
-                  () => {
-                    globusDestinationEndpoint = null;
-                  }
-                "
-                @open="
-                  () => {
-                    globusDestinationEndpoint = null;
-                    searchGlobusEndpoints();
-                  }
-                "
-                @close="
-                  () => {
-                    // endpointSearchText = '';
-                    retrievedEndpoints = [];
-                  }
-                "
-              >
-              </AutoComplete>
-
-              <div class="text-sm va-text-danger">
-                {{ globusShareModalError }}
-              </div>
-
-              <va-inner-loading class="mt-5" :loading="loading">
-                <GlobusCollectionInfo
-                  v-if="globusDestinationEndpoint"
-                  :destination-collection="globusDestinationEndpoint"
-                  :source-collection="globusSourceEndpoint"
-                  :file-path="
-                    getDatasetSourceCollectionPath(dataset.origin_path)
-                  "
-                />
-              </va-inner-loading>
-            </div>
-          </va-modal>
-          <!--          </div>-->
+          <GlobusShareModal
+            v-model:show-modal="showGlobusShareModal"
+            @update:show-modal="(show) => (showGlobusShareModal = show)"
+            :entity-to-share="dataset"
+          />
         </div>
       </div>
 
@@ -422,8 +367,7 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as globusService from "@/services/globus";
-import GlobusAppService from "@/services/globus/appApi";
-import globusTransferService from "@/services/globus/transfer";
+// import Globus
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
 import workflowService from "@/services/workflow";
@@ -436,14 +380,6 @@ const isDark = useDark();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
-// const { globusAccessToken, isGlobusAccessTokenValid } = storeToRefs(auth);
-// const isGlobusAccessTokenValid = auth.isGlobusAccessTokenValid();
-// const submissionId = ref("");
-const globusShareModalError = ref("");
-const endpointSearchText = ref("");
-const retrievedEndpoints = ref([]);
-const globusSourceEndpoint = ref(null);
-const globusDestinationEndpoint = ref(null);
 const dataset = ref({});
 const loading = ref(false);
 const stage_modal = ref(false);
@@ -604,37 +540,19 @@ function navigateToFileBrowser() {
   }
 }
 
+const showGlobusShareModal = ref(false);
 const downloadModal = ref(null);
+
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
 
-const showGlobusShareModal = ref(false);
-
-const beforeGlobusShareModalClose = () => {
-  console.log("onGlobusShareModalClose()");
-  if (!endpointSearchText.value) {
-    globusDestinationEndpoint.value = null;
-  }
-  globusShareModalError.value = "";
-  endpointSearchText.value = "";
-  showGlobusShareModal.value = false;
-  globusDestinationEndpoint.value = null;
-};
-
-const onGlobusShareModalOk = () => {
-  console.log("onGlobusShareModalOk()");
-  // endpointSearchText.value = "";
-  if (globusDestinationEndpoint.value) {
-    globusShareModalError.value = "";
-    endpointSearchText.value = "";
-    initiateGlobusTransfer();
-    // selectedGlobusEndpoint.value = null;
-  } else {
-    globusShareModalError.value = "Please select a destination Globus endpoint";
-    // keep modal open
-    showGlobusShareModal.value = true;
-  }
+const initiateGlobusAuth = () => {
+  // console.log("Initiating Globus Auth");
+  // console.log("route: ", route.path);
+  globusService.redirectToGlobusAuth({
+    persistentStateAttributes: [route.path],
+  });
 };
 
 const onGlobusShareClick = () => {
@@ -646,127 +564,6 @@ const onGlobusShareClick = () => {
   } else {
     showGlobusShareModal.value = true;
   }
-};
-
-const initiateGlobusAuth = () => {
-  // console.log("Initiating Globus Auth");
-  // console.log("route: ", route.path);
-  globusService.redirectToGlobusAuth({
-    persistentStateAttributes: [route.path],
-  });
-};
-
-const searchGlobusEndpoints = () => {
-  if (!endpointSearchText.value) {
-    return [];
-  }
-  return globusTransferService
-    .searchEndpoints({
-      filter_fulltext: encodeURIComponent(endpointSearchText.value),
-    })
-    .then((res) => {
-      retrievedEndpoints.value = res.data["DATA"];
-    });
-};
-
-const registerGlobusShare = ({
-  datasetId,
-  sourceCollectionId,
-  destinationCollectionId,
-}) => {
-  GlobusAppService.logGlobusShare({
-    dataset_id: datasetId,
-    source_collection_id: sourceCollectionId,
-    destination_collection_id: destinationCollectionId,
-    source_file_path: getDatasetSourceCollectionPath(dataset.value.origin_path),
-    destination_file_path: `/home/u_otp4tsmynba3hhwlxymrnhxlmq/${dataset.value.name}`,
-    user_id: auth.user.id,
-  }).catch((err) => {
-    console.error("Unable to register Globus share", err);
-  });
-};
-
-const getDatasetSourceCollectionPath = (dataset_origin_path) => {
-  console.log("origin_path: ", dataset_origin_path);
-  console.log(
-    "config.globus.source_endpoint_base_path",
-    config.globus.source_endpoint_path,
-  );
-  console.log(
-    "origin_path.indexOf(config.globus.source_endpoint_path)",
-    dataset_origin_path.indexOf(config.globus.source_endpoint_path),
-  );
-
-  console.log(
-    "dataset_origin_path.slice(config.globus.source_endpoint_path.length)",
-    dataset_origin_path.slice(config.globus.source_endpoint_path.length),
-  );
-  return dataset_origin_path.slice(config.globus.source_endpoint_path.length);
-};
-
-const initiateGlobusTransfer = () => {
-  loading.value = true;
-  globusTransferService
-    .submitTask()
-    .then((res) => {
-      let submissionId = res.data.value;
-      console.log("submissionId", submissionId);
-      return submissionId;
-    })
-    .then((submissionId) => {
-      const collection_file_path = getDatasetSourceCollectionPath(
-        dataset.value.origin_path,
-      );
-
-      // const collection_file_path =
-      // '/home/u_otp4tsmynba3hhwlxymrnhxlmq/sub-fsm40mn-2'
-      console.log("file: ", collection_file_path);
-      const transferRequestBody = globusService.getGlobusTransferRequestBody({
-        submissionId,
-        sourceFile: collection_file_path,
-        destinationCollectionId: globusDestinationEndpoint.value.id,
-      });
-      console.log("transferRequestBody: ", transferRequestBody);
-      return transferRequestBody;
-    })
-    .then((transferRequestBody) => {
-      return globusTransferService.transfer(transferRequestBody);
-    })
-    .then(() => {
-      showGlobusShareModal.value = false;
-      toast.success(`Initiated Globus transfer`);
-    })
-    .catch((err) => {
-      console.error("Failed to initiate Globus transfer", err);
-      toast.error("Failed to initiate Globus transfer");
-    })
-    .finally(() => {
-      loading.value = false;
-      registerGlobusShare({
-        datasetId: dataset.value.id,
-        sourceCollectionId: config.globus.source_collection_id,
-        destinationCollectionId: globusDestinationEndpoint.value.id,
-      });
-    });
-};
-
-const setGlobusCollections = ({ destinationCollection }) => {
-  loading.value = false;
-  globusDestinationEndpoint.value = destinationCollection;
-  globusTransferService
-    .getEndpointById(config.globus.source_collection_id)
-    .then((res) => {
-      globusSourceEndpoint.value = res.data;
-    })
-    .catch((err) => {
-      console.error(
-        `Could not retrieve collection ${config.globus.source_collection_id}`,
-        err,
-      );
-    })
-    .finally(() => {
-      loading.value = false;
-    });
 };
 
 watch(trigger_dataset_retrieval, () => {
@@ -787,16 +584,6 @@ watch(trigger_dataset_retrieval, () => {
 //   console.log("onBeforeRouteUpdate", to, from);
 // });
 </script>
-
-<style lang="scss">
-.collection-search-modal {
-  --va-modal-dialog-min-height: 350px;
-}
-
-.autocomplete-container {
-  min-height: 300px;
-}
-</style>
 
 <route lang="yaml">
 meta:

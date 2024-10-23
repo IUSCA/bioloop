@@ -95,8 +95,21 @@
           preset="primary"
           color="info"
           icon="cloud_sync"
-          @click="openModalToStageProject(rowData)"
+          @click="openModalToStageDataset(rowData)"
         />
+      </div>
+    </template>
+
+    <template #cell(share)="{ rowData }">
+      <div>
+        <va-button
+          class="shadow flex-none"
+          preset="primary"
+          color="info"
+          @click="onGlobusShareClick(rowData)"
+        >
+          <i-mdi-share-variant-outline />
+        </va-button>
       </div>
     </template>
 
@@ -179,6 +192,12 @@
     :dataset="datasetToStage"
     @update="fetch_and_update_dataset"
   />
+
+  <GlobusShareModal
+    v-model:show-modal="showGlobusShareModal"
+    @update:show-modal="(show) => (showGlobusShareModal = show)"
+    :entity-to-share="datasetToShare"
+  />
 </template>
 
 <script setup>
@@ -193,6 +212,7 @@ import { useAuthStore } from "@/stores/auth";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";
+import * as globusService from "@/services/globus";
 
 const { colors } = useColors();
 const auth = useAuthStore();
@@ -209,6 +229,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["datasets-retrieved", "download-initiated"]);
+
+const route = useRoute();
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
@@ -432,6 +454,7 @@ const columns = computed(() => [
   },
   { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
   { key: "download", width: "100px", thAlign: "center", tdAlign: "center" },
+  { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
   // { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
   {
     key: "type",
@@ -473,14 +496,43 @@ function openModalToDownloadProject(dataset) {
   downloadModal.value.show();
 }
 
-// stage modal
-const stageModal = ref(null);
 const datasetToStage = ref({});
+const datasetToShare = ref({});
+// stage modal ref
+const stageModal = ref(null);
+// globus share modal ref
+const showGlobusShareModal = ref(false);
 
-function openModalToStageProject(dataset) {
+function openModalToStageDataset(dataset) {
   datasetToStage.value = dataset;
   stageModal.value.show();
 }
+
+function openModalToShareDataset(dataset) {
+  datasetToShare.value = dataset;
+  showGlobusShareModal.value = true;
+}
+
+const initiateGlobusAuth = () => {
+  // console.log("Initiating Globus Auth");
+  // console.log("route: ", route.path);
+  globusService.redirectToGlobusAuth({
+    persistentStateAttributes: [route.path],
+  });
+};
+
+const onGlobusShareClick = (dataset) => {
+  console.log("onGlobusShareClick()");
+  console.log("globusAccessToken: ", auth.globusAccessToken);
+  console.log("isGlobusAccessTokenValid: ", auth.isGlobusAccessTokenValid());
+  // openModalToShareDataset()
+  if (!auth.globusAccessToken || !auth.isGlobusAccessTokenValid()) {
+    initiateGlobusAuth();
+  } else {
+    // showGlobusShareModal.value = true;
+    openModalToShareDataset(dataset);
+  }
+};
 
 function getCurrentProjAssoc(assocs) {
   return assocs?.filter((obj) => obj.project_id === props.project.id)?.[0];
