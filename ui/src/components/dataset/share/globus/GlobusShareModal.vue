@@ -34,7 +34,7 @@
         "
         @open="
           () => {
-            setSourceFileToShare({ file: null });
+            sourceFileSearchText = '';
             searchCollectionFiles({
               collectionId: config.globus.source_collection_id,
               path: sourceFileSearchText,
@@ -130,6 +130,7 @@
         "
         @open="
           () => {
+            destinationFileSearchText = '';
             setGlobusDestinationFileToShare({ file: null });
             searchCollectionFiles({
               collectionId: globusDestinationEndpoint.id,
@@ -326,6 +327,7 @@ const initiateGlobusTransfer = () => {
 };
 
 const setGlobusCollections = ({ destinationCollection }) => {
+  endpointSearchText.value = destinationCollection.display_name;
   globusDestinationEndpoint.value = destinationCollection;
   globusTransferService
     .getEndpointById(config.globus.source_collection_id)
@@ -351,6 +353,12 @@ const setGlobusDestinationFileToShare = ({ file }) => {
   destinationFileSearchText.value = `${file.path}/${file.name}`;
   console.log("file: ", file);
 };
+
+// const setGlobusDestinationCollection = ({ collection }) => {
+//   sourceFileToShare.value = file;
+//   sourceFileSearchText.value = `${file.path}/${file.name}`;
+//   console.log("file: ", file);
+// };
 
 onMounted(() => {
   console.log("GlobusShareModal mounted");
