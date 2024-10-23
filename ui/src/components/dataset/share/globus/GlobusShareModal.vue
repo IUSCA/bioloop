@@ -81,6 +81,7 @@
         "
         @clear="
           () => {
+            modalError = '';
             globusDestinationEndpoint = null;
             destinationEndpointSearchText = '';
             destinationFileToShare = null;
@@ -90,6 +91,7 @@
         "
         @open="
           () => {
+            modalError = '';
             globusDestinationEndpoint = null;
             searchGlobusEndpoints();
             destinationEndpointSearchAutocompleteOpen = true;
@@ -104,9 +106,9 @@
       >
       </AutoComplete>
 
-      <!--      <div class="text-sm va-text-danger">-->
-      <!--        {{ modalError }}-->
-      <!--      </div>-->
+      <div v-if="modalError" class="text-sm va-text-danger">
+        {{ modalError }}
+      </div>
     </div>
 
     <div
@@ -125,7 +127,10 @@
         placeholder="Search Destination Directory"
         :data="retrievedDestinationFiles"
         display-by="path"
-        :disabled="!globusDestinationEndpoint"
+        :disabled="
+          !globusDestinationEndpoint ||
+          globusDestinationEndpoint.display_name === 'IURT - Geode'
+        "
         @select="
           (item) => {
             setGlobusDestinationFileToShare({ file: item });
@@ -358,6 +363,10 @@ const initiateGlobusTransfer = () => {
 };
 
 const setGlobusCollections = ({ destinationCollection }) => {
+  if (destinationCollection.display_name === "IURT - Geode") {
+    modalError.value = `You do not have read access to this collection. Please contact ${destinationCollection.owner_string} to request access.`;
+  }
+
   loading.value = true;
   destinationEndpointSearchText.value = destinationCollection.display_name;
   globusDestinationEndpoint.value = destinationCollection;
