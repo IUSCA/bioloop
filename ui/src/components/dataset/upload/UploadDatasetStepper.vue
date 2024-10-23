@@ -495,6 +495,7 @@ const uploadFileChunks = async (fileDetails) => {
     // chunkData.append("data_product_name", fileDetails.name);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append("file", fileData);
+    chunkData.append("data_product_id", uploadLog.value.dataset.id);
 
     // Try uploading chunk, or retry until retry threshold is reached
     uploaded = await uploadChunk(chunkData);
