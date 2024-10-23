@@ -1,7 +1,11 @@
 <template>
   <va-accordion>
     <template v-for="item in props.items">
-      <va-collapse v-if="item.children" :key="item.title + 'collapse'">
+      <va-collapse
+        v-model="collapsibleStates"
+        v-if="item.children"
+        :key="item.title + 'collapse'"
+      >
         <template #header="{ value: isCollapsed }">
           <va-sidebar-item
             :active="
@@ -61,6 +65,19 @@
 const props = defineProps({
   items: { type: Array, required: true },
   isActive: { type: Function, required: true },
+});
+
+const route = useRoute();
+
+const collapsibleStates = computed({
+  get() {
+    return props.items.some((item) => {
+      return (item.children || []).some((child) => {
+        return child.path === route.path;
+      });
+    });
+  },
+  set(value) {},
 });
 </script>
 
