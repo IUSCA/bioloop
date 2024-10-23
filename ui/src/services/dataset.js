@@ -134,9 +134,5 @@ class DatasetService {
   processUpload(dataset_id) {
     return api.post(`/datasets/${dataset_id}/upload/process`);
   }
-
-  get_file_types() {
-    return api.get("/datasets/file-types");
-  }
 }
 export default new DatasetService();

@@ -54,7 +54,7 @@
 
   <va-data-table
     v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
-    :items="isDirectory ? props.dataProductDirectory : props.dataProductFiles"
+    :items="isDirectory ? [props.dataProductDirectory] : props.dataProductFiles"
     :columns="columns"
   >
     <template #cell(name)="{ rowData }">
@@ -63,11 +63,6 @@
         class="flex items-center gap-1 text-left"
       >
         <Icon icon="mdi-folder" class="text-xl flex-none text-gray-700" />
-        <span> {{ rowData.name }} </span>
-      </div>
-
-      <div v-else class="flex items-center gap-1 text-left">
-        <FileTypeIcon :filename="rowData.name" />
         <span> {{ rowData.name }} </span>
       </div>
     </template>
@@ -150,24 +145,15 @@
               <td>Data Product Name</td>
               <td>{{ props.datasetName }}</td>
             </tr>
-            <tr>
-              <td>File Type</td>
-              <td>
-                <va-chip outline small class="mr-2">{{
-                  props.fileType.name
-                }}</va-chip>
-                <va-chip outline small>{{ props.fileType.extension }}</va-chip>
-              </td>
-            </tr>
-            <tr>
+            <tr v-if="props.sourceRawData">
               <td>Source Raw Data</td>
               <td>
                 <span>
                   <router-link
-                    :to="`/datasets/${props.sourceRawData.id}`"
+                    :to="`/datasets/${props.sourceRawData?.id}`"
                     target="_blank"
                   >
-                    {{ props.sourceRawData.name }}
+                    {{ props.sourceRawData?.name }}
                   </router-link>
                 </span>
               </td>
@@ -184,7 +170,7 @@ import config from "@/config";
 
 const props = defineProps({
   dataProductDirectory: {
-    type: [],
+    type: Object,
   },
   dataProductFiles: {
     type: Array,
@@ -196,11 +182,6 @@ const props = defineProps({
   },
   sourceRawData: {
     type: Object,
-    required: true,
-  },
-  fileType: {
-    type: Object,
-    required: true,
   },
   statusChipColor: {
     type: String,

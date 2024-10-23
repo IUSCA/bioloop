@@ -53,17 +53,11 @@
     </template>
 
     <template #cell(source_dataset_name)="{ rowData }">
-      <router-link
-        :to="`/datasets/${rowData.source_dataset_id}`"
-        class="va-link"
-        >{{ rowData.source_dataset_name }}</router-link
+      <router-link v-if="rowData.source_dataset_id">
+        :to="`/datasets/${rowData.source_dataset_id}`" class="va-link" >{{
+          rowData.source_dataset_name
+        }}</router-link
       >
-    </template>
-
-    <template #cell(file_type_name)="{ value }">
-      <va-chip outline size="small">
-        {{ value }}
-      </va-chip>
     </template>
 
     <template #cell(user_name)="{ value }">
@@ -114,14 +108,18 @@ const filterInput = ref("");
 const pastUploads = ref([]);
 
 const uploads = computed(() => {
+  console.log("computed uploads");
+  console.dir(pastUploads.value, { depth: null });
   return pastUploads.value.map((e) => {
-    const sourceDataset = e.dataset.source_datasets[0];
+    const sourceDataset =
+      e.dataset.source_datasets.length > 0
+        ? e.dataset.source_datasets[0]
+        : null;
     return {
       ...e,
       data_product_name: e.dataset.name,
-      source_dataset_name: sourceDataset.source_dataset.name,
-      source_dataset_id: sourceDataset.source_dataset.id,
-      file_type_name: e.dataset.file_type.name,
+      source_dataset_name: sourceDataset?.source_dataset.name,
+      source_dataset_id: sourceDataset?.source_dataset.id,
       user_name: e.user.name,
     };
   });
@@ -131,7 +129,6 @@ const columns = [
   { key: "status", sortable: true },
   { key: "data_product_name", label: "Data Product", sortable: true },
   { key: "source_dataset_name", label: "Source Dataset", sortable: true },
-  { key: "file_type_name", label: "File Type", sortable: true },
   { key: "user_name", label: "Uploaded By", sortable: true },
   { key: "actions", width: "120px" },
 ];

@@ -4,12 +4,13 @@ const config = require('config');
 const _ = require('lodash/fp');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
+const createError = require('http-errors');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const authService = require('../services/auth');
-const { INCLUDE_UPLOAD_LOG_RELATIONS } = require('../services/dataset');
+const { INCLUDE_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
@@ -62,10 +63,10 @@ router.get(
   }),
 );
 
-const getDataProductOriginPath = (datasetName) => path.join(
+const getDataProductOriginPath = (datasetId) => path.join(
   UPLOAD_PATH,
   'data_products',
-  datasetName,
+  `${datasetId}`,
   'merged_chunks',
 );
 
@@ -74,54 +75,78 @@ router.post(
   '/log',
   isPermittedTo('update'),
   validate([
-    body('data_product_name').notEmpty().escape().isLength({ min: 3 }),
-    body('file_type').isObject(),
-    body('source_dataset_id').isInt().toInt(),
+    body('name').escape().notEmpty().isLength({ min: 3 }),
+    body('source_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
   ]),
   asyncHandler(async (req, res, next) => {
     const {
-      data_product_name, source_dataset_id, file_type, files_metadata,
+      name, source_dataset_id, files_metadata,
     } = req.body;
 
-    const upload_log = await prisma.upload_log.create({
-      data: {
-        status: config.upload_status.UPLOADING,
-        user: {
-          connect: {
-            id: req.user.id,
-          },
-        },
-        files: {
-          create: files_metadata.map((file) => ({
-            name: file.name,
-            md5: file.checksum,
-            num_chunks: file.num_chunks,
-            path: file.path,
-            status: config.upload_status.UPLOADING,
-          })),
-        },
-        dataset: {
-          create: {
-            source_datasets: {
-              create: [{
-                source_id: source_dataset_id,
-              }],
+    let upload_log;
+
+    try {
+      upload_log = await prisma.upload_log.create({
+        data: {
+          status: config.upload_status.UPLOADING,
+          user: {
+            connect: {
+              id: req.user.id,
             },
-            name: data_product_name,
-            origin_path: getDataProductOriginPath(data_product_name),
-            type: config.dataset_types[1],
-            file_type: file_type.id === undefined ? {
-              create: {
-                name: file_type.name,
-                extension: file_type.extension,
-              },
-            } : { connect: { id: file_type.id } },
+          },
+          files: {
+            create: files_metadata.map((file) => ({
+              name: file.name,
+              md5: file.checksum,
+              num_chunks: file.num_chunks,
+              path: file.path,
+              status: config.upload_status.UPLOADING,
+            })),
+          },
+          dataset: {
+            create: {
+              ...(source_dataset_id && {
+                source_datasets: {
+                  create: [{
+                    source_id: source_dataset_id,
+                  }],
+                },
+              }),
+              name,
+              // origin_path: getDataProductOriginPath(data_product_id),
+              type: config.dataset_types[1],
+            },
           },
         },
-      },
-      include: INCLUDE_UPLOAD_LOG_RELATIONS,
-    });
+        include: INCLUDE_UPLOAD_LOG_RELATIONS,
+      });
+    } catch (e) {
+      console.error(e);
+      // if upload log creation fails, don't proceed to updating the created
+      // corresponding dataset's origin_path
+      return next(createError.InternalServerError());
+    }
+
+    console.log('upload_log created');
+    console.dir(upload_log, { depth: null });
+
+    const datasetId = upload_log.dataset.id;
+
+    // if upload log creation succeeds, but update to the corresponding
+    // dataset's origin_path fails, then delete the created upload log
+    try {
+      await prisma.dataset.update({
+        where: { id: datasetId },
+        data: {
+          origin_path: getDataProductOriginPath(datasetId),
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      await prisma.upload_log.delete({ where: { id: upload_log.id } });
+      return next(createError.InternalServerError());
+    }
 
     res.json(upload_log);
   }),

@@ -9,8 +9,8 @@
       >
         <!-- Step icons and labels -->
         <template
-          v-for="(step, i) in steps"
-          :key="step.label"
+          v-for="(s, i) in steps"
+          :key="s.label"
           #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
         >
           <va-button
@@ -20,97 +20,61 @@
               'step-button--completed': isCompleted,
             }"
             @click="setStep(i)"
-            :disabled="submitAttempted"
+            :disabled="submitAttempted || step < i || loading"
             preset="secondary"
           >
             <div class="flex flex-col items-center">
-              <Icon :icon="step.icon" />
-              <span class="hidden sm:block"> {{ step.label }} </span>
+              <Icon :icon="s.icon" />
+              <span class="hidden sm:block"> {{ s.label }} </span>
             </div>
           </va-button>
         </template>
 
         <template #step-content-0>
-          <va-form-field
-            v-model="datasetName"
-            :rules="[
-              (v) => v.length >= 3 || 'Min length is 3 characters',
-              // (v) => v?.indexof(' ') === -1 || 'Name cannot contain spaces',
-              validateNotExists,
-            ]"
-          >
-            <template #default="{ value }">
-              <va-input
-                label="Dataset Name"
-                :placeholder="'Dataset Name'"
-                class="w-full"
-                v-model="value.ref"
-              />
-            </template>
-          </va-form-field>
-        </template>
-
-        <template #step-content-1>
-          <va-form-field
-            v-model="fileTypeSelected"
-            v-slot="{ value: v }"
-            :rules="[
-              (v) => {
-                return (
-                  (typeof v?.name === 'string' &&
-                    v?.name?.length > 0 &&
-                    typeof v?.extension === 'string' &&
-                    v?.extension?.length > 0) ||
-                  'File Type is required'
-                );
-              },
-            ]"
-          >
-            <FileTypeSelect
-              v-model="v.ref"
-              @file-type-created="
-                (newFileType) => {
-                  fileTypeList.push(newFileType);
+          <div class="flex flex-col gap-10">
+            <va-checkbox
+              v-model="isAssignedSourceRawData"
+              @update:modelValue="
+                (val) => {
+                  if (!val) {
+                    rawDataSelected = [];
+                  }
                 }
               "
-              :allow-create-new="
-                submissionStatus === SUBMISSION_STATES.UNINITIATED
-              "
-              :file-type-list="fileTypeList"
+              color="primary"
+              label="Assign source Raw Data"
             />
-          </va-form-field>
-        </template>
 
-        <template #step-content-2>
-          <va-form-field
-            v-model="rawDataSelected"
-            v-slot="{ value: v }"
-            :rules="[
-              (v) => {
-                return typeof v.length > 0 || 'Source dataset is required';
-              },
-            ]"
-          >
-            <DatasetSelect
-              :selected-results="v.ref"
-              @select="addDataset"
-              @remove="removeDataset"
-              select-mode="single"
-              :dataset-type="config.dataset.types.RAW_DATA.key"
-            ></DatasetSelect>
-          </va-form-field>
+            <va-form-field
+              v-if="isAssignedSourceRawData"
+              v-model="rawDataSelected"
+              v-slot="{ value: v }"
+            >
+              <DatasetSelect
+                :selected-results="v.ref"
+                @select="addDataset"
+                @remove="removeDataset"
+                select-mode="single"
+                :dataset-type="config.dataset.types.RAW_DATA.key"
+                :show-required-error="!stepIsPristine"
+                placeholder="Search Raw Data"
+                selected-label="Selected source Raw Data"
+                :messages="['Select a Source Raw Data']"
+              ></DatasetSelect>
+            </va-form-field>
 
-          <div v-if="isDirty" class="mt-2">
-            <p v-for="error in errorMessages" :key="error">
-              {{ error }}
-            </p>
+            <div class="text-xs va-text-danger" v-if="!stepIsPristine">
+              {{ formErrors[STEP_KEYS.RAW_DATA] }}
+            </div>
           </div>
         </template>
 
-        <template #step-content-3>
+        <template #step-content-1>
           <DatasetFileUploadTable
             :file-type="fileTypeSelected"
-            :source-raw-data="rawDataSelected[0]"
+            :source-raw-data="
+              rawDataSelected.length > 0 ? rawDataSelected[0] : null
+            "
             :dataset-name="datasetName"
             :status-chip-color="statusChipColor"
             :submission-status="submissionStatus"
@@ -125,6 +89,7 @@
             @file-removed="removeFile"
             @directory-added="
               (directoryDetails) => {
+                console.log('Directory added', directoryDetails);
                 setDirectory(directoryDetails);
                 isSubmissionAlertVisible = false;
               }
@@ -148,7 +113,7 @@
                   prevStep();
                 }
               "
-              :disabled="step === 0 || submitAttempted"
+              :disabled="isNextStepDisabled || loading"
             >
               Previous
             </va-button>
@@ -156,12 +121,12 @@
               class="flex-none"
               @click="onNextClick(nextStep)"
               :color="isLastStep ? 'success' : 'primary'"
-              :disabled="!isSubmitEnabled"
+              :disabled="formHasErrors || submissionSuccess || loading"
             >
               {{
                 isLastStep
                   ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
-                    ? "Retry Uploading Failed Files"
+                    ? "Retry"
                     : "Upload Files"
                   : "Next"
               }}
@@ -203,17 +168,69 @@ const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
+const STEP_KEYS = {
+  RAW_DATA: "rawData",
+  UPLOAD: "upload",
+};
+
 const steps = [
-  { label: "Name", icon: "material-symbols:description-outline" },
-  { label: "File Type", icon: "material-symbols:category" },
-  { label: "Source Raw Data", icon: "mdi:dna" },
-  { label: "Select Files", icon: "material-symbols:folder" },
+  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
+  {
+    key: STEP_KEYS.UPLOAD,
+    label: "Upload",
+    icon: "material-symbols:folder",
+  },
+  // { label: "Select Files", icon: "material-symbols:folder" },
 ];
+
+const UPLOAD_FILE_REQUIRED_ERROR = "A file must be selected for upload.";
+const DATASET_NAME_MAX_LENGTH_ERROR =
+  "Dataset name must have 3 or more characters.";
+const DATASET_NAME_EXISTS_ERROR =
+  "A Data Product with this name already exists.";
+const SOURCE_RAW_DATA_REQUIRED_ERROR =
+  "You have requested a source Raw Data to be assigned. Please select one.";
+
+const formErrors = ref({
+  [STEP_KEYS.RAW_DATA]: null,
+  [STEP_KEYS.INFO]: null,
+});
+const formHasErrors = computed(() => {
+  const errors = Object.values(formErrors.value);
+  return errors.some((error) => {
+    return error !== null;
+  });
+});
+
+const isAssignedSourceRawData = ref(true);
+const submissionSuccess = ref(false);
+
+const isNextStepDisabled = computed(() => {
+  return (
+    step.value === 0 ||
+    formHasErrors.value ||
+    submitAttempted.value ||
+    submissionSuccess.value
+  );
+});
+
+// Tracks if a step's form fields are pristine (i.e. not touched by user) or
+// not. Errors are only shown when a step's form fields are not pristine.
+// For steps 0 to 2, <va-form-field> components track the pristine state of
+// their respective input fields. For step 3, pristine state is maintained by
+// this component.
+const stepPristineStates = ref([
+  { [STEP_KEYS.RAW_DATA]: true },
+  { [STEP_KEYS.UPLOAD]: true },
+]);
+
+const stepIsPristine = computed(() => {
+  return !!Object.values(stepPristineStates.value[step.value])[0];
+});
 
 const loading = ref(true);
 const datasetName = ref("");
 const fileTypeSelected = ref(null);
-const fileTypeList = ref([]);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const uploadLog = ref();
@@ -224,9 +241,11 @@ const submissionAlertColor = ref();
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
 const dataProductFiles = ref([]);
-const dataProductDirectory = ref([]);
+const dataProductDirectory = ref(null);
 const step = ref(0);
 const uploadCancelled = ref(false);
+const selectedUploadFiles = ref([]);
+const selectedUploadDirectory = ref(null);
 
 const filesNotUploaded = computed(() => {
   return dataProductFiles.value.filter(
@@ -241,19 +260,43 @@ const isLastStep = computed(() => {
 });
 const uploadFormData = computed(() => {
   return {
-    data_product_name: datasetName.value,
-    source_dataset_id: rawDataSelected.value[0].id,
-    file_type: fileTypeSelected.value,
+    name: dataProductDirectory.value.name,
+    ...(rawDataSelected.value.length > 0 && {
+      source_dataset_id: rawDataSelected.value[0].id,
+    }),
   };
 });
 
-const isSubmitEnabled = computed(() => {
-  return (
-    submissionStatus.value === SUBMISSION_STATES.UNINITIATED ||
-    submissionStatus.value === SUBMISSION_STATES.PROCESSING_FAILED ||
-    submissionStatus.value === SUBMISSION_STATES.UPLOAD_FAILED
-  );
-});
+const resetFormErrors = () => {
+  formErrors.value = {
+    [STEP_KEYS.RAW_DATA]: null,
+    [STEP_KEYS.INFO]: null,
+  };
+};
+
+const setFormErrors = async () => {
+  resetFormErrors();
+  // const { isNameValid: datasetNameIsValid, error } =
+  //   await validateDatasetName();
+
+  if (step.value === 0) {
+    if (!isAssignedSourceRawData.value) {
+      formErrors.value[STEP_KEYS.RAW_DATA] = null;
+      return;
+    }
+    if (rawDataSelected.value.length === 0) {
+      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
+    }
+  }
+};
+
+// const isSubmitEnabled = computed(() => {
+//   return (
+//     submissionStatus.value === SUBMISSION_STATES.UNINITIATED ||
+//     submissionStatus.value === SUBMISSION_STATES.PROCESSING_FAILED ||
+//     submissionStatus.value === SUBMISSION_STATES.UPLOAD_FAILED
+//   );
+// });
 const noFilesSelected = computed(() => {
   return dataProductFiles.value.length === 0;
 });
@@ -290,13 +333,12 @@ const validateNotExists = (value) => {
 
 onMounted(() => {
   loading.value = true;
-  Promise.all([
-    datasetService.get_file_types(),
-    datasetService.getAll({ type: "RAW_DATA" }),
-  ])
-    .then(([res1, res2]) => {
-      fileTypeList.value = res1.data;
-      rawDataList.value = res2.data.datasets;
+
+  // datasetService.get_file_types(),
+  datasetService
+    .getAll({ type: "RAW_DATA" })
+    .then((res) => {
+      rawDataList.value = res.data.datasets;
     })
     .catch((err) => {
       toast.error("Failed to load resources");
@@ -450,7 +492,7 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("total", blockCount);
     chunkData.append("index", i);
     chunkData.append("size", file.size);
-    chunkData.append("data_product_name", datasetName.value);
+    // chunkData.append("data_product_name", fileDetails.name);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append("file", fileData);
 
@@ -461,7 +503,7 @@ const uploadFileChunks = async (fileDetails) => {
     } else {
       const chunkUploadProgress = Math.trunc(((i + 1) / blockCount) * 100);
       if (isDirectory.value) {
-        dataProductDirectory.value[0].progress += chunkUploadProgress;
+        dataProductDirectory.value.progress += chunkUploadProgress;
       } else {
         fileDetails.progress = chunkUploadProgress;
       }
@@ -509,7 +551,12 @@ const uploadFile = async (fileDetails) => {
   return successful;
 };
 
-const onSubmit = () => {
+const onSubmit = async () => {
+  if (dataProductFiles.value.length === 0) {
+    await setFormErrors();
+    return Promise.reject();
+  }
+
   submissionStatus.value = SUBMISSION_STATES.PROCESSING;
   statusChipColor.value = "primary";
   submissionAlert.value = null; // reset any alerts from previous submissions
@@ -519,6 +566,7 @@ const onSubmit = () => {
   return new Promise((resolve, reject) => {
     preUpload()
       .then(async () => {
+        submissionSuccess.value = true;
         submissionStatus.value = SUBMISSION_STATES.UPLOADING;
 
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
@@ -535,6 +583,7 @@ const onSubmit = () => {
       })
       .catch((err) => {
         console.error(err);
+        submissionSuccess.value = false;
         submissionStatus.value = SUBMISSION_STATES.PROCESSING_FAILED;
         statusChipColor.value = "warning";
         submissionAlertColor.value = "warning";
@@ -558,7 +607,7 @@ const postSubmit = () => {
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {
-      id: uploadLog.value.files.find((log) => log.md5 === file.fileChecksum).id,
+      id: uploadLog.value.files.find((f) => f.md5 === file.fileChecksum).id,
       data: {
         status: config.upload_status.UPLOAD_FAILED,
       },
@@ -669,6 +718,7 @@ const setFiles = (files) => {
 
 const setDirectory = (directoryDetails) => {
   isDirectory.value = true;
+  // dataProductDirectory.value = directoryDetails;
 
   const directoryFiles = directoryDetails.files;
   let directorySize = 0;
@@ -684,17 +734,42 @@ const setDirectory = (directoryDetails) => {
     });
     directorySize += file.size;
   });
-  dataProductDirectory.value.push({
+  dataProductDirectory.value = {
     type: "directory",
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: undefined,
-  });
+  };
 };
 
 const removeFile = (index) => {
   dataProductFiles.value.splice(index, 1);
 };
+
+const datasetNameHasMinimumChars = (name) => {
+  return name?.length >= 3;
+};
+
+const datasetNameIsNull = (name) => {
+  return !name;
+};
+
+// const validateDatasetName = async () => {
+//   const datasetName = selectedUploadFiles.value?.name;
+//   if (datasetNameIsNull(datasetName)) {
+//     return { isNameValid: false, error: UPLOAD_FILE_REQUIRED_ERROR };
+//   } else if (!datasetNameHasMinimumChars(datasetName)) {
+//     return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
+//   }
+//
+//   return validateNotExists(datasetName).then((res) => {
+//     return {
+//       isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
+//       error:
+//         res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
+//     };
+//   });
+// };
 
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
