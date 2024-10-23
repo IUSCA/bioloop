@@ -1,14 +1,16 @@
 <template>
   <va-modal
     v-model="showModal"
-    max-height="350x"
+    max-height="500px"
     class="collection-search-modal"
     fixed-layout
     @cancel="beforeGlobusShareModalClose"
     @ok="onGlobusShareModalOk"
     ok-text="Share via Globus"
   >
-    <div class="flex flex-col w-full autocomplete-container">
+    <div
+      :class="`flex flex-col w-full${sourceFilesSearchAutocompleteOpen ? ' autocomplete-container' : ''}`"
+    >
       <AutoComplete
         :async="true"
         v-model:search-text="sourceFileSearchText"
@@ -25,11 +27,13 @@
         @select="
           (item) => {
             setSourceFileToShare({ file: item });
+            sourceFilesSearchAutocompleteOpen = false;
           }
         "
         @clear="
           () => {
             setSourceFileToShare({ file: null });
+            sourceFilesSearchAutocompleteOpen = false;
           }
         "
         @open="
@@ -39,11 +43,13 @@
               collectionId: config.globus.source_collection_id,
               path: sourceFileSearchText,
             });
+            sourceFilesSearchAutocompleteOpen = true;
           }
         "
         @close="
           () => {
             retrievedSourceFiles = [];
+            sourceFilesSearchAutocompleteOpen = false;
           }
         "
       >
@@ -54,7 +60,9 @@
       <!--      </div>-->
     </div>
 
-    <div class="flex flex-col w-full autocomplete-container">
+    <div
+      :class="`flex flex-col w-full${destinationEndpointSearchAutocompleteOpen ? ' autocomplete-container' : ''}`"
+    >
       <AutoComplete
         :async="true"
         v-model:search-text="destinationEndpointSearchText"
@@ -68,6 +76,7 @@
         @select="
           (item) => {
             setGlobusCollections({ destinationCollection: item });
+            destinationEndpointSearchAutocompleteOpen = false;
           }
         "
         @clear="
@@ -76,17 +85,20 @@
             destinationEndpointSearchText = '';
             destinationFileToShare = null;
             retrievedDestinationFiles = [];
+            destinationEndpointSearchAutocompleteOpen = false;
           }
         "
         @open="
           () => {
             globusDestinationEndpoint = null;
             searchGlobusEndpoints();
+            destinationEndpointSearchAutocompleteOpen = true;
           }
         "
         @close="
           () => {
             retrievedEndpoints = [];
+            destinationEndpointSearchAutocompleteOpen = false;
           }
         "
       >
@@ -97,7 +109,9 @@
       <!--      </div>-->
     </div>
 
-    <div class="flex flex-col w-full autocomplete-container">
+    <div
+      :class="`flex flex-col w-full${destinationFilesSearchAutocompleteOpen ? ' autocomplete-container' : ''}`"
+    >
       <AutoComplete
         :async="true"
         v-model:search-text="destinationFileSearchText"
@@ -115,11 +129,13 @@
         @select="
           (item) => {
             setGlobusDestinationFileToShare({ file: item });
+            destinationFilesSearchAutocompleteOpen = false;
           }
         "
         @clear="
           () => {
             setGlobusDestinationFileToShare({ file: null });
+            destinationFilesSearchAutocompleteOpen = false;
           }
         "
         @open="
@@ -130,11 +146,13 @@
               collectionId: globusDestinationEndpoint.id,
               path: destinationFileSearchText,
             });
+            destinationFilesSearchAutocompleteOpen = true;
           }
         "
         @close="
           () => {
             retrievedDestinationFiles = [];
+            destinationFilesSearchAutocompleteOpen = false;
           }
         "
       >
@@ -201,6 +219,9 @@ const sourceFileToShare = ref(null);
 const destinationFileToShare = ref(null);
 const retrievedSourceFiles = ref([]);
 const retrievedDestinationFiles = ref([]);
+const sourceFilesSearchAutocompleteOpen = ref(false);
+const destinationFilesSearchAutocompleteOpen = ref(false);
+const destinationEndpointSearchAutocompleteOpen = ref(false);
 const loading = ref(false);
 
 const searchGlobusEndpoints = () => {
@@ -359,6 +380,7 @@ const setGlobusCollections = ({ destinationCollection }) => {
 const setSourceFileToShare = ({ file }) => {
   sourceFileToShare.value = file;
   sourceFileSearchText.value = `${file.path}/${file.name}`;
+  retrievedSourceFiles.value = [];
   console.log("file: ", file);
 };
 
@@ -380,9 +402,13 @@ onMounted(() => {
 });
 </script>
 
+<!--.va-modal__footer {-->
+<!--  padding-top: 100px !important;-->
+<!--}-->
+
 <style lang="scss">
 .collection-search-modal {
-  --va-modal-dialog-min-height: 350px;
+  --va-modal-dialog-min-height: 500px;
 }
 
 .autocomplete-container {
