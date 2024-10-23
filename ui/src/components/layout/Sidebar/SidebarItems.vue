@@ -24,6 +24,7 @@
 
         <template #body>
           <va-sidebar-item
+            class="ml-5"
             v-for="child in item.children"
             :key="child.title"
             :to="child.path"
