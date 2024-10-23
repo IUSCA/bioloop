@@ -388,14 +388,16 @@ const setGlobusCollections = ({ destinationCollection }) => {
 
 const setSourceFileToShare = ({ file }) => {
   sourceFileToShare.value = file;
-  sourceFileSearchText.value = `${file.path}/${file.name}`;
+  // sourceFileSearchText.value = `${file.path}/${file.name}`;
+  sourceFileSearchText.value = `${file.path}`;
+
   retrievedSourceFiles.value = [];
   console.log("file: ", file);
 };
 
 const setGlobusDestinationFileToShare = ({ file }) => {
   destinationFileToShare.value = file;
-  destinationFileSearchText.value = `${file.path}/${file.name}`;
+  destinationFileSearchText.value = `${file.path}`;
   console.log("file: ", file);
 };
 
