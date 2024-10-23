@@ -94,6 +94,25 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const INCLUDE_UPLOAD_LOG_RELATIONS = {
+  dataset: {
+    select: {
+      id: true,
+      source_datasets: {
+        select: {
+          source_dataset: true,
+        },
+      },
+    },
+  },
+  user: true,
+  files: {
+    select: {
+      md5: true,
+    },
+  },
+};
+
 const INCLUDE_DATASET_SHARES = {
   shares: {
     select: {
@@ -128,4 +147,5 @@ module.exports = {
   DUPLICATION_PROCESSING_INCLUSIONS,
   INCLUDE_DATASET_SHARES,
   DONE_STATUSES,
+  INCLUDE_UPLOAD_LOG_RELATIONS,
 };

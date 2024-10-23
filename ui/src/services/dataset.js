@@ -156,9 +156,9 @@ class DatasetService {
     return api.post(`/datasets/${dataset_id}/upload/process`);
   }
 
-  get_file_types() {
-    return api.get("/datasets/file-types");
-  }
+  // get_file_types() {
+  //   return api.get("/datasets/file-types");
+  // }
 
   create_dataset(data) {
     return api.post("/datasets", data);
