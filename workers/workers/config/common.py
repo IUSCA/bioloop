@@ -135,9 +135,18 @@ config = {
               'name': 'metadata',
               'task': 'metadata'
             },
+          ]
+        },
+        'batch_download': {
+          'steps': [
+            {
+              'name': 'batch_download',
+              'task': 'batch_download'
+            },
 
           ]
         }
+
     },
     'celery': {
         'queue': {
@@ -159,6 +168,6 @@ config = {
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
-    }
-
+    },
+'batch_script': '/opt/sca/script.sh',
 }

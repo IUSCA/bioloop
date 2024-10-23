@@ -68,23 +68,24 @@ services:
     expose:
       - 5432
 
-  nginx:
-    image: nginx:1.25
-    ports:
-        - 8000:8000
-    volumes:
-        - ./nginx/src:/usr/share/nginx/html
-        - ./nginx/conf:/etc/nginx/conf.d
-        - ./data:/opt/sca/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
+  # nginx:
+  #   image: nginx:1.25
+  #   ports:
+  #       - 8000:8000
+  #   volumes:
+  #       - ./nginx/src:/usr/share/nginx/html
+  #       - ./nginx/conf:/etc/nginx/conf.d
+  #       - ./data:/opt/sca/data
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
 
   workers:
     build:
       context: ./workers
     volumes:
       # - ./workers/:/opt/sca
-      - /home/ryanlong/Downloads/metadata_2024_03_01.csv:/opt/metadata.csv
+      - /home/ryanlong/Downloads/metadata_2024_03_01.csv:/opt/sca/metadata.csv
+      - /home/ryanlong/Downloads/test.sh:/opt/sca/test.sh
     # entrypoint:
     #   - tail
     #   - -f

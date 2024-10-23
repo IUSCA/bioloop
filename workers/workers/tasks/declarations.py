@@ -129,3 +129,11 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
 def metadata(celery_task, dataset_id, **kwargs):
     from workers.tasks.bc2_metadata import get_metadata_from_csv as task_body
     return task_body(celery_task, dataset_id, **kwargs)
+
+@app.task(base=WorkflowTask, bind=True, name='batch_download',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def batch_download(celery_task, batch_id, **kwargs):
+    from workers.tasks.bc2_batch_download import batch_download as task_body
+    return task_body(celery_task, batch_id, **kwargs)

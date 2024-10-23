@@ -80,10 +80,10 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { storeToRefs } from "pinia";
-import config from "@/config";
 
 const props = defineProps({ isSidebarCollapsed: Boolean });
 
@@ -192,6 +192,12 @@ const operator_items = ref([
     path: "/workflows",
     test_id: "sidebar-workflows",
   },
+  {
+    icon: "carbon:batch-job",
+    title: "Batch Download",
+    path: "/batchdownload",
+    test_id: "sidebar-batch-download",
+  }
   // {
   //   icon: "mdi-account-multiple",
   //   title: "Group Management",
