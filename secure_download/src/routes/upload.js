@@ -11,13 +11,13 @@ const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
-const getUploadPath = (datasetName) => path.join(
+const getUploadPath = (datasetId) => path.join(
   config.upload_path.data_products,
-  datasetName,
+  datasetId,
 );
 
-const getFileChunksStorageDir = (datasetName, fileChecksum) => path.join(
-  getUploadPath(datasetName),
+const getFileChunksStorageDir = (datasetId, fileChecksum) => path.join(
+  getUploadPath(datasetId),
   'chunked_files',
   fileChecksum,
 );
@@ -26,7 +26,7 @@ const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const chunkStorage = getFileChunksStorageDir(req.body.data_product_name, req.body.checksum);
+    const chunkStorage = getFileChunksStorageDir(req.body.data_product_id, req.body.checksum);
     await fsPromises.mkdir(chunkStorage, {
       recursive: true,
     });
@@ -48,11 +48,13 @@ router.post(
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
-      name, data_product_name, total, index, size, checksum, chunk_checksum,
+      name, data_product_id, total, index, size, checksum, chunk_checksum,
     } = req.body;
 
+    console.log('req.body', req.body);
+
     // eslint-disable-next-line no-console
-    console.log('Processing file piece ...', data_product_name, name, total, index, size, checksum, chunk_checksum);
+    console.log('Processing file piece ...', data_product_id, name, total, index, size, checksum, chunk_checksum);
 
     const UPLOAD_SCOPE = String(config.get('upload_scope'));
 
@@ -71,7 +73,7 @@ router.post(
       return next(createError.Forbidden('Expected one, but found multiple matching scopes'));
     }
 
-    if (!(data_product_name && checksum && chunk_checksum) || Number.isNaN(index)) {
+    if (!(data_product_id && checksum && chunk_checksum) || Number.isNaN(index)) {
       res.sendStatus(400);
     }
 
