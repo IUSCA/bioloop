@@ -11,6 +11,55 @@
     <div class="flex flex-col w-full autocomplete-container">
       <AutoComplete
         :async="true"
+        v-model:search-text="sourceFileSearchText"
+        @update:search-text="searchSourceFiles"
+        label="Search Source Collection Files"
+        placeholder="Enter file path"
+        :data="retrievedSourceFiles"
+        display-by="display_name"
+        @select="
+          (item) => {
+            setSourceFileToShare({ file: item });
+          }
+        "
+        @clear="
+          () => {
+            globusDestinationEndpoint = null;
+          }
+        "
+        @open="
+          () => {
+            globusDestinationEndpoint = null;
+            searchGlobusEndpoints();
+          }
+        "
+        @close="
+          () => {
+            retrievedEndpoints = [];
+          }
+        "
+      >
+      </AutoComplete>
+
+      <div class="text-sm va-text-danger">
+        {{ modalError }}
+      </div>
+
+      <va-inner-loading class="mt-5" :loading="loading">
+        <GlobusCollectionInfo
+          v-if="globusDestinationEndpoint"
+          :destination-collection="globusDestinationEndpoint"
+          :source-collection="globusSourceEndpoint"
+          :file-path="
+            getEntitySourceCollectionPath(props.entityToShare.origin_path)
+          "
+        />
+      </va-inner-loading>
+    </div>
+
+    <div class="flex flex-col w-full autocomplete-container">
+      <AutoComplete
+        :async="true"
         v-model:search-text="endpointSearchText"
         @update:search-text="searchGlobusEndpoints"
         label="Search Destination Endpoints"
@@ -92,6 +141,7 @@ const showGlobusShareModal = ref(false);
 const globusDestinationEndpoint = ref(null);
 const globusSourceEndpoint = ref(null);
 const modalError = ref("");
+const sourceFileToShare = ref(null);
 
 const searchGlobusEndpoints = () => {
   if (!endpointSearchText.value) {
@@ -205,6 +255,10 @@ const setGlobusCollections = ({ destinationCollection }) => {
         err,
       );
     });
+};
+
+const setSourceFileToShare = ({ file }) => {
+  sourceFileToShare.value = file;
 };
 
 onMounted(() => {

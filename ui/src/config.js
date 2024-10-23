@@ -172,8 +172,8 @@ const exports = {
     destination_collection_id:
       import.meta.env.VITE_GLOBUS_DESTINATION_ENDPOINT_ID ||
       "destination_endpoint_uuid",
-    destination_endpoint_path:
-      import.meta.env.VITE_GLOBUS_DESTINATION_ENDPOINT_PATH || "/path",
+    globusSourceEndpointEearchScope:
+      import.meta.env.VITE_GLOBUS_SOURCE_ENDPOINT_SEARCH_SCOPE || "/path",
   },
 };
 

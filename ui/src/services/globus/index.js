@@ -55,6 +55,7 @@ const getGlobusTransferRequestBody = ({
   destinationCollectionId,
 }) => {
   console.log("source_file", sourceFile);
+  console.log("destination_file", destinationFile);
   return {
     DATA: [
       {
