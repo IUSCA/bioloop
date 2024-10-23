@@ -1,7 +1,7 @@
 <template>
   <va-modal
     v-model="showModal"
-    max-height="500px"
+    max-height="600px"
     class="collection-search-modal"
     fixed-layout
     @cancel="beforeGlobusShareModalClose"
@@ -9,7 +9,7 @@
     ok-text="Share via Globus"
   >
     <div
-      :class="`flex flex-col w-full${sourceFilesSearchAutocompleteOpen ? ' autocomplete-container' : ''}`"
+      :class="`globus-autocomplete flex flex-col w-full${sourceFilesSearchAutocompleteOpen ? ' autocomplete-container' : ''}`"
     >
       <AutoComplete
         :async="true"
@@ -61,7 +61,7 @@
     </div>
 
     <div
-      :class="`flex flex-col w-full${destinationEndpointSearchAutocompleteOpen ? ' autocomplete-container' : ''}`"
+      :class="`globus-autocomplete flex flex-col w-full${destinationEndpointSearchAutocompleteOpen ? ' autocomplete-container' : ''}`"
     >
       <AutoComplete
         :async="true"
@@ -417,10 +417,21 @@ onMounted(() => {
 
 <style lang="scss">
 .collection-search-modal {
-  --va-modal-dialog-min-height: 500px;
+  .va-modal__message {
+    padding-bottom: 0 var(--va-modal-padding-right) 50px
+      var(--va-modal-padding-left);
+  }
+}
+
+.collection-search-modal {
+  --va-modal-dialog-min-height: 600px;
 }
 
 .autocomplete-container {
   min-height: 300px;
+}
+
+.globus-autocomplete {
+  padding-bottom: 20px;
 }
 </style>
