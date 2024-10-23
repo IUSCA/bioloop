@@ -19,7 +19,7 @@
           })
         "
         label="Search Source Collection Files"
-        placeholder="Enter file path"
+        placeholder="Search Source file path"
         :data="retrievedSourceFiles"
         display-by="path"
         @select="
@@ -57,10 +57,11 @@
     <div class="flex flex-col w-full autocomplete-container">
       <AutoComplete
         :async="true"
-        v-model:search-text="endpointSearchText"
+        v-model:search-text="destinationEndpointSearchText"
         @update:search-text="searchGlobusEndpoints"
         label="Search Destination Endpoints"
         placeholder="Search Destination Endpoints"
+        :disabled="!sourceFileToShare"
         :data="retrievedEndpoints"
         display-by="display_name"
         :messages="['Use hyphens between search terms']"
@@ -72,6 +73,9 @@
         @clear="
           () => {
             globusDestinationEndpoint = null;
+            destinationEndpointSearchText = '';
+            destinationFileToShare = null;
+            retrievedDestinationFiles = [];
           }
         "
         @open="
@@ -91,17 +95,6 @@
       <!--      <div class="text-sm va-text-danger">-->
       <!--        {{ modalError }}-->
       <!--      </div>-->
-
-      <va-inner-loading class="mt-5" :loading="loading">
-        <GlobusCollectionInfo
-          v-if="globusDestinationEndpoint"
-          :destination-collection="globusDestinationEndpoint"
-          :source-collection="globusSourceEndpoint"
-          :file-path="
-            getEntitySourceCollectionPath(props.entityToShare.origin_path)
-          "
-        />
-      </va-inner-loading>
     </div>
 
     <div class="flex flex-col w-full autocomplete-container">
@@ -114,10 +107,11 @@
             path: destinationFileSearchText,
           })
         "
-        label="Search Destination Collection Files"
-        placeholder="Enter file path"
+        label="Search Destination Collection Directories"
+        placeholder="Search Destination Directory"
         :data="retrievedDestinationFiles"
         display-by="path"
+        :disabled="!globusDestinationEndpoint"
         @select="
           (item) => {
             setGlobusDestinationFileToShare({ file: item });
@@ -150,6 +144,21 @@
       <!--        {{ modalError }}-->
       <!--      </div>-->
     </div>
+
+    <va-inner-loading
+      v-if="!!destinationFileToShare"
+      class="mt-5"
+      :loading="loading"
+    >
+      <GlobusCollectionInfo
+        v-if="globusDestinationEndpoint"
+        :destination-collection="globusDestinationEndpoint"
+        :source-collection="globusSourceEndpoint"
+        :file-path="
+          getEntitySourceCollectionPath(props.entityToShare.origin_path)
+        "
+      />
+    </va-inner-loading>
   </va-modal>
 </template>
 
@@ -180,7 +189,7 @@ const showModal = computed({
     emit("update:showModal", value);
   },
 });
-const endpointSearchText = ref("");
+const destinationEndpointSearchText = ref("");
 const sourceFileSearchText = ref("");
 const destinationFileSearchText = ref("");
 const retrievedEndpoints = ref([]);
@@ -192,14 +201,15 @@ const sourceFileToShare = ref(null);
 const destinationFileToShare = ref(null);
 const retrievedSourceFiles = ref([]);
 const retrievedDestinationFiles = ref([]);
+const loading = ref(false);
 
 const searchGlobusEndpoints = () => {
-  if (!endpointSearchText.value) {
+  if (!destinationEndpointSearchText.value) {
     return [];
   }
   return globusTransferService
     .searchEndpoints({
-      filter_fulltext: encodeURIComponent(endpointSearchText.value),
+      filter_fulltext: encodeURIComponent(destinationEndpointSearchText.value),
     })
     .then((res) => {
       retrievedEndpoints.value = res.data["DATA"];
@@ -243,17 +253,17 @@ const searchCollectionFiles = ({ collectionId, path }) => {
 const beforeGlobusShareModalClose = () => {
   console.log("onGlobusShareModalClose()");
   modalError.value = "";
-  endpointSearchText.value = "";
+  destinationEndpointSearchText.value = "";
   showGlobusShareModal.value = false;
   globusDestinationEndpoint.value = null;
 };
 
 const onGlobusShareModalOk = () => {
   console.log("onGlobusShareModalOk()");
-  // endpointSearchText.value = "";
+  // destinationEndpointSearchText.value = "";
   if (globusDestinationEndpoint.value) {
     modalError.value = "";
-    endpointSearchText.value = "";
+    destinationEndpointSearchText.value = "";
     initiateGlobusTransfer();
     // selectedGlobusEndpoint.value = null;
   } else {
@@ -327,7 +337,8 @@ const initiateGlobusTransfer = () => {
 };
 
 const setGlobusCollections = ({ destinationCollection }) => {
-  endpointSearchText.value = destinationCollection.display_name;
+  loading.value = true;
+  destinationEndpointSearchText.value = destinationCollection.display_name;
   globusDestinationEndpoint.value = destinationCollection;
   globusTransferService
     .getEndpointById(config.globus.source_collection_id)
@@ -339,6 +350,9 @@ const setGlobusCollections = ({ destinationCollection }) => {
         `Could not retrieve collection ${config.globus.source_collection_id}`,
         err,
       );
+    })
+    .finally(() => {
+      loading.value = false;
     });
 };
 
