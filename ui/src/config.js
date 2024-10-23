@@ -165,6 +165,9 @@ const exports = {
     transfer_endpoint_url:
       import.meta.env.VITE_GLOBUS_TRANSFER_ENDPOINT_URL ||
       "https://localhost/globus/transfer",
+    file_search_endpoint_url:
+      import.meta.env.VITE_GLOBUS_FILE_SEARCH_ENDPOINT_URL ||
+      "https://localhost/globus/search",
     source_collection_id:
       import.meta.env.VITE_GLOBUS_SOURCE_ENDPOINT_ID || "source_endpoint_uuid",
     source_endpoint_path:

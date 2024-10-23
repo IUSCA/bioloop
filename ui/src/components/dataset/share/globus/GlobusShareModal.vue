@@ -12,11 +12,16 @@
       <AutoComplete
         :async="true"
         v-model:search-text="sourceFileSearchText"
-        @update:search-text="searchSourceFiles"
+        @update:search-text="
+          searchCollectionFiles({
+            collectionId: config.globus.source_collection_id,
+            path: sourceFileSearchText,
+          })
+        "
         label="Search Source Collection Files"
         placeholder="Enter file path"
         :data="retrievedSourceFiles"
-        display-by="display_name"
+        display-by="path"
         @select="
           (item) => {
             setSourceFileToShare({ file: item });
@@ -24,18 +29,21 @@
         "
         @clear="
           () => {
-            globusDestinationEndpoint = null;
+            setSourceFileToShare({ file: null });
           }
         "
         @open="
           () => {
-            globusDestinationEndpoint = null;
-            searchGlobusEndpoints();
+            setSourceFileToShare({ file: null });
+            searchCollectionFiles({
+              collectionId: config.globus.source_collection_id,
+              path: sourceFileSearchText,
+            });
           }
         "
         @close="
           () => {
-            retrievedEndpoints = [];
+            retrievedSourceFiles = [];
           }
         "
       >
@@ -57,61 +65,62 @@
       </va-inner-loading>
     </div>
 
-    <div class="flex flex-col w-full autocomplete-container">
-      <AutoComplete
-        :async="true"
-        v-model:search-text="endpointSearchText"
-        @update:search-text="searchGlobusEndpoints"
-        label="Search Destination Endpoints"
-        placeholder="Search Destination Endpoints"
-        :data="retrievedEndpoints"
-        display-by="display_name"
-        :messages="['Use hyphens between search terms']"
-        @select="
-          (item) => {
-            setGlobusCollections({ destinationCollection: item });
-          }
-        "
-        @clear="
-          () => {
-            globusDestinationEndpoint = null;
-          }
-        "
-        @open="
-          () => {
-            globusDestinationEndpoint = null;
-            searchGlobusEndpoints();
-          }
-        "
-        @close="
-          () => {
-            retrievedEndpoints = [];
-          }
-        "
-      >
-      </AutoComplete>
+    <!--    <div class="flex flex-col w-full autocomplete-container">-->
+    <!--      <AutoComplete-->
+    <!--        :async="true"-->
+    <!--        v-model:search-text="endpointSearchText"-->
+    <!--        @update:search-text="searchGlobusEndpoints"-->
+    <!--        label="Search Destination Endpoints"-->
+    <!--        placeholder="Search Destination Endpoints"-->
+    <!--        :data="retrievedEndpoints"-->
+    <!--        display-by="display_name"-->
+    <!--        :messages="['Use hyphens between search terms']"-->
+    <!--        @select="-->
+    <!--          (item) => {-->
+    <!--            setGlobusCollections({ destinationCollection: item });-->
+    <!--          }-->
+    <!--        "-->
+    <!--        @clear="-->
+    <!--          () => {-->
+    <!--            globusDestinationEndpoint = null;-->
+    <!--          }-->
+    <!--        "-->
+    <!--        @open="-->
+    <!--          () => {-->
+    <!--            globusDestinationEndpoint = null;-->
+    <!--            searchGlobusEndpoints();-->
+    <!--          }-->
+    <!--        "-->
+    <!--        @close="-->
+    <!--          () => {-->
+    <!--            retrievedEndpoints = [];-->
+    <!--          }-->
+    <!--        "-->
+    <!--      >-->
+    <!--      </AutoComplete>-->
 
-      <div class="text-sm va-text-danger">
-        {{ modalError }}
-      </div>
+    <!--      <div class="text-sm va-text-danger">-->
+    <!--        {{ modalError }}-->
+    <!--      </div>-->
 
-      <va-inner-loading class="mt-5" :loading="loading">
-        <GlobusCollectionInfo
-          v-if="globusDestinationEndpoint"
-          :destination-collection="globusDestinationEndpoint"
-          :source-collection="globusSourceEndpoint"
-          :file-path="
-            getEntitySourceCollectionPath(props.entityToShare.origin_path)
-          "
-        />
-      </va-inner-loading>
-    </div>
+    <!--      <va-inner-loading class="mt-5" :loading="loading">-->
+    <!--        <GlobusCollectionInfo-->
+    <!--          v-if="globusDestinationEndpoint"-->
+    <!--          :destination-collection="globusDestinationEndpoint"-->
+    <!--          :source-collection="globusSourceEndpoint"-->
+    <!--          :file-path="-->
+    <!--            getEntitySourceCollectionPath(props.entityToShare.origin_path)-->
+    <!--          "-->
+    <!--        />-->
+    <!--      </va-inner-loading>-->
+    <!--    </div>-->
   </va-modal>
 </template>
 
 <script setup>
 import globusTransferService from "@/services/globus/transfer";
 import GlobusAppService from "@/services/globus/appApi";
+import globusFileSearchService from "@/services/globus/fileSearch";
 import config from "@/config";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
@@ -136,12 +145,14 @@ const showModal = computed({
   },
 });
 const endpointSearchText = ref("");
+const sourceFileSearchText = ref("");
 const retrievedEndpoints = ref([]);
 const showGlobusShareModal = ref(false);
 const globusDestinationEndpoint = ref(null);
 const globusSourceEndpoint = ref(null);
 const modalError = ref("");
 const sourceFileToShare = ref(null);
+const retrievedSourceFiles = ref([]);
 
 const searchGlobusEndpoints = () => {
   if (!endpointSearchText.value) {
@@ -153,6 +164,24 @@ const searchGlobusEndpoints = () => {
     })
     .then((res) => {
       retrievedEndpoints.value = res.data["DATA"];
+    });
+};
+
+const searchCollectionFiles = ({ collectionId, path }) => {
+  if (!path) {
+    return [];
+  }
+
+  globusFileSearchService
+    .listFiles({ collectionId, path })
+    .then((res) => {
+      retrievedSourceFiles.value = res.data["DATA"].map((file) => ({
+        ...file,
+        path: `${path}/${file.name}`,
+      }));
+    })
+    .catch((err) => {
+      console.error("Error searching collection files", err);
     });
 };
 
@@ -259,6 +288,8 @@ const setGlobusCollections = ({ destinationCollection }) => {
 
 const setSourceFileToShare = ({ file }) => {
   sourceFileToShare.value = file;
+  sourceFileSearchText.value = `${file.path}/${name}`;
+  console.log("file: ", file);
 };
 
 onMounted(() => {

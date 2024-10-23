@@ -208,8 +208,11 @@ export const useAuthStore = defineStore("auth", () => {
   const getTheme = () => user.value.theme;
 
   const setGlobusAccessToken = (token) => {
-    console.log("setGlobusAccessToken(): globusAccessToken.value ", token);
     globusAccessToken.value = token;
+    console.log(
+      "setGlobusAccessToken(): globusAccessToken.value ",
+      globusAccessToken.value,
+    );
   };
 
   const isGlobusAccessTokenValid = () => {
