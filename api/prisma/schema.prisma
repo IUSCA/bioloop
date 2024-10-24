@@ -11,8 +11,6 @@ model dataset {
   id               Int                   @id @default(autoincrement())
   name             String
   type             String
-  file_type        dataset_file_type?    @relation(fields: [file_type_id], references: [id])
-  file_type_id     Int?
   num_directories  Int?
   num_files        Int?
   du_size          BigInt?
@@ -93,15 +91,6 @@ model dataset_file_hierarchy {
 
   @@id([parent_id, child_id])
   @@index([child_id])
-}
-
-model dataset_file_type {
-  id        Int       @id @default(autoincrement())
-  name      String
-  extension String
-  datasets  dataset[]
-
-  @@unique([name, extension])
 }
 
 model upload_log {
