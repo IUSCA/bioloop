@@ -52,6 +52,11 @@ const exports = {
             title: "Ingest Dataset",
             path: "/ingest",
           },
+          {
+            icon: "mdi:folder-upload",
+            title: "Upload Dataset",
+            path: "/datasetUpload",
+          },
         ],
       },
       // {
@@ -76,11 +81,6 @@ const exports = {
         title: "Stats/Tracking",
         path: "/stats",
         test_id: "sidebar-stats-tracking",
-      },
-      {
-        icon: "mdi:folder-upload",
-        title: "Dataset Upload",
-        path: "/datasetUpload",
       },
       {
         icon: "mdi:map-marker-path",
