@@ -119,9 +119,9 @@
               ></DatasetSelect>
             </va-form-field>
 
-            <!--            <div class="text-xs va-text-danger" v-if="!stepIsPristine">-->
-            <!--              {{ formErrors[STEP_KEYS.DIRECTORY] }}-->
-            <!--            </div>-->
+            <div class="text-xs va-text-danger" v-if="!stepIsPristine">
+              {{ formErrors[STEP_KEYS.DIRECTORY] }}
+            </div>
           </div>
         </template>
 
@@ -527,13 +527,10 @@ watch(step, () => {
 
 onMounted(() => {
   loading.value = true;
-  Promise.all([
-    datasetService.get_file_types(),
-    datasetService.getAll({ type: "RAW_DATA" }),
-  ])
-    .then(([res1, res2]) => {
-      fileTypeList.value = res1.data;
-      rawDataList.value = res2.data.datasets;
+  datasetService
+    .getAll({ type: "RAW_DATA" })
+    .then((res) => {
+      rawDataList.value = res.data.datasets;
     })
     .catch((err) => {
       toast.error("Failed to load resources");
