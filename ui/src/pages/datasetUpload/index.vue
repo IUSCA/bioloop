@@ -37,57 +37,24 @@
       </va-chip>
     </template>
 
-    <template #cell(data_product_name)="{ rowData }">
-      <span
-        v-if="rowData.status !== config.upload_status.COMPLETE"
-        class="va-text-secondary"
-      >
-        {{ rowData.data_product_name }}
-      </span>
+    <template #cell(uploaded_dataset)="{ rowData }">
+      <router-link :to="`/datasets/${rowData.dataset.id}`" class="va-link">{{
+        rowData.dataset.name
+      }}</router-link>
+    </template>
+
+    <template #cell(source_dataset)="{ rowData }">
       <router-link
-        v-else
-        :to="`/datasets/${rowData.dataset_id}`"
+        v-if="rowData.source_dataset"
+        :to="`/datasets/${rowData.source_dataset.id}`"
         class="va-link"
-        >{{ rowData.data_product_name }}</router-link
       >
+        {{ rowData.source_dataset.name }}
+      </router-link>
     </template>
 
-    <template #cell(source_dataset_name)="{ rowData }">
-      <router-link v-if="rowData.source_dataset_id">
-        :to="`/datasets/${rowData.source_dataset_id}`" class="va-link" >{{
-          rowData.source_dataset_name
-        }}</router-link
-      >
-    </template>
-
-    <template #cell(user_name)="{ value }">
-      <span>{{ value }}</span>
-    </template>
-
-    <template #cell(actions)="{ row, isExpanded }">
-      <VaButton
-        :icon="isExpanded ? 'va-arrow-up' : 'va-arrow-down'"
-        preset="secondary"
-        class="w-full"
-        @click="row.toggleRowDetails()"
-      >
-        {{ isExpanded ? "Hide" : "More info" }}
-      </VaButton>
-    </template>
-
-    <template #expandableRow="{ rowData }">
-      <va-card>
-        <va-card-title>Files</va-card-title>
-        <va-card-content>
-          <va-data-table :items="rowData.files" :columns="fileColumns">
-            <template #cell(status)="{ value }">
-              <va-chip size="small" :color="getStatusChipColor(value)">
-                {{ value }}
-              </va-chip>
-            </template>
-          </va-data-table>
-        </va-card-content>
-      </va-card>
+    <template #cell(user)="{ rowData }">
+      <span>{{ rowData.user.name }} ({{ rowData.user.username }})</span>
     </template>
   </va-data-table>
 </template>
@@ -111,31 +78,54 @@ const uploads = computed(() => {
   console.log("computed uploads");
   console.dir(pastUploads.value, { depth: null });
   return pastUploads.value.map((e) => {
-    const sourceDataset =
+    const source_dataset =
       e.dataset.source_datasets.length > 0
-        ? e.dataset.source_datasets[0]
+        ? e.dataset.source_datasets[0].source_dataset
         : null;
     return {
       ...e,
-      data_product_name: e.dataset.name,
-      source_dataset_name: sourceDataset?.source_dataset.name,
-      source_dataset_id: sourceDataset?.source_dataset.id,
-      user_name: e.user.name,
+      user: e.user,
+      source_dataset,
+      uploaded_dataset: e.dataset,
     };
   });
 });
 
 const columns = [
-  { key: "status", sortable: true },
-  { key: "data_product_name", label: "Data Product", sortable: true },
-  { key: "source_dataset_name", label: "Source Dataset", sortable: true },
-  { key: "user_name", label: "Uploaded By", sortable: true },
-  { key: "actions", width: "120px" },
-];
-
-const fileColumns = [
-  { key: "name", sortable: true, width: "50%" },
-  { key: "status", sortable: true, width: "50%" },
+  { key: "status", width: "5%" },
+  {
+    key: "uploaded_dataset",
+    label: "Uploaded Data Product",
+    width: "30%",
+    thAlign: "center",
+    tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
+  {
+    key: "source_dataset",
+    label: "Source Dataset",
+    width: "30%",
+    thAlign: "center",
+    tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
+  {
+    key: "user",
+    label: "Uploaded By",
+    width: "25%",
+    thAlign: "center",
+    tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
 ];
 
 const getStatusChipColor = (value) => {
