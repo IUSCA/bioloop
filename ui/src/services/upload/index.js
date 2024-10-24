@@ -4,7 +4,7 @@ import api from "../api";
 class UploadService {
   constructor() {
     this.uploadApi = new UploadApi();
-    this.axios = this.uploadApi.axiosInstance;
+    this.uploadAxios = this.uploadApi.axiosInstance;
   }
 
   setToken(token) {
@@ -33,7 +33,7 @@ class UploadService {
   }
 
   uploadFile(data) {
-    return this.axios.post("/upload", data);
+    return this.uploadAxios.post("/upload", data);
   }
 }
 
