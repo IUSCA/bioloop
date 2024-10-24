@@ -123,7 +123,7 @@
   </va-alert>
 
   <!-- Submitted values -->
-  <va-card v-if="props.submitAttempted" class="mt-5">
+  <va-card class="mt-5">
     <va-card-title>
       <div class="flex flex-nowrap items-center w-full">
         <span class="text-lg">Details</span>
@@ -142,8 +142,19 @@
               </td>
             </tr>
             <tr>
-              <td>Data Product Name</td>
-              <td>{{ props.datasetName }}</td>
+              <td>Data Product</td>
+              <td>
+                <span>
+                  <router-link
+                    v-if="props.uploadedDataProduct"
+                    :to="`/datasets/${props.uploadedDataProduct?.id}`"
+                    target="_blank"
+                  >
+                    {{ props.uploadedDataProduct?.name }}
+                  </router-link>
+                  <span v-else> {{ props.uploadedDataProductName }}</span>
+                </span>
+              </td>
             </tr>
             <tr v-if="props.sourceRawData">
               <td>Source Raw Data</td>
@@ -176,7 +187,11 @@ const props = defineProps({
     type: Array,
     required: true,
   },
-  datasetName: {
+  uploadedDataProduct: {
+    type: Object,
+    required: true,
+  },
+  uploadedDataProductName: {
     type: String,
     required: true,
   },
@@ -272,6 +287,22 @@ const onDirectorySelection = (e) => {
 const removeFile = (index) => {
   emit("file-removed", index);
 };
+
+onMounted(() => {
+  console.log("onMounted");
+  console.log("props");
+  console.log("props.uploadedDataProduct", props.uploadedDataProduct);
+  console.log("props.sourceRawData", props.sourceRawData);
+  console.log("props.uploadedDataProductName", props.uploadedDataProductName);
+});
+
+watch(
+  () => props.uploadedDataProduct,
+  () => {
+    console.log("watch");
+    console.log("props.uploadedDataProduct", props.uploadedDataProduct);
+  },
+);
 </script>
 
 <style scoped>

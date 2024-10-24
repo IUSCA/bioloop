@@ -71,11 +71,11 @@
 
         <template #step-content-1>
           <DatasetFileUploadTable
-            :file-type="fileTypeSelected"
             :source-raw-data="
               rawDataSelected.length > 0 ? rawDataSelected[0] : null
             "
-            :dataset-name="datasetName"
+            :uploaded-data-product="uploadLogDataset"
+            :uploaded-data-product-name="dataProductDirectoryName"
             :status-chip-color="statusChipColor"
             :submission-status="submissionStatus"
             :is-submission-alert-visible="isSubmissionAlertVisible"
@@ -229,11 +229,13 @@ const stepIsPristine = computed(() => {
 });
 
 const loading = ref(true);
-const datasetName = ref("");
-const fileTypeSelected = ref(null);
+const datasetId = ref(null);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const uploadLog = ref();
+const uploadLogDataset = computed(() => {
+  return uploadLog.value?.dataset;
+});
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
 const statusChipColor = ref();
 const submissionAlert = ref(); // For handling network errors before upload begins
@@ -242,6 +244,9 @@ const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
 const dataProductFiles = ref([]);
 const dataProductDirectory = ref(null);
+const dataProductDirectoryName = computed(() => {
+  return dataProductDirectory.value?.name;
+});
 const step = ref(0);
 const uploadCancelled = ref(false);
 const selectedUploadFiles = ref([]);
