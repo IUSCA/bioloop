@@ -19,6 +19,7 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   function initialize() {
+    console.log("initializing auth store...");
     if (user.value && token.value) {
       loggedIn.value = true;
       refreshTokenBeforeExpiry();
@@ -39,9 +40,11 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function casLogin({ ticket }) {
+    console.log("logging in with CAS ticket", ticket);
     return authService
       .casVerify(ticket)
       .then((res) => {
+        console.log("CAS Login response", res);
         if (res.data) onLogin(res.data);
         return res.data;
       })

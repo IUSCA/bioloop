@@ -10,6 +10,8 @@
 import authService from "@/services/auth";
 import { useAuthStore } from "@/stores/auth";
 
+console.log('Getting to IU CAS page');
+
 const auth = useAuthStore();
 </script>
 

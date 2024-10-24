@@ -191,13 +191,8 @@ const operator_items = ref([
     title: "Workflows",
     path: "/workflows",
     test_id: "sidebar-workflows",
-  },
-  {
-    icon: "carbon:batch-job",
-    title: "Batch Download",
-    path: "/batchdownload",
-    test_id: "sidebar-batch-download",
   }
+
   // {
   //   icon: "mdi-account-multiple",
   //   title: "Group Management",
@@ -231,7 +226,12 @@ const bottom_items = ref([
   },
 ]);
 
-const admin_items = ref([]);
+const admin_items = ref([  {
+    icon: "carbon:batch-job",
+    title: "Batch Download",
+    path: "/batchdownload",
+    test_id: "sidebar-batch-download",
+  }]);
 </script>
 
 <style>

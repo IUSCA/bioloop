@@ -37,11 +37,17 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
+
+    console.log('req.body.ticket', req.body.ticket);
     const login = async (cas_id) => {
+      console.log('getting user...')
       const user = await userService.findActiveUserBy('cas_id', cas_id);
 
+      console.log('user', user);
       if (user) {
         const resObj = await authService.onLogin({ user });
+        
+        console.log('resObj', resObj);
         return res.json(resObj);
       }
       // User was authenticated with CAS but they are not a portal user
