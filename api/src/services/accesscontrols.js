@@ -52,6 +52,10 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    batch_download: {
+      'create:any': ['*'],
+
+    },
   },
 
   // user role permissions
