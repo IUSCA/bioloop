@@ -239,16 +239,41 @@ const noFilesSelected = computed(() => {
 });
 
 const columns = [
-  { key: "name" },
-  { key: "formattedSize", label: "Size" },
+  {
+    key: "name",
+    label: "File",
+    width: "40%",
+    thAlign: "left",
+    tdAlign: "left",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
+  {
+    key: "formattedSize",
+    label: "Size",
+    width: "10%",
+    thAlign: "center",
+    tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
   {
     key: "uploadStatus",
     label: "Status",
+    width: "30%",
     thAlign: "center",
     tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
-  { key: "progress" },
-  { key: "actions", width: "80px" },
+  { key: "progress", width: "15%" },
+  { key: "actions", width: "5%" },
 ];
 
 const onDirectorySelection = (e) => {
