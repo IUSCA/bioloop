@@ -3,13 +3,28 @@
     <div>
       <!-- ECharts BarChart Component -->
       <v-chart
-        v-if="isDataAvailable"
+        v-if="!isLoading && !isNoData"
         class="chart"
         :option="chartOptions"
         autoresize
         @click="onChartClick"
       />
-      <div v-else class="loading-message">Loading chart data...</div>
+      <!-- <div v-else class="loading-message">Loading chart data...</div> -->
+      <div
+        v-else-if="isLoading"
+        class="flex items-center justify-center"
+        style="height: 500px; width: 100%; font-size: 24px"
+      >
+        Loading...
+      </div>
+      <!-- Display 'No Data Found' if no data is fetched -->
+      <div
+        v-else
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        No Data Found
+      </div>
     </div>
     <div class="flex flex-row justify-center">
       <div class="max-w-max most-staged-datasets-chart-select-container">
@@ -52,7 +67,8 @@ use([
 
 // Default initialization to avoid undefined data
 const chartData = ref({ datasets: [], counts: [], ids: [] }); // Added ids array
-const isDataAvailable = ref(false); // Flag to indicate if data has been loaded
+const isLoading = ref(false); // Flag to indicate if data has been loaded
+const isNoData = ref(false); // Track if data is empty
 
 const dropdownOptions = [10, 20];
 const numberOfEntriesRetrieved = ref(dropdownOptions[0]);
@@ -68,16 +84,28 @@ const formatChartStatistics = (dataset_stats) => {
 
 // Fetch data from backend and update chart
 const retrieveAndConfigureChartData = () => {
-  isDataAvailable.value = false; // Set flag to false while data is loading
+  isLoading.value = true; // Set loading to true when starting the fetch
+  isNoData.value = false; // Reset noData state before fetching data
   StatisticsService.getMostStagedDatasets(numberOfEntriesRetrieved.value)
     .then((res) => {
       //console.log(res.data);
       chartData.value = formatChartStatistics(res.data);
-      isDataAvailable.value = true; // Set flag to true when data is ready
+      if (
+        !chartData.value.datasets.length ||
+        !chartData.value.counts.length ||
+        !chartData.value.ids.length
+      ) {
+        isNoData.value = true; // Set no data found
+      } else {
+        isNoData.value = false; // Data found
+      }
     })
     .catch((err) => {
       console.log("Unable to retrieve dataset count", err);
       toast.error("Unable to retrieve dataset count");
+    })
+    .finally(() => {
+      isLoading.value = false; // Set loading to false after fetch completes
     });
 };
 
@@ -175,9 +203,9 @@ const chartOptions = computed(() => ({
 .most-staged-datasets-chart-select-container {
   margin-top: 12px;
 }
-.loading-message {
+/* .loading-message {
   text-align: center;
   font-size: 16px;
   color: gray;
-}
+} */
 </style>

@@ -1,7 +1,27 @@
 <template>
   <div class="flex flex-col gap-5">
     <div>
+      <!-- Display 'Loading' while data is being fetched -->
+      <div
+        v-if="loading"
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        Loading...
+      </div>
+
+      <!-- Display 'No Data Found' if no data is fetched -->
+      <div
+        v-else-if="noData"
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        No Data Found
+      </div>
+
+      <!-- Show chart when data is loaded and available -->
       <v-chart
+        v-else
         :option="lineChartOption"
         autoresize
         style="height: 500px; width: 100%"
@@ -64,6 +84,8 @@ const endDateMax = ref();
 const startDateMin = ref();
 const isDateRangeLoaded = ref(false);
 const chartData = ref({ dates: [], counts: [] }); // Initialize with empty arrays
+const loading = ref(true); // Add loading state
+const noData = ref(false); // Add noData state
 
 const MONTH_DIFFERENCE = 3;
 
@@ -131,11 +153,26 @@ const configureChartData = (data) => {
 };
 
 const retrieveAndConfigureChartData = (startDate, endDate) => {
+  loading.value = true; // Set loading to true before data is fetched
+  noData.value = false; // Reset noData state
   StatisticsService.getStageRequestCountGroupedByDate(startDate, endDate)
-    .then((res) => configureChartData(res.data))
+    .then((res) => {
+      configureChartData(res.data);
+
+      // Check if the data arrays are empty, set noData to true if empty
+      if (
+        chartData.value.dates.length === 0 ||
+        chartData.value.counts.length === 0
+      ) {
+        noData.value = true;
+      }
+    })
     .catch((err) => {
       console.log("Unable to retrieve stage request counts by date", err);
       toast.error("Unable to retrieve stage request counts by date");
+    })
+    .finally(() => {
+      loading.value = false; // Set loading to false after data is fetched
     });
 };
 

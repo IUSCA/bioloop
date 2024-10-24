@@ -3,12 +3,28 @@
     <div>
       <!-- Render the bar chart -->
       <v-chart
-        v-if="isDataAvailable"
+        v-if="!isLoading && !isNoData"
         class="chart"
         :option="chartOptions"
         autoresize
+        @click="onChartClick"
       />
-      <div v-else class="loading-message">Loading chart data...</div>
+      <!-- <div v-else class="loading-message">Loading...</div> -->
+      <div
+        v-else-if="isLoading"
+        class="flex items-center justify-center"
+        style="height: 500px; width: 100%; font-size: 24px"
+      >
+        Loading...
+      </div>
+      <!-- Display 'No Data Found' if no data is fetched -->
+      <div
+        v-else
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        No Data Found
+      </div>
     </div>
     <div class="flex flex-row justify-center">
       <div class="max-w-max most-accessed-chart-select-container">
@@ -50,8 +66,9 @@ use([
 ]);
 
 // Reactive variables
-const chartData = ref({ names: [], counts: [] });
-const isDataAvailable = ref(false);
+const chartData = ref({ names: [], counts: [], ids: [] });
+const isLoading = ref(false);
+const isNoData = ref(false); // Track if data is empty
 
 const dropdownOptions = [10, 20];
 const numberOfEntriesRetrieved = ref(dropdownOptions[0]);
@@ -61,21 +78,45 @@ const configureChartData = (most_accessed_stats) => {
   return {
     names: most_accessed_stats.map((stat) => stat.name),
     counts: most_accessed_stats.map((stat) => stat.count),
+    ids: most_accessed_stats.map((stat) => stat.dataset_id), // Add dataset_id to the return object
   };
 };
 
 const retrieveAndConfigureChartData = () => {
-  isDataAvailable.value = false; // Set flag to false while loading data
+  isLoading.value = true; // Set flag to false while loading data
+  isNoData.value = false; // Reset noData state before fetching data
   StatisticsService.getMostAccessedData(numberOfEntriesRetrieved.value, true)
     .then((res) => {
-      console.log(res.data);
+      // console.log(res.data);
       chartData.value = configureChartData(res.data);
-      isDataAvailable.value = true; // Set flag to true once data is loaded
+      if (
+        !chartData.value.names.length ||
+        !chartData.value.counts.length ||
+        !chartData.value.ids.length
+      ) {
+        isNoData.value = true; // Set no data found
+      } else {
+        isNoData.value = false; // Data found
+      }
     })
     .catch((err) => {
       console.log("Unable to retrieve most accessed files", err);
       toast.error("Unable to retrieve most accessed files");
+    })
+    .finally(() => {
+      isLoading.value = false; // Set loading to false after fetch completes
     });
+};
+
+// Add the click event listener on the chart component
+const onChartClick = (params) => {
+  if (params.componentType === "series") {
+    const datasetId = chartData.value.ids[params.dataIndex]; // Get dataset_id using dataIndex
+    if (datasetId) {
+      // Navigate to the dataset page using the dataset_id
+      window.location.href = `/datasets/${datasetId}`; // Use relative path for navigation
+    }
+  }
 };
 
 // Watcher to handle dropdown selection change
@@ -165,9 +206,9 @@ const chartOptions = computed(() => ({
 .most-accessed-chart-select-container {
   margin-top: 12px;
 }
-.loading-message {
+/* .loading-message {
   text-align: center;
   font-size: 16px;
   color: gray;
-}
+} */
 </style>

@@ -3,17 +3,47 @@
     <div class="flex flex-row justify-between">
       <div class="w-1/2">
         <v-chart
+          v-if="!isLoading && !isNoData"
           :option="lineChartOption"
           autoresize
           style="height: 500px; width: 100%"
         />
+        <div
+          v-else-if="isLoading"
+          class="flex items-center justify-center"
+          style="height: 500px; width: 100%; font-size: 24px"
+        >
+          Loading...
+        </div>
+        <div
+          v-else
+          class="flex items-center justify-center"
+          style="height: 500px; width: 100%; font-size: 24px"
+        >
+          No Data Found
+        </div>
       </div>
       <div class="w-1/2">
         <v-chart
+          v-if="!isLoading && !isNoData"
           :option="pieChartOption"
           autoresize
           style="height: 500px; width: 100%"
         />
+        <div
+          v-else-if="isLoading"
+          class="flex items-center justify-center"
+          style="height: 500px; width: 100%; font-size: 24px"
+        >
+          Loading...
+        </div>
+        <div
+          v-else
+          class="flex items-center justify-center"
+          style="height: 500px; width: 100%; font-size: 24px"
+        >
+          No Data Found
+        </div>
       </div>
     </div>
     <div class="flex flex-row justify-center">
@@ -74,6 +104,8 @@ const endDateMax = ref();
 const startDateMin = ref();
 const isDateRangeLoaded = ref(false);
 const chartData = ref({});
+const isLoading = ref(true); // Track the loading state
+const isNoData = ref(false); // Track if data is empty
 
 const MONTH_DIFFERENCE = 3;
 
@@ -217,6 +249,16 @@ const configureChartData = (data) => {
     .filter((item) => item.access_type === "SLATE_SCRATCH")
     .reduce((sum, item) => sum + item.count, 0);
 
+  // Check if the data is empty
+  if (
+    data.length === 0 ||
+    (totalBrowserCount === 0 && totalSlateScratchCount === 0)
+  ) {
+    isNoData.value = true; // No data available
+  } else {
+    isNoData.value = false; // Data exists
+  }
+
   chartData.value = {
     dates,
     totalCounts: dates.map(
@@ -231,6 +273,7 @@ const configureChartData = (data) => {
       { value: totalSlateScratchCount, name: "SLATE_SCRATCH" },
     ],
   };
+  isLoading.value = false; // Data has been loaded, stop loading state
 };
 
 const totalAccessCount = computed(() => {
@@ -244,11 +287,14 @@ const totalAccessCount = computed(() => {
 });
 
 const retrieveAndConfigureChartData = (startDate, endDate) => {
+  isLoading.value = true; // Start loading state before fetching data
   StatisticsService.getDataAccessCountGroupedByDate(startDate, endDate, true)
     .then((res) => configureChartData(res.data))
     .catch((err) => {
       console.log("Unable to retrieve data access counts by date", err);
       toast.error("Unable to retrieve data access counts by date");
+      isLoading.value = false; // Stop loading state even if an error occurs
+      isNoData.value = true; // Assume no data if error occurs
     });
 };
 

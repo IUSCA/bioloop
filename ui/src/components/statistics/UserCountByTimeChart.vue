@@ -1,5 +1,22 @@
 <template>
   <div>
+    <!-- Display 'Loading' while data is being fetched -->
+    <div
+      v-if="loading"
+      class="flex justify-center items-center"
+      style="height: 500px; font-size: 24px"
+    >
+      Loading...
+    </div>
+
+    <!-- Display 'No Data Found' if no data is fetched -->
+    <div
+      v-else-if="noData"
+      class="flex justify-center items-center"
+      style="height: 500px; font-size: 24px"
+    >
+      No Data Found
+    </div>
     <v-chart
       :option="chartOptions"
       autoresize
@@ -35,6 +52,9 @@ use([
 
 // Register the component globally (Optional if used globally)
 const chartData = ref({});
+// Reactive variables for loading and data state
+const loading = ref(true); // Track loading state
+const noData = ref(false); // Track if there's no data
 
 // Function to format the date using the provided 'processUserCountLogs' function
 const processUserCountLogs = (user_count_logs) => {
@@ -86,7 +106,7 @@ const chartOptions = computed(() => {
         rotate: 45, // Rotate labels for better visibility
         formatter: function (value) {
           // Split the date string and remove the year
-          const [month, day, year] = value.split(" ");
+          const [month, day] = value.split(" ");
           return `${month} ${day}`; // Return only month and day
         },
       },
@@ -119,15 +139,28 @@ const chartOptions = computed(() => {
 
 // Function to retrieve and configure chart data
 const retrieveAndConfigureChartData = () => {
+  loading.value = true; // Set loading to true
+  noData.value = false; // Reset noData state
   StatisticsService.getUserCountGroupedByDate()
-    .then((res) => res.data)
+    .then((res) => {
+      const data = res.data;
+      if (data && data.length > 0) {
+        const processedData = processUserCountLogs(data);
+        chartData.value = processedData; // Assign processed data to chartData
+        noData.value = false; // Data exists
+      } else {
+        noData.value = true; // No data found
+        chartData.value = {}; // Reset chartData
+      }
+    })
     .catch((err) => {
       console.log("Unable to retrieve user count", err);
       toast.error("Unable to retrieve user count");
+      noData.value = true; // Set noData to true if there is an error
+      chartData.value = {}; // Reset chartData
     })
-    .then((data) => {
-      const processedData = processUserCountLogs(data);
-      chartData.value = processedData; // Assign processed data to chartData
+    .finally(() => {
+      loading.value = false; // Set loading to false after processing
     });
 };
 

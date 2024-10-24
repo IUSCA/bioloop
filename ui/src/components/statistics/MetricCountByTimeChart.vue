@@ -2,10 +2,27 @@
   <div class="flex flex-col gap-5">
     <div>
       <v-chart
+        v-if="!isLoading && !isNoData"
         :option="chartOptions"
         autoresize
         style="height: 400px; width: 100%"
       />
+      <div
+        v-else-if="isLoading"
+        class="flex justify-center items-center"
+        style="height: 400px; font-size: 24px"
+      >
+        Loading...
+      </div>
+
+      <!-- Display 'No Data Found' if no data is fetched -->
+      <div
+        v-else
+        class="flex justify-center items-center"
+        style="height: 400px; font-size: 24px"
+      >
+        No Data Found
+      </div>
     </div>
     <div class="flex flex-row justify-center">
       <div class="max-w-max">
@@ -61,8 +78,11 @@ const props = defineProps({
 
 const _being_used = ref(); // (unformatted) latest measure for given metric
 const _limit = ref(); // (unformatted) limit (max possible value) for given metric
+const isLoading = ref(false); // Flag to indicate if data has been loaded
+const isNoData = ref(false); // Track if data is empty
 
 const chartData = ref([]);
+const tooltipData = ref([]);
 const chartOptions = computed(() => {
   return {
     title: {
@@ -76,26 +96,30 @@ const chartOptions = computed(() => {
         // Access the timestamp from the first data point in `params`
         const firstDataPoint = params[0].data;
         const timestamp = firstDataPoint.value
-          ? firstDataPoint.value[0]
+          ? firstDataPoint.value[0] // This is the timestamp
           : firstDataPoint[0];
 
         // Convert timestamp to a readable date
         const formattedDate = new Date(timestamp).toLocaleString();
         let tooltipText = `${formattedDate}<br/>`; // Display date & time
 
+        // Find usage value based on the timestamp in tooltipData
+        const matchedData = tooltipData.value.find(
+          (data) => data.timestamp === timestamp,
+        );
+
         // Loop through each line's data point
         params.forEach((param) => {
-          // console.log("Tooltip param object:", param); // Debugging log
-
           // Check if `param` and `param.data` exist
           if (!param || !param.data || !param.data.value) {
             tooltipText += `${param.seriesName}: No data available<br/>`;
             return; // Continue to the next iteration
           }
 
-          // Extract the `usage` value from `param.data.value[1]`
-          const usageValue = param.data.value[1];
-          // console.log("Extracted usage value:", usageValue); // Debugging log
+          // Extract the `usage` value
+          const usageValue = matchedData
+            ? matchedData.usage
+            : "No usage data available";
 
           // Handle different measurement types
           let formattedValue;
@@ -117,8 +141,20 @@ const chartOptions = computed(() => {
         return tooltipText;
       },
     },
+
     xAxis: {
       type: "time",
+      axisLabel: {
+        formatter: (value) => {
+          // Create a new date object from the timestamp
+          const date = new Date(value);
+          // Format the date as DD/MM/YYYY
+          const day = String(date.getDate()).padStart(2, "0"); // Pad single digits with a leading zero
+          const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+          const year = date.getFullYear();
+          return `${year}/${month}/${day}`;
+        },
+      },
     },
     yAxis: {
       type: "category",
@@ -140,7 +176,11 @@ const chartOptions = computed(() => {
         data: chartData.value.map((item) => ({
           value: [
             item.timestamp,
+            //item.usage,
             getUniqueSortedYAxisValues().indexOf(item.usage), // Use the index in the y-axis categories
+            //console.log(item.usage),
+            //console.log("chartData.value:", chartData.value),
+            //console.log(getUniqueSortedYAxisValues().indexOf(item.usage)),
           ],
         })),
       },
@@ -188,7 +228,7 @@ const chartTitleCallBack = () => {
 const getUniqueSortedYAxisValues = () => {
   // Extract 'usage' values from chartData and create a Set to get unique values
   const uniqueValues = [...new Set(chartData.value.map((item) => item.usage))];
-  console.log(uniqueValues);
+  //console.log(uniqueValues);
 
   // Sort the values in ascending order
   return uniqueValues.sort((a, b) => a - b);
@@ -221,11 +261,31 @@ const yAxisTicksCallback = (val) => {
 };
 
 const retrieveAndConfigureChartData = () => {
+  isLoading.value = true; // Set loading to true when starting the fetch
+  isNoData.value = false; // Reset noData state before fetching data
+
   MetricsService.getSpaceUtilizationByTimeAndMeasurement(props.measurement)
     .then((res) => {
       chartData.value = res.data;
       _being_used.value = res.data.length > 0 ? res.data[0].usage : 0;
       _limit.value = res.data.length > 0 ? res.data[0].limit : 0;
+
+      // Populate tooltipData with timestamp and usage
+      tooltipData.value = res.data.map((item) => ({
+        timestamp: item.timestamp,
+        usage: item.usage,
+      }));
+
+      const totalUsageValues = res.data.map((item) => item.usage).length;
+      const totalTimestampValues = res.data.map(
+        (item) => item.timestamp,
+      ).length;
+
+      if (totalUsageValues === 0 && totalTimestampValues === 0) {
+        isNoData.value = true; // Set no data found
+      } else {
+        isNoData.value = false; // Data found
+      }
     })
     .catch((err) => {
       console.log(
@@ -235,6 +295,9 @@ const retrieveAndConfigureChartData = () => {
       toast.error(
         `Unable to fetch metrics for measurement ${props.measurement}`,
       );
+    })
+    .finally(() => {
+      isLoading.value = false; // Set loading to false after fetch completes
     });
 };
 
