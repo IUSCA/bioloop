@@ -169,5 +169,5 @@ config = {
             'max_purge_count': 10
         }
     },
-'batch_script': '/opt/sca/script.sh',
+'batch_script': '/opt/sca/test.sh',
 }

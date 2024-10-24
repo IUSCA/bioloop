@@ -4,8 +4,8 @@ import batchDownloadService from '@/services/batchDownload';
 const batch_id = ref('')
 
 const download = async () => {
-  const results = await batchDownloadService.intiate_download(batch_id)
-  
+  const results = await batchDownloadService.intiate_download(batch_id.value)
+
 }
 
 

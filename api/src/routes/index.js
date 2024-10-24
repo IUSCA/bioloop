@@ -13,6 +13,7 @@ router.use('/env', require('./env'));
 // From this point on, all routes require authentication.
 router.use(authenticate);
 
+router.use('/batch_download', require('./batch_download') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": []}] */);

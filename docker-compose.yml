@@ -85,7 +85,7 @@ services:
     volumes:
       # - ./workers/:/opt/sca
       - /home/ryanlong/Downloads/metadata_2024_03_01.csv:/opt/sca/metadata.csv
-      - /home/ryanlong/Downloads/test.sh:/opt/sca/test.sh
+      - ./workers/test.sh:/opt/sca/test.sh
     # entrypoint:
     #   - tail
     #   - -f

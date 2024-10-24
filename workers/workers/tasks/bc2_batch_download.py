@@ -3,10 +3,14 @@ from workers.config import config
 
 
 def batch_download(celery_task, batch_id, **kwargs):
-  stdout, stderr = cmd.execute([f'{config['batch_script']}', '{batch_id}'])
+
+  batch_script = config['batch_script']
+
+  stdout, stderr = cmd.execute([f'{batch_script}', f'{batch_id}'])
+
+  print(f'STDOUT: {stdout} STDERR: {stderr}')
+
   if stderr:
     raise Exception(stderr)
   
-  print(stdout)
-
   return batch_id,
