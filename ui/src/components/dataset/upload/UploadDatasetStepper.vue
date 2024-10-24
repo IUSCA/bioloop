@@ -193,7 +193,7 @@ const SOURCE_RAW_DATA_REQUIRED_ERROR =
 
 const formErrors = ref({
   [STEP_KEYS.RAW_DATA]: null,
-  [STEP_KEYS.INFO]: null,
+  [STEP_KEYS.UPLOAD]: null,
 });
 const formHasErrors = computed(() => {
   const errors = Object.values(formErrors.value);
@@ -229,7 +229,6 @@ const stepIsPristine = computed(() => {
 });
 
 const loading = ref(true);
-const datasetId = ref(null);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const uploadLog = ref();
@@ -275,7 +274,7 @@ const uploadFormData = computed(() => {
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.RAW_DATA]: null,
-    [STEP_KEYS.INFO]: null,
+    [STEP_KEYS.UPLOAD]: null,
   };
 };
 
@@ -788,6 +787,32 @@ onMounted(() => {
       e.returnValue = true;
     }
   });
+});
+
+watch(
+  [
+    rawDataSelected,
+    // selectedFile,
+    // fileListSearchText,
+    // isFileSearchAutocompleteOpen,
+    // searchSpace,
+    isAssignedSourceRawData,
+  ],
+  async (newVals, oldVals) => {
+    // mark step's form fields as not pristine, for fields' errors to be shown
+    const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
+    if (stepKey === STEP_KEYS.RAW_DATA) {
+      stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0];
+    } else {
+      stepPristineStates.value[step.value][stepKey] = false;
+    }
+
+    await setFormErrors();
+  },
+);
+
+onMounted(() => {
+  setFormErrors();
 });
 
 // show warning before user moves to a different route
