@@ -304,6 +304,17 @@ async function has_dataset_assoc({
   return projects.length > 0;
 }
 
+// Code to check if a particular dataset is linked to any projects or not.
+
+async function has_project_dataset_assoc({ datasetId }) {
+  const projectDatasetAssociations = await prisma.project_dataset.findMany({
+    where: {
+      dataset_id: datasetId,
+    },
+  });
+  return projectDatasetAssociations.length > 0;
+}
+
 // async function search_files({ dataset_id, query }) {
 //   const file_matches_promise = prisma.$queryRaw`
 //     select
@@ -486,6 +497,7 @@ module.exports = {
   create_workflow,
   create_filetree,
   has_dataset_assoc,
+  has_project_dataset_assoc,
   files_ls,
   search_files,
   add_files,
