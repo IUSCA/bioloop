@@ -29,14 +29,6 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Data Product ingestion - UI
-router.get(
-  '/file-types',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const dataset_file_types = await prisma.dataset_file_type.findMany();
-    res.json(dataset_file_types);
-  }),
-);
 
 router.post(
   '/:id/action-item',
@@ -420,7 +412,6 @@ router.get(
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').toBoolean().optional(),
-    query('include_file_type').toBoolean().optional(),
     query('include_action_items').optional().toBoolean(),
     query('include_duplications').optional().toBoolean(),
     query('include_states').toBoolean().optional(),
@@ -444,7 +435,6 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
-        file_type: req.query.include_file_type || false,
         action_items: req.query.include_action_items || false,
         ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
         ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DUPLICATIONS }),

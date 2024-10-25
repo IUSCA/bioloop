@@ -74,8 +74,6 @@
             :source-raw-data="
               rawDataSelected.length > 0 ? rawDataSelected[0] : null
             "
-            :uploaded-data-product="uploadLogDataset"
-            :uploaded-data-product-name="dataProductDirectoryName"
             :status-chip-color="statusChipColor"
             :submission-status="submissionStatus"
             :is-submission-alert-visible="isSubmissionAlertVisible"
@@ -84,6 +82,8 @@
               (files) => {
                 setFiles(files);
                 isSubmissionAlertVisible = false;
+                clearSelectedDirectoryToUpload();
+                setUploadedFileType(FILE_TYPE.FILE);
               }
             "
             @file-removed="removeFile"
@@ -92,12 +92,24 @@
                 console.log('Directory added', directoryDetails);
                 setDirectory(directoryDetails);
                 isSubmissionAlertVisible = false;
+                clearSelectedFilesToUpload();
+                setUploadedFileType(FILE_TYPE.DIRECTORY);
               }
             "
             :submit-attempted="submitAttempted"
             :submission-alert-color="submissionAlertColor"
             :data-product-files="dataProductFiles"
             :data-product-directory="dataProductDirectory"
+          />
+
+          <UploadedDatasetDetails
+            v-model:uploaded-directory-name="datasetNameSearchInput"
+            :selecting-files="selectingFiles"
+            :selecting-directory="selectingDirectory"
+            :uploaded-data-product-error-messages="[
+              formErrors.value[STEP_KEYS.UPLOAD],
+            ]"
+            :uploaded-data-product-error="!!formErrors.value[STEP_KEYS.UPLOAD]"
           />
         </template>
 
@@ -127,7 +139,7 @@
                 isLastStep
                   ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
                     ? "Retry"
-                    : "Upload Files"
+                    : "Upload"
                   : "Next"
               }}
             </va-button>
@@ -139,7 +151,6 @@
 </template>
 
 <script setup>
-import DatasetFileUploadTable from "@/components/dataset/upload/DatasetFileUploadTable.vue";
 import config from "@/config";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
@@ -160,6 +171,15 @@ const { SUBMISSION_STATES } = config;
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
 const isDirectory = ref(false);
 
+const STEP_KEYS = {
+  RAW_DATA: "rawData",
+  UPLOAD: "upload",
+};
+
+const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
+const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
+const HAS_SPACES_ERROR = "cannot contain spaces";
+
 const RETRY_COUNT_THRESHOLD = 1;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // Blob.slice method is used to segment files.
@@ -167,11 +187,6 @@ const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // ways.
 const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
-
-const STEP_KEYS = {
-  RAW_DATA: "rawData",
-  UPLOAD: "upload",
-};
 
 const steps = [
   { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
@@ -228,89 +243,20 @@ const stepIsPristine = computed(() => {
   return !!Object.values(stepPristineStates.value[step.value])[0];
 });
 
-const loading = ref(true);
-const rawDataList = ref([]);
-const rawDataSelected = ref([]);
-const uploadLog = ref();
-const uploadLogDataset = computed(() => {
-  return uploadLog.value?.dataset;
-});
-const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
-const statusChipColor = ref();
-const submissionAlert = ref(); // For handling network errors before upload begins
-const submissionAlertColor = ref();
-const isSubmissionAlertVisible = ref(false);
-const submitAttempted = ref(false);
-const dataProductFiles = ref([]);
-const dataProductDirectory = ref(null);
-const dataProductDirectoryName = computed(() => {
-  return dataProductDirectory.value?.name;
-});
-const step = ref(0);
-const uploadCancelled = ref(false);
-const selectedUploadFiles = ref([]);
-const selectedUploadDirectory = ref(null);
-
-const filesNotUploaded = computed(() => {
-  return dataProductFiles.value.filter(
-    (e) => e.uploadStatus !== config.upload_status.UPLOADED,
-  );
-});
-const someFilesPendingUpload = computed(
-  () => filesNotUploaded.value.length > 0,
-);
-const isLastStep = computed(() => {
-  return step.value === steps.length - 1;
-});
-const uploadFormData = computed(() => {
-  return {
-    name: dataProductDirectory.value.name,
-    ...(rawDataSelected.value.length > 0 && {
-      source_dataset_id: rawDataSelected.value[0].id,
-    }),
-  };
-});
-
-const resetFormErrors = () => {
-  formErrors.value = {
-    [STEP_KEYS.RAW_DATA]: null,
-    [STEP_KEYS.UPLOAD]: null,
-  };
+const removeFile = (index) => {
+  dataProductFiles.value.splice(index, 1);
 };
 
-const setFormErrors = async () => {
-  resetFormErrors();
-  // const { isNameValid: datasetNameIsValid, error } =
-  //   await validateDatasetName();
-
-  if (step.value === 0) {
-    if (!isAssignedSourceRawData.value) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = null;
-      return;
-    }
-    if (rawDataSelected.value.length === 0) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
-    }
-  }
+const stringHasSpaces = (name) => {
+  return name?.indexOf(" ") > -1;
 };
 
-// const isSubmitEnabled = computed(() => {
-//   return (
-//     submissionStatus.value === SUBMISSION_STATES.UNINITIATED ||
-//     submissionStatus.value === SUBMISSION_STATES.PROCESSING_FAILED ||
-//     submissionStatus.value === SUBMISSION_STATES.UPLOAD_FAILED
-//   );
-// });
-const noFilesSelected = computed(() => {
-  return dataProductFiles.value.length === 0;
-});
-
-const addDataset = (selectedDatasets) => {
-  rawDataSelected.value = selectedDatasets;
+const datasetNameHasMinimumChars = (name) => {
+  return name?.length >= 3;
 };
 
-const removeDataset = () => {
-  rawDataSelected.value = [];
+const datasetNameIsNull = (name) => {
+  return !name;
 };
 
 const validateNotExists = (value) => {
@@ -333,6 +279,175 @@ const validateNotExists = (value) => {
         });
     }
   });
+};
+
+const hasSpacesErrorStr = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
+
+const datasetNameValidationRules = [
+  (v) => {
+    return datasetNameIsNull(v) ? DATASET_NAME_REQUIRED_ERROR : true;
+  },
+  (v) => {
+    return datasetNameHasMinimumChars(v) ? true : DATASET_NAME_MAX_LENGTH_ERROR;
+  },
+  (v) => {
+    return stringHasSpaces(v) ? hasSpacesErrorStr("Dataset name") : true;
+  },
+  validateNotExists,
+];
+
+const loading = ref(true);
+const rawDataList = ref([]);
+const rawDataSelected = ref([]);
+const uploadLog = ref();
+const uploadLogDataset = computed(() => {
+  return uploadLog.value?.dataset;
+});
+const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
+const statusChipColor = ref();
+const submissionAlert = ref(); // For handling network errors before upload begins
+const submissionAlertColor = ref();
+const isSubmissionAlertVisible = ref(false);
+const submitAttempted = ref(false);
+const dataProductFiles = ref([]);
+const dataProductDirectory = ref(null);
+// const dataProductDirectoryName = computed(() => {
+//   return dataProductDirectory.value?.name || "";
+// });
+const dataProductDirectoryName = computed({
+  get() {
+    return dataProductDirectory.value?.name || "";
+  },
+  set(value) {},
+});
+
+const step = ref(0);
+const uploadCancelled = ref(false);
+
+const filesNotUploaded = computed(() => {
+  return dataProductFiles.value.filter(
+    (e) => e.uploadStatus !== config.upload_status.UPLOADED,
+  );
+});
+const someFilesPendingUpload = computed(
+  () => filesNotUploaded.value.length > 0,
+);
+const isLastStep = computed(() => {
+  return step.value === steps.length - 1;
+});
+
+const datasetNameSearchInput = ref("");
+
+const uploadFormData = computed(() => {
+  return {
+    name: dataProductDirectory.value.name,
+    ...(rawDataSelected.value.length > 0 && {
+      source_dataset_id: rawDataSelected.value[0].id,
+    }),
+  };
+});
+
+const resetFormErrors = () => {
+  formErrors.value = {
+    [STEP_KEYS.RAW_DATA]: null,
+    [STEP_KEYS.UPLOAD]: null,
+  };
+};
+
+const validateDatasetName = async () => {
+  if (datasetNameIsNull(datasetNameSearchInput.value)) {
+    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
+  } else if (!datasetNameHasMinimumChars(datasetNameSearchInput.value)) {
+    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
+  } else if (stringHasSpaces(datasetNameSearchInput.value)) {
+    return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
+  }
+
+  return datasetNameValidationRules[3](datasetNameSearchInput.value).then(
+    (res) => {
+      return {
+        isNameValid: res !== DATASET_EXISTS_ERROR,
+        error: DATASET_EXISTS_ERROR,
+      };
+    },
+  );
+};
+
+const clearSelectedDirectoryToUpload = () => {
+  dataProductDirectory.value = null;
+};
+
+const clearSelectedFilesToUpload = () => {
+  dataProductFiles.value = [];
+};
+
+const selectingFiles = ref(false);
+const selectingDirectory = ref(false);
+
+const FILE_TYPE = {
+  FILE: "file",
+  DIRECTORY: "directory",
+};
+
+const setUploadedFileType = (fileType) => {
+  if (fileType === FILE_TYPE.FILE) {
+    selectingFiles.value = true;
+    selectingDirectory.value = false;
+  } else if (fileType === FILE_TYPE.DIRECTORY) {
+    selectingDirectory.value = true;
+    selectingFiles.value = false;
+  }
+};
+
+const setFormErrors = async () => {
+  resetFormErrors();
+  const { isNameValid: datasetNameIsValid, error } =
+    await validateDatasetName();
+
+  if (step.value === 0) {
+    if (!isAssignedSourceRawData.value) {
+      formErrors.value[STEP_KEYS.RAW_DATA] = null;
+      return;
+    }
+    if (rawDataSelected.value.length === 0) {
+      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
+      return;
+    }
+  }
+
+  if (step.value === 1) {
+    if (
+      (selectingFiles.value && dataProductFiles.value?.length === 0) ||
+      (selectingDirectory.value && !dataProductDirectory.value)
+    ) {
+      formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
+      return;
+    }
+
+    if (datasetNameIsValid) {
+      formErrors.value[STEP_KEYS.UPLOAD] = null;
+    } else {
+      formErrors.value[STEP_KEYS.UPLOAD] = error;
+    }
+  }
+};
+// const isSubmitEnabled = computed(() => {
+//   return (
+//     submissionStatus.value === SUBMISSION_STATES.UNINITIATED ||
+//     submissionStatus.value === SUBMISSION_STATES.PROCESSING_FAILED ||
+//     submissionStatus.value === SUBMISSION_STATES.UPLOAD_FAILED
+//   );
+// });
+const noFilesSelected = computed(() => {
+  return dataProductFiles.value.length === 0;
+});
+
+const addDataset = (selectedDatasets) => {
+  rawDataSelected.value = selectedDatasets;
+};
+
+const removeDataset = () => {
+  rawDataSelected.value = [];
 };
 
 onMounted(() => {
@@ -747,18 +862,6 @@ const setDirectory = (directoryDetails) => {
   };
 };
 
-const removeFile = (index) => {
-  dataProductFiles.value.splice(index, 1);
-};
-
-const datasetNameHasMinimumChars = (name) => {
-  return name?.length >= 3;
-};
-
-const datasetNameIsNull = (name) => {
-  return !name;
-};
-
 // const validateDatasetName = async () => {
 //   const datasetName = selectedUploadFiles.value?.name;
 //   if (datasetNameIsNull(datasetName)) {
@@ -792,6 +895,9 @@ onMounted(() => {
 watch(
   [
     rawDataSelected,
+    datasetNameSearchInput,
+    selectingFiles,
+    selectingDirectory,
     // selectedFile,
     // fileListSearchText,
     // isFileSearchAutocompleteOpen,
