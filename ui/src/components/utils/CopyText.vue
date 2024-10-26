@@ -26,7 +26,7 @@ const props = defineProps(
     },
     errorMessages: {
       type: Array,
-      default: [],
+      default: () => [],
     },
   },
 );

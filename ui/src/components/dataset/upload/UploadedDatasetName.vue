@@ -2,25 +2,45 @@
   <CopyText
     v-if="props.selectingDirectory"
     :text="uploadedDatasetName"
-    :error-messages="props.errorMessages"
-    :error="props.error"
+    :error-messages="props.datasetNameErrorMessages"
+    :error="props.datasetNameError"
   />
 
   <va-input
     v-else-if="props.selectingFiles"
-    v-model="uploadedDatasetName"
+    v-model="uploadedDirectoryName"
     label="Data Product"
     :placeholder="'Dataset Product'"
     class="w-full"
+    :error="props.datasetNameError"
+    :error-messages="[props.datasetNameErrorMessages]"
   />
+
+  <!-- prop datasetNameErrorMessages is received but not forwarded - no error -->
+  <!--  <va-input-->
+  <!--    v-model="uploadedDirectoryName"-->
+  <!--    :error="props.datasetNameError"-->
+  <!--    :error-messages="[props.datasetNameErrorMessages]"-->
+  <!--  />-->
+
+  <!-- show error manually? -->
+
+  <!--  reset errorMessages when error is changed?-->
+
+  <!-- computed error msgs , reset to [] -->
+
+  <!-- prop datasetNameErrorMessages is received and is forwarded - error -->
+  <!--  <va-input-->
+  <!--    v-model="uploadedDirectoryName"-->
+  <!--    :error="props.datasetNameError"-->
+  <!--    :error-messages="props.datasetNameErrorMessages"-->
+  <!--  />-->
+
+  <!--  <CopyText :text="uploadedDirectoryName" />-->
 </template>
 
 <script setup>
 const props = defineProps({
-  showUploadedDatasetProductCopyText: {
-    type: Boolean,
-    default: false,
-  },
   uploadedDatasetName: {
     type: String,
     default: "",
@@ -33,21 +53,44 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  errorMessages: {
-    type: Array,
-    default: () => [],
-  },
-  error: {
+  datasetNameError: {
     type: Boolean,
-    default: null,
+    default: false,
+  },
+  datasetNameErrorMessages: {
+    type: String,
+    default: "",
   },
 });
 
-const uploadedDatasetName = computed({
+const emit = defineEmits(["update:uploadedDatasetName"]);
+
+const uploadedDirectoryName = computed({
   get() {
     return props.uploadedDatasetName;
   },
-  set(value) {},
+  set(value) {
+    emit("update:uploadedDatasetName", value);
+  },
+});
+
+// const errorMessages = computed({
+//   get() {
+//     return props.datasetNameErrorMessages;
+//   },
+//   set(value) {},
+// });
+
+onMounted(() => {
+  console.log("mounted");
+  console.log("props.isSelectingFiles", props.selectingFiles);
+  console.log("props.isSelectingDirectory", props.selectingDirectory);
+});
+
+watch([() => props.selectingFiles, () => props.selectingDirectory], () => {
+  console.log("watch");
+  console.log("props.isSelectingFiles", props.selectingFiles);
+  console.log("props.isSelectingDirectory", props.selectingDirectory);
 });
 </script>
 
