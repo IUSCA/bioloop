@@ -106,11 +106,12 @@
             v-model:uploaded-directory-name="datasetNameSearchInput"
             :selecting-files="selectingFiles"
             :selecting-directory="selectingDirectory"
-            :uploaded-data-product-error-messages="[
-              formErrors.value[STEP_KEYS.UPLOAD],
-            ]"
-            :uploaded-data-product-error="!!formErrors.value[STEP_KEYS.UPLOAD]"
+            :uploaded-data-product-error-messages="formErrors[STEP_KEYS.UPLOAD]"
+            :uploaded-data-product-error="!!formErrors[STEP_KEYS.UPLOAD]"
+            :source-raw-data="rawDataSelected"
           />
+          <!--          :uploaded-data-product-error-messages="[ formErrors[STEP_KEYS.UPLOAD],-->
+          <!--          ]"-->
         </template>
 
         <!-- custom controls -->
@@ -201,8 +202,6 @@ const steps = [
 const UPLOAD_FILE_REQUIRED_ERROR = "A file must be selected for upload.";
 const DATASET_NAME_MAX_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
-const DATASET_NAME_EXISTS_ERROR =
-  "A Data Product with this name already exists.";
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
   "You have requested a source Raw Data to be assigned. Please select one.";
 
@@ -271,11 +270,7 @@ const validateNotExists = (value) => {
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
         .then((res) => {
-          resolve(
-            res.data.datasets.length !== 0
-              ? "Data Product with provided name already exists"
-              : true,
-          );
+          resolve(res.data.datasets.length !== 0 ? DATASET_EXISTS_ERROR : true);
         });
     }
   });
@@ -314,12 +309,6 @@ const dataProductDirectory = ref(null);
 // const dataProductDirectoryName = computed(() => {
 //   return dataProductDirectory.value?.name || "";
 // });
-const dataProductDirectoryName = computed({
-  get() {
-    return dataProductDirectory.value?.name || "";
-  },
-  set(value) {},
-});
 
 const step = ref(0);
 const uploadCancelled = ref(false);

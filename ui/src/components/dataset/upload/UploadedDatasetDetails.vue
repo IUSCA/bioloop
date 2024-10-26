@@ -14,11 +14,20 @@
               <td>
                 <UploadedDatasetName
                   v-model:uploaded-dataset-name="uploadedDirectoryName"
+                  :dataset-name-error="props.uploadedDataProductError"
+                  :dataset-name-error-messages="
+                    props.uploadedDataProductErrorMessages
+                  "
                   :selecting-files="props.selectingFiles"
                   :selecting-directory="props.selectingDirectory"
-                  :error-messages="props.uploadedDataProductErrorMessages"
-                  :error="props.uploadedDataProductError"
                 />
+                <!--                :error="props.uploadedDataProductError"-->
+                <!--                  :error-messages="props.uploadedDataProductErrorMessages"-->
+
+                <!--                  :selecting-files="props.selectingFiles"-->
+                <!--                  :selecting-directory="props.selectingDirectory"-->
+                <!--                  :error-messages="props.uploadedDataProductErrorMessages"-->
+                <!--                  :error="props.uploadedDataProductError"-->
               </td>
             </tr>
 
@@ -31,15 +40,15 @@
               </td>
             </tr>
 
-            <tr v-if="props.sourceRawData">
+            <tr v-if="sourceRawData">
               <td>Source Raw Data</td>
               <td>
                 <span>
                   <router-link
-                    :to="`/datasets/${props.sourceRawData?.id}`"
+                    :to="`/datasets/${sourceRawData?.id}`"
                     target="_blank"
                   >
-                    {{ props.sourceRawData?.name }}
+                    {{ sourceRawData?.name }}
                   </router-link>
                 </span>
               </td>
@@ -66,21 +75,65 @@ const props = defineProps({
     required: true,
   },
   uploadedDataProductErrorMessages: {
-    type: Array,
-    required: true,
+    type: String,
+    default: "",
   },
   uploadedDataProductError: {
     type: Boolean,
-    required: true,
+    default: false,
+  },
+  statusChipColor: {
+    type: String,
+    default: "success",
+  },
+  sourceRawData: {
+    type: Array,
+    default: () => [],
   },
 });
+
+const emit = defineEmits(["update:uploadedDirectoryName"]);
 
 const uploadedDirectoryName = computed({
   get() {
     return props.uploadedDirectoryName;
   },
-  set(value) {},
+  set(value) {
+    emit("update:uploadedDirectoryName", value);
+  },
 });
+
+const sourceRawData = computed(() => props.sourceRawData[0]);
+
+watch(
+  () => props.sourceRawData,
+  () => {
+    console.log("Source Raw Data Changed");
+    console.dir(props.sourceRawData, { depth: null });
+  },
+);
+
+onMounted(() => {
+  console.log("details component mounted");
+  console.dir(props.sourceRawData, { depth: null });
+});
+
+// watch(
+//   [
+//     () => props.uploadedDataProductErrorMessages,
+//     () => props.uploadedDataProductError,
+//   ],
+//   (newVals, oldVals) => {
+//     console.log(
+//       "    () => props.uploadedDataProductErrorMessages,\n" +
+//         "    () => props.uploadedDataProductError,\n",
+//     );
+//     console.log("oldVals");
+//     console.log(oldVals[0], oldVals[1]);
+//     console.log("newVals");
+//     console.log(newVals[0], newVals[1]);
+//   },
+// );
 </script>
 
 <style scoped></style>
