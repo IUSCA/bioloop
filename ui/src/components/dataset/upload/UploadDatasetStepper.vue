@@ -103,7 +103,8 @@
           />
 
           <UploadedDatasetDetails
-            v-model:uploaded-directory-name="datasetNameSearchInput"
+            v-model:dataset-name-input="datasetNameInput"
+            :dataset-name="dataProductDirectory.name"
             :selecting-files="selectingFiles"
             :selecting-directory="selectingDirectory"
             :uploaded-data-product-error-messages="formErrors[STEP_KEYS.UPLOAD]"
@@ -325,7 +326,7 @@ const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
 
-const datasetNameSearchInput = ref("");
+const datasetNameInput = ref("");
 
 const uploadFormData = computed(() => {
   return {
@@ -344,22 +345,20 @@ const resetFormErrors = () => {
 };
 
 const validateDatasetName = async () => {
-  if (datasetNameIsNull(datasetNameSearchInput.value)) {
+  if (datasetNameIsNull(datasetNameInput.value)) {
     return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
-  } else if (!datasetNameHasMinimumChars(datasetNameSearchInput.value)) {
+  } else if (!datasetNameHasMinimumChars(datasetNameInput.value)) {
     return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
-  } else if (stringHasSpaces(datasetNameSearchInput.value)) {
+  } else if (stringHasSpaces(datasetNameInput.value)) {
     return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
   }
 
-  return datasetNameValidationRules[3](datasetNameSearchInput.value).then(
-    (res) => {
-      return {
-        isNameValid: res !== DATASET_EXISTS_ERROR,
-        error: DATASET_EXISTS_ERROR,
-      };
-    },
-  );
+  return datasetNameValidationRules[3](datasetNameInput.value).then((res) => {
+    return {
+      isNameValid: res !== DATASET_EXISTS_ERROR,
+      error: DATASET_EXISTS_ERROR,
+    };
+  });
 };
 
 const clearSelectedDirectoryToUpload = () => {
@@ -884,7 +883,7 @@ onMounted(() => {
 watch(
   [
     rawDataSelected,
-    datasetNameSearchInput,
+    datasetNameInput,
     selectingFiles,
     selectingDirectory,
     // selectedFile,
