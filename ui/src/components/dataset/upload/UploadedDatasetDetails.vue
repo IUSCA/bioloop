@@ -9,37 +9,6 @@
       <div class="va-table-responsive">
         <table class="va-table">
           <tbody>
-            <tr>
-              <td>Data Product</td>
-              <td>
-                <UploadedDatasetName
-                  v-model:uploaded-dataset-name="uploadedDirectoryName"
-                  :dataset-name-error="props.uploadedDataProductError"
-                  :dataset-name-error-messages="
-                    props.uploadedDataProductErrorMessages
-                  "
-                  :selecting-files="props.selectingFiles"
-                  :selecting-directory="props.selectingDirectory"
-                />
-                <!--                :error="props.uploadedDataProductError"-->
-                <!--                  :error-messages="props.uploadedDataProductErrorMessages"-->
-
-                <!--                  :selecting-files="props.selectingFiles"-->
-                <!--                  :selecting-directory="props.selectingDirectory"-->
-                <!--                  :error-messages="props.uploadedDataProductErrorMessages"-->
-                <!--                  :error="props.uploadedDataProductError"-->
-              </td>
-            </tr>
-
-            <tr>
-              <td>Status</td>
-              <td>
-                <va-chip size="small" :color="props.statusChipColor">
-                  {{ props.submissionStatus }}
-                </va-chip>
-              </td>
-            </tr>
-
             <tr v-if="sourceRawData">
               <td>Source Raw Data</td>
               <td>
@@ -53,6 +22,31 @@
                 </span>
               </td>
             </tr>
+
+            <!--            <tr>-->
+            <!--              <td>Status</td>-->
+            <!--              <td>-->
+            <!--                <va-chip size="small" :color="props.statusChipColor">-->
+            <!--                  {{ props.submissionStatus }}-->
+            <!--                </va-chip>-->
+            <!--              </td>-->
+            <!--            </tr>-->
+
+            <tr v-if="props.selectingFiles || props.selectingDirectory">
+              <td>Data Product</td>
+              <td>
+                <UploadedDatasetName
+                  v-model:dataset-name-input="datasetNameInput"
+                  :dataset-name="props.datasetName"
+                  :dataset-name-error="props.uploadedDataProductError"
+                  :dataset-name-error-messages="
+                    props.uploadedDataProductErrorMessages
+                  "
+                  :selecting-files="props.selectingFiles"
+                  :selecting-directory="props.selectingDirectory"
+                />
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -62,7 +56,11 @@
 
 <script setup>
 const props = defineProps({
-  uploadedDirectoryName: {
+  datasetName: {
+    type: String,
+    default: "",
+  },
+  datasetNameInput: {
     type: String,
     required: true,
   },
@@ -92,14 +90,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:uploadedDirectoryName"]);
+const emit = defineEmits(["update:datasetNameInput"]);
 
-const uploadedDirectoryName = computed({
+const datasetNameInput = computed({
   get() {
-    return props.uploadedDirectoryName;
+    return props.datasetNameInput;
   },
   set(value) {
-    emit("update:uploadedDirectoryName", value);
+    emit("update:datasetNameInput", value);
   },
 });
 

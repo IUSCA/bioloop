@@ -1,47 +1,30 @@
+<!--todo - input file name is never visible-->
 <template>
   <CopyText
     v-if="props.selectingDirectory"
-    :text="uploadedDatasetName"
-    :error-messages="props.datasetNameErrorMessages"
+    :text="props.datasetName"
+    :error-messages="[props.datasetNameErrorMessages]"
     :error="props.datasetNameError"
   />
-
+  <!--v-modal blank-->
   <va-input
     v-else-if="props.selectingFiles"
-    v-model="uploadedDirectoryName"
-    label="Data Product"
-    :placeholder="'Dataset Product'"
+    v-model="datasetNameInput"
+    :placeholder="'Dataset name'"
     class="w-full"
     :error="props.datasetNameError"
     :error-messages="[props.datasetNameErrorMessages]"
+    :messages="'Please select a name for the uploaded dataset.'"
   />
-
-  <!-- prop datasetNameErrorMessages is received but not forwarded - no error -->
-  <!--  <va-input-->
-  <!--    v-model="uploadedDirectoryName"-->
-  <!--    :error="props.datasetNameError"-->
-  <!--    :error-messages="[props.datasetNameErrorMessages]"-->
-  <!--  />-->
-
-  <!-- show error manually? -->
-
-  <!--  reset errorMessages when error is changed?-->
-
-  <!-- computed error msgs , reset to [] -->
-
-  <!-- prop datasetNameErrorMessages is received and is forwarded - error -->
-  <!--  <va-input-->
-  <!--    v-model="uploadedDirectoryName"-->
-  <!--    :error="props.datasetNameError"-->
-  <!--    :error-messages="props.datasetNameErrorMessages"-->
-  <!--  />-->
-
-  <!--  <CopyText :text="uploadedDirectoryName" />-->
 </template>
 
 <script setup>
 const props = defineProps({
-  uploadedDatasetName: {
+  datasetName: {
+    type: String,
+    default: "",
+  },
+  datasetNameInput: {
     type: String,
     default: "",
   },
@@ -63,14 +46,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:uploadedDatasetName"]);
+const emit = defineEmits(["update:datasetNameInput"]);
 
-const uploadedDirectoryName = computed({
+const datasetNameInput = computed({
   get() {
-    return props.uploadedDatasetName;
+    return props.datasetNameInput;
   },
   set(value) {
-    emit("update:uploadedDatasetName", value);
+    emit("update:datasetNameInput", value);
   },
 });
 
