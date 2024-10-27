@@ -1,12 +1,11 @@
+const { constants } = require('node:fs');
 const fs = require('fs');
-// const fsPromises = require('fs').promises;
 const express = require('express');
 const {
   query,
   // param, body, checkSchema,
 } = require('express-validator');
 const path = require('node:path');
-// const { exec } = require('child_process');
 const createError = require('http-errors');
 
 const config = require('config');
@@ -18,9 +17,6 @@ const isPermittedTo = accessControl('fs');
 
 const router = express.Router();
 
-// const BASE_DIRS = Object.values(config.filesystem.base_dir);
-// console.log('BASE_DIRS: ', BASE_DIRS);
-
 function getBaseDirKey(req) {
   const base_dir_key = Object.keys(config.filesystem.base_dir).filter((key) => key === req.query.search_space)[0];
   return base_dir_key;
@@ -28,17 +24,9 @@ function getBaseDirKey(req) {
 
 function getBaseDir(req) {
   const base_dir_key = getBaseDirKey(req);
-  console.log('base_dir_key: ', base_dir_key);
   const base_dir = config.filesystem.base_dir[base_dir_key];
-  console.log('base_dir: ', base_dir);
   return base_dir;
 }
-
-// function getSearchSpaceKey(req) {
-//   const base_dir_key = getBaseDirKey(req);
-//   console.log('base_dir_key: ', base_dir_key);
-//   return base_dir_key;
-// }
 
 function validatePath(req, res, next) {
   const query_path = req.query.path;
@@ -46,11 +34,7 @@ function validatePath(req, res, next) {
     return next(createError.Forbidden());
   }
 
-  // const query_path = req_path.slice(req.path.indexOf(BASE_PATH) +
-  // path_prefix.length + 1);
-
   let p = query_path ? path.normalize(query_path) : null;
-  console.log(`Normalized path: ${p}`);
 
   if (!p || !path.isAbsolute(p)) {
     res.status(400).send('Invalid path');
@@ -58,38 +42,20 @@ function validatePath(req, res, next) {
   }
 
   p = path.resolve(p);
-  console.log(`Resolved path: ${p}`);
 
   const base_dir = getBaseDir(req);
-  console.log('base_dir: ', base_dir);
-
   if (!p.startsWith(base_dir)) {
     res.status(403).send('Forbidden');
     return;
   }
 
   req.query.path = p;
-  console.log('req.query.path: ', req.query.path);
-  console.log('next()');
   next();
 }
 
 const get_mount_dir = (req) => {
   const base_dir_key = getBaseDirKey(req);
-  console.log('get_mount_dir(): base_dir:', base_dir_key);
-  console.log('config.filesystem.base_dir.slateScratch:', config.filesystem.base_dir.slateScratch);
-  console.log('config.filesystem.base_dir.slateProject:', config.filesystem.base_dir.slateProject);
-  console.log('config.filesystem.mount_dir[base_dir]:', config.filesystem.mount_dir[base_dir_key]);
   return config.filesystem.mount_dir[base_dir_key];
-
-  // switch (base_dir) {
-  //   case config.filesystem.base_dir.slateScratch:
-  //     return config.filesystem.mount_dir.slateScratch;
-  //   case config.filesystem.base_dir.slateProject:
-  //     return config.filesystem.mount_dir.slateProject;
-  //   default:
-  //     return null;
-  // }
 };
 
 const get_mounted_search_dir = (req) => {
@@ -98,16 +64,8 @@ const get_mounted_search_dir = (req) => {
 
   const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
     + path_prefix.length);
-  console.log('query_path: ', query_path);
-
   const mount_dir = get_mount_dir(req);
-
-  console.log('FILESYSTEM_MOUNT_DIR: ', mount_dir);
-
-  const mounted_search_dir = path.join(mount_dir, query_path);
-  console.log('mounted_search_dir: ', mounted_search_dir);
-
-  return mounted_search_dir;
+  return path.join(mount_dir, query_path);
 };
 
 router.get(
@@ -116,9 +74,7 @@ router.get(
   isPermittedTo('read'),
   query('dirs_only').optional().default(false),
   query('search_space').optional().escape().notEmpty(),
-  asyncHandler(async (req, res) => {
-    // console.log('current path: ', __dirname);
-
+  asyncHandler(async (req, res, next) => {
     const { dirs_only, path: query_path } = req.query;
 
     if (!query_path) {
@@ -126,49 +82,34 @@ router.get(
       return;
     }
 
-    // const query_path = req.query.path;
-
-    // const base_dir = Object.values(config.filesystem.base_dir).filter((dir)
-    // => req.query.path.startsWith(dir))[0]; console.log('base_dir: ',
-    // base_dir);
-    //
     const mounted_search_dir = get_mounted_search_dir(req);
-    console.log('mounted_search_dir: ', mounted_search_dir);
 
-    if (!fs.existsSync(mounted_search_dir)) {
-      res.json([]);
-      return;
-    }
-
-    const files = fs.readdirSync(mounted_search_dir, {
-      withFileTypes: true,
-    });
-
-    let filesData = files.map((f) => {
-      console.dir(f, { depth: null });
-      const file = {
-        name: f.name,
-        isDir: f.isDirectory(),
-        path: path.join(query_path, f.name),
-      };
-
-      if (dirs_only) {
-        return file.isDir ? file : null;
+    fs.access(mounted_search_dir, constants.F_OK, (err) => {
+      if (err) {
+        return next(createError.InternalServerError());
       }
-      return file;
+      if (!fs.existsSync(mounted_search_dir)) {
+        return next(createError.InternalServerError());
+      }
+
+      fs.readdir(mounted_search_dir, {
+        withFileTypes: true,
+      }, (err, files) => {
+        let filesData = files.map((f) => {
+          const file = {
+            name: f.name,
+            isDir: f.isDirectory(),
+            path: path.join(query_path, f.name),
+          };
+          if (dirs_only) {
+            return file.isDir ? file : null;
+          }
+          return file;
+        });
+        filesData = _.compact(filesData);
+        res.json(filesData);
+      });
     });
-
-    // let filesData = _.range(0, 3).map((e, i) => ({
-    //   name: `file-${e}-${i}`,
-    //   // name: `f${i}`,
-    //   isDir: true,
-    //   path: `${req.query.path}`,
-    // }));
-
-    filesData = _.compact(filesData);
-    console.log('filesData: ', filesData);
-
-    res.json(filesData);
   }),
 );
 
