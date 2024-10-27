@@ -9,7 +9,6 @@
     @clear="emit('clear')"
     @select="
       (file) => {
-        console.log('@select: selected file:', file);
         onFileSelect(file);
       }
     "
@@ -18,7 +17,6 @@
     @open="emit('open')"
     @close="emit('close')"
   >
-    <!--    :error="props.error"-->
     <va-badge
       v-if="props.basePath"
       class="base-path-badge"
@@ -40,7 +38,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  // "select",
   "update:selected",
   "update:searchText",
   "filesRetrieved",
@@ -53,31 +50,19 @@ const emit = defineEmits([
 
 const searchText = computed({
   get: () => {
-    console.log("getting searchText,", props.searchText);
     return props.searchText;
   },
   set: (value) => {
-    // searchText.value = value;
-    // const _searchText = +value.path;
-
     emit("update:searchText", value);
   },
 });
 
-const fileList = ref([]);
-const loading = ref(false);
 const basePath = computed(() => {
   return props.basePath.endsWith("/") ? props.basePath : props.basePath + "/";
 });
 
 const onFileSelect = (file) => {
-  console.log("onFileSelect:", file);
-  console.dir(file, { depth: null });
   emit(
-    "update:searchText",
-    file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length),
-  );
-  console.log(
     "update:searchText",
     file.path.slice(file.path.indexOf(basePath.value) + basePath.value.length),
   );

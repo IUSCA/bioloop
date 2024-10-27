@@ -18,14 +18,12 @@ const isPermittedTo = accessControl('fs');
 const router = express.Router();
 
 function getBaseDirKey(req) {
-  const base_dir_key = Object.keys(config.filesystem.base_dir).filter((key) => key === req.query.search_space)[0];
-  return base_dir_key;
+  return Object.keys(config.filesystem.base_dir).filter((key) => key === req.query.search_space)[0];
 }
 
 function getBaseDir(req) {
   const base_dir_key = getBaseDirKey(req);
-  const base_dir = config.filesystem.base_dir[base_dir_key];
-  return base_dir;
+  return config.filesystem.base_dir[base_dir_key];
 }
 
 function validatePath(req, res, next) {
@@ -35,7 +33,6 @@ function validatePath(req, res, next) {
   }
 
   let p = query_path ? path.normalize(query_path) : null;
-
   if (!p || !path.isAbsolute(p)) {
     res.status(400).send('Invalid path');
     return;

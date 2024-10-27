@@ -52,7 +52,6 @@
                 @clear="resetSearch"
                 @open="
                   () => {
-                    console.log('open emitted');
                     isFileSearchAutocompleteOpen = true;
                     selectedFile = null;
                     searchFiles();
@@ -69,9 +68,7 @@
                 v-model:selected="selectedFile"
                 @update:selected="
                   (file) => {
-                    console.log('@update:selected, Selected file:', file);
                     // selectedFile = file;
-                    console.log('Selected file:', selectedFile);
                   }
                 "
                 v-model:search-text="fileListSearchText"
@@ -172,12 +169,6 @@ import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
 import pm from "picomatch";
 
-// error shown - step has errors, and is not pristine
-//  - onMounted - setFormErrors()
-//      - all fields pristine
-//  - no need = step changes - current step is pristine
-//  - next and previous disabled when step has errors
-
 const STEP_KEYS = {
   DIRECTORY: "directory",
   RAW_DATA: "rawData",
@@ -213,7 +204,6 @@ const steps = [
 
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
-const fileTypeList = ref([]);
 const rawDataSelected = ref([]);
 const fileListSearchText = ref("");
 const fileList = ref([]);
@@ -405,7 +395,6 @@ const searchFiles = async () => {
       setRetrievedFiles(response.data);
     })
     .catch((err) => {
-      console.log(err.response.status);
       console.error(err);
       if (err.response.status === 403) {
         setRetrievedFiles([]);

@@ -15,10 +15,8 @@
           :disabled="props.disabled"
           :label="props.label"
         >
-          <!--          :error="props.error"-->
           <template #prependInner><slot></slot></template>
         </va-input>
-        <!--          @update:model-value="(newVal) => emit('update:searchText', newVal)"-->
       </va-form>
       <ul
         v-if="visible"
@@ -111,7 +109,6 @@ const text = computed({
   get: () => props.searchText,
   set: (value) => {
     emit("update:searchText", value);
-    // visible.value = value.length > 0;
   },
 });
 

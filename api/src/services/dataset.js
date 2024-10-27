@@ -67,7 +67,8 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name, initiator_id) {
   const wf_body = get_wf_body(wf_name);
 
-  // check if a workflow with the same name is not already running / pending on this dataset
+  // check if a workflow with the same name is not already running / pending on
+  // this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
     .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
@@ -291,7 +292,6 @@ function create_filetree(files) {
         parent.children[dir_name] = curr;
         return curr;
       }, root);
-    // console.log(pathObject);
     parent_dir.children[pathObject.base] = {
       metadata: { ...rest },
     };

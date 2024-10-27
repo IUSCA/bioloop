@@ -20,4 +20,8 @@ nav.setNavItems([
 ]);
 </script>
 
-<style scoped></style>
+<route lang="yaml">
+meta:
+  title: Ingest
+  requiresRoles: ["operator", "admin"]
+</route>

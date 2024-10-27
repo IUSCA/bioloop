@@ -127,10 +127,6 @@ class DatasetService {
     });
   }
 
-  get_file_types() {
-    return api.get("/datasets/file-types");
-  }
-
   create_dataset(data) {
     return api.post("/datasets", data);
   }
