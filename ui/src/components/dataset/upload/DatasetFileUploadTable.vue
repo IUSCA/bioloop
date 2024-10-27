@@ -9,11 +9,11 @@
       dropZoneText=""
       :disabled="props.submitAttempted"
       @file-added="
-        (files) => {
+        (f) => {
           showUploadedDatasetProductCopyText = false;
           showUploadedDatasetSearchInput = true;
-          emit('files-added', files);
-          console.log('Files added:', files);
+          emit('files-added', f);
+          console.log('Files added:', f);
         }
       "
     />

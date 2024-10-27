@@ -37,7 +37,7 @@
               <td>
                 <UploadedDatasetName
                   v-model:dataset-name-input="datasetNameInput"
-                  :dataset-name="props.datasetName"
+                  v-model:dataset-name="datasetName"
                   :dataset-name-error="props.uploadedDataProductError"
                   :dataset-name-error-messages="
                     props.uploadedDataProductErrorMessages
@@ -101,37 +101,46 @@ const datasetNameInput = computed({
   },
 });
 
-const sourceRawData = computed(() => props.sourceRawData[0]);
-
-watch(
-  () => props.sourceRawData,
-  () => {
-    console.log("Source Raw Data Changed");
-    console.dir(props.sourceRawData, { depth: null });
+const datasetName = computed({
+  get() {
+    return props.datasetName;
   },
-);
-
-onMounted(() => {
-  console.log("details component mounted");
-  console.dir(props.sourceRawData, { depth: null });
+  set(value) {
+    emit("update:datasetName", value);
+  },
 });
 
+const sourceRawData = computed(() => props.sourceRawData[0]);
+
 // watch(
-//   [
-//     () => props.uploadedDataProductErrorMessages,
-//     () => props.uploadedDataProductError,
-//   ],
-//   (newVals, oldVals) => {
-//     console.log(
-//       "    () => props.uploadedDataProductErrorMessages,\n" +
-//         "    () => props.uploadedDataProductError,\n",
-//     );
-//     console.log("oldVals");
-//     console.log(oldVals[0], oldVals[1]);
-//     console.log("newVals");
-//     console.log(newVals[0], newVals[1]);
+//   () => props.sourceRawData,
+//   () => {
+//     console.log("Source Raw Data Changed");
+//     console.dir(props.sourceRawData, { depth: null });
 //   },
 // );
+//
+// onMounted(() => {
+//   console.log("details component mounted");
+//   console.dir(props.sourceRawData, { depth: null });
+// });
+
+watch(
+  [
+    () => props.uploadedDataProductErrorMessages,
+    () => props.uploadedDataProductError,
+  ],
+  (newVals, oldVals) => {
+    console.log(
+      "    () => props.uploadedDataProductErrorMessages,\n" +
+        "    () => props.uploadedDataProductError,\n",
+    );
+    console.log("oldVals");
+    console.log(oldVals[0], oldVals[1]);
+    console.log("newVals");
+    console.log(newVals[0], newVals[1]);
+  },
+);
 </script>
 
 <style scoped></style>
