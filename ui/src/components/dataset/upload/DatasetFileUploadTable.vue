@@ -61,7 +61,7 @@
   <div class="flex flex-row">
     <va-data-table
       v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
-      :items="_fileTableItems"
+      :items="fileTableItems"
       :columns="columns"
     >
       <template #cell(name)="{ rowData }">
@@ -140,7 +140,7 @@ const props = defineProps({
   dataProductDirectory: {
     type: Object,
   },
-  filesToUpload: {
+  files: {
     type: Array,
     required: true,
   },
@@ -171,6 +171,14 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  selectingFiles: {
+    type: Boolean,
+    required: true,
+  },
+  selectingDirectory: {
+    type: Boolean,
+    required: true,
+  },
 });
 
 const emit = defineEmits(["files-added", "directory-added", "file-removed"]);
@@ -192,18 +200,16 @@ const isDirectory = computed(() => {
 //   return [props.dataProductDirectory];
 // });
 
-const _fileTableItems = computed(() => {
-  return props.filesToUpload;
-});
-
 // const fileTableItems = computed(() => {
-//   return isDirectory.value
-//     ? [props.dataProductDirectory]
-//     : props.filesToUpload;
+//   return props.selectingFiles ? props.files : [props.dataProductDirectory];
 // });
 
+// const fileTableItems = computed(() => {
+// return isDirectory.value ? [props.dataProductDirectory] :
+// props.files; });
+
 const noFilesSelected = computed(() => {
-  return props.filesToUpload.length === 0;
+  return props.files.length === 0;
 });
 
 const columns = [
