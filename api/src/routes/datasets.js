@@ -24,16 +24,6 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Data Product ingestion - UI
-router.get(
-  '/file-types',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const dataset_file_types = await prisma.dataset_file_type.findMany();
-    res.json(dataset_file_types);
-  }),
-);
-
 // stats - UI
 router.get(
   '/stats',
@@ -42,8 +32,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Get summary statistics of datasets.'
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -207,8 +197,9 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be
-// filtered and sorted by the criteria specified. Used by workers + UI.
+// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
+// the criteria specified.
+// Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -305,8 +296,7 @@ router.get(
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the dataset_file table if files is
-    // true
+    // only select path and md5 columns from the dataset_file table if files is true
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -317,7 +307,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
-      initiator: req.query.initiator || false
+      initiator: req.query.initiator || false,
     });
     res.json(dataset);
   }),
@@ -336,9 +326,7 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /*
-    * #swagger.description = 'workflow_id is optional. If the request body has
-    * workflow_id,
+    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
     const {
@@ -346,7 +334,6 @@ router.post(
     } = req.body;
 
     const { origin_path } = data;
-    console.log('origin_path:', origin_path);
 
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('');
@@ -354,12 +341,10 @@ router.post(
     // if dataset's origin_path is a restricted for dataset creation, throw
     // error
     const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
-    console.log('restricted_ingestion_dirs:', restricted_ingestion_dirs);
     const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
       const origin_path_formatted = origin_path.endsWith('/') ? origin_path : `${origin_path}/`;
       const isMatch = pm(glob);
       const matches = isMatch(origin_path_formatted, glob, { contains: true });
-      // console.log('path:', origin_path_formatted, 'glob:', glob, 'isMatch:', matches.isMatch);
       return matches.isMatch;
     });
 
@@ -597,16 +582,14 @@ router.post(
     // user role can only run stage workflows
 
     // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true
-    // value
+    // filter only works on objects not arrays, so we use an object with true value
     const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
     if (allowed_wfs[req.params.wf]) {
       return next();
     }
     next(createError.Forbidden());
   },
-  // user role can only run wf on the datasets they can access through project
-  // associations
+  // user role can only run wf on the datasets they can access through project associations
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -700,8 +683,7 @@ router.get(
       base: req.query.basepath,
     });
     // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
-    // if a need arises
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -741,8 +723,7 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of a token
-    // being returned.
+    // Catch errors to ensure that logging does not get in the way of a token being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -782,8 +763,8 @@ router.get(
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
 
-      // use url.pathname instead of download_file_path to deal with spaces in
-      // the file path oauth scope cannot contain spaces
+      // use url.pathname instead of download_file_path to deal with spaces in the file path
+      // oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
       res.json({
         url: url.href,
