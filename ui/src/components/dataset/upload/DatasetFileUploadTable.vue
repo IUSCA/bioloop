@@ -1,4 +1,5 @@
 <template>
+  <!-- Upload buttons -->
   <div class="flex flex-row">
     <va-file-upload
       class="w-full"
@@ -56,12 +57,11 @@
     </div>
   </div>
 
+  <!-- File list table, upload details, and file input -->
   <div class="flex flex-row">
     <va-data-table
       v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
-      :items="
-        isDirectory ? [props.dataProductDirectory] : props.dataProductFiles
-      "
+      :items="_fileTableItems"
       :columns="columns"
     >
       <template #cell(name)="{ rowData }">
@@ -184,6 +184,23 @@ const showUploadedDatasetSearchInput = ref(false);
 const isDirectory = computed(() => {
   return directoryName.value && directoryName.value.length > 0;
 });
+
+// const _fileTableItems = ref([]);
+
+// const _fileTableItems = computed(() => {
+//   debugger;
+//   return [props.dataProductDirectory];
+// });
+
+const _fileTableItems = computed(() => {
+  return props.dataProductFiles;
+});
+
+// const fileTableItems = computed(() => {
+//   return isDirectory.value
+//     ? [props.dataProductDirectory]
+//     : props.dataProductFiles;
+// });
 
 const noFilesSelected = computed(() => {
   return props.dataProductFiles.length === 0;
