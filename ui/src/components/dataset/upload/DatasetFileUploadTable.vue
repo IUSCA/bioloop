@@ -140,7 +140,7 @@ const props = defineProps({
   dataProductDirectory: {
     type: Object,
   },
-  dataProductFiles: {
+  filesToUpload: {
     type: Array,
     required: true,
   },
@@ -193,17 +193,17 @@ const isDirectory = computed(() => {
 // });
 
 const _fileTableItems = computed(() => {
-  return props.dataProductFiles;
+  return props.filesToUpload;
 });
 
 // const fileTableItems = computed(() => {
 //   return isDirectory.value
 //     ? [props.dataProductDirectory]
-//     : props.dataProductFiles;
+//     : props.filesToUpload;
 // });
 
 const noFilesSelected = computed(() => {
-  return props.dataProductFiles.length === 0;
+  return props.filesToUpload.length === 0;
 });
 
 const columns = [

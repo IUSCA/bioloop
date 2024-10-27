@@ -98,7 +98,7 @@
             "
             :submit-attempted="submitAttempted"
             :submission-alert-color="submissionAlertColor"
-            :data-product-files="dataProductFiles"
+            :files-to-upload="filesToUpload"
           />
           <!--            :data-product-directory="dataProductDirectory"-->
 
@@ -245,7 +245,7 @@ const stepIsPristine = computed(() => {
 });
 
 const removeFile = (index) => {
-  dataProductFiles.value.splice(index, 1);
+  filesToUpload.value.splice(index, 1);
 };
 
 const stringHasSpaces = (name) => {
@@ -306,7 +306,7 @@ const submissionAlert = ref(); // For handling network errors before upload begi
 const submissionAlertColor = ref();
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
-const dataProductFiles = ref([]);
+const filesToUpload = ref([]);
 const dataProductDirectory = ref(null);
 // const dataProductDirectoryName = computed(() => {
 //   return dataProductDirectory.value?.name || "";
@@ -316,7 +316,7 @@ const step = ref(0);
 const uploadCancelled = ref(false);
 
 const filesNotUploaded = computed(() => {
-  return dataProductFiles.value.filter(
+  return filesToUpload.value.filter(
     (e) => e.uploadStatus !== config.upload_status.UPLOADED,
   );
 });
@@ -367,7 +367,7 @@ const clearSelectedDirectoryToUpload = () => {
 };
 
 const clearSelectedFilesToUpload = () => {
-  dataProductFiles.value = [];
+  filesToUpload.value = [];
 };
 
 const selectingFiles = ref(false);
@@ -406,7 +406,7 @@ const setFormErrors = async () => {
 
   if (step.value === 1) {
     if (
-      (selectingFiles.value && dataProductFiles.value?.length === 0) ||
+      (selectingFiles.value && filesToUpload.value?.length === 0) ||
       (selectingDirectory.value && !dataProductDirectory.value)
     ) {
       formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
@@ -428,7 +428,7 @@ const setFormErrors = async () => {
 //   );
 // });
 const noFilesSelected = computed(() => {
-  return dataProductFiles.value.length === 0;
+  return filesToUpload.value.length === 0;
 });
 
 const addDataset = (selectedDatasets) => {
@@ -661,7 +661,7 @@ const uploadFile = async (fileDetails) => {
 };
 
 const onSubmit = async () => {
-  if (dataProductFiles.value.length === 0) {
+  if (filesToUpload.value.length === 0) {
     await setFormErrors();
     return Promise.reject();
   }
@@ -779,7 +779,7 @@ const preUpload = async () => {
       }
     : {
         ...uploadFormData.value,
-        files_metadata: dataProductFiles.value.map((e) => {
+        files_metadata: filesToUpload.value.map((e) => {
           return {
             name: e.name,
             checksum: e.fileChecksum,
@@ -815,7 +815,7 @@ const uploadFiles = async (files) => {
 const setFiles = (files) => {
   _.range(0, files.length).forEach((i) => {
     const file = files.item(i);
-    dataProductFiles.value.push({
+    filesToUpload.value.push({
       type: "file",
       file: file,
       name: file.name,
@@ -833,8 +833,8 @@ const setDirectory = (directoryDetails) => {
   let directorySize = 0;
   _.range(0, directoryFiles.length).forEach((i) => {
     const file = directoryFiles[i];
-    dataProductFiles.value.push({
-      type: "file",
+    filesToUpload.value.push({
+      type: FILE_TYPE.FILE,
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
@@ -844,7 +844,7 @@ const setDirectory = (directoryDetails) => {
     directorySize += file.size;
   });
   dataProductDirectory.value = {
-    type: "directory",
+    type: FILE_TYPE.DIRECTORY,
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: undefined,
