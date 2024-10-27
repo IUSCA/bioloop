@@ -370,12 +370,12 @@ const validateDatasetName = async () => {
 };
 
 const displayedFilesToUpload = computed(() => {
-  // return selectingFiles.value
-  //   ? filesToUpload.value
-  // todo - this is the culprit
-  // return [dataProductDirectory.value];
-
-  return filesToUpload.value.files;
+  if (selectingFiles.value) {
+    return filesToUpload.value.files;
+  } else if (selectingDirectory.value) {
+    return [dataProductDirectory.value];
+  }
+  // return filesToUpload.value.files;
 });
 
 const clearSelectedDirectoryToUpload = () => {
