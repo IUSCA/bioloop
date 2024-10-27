@@ -80,30 +80,34 @@
             :submission-alert="submissionAlert"
             @files-added="
               (files) => {
+                clearSelectedDirectoryToUpload();
                 setFiles(files);
                 isSubmissionAlertVisible = false;
-                clearSelectedDirectoryToUpload();
                 setUploadedFileType(FILE_TYPE.FILE);
               }
             "
             @file-removed="removeFile"
             @directory-added="
               (directoryDetails) => {
-                console.log('Directory added', directoryDetails);
+                // console.log('Directory added', directoryDetails);
+                clearSelectedFilesToUpload();
                 setDirectory(directoryDetails);
                 isSubmissionAlertVisible = false;
-                clearSelectedFilesToUpload();
                 setUploadedFileType(FILE_TYPE.DIRECTORY);
               }
             "
             :submit-attempted="submitAttempted"
             :submission-alert-color="submissionAlertColor"
-            :files-to-upload="filesToUpload"
+            :files="displayedFilesToUpload"
+            :directory-to-upload="dataProductDirectory"
+            :selecting-files="selectingFiles"
+            :selecting-directory="selectingDirectory"
           />
           <!--            :data-product-directory="dataProductDirectory"-->
 
           <!--         todo - should not be dataProductDirectory -->
           <UploadedDatasetDetails
+            v-if="selectingFiles || selectingDirectory"
             v-model:dataset-name-input="datasetNameInput"
             :dataset-name="dataProductDirectory?.name || ''"
             :selecting-files="selectingFiles"
@@ -362,7 +366,16 @@ const validateDatasetName = async () => {
   });
 };
 
+const displayedFilesToUpload = computed(() => {
+  return selectingFiles.value
+    ? filesToUpload.value
+    : [dataProductDirectory.value];
+});
+
 const clearSelectedDirectoryToUpload = () => {
+  // clear files within directory being deleted
+  clearSelectedFilesToUpload();
+  // clear directory being deleted
   dataProductDirectory.value = null;
 };
 
@@ -848,6 +861,7 @@ const setDirectory = (directoryDetails) => {
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: undefined,
+    uploadStatus: config.upload_status.PROCESSING_FAILED,
   };
 };
 
