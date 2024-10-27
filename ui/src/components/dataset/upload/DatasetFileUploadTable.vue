@@ -61,7 +61,7 @@
   <div class="flex flex-row">
     <va-data-table
       v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
-      :items="fileTableItems"
+      :items="props.files"
       :columns="columns"
     >
       <template #cell(name)="{ rowData }">
@@ -142,7 +142,7 @@ const props = defineProps({
   },
   files: {
     type: Array,
-    required: true,
+    default: () => [],
   },
   sourceRawData: {
     type: Object,
