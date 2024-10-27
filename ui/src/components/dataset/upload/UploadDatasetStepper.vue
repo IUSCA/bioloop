@@ -99,12 +99,13 @@
             :submit-attempted="submitAttempted"
             :submission-alert-color="submissionAlertColor"
             :data-product-files="dataProductFiles"
-            :data-product-directory="dataProductDirectory"
           />
+          <!--            :data-product-directory="dataProductDirectory"-->
 
+          <!--         todo - should not be dataProductDirectory -->
           <UploadedDatasetDetails
             v-model:dataset-name-input="datasetNameInput"
-            :dataset-name="dataProductDirectory.name"
+            :dataset-name="dataProductDirectory?.name || ''"
             :selecting-files="selectingFiles"
             :selecting-directory="selectingDirectory"
             :uploaded-data-product-error-messages="formErrors[STEP_KEYS.UPLOAD]"
