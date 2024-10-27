@@ -1,9 +1,13 @@
 <!--todo - input file name is never visible-->
+
+<!--todo - other usages of copytext  -->
+
 <template>
+  UploadedDatasetName - {{ datasetNameErrorMessages }}
   <CopyText
     v-if="props.selectingDirectory"
-    :text="props.datasetName"
-    :error-messages="[props.datasetNameErrorMessages]"
+    v-model:text="datasetName"
+    :error-messages="datasetNameErrorMessages"
     :error="props.datasetNameError"
   />
   <!--v-modal blank-->
@@ -13,7 +17,7 @@
     :placeholder="'Dataset name'"
     class="w-full"
     :error="props.datasetNameError"
-    :error-messages="[props.datasetNameErrorMessages]"
+    :error-messages="datasetNameErrorMessages"
     :messages="'Please select a name for the uploaded dataset.'"
   />
 </template>
@@ -46,7 +50,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:datasetNameInput"]);
+const emit = defineEmits(["update:datasetNameInput", "update:datasetName"]);
 
 const datasetNameInput = computed({
   get() {
@@ -57,6 +61,19 @@ const datasetNameInput = computed({
   },
 });
 
+const datasetName = computed({
+  get() {
+    return props.datasetName;
+  },
+  set(value) {
+    emit("update:datasetName", value);
+  },
+});
+
+const datasetNameErrorMessages = computed(() => {
+  return [props.datasetNameErrorMessages];
+});
+
 // const errorMessages = computed({
 //   get() {
 //     return props.datasetNameErrorMessages;
@@ -64,17 +81,29 @@ const datasetNameInput = computed({
 //   set(value) {},
 // });
 
-onMounted(() => {
-  console.log("mounted");
-  console.log("props.isSelectingFiles", props.selectingFiles);
-  console.log("props.isSelectingDirectory", props.selectingDirectory);
-});
+//   console.log("props.isSelectingFiles", props.selectingFiles);
+//   console.log("props.isSelectingDirectory", props.selectingDirectory);
+// });
+//
+// watch([() => props.selectingFiles, () => props.selectingDirectory], () => {
+//   console.log("watch");
+//   console.log("props.isSelectingFiles", props.selectingFiles);
+//   console.log("props.isSelectingDirectory", props.selectingDirectory);
+// });
 
-watch([() => props.selectingFiles, () => props.selectingDirectory], () => {
-  console.log("watch");
-  console.log("props.isSelectingFiles", props.selectingFiles);
-  console.log("props.isSelectingDirectory", props.selectingDirectory);
-});
+watch(
+  [() => props.datasetNameErrorMessages, () => props.datasetNameError],
+  (newVals, oldVals) => {
+    console.log(
+      "    () => props.datasetNameErrorMessages,\n" +
+        "    () => props.datasetNameError,\n",
+    );
+    console.log("oldVals");
+    console.log(oldVals[0], oldVals[1]);
+    console.log("newVals");
+    console.log(newVals[0], newVals[1]);
+  },
+);
 </script>
 
 <style scoped></style>
