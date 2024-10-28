@@ -660,6 +660,36 @@ router.get(
   }),
 );
 
+// router.get('*', (req, res, next) => {
+//   const SCOPE_PREFIX = config.get('scope_prefix');
+//
+//   const scopes = (req.token?.scope || '').split(' ');
+//   const downoad_scopes = scopes.filter((scope) => scope.startsWith(SCOPE_PREFIX));
+//
+//   if (downoad_scopes.length === 0) {
+//     return next(createError.Forbidden('Invalid scope'));
+//   }
+//
+//   const token_file_path = remove_leading_slash(downoad_scopes[0].slice(SCOPE_PREFIX.length));
+//   const req_path = remove_leading_slash(req.path);
+//
+//   if (req_path === token_file_path) {
+//     res.set('X-Accel-Redirect', `/data/${token_file_path}`);
+//
+//     // make browser download response instead of attempting to render it
+//     res.set('content-type', 'application/octet-stream; charset=utf-8');
+//
+//     // makes nginx not cache the response file
+//     // otherwise the response cuts off at 1GB as the max buffer size is reached
+//     // and the file download fails
+//     // https://stackoverflow.com/a/64282626
+//     res.set('X-Accel-Buffering', 'no');
+//     res.send('');
+//   } else {
+//     return next(createError.Forbidden('Invalid path'));
+//   }
+// });
+
 router.get(
   '/download/:id',
   validate([
@@ -708,19 +738,40 @@ router.get(
     });
 
     if (dataset.metadata.stage_alias) {
-      const download_file_path = isFileDownload
+      const download_dir_relative_path = config.get('download.relative_path');
+      const scratch_mount_dir = config.get('filesystem.mount_dir.slateScratchApp');
+      const path_prefix = `${scratch_mount_dir}/${download_dir_relative_path}`;
+      const file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
+      const download_file_path = `${path_prefix}/${file_path}`;
+      console.log('download_file_path:', download_file_path);
 
-      const url = new URL(download_file_path, config.get('download_server.base_url'));
+      // const url = new URL(download_file_path, config.get('download_server.base_url'));
+      //
+      // // use url.pathname instead of download_file_path to deal with spaces in the file path
+      // // oauth scope cannot contain spaces
+      // const download_token = await authService.get_download_token(url.pathname);
+      // res.json({
+      //   url: url.href,
+      //   bearer_token: download_token.accessToken,
+      // });
 
-      // use url.pathname instead of download_file_path to deal with spaces in the file path
-      // oauth scope cannot contain spaces
-      const download_token = await authService.get_download_token(url.pathname);
-      res.json({
-        url: url.href,
-        bearer_token: download_token.accessToken,
-      });
+      try {
+        await fsPromises.access(download_file_path);
+      } catch (err) {
+        return next(createError.Forbidden('Invalid path'));
+      }
+
+      res.set('X-Accel-Redirect', `${download_file_path}`);
+      // make browser download response instead of attempting to render it
+      res.set('content-type', 'application/octet-stream; charset=utf-8');
+      // makes nginx not cache the response file
+      // otherwise the response cuts off at 1GB as the max buffer size is reached
+      // and the file download fails
+      // https://stackoverflow.com/a/64282626
+      res.set('X-Accel-Buffering', 'no');
+      res.send('');
     } else {
       next(createError.NotFound('Dataset is not prepared for download'));
     }

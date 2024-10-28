@@ -23,9 +23,6 @@
       "client_secret": "CILOGON_OAUTH_CLIENT_SECRET"
     }
   },
-  "download_server": {
-    "base_url": "DOWNLOAD_SERVER_BASE_URL"
-  },
   "e2e": {
     "users": {
       "admin": {
@@ -37,6 +34,14 @@
       "user": {
         "username": "E2E_USER"
       }
+    }
+  },
+  "download": {
+    "relative_path": "DOWNLOAD_DIR_RELATIVE_PATH"
+  },
+  "filesystem": {
+    "mount_dir": {
+      "slateScratchApp": "FILESYSTEM_SCRATCH_SCADEV_MOUNT_DIR"
     }
   }
 }

@@ -46,9 +46,6 @@
       "scope_prefix": "download_file:"
     }
   },
-  "download_server": {
-    "base_url": ""
-  },
   "workflow_registry": {
     "integrated": {
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
@@ -116,6 +113,15 @@
       "user": {
         "username": ""
       }
+    }
+  },
+  "download": {
+    "relative_path": ""
+  },
+  "filesystem": {
+    "search_spaces": "",
+    "mount_dir": {
+      "slateScratchApp": ""
     }
   }
 }
