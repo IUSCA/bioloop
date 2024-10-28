@@ -3,23 +3,24 @@
 <!--todo - other usages of copytext  -->
 
 <template>
-  UploadedDatasetName - {{ datasetNameErrorMessages }}
-  <CopyText
-    v-if="props.selectingDirectory"
-    v-model:text="datasetName"
-    :error-messages="datasetNameErrorMessages"
-    :error="props.datasetNameError"
-  />
-  <!--v-modal blank-->
+  <!--  datasetNameErrorMessages - {{ datasetNameErrorMessages }}, datasetNameError - -->
+  <!--  {{ datasetNameError }}-->
+
+  <CopyText v-if="props.selectingDirectory" v-model:text="datasetName" />
+
+  <!--  <SomeComponent />-->
+
   <va-input
     v-else-if="props.selectingFiles"
     v-model="datasetNameInput"
     :placeholder="'Dataset name'"
     class="w-full"
-    :error="props.datasetNameError"
-    :error-messages="datasetNameErrorMessages"
-    :messages="'Please select a name for the uploaded dataset.'"
+    :messages="'Name for the uploaded dataset'"
   />
+
+  <div class="va-text-danger text-xs" v-if="props.datasetNameError">
+    {{ props.datasetNameErrorMessages }}
+  </div>
 </template>
 
 <script setup>
@@ -52,6 +53,10 @@ const props = defineProps({
 
 const emit = defineEmits(["update:datasetNameInput", "update:datasetName"]);
 
+// const emitDatasetNameUpdate = (text) => {
+//   emit("update:datasetName", text);
+// };
+
 const datasetNameInput = computed({
   get() {
     return props.datasetNameInput;
@@ -70,9 +75,9 @@ const datasetName = computed({
   },
 });
 
-const datasetNameErrorMessages = computed(() => {
-  return [props.datasetNameErrorMessages];
-});
+// const datasetNameErrorMessages = computed(() => {
+//   return [props.datasetNameErrorMessages];
+// });
 
 // const errorMessages = computed({
 //   get() {
@@ -91,19 +96,38 @@ const datasetNameErrorMessages = computed(() => {
 //   console.log("props.isSelectingDirectory", props.selectingDirectory);
 // });
 
+onMounted(() => {
+  console.log("name component mounted");
+  console.log("props.datasetName");
+  console.dir(props.datasetName);
+  console.log("props.datasetNameInput");
+  console.dir(props.datasetNameInput);
+});
+
 watch(
-  [() => props.datasetNameErrorMessages, () => props.datasetNameError],
-  (newVals, oldVals) => {
-    console.log(
-      "    () => props.datasetNameErrorMessages,\n" +
-        "    () => props.datasetNameError,\n",
-    );
-    console.log("oldVals");
-    console.log(oldVals[0], oldVals[1]);
-    console.log("newVals");
-    console.log(newVals[0], newVals[1]);
+  () => props.datasetName,
+  () => {
+    console.log("name component watch");
+    console.log("props.datasetName");
+    console.dir(props.datasetName);
+    console.log("props.datasetNameInput");
+    console.dir(props.datasetNameInput);
   },
 );
+
+// watch(
+//   [() => props.datasetNameErrorMessages, () => props.datasetNameError],
+//   (newVals, oldVals) => {
+//     console.log(
+//       "    () => props.datasetNameErrorMessages,\n" +
+//         "    () => props.datasetNameError,\n",
+//     );
+//     console.log("oldVals");
+//     console.log(oldVals[0], oldVals[1]);
+//     console.log("newVals");
+//     console.log(newVals[0], newVals[1]);
+//   },
+// );
 </script>
 
 <style scoped></style>

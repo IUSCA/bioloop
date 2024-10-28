@@ -120,25 +120,22 @@ const sourceRawData = computed(() => props.sourceRawData[0]);
 //   },
 // );
 //
-// onMounted(() => {
-//   console.log("details component mounted");
-//   console.dir(props.sourceRawData, { depth: null });
-// });
+onMounted(() => {
+  console.log("details component mounted");
+  console.log("props.datasetName");
+  console.dir(props.datasetName);
+  console.log("props.datasetNameInput");
+  console.dir(props.datasetNameInput);
+});
 
 watch(
-  [
-    () => props.uploadedDataProductErrorMessages,
-    () => props.uploadedDataProductError,
-  ],
-  (newVals, oldVals) => {
-    console.log(
-      "    () => props.uploadedDataProductErrorMessages,\n" +
-        "    () => props.uploadedDataProductError,\n",
-    );
-    console.log("oldVals");
-    console.log(oldVals[0], oldVals[1]);
-    console.log("newVals");
-    console.log(newVals[0], newVals[1]);
+  () => props.datasetName,
+  () => {
+    console.log("details component watch");
+    console.log("props.datasetName");
+    console.dir(props.datasetName);
+    console.log("props.datasetNameInput");
+    console.dir(props.datasetNameInput);
   },
 );
 </script>

@@ -315,9 +315,17 @@ const filesToUpload = ref([]);
 const displayedFilesToUpload = ref([]);
 
 const dataProductDirectory = ref(null);
-const dataProductDirectoryName = computed(() => {
-  return dataProductDirectory.value?.name || "";
-});
+// const dataProductDirectoryName = computed(() => {
+//   return dataProductDirectory.value?.name || "";
+// });
+// const dataProductDirectoryName = computed({
+//   get: () => dataProductDirectory.value?.name || "",
+//   set: (value) => {},
+// });
+
+// TODO - set pristine to false when step === 1 and file or directory selection
+//  changes
+const dataProductDirectoryName = ref("");
 const datasetNameInput = ref("");
 
 // const dataProductDirectoryName = computed(() => {
@@ -384,6 +392,8 @@ const clearSelectedDirectoryToUpload = () => {
   clearSelectedFilesToUpload();
   // clear directory being deleted
   dataProductDirectory.value = null;
+  // clear directory name
+  dataProductDirectoryName.value = "";
 };
 
 const clearSelectedFilesToUpload = () => {
@@ -873,6 +883,8 @@ const setDirectory = (directoryDetails) => {
     progress: undefined,
     uploadStatus: config.upload_status.PROCESSING_FAILED,
   };
+  dataProductDirectoryName.value = dataProductDirectory.value.name;
+
   displayedFilesToUpload.value = [dataProductDirectory.value];
 };
 
