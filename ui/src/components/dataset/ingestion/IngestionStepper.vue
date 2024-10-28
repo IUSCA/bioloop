@@ -396,7 +396,7 @@ const searchFiles = async () => {
     })
     .catch((err) => {
       console.error(err);
-      if (err.response.status === 403) {
+      if (err.response.status === 403 || err.response.status === 404) {
         setRetrievedFiles([]);
       } else {
         toast.error("Error fetching files");
