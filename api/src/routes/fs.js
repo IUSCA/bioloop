@@ -83,10 +83,7 @@ router.get(
 
     fs.access(mounted_search_dir, constants.F_OK, (err) => {
       if (err) {
-        return next(createError.InternalServerError());
-      }
-      if (!fs.existsSync(mounted_search_dir)) {
-        return next(createError.InternalServerError());
+        return next(createError.NotFound());
       }
 
       fs.readdir(mounted_search_dir, {

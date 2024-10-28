@@ -276,11 +276,9 @@ const setFormErrors = async () => {
       const restricted_dataset_paths = getRestrictedIngestionPaths();
       const origin_path_is_restricted = selectedFile.value
         ? restricted_dataset_paths.some((pattern) => {
-            const _path = selectedFile.value.path.endsWith("/")
-              ? selectedFile.value.path
-              : `${selectedFile.value.path}/`;
-            let isMatch = pm(pattern);
-            const matches = isMatch(_path, pattern, { contains: true });
+            const _path = selectedFile.value.path
+              let isMatch = pm(pattern);
+            const matches = isMatch(_path, pattern);
             return matches.isMatch;
           })
         : false;
@@ -396,7 +394,7 @@ const searchFiles = async () => {
     })
     .catch((err) => {
       console.error(err);
-      if (err.response.status === 403) {
+      if (err.response.status === 403 || err.response.status === 404) {
         setRetrievedFiles([]);
       } else {
         toast.error("Error fetching files");
