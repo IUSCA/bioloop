@@ -315,23 +315,11 @@ const filesToUpload = ref([]);
 const displayedFilesToUpload = ref([]);
 
 const dataProductDirectory = ref(null);
-// const dataProductDirectoryName = computed(() => {
-//   return dataProductDirectory.value?.name || "";
-// });
-// const dataProductDirectoryName = computed({
-//   get: () => dataProductDirectory.value?.name || "",
-//   set: (value) => {},
-// });
 
 // TODO - set pristine to false when step === 1 and file or directory selection
 //  changes
 const dataProductDirectoryName = ref("");
 const datasetNameInput = ref("");
-
-// const dataProductDirectoryName = computed(() => {
-
-//   return dataProductDirectory.value?.name || "";
-// });
 
 const step = ref(0);
 const uploadCancelled = ref(false);
@@ -349,8 +337,13 @@ const isLastStep = computed(() => {
 });
 
 const uploadFormData = computed(() => {
+  const datasetName = selectingFiles.value
+    ? datasetNameInput.value
+    : selectingDirectory.value
+      ? dataProductDirectory.value?.name
+      : "";
   return {
-    name: dataProductDirectory.value.name,
+    name: datasetName,
     ...(rawDataSelected.value.length > 0 && {
       source_dataset_id: rawDataSelected.value[0].id,
     }),
@@ -802,6 +795,7 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
+  console.log("preUpload");
   await evaluateChecksums(filesNotUploaded.value);
 
   const logData = uploadLog.value?.id
@@ -827,6 +821,7 @@ const preUpload = async () => {
 
 // Log (or update) upload status
 const createOrUpdateUploadLog = (uploadLogId, data) => {
+  console.log("createOrUpdateUploadLog", uploadLogId, data);
   return !uploadLogId
     ? uploadService.logUpload(data)
     : uploadService.updateUploadLog(uploadLogId, data);
