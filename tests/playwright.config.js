@@ -34,8 +34,7 @@ module.exports = {
     reporter: 'html',
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
-      /* Base URL to use in actions like `await page.goto('/')`. */
-      // baseURL: 'https://localhost',
+    /* Base URL to use in actions like `await page.goto('/')`. */
       baseURL: 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
@@ -51,11 +50,6 @@ module.exports = {
       {
         name: 'admin_login',
         testMatch: path.join(__dirname, '/tests/setup/admin_login.setup.js'),
-        // testIgnore: '*',
-      },
-      {
-        name: 'operator_login',
-        testMatch: path.join(__dirname, '/tests/setup/operator_login.setup.js'),
       },
       {
         name: 'operator_login',
@@ -64,40 +58,23 @@ module.exports = {
       {
         name: 'user_login',
         testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
-        // testIgnore: '*',
       },
       {
         name: 'unauthenticated_views',
         use: { ...devices['Desktop Chrome'] },
         testMatch: '/view/unauthenticated/*.spec.js',
-        // testIgnore: '*',
       },
       {
         name: 'admin_views',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/admin_*_view.spec.js',
-        // testIgnore: '*',
       },
       {
         name: 'user_views',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
         testMatch: '/view/authenticated/user_*_view.spec.js',
-        // testIgnore: '*',
-      },
-      {
-        name: 'dataset_duplication',
-        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
-        dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/datasetDuplication/notification.spec.js',
-        // testIgnore: '*',
-      },
-      {
-        name: 'test_project',
-        use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/cursor_test.spec.js',
-        testIgnore: '*',
       },
       {
         name: 'admin_notifications',
@@ -118,28 +95,16 @@ module.exports = {
         testMatch: '/view/authenticated/notifications/notifications_user.spec.js',
       },
       {
-        name: 'admin_notifications',
+        name: 'admin_user_management',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+        testMatch: '/view/authenticated/userManagement/*.spec.js',
       },
       {
-        name: 'operator_notifications',
+        name: 'operator_user_management',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
         dependencies: ['operator_login', 'admin_notifications'],
         testMatch: '/view/authenticated/notifications/notifications.spec.js',
-      },
-      {
-        name: 'user_notifications',
-        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
-        dependencies: ['operator_login'],
-        testMatch: '/view/authenticated/notifications/notifications_user.spec.js',
-      },
-      {
-        name: 'project',
-        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
-        dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/project/*.spec.js',
       },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
@@ -159,23 +124,23 @@ module.exports = {
       //   use: { ...devices['iPhone 12'] },
       // },
 
-      /* Test against branded browsers. */
-      // {
-      //   name: 'Microsoft Edge',
-      //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-      // },
-      // {
-      //   name: 'Google Chrome',
-      //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-      // },
+    /* Test against branded browsers. */
+    // {
+    //   name: 'Microsoft Edge',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    // },
+    // {
+    //   name: 'Google Chrome',
+    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    // },
     ],
 
-    /* Run your local dev server before starting the tests */
-    // webServer: {
-    //   command: 'npm run start',
-    //   url: 'http://127.0.0.1:3000',
-    //   reuseExistingServer: !process.env.CI,
-    // },
+  /* Run your local dev server before starting the tests */
+  // webServer: {
+  //   command: 'npm run start',
+  //   url: 'http://127.0.0.1:3000',
+  //   reuseExistingServer: !process.env.CI,
+  // },
   }),
   USER_STORAGE_STATE,
   OPERATOR_STORAGE_STATE,
