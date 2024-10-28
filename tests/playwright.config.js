@@ -58,6 +58,10 @@ module.exports = {
         testMatch: path.join(__dirname, '/tests/setup/operator_login.setup.js'),
       },
       {
+        name: 'operator_login',
+        testMatch: path.join(__dirname, '/tests/setup/operator_login.setup.js'),
+      },
+      {
         name: 'user_login',
         testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
         // testIgnore: '*',
@@ -112,6 +116,30 @@ module.exports = {
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['operator_login'],
         testMatch: '/view/authenticated/notifications/notifications_user.spec.js',
+      },
+      {
+        name: 'admin_notifications',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+      },
+      {
+        name: 'operator_notifications',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login', 'admin_notifications'],
+        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+      },
+      {
+        name: 'user_notifications',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/notifications/notifications_user.spec.js',
+      },
+      {
+        name: 'project',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/project/*.spec.js',
       },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },

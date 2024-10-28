@@ -286,6 +286,16 @@ model user_settings {
   users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
+model notification {
+  id                 Int                 @id @default(autoincrement())
+  created_at         DateTime            @default(now()) @db.Timestamp(6)
+  label              String
+  text               String?
+  status             NOTIFICATION_STATUS @default(CREATED)
+  acknowledged_by_id Int?
+  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
+}
+
 model contact {
   id          Int               @id @default(autoincrement())
   type        String
