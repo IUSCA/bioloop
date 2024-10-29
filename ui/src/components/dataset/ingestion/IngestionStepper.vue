@@ -227,9 +227,9 @@ const isNextStepDisabled = computed(() => {
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine.
-// For steps 0 to 2, <va-form-field> components track the pristine state of
-// their respective input fields. For step 3, pristine state is maintained by
-// this component.
+// For steps STEP_KEYS.DIRECTORY and STEP_KEYS.RAW_DATA, <va-form-field>
+// components track the pristine state of their respective input fields. For
+// step STEP_KEYS.INFO, pristine state is maintained by this component.
 const stepPristineStates = ref([
   { [STEP_KEYS.DIRECTORY]: true },
   { [STEP_KEYS.RAW_DATA]: true },
@@ -311,7 +311,7 @@ const validateNotExists = (value) => {
     } else {
       loading.value = true;
       datasetService
-        .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
+        .getAll({ type: "DATA_PRODUCT", name: value })
         .then((res) => {
           // Vuestic expects this Promise to resolve with an error message, for
           // it to show the error message.
