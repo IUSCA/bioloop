@@ -749,14 +749,16 @@ router.get(
     });
 
     if (dataset.metadata.stage_alias) {
-      const download_dir_relative_path = config.get('download.relative_path');
-      const scratch_mount_dir = config.get('filesystem.mount_dir.slateScratchApp');
-      const path_prefix = `${scratch_mount_dir}/${download_dir_relative_path}`;
-      const file_path = isFileDownload
-        ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${dataset.metadata.bundle_alias}`;
-      const download_file_path = `${path_prefix}/${file_path}`;
-      console.log('download_file_path:', download_file_path);
+      // const download_dir_relative_path = config.get('download.relative_path');
+      // const scratch_mount_dir = config.get('filesystem.mount_dir.slateScratchApp');
+      // const download_path_prefix = `${scratch_mount_dir}/${download_dir_relative_path}`;
+      // const file_path = isFileDownload
+      //   ? `${dataset.metadata.stage_alias}/${file.path}`
+      //   : `${dataset.metadata.bundle_alias}`;
+      // const file_name = isFileDownload? file.name : dataset.metadata.bundle_alias;
+      // console.log('file_name:', file_name);
+      // const download_file_path = `${download_path_prefix}/${file_path}`;
+      // console.log('download_file_path:', download_file_path);
 
       // const url = new URL(download_file_path,
       // config.get('download_server.base_url'));
@@ -769,6 +771,9 @@ router.get(
       //   bearer_token: download_token.accessToken,
       // });
 
+
+      const download_file_path = "/opt/sca/app/admins.json"
+
       try {
         await fsPromises.access(download_file_path);
       } catch (err) {
@@ -778,6 +783,8 @@ router.get(
       res.set('X-Accel-Redirect', `${download_file_path}`);
       // make browser download response instead of attempting to render it
       res.set('content-type', 'application/octet-stream; charset=utf-8');
+
+      res.set('content-disposition', `attachment; filename=${file_name}`);
       // makes nginx not cache the response file
       // otherwise the response cuts off at 1GB as the max buffer size is
       // reached and the file download fails https://stackoverflow.com/a/64282626

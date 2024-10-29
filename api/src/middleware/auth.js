@@ -20,7 +20,6 @@ function authenticate(req, res, next) {
     return next(createError.Unauthorized('Authentication failed. Token not found.'))
   }
   const token = authHeaderToken ? authHeaderToken.split(' ')[1] : searchParamsToken;
-  console.log('Token:', token);
 
   const auth = authService.checkJWT(token);
   if (!auth) return next(err);
