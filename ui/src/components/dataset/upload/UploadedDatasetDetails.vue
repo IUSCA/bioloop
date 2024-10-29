@@ -1,57 +1,57 @@
 <template>
-  <va-card class="mt-5">
-    <va-card-title>
-      <div class="flex flex-nowrap items-center w-full">
-        <span class="text-lg">Details</span>
-      </div>
-    </va-card-title>
-    <va-card-content>
-      <div class="va-table-responsive">
-        <table class="va-table">
-          <tbody>
-            <tr v-if="sourceRawData">
-              <td>Source Raw Data</td>
-              <td>
-                <span>
-                  <router-link
-                    :to="`/datasets/${sourceRawData?.id}`"
-                    target="_blank"
-                  >
-                    {{ sourceRawData?.name }}
-                  </router-link>
-                </span>
-              </td>
-            </tr>
+  <!--  <va-card class="">-->
+  <!--    <va-card-title>-->
+  <!--      <div class="flex flex-nowrap items-center w-full">-->
+  <!--        <span class="text-lg">Details</span>-->
+  <!--      </div>-->
+  <!--    </va-card-title>-->
+  <!--    <va-card-content>-->
+  <div class="va-table-responsive">
+    <table class="va-table">
+      <tbody>
+        <tr v-if="sourceRawData">
+          <td>Source Raw Data</td>
+          <td class="source-raw-data-name">
+            <span>
+              <router-link
+                :to="`/datasets/${sourceRawData?.id}`"
+                target="_blank"
+              >
+                {{ sourceRawData?.name }}
+              </router-link>
+            </span>
+          </td>
+        </tr>
 
-            <!--            <tr>-->
-            <!--              <td>Status</td>-->
-            <!--              <td>-->
-            <!--                <va-chip size="small" :color="props.statusChipColor">-->
-            <!--                  {{ props.submissionStatus }}-->
-            <!--                </va-chip>-->
-            <!--              </td>-->
-            <!--            </tr>-->
+        <!--            <tr>-->
+        <!--              <td>Status</td>-->
+        <!--              <td>-->
+        <!--                <va-chip size="small" :color="props.statusChipColor">-->
+        <!--                  {{ props.submissionStatus }}-->
+        <!--                </va-chip>-->
+        <!--              </td>-->
+        <!--            </tr>-->
 
-            <tr v-if="props.selectingFiles || props.selectingDirectory">
-              <td>Data Product</td>
-              <td>
-                <UploadedDatasetName
-                  v-model:dataset-name-input="datasetNameInput"
-                  v-model:dataset-name="datasetName"
-                  :dataset-name-error="props.uploadedDataProductError"
-                  :dataset-name-error-messages="
-                    props.uploadedDataProductErrorMessages
-                  "
-                  :selecting-files="props.selectingFiles"
-                  :selecting-directory="props.selectingDirectory"
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </va-card-content>
-  </va-card>
+        <tr v-if="props.selectingFiles || props.selectingDirectory">
+          <td>Data Product</td>
+          <td>
+            <UploadedDatasetName
+              v-model:dataset-name-input="datasetNameInput"
+              v-model:dataset-name="datasetName"
+              :dataset-name-error="props.uploadedDataProductError"
+              :dataset-name-error-messages="
+                props.uploadedDataProductErrorMessages
+              "
+              :selecting-files="props.selectingFiles"
+              :selecting-directory="props.selectingDirectory"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <!--    </va-card-content>-->
+  <!--  </va-card>-->
 </template>
 
 <script setup>
@@ -140,4 +140,10 @@ watch(
 );
 </script>
 
-<style scoped></style>
+<style scoped>
+.source-raw-data-name {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+</style>

@@ -83,7 +83,6 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
                 })
         api.update_upload_log(upload_log_id, {
             'status': config['upload_status']['PROCESSING'],
-            'increment_processing_count': True,
             'files': file_log_updates
         })
     except Exception as e:

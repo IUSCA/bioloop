@@ -11,6 +11,8 @@
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
+    :show-error="props.showRequiredError"
+    :messages="props.messages"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -73,6 +75,18 @@ const props = defineProps({
   selectMode: {
     type: String,
     default: () => "multiple",
+  },
+  showRequiredError: {
+    type: Boolean,
+    default: false,
+  },
+  selectedLabel: {
+    type: String,
+    default: () => "Selected Datasets",
+  },
+  messages: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -142,12 +156,13 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
+  let query;
   if (props.datasetType) {
-    return {
+    query = {
       type: props.datasetType,
     };
   } else {
-    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+    query = lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
       ? {
           type: checkboxes.value.rawData
             ? "RAW_DATA"
@@ -157,6 +172,9 @@ const filterQuery = computed(() => {
         }
       : undefined;
   }
+  return {
+    ...query,
+  };
 });
 
 const batchingQuery = computed(() => {

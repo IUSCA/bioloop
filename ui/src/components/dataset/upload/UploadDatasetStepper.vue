@@ -1,83 +1,75 @@
 <template>
-  <va-inner-loading :loading="loading">
-    <va-form ref="datasetUploadForm" class="h-full">
-      <va-stepper
-        v-model="step"
-        :steps="steps"
-        controlsHidden
-        class="h-full create-data-product-stepper"
+  <va-inner-loading :loading="loading" class="h-full">
+    <!--    <va-form ref="datasetUploadForm">-->
+    <va-stepper
+      v-model="step"
+      :steps="steps"
+      controlsHidden
+      class="h-full create-data-product-stepper"
+    >
+      <!-- Step icons and labels -->
+      <template
+        v-for="(s, i) in steps"
+        :key="s.label"
+        #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
       >
-        <!-- Step icons and labels -->
-        <template
-          v-for="(s, i) in steps"
-          :key="s.label"
-          #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
+        <va-button
+          class="step-button p-1 sm:p-3 cursor-pointer"
+          :class="{
+            'step-button--active': isActive,
+            'step-button--completed': isCompleted,
+          }"
+          @click="setStep(i)"
+          :disabled="submitAttempted || step < i || loading"
+          preset="secondary"
         >
-          <va-button
-            class="step-button p-1 sm:p-3 cursor-pointer"
-            :class="{
-              'step-button--active': isActive,
-              'step-button--completed': isCompleted,
-            }"
-            @click="setStep(i)"
-            :disabled="submitAttempted || step < i || loading"
-            preset="secondary"
-          >
-            <div class="flex flex-col items-center">
-              <Icon :icon="s.icon" />
-              <span class="hidden sm:block"> {{ s.label }} </span>
-            </div>
-          </va-button>
-        </template>
-
-        <template #step-content-0>
-          <div class="flex flex-col gap-10">
-            <va-checkbox
-              v-model="isAssignedSourceRawData"
-              @update:modelValue="
-                (val) => {
-                  if (!val) {
-                    rawDataSelected = [];
-                  }
-                }
-              "
-              color="primary"
-              label="Assign source Raw Data"
-            />
-
-            <va-form-field
-              v-if="isAssignedSourceRawData"
-              v-model="rawDataSelected"
-              v-slot="{ value: v }"
-            >
-              <DatasetSelect
-                :selected-results="v.ref"
-                @select="addDataset"
-                @remove="removeDataset"
-                select-mode="single"
-                :dataset-type="config.dataset.types.RAW_DATA.key"
-                :show-required-error="!stepIsPristine"
-                placeholder="Search Raw Data"
-                selected-label="Selected source Raw Data"
-                :messages="['Select a Source Raw Data']"
-              ></DatasetSelect>
-            </va-form-field>
-
-            <div class="text-xs va-text-danger" v-if="!stepIsPristine">
-              {{ formErrors[STEP_KEYS.RAW_DATA] }}
-            </div>
+          <div class="flex flex-col items-center">
+            <Icon :icon="s.icon" />
+            <span class="hidden sm:block"> {{ s.label }} </span>
           </div>
-        </template>
+        </va-button>
+      </template>
 
-        <template #step-content-1>
-          <DatasetFileUploadTable
-            :source-raw-data="
-              rawDataSelected.length > 0 ? rawDataSelected[0] : null
+      <template #step-content-0>
+        <div class="flex flex-col gap-10">
+          <va-checkbox
+            v-model="isAssignedSourceRawData"
+            @update:modelValue="
+              (val) => {
+                if (!val) {
+                  rawDataSelected = [];
+                }
+              }
             "
-            :status-chip-color="statusChipColor"
-            :submission-status="submissionStatus"
-            :is-submission-alert-visible="isSubmissionAlertVisible"
-            :submission-alert="submissionAlert"
+            color="primary"
+            label="Assign source Raw Data"
+          />
+
+          <va-form-field
+            v-if="isAssignedSourceRawData"
+            v-model="rawDataSelected"
+            v-slot="{ value: v }"
+          >
+            <DatasetSelect
+              :selected-results="v.ref"
+              @select="addDataset"
+              @remove="removeDataset"
+              select-mode="single"
+              :dataset-type="config.dataset.types.RAW_DATA.key"
+              :show-error="!stepIsPristine"
+              :error="formErrors[STEP_KEYS.RAW_DATA]"
+              placeholder="Search Raw Data"
+              selected-label="Selected source Raw Data"
+              :messages="['Select a Source Raw Data']"
+            ></DatasetSelect>
+          </va-form-field>
+        </div>
+      </template>
+
+      <template #step-content-1>
+        <div class="flex flex-col">
+          <SelectFileButtons
+            :submit-attempted="submitAttempted"
             @files-added="
               (files) => {
                 clearSelectedDirectoryToUpload();
@@ -86,74 +78,110 @@
                 setUploadedFileType(FILE_TYPE.FILE);
               }
             "
-            @file-removed="removeFile"
             @directory-added="
               (directoryDetails) => {
                 // console.log('Directory added', directoryDetails);
-                clearSelectedFilesToUpload();
+                clearSelectedFilesToUpload({ clearNameInput: true });
                 setDirectory(directoryDetails);
                 isSubmissionAlertVisible = false;
                 setUploadedFileType(FILE_TYPE.DIRECTORY);
               }
             "
-            :submit-attempted="submitAttempted"
-            :submission-alert-color="submissionAlertColor"
-            :files="displayedFilesToUpload"
-            :directory-to-upload="dataProductDirectory"
-            :selecting-files="selectingFiles"
-            :selecting-directory="selectingDirectory"
           />
-          <!--            :data-product-directory="dataProductDirectory"-->
 
-          <!--         todo - should not be dataProductDirectory -->
-          <UploadedDatasetDetails
+          <va-divider />
+
+          <div
+            class="flex flex-row"
             v-if="selectingFiles || selectingDirectory"
-            v-model:dataset-name-input="datasetNameInput"
-            v-model:dataset-name="dataProductDirectoryName"
-            :selecting-files="selectingFiles"
-            :selecting-directory="selectingDirectory"
-            :uploaded-data-product-error-messages="formErrors[STEP_KEYS.UPLOAD]"
-            :uploaded-data-product-error="!!formErrors[STEP_KEYS.UPLOAD]"
-            :source-raw-data="rawDataSelected"
-          />
-          <!--          :uploaded-data-product-error-messages="[ formErrors[STEP_KEYS.UPLOAD],-->
-          <!--          ]"-->
-        </template>
+          >
+            <!--            :data-product-directory="dataProductDirectory"-->
 
-        <!-- custom controls -->
-        <template #controls="{ nextStep, prevStep }">
-          <div class="flex items-center justify-around w-full">
-            <va-button
-              class="flex-none"
-              preset="primary"
-              @click="
-                () => {
-                  isSubmissionAlertVisible = false;
-                  prevStep();
-                }
-              "
-              :disabled="isNextStepDisabled || loading"
-            >
-              Previous
-            </va-button>
-            <va-button
-              class="flex-none"
-              @click="onNextClick(nextStep)"
-              :color="isLastStep ? 'success' : 'primary'"
-              :disabled="formHasErrors || submissionSuccess || loading"
-            >
-              {{
-                isLastStep
-                  ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
-                    ? "Retry"
-                    : "Upload"
-                  : "Next"
-              }}
-            </va-button>
+            <!--         todo - should not be dataProductDirectory - use 'dataset' instead -->
+            <div class="flex-1">
+              <va-card class="upload-details">
+                <va-card-title>
+                  <div class="flex flex-nowrap items-center w-full">
+                    <span class="text-lg">Details</span>
+                  </div>
+                </va-card-title>
+                <va-card-content>
+                  <UploadedDatasetDetails
+                    v-if="selectingFiles || selectingDirectory"
+                    v-model:dataset-name-input="datasetNameInput"
+                    v-model:dataset-name="dataProductDirectoryName"
+                    :selecting-files="selectingFiles"
+                    :selecting-directory="selectingDirectory"
+                    :uploaded-data-product-error-messages="
+                      formErrors[STEP_KEYS.UPLOAD]
+                    "
+                    :uploaded-data-product-error="
+                      !!formErrors[STEP_KEYS.UPLOAD]
+                    "
+                    :source-raw-data="rawDataSelected"
+                  /> </va-card-content
+              ></va-card>
+            </div>
+
+            <va-divider vertical />
+
+            <div class="flex-1">
+              <DatasetFileUploadTable
+                :source-raw-data="
+                  rawDataSelected.length > 0 ? rawDataSelected[0] : null
+                "
+                :status-chip-color="statusChipColor"
+                :submission-status="submissionStatus"
+                :is-submission-alert-visible="isSubmissionAlertVisible"
+                :submission-alert="submissionAlert"
+                @file-removed="removeFile"
+                :submit-attempted="submitAttempted"
+                :submission-alert-color="submissionAlertColor"
+                :files="displayedFilesToUpload"
+                :selecting-files="selectingFiles"
+                :selecting-directory="selectingDirectory"
+              />
+            </div>
           </div>
-        </template>
-      </va-stepper>
-    </va-form>
+        </div>
+        <!--          :uploaded-data-product-error-messages="[ formErrors[STEP_KEYS.UPLOAD],-->
+        <!--          ]"-->
+      </template>
+
+      <!-- custom controls -->
+      <template #controls="{ nextStep, prevStep }">
+        <div class="flex items-center justify-around w-full">
+          <va-button
+            class="flex-none"
+            preset="primary"
+            @click="
+              () => {
+                isSubmissionAlertVisible = false;
+                prevStep();
+              }
+            "
+            :disabled="isNextStepDisabled || loading"
+          >
+            Previous
+          </va-button>
+          <va-button
+            class="flex-none"
+            @click="onNextClick(nextStep)"
+            :color="isLastStep ? 'success' : 'primary'"
+            :disabled="formHasErrors || submissionSuccess || loading"
+          >
+            {{
+              isLastStep
+                ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
+                  ? "Retry"
+                  : "Upload"
+                : "Next"
+            }}
+          </va-button>
+        </div>
+      </template>
+    </va-stepper>
+    <!--    </va-form>-->
   </va-inner-loading>
 </template>
 
@@ -167,6 +195,7 @@ import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { useBreakpoint, useForm } from "vuestic-ui";
+import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
@@ -381,7 +410,7 @@ const validateDatasetName = async () => {
 };
 
 const clearSelectedDirectoryToUpload = () => {
-  // clear files within directory being deleted
+  // clear files within the directory being deleted
   clearSelectedFilesToUpload();
   // clear directory being deleted
   dataProductDirectory.value = null;
@@ -389,8 +418,10 @@ const clearSelectedDirectoryToUpload = () => {
   dataProductDirectoryName.value = "";
 };
 
-const clearSelectedFilesToUpload = () => {
-  datasetNameInput.value = "";
+const clearSelectedFilesToUpload = ({ clearNameInput = false } = {}) => {
+  if (clearNameInput) {
+    datasetNameInput.value = "";
+  }
   filesToUpload.value = [];
 };
 
@@ -427,16 +458,24 @@ const setFormErrors = async () => {
   }
 
   if (step.value === 1) {
-    const { isNameValid: datasetNameIsValid, error } =
-      await validateDatasetName();
-
     if (
-      (selectingFiles.value && filesToUpload.value?.length === 0) ||
-      (selectingDirectory.value && !dataProductDirectory.value)
+      (selectingFiles.value || selectingDirectory.value) &&
+      filesToUpload.value.length === 0
     ) {
       formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
       return;
     }
+
+    const { isNameValid: datasetNameIsValid, error } =
+      await validateDatasetName();
+
+    // if (
+    //   (selectingFiles.value && filesToUpload.value?.length === 0) ||
+    //   (selectingDirectory.value && !dataProductDirectory.value)
+    // ) {
+    //   formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
+    //   return;
+    // }
 
     if (datasetNameIsValid) {
       formErrors.value[STEP_KEYS.UPLOAD] = null;
@@ -753,7 +792,6 @@ const postSubmit = () => {
       status: someFilesPendingUpload.value
         ? config.upload_status.UPLOAD_FAILED
         : config.upload_status.UPLOADED,
-      increment_processing_count: false,
       files: failedFileUpdates,
     })
       .then((res) => {
@@ -801,7 +839,6 @@ const preUpload = async () => {
   const logData = uploadLog.value?.id
     ? {
         status: config.upload_status.UPLOADING,
-        increment_processing_count: false,
       }
     : {
         ...uploadFormData.value,
@@ -925,6 +962,7 @@ watch(
     // isFileSearchAutocompleteOpen,
     // searchSpace,
     isAssignedSourceRawData,
+    filesToUpload,
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
@@ -998,6 +1036,11 @@ onBeforeUnmount(() => {
   .raw_data_select .va-select-content__autocomplete {
     padding-top: 7.5px;
     padding-bottom: 7.5px;
+  }
+
+  .upload-details {
+    height: 290px;
+    max-height: 290px;
   }
 }
 </style>

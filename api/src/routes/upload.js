@@ -175,21 +175,13 @@ router.patch(
   validate([
     param('id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
-    body('increment_processing_count').isBoolean().toBoolean().optional()
-      .default(false),
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const { status, files, increment_processing_count } = req.body;
+    const { status, files } = req.body;
     const update_query = _.omitBy(_.isUndefined)({
       status,
       last_updated: new Date(),
-      ...(increment_processing_count && {
-        processing_attempt_count:
-        {
-          increment: 1,
-        },
-      }),
       ...(status === config.upload_status.FAILED && {
         dataset: {
           delete: true,

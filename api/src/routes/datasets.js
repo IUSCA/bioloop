@@ -22,8 +22,6 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Data Product ingestion - UI
-
 // stats - UI
 router.get(
   '/stats',
@@ -32,8 +30,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Get summary statistics of datasets.'
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {

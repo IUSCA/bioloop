@@ -90,15 +90,14 @@ model dataset_file_type {
 }
 
 model upload_log {
-  id                       Int               @id @default(autoincrement())
-  status                   upload_status
-  dataset_id               Int?              @unique
-  dataset                  dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  files                    file_upload_log[]
-  last_updated             DateTime          @default(now()) @db.Timestamp(6)
-  processing_attempt_count Int               @default(0)
-  user_id                  Int
-  user                     user              @relation(fields: [user_id], references: [id])
+  id           Int               @id @default(autoincrement())
+  status       upload_status
+  dataset_id   Int?              @unique
+  dataset      dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  files        file_upload_log[]
+  last_updated DateTime          @default(now()) @db.Timestamp(6)
+  user_id      Int
+  user         user              @relation(fields: [user_id], references: [id])
 }
 
 model file_upload_log {
