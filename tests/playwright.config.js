@@ -95,6 +95,18 @@ module.exports = {
         testMatch: '/view/authenticated/notifications/notifications_user.spec.js',
       },
       {
+        name: 'admin_user_management',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/userManagement/*.spec.js',
+      },
+      {
+        name: 'operator_user_management',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login', 'admin_notifications'],
+        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+      },
+      {
         name: 'project',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
