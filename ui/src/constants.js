@@ -50,15 +50,10 @@ const exports = {
           {
             icon: "mdi-file-cog-outline",
             title: "Ingest Dataset",
-            path: "/ingest",
+            path: "/datasets/ingest",
           },
         ],
       },
-      // {
-      //   icon: "mdi-file-cog-outline",
-      //   title: "Ingest Dataset",
-      //   path: "/ingest",
-      // },
       {
         icon: "mdi-content-copy",
         title: "Duplicate Datasets",

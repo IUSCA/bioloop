@@ -15,7 +15,7 @@ const nav = useNavStore();
 nav.setNavItems([
   {
     label: "Ingest",
-    to: "/ingest",
+    to: "/datasets/ingest",
   },
 ]);
 </script>
