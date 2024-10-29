@@ -470,6 +470,12 @@ const onSubmit = async () => {
   });
 };
 
+const getRestrictedIngestionPaths = () => {
+  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(
+    ",",
+  );
+};
+
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
     onSubmit();
@@ -500,16 +506,14 @@ watch(
   },
 );
 
-const getRestrictedIngestionPaths = () => {
-  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(
-    ",",
-  );
-};
+// Form errors are set when this component mounts, or if the current step
+// changes, but not shown if a step's form fields are pristine.
+watch(step, async () => {
+  await setFormErrors();
+});
 
-// Form errors are set when this component mounts, but not shown if a step's
-// form fields are pristine.
-watch(step, () => {
-  setFormErrors();
+onMounted(async () => {
+  await setFormErrors();
 });
 
 onMounted(() => {
@@ -526,10 +530,6 @@ onMounted(() => {
     .finally(() => {
       loading.value = false;
     });
-});
-
-onMounted(() => {
-  setFormErrors();
 });
 </script>
 
