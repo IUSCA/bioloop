@@ -85,7 +85,7 @@
                 :items="props.searchResults"
                 :columns="_searchResultColumns"
                 selectable
-                select-mode="multiple"
+                :select-mode="props.selectMode"
               >
                 <!-- dynamically generated templates for displaying columns of the search results table -->
                 <template
@@ -190,7 +190,7 @@
         >
           <div
             class="flex va-text-danger h-full"
-            v-if="props.showRequiredError && props.selectedResults.length === 0"
+            v-if="props.showError && props.selectedResults.length === 0"
           >
             <va-alert
               dense
@@ -305,6 +305,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  selectMode: {
+    type: String,
+    default: () => "multiple",
+  },
   trackBy: {
     type: [Function, String],
     default: "id",
@@ -327,13 +331,19 @@ const props = defineProps({
     type: String,
     default: "result",
   },
-  showRequiredError: {
+  error: {
+    type: String,
+  },
+  showError: {
     type: Boolean,
     default: false,
   },
 });
 
 const selectionRequiredError = computed(() => {
+  if (props.error) {
+    return props.error;
+  }
   return (
     "Please select " +
     (props.selectMode === "single" ? "a" : "at least one") +
@@ -411,8 +421,8 @@ const isSelected = (result) => {
 };
 
 /**
- * Given a search result and a display config for one of the columns in the search result table,
- * returns the column's formatted value.
+ * Given a search result and a display config for one of the columns in the
+ * search result table, returns the column's formatted value.
  * @param rowData the search result to format
  * @param columnConfig the display config for a column in the search results table. This object
  * corresponds to the display config for this column that was provided to <va-data-table> via the `columns` prop.
@@ -432,10 +442,10 @@ const templateName = (field) => `cell(${field["key"]})`;
 
 const onScrollToEnd = () => {
   emit("scroll-end");
-  // This method returns a Promise simply because <va-infinite-scroll>'s expects its `load`
-  // callback prop to always return a Promise. The Promise in this instance doesn't do
-  // anything, and the actual fetching of subsequent results is handled by the client,
-  // who listens to the `scroll-end` event.
+  // This method returns a Promise simply because <va-infinite-scroll>'s
+  // expects its `load` callback prop to always return a Promise. The Promise in
+  // this instance doesn't do anything, and the actual fetching of subsequent
+  // results is handled by the client, who listens to the `scroll-end` event.
   return new Promise((resolve) => {
     resolve();
   });
