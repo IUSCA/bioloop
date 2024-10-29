@@ -65,7 +65,6 @@
 
         <!-- Search results table -->
         <va-inner-loading :loading="props.loading">
-          <div class="va-text-danger text-xs"></div>
           <div
             ref="infiniteScrollTarget_search"
             class="max-h-80 overflow-y-auto"

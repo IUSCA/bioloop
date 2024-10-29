@@ -45,7 +45,6 @@ const operator_items = constants.sidebar.operator_items;
 const admin_items = constants.sidebar.admin_items;
 const bottom_items = constants.sidebar.bottom_items;
 
-const ui = useUIStore();
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
