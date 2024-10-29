@@ -111,13 +111,14 @@ const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
+  match_name_exact,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     is_staged: staged,
     type,
     name: name ? {
-      contains: name,
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
@@ -179,7 +180,8 @@ const buildQueryObject = ({
 };
 
 // const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-//   const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
+// const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size',
+// 'size'];
 
 //   if (!field || !sortOrder) {
 //     return {};
@@ -210,9 +212,8 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
-// the criteria specified.
-// Used by workers + UI.
+// Get all datasets, and the count of datasets. Results can optionally be
+// filtered and sorted by the criteria specified. Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -235,6 +236,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('match_name_exact').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -308,7 +310,8 @@ router.get(
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the dataset_file table if files is true
+    // only select path and md5 columns from the dataset_file table if files is
+    // true
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -337,7 +340,9 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
+    /*
+    * #swagger.description = 'workflow_id is optional. If the request body has
+    * workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
     const { workflow_id, state, ...data } = req.body;
@@ -533,14 +538,16 @@ router.post(
     // user role can only run stage workflows
 
     // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true value
+    // filter only works on objects not arrays, so we use an object with true
+    // value
     const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
     if (allowed_wfs[req.params.wf]) {
       return next();
     }
     next(createError.Forbidden());
   },
-  // user role can only run wf on the datasets they can access through project associations
+  // user role can only run wf on the datasets they can access through project
+  // associations
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -634,7 +641,8 @@ router.get(
       base: req.query.basepath,
     });
     // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+    // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -664,14 +672,16 @@ router.get(
 //   const SCOPE_PREFIX = config.get('scope_prefix');
 //
 //   const scopes = (req.token?.scope || '').split(' ');
-//   const downoad_scopes = scopes.filter((scope) => scope.startsWith(SCOPE_PREFIX));
+// const downoad_scopes = scopes.filter((scope) =>
+// scope.startsWith(SCOPE_PREFIX));
 //
 //   if (downoad_scopes.length === 0) {
 //     return next(createError.Forbidden('Invalid scope'));
 //   }
 //
-//   const token_file_path = remove_leading_slash(downoad_scopes[0].slice(SCOPE_PREFIX.length));
-//   const req_path = remove_leading_slash(req.path);
+// const token_file_path =
+// remove_leading_slash(downoad_scopes[0].slice(SCOPE_PREFIX.length)); const
+// req_path = remove_leading_slash(req.path);
 //
 //   if (req_path === token_file_path) {
 //     res.set('X-Accel-Redirect', `/data/${token_file_path}`);
@@ -704,7 +714,8 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of a token being returned.
+    // Catch errors to ensure that logging does not get in the way of a token
+    // being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -747,7 +758,8 @@ router.get(
       const download_file_path = `${path_prefix}/${file_path}`;
       console.log('download_file_path:', download_file_path);
 
-      // const url = new URL(download_file_path, config.get('download_server.base_url'));
+      // const url = new URL(download_file_path,
+      // config.get('download_server.base_url'));
       //
       // // use url.pathname instead of download_file_path to deal with spaces in the file path
       // // oauth scope cannot contain spaces
@@ -767,9 +779,8 @@ router.get(
       // make browser download response instead of attempting to render it
       res.set('content-type', 'application/octet-stream; charset=utf-8');
       // makes nginx not cache the response file
-      // otherwise the response cuts off at 1GB as the max buffer size is reached
-      // and the file download fails
-      // https://stackoverflow.com/a/64282626
+      // otherwise the response cuts off at 1GB as the max buffer size is
+      // reached and the file download fails https://stackoverflow.com/a/64282626
       res.set('X-Accel-Buffering', 'no');
       res.send('');
     } else {
