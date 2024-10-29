@@ -106,6 +106,12 @@ module.exports = {
         dependencies: ['operator_login', 'admin_notifications'],
         testMatch: '/view/authenticated/notifications/notifications.spec.js',
       },
+      {
+        name: 'project',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/project/*.spec.js',
+      },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
       //

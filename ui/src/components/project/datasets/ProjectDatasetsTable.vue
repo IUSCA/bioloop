@@ -151,6 +151,7 @@
   </va-data-table>
 
   <Pagination
+    data-testid="project-datasets-pagination"
     v-model:page="currentPageIndex"
     v-model:page_size="pageSize"
     :total_results="total_results"
@@ -247,7 +248,7 @@ let datasets_sort_query = computed(() => {
 // Criteria used to limit the number of results retrieved, and to define the offset starting at
 // which the next batch of results will be retrieved.
 const datasets_batching_query = computed(() => {
-  return { offset: offset.value, limit: pageSize.value };
+  return { skip: offset.value, take: pageSize.value };
 });
 
 // Aggregate of all other criteria. Used for retrieving results according to the criteria
