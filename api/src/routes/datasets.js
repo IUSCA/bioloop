@@ -340,11 +340,11 @@ router.post(
     data.name = data.name.split(' ').join('');
 
     // if dataset's origin_path is a restricted for dataset creation, throw
-    // error    
+    // error
     const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
     const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
       const isMatch = pm(glob);
-      const matches = isMatch(origin_path, glob, { contains: true });
+      const matches = isMatch(origin_path, glob);
       return matches.isMatch;
     });
 
