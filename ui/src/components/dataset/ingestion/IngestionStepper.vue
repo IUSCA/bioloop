@@ -276,8 +276,8 @@ const setFormErrors = async () => {
       const restricted_dataset_paths = getRestrictedIngestionPaths();
       const origin_path_is_restricted = selectedFile.value
         ? restricted_dataset_paths.some((pattern) => {
-            const _path = selectedFile.value.path
-              let isMatch = pm(pattern);
+            const _path = selectedFile.value.path;
+            let isMatch = pm(pattern);
             const matches = isMatch(_path, pattern);
             return matches.isMatch;
           })
