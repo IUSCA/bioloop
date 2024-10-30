@@ -1,166 +1,164 @@
 <template>
-  <va-inner-loading :loading="loading">
-    <va-form ref="dataProductIngestionForm" class="h-full">
-      <va-stepper
-        v-model="step"
-        :steps="steps"
-        controlsHidden
-        class="h-full stepper"
+  <va-inner-loading :loading="loading" class="h-full">
+    <va-stepper
+      v-model="step"
+      :steps="steps"
+      controlsHidden
+      class="h-full ingestion-stepper"
+    >
+      <!-- Step icons and labels -->
+      <template
+        v-for="(s, i) in steps"
+        :key="s.label"
+        #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
       >
-        <!-- Step icons and labels -->
-        <template
-          v-for="(s, i) in steps"
-          :key="s.label"
-          #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
+        <va-button
+          class="step-button p-1 sm:p-3 cursor-pointer"
+          :class="{
+            'step-button--active': isActive,
+            'step-button--completed': isCompleted,
+          }"
+          @click="setStep(i)"
+          :disabled="submitAttempted || step < i || loading"
+          preset="secondary"
         >
-          <va-button
-            class="step-button p-1 sm:p-3 cursor-pointer"
-            :class="{
-              'step-button--active': isActive,
-              'step-button--completed': isCompleted,
-            }"
-            @click="setStep(i)"
-            :disabled="submitAttempted || step < i || loading"
-            preset="secondary"
-          >
-            <div class="flex flex-col items-center">
-              <Icon :icon="s.icon" />
-              <span class="hidden sm:block"> {{ s.label }} </span>
-            </div>
-          </va-button>
-        </template>
-
-        <template #step-content-0>
-          <div class="flex">
-            <va-select
-              class="mr-2"
-              v-model="searchSpace"
-              @update:modelValue="resetSearch"
-              :options="FILESYSTEM_SEARCH_SPACES"
-              :text-by="'label'"
-              :track-by="'key'"
-              label="Search space"
-              :disabled="submitAttempted || loading"
-            />
-
-            <div class="flex flex-col w-full">
-              <FileListAutoComplete
-                @files-retrieved="setRetrievedFiles"
-                :disabled="submitAttempted"
-                :base-path="searchSpaceBasePath"
-                @loading="loading = true"
-                @loaded="loading = false"
-                @clear="resetSearch"
-                @open="
-                  () => {
-                    isFileSearchAutocompleteOpen = true;
-                    selectedFile = null;
-                    searchFiles();
-                  }
-                "
-                @close="
-                  () => {
-                    if (!selectedFile) {
-                      fileListSearchText = '';
-                    }
-                    isFileSearchAutocompleteOpen = false;
-                  }
-                "
-                v-model:selected="selectedFile"
-                @update:selected="
-                  (file) => {
-                    // selectedFile = file;
-                  }
-                "
-                v-model:search-text="fileListSearchText"
-                @update:search-text="searchFiles"
-                :options="fileList"
-              />
-
-              <div class="text-xs va-text-danger" v-if="!stepIsPristine">
-                {{ formErrors[STEP_KEYS.DIRECTORY] }}
-              </div>
-            </div>
+          <div class="flex flex-col items-center">
+            <Icon :icon="s.icon" />
+            <span class="hidden sm:block"> {{ s.label }} </span>
           </div>
-        </template>
+        </va-button>
+      </template>
 
-        <template #step-content-1>
-          <div class="flex flex-col gap-10">
-            <va-checkbox
-              v-model="isAssignedSourceRawData"
-              @update:modelValue="
-                (val) => {
-                  if (!val) {
-                    rawDataSelected = [];
-                  }
+      <template #step-content-0>
+        <div class="flex">
+          <va-select
+            class="mr-2"
+            v-model="searchSpace"
+            @update:modelValue="resetSearch"
+            :options="FILESYSTEM_SEARCH_SPACES"
+            :text-by="'label'"
+            :track-by="'key'"
+            label="Search space"
+            :disabled="submitAttempted || loading"
+          />
+
+          <div class="flex flex-col w-full">
+            <FileListAutoComplete
+              @files-retrieved="setRetrievedFiles"
+              :disabled="submitAttempted"
+              :base-path="searchSpaceBasePath"
+              @loading="loading = true"
+              @loaded="loading = false"
+              @clear="resetSearch"
+              @open="
+                () => {
+                  isFileSearchAutocompleteOpen = true;
+                  selectedFile = null;
+                  searchFiles();
                 }
               "
-              color="primary"
-              label="Assign source Raw Data"
+              @close="
+                () => {
+                  if (!selectedFile) {
+                    fileListSearchText = '';
+                  }
+                  isFileSearchAutocompleteOpen = false;
+                }
+              "
+              v-model:selected="selectedFile"
+              @update:selected="
+                (file) => {
+                  // selectedFile = file;
+                }
+              "
+              v-model:search-text="fileListSearchText"
+              @update:search-text="searchFiles"
+              :options="fileList"
             />
-
-            <va-form-field
-              v-if="isAssignedSourceRawData"
-              v-model="rawDataSelected"
-              v-slot="{ value: v }"
-            >
-              <DatasetSelect
-                :selected-results="v.ref"
-                @select="addDataset"
-                @remove="removeDataset"
-                select-mode="single"
-                :dataset-type="config.dataset.types.RAW_DATA.key"
-                :show-error="!stepIsPristine"
-                :error="formErrors[STEP_KEYS.RAW_DATA]"
-                placeholder="Search Raw Data"
-                selected-label="Selected source Raw Data"
-                :messages="['Select a Source Raw Data']"
-              ></DatasetSelect>
-            </va-form-field>
 
             <div class="text-xs va-text-danger" v-if="!stepIsPristine">
               {{ formErrors[STEP_KEYS.DIRECTORY] }}
             </div>
           </div>
-        </template>
+        </div>
+      </template>
 
-        <template #step-content-2>
-          <IngestionInfo
-            :ingestion-dir="selectedFile"
-            :source-raw-data="rawDataSelected[0]"
-            :ingestion-space="searchSpace.label"
-            :dataset-id="datasetId"
-          />
-        </template>
-
-        <!-- custom controls -->
-        <template #controls="{ nextStep, prevStep }">
-          <div class="flex items-center justify-around w-full">
-            <va-button
-              class="flex-none"
-              preset="primary"
-              @click="
-                () => {
-                  isSubmissionAlertVisible = false;
-                  prevStep();
+      <template #step-content-1>
+        <div class="flex flex-col gap-10">
+          <va-checkbox
+            v-model="isAssignedSourceRawData"
+            @update:modelValue="
+              (val) => {
+                if (!val) {
+                  rawDataSelected = [];
                 }
-              "
-              :disabled="isNextStepDisabled || loading"
-            >
-              Previous
-            </va-button>
-            <va-button
-              class="flex-none"
-              @click="onNextClick(nextStep)"
-              :color="isLastStep ? 'success' : 'primary'"
-              :disabled="formHasErrors || submissionSuccess || loading"
-            >
-              {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
-            </va-button>
+              }
+            "
+            color="primary"
+            label="Assign source Raw Data"
+          />
+
+          <va-form-field
+            v-if="isAssignedSourceRawData"
+            v-model="rawDataSelected"
+            v-slot="{ value: v }"
+          >
+            <DatasetSelect
+              :selected-results="v.ref"
+              @select="addDataset"
+              @remove="removeDataset"
+              select-mode="single"
+              :dataset-type="config.dataset.types.RAW_DATA.key"
+              :show-error="!stepIsPristine"
+              :error="formErrors[STEP_KEYS.RAW_DATA]"
+              placeholder="Search Raw Data"
+              selected-label="Selected source Raw Data"
+              :messages="['Select a Source Raw Data']"
+            ></DatasetSelect>
+          </va-form-field>
+
+          <div class="text-xs va-text-danger" v-if="!stepIsPristine">
+            {{ formErrors[STEP_KEYS.DIRECTORY] }}
           </div>
-        </template>
-      </va-stepper>
-    </va-form>
+        </div>
+      </template>
+
+      <template #step-content-2>
+        <IngestionInfo
+          :ingestion-dir="selectedFile"
+          :source-raw-data="rawDataSelected[0]"
+          :ingestion-space="searchSpace.label"
+          :dataset-id="datasetId"
+        />
+      </template>
+
+      <!-- custom controls -->
+      <template #controls="{ nextStep, prevStep }">
+        <div class="flex items-center justify-around w-full">
+          <va-button
+            class="flex-none"
+            preset="primary"
+            @click="
+              () => {
+                isSubmissionAlertVisible = false;
+                prevStep();
+              }
+            "
+            :disabled="isNextStepDisabled || loading"
+          >
+            Previous
+          </va-button>
+          <va-button
+            class="flex-none"
+            @click="onNextClick(nextStep)"
+            :color="isLastStep ? 'success' : 'primary'"
+            :disabled="formHasErrors || submissionSuccess || loading"
+          >
+            {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
+          </va-button>
+        </div>
+      </template>
+    </va-stepper>
   </va-inner-loading>
 </template>
 
@@ -531,11 +529,12 @@ onMounted(() => {
 });
 </script>
 
-<style lang="scss" scoped>
-.stepper {
-  .stepbutton {
+<style lang="scss">
+.ingestion-stepper {
+  .step-button {
     color: var(--va-secondary);
   }
+
   .step-button--active {
     color: var(--va-primary);
   }
@@ -547,6 +546,7 @@ onMounted(() => {
   .step-button:hover {
     background-color: var(--va-background-element);
   }
+
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
     // min-height: 0 to shrink the elemenet to below its calculated min-height of children
@@ -555,6 +555,7 @@ onMounted(() => {
     flex: 1;
     min-height: 0;
   }
+
   .va-stepper__step-content {
     // step-content-wrapper contains step-content and controls
     // only shrink and grow step-content
