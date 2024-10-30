@@ -41,7 +41,7 @@ const props = defineProps({
 const projects = ref([]);
 
 projectService.getAll({ forSelf: false }).then((res) => {
-  projects.value = (res.data || []).filter(
+  projects.value = (res.data.projects || []).filter(
     (p) => !props.excludeIds.includes(p.id),
   );
 });
