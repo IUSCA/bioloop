@@ -11,7 +11,8 @@
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
-    :show-error="props.showRequiredError"
+    :show-error="props.showError"
+    :error="props.error"
     :messages="props.messages"
     @reset="
       () => {
@@ -76,9 +77,12 @@ const props = defineProps({
     type: String,
     default: () => "multiple",
   },
-  showRequiredError: {
+  showError: {
     type: Boolean,
     default: false,
+  },
+  error: {
+    type: String,
   },
   selectedLabel: {
     type: String,
