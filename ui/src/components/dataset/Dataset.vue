@@ -544,7 +544,7 @@ const columns = [
   { key: "created_at", label: "Created At", sortable: true, width: "100px" },
   { key: "updated_at", label: "Updated At", sortable: true, width: "150px" },
   { key: "assigned_at", label: "Assigned At", sortable: true, width: "150px" },
-  { key: "assigner", label: "Assigner", sortable: true, width: "150px" },
+  { key: "assigner", label: "Assigner", sortable: false, width: "150px" },
 ];
 
 function fetch_projects() {
