@@ -15,7 +15,7 @@
           :disabled="props.disabled"
           :label="props.label"
         >
-          <template #prependInner><slot></slot></template>
+          <template #prependInner><slot name="prependInner"></slot></template>
         </va-input>
       </va-form>
       <ul

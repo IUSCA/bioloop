@@ -1,5 +1,4 @@
 <template>
-  <!--    @update:search-text="searchFiles"-->
   <AutoComplete
     v-model:search-text="searchText"
     :placeholder="`Search directories in ${basePath}`"
@@ -17,13 +16,14 @@
     @open="emit('open')"
     @close="emit('close')"
   >
-    <va-badge
-      v-if="props.basePath"
-      class="base-path-badge"
-      :text="basePath"
-      color="secondary"
-    >
-    </va-badge>
+    <template #prependInner>
+      <va-badge
+        v-if="props.basePath"
+        class="base-path-badge"
+        :text="basePath"
+        color="secondary"
+      />
+    </template>
   </AutoComplete>
 </template>
 
