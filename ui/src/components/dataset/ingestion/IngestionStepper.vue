@@ -54,7 +54,6 @@
                 () => {
                   isFileSearchAutocompleteOpen = true;
                   selectedFile = null;
-                  searchFiles();
                 }
               "
               @close="
@@ -62,12 +61,13 @@
                   if (!selectedFile) {
                     fileListSearchText = '';
                   }
+                  fileList = [];
                   isFileSearchAutocompleteOpen = false;
                 }
               "
               v-model:selected="selectedFile"
+              @update:selected="fileList = []"
               v-model:search-text="fileListSearchText"
-              @update:search-text="searchFiles"
               :options="fileList"
             />
 
@@ -163,6 +163,7 @@ import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
 import pm from "picomatch";
+import { watchDebounced } from "@vueuse/core";
 
 const STEP_KEYS = {
   DIRECTORY: "directory",
@@ -358,6 +359,14 @@ const searchSpace = ref(
 
 const searchSpaceBasePath = computed(() => searchSpace.value.base_path);
 
+const _searchText = computed(() => {
+  return (
+    (searchSpace.value.base_path.endsWith("/")
+      ? searchSpace.value.base_path
+      : searchSpace.value.base_path + "/") + fileListSearchText.value
+  );
+});
+
 const resetSearch = () => {
   selectedFile.value = null;
   fileListSearchText.value = "";
@@ -366,15 +375,9 @@ const resetSearch = () => {
 };
 
 const searchFiles = async () => {
-  const _searchText =
-    (searchSpace.value.base_path.endsWith("/")
-      ? searchSpace.value.base_path
-      : searchSpace.value.base_path + "/") + fileListSearchText.value;
-
-  loading.value = true;
   fileSystemService
     .getPathFiles({
-      path: _searchText,
+      path: _searchText.value,
       dirs_only: true,
       search_space: searchSpace.value.key,
     })
@@ -393,6 +396,27 @@ const searchFiles = async () => {
       loading.value = false;
     });
 };
+
+// Set loading to true when FileListAutoComplete is either opened or typed into.
+// The actual search begins after a delay, but a loading indicator should be
+// shown before the search begins.
+watch([isFileSearchAutocompleteOpen, fileListSearchText], () => {
+  if (isFileSearchAutocompleteOpen.value) {
+    loading.value = true;
+  }
+});
+
+// Begin search once FileListAutoComplete is opened, or typed into, but
+// after a delay.
+watchDebounced(
+  [isFileSearchAutocompleteOpen, fileListSearchText],
+  () => {
+    if (isFileSearchAutocompleteOpen.value) {
+      searchFiles();
+    }
+  },
+  { debounce: 500, maxWait: 1000 },
+);
 
 const setRetrievedFiles = (files) => {
   fileList.value = files;
