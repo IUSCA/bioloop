@@ -58,7 +58,11 @@ const searchText = computed({
 });
 
 const basePath = computed(() => {
-  return props.basePath.endsWith("/") ? props.basePath : props.basePath + "/";
+  return props.basePath
+    ? props.basePath.endsWith("/")
+      ? props.basePath
+      : props.basePath + "/"
+    : "";
 });
 
 const onFileSelect = (file) => {
