@@ -66,11 +66,6 @@
                 }
               "
               v-model:selected="selectedFile"
-              @update:selected="
-                (file) => {
-                  // selectedFile = file;
-                }
-              "
               v-model:search-text="fileListSearchText"
               @update:search-text="searchFiles"
               :options="fileList"
