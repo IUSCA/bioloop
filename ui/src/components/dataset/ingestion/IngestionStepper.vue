@@ -1,160 +1,173 @@
 <template>
-  <va-inner-loading :loading="loading" class="h-full">
-    <va-stepper
-      v-model="step"
-      :steps="steps"
-      controlsHidden
-      class="h-full ingestion-stepper"
+  <!--  <va-inner-loading :loading="loading" class="h-full">-->
+  <va-stepper
+    v-model="step"
+    :steps="steps"
+    controlsHidden
+    class="h-full ingestion-stepper"
+  >
+    <!-- Step icons and labels -->
+    <template
+      v-for="(s, i) in steps"
+      :key="s.label"
+      #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
     >
-      <!-- Step icons and labels -->
-      <template
-        v-for="(s, i) in steps"
-        :key="s.label"
-        #[`step-button-${i}`]="{ setStep, isActive, isCompleted }"
+      <va-button
+        class="step-button p-1 sm:p-3 cursor-pointer"
+        :class="{
+          'step-button--active': isActive,
+          'step-button--completed': isCompleted,
+        }"
+        @click="setStep(i)"
+        :disabled="
+          submitAttempted || step < i || loading || asyncValidatingDatasetName
+        "
+        preset="secondary"
       >
-        <va-button
-          class="step-button p-1 sm:p-3 cursor-pointer"
-          :class="{
-            'step-button--active': isActive,
-            'step-button--completed': isCompleted,
-          }"
-          @click="setStep(i)"
-          :disabled="submitAttempted || step < i || loading"
-          preset="secondary"
-        >
-          <div class="flex flex-col items-center">
-            <Icon :icon="s.icon" />
-            <span class="hidden sm:block"> {{ s.label }} </span>
-          </div>
-        </va-button>
-      </template>
-
-      <template #step-content-0>
-        <div class="flex">
-          <va-select
-            class="mr-2"
-            v-model="searchSpace"
-            @update:modelValue="resetSearch"
-            :options="FILESYSTEM_SEARCH_SPACES"
-            :text-by="'label'"
-            :track-by="'key'"
-            label="Search space"
-            :disabled="submitAttempted || loading"
-          />
-
-          <div class="flex flex-col w-full">
-            <FileListAutoComplete
-              @files-retrieved="setRetrievedFiles"
-              :disabled="submitAttempted"
-              :base-path="searchSpaceBasePath"
-              @loading="loading = true"
-              @loaded="loading = false"
-              @clear="resetSearch"
-              @open="
-                () => {
-                  isFileSearchAutocompleteOpen = true;
-                  selectedFile = null;
-                }
-              "
-              @close="
-                () => {
-                  if (!selectedFile) {
-                    fileListSearchText = '';
-                  }
-                  fileList = [];
-                  isFileSearchAutocompleteOpen = false;
-                }
-              "
-              v-model:selected="selectedFile"
-              @update:selected="fileList = []"
-              v-model:search-text="fileListSearchText"
-              :options="fileList"
-            />
-
-            <div class="text-xs va-text-danger" v-if="!stepIsPristine">
-              {{ formErrors[STEP_KEYS.DIRECTORY] }}
-            </div>
-          </div>
+        <div class="flex flex-col items-center">
+          <Icon :icon="s.icon" />
+          <span class="hidden sm:block"> {{ s.label }} </span>
         </div>
-      </template>
+      </va-button>
+    </template>
 
-      <template #step-content-1>
-        <div class="flex flex-col gap-10">
-          <va-checkbox
-            v-model="isAssignedSourceRawData"
-            @update:modelValue="
-              (val) => {
-                if (!val) {
-                  rawDataSelected = [];
+    <template #step-content-0>
+      <div class="flex">
+        <va-select
+          class="mr-2"
+          v-model="searchSpace"
+          @update:modelValue="resetSearch"
+          :options="FILESYSTEM_SEARCH_SPACES"
+          :text-by="'label'"
+          :track-by="'key'"
+          label="Search space"
+          :disabled="submitAttempted || loading || asyncValidatingDatasetName"
+        />
+
+        <div class="flex flex-col w-full">
+          <FileListAutoComplete
+            @files-retrieved="setRetrievedFiles"
+            :disabled="submitAttempted"
+            :base-path="searchSpaceBasePath"
+            :loading="asyncValidatingDatasetName"
+            @loading="loading = true"
+            @loaded="loading = false"
+            @clear="resetSearch"
+            @open="
+              () => {
+                isFileSearchAutocompleteOpen = true;
+                selectedFile = null;
+              }
+            "
+            @close="
+              () => {
+                if (!selectedFile) {
+                  fileListSearchText = '';
+                }
+                fileList = [];
+                isFileSearchAutocompleteOpen = false;
+                if (asyncValidatingDatasetName) {
+                  asyncValidatingDatasetName = false;
                 }
               }
             "
-            color="primary"
-            label="Assign source Raw Data"
+            v-model:selected="selectedFile"
+            @update:selected="fileList = []"
+            v-model:search-text="fileListSearchText"
+            :options="fileList"
           />
-
-          <va-form-field
-            v-if="isAssignedSourceRawData"
-            v-model="rawDataSelected"
-            v-slot="{ value: v }"
-          >
-            <DatasetSelect
-              :selected-results="v.ref"
-              @select="addDataset"
-              @remove="removeDataset"
-              select-mode="single"
-              :dataset-type="config.dataset.types.RAW_DATA.key"
-              :show-error="!stepIsPristine"
-              :error="formErrors[STEP_KEYS.RAW_DATA]"
-              placeholder="Search Raw Data"
-              selected-label="Selected source Raw Data"
-              :messages="['Select a Source Raw Data']"
-            ></DatasetSelect>
-          </va-form-field>
 
           <div class="text-xs va-text-danger" v-if="!stepIsPristine">
             {{ formErrors[STEP_KEYS.DIRECTORY] }}
           </div>
         </div>
-      </template>
+      </div>
+    </template>
 
-      <template #step-content-2>
-        <IngestionInfo
-          :ingestion-dir="selectedFile"
-          :source-raw-data="rawDataSelected[0]"
-          :ingestion-space="searchSpace.label"
-          :dataset-id="datasetId"
-        />
-      </template>
-
-      <!-- custom controls -->
-      <template #controls="{ nextStep, prevStep }">
-        <div class="flex items-center justify-around w-full">
-          <va-button
-            class="flex-none"
-            preset="primary"
-            @click="
-              () => {
-                isSubmissionAlertVisible = false;
-                prevStep();
+    <template #step-content-1>
+      <div class="flex flex-col gap-10">
+        <va-checkbox
+          v-model="isAssignedSourceRawData"
+          @update:modelValue="
+            (val) => {
+              if (!val) {
+                rawDataSelected = [];
               }
-            "
-            :disabled="isNextStepDisabled || loading"
-          >
-            Previous
-          </va-button>
-          <va-button
-            class="flex-none"
-            @click="onNextClick(nextStep)"
-            :color="isLastStep ? 'success' : 'primary'"
-            :disabled="formHasErrors || submissionSuccess || loading"
-          >
-            {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
-          </va-button>
+            }
+          "
+          color="primary"
+          label="Assign source Raw Data"
+        />
+
+        <va-form-field
+          v-if="isAssignedSourceRawData"
+          v-model="rawDataSelected"
+          v-slot="{ value: v }"
+        >
+          <DatasetSelect
+            :selected-results="v.ref"
+            @select="addDataset"
+            @remove="removeDataset"
+            select-mode="single"
+            :dataset-type="config.dataset.types.RAW_DATA.key"
+            :show-error="!stepIsPristine"
+            :error="formErrors[STEP_KEYS.RAW_DATA]"
+            placeholder="Search Raw Data"
+            selected-label="Selected source Raw Data"
+            :messages="['Select a Source Raw Data']"
+          ></DatasetSelect>
+        </va-form-field>
+
+        <div class="text-xs va-text-danger" v-if="!stepIsPristine">
+          {{ formErrors[STEP_KEYS.DIRECTORY] }}
         </div>
-      </template>
-    </va-stepper>
-  </va-inner-loading>
+      </div>
+    </template>
+
+    <template #step-content-2>
+      <IngestionInfo
+        :ingestion-dir="selectedFile"
+        :source-raw-data="rawDataSelected[0]"
+        :ingestion-space="searchSpace.label"
+        :dataset-id="datasetId"
+      />
+    </template>
+
+    <!-- custom controls -->
+    <template #controls="{ nextStep, prevStep }">
+      <div class="flex items-center justify-around w-full">
+        <va-button
+          class="flex-none"
+          preset="primary"
+          @click="
+            () => {
+              isSubmissionAlertVisible = false;
+              prevStep();
+            }
+          "
+          :disabled="
+            isNextStepDisabled || loading || asyncValidatingDatasetName
+          "
+        >
+          Previous
+        </va-button>
+        <va-button
+          class="flex-none"
+          @click="onNextClick(nextStep)"
+          :color="isLastStep ? 'success' : 'primary'"
+          :disabled="
+            formHasErrors ||
+            submissionSuccess ||
+            loading ||
+            asyncValidatingDatasetName
+          "
+        >
+          {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
+        </va-button>
+      </div>
+    </template>
+  </va-stepper>
+  <!--  </va-inner-loading>-->
 </template>
 
 <script setup>
@@ -205,6 +218,7 @@ const fileListSearchText = ref("");
 const fileList = ref([]);
 const datasetId = ref();
 const loading = ref(false);
+const asyncValidatingDatasetName = ref(false);
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
 const rawDataList = ref([]);
@@ -222,10 +236,9 @@ const isNextStepDisabled = computed(() => {
 });
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
-// not. Errors are only shown when a step's form fields are not pristine.
-// For step STEP_KEYS.RAW_DATA, <va-form-field>
-// component tracks the pristine state of the step's input fields. For
-// step STEP_KEYS.DIRECTORY, pristine state is maintained by this component.
+// not. Errors are only shown when a step's form fields are not pristine. At
+// this time, errors are only shown on steps 0 (STEP_KEYS.DIRECTORY) and 1
+// (STEP_KEYS.RAW_DATA)
 const stepPristineStates = ref([
   { [STEP_KEYS.DIRECTORY]: true },
   { [STEP_KEYS.RAW_DATA]: true },
@@ -296,7 +309,8 @@ const setFormErrors = async () => {
   }
 };
 
-const validateNotExists = (value) => {
+// determines if the dataset (Data Product) named `value` already exists
+const asyncValidateDatasetName = (value) => {
   return new Promise((resolve) => {
     // Vuestic claims that it should not run async validation if synchronous
     // validation fails, but it seems to be triggering async validation
@@ -305,7 +319,7 @@ const validateNotExists = (value) => {
     if (!value) {
       resolve(true);
     } else {
-      loading.value = true;
+      asyncValidatingDatasetName.value = true;
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value })
         .then((res) => {
@@ -319,7 +333,7 @@ const validateNotExists = (value) => {
           console.error(err);
         })
         .finally(() => {
-          loading.value = false;
+          asyncValidatingDatasetName.value = false;
         });
     }
   });
@@ -333,7 +347,7 @@ const validateDatasetName = async () => {
     return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
   }
 
-  return validateNotExists(datasetName).then((res) => {
+  return asyncValidateDatasetName(datasetName).then((res) => {
     return {
       isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
       error:
@@ -372,6 +386,9 @@ const resetSearch = () => {
   fileListSearchText.value = "";
   setRetrievedFiles([]);
   formErrors.value[STEP_KEYS.DIRECTORY] = null;
+  if (asyncValidatingDatasetName.value) {
+    asyncValidatingDatasetName.value = false;
+  }
 };
 
 const searchFiles = async () => {

@@ -24,6 +24,15 @@
         color="secondary"
       />
     </template>
+
+    <template #appendInner>
+      <va-icon
+        v-if="props.loading"
+        name="loop"
+        spin="clockwise"
+        color="primary"
+      />
+    </template>
   </AutoComplete>
 </template>
 
@@ -35,6 +44,7 @@ const props = defineProps({
   searchText: { type: String, default: "" },
   options: { type: Array, default: () => [] },
   error: { type: Boolean, default: false },
+  loading: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([

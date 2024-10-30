@@ -16,6 +16,7 @@
           :label="props.label"
         >
           <template #prependInner><slot name="prependInner"></slot></template>
+          <template #appendInner><slot name="appendInner"></slot></template>
         </va-input>
       </va-form>
       <ul
