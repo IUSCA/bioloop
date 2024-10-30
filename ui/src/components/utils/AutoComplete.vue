@@ -19,8 +19,27 @@
           <template #appendInner><slot name="appendInner"></slot></template>
         </va-input>
       </va-form>
+
       <ul
-        v-if="visible"
+        v-if="props.loading"
+        class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
+      >
+        <li
+          class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
+        >
+          <div class="flex">
+            <va-icon
+              class="mx-auto"
+              name="loop"
+              spin="clockwise"
+              color="primary"
+            />
+          </div>
+        </li>
+      </ul>
+
+      <ul
+        v-else-if="visible"
         class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
       >
         <li
@@ -93,6 +112,10 @@ const props = defineProps({
     default: false,
   },
   error: {
+    type: Boolean,
+    default: false,
+  },
+  loading: {
     type: Boolean,
     default: false,
   },

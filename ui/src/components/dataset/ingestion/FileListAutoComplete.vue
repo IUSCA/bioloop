@@ -13,6 +13,7 @@
     "
     :disabled="disabled"
     :label="'Dataset Path'"
+    :loading="props.loading"
     @open="emit('open')"
     @close="emit('close')"
   >
@@ -27,7 +28,7 @@
 
     <template #appendInner>
       <va-icon
-        v-if="props.loading"
+        v-if="props.validating"
         name="loop"
         spin="clockwise"
         color="primary"
@@ -45,14 +46,12 @@ const props = defineProps({
   options: { type: Array, default: () => [] },
   error: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
+  validating: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
   "update:selected",
   "update:searchText",
-  "filesRetrieved",
-  "loading",
-  "loaded",
   "clear",
   "open",
   "close",

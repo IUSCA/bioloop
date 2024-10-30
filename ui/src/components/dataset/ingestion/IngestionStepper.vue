@@ -20,7 +20,11 @@
         }"
         @click="setStep(i)"
         :disabled="
-          submitAttempted || step < i || loading || asyncValidatingDatasetName
+          submitAttempted ||
+          step < i ||
+          searchingFiles ||
+          loadingResources ||
+          asyncValidatingDatasetName
         "
         preset="secondary"
       >
@@ -41,7 +45,9 @@
           :text-by="'label'"
           :track-by="'key'"
           label="Search space"
-          :disabled="submitAttempted || loading || asyncValidatingDatasetName"
+          :disabled="
+            submitAttempted || searchingFiles || asyncValidatingDatasetName
+          "
         />
 
         <div class="flex flex-col w-full">
@@ -49,9 +55,8 @@
             @files-retrieved="setRetrievedFiles"
             :disabled="submitAttempted"
             :base-path="searchSpaceBasePath"
-            :loading="asyncValidatingDatasetName"
-            @loading="loading = true"
-            @loaded="loading = false"
+            :loading="searchingFiles"
+            :validating="asyncValidatingDatasetName"
             @clear="resetSearch"
             @open="
               () => {
@@ -146,7 +151,10 @@
             }
           "
           :disabled="
-            isNextStepDisabled || loading || asyncValidatingDatasetName
+            isNextStepDisabled ||
+            searchingFiles ||
+            loadingResources ||
+            asyncValidatingDatasetName
           "
         >
           Previous
@@ -158,7 +166,8 @@
           :disabled="
             formHasErrors ||
             submissionSuccess ||
-            loading ||
+            searchingFiles ||
+            loadingResources ||
             asyncValidatingDatasetName
           "
         >
@@ -217,7 +226,8 @@ const rawDataSelected = ref([]);
 const fileListSearchText = ref("");
 const fileList = ref([]);
 const datasetId = ref();
-const loading = ref(false);
+const loadingResources = ref(false); // determines if the initial resources needed for the stepper are being fetched
+const searchingFiles = ref(false);
 const asyncValidatingDatasetName = ref(false);
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
@@ -410,7 +420,7 @@ const searchFiles = async () => {
       }
     })
     .finally(() => {
-      loading.value = false;
+      searchingFiles.value = false;
     });
 };
 
@@ -419,7 +429,7 @@ const searchFiles = async () => {
 // shown before the search begins.
 watch([isFileSearchAutocompleteOpen, fileListSearchText], () => {
   if (isFileSearchAutocompleteOpen.value) {
-    loading.value = true;
+    searchingFiles.value = true;
   }
 });
 
@@ -549,7 +559,7 @@ onMounted(async () => {
 });
 
 onMounted(() => {
-  loading.value = true;
+  loadingResources.value = true;
   datasetService
     .getAll({ type: "RAW_DATA" })
     .then((res) => {
@@ -560,7 +570,7 @@ onMounted(() => {
       console.error(err);
     })
     .finally(() => {
-      loading.value = false;
+      loadingResources.value = false;
     });
 });
 </script>
