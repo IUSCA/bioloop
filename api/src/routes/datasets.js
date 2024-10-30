@@ -9,6 +9,8 @@ const {
 const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
+const dayjs = require('dayjs');
+const pm = require('picomatch');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -111,13 +113,14 @@ const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
+  match_name_exact,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     is_staged: staged,
     type,
     name: name ? {
-      contains: name,
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
@@ -178,22 +181,6 @@ const buildQueryObject = ({
   return query_obj;
 };
 
-// const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-//   const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
-
-//   if (!field || !sortOrder) {
-//     return {};
-//   }
-//   if (nullable_order_by_fields.includes(field)) {
-//     return {
-//       [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-//     };
-//   }
-//   return {
-//     [field]: sortOrder,
-//   };
-// };
-
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -210,9 +197,8 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
-// the criteria specified.
-// Used by workers + UI.
+// Get all datasets, and the count of datasets. Results can optionally be
+// filtered and sorted by the criteria specified. Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -235,6 +221,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('match_name_exact').toBoolean().optional().default(true),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -258,7 +245,6 @@ router.get(
       },
     };
 
-    // console.log(JSON.stringify(filterQuery, null, 2));
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
       prisma.dataset.count({ ...filterQuery }),
@@ -308,7 +294,8 @@ router.get(
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the dataset_file table if files is true
+    // only select path and md5 columns from the dataset_file table if files is
+    // true
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -333,14 +320,48 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('ingestion_space').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /* #swagger.description = 'workflow_id is optional. If the request body has workflow_id,
+    /*
+    * #swagger.description = 'workflow_id is optional. If the request body has
+    * workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
-    const { workflow_id, state, ...data } = req.body;
+    const {
+      workflow_id, state, ingestion_space, data,
+    } = req.body;
+
+    const { origin_path } = data;
+
+    // remove whitespaces from dataset name
+    data.name = data.name.split(' ').join('');
+
+    // if dataset's origin_path is a restricted for dataset creation, throw
+    // error
+    const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+    const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+      const isMatch = pm(glob);
+      const matches = isMatch(origin_path, glob);
+      return matches.isMatch;
+    });
+
+    if (origin_path_is_restricted) {
+      return next(createError.Forbidden());
+    }
+
+    // create workflow association
+    if (workflow_id) {
+      data.workflows = {
+        create: [
+          {
+            id: workflow_id,
+          },
+        ],
+      };
+    }
 
     // create workflow association
     if (workflow_id) {
@@ -533,14 +554,16 @@ router.post(
     // user role can only run stage workflows
 
     // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true value
+    // filter only works on objects not arrays, so we use an object with true
+    // value
     const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
     if (allowed_wfs[req.params.wf]) {
       return next();
     }
     next(createError.Forbidden());
   },
-  // user role can only run wf on the datasets they can access through project associations
+  // user role can only run wf on the datasets they can access through project
+  // associations
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -634,7 +657,8 @@ router.get(
       base: req.query.basepath,
     });
     // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache if a need arises
+    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+    // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -674,7 +698,8 @@ router.get(
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.
-    // Catch errors to ensure that logging does not get in the way of a token being returned.
+    // Catch errors to ensure that logging does not get in the way of a token
+    // being returned.
     try {
       await prisma.data_access_log.create({
         data: {
@@ -714,8 +739,8 @@ router.get(
 
       const url = new URL(download_file_path, config.get('download_server.base_url'));
 
-      // use url.pathname instead of download_file_path to deal with spaces in the file path
-      // oauth scope cannot contain spaces
+      // use url.pathname instead of download_file_path to deal with spaces in
+      // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
       res.json({
         url: url.href,

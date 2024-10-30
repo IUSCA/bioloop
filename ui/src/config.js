@@ -26,11 +26,13 @@ const exports = {
   dataset: {
     types: {
       RAW_DATA: {
+        key: "RAW_DATA",
         label: "Raw Data",
         collection_path: "rawdata",
         icon: "mdi-dna",
       },
       DATA_PRODUCT: {
+        key: "DATA_PRODUCT",
         label: "Data Product",
         collection_path: "dataproducts",
         icon: "mdi-package-variant-closed",
@@ -73,6 +75,44 @@ const exports = {
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
+  },
+  filesystem_search_spaces: [
+    {
+      slateScratch: {
+        base_path:
+          import.meta.env.VITE_SCRATCH_BASE_DIR || "/bioloop/scratch/space",
+        mount_path:
+          import.meta.env.VITE_SCRATCH_MOUNT_DIR ||
+          "/bioloop/user/scratch/mount/dir",
+        key: "slateScratch",
+        label: "Slate-Scratch",
+      },
+    },
+    {
+      slateProject: {
+        base_path:
+          import.meta.env.VITE_PROJECT_BASE_DIR || "/bioloop/project/space",
+        mount_path:
+          import.meta.env.VITE_PROJECT_MOUNT_DIR ||
+          "bioloop/user/project/mount/dir",
+        key: "slateProject",
+        label: "Slate-Project",
+      },
+    },
+  ],
+  restricted_ingestion_dirs: {
+    slateScratch: {
+      paths:
+        import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+        "/scratch/space/restricted",
+      key: "scratch",
+    },
+    slateProject: {
+      paths:
+        import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
+        "/project/space/restricted",
+      key: "project",
+    },
   },
 };
 

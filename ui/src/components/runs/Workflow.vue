@@ -152,7 +152,6 @@ const emit = defineEmits(["update"]);
 
 const loading = ref(false);
 const workflow = ref(props.workflow);
-// console.log(workflow.value);
 
 const auth = useAuthStore();
 
@@ -280,9 +279,10 @@ function resume_workflow() {
       toast.error("Unable to resume workflow");
     })
     .finally(() => {
-      // the workflow status needs a little bit of time to change after successful resumption
-      // because a worker needs to accept the new task, which in turn updates the workflow object
-      // wait for 2 seconds and then update
+      // the workflow status needs a little bit of time to change after
+      // successful resumption because a worker needs to accept the new task,
+      // which in turn updates the workflow object wait for 2 seconds and then
+      // update
       setTimeout(() => {
         emit("update");
       }, 2000);
