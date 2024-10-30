@@ -49,7 +49,7 @@ const exports = {
         children: [
           {
             icon: "mdi-file-cog-outline",
-            title: "Ingest Dataset",
+            title: "Ingest",
             path: "/datasets/ingest",
           },
         ],
