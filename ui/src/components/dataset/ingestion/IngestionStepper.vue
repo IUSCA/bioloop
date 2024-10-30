@@ -36,8 +36,9 @@
               class="mr-2"
               v-model="searchSpace"
               @update:modelValue="resetSearch"
-              :options="FILESYSTEM_SEARCH_SPACES.map((space) => space.label)"
+              :options="FILESYSTEM_SEARCH_SPACES"
               :text-by="'label'"
+              :track-by="'key'"
               label="Search space"
               :disabled="submitAttempted || loading"
             />
@@ -227,9 +228,9 @@ const isNextStepDisabled = computed(() => {
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine.
-// For steps STEP_KEYS.DIRECTORY and STEP_KEYS.RAW_DATA, <va-form-field>
-// components track the pristine state of their respective input fields. For
-// step STEP_KEYS.INFO, pristine state is maintained by this component.
+// For step STEP_KEYS.RAW_DATA, <va-form-field>
+// component tracks the pristine state of the step's input fields. For
+// step STEP_KEYS.DIRECTORY, pristine state is maintained by this component.
 const stepPristineStates = ref([
   { [STEP_KEYS.DIRECTORY]: true },
   { [STEP_KEYS.RAW_DATA]: true },
@@ -361,13 +362,7 @@ const searchSpace = ref(
     : "",
 );
 
-const searchSpaceBasePath = computed({
-  get: () => searchSpace.value.base_path,
-  set: (value) => {
-    searchSpace.value = value;
-    resetSearch();
-  },
-});
+const searchSpaceBasePath = computed(() => searchSpace.value.base_path);
 
 const resetSearch = () => {
   selectedFile.value = null;
@@ -484,6 +479,8 @@ const onNextClick = (nextStep) => {
   }
 };
 
+// Form errors are set when this component mounts, or when a form field's value
+// changes, or when the current step changes.
 watch(
   [
     rawDataSelected,
@@ -506,8 +503,8 @@ watch(
   },
 );
 
-// Form errors are set when this component mounts, or if the current step
-// changes, but not shown if a step's form fields are pristine.
+// separate watcher for when step changes, since we don't want to mark the form
+// fields as not pristine upon step changes
 watch(step, async () => {
   await setFormErrors();
 });
