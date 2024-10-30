@@ -1,6 +1,6 @@
 <template>
   <va-card>
-    <va-card-title>Dataset Ingestion</va-card-title>
+    <va-card-title>Ingestion Details</va-card-title>
     <va-card-content>
       <div class="va-table-responsive">
         <table class="va-table w-full">
