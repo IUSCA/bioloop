@@ -1,6 +1,6 @@
 # Utility Components
 
-## Auto Complete
+## AutoComplete
 
 ### Basic Usage
 
@@ -114,6 +114,7 @@ const onSelect = (selectedUser) => {
 - disabled: Boolean - Can be used to show the underlying `va-input` element in a disabled state. Defaults to `false`.
 - error: String - Error message to show beneath the underlying `va-input` element.
 - label: String - Label for `AutoComplete`
+- loading: Boolean - determines if AutoComplete's dropdown will show a loading indicator, or retrieved results
 
 ### Events
 
@@ -127,6 +128,7 @@ const onSelect = (selectedUser) => {
 
 - `#filtered={ item }` - Named slot (filtered) with props ({item}) to render a custom search result. This slot is in
   v-for and called for each search result.
+- `#appendInner` - Named slot (appendInner) to append custom markup to `AutoComplete`'s input field. The markup provided will be rendered inside `va-input`'s `appendInner` slot.
 - `#prependInner` - Named slot (prependInner) to prepend custom markup to `AutoComplete`'s input field. The markup provided will be rendered inside `va-input`'s `prependInner` slot.
 
 ## SearchAndSelect
