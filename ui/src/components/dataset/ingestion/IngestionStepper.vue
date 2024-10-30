@@ -150,12 +150,7 @@
               prevStep();
             }
           "
-          :disabled="
-            isNextStepDisabled ||
-            searchingFiles ||
-            loadingResources ||
-            asyncValidatingDatasetName
-          "
+          :disabled="isPreviousButtonDisabled"
         >
           Previous
         </va-button>
@@ -163,13 +158,7 @@
           class="flex-none"
           @click="onNextClick(nextStep)"
           :color="isLastStep ? 'success' : 'primary'"
-          :disabled="
-            formHasErrors ||
-            submissionSuccess ||
-            searchingFiles ||
-            loadingResources ||
-            asyncValidatingDatasetName
-          "
+          :disabled="isNextButtonDisabled"
         >
           {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
         </va-button>
@@ -236,12 +225,23 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
-const isNextStepDisabled = computed(() => {
+
+const isNextButtonDisabled = computed(() => {
+  return (
+    formHasErrors.value ||
+    submissionSuccess.value ||
+    loadingResources.value ||
+    searchingFiles.value ||
+    asyncValidatingDatasetName.value
+  );
+});
+const isPreviousButtonDisabled = computed(() => {
   return (
     step.value === 0 ||
-    formHasErrors.value ||
-    submitAttempted.value ||
-    submissionSuccess.value
+    submissionSuccess.value ||
+    searchingFiles.value ||
+    loadingResources.value ||
+    asyncValidatingDatasetName.value
   );
 });
 
@@ -458,7 +458,6 @@ const removeDataset = () => {
 };
 
 const preIngestion = () => {
-  submitAttempted.value = true;
   return datasetService.create_dataset({
     data: {
       name: selectedFile.value.name,
@@ -551,7 +550,9 @@ watch(
 // separate watcher for when step changes, since we don't want to mark the form
 // fields as not pristine upon step changes
 watch(step, async () => {
-  await setFormErrors();
+  if (step.value !== 2) {
+    await setFormErrors();
+  }
 });
 
 onMounted(async () => {
