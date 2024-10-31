@@ -7,16 +7,40 @@
           :data-testid="props.dataTestId || 'autocomplete'"
           outline
           clearable
+          @clear="emit('clear')"
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
           class="w-full autocomplete-input"
           @click="openResults"
-        />
+          :disabled="props.disabled"
+          :label="props.label"
+        >
+          <template #prependInner><slot name="prependInner"></slot></template>
+          <template #appendInner><slot name="appendInner"></slot></template>
+        </va-input>
       </va-form>
 
       <ul
-        v-if="visible"
+        v-if="props.loading"
+        class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
+      >
+        <li
+          class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
+        >
+          <div class="flex">
+            <va-icon
+              class="mx-auto"
+              name="loop"
+              spin="clockwise"
+              color="primary"
+            />
+          </div>
+        </li>
+      </ul>
+
+      <ul
+        v-else-if="visible"
         class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
       >
         <li
@@ -52,6 +76,14 @@
 import { OnClickOutside } from "@vueuse/components";
 
 const props = defineProps({
+  searchText: {
+    type: String,
+    default: "",
+  },
+  label: {
+    type: String,
+    default: "",
+  },
   placeholder: {
     type: String,
     default: "Type here",
@@ -72,14 +104,42 @@ const props = defineProps({
     type: String,
     default: "name",
   },
+  async: {
+    type: Boolean,
+    default: false,
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  error: {
+    type: Boolean,
+    default: false,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
   dataTestId: {
     type: String,
   },
 });
 
-const emit = defineEmits(["select"]);
+const emit = defineEmits([
+  "select",
+  "clear",
+  "update:searchText",
+  "open",
+  "close",
+]);
 
-const text = ref("");
+const text = computed({
+  get: () => props.searchText,
+  set: (value) => {
+    emit("update:searchText", value);
+  },
+});
+
 const visible = ref(false);
 
 // when clicked outside, hide the results ul
@@ -87,7 +147,7 @@ const visible = ref(false);
 // when clicked on a search result, clear text and hide the results ul
 
 const search_results = computed(() => {
-  if (text.value === "") return props.data;
+  if (text.value === "" || props.async) return props.data;
 
   const filterFn =
     props.filterFn instanceof Function
@@ -102,10 +162,12 @@ const search_results = computed(() => {
 
 function closeResults() {
   visible.value = false;
+  emit("close");
 }
 
 function openResults() {
   visible.value = true;
+  emit("open");
 }
 
 function handleSelect(item) {

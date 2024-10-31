@@ -126,6 +126,14 @@ class DatasetService {
       },
     });
   }
+
+  create_dataset(data) {
+    return api.post("/datasets", data);
+  }
+
+  initiate_workflow_on_dataset({ dataset_id, workflow }) {
+    return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
+  }
 }
 
 export default new DatasetService();

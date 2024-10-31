@@ -7,6 +7,17 @@
     "consistent-return": 0,
     "camelcase": 0,
     "no-console": ["error", { "allow": ["warn", "error"] }],
+    "comment-length/limit-multi-line-comments": [
+      "warn",
+      {
+        "mode": "overflow-only",
+        "maxLength": 80,
+        "logicalWrap": true,
+        "ignoreUrls": true,
+        "ignoreCommentsWithCode": true,
+        "tabSize": 2
+      }
+    ],
     "max-len": ["error", { "ignoreComments": true, "code": 120 }]
   },
   "env": {
@@ -19,6 +30,7 @@
   },
   "extends": [
     "airbnb-base",
-    "plugin:lodash-fp/recommended" // https://www.npmjs.com/package/eslint-plugin-lodash-fp
+    "plugin:lodash-fp/recommended", // https://www.npmjs.com/package/eslint-plugin-lodash-fp
+    "plugin:comment-length/recommended"
   ]
 }

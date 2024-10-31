@@ -9,6 +9,7 @@
           <div class="flex gap-2">
             <!-- Search input -->
             <va-input
+              :messages="props.messages"
               :modelValue="props.searchTerm"
               @update:modelValue="
                 (val) => {
@@ -83,7 +84,7 @@
                 :items="props.searchResults"
                 :columns="_searchResultColumns"
                 selectable
-                select-mode="multiple"
+                :select-mode="props.selectMode"
               >
                 <!-- dynamically generated templates for displaying columns of the search results table -->
                 <template
@@ -137,7 +138,7 @@
 
     <!-- Selected results -->
     <div class="flex-auto">
-      <div class="flex flex-col gap-2">
+      <div class="h-full flex flex-col gap-2">
         <!-- Container for Controls -->
         <div class="flex flex-col gap-2 --controls-height --controls-margin">
           <div class="va-h6 h-9 my-0">
@@ -178,17 +179,42 @@
         </div>
 
         <!-- Selected Results table -->
-        <va-inner-loading :loading="props.loading">
-          <div class="overflow-y-auto selected-table">
+        <va-inner-loading
+          :loading="props.loading"
+          class="h-full"
+          :class="{
+            'selected-table__top-padding--hint-message-provided':
+              props.messages.length > 0,
+          }"
+        >
+          <div
+            class="flex va-text-danger h-full"
+            v-if="props.showError && props.selectedResults.length === 0"
+          >
+            <va-alert
+              dense
+              class="my-auto text-xs"
+              text-color="danger"
+              color="danger"
+              icon="warning"
+              outline
+            >
+              {{ selectionRequiredError }}</va-alert
+            >
+          </div>
+
+          <div
+            class="overflow-y-auto selected-table"
+            v-if="props.selectedResults.length > 0"
+          >
             <va-data-table
               class="results-table"
               v-model="selectedResultSelections"
-              v-if="props.selectedResults.length > 0"
               :items="props.selectedResults"
               :columns="_selectedResultColumns"
               virtual-scroller
               selectable
-              select-mode="multiple"
+              :select-mode="props.selectMode"
             >
               <!-- dynamically generated templates for displaying columns of the selected results table  -->
               <template
@@ -243,6 +269,9 @@
 import _ from "lodash";
 
 const props = defineProps({
+  messages: {
+    type: Array,
+  },
   placeholder: {
     type: String,
     default: () => "Type to search",
@@ -275,6 +304,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  selectMode: {
+    type: String,
+    default: () => "multiple",
+  },
   trackBy: {
     type: [Function, String],
     default: "id",
@@ -293,6 +326,28 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  resource: {
+    type: String,
+    default: "result",
+  },
+  error: {
+    type: String,
+  },
+  showError: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const selectionRequiredError = computed(() => {
+  if (props.error) {
+    return props.error;
+  }
+  return (
+    "Please select " +
+    (props.selectMode === "single" ? "a" : "at least one") +
+    ` ${props.resource}`
+  );
 });
 
 const _controlsMargin = toRef(() => props.controlsMargin);
@@ -365,8 +420,8 @@ const isSelected = (result) => {
 };
 
 /**
- * Given a search result and a display config for one of the columns in the search result table,
- * returns the column's formatted value.
+ * Given a search result and a display config for one of the columns in the
+ * search result table, returns the column's formatted value.
  * @param rowData the search result to format
  * @param columnConfig the display config for a column in the search results table. This object
  * corresponds to the display config for this column that was provided to <va-data-table> via the `columns` prop.
@@ -386,10 +441,10 @@ const templateName = (field) => `cell(${field["key"]})`;
 
 const onScrollToEnd = () => {
   emit("scroll-end");
-  // This method returns a Promise simply because <va-infinite-scroll>'s expects its `load`
-  // callback prop to always return a Promise. The Promise in this instance doesn't do
-  // anything, and the actual fetching of subsequent results is handled by the client,
-  // who listens to the `scroll-end` event.
+  // This method returns a Promise simply because <va-infinite-scroll>'s
+  // expects its `load` callback prop to always return a Promise. The Promise in
+  // this instance doesn't do anything, and the actual fetching of subsequent
+  // results is handled by the client, who listens to the `scroll-end` event.
   return new Promise((resolve) => {
     resolve();
   });
@@ -445,6 +500,10 @@ const addOrRemove = (rowData) => {
 
   .selected-table {
     height: 320px;
+  }
+
+  .selected-table__top-padding--hint-message-provided {
+    padding-top: 19px;
   }
 }
 </style>

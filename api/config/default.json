@@ -54,30 +54,30 @@
       "description": "An end-to-end workflow to inspect, archive, state and validate a dataset",
       "steps": [
         {
-            "name": "await stability",
-            "task": "await_stability"
+          "name": "await stability",
+          "task": "await_stability"
         },
         {
-            "name": "inspect",
-            "task": "inspect_dataset"
+          "name": "inspect",
+          "task": "inspect_dataset"
         },
         {
-            "name": "archive",
-            "task": "archive_dataset"
+          "name": "archive",
+          "task": "archive_dataset"
         },
         {
-            "name": "stage",
-            "task": "stage_dataset"
+          "name": "stage",
+          "task": "stage_dataset"
         },
         {
-            "name": "validate",
-            "task": "validate_dataset"
+          "name": "validate",
+          "task": "validate_dataset"
         },
         {
-            "name": "setup_download",
-            "task": "setup_dataset_download"
+          "name": "setup_download",
+          "task": "setup_dataset_download"
         }
-    ]
+      ]
     },
     "stage": {
       "steps": [
@@ -104,7 +104,10 @@
       ]
     }
   },
-  "dataset_types" : ["RAW_DATA", "DATA_PRODUCT"],
+  "dataset_types": [
+    "RAW_DATA",
+    "DATA_PRODUCT"
+  ],
   "e2e": {
     "users": {
       "admin": {
@@ -117,5 +120,21 @@
         "username": ""
       }
     }
+  },
+  "filesystem_search_spaces": "",
+  "filesystem": {
+    "search_spaces": "",
+    "base_dir": {
+      "slateScratch": "",
+      "slateProject": ""
+    },
+    "mount_dir": {
+      "slateScratch": "",
+      "slateProject": ""
+    }
+  },
+  "restricted_ingestion_dirs": {
+    "slateScratch": "",
+    "slateProject": ""
   }
 }

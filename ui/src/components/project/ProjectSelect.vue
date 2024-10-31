@@ -1,5 +1,6 @@
 <template>
   <AutoComplete
+    v-model:search-text="searchText"
     :data="projects"
     filter-by="name"
     placeholder="Search projects by name"
@@ -39,6 +40,7 @@ const props = defineProps({
   },
 });
 
+const searchText = ref("");
 const projects = ref([]);
 
 projectService.getAll({ forSelf: false }).then((res) => {
