@@ -1,6 +1,10 @@
 const { test, expect } = require('@playwright/test');
 const { v4: uuidv4 } = require('uuid');
 
+const {
+  testIdSelector, elementTestIdLocator, fillAndAssertValue,
+} = require('../../../../utils');
+
 const TEXT = 'some_text';
 
 const random_username = uuidv4();
@@ -18,9 +22,6 @@ const TEST_ID_USERNAME = 'user-username-input';
 const TEST_ID_EMAIL = 'user-email-input';
 const TEST_ID_CAS_ID = 'user-cas-id-input';
 const TEST_ID_NOTES = 'user-notes-input';
-
-const testIdSelector = (testId) => `[data-testid=${testId}]`;
-const elementTestIdLocator = ({ elementType = null, testId }) => (elementType ? `${elementType}${testIdSelector(testId)}` : `div${testIdSelector(testId)}`);
 
 test.describe.serial('User management', () => {
   let userNameInputLocator;
@@ -121,14 +122,3 @@ test.describe.serial('User management', () => {
     await expect(userNotesInputLocator).toHaveText('');
   });
 });
-
-const fillAndAssertValue = async ({
-  locator, text,
-}) => {
-  await fillText({ locator, text });
-  await expect(locator).toHaveValue(text);
-};
-
-const fillText = async ({ locator, text }) => {
-  await locator.fill(text);
-};

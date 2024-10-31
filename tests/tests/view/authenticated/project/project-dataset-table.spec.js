@@ -1,5 +1,8 @@
 const { test, expect } = require('@playwright/test');
 
+const { editProject } = require('../../../../api/project');
+const { getDatasets } = require('../../../../api/dataset');
+
 const PROJECT_ID = '98045a35-723c-4e1b-88e6-9462c1aff4c1';
 
 test.describe.serial('Project-datasets table', () => {
@@ -13,7 +16,7 @@ test.describe.serial('Project-datasets table', () => {
 
     const token = await page.evaluate(() => localStorage.getItem('token'));
 
-    const appDatasetsQueryResponse = await queryDatasets({
+    const appDatasetsQueryResponse = await getDatasets({
       requestContext: apiRequestContext,
       token,
     });
@@ -21,9 +24,9 @@ test.describe.serial('Project-datasets table', () => {
     const appDatasets = appDatasetsQueryResults.datasets;
 
     // remove all datasets from the project
-    await editProjectDatasets({
+    await editProject({
       requestContext: apiRequestContext,
-      projectId: PROJECT_ID,
+      id: PROJECT_ID,
       data: {
         remove_dataset_ids: appDatasets.map((ds) => ds.id),
       },
@@ -35,9 +38,9 @@ test.describe.serial('Project-datasets table', () => {
     // add one dataset to verify that the count / results-per-page options are
     // visible
     let datasetsToAdd = [1];
-    await editProjectDatasets({
+    await editProject({
       requestContext: apiRequestContext,
-      projectId: PROJECT_ID,
+      id: PROJECT_ID,
       data: {
         add_dataset_ids: datasetsToAdd,
       },
@@ -51,9 +54,9 @@ test.describe.serial('Project-datasets table', () => {
     datasetsToAdd = appDatasets
       .map((ds) => ds.id).filter((id) => (!datasetsToAdd.includes(id)));
     // add these datasets to the project
-    await editProjectDatasets({
+    await editProject({
       requestContext: apiRequestContext,
-      projectId: PROJECT_ID,
+      id: PROJECT_ID,
       data: {
         add_dataset_ids: datasetsToAdd,
       },
@@ -62,22 +65,4 @@ test.describe.serial('Project-datasets table', () => {
     await page.reload();
     await expect(page.locator('[data-testid=project-datasets-pagination] .va-pagination')).toBeVisible();
   });
-});
-
-const queryDatasets = async ({
-  requestContext, token, params,
-}) => requestContext.get('/api/datasets', {
-  params,
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
-
-const editProjectDatasets = async ({
-  requestContext, token, projectId, data,
-}) => requestContext.patch(`/api/projects/${projectId}/datasets`, {
-  data,
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
 });

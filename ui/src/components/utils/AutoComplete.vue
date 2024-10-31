@@ -4,6 +4,7 @@
     <OnClickOutside @trigger="closeResults">
       <va-form>
         <va-input
+          :data-testid="props.dataTestId || 'autocomplete'"
           outline
           clearable
           type="text"
@@ -70,6 +71,9 @@ const props = defineProps({
   displayBy: {
     type: String,
     default: "name",
+  },
+  dataTestId: {
+    type: String,
   },
 });
 

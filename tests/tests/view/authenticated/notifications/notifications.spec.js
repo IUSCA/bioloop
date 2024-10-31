@@ -99,6 +99,7 @@ const notificationBadgeLocator = (page) => page.getByTestId('notification-count'
 const notificationMenuItemLocator = (page) => page.getByTestId('notification-menu-items')
   .locator('tr.va-menu-item');
 
+// todo - replace with absracted API code
 const createNotification = async ({
   request, token, label, text,
 }) => {
