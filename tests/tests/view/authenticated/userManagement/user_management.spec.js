@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { v4: uuidv4 } = require('uuid');
 
 const {
-  testIdSelector, elementTestIdLocator, fillAndAssertValue,
+  testIdSelector, elementTestIdSelector, fillAndAssertValue,
 } = require('../../../../utils');
 
 const TEXT = 'some_text';
@@ -40,23 +40,23 @@ test.describe.serial('User management', () => {
   });
 
   test('Create User modal opened', async ({ page }) => {
-    userNameInputLocator = page.locator(elementTestIdLocator({
+    userNameInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_NAME,
     }));
-    userUsernameInputLocator = page.locator(elementTestIdLocator({
+    userUsernameInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_USERNAME,
     }));
-    userEmailInputLocator = page.locator(elementTestIdLocator({
+    userEmailInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_EMAIL,
     }));
-    userCasIdInputLocator = page.locator(elementTestIdLocator({
+    userCasIdInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_CAS_ID,
     }));
-    userNotesInputLocator = page.locator(elementTestIdLocator({
+    userNotesInputLocator = page.locator(elementTestIdSelector({
       elementType: 'textarea',
       testId: TEST_ID_NOTES,
     }));

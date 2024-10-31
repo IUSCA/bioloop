@@ -1,6 +1,6 @@
 <!-- Adapted from and improved upon https://stevencotterill.com/articles/how-to-build-an-autocomplete-field-with-vue-3 -->
 <template>
-  <div class="relative">
+  <div class="relative" :data-testid="`${props.dataTestId}--container`">
     <OnClickOutside @trigger="closeResults">
       <va-form>
         <va-input
@@ -24,9 +24,11 @@
       <ul
         v-if="props.loading"
         class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
+        :data-testid="`${props.dataTestId}--search-results-ul__loading`"
       >
         <li
           class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
+          :data-testid="`${props.dataTestId}--search-results-li__loading`"
         >
           <div class="flex">
             <va-icon
@@ -42,14 +44,20 @@
       <ul
         v-else-if="visible"
         class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
+        :data-testid="`${props.dataTestId}--search-results-ul`"
       >
         <li
           class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
           v-if="search_results.length"
+          :data-testid="`${props.dataTestId}--no-search-results-li`"
         >
           Showing {{ search_results.length }} of {{ data.length }} results
         </li>
-        <li v-for="(item, idx) in search_results" :key="idx">
+        <li
+          v-for="(item, idx) in search_results"
+          :key="idx"
+          :data-testid="`${props.dataTestId}--search-result-li-${idx}`"
+        >
           <button
             class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded w-full text-left"
             @click="handleSelect(item)"

@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const { testIdSelector, elementTestIdLocator, fillText } = require('../../../../utils');
+const { testIdSelector, elementTestIdSelector, fillText } = require('../../../../utils');
 const { getProjectById } = require('../../../../api/project');
 
 const TEST_PROJECT_ID = '98045a35-723c-4e1b-88e6-9462c1aff4c1';
@@ -10,6 +10,9 @@ const PROJECT_TO_MERGE_ID = '873d15e3-c221-4dc9-9357-2845d7fa25e2';
 const TEST_ID_PROJECT_MERGE_BUTTON = 'merge-projects-button';
 const TEST_ID_PROJECT_MERGE_MODAL = 'merge-projects-modal';
 const TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE = 'project-search-autocomplete';
+const TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_CONTAINER = `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE}--container`;
+const TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_SEARCH_RESULTS_UL = `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE}--search-results-ul`;
+// const SEARCH_RESULT = '--search-result-';
 
 test.describe.serial('Project-datasets table', () => {
   test.beforeEach(async ({ page }) => {
@@ -28,7 +31,7 @@ test.describe.serial('Project-datasets table', () => {
     const projectResults = await getProjectResponse.json();
     const project = projectResults.projects[0];
 
-    const searchInputLocator = elementTestIdLocator(
+    const searchInputLocator = elementTestIdSelector(
       { testId: TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE },
     );
 
@@ -40,4 +43,11 @@ test.describe.serial('Project-datasets table', () => {
       text: project.name.slice(0, project.name.length - 1),
     });
   });
+
+  // const autoCompleteLocator = elementTestIdSelector({ testId:
+  // TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE });
+  const autoCompleteContainerLocator = elementTestIdSelector({ testId: `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_CONTAINER}` });
+  const autoCompleteContainerUnorderedListLocator = elementTestIdSelector({ testId: `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_SEARCH_RESULTS_UL}` });
+
+  const firstSearchResultElementLocator = `${autoCompleteContainerLocator} ${autoCompleteContainerUnorderedListLocator} li`;
 });
