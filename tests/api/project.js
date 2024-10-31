@@ -1,18 +1,24 @@
-const { patch } = require('./index');
+const { patch, get } = require('./index');
 
 const getProjectById = async ({
-  requestContext, token, id,
-}) => patch({
-  requestContext, url: `/projects/${id}`, token,
-});
+  requestContext, token, id, test,
+} = {}) => {
+  console.log('project api token: ', token);
+  return get({
+    requestContext, url: `/projects/${id}`, token,
+  });
+};
 
-const editProject = async ({
+const editProjectDatasets = async ({
   requestContext, token, id, data,
-}) => patch({
-  requestContext, url: `/projects/${id}/datasets`, token, data,
-});
+}) => {
+  console.log('project api token: ', token);
+  return patch({
+    requestContext, url: `/projects/${id}/datasets`, token, data,
+  });
+};
 
 module.exports = {
-  editProject,
+  editProjectDatasets,
   getProjectById,
 };

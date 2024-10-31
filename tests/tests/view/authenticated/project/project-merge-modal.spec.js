@@ -22,32 +22,35 @@ test.describe.serial('Project-datasets table', () => {
   test('Project Merge', async ({ page }) => {
     const apiRequestContext = page.request;
     const token = await page.evaluate(() => localStorage.getItem('token'));
+    console.log('test token: ', token);
 
     const getProjectResponse = await getProjectById({
       requestContext: apiRequestContext,
       token,
       id: PROJECT_TO_MERGE_ID,
+      test: '1',
     });
-    const projectResults = await getProjectResponse.json();
-    const project = projectResults.projects[0];
+    const project = await getProjectResponse.json();
 
-    const searchInputLocator = elementTestIdSelector(
+    const searchInputSelector = elementTestIdSelector(
       { testId: TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE },
     );
 
     await fillText({
-      locator: searchInputLocator,
+      locator: searchInputSelector,
       // exclude the last character, so that the ProjectSearch searches by
       // a matching name (which is how a user would search), instead of the
       // exact name of the project
       text: project.name.slice(0, project.name.length - 1),
     });
+
+    // const autoCompleteLocator = elementTestIdSelector({ testId:
+    // TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE });
+    const autoCompleteContainerSelector = elementTestIdSelector({ testId: `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_CONTAINER}` });
+    const autoCompleteContainerUnorderedListSelector = elementTestIdSelector({ testId: `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_SEARCH_RESULTS_UL}` });
+
+    const resultsElementSelector = `${autoCompleteContainerSelector} ${autoCompleteContainerUnorderedListSelector} li`;
+
+    await expect(page.locator(resultsElementSelector)).toHaveText(project.name);
   });
-
-  // const autoCompleteLocator = elementTestIdSelector({ testId:
-  // TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE });
-  const autoCompleteContainerLocator = elementTestIdSelector({ testId: `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_CONTAINER}` });
-  const autoCompleteContainerUnorderedListLocator = elementTestIdSelector({ testId: `${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE_SEARCH_RESULTS_UL}` });
-
-  const firstSearchResultElementLocator = `${autoCompleteContainerLocator} ${autoCompleteContainerUnorderedListLocator} li`;
 });

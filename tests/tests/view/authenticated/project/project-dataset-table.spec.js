@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const { editProject } = require('../../../../api/project');
+const { editProjectDatasets } = require('../../../../api/project');
 const { getDatasets } = require('../../../../api/dataset');
 
 const PROJECT_ID = '98045a35-723c-4e1b-88e6-9462c1aff4c1';
@@ -24,7 +24,7 @@ test.describe.serial('Project-datasets table', () => {
     const appDatasets = appDatasetsQueryResults.datasets;
 
     // remove all datasets from the project
-    await editProject({
+    await editProjectDatasets({
       requestContext: apiRequestContext,
       id: PROJECT_ID,
       data: {
@@ -38,7 +38,7 @@ test.describe.serial('Project-datasets table', () => {
     // add one dataset to verify that the count / results-per-page options are
     // visible
     let datasetsToAdd = [1];
-    await editProject({
+    await editProjectDatasets({
       requestContext: apiRequestContext,
       id: PROJECT_ID,
       data: {
@@ -54,7 +54,7 @@ test.describe.serial('Project-datasets table', () => {
     datasetsToAdd = appDatasets
       .map((ds) => ds.id).filter((id) => (!datasetsToAdd.includes(id)));
     // add these datasets to the project
-    await editProject({
+    await editProjectDatasets({
       requestContext: apiRequestContext,
       id: PROJECT_ID,
       data: {

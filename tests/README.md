@@ -2,6 +2,8 @@
 
 Tests are written using Playwright.
 
+[//]: # (todo - document REST API util files)
+
 ---
 
 ## Coverage
