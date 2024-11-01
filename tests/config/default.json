@@ -16,7 +16,7 @@
   },
   "enabledFeatures": {
     "notifications": {
-      "enabledForRoles": ["operator", "admin"]
+      "enabledForRoles": []
     }
   }
 }
