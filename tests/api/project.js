@@ -1,7 +1,7 @@
 const { patch, get } = require('./index');
 
 const getProjectById = async ({
-  requestContext, token, id, test,
+  requestContext, token, id,
 } = {}) => {
   console.log('project api token: ', token);
   return get({

@@ -49,7 +49,7 @@
         <li
           class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
           v-if="search_results.length"
-          :data-testid="`${props.dataTestId}--no-search-results-li`"
+          :data-testid="`${props.dataTestId}--search-results-count-li`"
         >
           Showing {{ search_results.length }} of {{ data.length }} results
         </li>
@@ -67,7 +67,11 @@
             </slot>
           </button>
         </li>
-        <li v-if="search_results.length == 0" class="py-2 px-3">
+        <li
+          v-if="search_results.length == 0"
+          class="py-2 px-3"
+          :data-testid="`${props.dataTestId}--no-search-results-li`"
+        >
           <span
             class="flex gap-2 items-center justify-center va-text-secondary"
           >

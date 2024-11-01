@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { v4: uuidv4 } = require('uuid');
 
 const {
-  testIdSelector, elementTestIdSelector, fillAndAssertValue,
+  testIdSelector, elementTestIdSelector, fillAndAssertText,
 } = require('../../../../utils');
 
 const TEXT = 'some_text';
@@ -70,19 +70,19 @@ test.describe.serial('User management', () => {
 
   test('Cancel Modal action taken', async ({ page }) => {
     // fill-in fields
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNameInputSelector, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userUsernameInputSelector, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userEmailInputSelector, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userCasIdInputSelector, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNotesInputSelector, text: TEXT,
     });
 
@@ -100,13 +100,13 @@ test.describe.serial('User management', () => {
 
   test('User created', async ({ page }) => {
     // fill-in fields
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNameInputSelector, text: TEST_USER.name,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userEmailInputSelector, text: TEST_USER.email,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNotesInputSelector, text: TEST_USER.notes,
     });
 

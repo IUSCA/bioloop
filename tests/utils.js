@@ -5,10 +5,11 @@ const testIdSelector = (testId) => `[data-testid=${testId}]`;
 const elementTestIdSelector = ({ elementType = null, testId }) => (elementType ? `${elementType}${testIdSelector(testId)}` : `div${testIdSelector(testId)}`);
 
 const fillText = async ({ locator, text }) => {
+  // debugger;
   await locator.fill(text);
 };
 
-const fillAndAssertValue = async ({
+const fillAndAssertText = async ({
   locator, text,
 }) => {
   await fillText({ locator, text });
@@ -19,5 +20,5 @@ module.exports = {
   testIdSelector,
   elementTestIdSelector,
   fillText,
-  fillAndAssertValue,
+  fillAndAssertText,
 };
