@@ -34,7 +34,6 @@ const createNotifications = async ({ request, token }) => {
     });
     // eslint-disable-next-line no-await-in-loop
     const notification = await createNotificationResponse.json();
-    console.log('created notification:', notification);
     created.push(notification);
   }
   return created;
@@ -84,7 +83,6 @@ test.describe.serial('Notifications', () => {
       const { request } = page;
 
       createdNotifications = await createNotifications({ request, token });
-      console.log('createdNotifications: ', createdNotifications);
     });
 
     await test.step('Assert', async () => {
