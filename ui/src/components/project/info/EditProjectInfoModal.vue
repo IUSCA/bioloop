@@ -7,7 +7,10 @@
     hide-default-actions
     size="small"
   >
-    <va-inner-loading :loading="loading" class="sm:w-96">
+    <va-inner-loading
+      :loading="loading"
+      class="sm:min-h-[50vh] sm:max-h-[50vh] min-h-[65vh] max-h-[65vh]"
+    >
       <ProjectInfoForm />
     </va-inner-loading>
     <template #footer>
