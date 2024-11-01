@@ -252,7 +252,8 @@ function handleEditUpdate() {
         path: `/projects/${new_slug}`,
       });
     } else {
-      // update prop which will trigger re-fetching of project-dataset associations
+      // update prop which will trigger re-fetching of project-dataset
+      // associations
       triggerDatasetsRetrieval.value = true;
     }
   });
