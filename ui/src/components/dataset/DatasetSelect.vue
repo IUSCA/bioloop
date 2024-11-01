@@ -11,7 +11,7 @@
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
-    :show-required-error="props.showRequiredError"
+    :show-error="props.showRequiredError"
     :messages="props.messages"
     @reset="
       () => {

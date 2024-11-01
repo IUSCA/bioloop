@@ -112,7 +112,7 @@
                 @remove="removeDataset"
                 select-mode="single"
                 :dataset-type="config.dataset.types.RAW_DATA.key"
-                :show-required-error="!stepIsPristine"
+                :show-error="!stepIsPristine"
                 placeholder="Search Raw Data"
                 selected-label="Selected source Raw Data"
                 :messages="['Select a Source Raw Data']"

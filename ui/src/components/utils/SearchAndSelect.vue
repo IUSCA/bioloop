@@ -190,7 +190,7 @@
         >
           <div
             class="flex va-text-danger h-full"
-            v-if="props.showRequiredError && props.selectedResults.length === 0"
+            v-if="props.showError && props.selectedResults.length === 0"
           >
             <va-alert
               dense
@@ -331,13 +331,19 @@ const props = defineProps({
     type: String,
     default: "result",
   },
-  showRequiredError: {
+  error: {
+    type: String,
+  },
+  showError: {
     type: Boolean,
     default: false,
   },
 });
 
 const selectionRequiredError = computed(() => {
+  if (props.error) {
+    return props.error;
+  }
   return (
     "Please select " +
     (props.selectMode === "single" ? "a" : "at least one") +

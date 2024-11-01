@@ -27,6 +27,7 @@
     <!-- create button -->
     <div class="flex-none">
       <va-button
+        data-testid="create-user-button"
         icon="add"
         class="px-3"
         color="success"
@@ -139,6 +140,7 @@
 
   <!-- edit modal -->
   <va-modal
+    data-testid="edit-user-modal"
     :model-value="editing"
     :title="editModalTitle"
     size="small"
@@ -150,31 +152,35 @@
       <va-inner-loading :loading="modal_loading">
         <va-form class="flex flex-wrap gap-2 gap-y-6" ref="modifyFormRef">
           <va-input
+            data-testid="user-name-input"
+            class="w-full"
             v-model="editedUser.name"
             label="Name"
-            class="w-64"
             :rules="[
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
           <va-input
+            data-testid="user-email-input"
             v-model="editedUser.email"
             label="Email"
-            class="w-64"
+            class="w-full"
             :rules="[
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
           <va-input
+            data-testid="user-username-input"
             :modelValue="editedUser.username || autofill.username"
             @update:modelValue="editedUser.username = $event"
             label="Username"
-            class="w-64"
+            class="w-full"
             :rules="[
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
           <va-input
+            data-testid="user-cas-id-input"
             :modelValue="editedUser.cas_id || autofill.cas_id"
             @update:modelValue="editedUser.cas_id = $event"
             label="CAS ID"
@@ -215,6 +221,8 @@
           </div>
 
           <va-textarea
+            data-testid="user-notes-input"
+            class="w-full"
             v-model="editedUser.notes"
             label="Notes"
             autosize
@@ -490,6 +498,9 @@ watch(
       const username = email.split("@")[0];
       autofill.value.username = username;
       autofill.value.cas_id = username;
+    } else {
+      autofill.value.username = "";
+      autofill.value.cas_id = "";
     }
   },
 );

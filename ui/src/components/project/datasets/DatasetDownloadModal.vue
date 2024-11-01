@@ -157,6 +157,8 @@ defineExpose({
   hide,
 });
 
+const appApiToken = useLocalStorage("token")
+
 const downloadURL = computed(() => {
   return `${window.location.origin}/datasets/${props.dataset?.id}/filebrowser`;
 });
@@ -179,23 +181,25 @@ const log_data_access = () => {
 };
 
 const initiate_dataset_download = () => {
-  datasetService
-    .get_file_download_data({
-      dataset_id: props.dataset.id,
-    })
-    .then((res) => {
-      const url = new URL(res.data.url);
-      url.searchParams.set("token", res.data.bearer_token);
+  const downloadApiURL = 'https://localhost/' + config.apiBasePath + `/datasets/download/${props.dataset.id}`
+  // datasetService
+  //   .get_file_download_data({
+  //     dataset_id: props.dataset.id,
+  //   })
+  //   .then((res) => {
+      const url = new URL(downloadApiURL);
+      url.searchParams.set("token", appApiToken.value);
       downloadFile({
         url: url.toString(),
         filename: props.dataset.name,
       });
       emit("download-initiated", props.dataset.id);
-    })
-    .catch((err) => {
-      console.error(err);
-      toast.error("Unable to download dataset");
-    });
+    // }
+  // )
+  //   .catch((err) => {
+  //     console.error(err);
+  //     toast.error("Unable to download dataset");
+  //   });
 };
 
 const visible = ref(false);

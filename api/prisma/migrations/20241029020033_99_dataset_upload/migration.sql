@@ -7,7 +7,6 @@ CREATE TABLE "upload_log" (
     "status" "upload_status" NOT NULL,
     "dataset_id" INTEGER,
     "last_updated" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "processing_attempt_count" INTEGER NOT NULL DEFAULT 0,
     "user_id" INTEGER NOT NULL,
 
     CONSTRAINT "upload_log_pkey" PRIMARY KEY ("id")

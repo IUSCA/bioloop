@@ -27,9 +27,6 @@
       "client_secret": "CILOGON_OAUTH_CLIENT_SECRET"
     }
   },
-  "download_server": {
-    "base_url": "DOWNLOAD_SERVER_BASE_URL"
-  },
   "upload_path": "UPLOAD_PATH",
   "e2e": {
     "users": {
@@ -44,6 +41,9 @@
       }
     }
   },
+  "download": {
+    "relative_path": "DOWNLOAD_DIR_RELATIVE_PATH"
+  },
   "filesystem": {
     "search_spaces": "FILESYSTEM_SEARCH_SPACES",
     "base_dir": {
@@ -52,7 +52,8 @@
     },
     "mount_dir": {
       "slateScratch": "FILESYSTEM_MOUNT_DIR_SCRATCH",
-      "slateProject": "FILESYSTEM_MOUNT_DIR_PROJECT"
+      "slateProject": "FILESYSTEM_MOUNT_DIR_PROJECT",
+      "slateScratchApp": "FILESYSTEM_SCRATCH_SCADEV_MOUNT_DIR"
     }
   },
   "restricted_ingestion_dirs": {
