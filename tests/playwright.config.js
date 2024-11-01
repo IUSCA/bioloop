@@ -71,6 +71,7 @@ module.exports = {
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
       },
+
       {
         name: 'operator_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
@@ -119,12 +120,6 @@ module.exports = {
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/project/*.spec.js',
       },
-      // {
-      //   name: 'project',
-      //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
-      //   dependencies: ['admin_login'],
-      //   testMatch: '/view/authenticated/project/*.spec.js',
-      // },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
       //
