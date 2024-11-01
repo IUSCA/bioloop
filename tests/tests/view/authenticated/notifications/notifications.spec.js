@@ -32,7 +32,9 @@ const createNotifications = async ({ request, token }) => {
         text: NOTIFICATION_TEXTS[i],
       },
     });
-    const notification = createNotificationResponse.json();
+    // eslint-disable-next-line no-await-in-loop
+    const notification = await createNotificationResponse.json();
+    console.log('created notification:', notification);
     created.push(notification);
   }
   return created;
@@ -71,39 +73,38 @@ test.describe('Notifications', () => {
     await page.getByTestId('notification-icon').click();
   });
 
-  // test('Notification created', async ({ page }) => {
-  // test.skip(config.enabledFeatures.notifications.enabledForRoles.length ===
-  // 0, 'Notifications feature is not enabled');
-  //
-  //   let createdNotifications;
-  //
-  //   await test.step('Create notifications', async () => {
-  //     await page.goto('/');
-  //     const token = await page.evaluate(() => localStorage.getItem('token'));
-  //
-  //     const { request } = page;
-  //
-  //     createdNotifications = await createNotifications({ request, token });
-  //   });
-  //
-  //   await test.step('Assert', async () => {
-  // await
-  // expect(notificationBadgeLocator(page)).toContainText(`${NUMBER_OF_NOTIFICATIONS}`);
-  //
-  //     // open the notification menu
-  //     await page.getByTestId('notification-icon').click();
-  //
-  // await
-  // expect(notificationMenuItemLocator(page)).toHaveCount(NUMBER_OF_NOTIFICATIONS);
-  //
-  //     // eslint-disable-next-line no-plusplus
-  //     for (let i = 0; i < NUMBER_OF_NOTIFICATIONS; i++) {
-  //       // eslint-disable-next-line no-await-in-loop
-  // await
-  // expect(page.getByTestId(`notification-${createdNotifications[i].id}-label`))
-  // .toContainText(NOTIFICATION_LABELS[i]);
-  //       // eslint-disable-next-line no-await-in-loop
-  // await
-  // expect(page.getByTestId(`notification-${createdNotifications[i].id}-text`))
-  // .toContainText(NOTIFICATION_TEXTS[i]); } }); });
+  test('Notification created', async ({ page }) => {
+    test.skip(config.enabledFeatures.notifications.enabledForRoles.length === 0, 'Notifications feature is not enabled');
+
+    let createdNotifications;
+
+    await test.step('Create notifications', async () => {
+      await page.goto('/');
+      const token = await page.evaluate(() => localStorage.getItem('token'));
+
+      const { request } = page;
+
+      createdNotifications = await createNotifications({ request, token });
+      console.log('createdNotifications: ', createdNotifications);
+    });
+
+    await test.step('Assert', async () => {
+      await expect(notificationBadgeLocator(page)).toContainText(`${NUMBER_OF_NOTIFICATIONS}`);
+
+      // open the notification menu
+      await page.getByTestId('notification-icon').click();
+
+      await expect(notificationMenuItemLocator(page)).toHaveCount(NUMBER_OF_NOTIFICATIONS);
+
+      // eslint-disable-next-line no-plusplus
+      for (let i = 0; i < NUMBER_OF_NOTIFICATIONS; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await expect(page.getByTestId(`notification-${createdNotifications[i].id}-label`))
+          .toContainText(NOTIFICATION_LABELS[i]);
+        // eslint-disable-next-line no-await-in-loop
+        await expect(page.getByTestId(`notification-${createdNotifications[i].id}-text`))
+          .toContainText(NOTIFICATION_TEXTS[i]);
+      }
+    });
+  });
 });
