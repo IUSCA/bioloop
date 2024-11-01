@@ -136,6 +136,8 @@ test('test that needs to get server-side state', async ({ page }) => {
   
   const token = await page.evaluate(() => localStorage.getItem('token'));
   // use retrieved token to make API calls
+
+[//]: # ( TODO - document using utils files as well )
   const response = await request.get(`${config.apiBasePath}/datasets`, {
     headers: {
       Authorization: `Bearer ${token}`,
