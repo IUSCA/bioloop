@@ -5,7 +5,6 @@ const testIdSelector = (testId) => `[data-testid=${testId}]`;
 const elementTestIdSelector = ({ elementType = null, testId }) => (elementType ? `${elementType}${testIdSelector(testId)}` : `div${testIdSelector(testId)}`);
 
 const fillText = async ({ locator, text }) => {
-  // debugger;
   await locator.fill(text);
 };
 

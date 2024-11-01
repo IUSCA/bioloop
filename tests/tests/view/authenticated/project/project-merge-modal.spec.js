@@ -35,7 +35,7 @@ test.describe.serial('Project-datasets table', () => {
     // matching and not exact project names.
     await searchInput.fill(projectToMerge.name.slice(0, projectToMerge.name.length - 1));
 
-    // TODO - locate <li>'s based on matching data-testids
+    // TODO - assert that any results (instead of first) contain expected result
     const resultsElementLocator = page
       .locator(`[data-testid*=${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE}--search-result-li]`)
       .first();
