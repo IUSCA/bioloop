@@ -11,18 +11,24 @@ const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
-const getUploadPath = (datasetId) => path.join(
+const UPLOAD_SCOPE = String(config.get('upload_scope'));
+
+const getUploadPath = (datasetId) => {
+  return path.join(
   config.upload_path.data_products,
   datasetId,
-);
+)};
 
-const getFileChunksStorageDir = (datasetId, fileChecksum) => path.join(
+const getFileChunksStorageDir = (datasetId, fileChecksum) => {
+  return path.join(
   getUploadPath(datasetId),
   'chunked_files',
   fileChecksum,
-);
+)};
 
-const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
+const getFileChunkName = (fileChecksum, index) => {
+  return `${fileChecksum}-${index}`
+};
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
@@ -44,65 +50,55 @@ const uploadFileStorage = multer.diskStorage({
  * the request body.
  */
 
-// preflight check works with multer middleware - API responds with 502
 router.post(
   '/',
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
-      console.log('req.body', req.body);
-      console.log('req.file', req.file);
-      res.json("upload response")
-      // check req.file.path
+    const {
+      name, data_product_id, total, index, size, checksum, chunk_checksum,
+    } = req.body;
 
-    // const {
-    //   name, data_product_id, total, index, size, checksum, chunk_checksum,
-    // } = req.body;
+    // eslint-disable-next-line no-console
+    console.log('Processing file chunk ...', data_product_id, name, total, index, size, checksum, chunk_checksum);
 
+    const scopes = (req.token?.scope || '').split(' ');
 
-    // // eslint-disable-next-line no-console
-    // console.log('Processing file piece ...', data_product_id, name, total, index, size, checksum, chunk_checksum);
+    const matching_scopes = scopes.filter((scope) => scope === `${UPLOAD_SCOPE}:${name}`);
+    if (matching_scopes.length === 0) {
+      // eslint-disable-next-line no-console
+      // console.log('Expected one, but found no matching scopes');
+      return next(createError.Forbidden('Expected one, but found no matching scopes'));
+    }
+    if (matching_scopes.length > 1) {
+      // eslint-disable-next-line no-console
+      // console.log('Expected one, but found multiple matching scopes');
+      return next(createError.Forbidden('Expected one, but found multiple matching scopes'));
+    }
 
-    // const UPLOAD_SCOPE = String(config.get('upload_scope'));
+    if (!(data_product_id && checksum && chunk_checksum) || Number.isNaN(index)) {
+      return next(createError.BadRequest());
+    }
 
-    // const scopes = (req.token?.scope || '').split(' ');
+    const receivedFilePath = req.file.path;
+    fs.readFile(receivedFilePath, (err, data) => {
+      if (err) {
+        // eslint-disable-next-line no-console
+        // console.log('Error reading file:', err);
+        throw err;
+      }
 
-    // const matching_scopes = scopes.filter((scope) => scope === `${UPLOAD_SCOPE}:${name}`);
-
-    // if (matching_scopes.length === 0) {
-    //   // eslint-disable-next-line no-console
-    //   console.log('Expected one, but found no matching scopes');
-    //   return next(createError.Forbidden('Expected one, but found no matching scopes'));
-    // }
-    // if (matching_scopes.length > 1) {
-    //   // eslint-disable-next-line no-console
-    //   console.log('Expected one, but found multiple matching scopes');
-    //   return next(createError.Forbidden('Expected one, but found multiple matching scopes'));
-    // }
-
-    // if (!(data_product_id && checksum && chunk_checksum) || Number.isNaN(index)) {
-    //   res.sendStatus(400);
-    // }
-
-    // const receivedFilePath = req.file.path;
-    // fs.readFile(receivedFilePath, (err, data) => {
-    //   if (err) {
-    //     // eslint-disable-next-line no-console
-    //     console.log('Error reading file:', err);
-    //     throw err;
-    //   }
-
-    //   const evaluated_checksum = createHash('md5').update(data).digest('hex');
-    //   if (evaluated_checksum !== chunk_checksum) {
-    //     // eslint-disable-next-line no-console
-    //     console.log('Evaluated checksum of chunk does not match checksum received in the request');
-    //     return next(createError.BadRequest('Evaluated checksum of chunk does not match checksum received in the request'));
-    //   }
-    //   // eslint-disable-next-line no-console
-    //   console.log('checksums match');
-    //   // eslint-disable-next-line no-console
-    //   console.log('writing file...');
-    //   res.sendStatus(200);
-    // });
+      const evaluated_checksum = createHash('md5').update(data).digest('hex');
+      if (evaluated_checksum !== chunk_checksum) {
+        // eslint-disable-next-line no-console
+        // console.log('Evaluated checksum of chunk does not match checksum received in the request');
+        return next(createError.BadRequest('Evaluated checksum of chunk does not match checksum received in the request'));
+      }
+      // eslint-disable-next-line no-console
+      // console.log('checksums match');
+      // eslint-disable-next-line no-console
+      // console.log('writing file...');
+      res.sendStatus(200);
+    });
   }),
 );
 
