@@ -40,7 +40,6 @@ const createNotifications = async ({ request, token }) => {
   return created;
 };
 
-test.describe.configure({ mode: 'serial' });
 test.beforeEach(async ({ page }) => {
   // delete active notifications before each test
   await page.goto('/');
@@ -57,7 +56,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test.describe('Notifications', () => {
+test.describe.serial('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
     test.skip(config.enabledFeatures.notifications.enabledForRoles.length === 0, 'Notifications feature is not enabled');
 
