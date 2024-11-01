@@ -35,8 +35,21 @@ const patch = async ({
   });
 };
 
+const deleteApi = async ({
+  requestContext, token, url, params,
+}) => {
+  console.log('api token: ', token);
+  return requestContext.delete(prefixedUrl(url), {
+    params,
+    headers: {
+      Authorization: authHeader(token),
+    },
+  });
+};
+
 module.exports = {
   get,
   post,
   patch,
+  deleteApi,
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const {
-  query, body,
+  query, body, param,
 } = require('express-validator');
 const _ = require('lodash/fp');
 
@@ -70,12 +70,17 @@ router.delete(
     query('status').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
+    console.log('in /delete notifications route');
+    console.log('req.query: ', req.query);
+    console.log('req.params: ', req.params);
+
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    const filterQuery = req.query;
+    const queryParams = req.query;
+    console.log('queryParams: ', queryParams);
 
-    if (Object.keys(filterQuery).length === 0) {
+    if (Object.keys(queryParams).length === 0) {
       res.send({
         count: 0,
       });
@@ -83,11 +88,15 @@ router.delete(
     }
 
     const updatedCount = await prisma.notification.updateMany({
-      where: filterQuery,
+      where: queryParams,
       data: {
         status: 'RESOLVED',
       },
     });
+
+    const notifications = await prisma.notification.findMany({ where: {} });
+    console.log('Total notifications after deletion: ', notifications.length);
+
     res.json(updatedCount);
   }),
 );
