@@ -35,12 +35,10 @@ test.describe.serial('Project-datasets table', () => {
     // matching and not exact project names.
     await searchInput.fill(projectToMerge.name.slice(0, projectToMerge.name.length - 1));
 
-    const resultsElementLocator = page.locator(`[data-testid*=${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE}--search-result-li]`);
-    const resultListElements = await resultsElementLocator.all();
-
-    const expectedResultFound = resultListElements.some(async (result) => {
-      await expect(result).toContainText(projectToMerge.name);
-    });
-    await expect(expectedResultFound).toEqual(true);
+    // TODO - locate <li>'s based on matching data-testids
+    const resultsElementLocator = page
+      .locator(`[data-testid*=${TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE}--search-result-li]`)
+      .first();
+    await expect(resultsElementLocator).toContainText(projectToMerge.name);
   });
 });
