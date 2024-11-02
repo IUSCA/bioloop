@@ -219,7 +219,7 @@ router.patch(
 // todo - change route to include /:id
 // Update the attributes of an uploaded file - worker
 router.patch(
-  '/:id/file-upload-log/:file-upload-log-id',
+  '/:id/file-upload-log/:file_upload_log_id',
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
