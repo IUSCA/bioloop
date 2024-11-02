@@ -28,8 +28,11 @@ class UploadService {
     return api.patch(`/upload/log/${upload_log_id}`, data);
   }
 
-  updateFileUploadLog(file_log_id, data) {
-    return api.patch(`/upload/file-upload-log/${file_log_id}`, data);
+  updateFileUploadLog(upload_log_id, file_upload_log_id, data) {
+    return api.patch(
+      `/upload/${upload_log_id}/file-upload-log/${file_upload_log_id}`,
+      data,
+    );
   }
 
   uploadFile(data) {

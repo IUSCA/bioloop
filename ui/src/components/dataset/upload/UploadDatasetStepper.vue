@@ -330,9 +330,6 @@ const loading = ref(true);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const uploadLog = ref();
-const uploadLogDataset = computed(() => {
-  return uploadLog.value?.dataset;
-});
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
 const statusChipColor = ref();
 const submissionAlert = ref(); // For handling network errors before upload begins
@@ -619,8 +616,6 @@ const uploadChunk = async (chunkData) => {
 
     uploadService.setToken(uploadToken.value);
     try {
-      let _chunkData = {"checksum": 'test'}
-
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
@@ -695,14 +690,16 @@ const uploadFile = async (fileDetails) => {
 
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
-  
+
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
-  const fileLogId = uploadLog.value.files.find((e) => e.md5 === checksum)?.id;
-  
+  const fileUploadLogId = uploadLog.value.files.find(
+    (e) => e.md5 === checksum,
+  )?.id;
+
   fileDetails.uploadStatus = uploaded
     ? config.upload_status.UPLOADED
     : config.upload_status.UPLOAD_FAILED;
@@ -710,9 +707,13 @@ const uploadFile = async (fileDetails) => {
   let updated = false;
   if (uploaded) {
     try {
-      await uploadService.updateFileUploadLog(fileLogId, {
-        status: config.upload_status.UPLOADED,
-      });
+      await uploadService.updateFileUploadLog(
+        uploadLog.value.id,
+        fileUploadLogId,
+        {
+          status: config.upload_status.UPLOADED,
+        },
+      );
       updated = true;
     } catch (e) {
       console.error(e);
@@ -774,7 +775,6 @@ const onSubmit = async () => {
 
 const postSubmit = () => {
   if (!someFilesPendingUpload.value) {
-    console.log("No files pending upload");
     submissionStatus.value = SUBMISSION_STATES.UPLOADED;
     statusChipColor.value = "primary";
     submissionAlertColor.value = "success";
@@ -792,7 +792,6 @@ const postSubmit = () => {
     };
   });
 
-  console.log("uploadlog.value", uploadLog.value);
   if (uploadLog.value) {
     createOrUpdateUploadLog(uploadLog.value.id, {
       status: someFilesPendingUpload.value

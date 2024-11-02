@@ -216,27 +216,36 @@ router.patch(
   }),
 );
 
+// todo - change route to include /:id
 // Update the attributes of an uploaded file - worker
 router.patch(
-  '/file-upload-log/:id',
+  '/:id/file-upload-log/:file-upload-log-id',
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
+    param('file_upload_log_id').isInt().toInt(),
     body('status').notEmpty().escape(),
   ]),
   asyncHandler(async (req, res, next) => {
     const { status } = req.body;
 
-    const file_upload_log = await prisma.file_upload_log.update({
+    const upload_log = await prisma.upload_log.update({
       where: {
         id: req.params.id,
       },
       data: {
-        status,
+        files: {
+          update: {
+            where: { id: req.params.file_upload_log_id },
+            data: {
+              status,
+            },
+          },
+        },
       },
     });
 
-    res.json(file_upload_log);
+    res.json(upload_log);
   }),
 );
 

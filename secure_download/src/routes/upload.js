@@ -13,22 +13,18 @@ const router = express.Router();
 
 const UPLOAD_SCOPE = String(config.get('upload_scope'));
 
-const getUploadPath = (datasetId) => {
-  return path.join(
+const getUploadPath = (datasetId) => path.join(
   config.upload_path.data_products,
   datasetId,
-)};
+);
 
-const getFileChunksStorageDir = (datasetId, fileChecksum) => {
-  return path.join(
+const getFileChunksStorageDir = (datasetId, fileChecksum) => path.join(
   getUploadPath(datasetId),
   'chunked_files',
   fileChecksum,
-)};
+);
 
-const getFileChunkName = (fileChecksum, index) => {
-  return `${fileChecksum}-${index}`
-};
+const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
@@ -101,12 +97,5 @@ router.post(
     });
   }),
 );
-
-router.get(
-  '/test',
-  (req, res) => {
-    res.json("upload hello changed")
-  }
-)
 
 module.exports = router;
