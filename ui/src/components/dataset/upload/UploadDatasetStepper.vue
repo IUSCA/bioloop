@@ -186,6 +186,7 @@
 </template>
 
 <script setup>
+import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 import config from "@/config";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
@@ -195,7 +196,6 @@ import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { useBreakpoint, useForm } from "vuestic-ui";
-import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
@@ -619,6 +619,8 @@ const uploadChunk = async (chunkData) => {
 
     uploadService.setToken(uploadToken.value);
     try {
+      let _chunkData = {"checksum": 'test'}
+
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
@@ -666,8 +668,9 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("size", file.size);
     // chunkData.append("data_product_name", fileDetails.name);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append("file", fileData);
     chunkData.append("data_product_id", uploadLog.value.dataset.id);
+    // After setting the request's body, set the request's file
+    chunkData.append("file", fileData);
 
     // Try uploading chunk, or retry until retry threshold is reached
     uploaded = await uploadChunk(chunkData);
