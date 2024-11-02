@@ -695,13 +695,14 @@ const uploadFile = async (fileDetails) => {
 
   fileDetails.uploadStatus = config.upload_status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
-  const fileLogId = uploadLog.value.files.find((e) => e.md5 === checksum)?.id;
-
+  
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
+  const fileLogId = uploadLog.value.files.find((e) => e.md5 === checksum)?.id;
+  
   fileDetails.uploadStatus = uploaded
     ? config.upload_status.UPLOADED
     : config.upload_status.UPLOAD_FAILED;
@@ -773,6 +774,7 @@ const onSubmit = async () => {
 
 const postSubmit = () => {
   if (!someFilesPendingUpload.value) {
+    console.log("No files pending upload");
     submissionStatus.value = SUBMISSION_STATES.UPLOADED;
     statusChipColor.value = "primary";
     submissionAlertColor.value = "success";
@@ -790,6 +792,7 @@ const postSubmit = () => {
     };
   });
 
+  console.log("uploadlog.value", uploadLog.value);
   if (uploadLog.value) {
     createOrUpdateUploadLog(uploadLog.value.id, {
       status: someFilesPendingUpload.value
