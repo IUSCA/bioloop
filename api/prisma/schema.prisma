@@ -11,8 +11,6 @@ model dataset {
   id               Int                 @id @default(autoincrement())
   name             String
   type             String
-  file_type        dataset_file_type?  @relation(fields: [file_type_id], references: [id])
-  file_type_id     Int?
   num_directories  Int?
   num_files        Int?
   du_size          BigInt?
@@ -79,15 +77,6 @@ model dataset_file_hierarchy {
 
   @@id([parent_id, child_id])
   @@index([child_id])
-}
-
-model dataset_file_type {
-  id        Int       @id @default(autoincrement())
-  name      String
-  extension String
-  datasets  dataset[]
-
-  @@unique([name, extension])
 }
 
 model upload_log {
@@ -189,6 +178,8 @@ model user {
   project_users_assigned    project_user[]      @relation("project_user_assignor")
   project_datasets_assigned project_dataset[]
   project_contacts_assigned project_contact[]
+  initiated_workflows       workflow[]       @relation("initiated_workflows")
+  acknowledged_notifications notification[]
   uploads                   upload_log[]
 }
 
@@ -214,6 +205,16 @@ model user_settings {
   user_id  Int  @unique
   settings Json
   users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model notification {
+  id                 Int                 @id @default(autoincrement())
+  created_at         DateTime            @default(now()) @db.Timestamp(6)
+  label              String
+  text               String?
+  status             NOTIFICATION_STATUS @default(CREATED)
+  acknowledged_by_id Int?
+  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
 }
 
 model contact {
@@ -249,6 +250,8 @@ model workflow {
   id         String   @id
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  initiator_id Int?
+  initiator    user? @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
 }
 
 model metric {
@@ -348,6 +351,12 @@ model about {
 enum access_type {
   BROWSER
   SLATE_SCRATCH
+}
+
+enum NOTIFICATION_STATUS {
+  CREATED
+  ACKNOWLEDGED
+  RESOLVED
 }
 
 enum upload_status {

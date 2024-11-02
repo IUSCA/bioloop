@@ -3,15 +3,16 @@
     v-model:searchTerm="searchTerm"
     :search-results="datasets"
     :selected-results="props.selectedResults"
-    :selectMode="props.selectMode"
     :search-result-count="totalResultCount"
+    :selectMode="props.selectMode"
     placeholder="Search Datasets by name"
-    selected-label="Datasets to assign"
+    :selected-label="props.selectedLabel"
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
-    :show-error="props.showRequiredError"
+    :show-error="props.showError"
+    :error="props.error"
     :messages="props.messages"
     @reset="
       () => {
@@ -54,8 +55,8 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import { lxor } from "@/services/utils";
 import _ from "lodash";
+import { lxor } from "@/services/utils";
 
 const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
@@ -76,9 +77,12 @@ const props = defineProps({
     type: String,
     default: () => "multiple",
   },
-  showRequiredError: {
+  showError: {
     type: Boolean,
     default: false,
+  },
+  error: {
+    type: String,
   },
   selectedLabel: {
     type: String,
@@ -156,13 +160,12 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
-  let query;
   if (props.datasetType) {
-    query = {
+    return {
       type: props.datasetType,
     };
   } else {
-    query = lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
       ? {
           type: checkboxes.value.rawData
             ? "RAW_DATA"
@@ -172,9 +175,6 @@ const filterQuery = computed(() => {
         }
       : undefined;
   }
-  return {
-    ...query,
-  };
 });
 
 const batchingQuery = computed(() => {

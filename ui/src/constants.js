@@ -49,26 +49,15 @@ const exports = {
         children: [
           {
             icon: "mdi-file-cog-outline",
-            title: "Ingest Dataset",
-            path: "/ingest",
+            title: "Ingest",
+            path: "/datasets/ingest",
           },
           {
             icon: "mdi:folder-upload",
-            title: "Upload Dataset",
+            title: "Upload",
             path: "/datasetUpload",
           },
         ],
-      },
-      // {
-      //   icon: "mdi-file-cog-outline",
-      //   title: "Ingest Dataset",
-      //   path: "/ingest",
-      // },
-      {
-        icon: "mdi-content-copy",
-        title: "Duplicate Datasets",
-        path: "/duplicateDatasets",
-        test_id: "sidebar-duplicate-datasets",
       },
       {
         icon: "mdi-table-account",

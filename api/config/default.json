@@ -135,17 +135,21 @@
       }
     }
   },
-  "WORKFLOW_STATUS": {
-    "PENDING": "PENDING",
-    "STARTED": "STARTED",
-    "SUCCESS": "SUCCESS",
-    "FAILURE": "FAILURE",
-    "REVOKED": "REVOKED"
+  "filesystem_search_spaces": "",
+  "filesystem": {
+    "search_spaces": "",
+    "base_dir": {
+      "slateScratch": "",
+      "slateProject": ""
+    },
+    "mount_dir": {
+      "slateScratch": "",
+      "slateProject": ""
+    }
   },
-  "DONE_STATUSES": {
-    "REVOKED": "REVOKED",
-    "FAILURE": "FAILURE",
-    "SUCCESS": "SUCCESS"
+  "restricted_ingestion_dirs": {
+    "slateScratch": "",
+    "slateProject": ""
   },
   "upload_status": {
     "UPLOADING": "UPLOADING",

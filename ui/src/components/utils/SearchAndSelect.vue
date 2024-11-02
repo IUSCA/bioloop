@@ -475,6 +475,7 @@ const addOrRemove = (rowData) => {
 .search {
   .results-table {
     --va-data-table-cell-padding: 3px;
+    //--va-data-table-selectable-cell-width: 40px;
   }
 
   .icon {

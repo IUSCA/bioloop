@@ -132,7 +132,7 @@ def get_all_datasets(
         name=None,
         days_since_last_staged=None,
         deleted=False,
-        archived=False,
+        archived=None,
         bundle=False):
     with APIServerSession() as s:
         payload = {

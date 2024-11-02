@@ -18,15 +18,11 @@
             >
               <!-- user -->
               <div class="flex items-center gap-2">
-                <va-avatar
-                  :color="stringToRGB(log.user.name || '')"
-                  size="small"
-                >
-                  <span class="text-sm uppercase">{{
-                    initials(log.user.name)
-                  }}</span>
-                </va-avatar>
-                <span> {{ log.user.username }} </span>
+                <UserAvatar
+                  :username="log.user?.username"
+                  :name="log.user?.name"
+                />
+                <span> {{ log.user?.username }} </span>
               </div>
 
               <!-- timestamp -->
@@ -75,9 +71,7 @@
 </template>
 
 <script setup>
-import { stringToRGB } from "@/services/colors";
 import * as datetime from "@/services/datetime";
-import { initials } from "@/services/utils";
 
 const props = defineProps({
   logs: Array,

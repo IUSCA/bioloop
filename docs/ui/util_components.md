@@ -1,6 +1,6 @@
 # Utility Components
 
-## Auto Complete
+## AutoComplete
 
 ### Basic Usage
 
@@ -24,7 +24,7 @@
 </script>
 ```
 
-### Advanced Usage
+### With Slots
 
 ```html
 
@@ -62,23 +62,74 @@
 </script>
 ```
 
+### Async
+
+```html
+
+<template>
+  <AutoComplete
+    :async="true"
+    v-model:search-text="searchText"
+    :placeholder="`Search Users`"
+    :data="retrievedUsers"
+    :display-by="'username'"
+    @clear="emit('clear')"
+    @select="
+      (user) => {
+        onSelect(user);
+      }
+    "
+    :label="'Search Users'"
+    @open="emit('open')"
+    @close="emit('close')"
+  />
+</template>
+
+<script setup>
+const searchText = ref("")
+const retrievedUsers = ref([])
+
+const onSelect = (selectedUser) => {
+  const searchTerm = selectedUser.username
+  userService.getByMatchingUsername({
+    username: searchTerm
+  }).then(res => {
+    retrievedUsers.value = res.data
+  })
+};
+</script>
+
+```
+
 ### Props
 
+- search-text: String - Can optionally be provided to show the selected value within `AutoComplete`. By default, selected values are not shown.
 - placeholder: String - placeholder for the input element
 - data: Array of Objects - data to search and display
 - filter-by: String - property of data object to use with case-insensitive search
 - display-by: String - property of data object to use to show search results
 - filter-fn: Function (text: String) => (item: Object) => Bool: When provided used to filter the data based on enetered
   text value
+- async: Boolean - Can be used in combination with `search-text` to enable asynchronous search for results. Defaults to `false`.
+- disabled: Boolean - Can be used to show the underlying `va-input` element in a disabled state. Defaults to `false`.
+- error: String - Error message to show beneath the underlying `va-input` element.
+- label: String - Label for `AutoComplete`
+- loading: Boolean - determines if AutoComplete's dropdown will show a loading indicator, or retrieved results
 
 ### Events
 
 - select - emitted when one of the search results is clicked
+- open - emitted when the AutoComplete is opened
+- close - emitted when the AutoComplete is closed
+- clear - emitted when the selected value or the current search term is cleared via `va-input`'s clear button
+- update:search-text - emitted when the search input is changed
 
 ### Slots
 
-- `#filtered={ item }`. Named slot (filtered) with props ({item}) to render a custom search result. This slot is in
+- `#filtered={ item }` - Named slot (filtered) with props ({item}) to render a custom search result. This slot is in
   v-for and called for each search result.
+- `#appendInner` - Named slot (appendInner) to append custom markup to `AutoComplete`'s input field. The markup provided will be rendered inside `va-input`'s `appendInner` slot.
+- `#prependInner` - Named slot (prependInner) to prepend custom markup to `AutoComplete`'s input field. The markup provided will be rendered inside `va-input`'s `prependInner` slot.
 
 ## SearchAndSelect
 
@@ -416,12 +467,27 @@ const selectedColumnsConfig = [searchColumnsConfig[0]];
 Displayed results can be formatted via the `formatFn` prop. They can also be put inside slots for a more customized
 markup per cell.
 
-For showing a cell's value inside customized markup, embed the cell's value inside `<template #templateName>` (
-example - `<template #address>`). The name of a column's template must be the same as the `key` of the column's config
-that was provided via the `searchResultColumns` or `selectedResultColumns` props. The value of the column inside
-the `<template>` can be accessed via `slotProps["value"]`.
+For showing a field's value inside customized markup
+- set `{ slotted: true }` in the field's config that is being provided via the `searchResultColumns` or `selectedResultColumns` props
+- embed the cell's value inside `<template #templateName>` (
+example - `<template #address>`).
+  - The name of a column's template is the same as the `key` of the column's config that was provided via the `searchResultColumns` or `selectedResultColumns` props.
 
-The below example formats the first column, and embeds the second column inside custom markup.
+The value of the column inside the `<template>` can be accessed via `slotProps["value"]`, which is an object that contains the formatted as well as the raw value for the slotted field.
+
+```
+// slotProps['value]
+
+{
+  formatted: 'formatted value',
+  raw: 'raw value
+}
+
+```
+
+The below example formats the values in the `text` column, and embeds the values in the `other` column inside custom markup.
+
+Notice how both the formatted and raw values of a slotted field can be access via `slotProps["value"]`.
 
 ```html
 <template>
@@ -443,7 +509,9 @@ The below example formats the first column, and embeds the second column inside 
     "
   >
     <template #other="slotProps">
-      <va-chip>{{ slotProps["value"] }}</va-chip>
+    <!-- Both formatted and unFormatted values can be accessed via slotProps -->
+      <va-chip>{{ slotProps["value"].formatted }}</va-chip>
+      <va-chip>{{ slotProps["value"].raw }}</va-chip>
     </template>
   </SearchAndSelect>
 </template>
@@ -578,6 +646,8 @@ the string is looked up in the target argument, and returned.
 
 ### Props
 
+- `messages`: Array - Hint message(s) to be shown below the underlying `va-input`
+- `selectMode`: String ['single' | 'multiple'] - Determines if the widget should allow selecting/unselecting multiple results at once. Use `single` for only allowing a single result to be selected/unselected at one time. Defaults to `multiple`.
 - `placeholder`: String - Placeholder for the search input. Default - "Type to search"- `selectedResults`: Array - the array of currently selected results. Can be used to load the widget with some items
   pre-selected. Defaults to [].
 - `loading`: Boolean - Shows loading indicator and disables controls when loading. Defaults to False.
@@ -599,6 +669,9 @@ the string is looked up in the target argument, and returned.
 - `searchTerm`: String - The search term to be used for performing the search. Client provides this as a component v-model, via `v-model:searchTerm`.
 - `trackBy`: String | Function - Used to uniquely identity a result. Defaults to "id".
 - `pageSizeSearch`: Number - the number of results to be fetched in one batch. Defaults to 10.
+- `resource`: String - the name of the entity being searched for. Defaults to `result`.
+- `error`: String - error to be shown beneath the underlying `va-input`.
+- `showError`: Boolean - determines whether `error` will be shown
 - `controlsMargin`: String - margin between the controls and the tables
 - `controlsHeight`: String - height of the controls container element
 
@@ -670,7 +743,7 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 
 - status: Boolean (0-off, 1-on)
 - icons - Array of 2 elements (off icon, on icon)
-- labels - Array of 2 element (off lable, on label)
+- labels - Array of 2 element (off label, on label)
   - default: `['disbaled', 'enabled']`
 
 ## EnvAlert

@@ -8,6 +8,8 @@ const {
 const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
+const dayjs = require('dayjs');
+const pm = require('picomatch');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -219,7 +221,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
-    query('match_name_exact').toBoolean().optional(),
+    query('match_name_exact').toBoolean().optional().default(true),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -243,7 +245,6 @@ router.get(
       },
     };
 
-    // console.log(JSON.stringify(filterQuery, null, 2));
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
       prisma.dataset.count({ ...filterQuery }),
@@ -288,6 +289,7 @@ router.get(
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
+    query('initiator').optional().toBoolean(),
     query('include_uploading_derived_datasets').toBoolean().default(false),
     query('include_upload_log').toBoolean().default(false),
   ]),
@@ -296,8 +298,6 @@ router.get(
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is
     // true
-
-    // console.log('req.query.include_shares', req.query.include_shares);
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -324,6 +324,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('ingestion_space').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -333,7 +334,38 @@ router.post(
     * workflow_id,
         a new relation is created between dataset and given workflow_id'
     */
-    const { workflow_id, state, ...data } = req.body;
+    const {
+      workflow_id, state, ingestion_space, data,
+    } = req.body;
+
+    const { origin_path } = data;
+
+    // remove whitespaces from dataset name
+    data.name = data.name.split(' ').join('');
+
+    // if dataset's origin_path is a restricted for dataset creation, throw
+    // error
+    const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+    const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+      const isMatch = pm(glob);
+      const matches = isMatch(origin_path, glob);
+      return matches.isMatch;
+    });
+
+    if (origin_path_is_restricted) {
+      return next(createError.Forbidden());
+    }
+
+    // create workflow association
+    if (workflow_id) {
+      data.workflows = {
+        create: [
+          {
+            id: workflow_id,
+          },
+        ],
+      };
+    }
 
     // create workflow association
     if (workflow_id) {
@@ -459,6 +491,7 @@ router.post(
       data: {
         id: req.body.workflow_id,
         dataset_id: req.params.id,
+        initiator_id: req.user.id,
       },
     });
     res.sendStatus(200);
@@ -561,7 +594,7 @@ router.post(
     });
 
     const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
     return res.json(wf);
   }),
 );
