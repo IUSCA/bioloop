@@ -48,12 +48,6 @@
         }}</router-link>
       </template>
 
-      <template #cell(file_type)="{ rowData }">
-        <va-chip v-if="rowData.file_type?.id" outline size="small">
-          {{ rowData.file_type?.name }}
-        </va-chip>
-      </template>
-
       <template #cell(created_at)="{ value }">
         <span>{{ datetime.date(value) }}</span>
       </template>
@@ -270,12 +264,6 @@ const columns = [
     width: "100px",
   },
   {
-    key: "file_type",
-    label: "File Type",
-    thAlign: "center",
-    tdAlign: "center",
-  },
-  {
     key: "archive_path",
     name: "archived",
     label: "archived",
@@ -370,7 +358,6 @@ function fetch_items() {
     sort_by: query.value.sort_by,
     sort_order: query.value.sort_order,
     ...filters_api,
-    include_file_type: true,
   })
     .then((res) => {
       datasets.value = res.data?.datasets || [];

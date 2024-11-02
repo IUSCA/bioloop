@@ -9,7 +9,10 @@
       :disabled="props.submitAttempted"
       @file-added="
         (files) => {
+          showUploadedDatasetProductCopyText = false;
+          showUploadedDatasetSearchInput = true;
           emit('files-added', files);
+          console.log('Files added:', files);
         }
       "
     />
@@ -41,6 +44,7 @@
             :disabled="props.submitAttempted"
             @click="
               () => {
+                showUploadedDatasetSearchInput = false;
                 folderUploadInput.click();
               }
             "
@@ -52,65 +56,110 @@
     </div>
   </div>
 
-  <va-data-table
-    v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
-    :items="isDirectory ? [props.dataProductDirectory] : props.dataProductFiles"
-    :columns="columns"
-  >
-    <template #cell(name)="{ rowData }">
-      <div
-        v-if="rowData.type === 'directory'"
-        class="flex items-center gap-1 text-left"
-      >
-        <Icon icon="mdi-folder" class="text-xl flex-none text-gray-700" />
-        <span> {{ rowData.name }} </span>
-      </div>
-    </template>
-
-    <template #cell(progress)="{ value }">
-      <va-progress-circle
-        :model-value="value ? parseInt(value, 10) : 0"
-        size="small"
-      >
-        {{ value && value + "%" }}
-      </va-progress-circle>
-    </template>
-
-    <template #cell(uploadStatus)="{ value }">
-      <span class="flex justify-center">
-        <va-popover
-          v-if="value === config.upload_status.UPLOADED"
-          message="Succeeded"
+  <div class="flex flex-row">
+    <va-data-table
+      v-if="!(props.isSubmissionAlertVisible || noFilesSelected)"
+      :items="
+        isDirectory ? [props.dataProductDirectory] : props.dataProductFiles
+      "
+      :columns="columns"
+    >
+      <template #cell(name)="{ rowData }">
+        <div
+          v-if="rowData.type === 'directory'"
+          class="flex items-center gap-1 text-left"
         >
-          <va-icon name="check_circle_outline" color="success" />
-        </va-popover>
-        <va-popover
-          v-if="value === config.upload_status.UPLOADING"
-          message="Uploading"
-        >
-          <va-icon name="pending" color="info" />
-        </va-popover>
-        <va-popover
-          v-if="value === config.upload_status.UPLOAD_FAILED"
-          message="Failed"
-        >
-          <va-icon name="error_outline" color="danger" />
-        </va-popover>
-      </span>
-    </template>
+          <Icon icon="mdi-folder" class="text-xl flex-none text-gray-700" />
+          <span> {{ rowData.name }} </span>
+        </div>
+      </template>
 
-    <template #cell(actions)="{ rowIndex }">
-      <div class="flex gap-1">
-        <va-button
-          preset="plain"
-          icon="delete"
-          color="danger"
-          @click="removeFile(rowIndex)"
-          :disabled="props.submitAttempted"
-        />
-      </div>
-    </template>
-  </va-data-table>
+      <template #cell(progress)="{ value }">
+        <va-progress-circle
+          :model-value="value ? parseInt(value, 10) : 0"
+          size="small"
+        >
+          {{ value && value + "%" }}
+        </va-progress-circle>
+      </template>
+
+      <template #cell(uploadStatus)="{ value }">
+        <span class="flex justify-center">
+          <va-popover
+            v-if="value === config.upload_status.UPLOADED"
+            message="Succeeded"
+          >
+            <va-icon name="check_circle_outline" color="success" />
+          </va-popover>
+          <va-popover
+            v-if="value === config.upload_status.UPLOADING"
+            message="Uploading"
+          >
+            <va-icon name="pending" color="info" />
+          </va-popover>
+          <va-popover
+            v-if="value === config.upload_status.UPLOAD_FAILED"
+            message="Failed"
+          >
+            <va-icon name="error_outline" color="danger" />
+          </va-popover>
+        </span>
+      </template>
+
+      <template #cell(actions)="{ rowIndex }">
+        <div class="flex gap-1">
+          <va-button
+            preset="plain"
+            icon="delete"
+            color="danger"
+            @click="removeFile(rowIndex)"
+            :disabled="props.submitAttempted"
+          />
+        </div>
+      </template>
+    </va-data-table>
+
+    <va-divider vertical />
+
+    <!-- Submitted values -->
+    <va-card class="mt-5">
+      <va-card-title>
+        <div class="flex flex-nowrap items-center w-full">
+          <span class="text-lg">Details</span>
+        </div>
+      </va-card-title>
+      <va-card-content>
+        <div class="va-table-responsive">
+          <table class="va-table">
+            <tbody>
+              <tr>
+                <td>Status</td>
+                <td>
+                  <va-chip size="small" :color="props.statusChipColor">
+                    {{ props.submissionStatus }}
+                  </va-chip>
+                </td>
+              </tr>
+
+              <tr v-if="props.sourceRawData">
+                <td>Source Raw Data</td>
+                <td>
+                  <span>
+                    <router-link
+                      :to="`/datasets/${props.sourceRawData?.id}`"
+                      target="_blank"
+                    >
+                      {{ props.sourceRawData?.name }}
+                    </router-link>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </va-card-content>
+    </va-card>
+  </div>
 
   <!-- Alert for showing errors encountered during submission -->
   <va-alert
@@ -121,59 +170,6 @@
     dense
     >{{ props.submissionAlert }}
   </va-alert>
-
-  <!-- Submitted values -->
-  <va-card class="mt-5">
-    <va-card-title>
-      <div class="flex flex-nowrap items-center w-full">
-        <span class="text-lg">Details</span>
-      </div>
-    </va-card-title>
-    <va-card-content>
-      <div class="va-table-responsive">
-        <table class="va-table">
-          <tbody>
-            <tr>
-              <td>Status</td>
-              <td>
-                <va-chip size="small" :color="props.statusChipColor">
-                  {{ props.submissionStatus }}
-                </va-chip>
-              </td>
-            </tr>
-            <tr>
-              <td>Data Product</td>
-              <td>
-                <span>
-                  <router-link
-                    v-if="props.uploadedDataProduct"
-                    :to="`/datasets/${props.uploadedDataProduct?.id}`"
-                    target="_blank"
-                  >
-                    {{ props.uploadedDataProduct?.name }}
-                  </router-link>
-                  <span v-else> {{ props.uploadedDataProductName }}</span>
-                </span>
-              </td>
-            </tr>
-            <tr v-if="props.sourceRawData">
-              <td>Source Raw Data</td>
-              <td>
-                <span>
-                  <router-link
-                    :to="`/datasets/${props.sourceRawData?.id}`"
-                    target="_blank"
-                  >
-                    {{ props.sourceRawData?.name }}
-                  </router-link>
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </va-card-content>
-  </va-card>
 </template>
 
 <script setup>
@@ -185,14 +181,6 @@ const props = defineProps({
   },
   dataProductFiles: {
     type: Array,
-    required: true,
-  },
-  uploadedDataProduct: {
-    type: Object,
-    required: true,
-  },
-  uploadedDataProductName: {
-    type: String,
     required: true,
   },
   sourceRawData: {
@@ -229,6 +217,8 @@ const emit = defineEmits(["files-added", "directory-added", "file-removed"]);
 const folderUploadInput = ref(null);
 
 let directoryName = ref("");
+const showUploadedDatasetProductCopyText = ref(false);
+const showUploadedDatasetSearchInput = ref(false);
 
 const isDirectory = computed(() => {
   return directoryName.value && directoryName.value.length > 0;
@@ -277,6 +267,8 @@ const columns = [
 ];
 
 const onDirectorySelection = (e) => {
+  showUploadedDatasetProductCopyText.value = true;
+
   const isWindows = (path) =>
     path.indexOf("/") === -1 && path.indexOf("\\") > 0;
   const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;
@@ -312,22 +304,6 @@ const onDirectorySelection = (e) => {
 const removeFile = (index) => {
   emit("file-removed", index);
 };
-
-onMounted(() => {
-  console.log("onMounted");
-  console.log("props");
-  console.log("props.uploadedDataProduct", props.uploadedDataProduct);
-  console.log("props.sourceRawData", props.sourceRawData);
-  console.log("props.uploadedDataProductName", props.uploadedDataProductName);
-});
-
-watch(
-  () => props.uploadedDataProduct,
-  () => {
-    console.log("watch");
-    console.log("props.uploadedDataProduct", props.uploadedDataProduct);
-  },
-);
 </script>
 
 <style scoped>

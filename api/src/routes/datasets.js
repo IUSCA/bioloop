@@ -15,21 +15,14 @@ const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Data Products uploads - UI
-router.get(
-  '/file-types',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const dataset_file_types = await prisma.dataset_file_type.findMany();
-    res.json(dataset_file_types);
-  }),
-);
+// Data Product ingestion - UI
 
 // stats - UI
 router.get(
@@ -188,23 +181,6 @@ const buildQueryObject = ({
   return query_obj;
 };
 
-// const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-// const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size',
-// 'size'];
-
-//   if (!field || !sortOrder) {
-//     return {};
-//   }
-//   if (nullable_order_by_fields.includes(field)) {
-//     return {
-//       [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-//     };
-//   }
-//   return {
-//     [field]: sortOrder,
-//   };
-// };
-
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -246,7 +222,6 @@ router.get(
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').toBoolean().optional(),
-    query('include_file_type').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -263,11 +238,10 @@ router.get(
       ...filterQuery,
       orderBy,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
-        file_type: req.query.include_file_type || false,
       },
     };
 
@@ -325,6 +299,8 @@ router.get(
     // only select path and md5 columns from the dataset_file table if files is
     // true
 
+    // console.log('req.query.include_shares', req.query.include_shares);
+
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
       files: req.query.files,
@@ -334,6 +310,7 @@ router.get(
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
+      initiator: req.query.initiator || false,
       include_uploading_derived_datasets: req.query.include_uploading_derived_datasets,
       include_upload_log: req.query.include_upload_log,
     });
@@ -384,7 +361,7 @@ router.post(
     const dataset = await prisma.dataset.create({
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     });
     res.json(dataset);
@@ -438,7 +415,7 @@ router.patch(
       },
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
       },
@@ -773,16 +750,6 @@ router.get(
       ...req.query,
     });
     res.json(files);
-  }),
-);
-
-// Data Products - UI
-router.get(
-  '/file-types',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const dataset_file_types = await prisma.dataset_file_type.findMany();
-    res.json(dataset_file_types);
   }),
 );
 
