@@ -11,7 +11,7 @@ model dataset {
   id               Int                 @id @default(autoincrement())
   name             String
   type             String
-  file_type        dataset_file_type? @relation(fields: [file_type_id], references: [id])
+  file_type        dataset_file_type?  @relation(fields: [file_type_id], references: [id])
   file_type_id     Int?
   num_directories  Int?
   num_files        Int?
@@ -38,6 +38,7 @@ model dataset {
   stage_requests   stage_request_log[]
   bundle           bundle?
   upload_log       upload_log?
+
   @@unique([name, type, is_deleted])
 }
 
@@ -95,6 +96,7 @@ model upload_log {
   dataset_id   Int?              @unique
   dataset      dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   files        file_upload_log[]
+  started      DateTime          @default(now()) @db.Timestamp(6)
   last_updated DateTime          @default(now()) @db.Timestamp(6)
   user_id      Int
   user         user              @relation(fields: [user_id], references: [id])
