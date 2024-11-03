@@ -69,7 +69,7 @@ const INCLUDE_UPLOAD_LOG_RELATIONS = {
       id: true,
       md5: true,
       name: true,
-      path: true
+      path: true,
     },
   },
 };

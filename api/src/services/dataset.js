@@ -9,6 +9,7 @@ const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
+const { DONE_STATUSES } = require('../constants');
 
 const prisma = new PrismaClient();
 
@@ -46,8 +47,6 @@ const INCLUDE_AUDIT_LOGS = {
     },
   },
 };
-
-const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
