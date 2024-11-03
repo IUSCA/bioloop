@@ -12,7 +12,7 @@ class UploadService {
   }
 
   getUploadLogs({ status = null, dataset_name = null } = {}) {
-    return api.get(`/upload/logs`, {
+    return api.get(`/uploads`, {
       params: {
         status,
         dataset_name,
@@ -21,16 +21,16 @@ class UploadService {
   }
 
   logUpload(data) {
-    return api.post("/upload/log", data);
+    return api.post("/uploads", data);
   }
 
   updateUploadLog(upload_log_id, data) {
-    return api.patch(`/upload/log/${upload_log_id}`, data);
+    return api.patch(`/uploads/${upload_log_id}`, data);
   }
 
   updateFileUploadLog(upload_log_id, file_upload_log_id, data) {
     return api.patch(
-      `/upload/${upload_log_id}/file-upload-log/${file_upload_log_id}`,
+      `/uploads/${upload_log_id}/file-upload-log/${file_upload_log_id}`,
       data,
     );
   }

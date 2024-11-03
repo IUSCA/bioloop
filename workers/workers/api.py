@@ -245,27 +245,27 @@ def get_all_workflows():
 
 def get_upload_log(upload_log_id: str):
     with APIServerSession() as s:
-        r = s.get(f'log/{upload_log_id}')
+        r = s.get(f'uploads/{upload_log_id}')
         r.raise_for_status()
         return r.json()
 
 
 def get_upload_logs():
     with APIServerSession() as s:
-        r = s.get(f'upload/logs')
+        r = s.get(f'uploads')
         r.raise_for_status()
         return r.json()
 
 
 def update_upload_log(upload_log_id, log):
     with APIServerSession() as s:
-        r = s.patch(f'upload/log/{upload_log_id}', json=log)
+        r = s.patch(f'uploads/{upload_log_id}', json=log)
         r.raise_for_status()
 
 
 def update_file_upload_log(upload_log_id, file_upload_log_id, log):
     with APIServerSession() as s:
-        r = s.patch(f'upload/{upload_log_id}/file-upload-log/{file_upload_log_id}', json=log)
+        r = s.patch(f'uploads/{upload_log_id}/file-upload-log/{file_upload_log_id}', json=log)
         r.raise_for_status()
 
 

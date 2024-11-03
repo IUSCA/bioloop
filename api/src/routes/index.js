@@ -21,6 +21,6 @@ router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAu
 router.use('/statistics', require('./statistics'));
 router.use('/notifications', require('./notifications'));
 router.use('/fs', require('./fs'));
-router.use('/upload', require('./upload'));
+router.use('/uploads', require('./uploads'));
 
 module.exports = router;

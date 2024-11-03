@@ -38,7 +38,7 @@ router.post(
 );
 
 router.get(
-  '/logs',
+  '/',
   validate([
     query('status').isIn(Object.values(config.upload_status)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
@@ -72,7 +72,7 @@ const getDataProductOriginPath = (datasetId) => path.join(
 
 // Post a Dataset's upload log, files' info and the Dataset to the database - UI
 router.post(
-  '/log',
+  '/',
   isPermittedTo('update'),
   validate([
     body('name').escape().notEmpty().isLength({ min: 3 }),
@@ -154,7 +154,7 @@ router.post(
 
 // Get an upload log - UI, worker
 router.get(
-  '/log/:id',
+  '/:id',
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
@@ -170,7 +170,7 @@ router.get(
 
 // Update an upload log and it's files - UI, workers
 router.patch(
-  '/log/:id',
+  '/:id',
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
