@@ -263,9 +263,9 @@ def update_upload_log(upload_log_id, log):
         r.raise_for_status()
 
 
-def update_file_upload_log(file_upload_log_id, log):
+def update_file_upload_log(upload_log_id, file_upload_log_id, log):
     with APIServerSession() as s:
-        r = s.patch(f'upload/file-upload-log/{file_upload_log_id}', json=log)
+        r = s.patch(f'upload/{upload_log_id}/file-upload-log/{file_upload_log_id}', json=log)
         r.raise_for_status()
 
 

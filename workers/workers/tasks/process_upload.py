@@ -66,6 +66,8 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
 
 
 def chunks_to_files(celery_task, dataset_id, **kwargs):
+    upload_log_id = None
+        
     try:
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
         upload_log = dataset['upload_log']
@@ -88,7 +90,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     except Exception as e:
         raise exc.RetryableException(e)
 
-    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / dataset['name']
+    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
 
     if not dataset_path.exists():
         raise Exception(f"Upload directory {dataset_path} does not exist for\
@@ -127,9 +129,13 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
             print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
 
         try:
-            api.update_file_upload_log(file_upload_log_id, {
-                'status': f['status']
-            })
+            api.update_file_upload_log(
+                    upload_log_id,
+                    file_upload_log_id,
+                    {
+                      'status': f['status']
+                    }
+                )
         except Exception as e:
             raise exc.RetryableException(e)
 
