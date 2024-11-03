@@ -38,7 +38,8 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         print(f'Destination path {file_destination_path} already exists for file {file_name}\
 (file_upload_log_id {file_upload_log_id})')
         print(f'Deleting existing destination path {file_destination_path}')
-        shutil.rmtree(file_destination_path)
+        # shutil.rmtree(file_destination_path)
+        file_destination_path.unlink()
 
     print(f'Creating destination path {file_destination_path}')
     file_destination_path.touch()
@@ -127,17 +128,15 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
             print(e)
         finally:
             print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
-
-        try:
-            api.update_file_upload_log(
-                    upload_log_id,
-                    file_upload_log_id,
-                    {
-                      'status': f['status']
-                    }
-                )
-        except Exception as e:
-            raise exc.RetryableException(e)
+        api.update_file_upload_log(
+                upload_log_id,
+                file_upload_log_id,
+                {
+                  'status': f['status']
+                }
+            )
+        if f['status'] == config['upload_status']['PROCESSING_FAILED']:
+            raise Exception(f"Failed to process file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
     failed_files = [file for file in pending_files if file['status'] != config['upload_status']['COMPLETE']]
     has_errors = len(failed_files) > 0
