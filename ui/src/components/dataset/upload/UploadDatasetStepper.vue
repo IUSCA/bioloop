@@ -422,6 +422,7 @@ const clearSelectedFilesToUpload = ({ clearNameInput = false } = {}) => {
   filesToUpload.value = [];
 };
 
+// todo - rename these to uploading...
 const selectingFiles = ref(false);
 const selectingDirectory = ref(false);
 
@@ -641,6 +642,15 @@ const uploadChunk = async (chunkData) => {
   return uploaded;
 };
 
+const getFileUploadLog = ({ name, path }) => {
+  const fileToUpload = uploadLog.value.files.find((fileUploadLog) => {
+    return selectingDirectory.value
+      ? fileUploadLog.name === name && fileUploadLog.path === path
+      : fileUploadLog.name === name;
+  });
+  return fileToUpload;
+};
+
 const uploadFileChunks = async (fileDetails) => {
   let file = fileDetails.file;
   let uploaded = false;
@@ -664,6 +674,10 @@ const uploadFileChunks = async (fileDetails) => {
     // chunkData.append("data_product_name", fileDetails.name);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append("data_product_id", uploadLog.value.dataset.id);
+    chunkData.append(
+      "file_upload_log_id",
+      getFileUploadLog({ name: fileDetails.name, path: fileDetails.path })?.id,
+    );
     // After setting the request's body, set the request's file
     chunkData.append("file", fileData);
 
@@ -881,6 +895,7 @@ const uploadFiles = async (files) => {
   return uploaded;
 };
 
+// two files can't have same path/name
 const setFiles = (files) => {
   _.range(0, files.length).forEach((i) => {
     const file = files.item(i);
@@ -895,6 +910,7 @@ const setFiles = (files) => {
   displayedFilesToUpload.value = filesToUpload.value;
 };
 
+// two files can't have the same name and path
 const setDirectory = (directoryDetails) => {
   isDirectory.value = true;
   // dataProductDirectory.value = directoryDetails;

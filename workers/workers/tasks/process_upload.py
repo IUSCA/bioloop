@@ -11,6 +11,7 @@ import workers.api as api
 from workers.config import config
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
+import workers.utils as utils
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -38,7 +39,6 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         print(f'Destination path {file_destination_path} already exists for file {file_name}\
 (file_upload_log_id {file_upload_log_id})')
         print(f'Deleting existing destination path {file_destination_path}')
-        # shutil.rmtree(file_destination_path)
         file_destination_path.unlink()
 
     print(f'Creating destination path {file_destination_path}')
@@ -60,6 +60,11 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
                 with open(file_destination_path, 'ab') as destination:
                     destination.write(chunk.read())
         print(f'Chunks for file id {file_upload_log_id} ({file_name}) merged successfully')
+
+        evaluated_checksum = utils.checksum(file_destination_path)
+        print(f'evaluated_checksum: {evaluated_checksum}')
+        print(f'file_md5: {file_md5}')
+        processing_error = evaluated_checksum != file_md5
 
     return config['upload_status']['PROCESSING_FAILED'] \
         if processing_error \
@@ -113,7 +118,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         file_upload_log_id = f['id']
         file_path = f['path']
 
-        chunks_path = dataset_path / 'chunked_files' / f['md5']
+        chunks_path = dataset_path / 'chunked_files' / file_upload_log_id
 
         if not chunks_path.exists():
             raise Exception(f"Chunks directory {chunks_path} does not exist\
