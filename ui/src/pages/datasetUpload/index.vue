@@ -76,17 +76,19 @@ const pastUploads = ref([]);
 
 const uploads = computed(() => {
   console.log("computed uploads");
-  console.dir(pastUploads.value, { depth: null });
+  // console.dir(pastUploads.value, { depth: null });
   return pastUploads.value.map((e) => {
+    const dataset_upload_log = e.dataset_upload_log;
+    const dataset = dataset_upload_log.dataset;
     const source_dataset =
-      e.dataset.source_datasets.length > 0
-        ? e.dataset.source_datasets[0].source_dataset
+      dataset.source_datasets.length > 0
+        ? dataset.source_datasets[0].source_dataset
         : null;
     return {
       ...e,
       user: e.user,
       source_dataset,
-      uploaded_dataset: e.dataset,
+      uploaded_dataset: dataset,
     };
   });
 });
@@ -131,19 +133,19 @@ const columns = [
 const getStatusChipColor = (value) => {
   let color;
   switch (value) {
-    case config.upload_status.UPLOADING:
-    case config.upload_status.UPLOADED:
-    case config.upload_status.PROCESSING:
+    case config.upload.status.UPLOADING:
+    case config.upload.status.UPLOADED:
+    case config.upload.status.PROCESSING:
       color = "primary";
       break;
-    case config.upload_status.UPLOAD_FAILED:
+    case config.upload.status.UPLOAD_FAILED:
       color = "warning";
       break;
-    case config.upload_status.COMPLETE:
+    case config.upload.status.COMPLETE:
       color = "success";
       break;
-    case config.upload_status.PROCESSING_FAILED:
-    case config.upload_status.FAILED:
+    case config.upload.status.PROCESSING_FAILED:
+    case config.upload.status.FAILED:
       color = "danger";
       break;
     default:
@@ -153,14 +155,19 @@ const getStatusChipColor = (value) => {
 };
 
 onMounted(() => {
-  uploadService.getUploadLogs().then((res) => {
-    pastUploads.value = res.data;
-  });
+  uploadService
+    .getUploadLogs({
+      upload_type: config.upload.type.DATASET,
+    })
+    .then((res) => {
+      pastUploads.value = res.data;
+    });
 });
 
 watch(filterInput, () => {
   const filters = filterInput.value && {
-    dataset_name: filterInput.value,
+    entity_name: filterInput.value,
+    upload_type: config.upload.type.DATASET,
   };
   uploadService.getUploadLogs(filters).then((res) => {
     pastUploads.value = res.data;

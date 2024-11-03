@@ -66,9 +66,9 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         print(f'file_md5: {file_md5}')
         processing_error = evaluated_checksum != file_md5
 
-    return config['upload_status']['PROCESSING_FAILED'] \
+    return config['upload']['status']['PROCESSING_FAILED'] \
         if processing_error \
-        else config['upload_status']['COMPLETE']
+        else config['upload']['status']['COMPLETE']
 
 
 def chunks_to_files(celery_task, dataset_id, **kwargs):
@@ -82,15 +82,15 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
         file_log_updates = []
         for file_log in upload_log_files:
-            if file_log['status'] != config['upload_status']['COMPLETE']:
+            if file_log['status'] != config['upload']['status']['COMPLETE']:
                 file_log_updates.append({
                     'id': file_log['id'],
                     'data': {
-                        'status': config['upload_status']['PROCESSING']
+                        'status': config['upload']['status']['PROCESSING']
                     }
                 })
         api.update_upload_log(upload_log_id, {
-            'status': config['upload_status']['PROCESSING'],
+            'status': config['upload']['status']['PROCESSING'],
             'files': file_log_updates
         })
     except Exception as e:
@@ -102,7 +102,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         raise Exception(f"Upload directory {dataset_path} does not exist for\
  dataset id {dataset_id} (upload_log_id: {upload_log_id})")
 
-    pending_files = [file for file in upload_log_files if file['status'] != config['upload_status']['COMPLETE']]
+    pending_files = [file for file in upload_log_files if file['status'] != config['upload']['status']['COMPLETE']]
 
     dataset_merged_chunks_path = dataset_path / 'merged_chunks'
     if not dataset_merged_chunks_path.exists():
@@ -129,7 +129,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
                                             file_md5, chunks_path, dataset_merged_chunks_path,
                                             num_chunks_expected)
         except Exception as e:
-            f['status'] = config['upload_status']['PROCESSING_FAILED']
+            f['status'] = config['upload']['status']['PROCESSING_FAILED']
             print(e)
         finally:
             print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
@@ -140,10 +140,10 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
                   'status': f['status']
                 }
             )
-        if f['status'] == config['upload_status']['PROCESSING_FAILED']:
+        if f['status'] == config['upload']['status']['PROCESSING_FAILED']:
             raise Exception(f"Failed to process file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
-    failed_files = [file for file in pending_files if file['status'] != config['upload_status']['COMPLETE']]
+    failed_files = [file for file in pending_files if file['status'] != config['upload']['status']['COMPLETE']]
     has_errors = len(failed_files) > 0
 
     if not has_errors:
@@ -159,7 +159,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     # Update status of upload log
     try:
         api.update_upload_log(upload_log_id, {
-            'status': config['upload_status']['PROCESSING_FAILED'] if has_errors else config['upload_status'][
+            'status': config['upload']['status']['PROCESSING_FAILED'] if has_errors else config['upload']['status'][
                 'COMPLETE'],
         })
     except Exception as e:

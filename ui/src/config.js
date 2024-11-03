@@ -10,7 +10,8 @@ const exports = {
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
-  refreshTokenTMinusSeconds: { // milliseconds
+  refreshTokenTMinusSeconds: {
+    // milliseconds
     appToken: 300,
     uploadToken: 5,
   },
@@ -119,22 +120,17 @@ const exports = {
       key: "project",
     },
   },
-  upload_status: {
-    UPLOADING: "UPLOADING",
-    UPLOAD_FAILED: "UPLOAD_FAILED",
-    UPLOADED: "UPLOADED",
-    PROCESSING: "PROCESSING",
-    PROCESSING_FAILED: "PROCESSING_FAILED",
-    COMPLETE: "COMPLETE",
-    FAILED: "FAILED",
-  },
-  SUBMISSION_STATES: {
-    UNINITIATED: "Uninitiated",
-    PROCESSING: "Processing",
-    PROCESSING_FAILED: "Processing Failed",
-    UPLOADING: "Uploading",
-    UPLOAD_FAILED: "Upload Failed",
-    UPLOADED: "Uploaded",
+  upload: {
+    type: [{ DATASET: "DATASET" }],
+    status: {
+      UPLOADING: "UPLOADING",
+      UPLOAD_FAILED: "UPLOAD_FAILED",
+      UPLOADED: "UPLOADED",
+      PROCESSING: "PROCESSING",
+      PROCESSING_FAILED: "PROCESSING_FAILED",
+      COMPLETE: "COMPLETE",
+      FAILED: "FAILED",
+    },
   },
 };
 

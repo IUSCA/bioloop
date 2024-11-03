@@ -784,23 +784,4 @@ router.get(
   }),
 );
 
-// Initiate the processing of uploaded files - worker
-router.post(
-  '/:id/upload/process',
-  isPermittedTo('update'),
-  asyncHandler(async (req, res, next) => {
-    const dataset = await prisma.dataset.findFirst({
-      where: {
-        id: Number(req.params.id),
-      },
-      include: {
-        workflows: true,
-      },
-    });
-
-    const workflow = await datasetService.create_workflow(dataset, 'process_upload');
-    res.json(workflow);
-  }),
-);
-
 module.exports = router;

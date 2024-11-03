@@ -202,10 +202,17 @@ const uploadToken = ref(useLocalStorage("uploadToken", ""));
 
 const breakpoint = useBreakpoint();
 
-const { SUBMISSION_STATES } = config;
-
 const { errorMessages, isDirty } = useForm("datasetUploadForm");
 const isDirectory = ref(false);
+
+const SUBMISSION_STATES = {
+  UNINITIATED: "Uninitiated",
+  PROCESSING: "Processing",
+  PROCESSING_FAILED: "Processing Failed",
+  UPLOADING: "Uploading",
+  UPLOAD_FAILED: "Upload Failed",
+  UPLOADED: "Uploaded",
+};
 
 const STEP_KEYS = {
   RAW_DATA: "rawData",
@@ -352,7 +359,7 @@ const uploadCancelled = ref(false);
 
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
-    (e) => e.uploadStatus !== config.upload_status.UPLOADED,
+    (e) => e.uploadStatus !== config.upload.status.UPLOADED,
   );
 });
 const someFilesPendingUpload = computed(
@@ -643,16 +650,16 @@ const uploadChunk = async (chunkData) => {
 };
 
 const getFileUploadLog = ({ name, path }) => {
-  console.log(`Getting file upload log for ${name} at ${path}`);
-  console.log('uploadLog files', uploadLog.value.files);
-  console.log('selectingFiles', selectingFiles.value);
-  console.log('selectingDirectory', selectingDirectory.value);
+  // console.log(`Getting file upload log for ${name} at ${path}`);
+  // console.log("uploadLog files", uploadLog.value.files);
+  // console.log("selectingFiles", selectingFiles.value);
+  // console.log("selectingDirectory", selectingDirectory.value);
   const fileToUpload = uploadLog.value.files.find((fileUploadLog) => {
     return selectingDirectory.value
       ? fileUploadLog.name === name && fileUploadLog.path === path
       : fileUploadLog.name === name;
   });
-  console.log('fileToUpload', fileToUpload);
+  // console.log("fileToUpload", fileToUpload);
 
   return fileToUpload;
 };
@@ -679,7 +686,10 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("size", file.size);
     // chunkData.append("data_product_name", fileDetails.name);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append("data_product_id", uploadLog.value.dataset.id);
+    chunkData.append(
+      "data_product_id",
+      uploadLog.value.dataset_upload_log.dataset.id,
+    );
     chunkData.append(
       "file_upload_log_id",
       getFileUploadLog({ name: fileDetails.name, path: fileDetails.path })?.id,
@@ -708,7 +718,7 @@ const uploadFile = async (fileDetails) => {
   // persist token in store
   await auth.onFileUpload(fileDetails.name);
 
-  fileDetails.uploadStatus = config.upload_status.UPLOADING;
+  fileDetails.uploadStatus = config.upload.status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
 
   const uploaded = await uploadFileChunks(fileDetails);
@@ -721,8 +731,8 @@ const uploadFile = async (fileDetails) => {
   )?.id;
 
   fileDetails.uploadStatus = uploaded
-    ? config.upload_status.UPLOADED
-    : config.upload_status.UPLOAD_FAILED;
+    ? config.upload.status.UPLOADED
+    : config.upload.status.UPLOAD_FAILED;
 
   let updated = false;
   if (uploaded) {
@@ -731,7 +741,7 @@ const uploadFile = async (fileDetails) => {
         uploadLog.value.id,
         fileUploadLogId,
         {
-          status: config.upload_status.UPLOADED,
+          status: config.upload.status.UPLOADED,
         },
       );
       updated = true;
@@ -807,7 +817,7 @@ const postSubmit = () => {
     return {
       id: uploadLog.value.files.find((f) => f.md5 === file.fileChecksum).id,
       data: {
-        status: config.upload_status.UPLOAD_FAILED,
+        status: config.upload.status.UPLOAD_FAILED,
       },
     };
   });
@@ -815,8 +825,8 @@ const postSubmit = () => {
   if (uploadLog.value) {
     createOrUpdateUploadLog(uploadLog.value.id, {
       status: someFilesPendingUpload.value
-        ? config.upload_status.UPLOAD_FAILED
-        : config.upload_status.UPLOADED,
+        ? config.upload.status.UPLOAD_FAILED
+        : config.upload.status.UPLOADED,
       files: failedFileUpdates,
     })
       .then((res) => {
@@ -831,7 +841,7 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return datasetService.processUpload(uploadLog.value.dataset_id);
+      return uploadService.processUpload(uploadLog.value.id);
     })
     .catch((err) => {
       console.error(err);
@@ -863,7 +873,7 @@ const preUpload = async () => {
 
   const logData = uploadLog.value?.id
     ? {
-        status: config.upload_status.UPLOADING,
+        status: config.upload.status.UPLOADING,
       }
     : {
         ...uploadFormData.value,
@@ -883,9 +893,9 @@ const preUpload = async () => {
 
 // Log (or update) upload status
 const createOrUpdateUploadLog = (uploadLogId, data) => {
-  console.log("createOrUpdateUploadLog", uploadLogId, data);
+  // console.log("createOrUpdateUploadLog", uploadLogId, data);
   return !uploadLogId
-    ? uploadService.logUpload(data)
+    ? uploadService.logDatasetUpload(data)
     : uploadService.updateUploadLog(uploadLogId, data);
 };
 
@@ -940,7 +950,7 @@ const setDirectory = (directoryDetails) => {
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: undefined,
-    uploadStatus: config.upload_status.PROCESSING_FAILED,
+    uploadStatus: config.upload.status.PROCESSING_FAILED,
   };
   dataProductDirectoryName.value = dataProductDirectory.value.name;
 

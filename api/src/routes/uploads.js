@@ -10,11 +10,12 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const authService = require('../services/auth');
+const datasetService = require('../services/dataset');
 const { INCLUDE_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
-const isPermittedTo = accessControl('datasets');
+const isPermittedTo = accessControl('upload');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -40,18 +41,25 @@ router.post(
 router.get(
   '/',
   validate([
-    query('status').isIn(Object.values(config.upload_status)).optional(),
-    query('dataset_name').notEmpty().escape().optional(),
+    query('status').isIn(Object.values(config.upload.status)).optional(),
+    query('upload_type').isIn(Object.values(Object.values(config.upload.types))).optional(),
+    query('entity_name').notEmpty().escape().optional(),
   ]),
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
-    const { status, dataset_name } = req.query;
+    const { status, upload_type, entity_name } = req.query;
+
+    const nameFilter = upload_type === config.upload.types.DATASET ? {
+      dataset_upload_log: {
+        dataset: {
+          name: { contains: entity_name },
+        },
+      },
+    } : null;
 
     const query_obj = _.omitBy(_.isUndefined)({
       status,
-      dataset: {
-        name: { contains: dataset_name },
-      },
+      ...nameFilter,
     });
 
     const upload_logs = await prisma.upload_log.findMany({
@@ -63,7 +71,7 @@ router.get(
   }),
 );
 
-const getDataProductOriginPath = (datasetId) => path.join(
+const getUploadedDataProductPath = (datasetId) => path.join(
   UPLOAD_PATH,
   'data_products',
   `${datasetId}`,
@@ -72,7 +80,7 @@ const getDataProductOriginPath = (datasetId) => path.join(
 
 // Post a Dataset's upload log, files' info and the Dataset to the database - UI
 router.post(
-  '/',
+  '/dataset',
   isPermittedTo('update'),
   validate([
     body('name').escape().notEmpty().isLength({ min: 3 }),
@@ -84,12 +92,31 @@ router.post(
       name, source_dataset_id, files_metadata,
     } = req.body;
 
-    let upload_log;
+    const createDatasetQuery = {
+      dataset_upload_log: {
+        create: {
+          dataset: {
+            create: {
+              ...(source_dataset_id && {
+                source_datasets: {
+                  create: [{
+                    source_id: source_dataset_id,
+                  }],
+                },
+              }),
+              name,
+              // origin_path: getUploadedDataProductPath(data_product_id),
+              type: 'DATA_PRODUCT',
+            },
+          },
+        },
+      },
+    };
 
-    try {
-      upload_log = await prisma.upload_log.create({
+    const datasetUploadLog = await prisma.$transaction(async (tx) => {
+      const upload_log = await tx.upload_log.create({
         data: {
-          status: config.upload_status.UPLOADING,
+          status: config.upload.status.UPLOADING,
           user: {
             connect: {
               id: req.user.id,
@@ -101,54 +128,31 @@ router.post(
               md5: file.checksum,
               num_chunks: file.num_chunks,
               path: file.path,
-              status: config.upload_status.UPLOADING,
+              status: config.upload.status.UPLOADING,
             })),
           },
-          dataset: {
-            create: {
-              ...(source_dataset_id && {
-                source_datasets: {
-                  create: [{
-                    source_id: source_dataset_id,
-                  }],
-                },
-              }),
-              name,
-              // origin_path: getDataProductOriginPath(data_product_id),
-              type: config.dataset_types[1],
-            },
-          },
+          ...createDatasetQuery,
         },
         include: INCLUDE_UPLOAD_LOG_RELATIONS,
       });
-    } catch (e) {
-      console.error(e);
-      // if upload log creation fails, don't proceed to updating the created
-      // corresponding dataset's origin_path
-      return next(createError.InternalServerError());
-    }
 
-    console.log('upload_log created');
-    console.dir(upload_log, { depth: null });
-
-    const datasetId = upload_log.dataset.id;
-
-    // if upload log creation succeeds, but update to the corresponding
-    // dataset's origin_path fails, then delete the created upload log
-    try {
-      await prisma.dataset.update({
-        where: { id: datasetId },
+      const uploadedDatasetId = upload_log.dataset_upload_log.dataset.id;
+      await tx.dataset.update({
+        where: { id: uploadedDatasetId },
         data: {
-          origin_path: getDataProductOriginPath(datasetId),
+          origin_path: getUploadedDataProductPath(uploadedDatasetId),
         },
       });
-    } catch (e) {
-      console.error(e);
-      await prisma.upload_log.delete({ where: { id: upload_log.id } });
-      return next(createError.InternalServerError());
-    }
 
-    res.json(upload_log);
+      const updated_upload_log = await tx.upload_log.findUnique({
+        where: {
+          id: upload_log.id,
+        },
+      });
+      return updated_upload_log;
+    });
+
+    res.json(datasetUploadLog);
   }),
 );
 
@@ -181,11 +185,6 @@ router.patch(
     const { status, files } = req.body;
     const update_query = _.omitBy(_.isUndefined)({
       status,
-      ...(status === config.upload_status.FAILED && {
-        dataset: {
-          delete: true,
-        },
-      }),
     });
 
     const updates = [];
@@ -235,6 +234,40 @@ router.patch(
     });
 
     res.json(upload_log);
+  }),
+);
+
+// Initiate the processing of uploaded files - worker
+router.post(
+  '/:id/process',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  isPermittedTo('update'),
+  asyncHandler(async (req, res, next) => {
+    const upload_log = await prisma.upload_log.findUnique({
+      where: { id: req.params.id },
+    });
+    let uploadType;
+    if (upload_log.dataset_upload_log) {
+      uploadType = config.upload.types.DATASET;
+    } else {
+      // Handle other upload types
+    }
+
+    // Conditionally handle different upload types
+    if (uploadType === config.upload.types.DATASET) {
+      const dataset = await prisma.dataset.findFirst({
+        where: {
+          id: Number(req.params.id),
+        },
+        include: {
+          workflows: true,
+        },
+      });
+      const workflow = await datasetService.create_workflow(dataset, 'process_upload');
+      res.json(workflow);
+    }
   }),
 );
 

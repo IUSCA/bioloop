@@ -250,9 +250,11 @@ def get_upload_log(upload_log_id: str):
         return r.json()
 
 
-def get_upload_logs():
+def get_upload_logs(upload_type: str):
     with APIServerSession() as s:
-        r = s.get(f'uploads')
+        r = s.get(f'uploads', params={
+            'upload_type': upload_type
+        })
         r.raise_for_status()
         return r.json()
 

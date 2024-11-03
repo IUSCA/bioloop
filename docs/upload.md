@@ -93,4 +93,4 @@ The uploaded data goes through two stages of checksum validation:
 
 ## 7. Retry
 1. Upon encountering retryable exceptions, the `process_upload` worker retries itself 3 times before failing.
-2. The script `manage_pending_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that are pending (`status != COMPLETE`), and retries the ones which have been pending for less than 24 hours. Other uploads are marked as FAILED. 
+2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that are pending (`status != COMPLETE`), and retries the ones which have been pending for less than 24 hours. Other uploads are marked as FAILED. 

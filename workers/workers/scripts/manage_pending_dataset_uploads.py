@@ -17,13 +17,14 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
                  config['DONE_STATUSES']['SUCCESS']]
 
+UPLOAD_RETRY_THRESHOLD_HOURS = config['upload']['UPLOAD_RETRY_THRESHOLD_HOURS']
 
 def main():
-    uploads = api.get_upload_logs()
+    uploads = api.get_upload_logs(upload_type='DATASET')
     pending_uploads = [
         upload for upload in uploads if (
-                upload['status'] == config['upload_status']['UPLOADED'] or
-                upload['status'] == config['upload_status']['PROCESSING']
+                upload['status'] == config['upload']['status']['UPLOADED'] or
+                upload['status'] == config['upload']['status']['PROCESSING']
         )]
 
     for upload in pending_uploads:
@@ -33,13 +34,16 @@ def main():
         current_time = datetime.now()
         difference = (current_time - last_updated_time).total_seconds() / 3600
 
-        if difference <= 24:
-            print(f'Will retry processing upload {upload["id"]}')
+        # retry processing this upload if it hasn't been updated in the last 72 hours
+        if difference <= UPLOAD_RETRY_THRESHOLD_HOURS:
+            print(f'Upload {upload["id"]} has been in state {upload["status"]} for {UPLOAD_RETRY_THRESHOLD_HOURS} hours.'
+                  f' Retrying processing of upload')
             # retry processing this upload
-            dataset_id = upload['dataset_id']
+            dataset_id = upload['dataset_upload_log']['dataset_id']
             dataset = api.get_dataset(dataset_id, workflows=True)
             duplicate_workflows = [
                 wf for wf in dataset['workflows']
+                # Todo - wf['name'] won't work
                 if wf['name'] == WORKFLOW_NAME and
                    wf['status'] not in DONE_STATUSES
             ]
@@ -54,21 +58,23 @@ def main():
         else:
             # mark upload as failed and clean up resources
             print(
-                f"Upload id {upload['id']} has been in a pending state for more than 24 hours, and will be cleaned up")
+                f"Upload id {upload['id']} has been in a pending state for more than"
+                f" ${UPLOAD_RETRY_THRESHOLD_HOURS} hours, and will be cleaned up")
             origin_path = Path(upload['dataset']['origin_path'])
+            # todo - delete uploaded chunks as well
             if origin_path.exists():
                 shutil.rmtree(origin_path)
             file_updates = [
                 {
                     'id': file['id'],
                     'data': {
-                        'status': config['upload_status']['FAILED']
+                        'status': config['upload']['status']['FAILED']
                     }
                 }
                 for file in upload['files']
             ]
             api.update_upload_log(upload['id'], {
-                'status': config['upload_status']['FAILED'],
+                'status': config['upload']['status']['FAILED'],
                 'files': file_updates
             })
 

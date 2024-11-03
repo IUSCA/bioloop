@@ -50,7 +50,21 @@
     }
   },
   "upload": {
-    "path": ""
+    "path": "",
+    "types": [
+      {
+        "DATASET": "DATASET"
+      }
+    ],
+    "status": {
+      "UPLOADING": "UPLOADING",
+      "UPLOAD_FAILED": "UPLOAD_FAILED",
+      "UPLOADED": "UPLOADED",
+      "PROCESSING": "PROCESSING",
+      "PROCESSING_FAILED": "PROCESSING_FAILED",
+      "COMPLETE": "COMPLETE",
+      "FAILED": "FAILED"
+    }
   },
   "download_server": {
     "base_url": ""
@@ -150,14 +164,5 @@
   "restricted_ingestion_dirs": {
     "slateScratch": "",
     "slateProject": ""
-  },
-  "upload_status": {
-    "UPLOADING": "UPLOADING",
-    "UPLOAD_FAILED": "UPLOAD_FAILED",
-    "UPLOADED": "UPLOADED",
-    "PROCESSING": "PROCESSING",
-    "PROCESSING_FAILED": "PROCESSING_FAILED",
-    "COMPLETE": "COMPLETE",
-    "FAILED": "FAILED"
   }
 }

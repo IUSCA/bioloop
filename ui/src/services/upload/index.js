@@ -11,17 +11,22 @@ class UploadService {
     this.uploadApi.setToken(token);
   }
 
-  getUploadLogs({ status = null, dataset_name = null } = {}) {
+  getUploadLogs({
+    status = null,
+    upload_type = null,
+    entity_name = null,
+  } = {}) {
     return api.get(`/uploads`, {
       params: {
         status,
-        dataset_name,
+        upload_type,
+        entity_name,
       },
     });
   }
 
-  logUpload(data) {
-    return api.post("/uploads", data);
+  logDatasetUpload(data) {
+    return api.post("/uploads/dataset", data);
   }
 
   updateUploadLog(upload_log_id, data) {
@@ -33,6 +38,10 @@ class UploadService {
       `/uploads/${upload_log_id}/file-upload-log/${file_upload_log_id}`,
       data,
     );
+  }
+
+  processUpload(upload_log_id) {
+    return api.post(`/uploads/${upload_log_id}/process`);
   }
 
   uploadFile(data) {

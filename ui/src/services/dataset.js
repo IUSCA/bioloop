@@ -138,10 +138,6 @@ class DatasetService {
   initiate_workflow_on_dataset({ dataset_id, workflow }) {
     return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
   }
-
-  processUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/upload/process`);
-  }
 }
 
 export default new DatasetService();

@@ -175,7 +175,7 @@ async function get_dataset({
               },
               {
                 upload_log: {
-                  status: config.upload_status.COMPLETE,
+                  status: config.upload.status.COMPLETE,
                 },
               },
             ],
