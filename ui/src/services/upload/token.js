@@ -2,7 +2,7 @@ import api from "@/services/api";
 
 class UploadTokenService {
   getUploadToken({ data }) {
-    return api.post("/upload/token", data);
+    return api.post("/uploads/token", data);
   }
 }
 
