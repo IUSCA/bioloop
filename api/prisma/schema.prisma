@@ -95,7 +95,7 @@ model dataset_upload_log {
   dataset_id    Int        @unique
   dataset       dataset    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   upload_log_id Int
-  upload        upload_log @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
+  upload_log    upload_log @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
 
   @@unique([upload_log_id])
 }

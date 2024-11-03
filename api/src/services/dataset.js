@@ -9,44 +9,11 @@ const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
-const { DONE_STATUSES } = require('../constants');
+const {
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
+} = require('../constants');
 
 const prisma = new PrismaClient();
-
-const INCLUDE_STATES = {
-  states: {
-    select: {
-      state: true,
-      timestamp: true,
-      metadata: true,
-    },
-    orderBy: {
-      timestamp: 'desc',
-    },
-  },
-};
-
-const INCLUDE_WORKFLOWS = {
-  workflows: {
-    select: {
-      id: true,
-    },
-  },
-};
-
-const INCLUDE_AUDIT_LOGS = {
-  audit_logs: {
-    include: {
-      user: {
-        include: {
-          user_role: {
-            select: { roles: true },
-          },
-        },
-      },
-    },
-  },
-};
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
@@ -168,8 +135,10 @@ async function get_dataset({
       derived_datasets: true,
       projects: includeProjects,
       dataset_upload_log: include_upload_log ? {
-        include: {
-          files: true,
+        upload_log: {
+          select: {
+            files: true,
+          },
         },
       } : false,
     },
@@ -508,8 +477,6 @@ async function add_files({ dataset_id, data }) {
 
 module.exports = {
   soft_delete,
-  INCLUDE_STATES,
-  INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
   create_filetree,
