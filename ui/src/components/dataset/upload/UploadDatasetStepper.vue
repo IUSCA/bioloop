@@ -643,11 +643,17 @@ const uploadChunk = async (chunkData) => {
 };
 
 const getFileUploadLog = ({ name, path }) => {
+  console.log(`Getting file upload log for ${name} at ${path}`);
+  console.log('uploadLog files', uploadLog.value.files);
+  console.log('selectingFiles', selectingFiles.value);
+  console.log('selectingDirectory', selectingDirectory.value);
   const fileToUpload = uploadLog.value.files.find((fileUploadLog) => {
     return selectingDirectory.value
       ? fileUploadLog.name === name && fileUploadLog.path === path
       : fileUploadLog.name === name;
   });
+  console.log('fileToUpload', fileToUpload);
+
   return fileToUpload;
 };
 

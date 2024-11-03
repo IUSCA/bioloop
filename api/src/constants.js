@@ -68,6 +68,8 @@ const INCLUDE_UPLOAD_LOG_RELATIONS = {
     select: {
       id: true,
       md5: true,
+      name: true,
+      path: true
     },
   },
 };

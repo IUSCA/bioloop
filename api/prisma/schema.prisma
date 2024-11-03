@@ -86,7 +86,7 @@ model upload_log {
   dataset      dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   files        file_upload_log[]
   initiated_at DateTime          @default(now()) @db.Timestamp(6)
-  updated_at   DateTime          @default(now()) @db.Timestamp(6)
+  updated_at   DateTime          @default(now()) @updatedAt @db.Timestamp(6)
   user_id      Int
   user         user              @relation(fields: [user_id], references: [id])
 }

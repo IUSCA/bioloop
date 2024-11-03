@@ -181,7 +181,6 @@ router.patch(
     const { status, files } = req.body;
     const update_query = _.omitBy(_.isUndefined)({
       status,
-      last_updated: new Date(),
       ...(status === config.upload_status.FAILED && {
         dataset: {
           delete: true,
