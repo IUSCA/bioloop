@@ -148,6 +148,7 @@ router.post(
         where: {
           id: upload_log.id,
         },
+        include: INCLUDE_UPLOAD_LOG_RELATIONS,
       });
       return updated_upload_log;
     });

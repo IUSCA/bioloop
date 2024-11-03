@@ -133,7 +133,6 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
-  include_uploading_derived_datasets = false,
   include_upload_log = false,
 }) {
   const fileSelect = files ? {
@@ -166,24 +165,9 @@ async function get_dataset({
       ...INCLUDE_STATES,
       bundle,
       source_datasets: true,
-      derived_datasets: include_uploading_derived_datasets ? true : {
-        where: {
-          derived_dataset: {
-            OR: [
-              {
-                upload_log: null,
-              },
-              {
-                upload_log: {
-                  status: config.upload.status.COMPLETE,
-                },
-              },
-            ],
-          },
-        },
-      },
+      derived_datasets: true,
       projects: includeProjects,
-      upload_log: include_upload_log ? {
+      dataset_upload_log: include_upload_log ? {
         include: {
           files: true,
         },
