@@ -160,8 +160,6 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function refreshUploadToken(fileName) {
-    refreshUploadTokenTimer = null; // reset upload timer state
-
     uploadTokenService
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
