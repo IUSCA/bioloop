@@ -266,7 +266,7 @@ router.post(
           workflows: true,
         },
       });
-      const workflow = await datasetService.create_workflow(dataset, 'process_upload');
+      const workflow = await datasetService.create_workflow(dataset, 'process_dataset_upload');
       res.json(workflow);
     }
   }),

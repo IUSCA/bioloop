@@ -42,7 +42,7 @@ For each upload, information is logged to the following relational tables (Postg
 2. The actual upload begins once the above steps are successful.
 3. Chunks are uploaded sequentially. If a chunk upload fails, the client-side retries the upload upto 5 times before failing.
 4. The client sends an HTTP request to upload a chunk to our File Upload Server, which writes the received chunk to the filesystem, after validating its checksum (this is the first stage of checksum validation).
-5. After all files' chunks are uploaded successfully, the client-side makes a request to the Rhythm API to trigger the `process_upload` worker, which merges each file's uploaded chunks into the corresponding file.
+5. After all files' chunks are uploaded successfully, the client-side makes a request to the Rhythm API to trigger the `process_dataset_upload` worker, which merges each file's uploaded chunks into the corresponding file.
 
 ### 4.3 Directory structure
 The following directories on the File Upload Server are used for uploads:
@@ -82,7 +82,7 @@ The status of the upload, as well the status of each file in the upload goes thr
 | FAILED | Upload was pending (i.e. `status != COMPLETE`) for more than 24 hours, and was marked as failed |
 
 ## 5. Processing
-Uploaded file chunks are merged into the corresponding file by the worker `process_upload`. After the file has been recreated from its chunks, the MD5 checksum of the recreated file is matched with the expected MD5 checksum of the file that was persisted to the database before the upload (this is the second stage of checksum validation).
+Uploaded file chunks are merged into the corresponding file by the worker `process_dataset_upload`. After the file has been recreated from its chunks, the MD5 checksum of the recreated file is matched with the expected MD5 checksum of the file that was persisted to the database before the upload (this is the second stage of checksum validation).
 
 After all uploaded files have been processed successfully, the resources (chunks) associated with them are deleted.
 
@@ -92,5 +92,5 @@ The uploaded data goes through two stages of checksum validation:
 2. Validating MD5 checksum of the file, once it has been recreated from its chunks by the worker.
 
 ## 7. Retry
-1. Upon encountering retryable exceptions, the `process_upload` worker retries itself 3 times before failing.
+1. Upon encountering retryable exceptions, the `process_dataset_upload` worker retries itself 3 times before failing.
 2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that are pending (`status != COMPLETE`), and retries the ones which have been pending for less than 24 hours. Other uploads are marked as FAILED. 

@@ -145,11 +145,11 @@ config = {
                 }
             ]
         },
-        'process_upload': {
+        'process_dataset_upload': {
             'steps': [
                 {
-                    'name': 'process uploaded chunks',
-                    'task': 'process_upload'
+                    'name': 'Process Dataset Upload',
+                    'task': 'process_dataset_upload'
                 }
             ]
         }
