@@ -192,6 +192,7 @@ router.patch(
     updates.push(prisma.upload_log.update({
       where: { id: req.params.id },
       data: update_query,
+      include: INCLUDE_UPLOAD_LOG_RELATIONS,
     }));
     (files || []).forEach((f) => {
       updates.push(prisma.file_upload_log.update({
@@ -200,15 +201,8 @@ router.patch(
       }));
     });
 
-    await prisma.$transaction(updates);
-
-    const upload = await prisma.upload_log.findUniqueOrThrow({
-      where: {
-        id: req.params.id,
-      },
-      include: INCLUDE_UPLOAD_LOG_RELATIONS,
-    });
-    res.json(upload);
+    const uploadLog = await prisma.$transaction(updates)[0];
+    res.json(uploadLog);
   }),
 );
 
