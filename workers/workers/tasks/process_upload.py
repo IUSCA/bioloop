@@ -118,7 +118,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         file_upload_log_id = f['id']
         file_path = f['path']
 
-        chunks_path = dataset_path / 'chunked_files' / file_upload_log_id
+        chunks_path = dataset_path / 'chunked_files' / str(file_upload_log_id)
 
         if not chunks_path.exists():
             raise Exception(f"Chunks directory {chunks_path} does not exist\

@@ -54,11 +54,11 @@ router.post(
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
-      name, data_product_id, total, index, size, checksum, chunk_checksum,
+      name, data_product_id, total, index, size, checksum, chunk_checksum, file_upload_log_id,
     } = req.body;
 
     // eslint-disable-next-line no-console
-    console.log('Processing file chunk ...', data_product_id, name, total, index, size, checksum, chunk_checksum);
+    console.log('Processing file chunk ...', data_product_id, name, total, index, size, checksum, chunk_checksum, file_upload_log_id);
 
     const scopes = (req.token?.scope || '').split(' ');
 
