@@ -1,7 +1,30 @@
 <template>
+  <va-alert
+    v-if="props.isSubmissionAlertVisible"
+    icon="warning"
+    :color="props.submissionAlertColor"
+  >
+    {{ props.submissionAlert }}
+  </va-alert>
   <div class="va-table-responsive">
     <table class="va-table">
       <tbody>
+        <tr v-if="props.selectingFiles || props.selectingDirectory">
+          <td>Data Product</td>
+          <td>
+            <UploadedDatasetName
+              v-model:dataset-name-input="datasetNameInput"
+              v-model:dataset-name="datasetName"
+              :dataset-name-error="props.uploadedDataProductError"
+              :dataset-name-error-messages="
+                props.uploadedDataProductErrorMessages
+              "
+              :selecting-files="props.selectingFiles"
+              :selecting-directory="props.selectingDirectory"
+            />
+          </td>
+        </tr>
+
         <tr v-if="sourceRawData">
           <td>Source Raw Data</td>
           <td class="source-raw-data-name">
@@ -24,27 +47,9 @@
             </va-chip>
           </td>
         </tr>
-
-        <tr v-if="props.selectingFiles || props.selectingDirectory">
-          <td>Data Product</td>
-          <td>
-            <UploadedDatasetName
-              v-model:dataset-name-input="datasetNameInput"
-              v-model:dataset-name="datasetName"
-              :dataset-name-error="props.uploadedDataProductError"
-              :dataset-name-error-messages="
-                props.uploadedDataProductErrorMessages
-              "
-              :selecting-files="props.selectingFiles"
-              :selecting-directory="props.selectingDirectory"
-            />
-          </td>
-        </tr>
       </tbody>
     </table>
   </div>
-  <!--    </va-card-content>-->
-  <!--  </va-card>-->
 </template>
 
 <script setup>
@@ -85,6 +90,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  isSubmissionAlertVisible: {
+    type: Boolean,
+    default: false,
+  },
+  submissionAlert: {
+    type: String,
+  },
+  submissionAlertColor: {
+    type: String,
+    default: "warning",
+  },
 });
 
 const emit = defineEmits(["update:datasetNameInput"]);
@@ -108,33 +124,6 @@ const datasetName = computed({
 });
 
 const sourceRawData = computed(() => props.sourceRawData[0]);
-
-// watch(
-//   () => props.sourceRawData,
-//   () => {
-//     console.log("Source Raw Data Changed");
-//     console.dir(props.sourceRawData, { depth: null });
-//   },
-// );
-//
-onMounted(() => {
-  console.log("details component mounted");
-  console.log("props.datasetName");
-  console.dir(props.datasetName);
-  console.log("props.datasetNameInput");
-  console.dir(props.datasetNameInput);
-});
-
-watch(
-  () => props.datasetName,
-  () => {
-    console.log("details component watch");
-    console.log("props.datasetName");
-    console.dir(props.datasetName);
-    console.log("props.datasetNameInput");
-    console.dir(props.datasetNameInput);
-  },
-);
 </script>
 
 <style scoped>

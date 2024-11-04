@@ -122,7 +122,10 @@
                     "
                     :source-raw-data="rawDataSelected"
                     :submission-status="submissionStatus"
+                    :submission-alert="submissionAlert"
                     :status-chip-color="statusChipColor"
+                    :submission-alert-color="submissionAlertColor"
+                    :is-submission-alert-visible="isSubmissionAlertVisible"
                   /> </va-card-content
               ></va-card>
             </div>
@@ -134,13 +137,8 @@
                 :source-raw-data="
                   rawDataSelected.length > 0 ? rawDataSelected[0] : null
                 "
-                :status-chip-color="statusChipColor"
-                :submission-status="submissionStatus"
-                :is-submission-alert-visible="isSubmissionAlertVisible"
-                :submission-alert="submissionAlert"
                 @file-removed="removeFile"
                 :submit-attempted="submitAttempted"
-                :submission-alert-color="submissionAlertColor"
                 :files="displayedFilesToUpload"
                 :selecting-files="selectingFiles"
                 :selecting-directory="selectingDirectory"
@@ -148,8 +146,6 @@
             </div>
           </div>
         </div>
-        <!--          :uploaded-data-product-error-messages="[ formErrors[STEP_KEYS.UPLOAD],-->
-        <!--          ]"-->
       </template>
 
       <!-- custom controls -->
@@ -835,7 +831,6 @@ const handleSubmit = () => {
       );
     })
     .catch((err) => {
-      console.log("onSubmit catch error");
       console.error(err);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
