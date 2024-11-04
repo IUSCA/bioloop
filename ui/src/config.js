@@ -11,7 +11,6 @@ const exports = {
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
   refreshTokenTMinusSeconds: {
-    // milliseconds
     appToken: 300,
     uploadToken: 5,
   },

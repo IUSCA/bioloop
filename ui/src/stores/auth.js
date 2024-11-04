@@ -162,14 +162,39 @@ export const useAuthStore = defineStore("auth", () => {
   const getTheme = () => user.value.theme;
 
   const onFileUpload = async (fileName) => {
-    return uploadTokenService
-      .getUploadToken({ data: { file_name: fileName } })
-      .then((res) => {
-        uploadToken.value = res.data.accessToken;
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+    const payload = jwtDecode(uploadToken.value);
+    const expiresAt = new Date(payload.exp * 1000);
+    const now = new Date();
+
+    let willRefreshUploadToken = false;
+    if (now < expiresAt) {
+      const uploadTokenExpiresInSeconds = (expiresAt - now) / 1000;
+      console.log("now: ", now);
+      console.log("expiresAt: ", expiresAt);
+      console.log("uploadTokenExpiresInSeconds: ", uploadTokenExpiresInSeconds);
+      willRefreshUploadToken =
+        uploadTokenExpiresInSeconds <
+        config.refreshTokenTMinusSeconds.uploadToken;
+    } else {
+      willRefreshUploadToken = true;
+    }
+
+    return new Promise((resolve, reject) => {
+      if (willRefreshUploadToken) {
+        uploadTokenService
+          .getUploadToken({ data: { file_name: fileName } })
+          .then((res) => {
+            uploadToken.value = res.data.accessToken;
+            resolve();
+          })
+          .catch((err) => {
+            console.error(err);
+            reject(err);
+          });
+      } else {
+        resolve();
+      }
+    });
   };
 
   const postFileUpload = () => {
