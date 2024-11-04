@@ -172,13 +172,7 @@
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="isNextButtonDisabled"
           >
-            {{
-              isLastStep
-                ? submissionStatus === SUBMISSION_STATES.UPLOAD_FAILED
-                  ? "Retry"
-                  : "Upload"
-                : "Next"
-            }}
+            {{ isLastStep ? "Upload" : "Next" }}
           </va-button>
         </div>
       </template>
