@@ -20,7 +20,9 @@
             'step-button--completed': isCompleted,
           }"
           @click="setStep(i)"
-          :disabled="submitAttempted || step < i || loading"
+          :disabled="
+            submitAttempted || submissionSuccess || step < i || loading
+          "
           preset="secondary"
         >
           <div class="flex flex-col items-center">
@@ -160,7 +162,7 @@
                 prevStep();
               }
             "
-            :disabled="isNextStepDisabled || loading"
+            :disabled="isPreviousButtonDisabled"
           >
             Previous
           </va-button>
@@ -168,7 +170,7 @@
             class="flex-none"
             @click="onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
-            :disabled="formHasErrors || submissionSuccess || loading"
+            :disabled="isNextButtonDisabled"
           >
             {{
               isLastStep
@@ -261,12 +263,21 @@ const formHasErrors = computed(() => {
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
 
-const isNextStepDisabled = computed(() => {
+const isPreviousButtonDisabled = computed(() => {
+  return step.value === 0 || submitAttempted.value || loading.value;
+});
+
+const isNextButtonDisabled = computed(() => {
   return (
-    step.value === 0 ||
     formHasErrors.value ||
-    submitAttempted.value ||
-    submissionSuccess.value
+    // submitAttempted.value ||
+    submissionSuccess.value ||
+    [
+      SUBMISSION_STATES.PROCESSING,
+      SUBMISSION_STATES.UPLOADING,
+      SUBMISSION_STATES.UPLOADED,
+    ].includes(submissionStatus.value) ||
+    loading.value
   );
 });
 
@@ -775,23 +786,17 @@ const onSubmit = async () => {
         if (filesUploaded) {
           resolve();
         } else {
+          // console.log("reject upload");
           submissionStatus.value = SUBMISSION_STATES.UPLOAD_FAILED;
-          statusChipColor.value = "warning";
-          submissionAlertColor.value = "warning";
           submissionAlert.value = "Some files could not be uploaded.";
-          isSubmissionAlertVisible.value = true;
           reject();
         }
       })
       .catch((err) => {
         console.error(err);
-        submissionSuccess.value = false;
         submissionStatus.value = SUBMISSION_STATES.PROCESSING_FAILED;
-        statusChipColor.value = "warning";
-        submissionAlertColor.value = "warning";
         submissionAlert.value =
           "There was an error. Please try submitting again.";
-        isSubmissionAlertVisible.value = true;
         reject();
       });
   });
@@ -841,7 +846,12 @@ const handleSubmit = () => {
       );
     })
     .catch((err) => {
+      console.log("onSubmit catch error");
       console.error(err);
+      submissionSuccess.value = false;
+      statusChipColor.value = "warning";
+      submissionAlertColor.value = "warning";
+      isSubmissionAlertVisible.value = true;
     })
     .finally(() => {
       postSubmit();
