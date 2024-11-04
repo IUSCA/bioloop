@@ -26,6 +26,7 @@
               v-else
               v-model:dataset-name-input="datasetNameInput"
               v-model:dataset-name="datasetName"
+              :input-disabled="props.inputDisabled"
               :dataset-name-error="props.uploadedDataProductError"
               :dataset-name-error-messages="
                 props.uploadedDataProductErrorMessages
@@ -60,6 +61,7 @@
 
 <script setup>
 const props = defineProps({
+  // `dataset`: Dataset to be uploaded.
   dataset: {
     type: Object,
   },
@@ -74,6 +76,10 @@ const props = defineProps({
   datasetNameInput: {
     type: String,
     required: true,
+  },
+  inputDisabled: {
+    type: Boolean,
+    default: false,
   },
   selectingFiles: {
     type: Boolean,

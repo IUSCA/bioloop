@@ -110,6 +110,7 @@
                     :dataset="uploadLog?.dataset_upload?.dataset"
                     v-model:dataset-name="selectedDirectoryName"
                     v-model:dataset-name-input="datasetToUploadInputName"
+                    :input-disabled="submitAttempted"
                     :selecting-files="selectingFiles"
                     :selecting-directory="selectingDirectory"
                     :uploaded-data-product-error-messages="
@@ -256,7 +257,6 @@ const isPreviousButtonDisabled = computed(() => {
 const isNextButtonDisabled = computed(() => {
   return (
     formHasErrors.value ||
-    // submitAttempted.value ||
     submissionSuccess.value ||
     [
       SUBMISSION_STATES.PROCESSING,

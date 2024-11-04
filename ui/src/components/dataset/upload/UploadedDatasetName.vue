@@ -7,6 +7,7 @@
     :placeholder="'Dataset name'"
     class="w-full"
     :messages="'Name for the uploaded dataset'"
+    :disabled="props.inputDisabled"
   />
 
   <div class="va-text-danger text-xs" v-if="props.datasetNameError">
@@ -23,6 +24,10 @@ const props = defineProps({
   datasetNameInput: {
     type: String,
     default: "",
+  },
+  inputDisabled: {
+    type: Boolean,
+    default: false,
   },
   selectingFiles: {
     type: Boolean,
