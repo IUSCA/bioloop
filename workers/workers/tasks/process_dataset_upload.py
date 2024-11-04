@@ -140,12 +140,13 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         file_upload_log_payload = {
             'status': f['status']
         }
-        if f['status'] == config['upload']['status']['PROCESSING_FAILED']:
-            # mark entire upload as PROCESSING_FAILED
-            file_upload_log_payload['upload_status'] = f['status']
+        upload_status = config['upload']['status']['PROCESSING_FAILED'] if (
+                f['status'] == config['upload']['status']['PROCESSING_FAILED']
+        ) else None
         api.update_upload_log(
             upload_log_id,
             {
+                'status': upload_status,
                 'files': [{
                     'id': file_upload_log_id,
                     'data': file_upload_log_payload
