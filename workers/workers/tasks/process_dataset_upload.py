@@ -177,4 +177,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
             api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
             int_wf.start(dataset_id)
 
+        # purge uploaded files from the filesystem
+        shutil.rmtree(dataset_path / 'chunked_files')
+
     return dataset_id,
