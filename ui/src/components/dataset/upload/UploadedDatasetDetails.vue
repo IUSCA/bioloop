@@ -1,6 +1,7 @@
 <template>
   <va-alert
     v-if="props.isSubmissionAlertVisible"
+    dense
     icon="warning"
     :color="props.submissionAlertColor"
   >
