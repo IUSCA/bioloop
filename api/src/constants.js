@@ -51,8 +51,7 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
-// todo - rename
-const INCLUDE_UPLOAD_LOG_RELATIONS = {
+const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
   dataset_upload: {
     select: {
       dataset: {
@@ -87,5 +86,5 @@ module.exports = {
   INCLUDE_WORKFLOWS,
   INCLUDE_AUDIT_LOGS,
   DONE_STATUSES,
-  INCLUDE_UPLOAD_LOG_RELATIONS,
+  INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
 };

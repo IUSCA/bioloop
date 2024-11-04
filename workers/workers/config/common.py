@@ -74,9 +74,9 @@ config = {
     },
     'upload': {
         'UPLOAD_RETRY_THRESHOLD_HOURS': 72,
-        'types': [{
+        'types': {
             'DATASET': 'DATASET'
-        }],
+        },
         'status': {
             'UPLOADING': 'UPLOADING',
             'UPLOAD_FAILED': 'UPLOAD_FAILED',

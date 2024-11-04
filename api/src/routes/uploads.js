@@ -4,14 +4,13 @@ const config = require('config');
 const _ = require('lodash/fp');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
-const createError = require('http-errors');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const authService = require('../services/auth');
 const datasetService = require('../services/dataset');
-const { INCLUDE_UPLOAD_LOG_RELATIONS } = require('../constants');
+const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
@@ -49,7 +48,9 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const { status, upload_type, entity_name } = req.query;
 
-    const nameFilter = upload_type === config.upload.types.DATASET ? {
+    const isDatasetUpload = upload_type === config.upload.types.DATASET;
+
+    const nameFilter = isDatasetUpload ? {
       dataset_upload: {
         dataset: {
           name: { contains: entity_name },
@@ -64,7 +65,7 @@ router.get(
 
     const upload_logs = await prisma.upload_log.findMany({
       where: query_obj,
-      include: INCLUDE_UPLOAD_LOG_RELATIONS,
+      include: isDatasetUpload ? INCLUDE_DATASET_UPLOAD_LOG_RELATIONS : null,
     });
 
     res.json(upload_logs);
@@ -133,7 +134,7 @@ router.post(
           },
           ...createDatasetQuery,
         },
-        include: INCLUDE_UPLOAD_LOG_RELATIONS,
+        include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
 
       const uploadedDatasetId = upload_log.dataset_upload.dataset.id;
@@ -148,7 +149,7 @@ router.post(
         where: {
           id: upload_log.id,
         },
-        include: INCLUDE_UPLOAD_LOG_RELATIONS,
+        include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
       return updated_upload_log;
     });
@@ -167,7 +168,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     const upload_log = await prisma.upload_log.findFirstOrThrow({
       where: { id: req.params.id },
-      include: INCLUDE_UPLOAD_LOG_RELATIONS,
+      include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
     });
     res.json(upload_log);
   }),
@@ -192,7 +193,7 @@ router.patch(
     updates.push(prisma.upload_log.update({
       where: { id: req.params.id },
       data: update_query,
-      include: INCLUDE_UPLOAD_LOG_RELATIONS,
+      include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
     }));
     (files || []).forEach((f) => {
       updates.push(prisma.file_upload_log.update({
@@ -214,15 +215,17 @@ router.patch(
     param('id').isInt().toInt(),
     param('file_upload_log_id').isInt().toInt(),
     body('status').notEmpty().escape(),
+    body('upload_status').notEmpty().escape().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    const { status } = req.body;
+    const { status, upload_status } = req.body;
 
     const upload_log = await prisma.upload_log.update({
       where: {
         id: req.params.id,
       },
       data: {
+        ...(upload_status && { status: upload_status }),
         files: {
           update: {
             where: { id: req.params.file_upload_log_id },
@@ -247,18 +250,6 @@ router.post(
   ]),
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
-    console.log('req.params.upload_type:', req.query.upload_type);
-
-    const upload_log = await prisma.upload_log.findUnique({
-      where: { id: req.params.id },
-    });
-    // let uploadType;
-    // if (upload_log.dataset_upload) {
-    //   uploadType = config.upload.types.DATASET;
-    // } else {
-    //   // Handle other upload types
-    // }
-
     // Conditionally handle different upload types
     if (req.query.upload_type === config.upload.types.DATASET) {
       const dataset = await prisma.dataset.findFirst({

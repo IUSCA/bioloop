@@ -77,14 +77,15 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     try:
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
         dataset_upload_log = dataset['dataset_upload_log']
-        upload_log = dataset['dataset_upload_log']['upload_log']
+        upload_log = dataset_upload_log['upload_log']
         
         upload_log_id = upload_log['id']
         upload_log_files = upload_log['files']
 
         file_log_updates = []
         for file_log in upload_log_files:
-            if file_log['status'] != config['upload']['status']['COMPLETE']:
+            if (file_log['status'] != config['upload']['status']['COMPLETE']
+                    and file_log['status'] != config['upload']['status']['PROCESSING']):
                 file_log_updates.append({
                     'id': file_log['id'],
                     'data': {
@@ -119,7 +120,6 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         file_md5 = f['md5']
         file_upload_log_id = f['id']
         file_path = f['path']
-
         chunks_path = dataset_path / 'chunked_files' / str(file_upload_log_id)
 
         if not chunks_path.exists():
@@ -132,16 +132,22 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
                                             num_chunks_expected)
         except Exception as e:
             f['status'] = config['upload']['status']['PROCESSING_FAILED']
+            print(f"Encountered error while processing file {file_name} (file_upload_log_id: {file_upload_log_id}):\n")
             print(e)
         finally:
             print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
+
+        file_upload_log_payload = {
+            'status': f['status']
+        }
+        if f['status'] == config['upload']['status']['PROCESSING_FAILED']:
+            # mark entire upload as PROCESSING_FAILED
+            file_upload_log_payload['upload_status'] = f['status']
         api.update_file_upload_log(
-                upload_log_id,
-                file_upload_log_id,
-                {
-                  'status': f['status']
-                }
-            )
+            upload_log_id,
+            file_upload_log_id,
+            file_upload_log_payload
+        )
         if f['status'] == config['upload']['status']['PROCESSING_FAILED']:
             raise Exception(f"Failed to process file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
@@ -149,22 +155,23 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     has_errors = len(failed_files) > 0
 
     if not has_errors:
+        # Update status of upload to COMPLETE
+        try:
+            api.update_upload_log(upload_log_id, {
+                'status': config['upload']['status']['PROCESSING_FAILED'] if has_errors else config['upload']['status'][
+                    'COMPLETE'],
+            })
+        except Exception as e:
+            raise exc.RetryableException(e)
+
+        # todo - check if integrated is not already running for this dataset
         print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
- have been processed successfully.')
+    have been processed successfully.')
         workflow_name = 'integrated'
         print(f"Beginning {workflow_name} workflow for dataset {dataset['id']} (upload_log_id: {upload_log_id})")
         integrated_wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
         int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
         int_wf.start(dataset_id)
-
-    # Update status of upload log
-    try:
-        api.update_upload_log(upload_log_id, {
-            'status': config['upload']['status']['PROCESSING_FAILED'] if has_errors else config['upload']['status'][
-                'COMPLETE'],
-        })
-    except Exception as e:
-        raise exc.RetryableException(e)
 
     return dataset_id,

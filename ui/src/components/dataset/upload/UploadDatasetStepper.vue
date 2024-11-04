@@ -489,13 +489,7 @@ const setFormErrors = async () => {
     }
   }
 };
-// const isSubmitEnabled = computed(() => {
-//   return (
-//     submissionStatus.value === SUBMISSION_STATES.UNINITIATED ||
-//     submissionStatus.value === SUBMISSION_STATES.PROCESSING_FAILED ||
-//     submissionStatus.value === SUBMISSION_STATES.UPLOAD_FAILED
-//   );
-// });
+
 const noFilesSelected = computed(() => {
   return filesToUpload.value?.length === 0;
 });
@@ -841,7 +835,10 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return uploadService.processUpload(uploadLog.value.dataset_upload.dataset.id, config.upload.types.DATASET);
+      return uploadService.processUpload(
+        uploadLog.value.dataset_upload.dataset.id,
+        config.upload.types.DATASET,
+      );
     })
     .catch((err) => {
       console.error(err);

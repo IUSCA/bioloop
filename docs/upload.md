@@ -71,15 +71,15 @@ Here, `dataset_name` is the name chosen for the dataset before the upload, and `
 
 The status of the upload, as well the status of each file in the upload goes through the following values:
 
-| Status    | Description                                                                                     |
-|-----------|-------------------------------------------------------------------------------------------------|
-| UPLOADING    | Upload initiated through the browser                                                            |
-| UPLOAD_FAILED | Upload could not be completed (network errors)                                                  |
-| UPLOADED | All files successfully uploaded                                                                 |
-| PROCESSING | Upload currently being processed                                                                |
-| PROCESSING_FAILED | Encountered errors while processing a file in this upload                                       |
-| COMPLETE | All files in the upload processed successfully                                                  |
-| FAILED | Upload was pending (i.e. `status != COMPLETE`) for more than 24 hours, and was marked as failed |
+| Status    | Description                                                                                                                                                  |
+|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| UPLOADING    | Upload initiated through the browser                                                                                                                         |
+| UPLOAD_FAILED | Upload could not be completed (network errors)                                                                                                               |
+| UPLOADED | All files successfully uploaded                                                                                                                              |
+| PROCESSING | Upload currently being processed                                                                                                                             |
+| PROCESSING_FAILED | Encountered errors while processing a file in this upload                                                                                                    |
+| COMPLETE | All files in the upload processed successfully                                                                                                               |
+| FAILED | Upload was failing processing (i.e. `status == PROCESSING_FAILED`) for more than 72 hours, and was marked as `FAILED`, and its filesystem resources deleted. |
 
 ## 5. Processing
 Uploaded file chunks are merged into the corresponding file by the worker `process_dataset_upload`. After the file has been recreated from its chunks, the MD5 checksum of the recreated file is matched with the expected MD5 checksum of the file that was persisted to the database before the upload (this is the second stage of checksum validation).
@@ -93,4 +93,4 @@ The uploaded data goes through two stages of checksum validation:
 
 ## 7. Retry
 1. Upon encountering retryable exceptions, the `process_dataset_upload` worker retries itself 3 times before failing.
-2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that are pending (`status != COMPLETE`), and retries the ones which have been pending for less than 24 hours. Other uploads are marked as FAILED. 
+2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that are failing (`status == PROCESSING_FAILED`), and retries to process the ones which have been failing for less than 72 hours. If some uploads have been failing for more than 72 hours, they are marked as `FAILED` and their filesystem resources (uploaded file chunks, and any processed files) are purged.

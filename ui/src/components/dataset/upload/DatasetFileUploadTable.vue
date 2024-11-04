@@ -86,7 +86,10 @@
 
     <template #cell(uploadStatus)="{ value }">
       <span class="flex justify-center">
-        <va-popover v-if="value === config.upload.UPLOADED" message="Succeeded">
+        <va-popover
+          v-if="value === config.upload.status.UPLOADED"
+          message="Succeeded"
+        >
           <va-icon name="check_circle_outline" color="success" />
         </va-popover>
         <va-popover
