@@ -30,7 +30,6 @@ router.post(
     try {
       token = await authService.get_upload_token(req.body.file_name);
     } catch (e) {
-      // console.log('ERROR');
       console.error(e);
     }
     res.json(token);

@@ -149,14 +149,6 @@ const sourceRawData = computed(() => props.sourceRawData[0]);
 const submissionAlertIcon = computed(() => {
   return props.submissionAlertColor === "success" ? "check_circle" : "warning";
 });
-
-watch(
-  () => props.datasetId,
-  () => {
-    console.log("datasetId updated");
-    console.log(props.datasetId);
-  },
-);
 </script>
 
 <style scoped>

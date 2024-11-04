@@ -294,7 +294,6 @@ router.get(
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
-    console.log("include_upload_log: ", req.query.include_upload_log)
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is
     // true
@@ -311,9 +310,6 @@ router.get(
       initiator: req.query.initiator || false,
       include_upload_log: req.query.include_upload_log,
     });
-
-    console.log("endpoint")
-    console.dir(dataset, { depth: null });
 
     res.json(dataset);
   }),

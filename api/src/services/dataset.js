@@ -102,9 +102,6 @@ async function get_dataset({
   initiator = false,
   include_upload_log = false,
 }) {
-  console.log("datasetService")
-  console.log("include_upload_log", include_upload_log);
-
   const fileSelect = files ? {
     select: {
       path: true,
@@ -177,8 +174,6 @@ async function get_dataset({
     // eslint-disable-next-line no-param-reassign
     if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
   });
-
-  console.dir(dataset, { depth: null });
 
   return dataset;
 }

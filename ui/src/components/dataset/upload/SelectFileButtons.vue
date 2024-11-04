@@ -10,7 +10,6 @@
       @file-added="
         (f) => {
           emit('files-added', f);
-          // console.log('Files added:', f);
         }
       "
     />

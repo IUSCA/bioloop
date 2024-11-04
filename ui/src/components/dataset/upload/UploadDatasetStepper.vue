@@ -82,7 +82,6 @@
             "
             @directory-added="
               (directoryDetails) => {
-                // console.log('Directory added', directoryDetails);
                 clearSelectedFilesToUpload({ clearNameInput: true });
                 setDirectory(directoryDetails);
                 isSubmissionAlertVisible = false;
@@ -597,8 +596,6 @@ const updateToken = async (fileName) => {
   const lastUploadedFileName = currentTokenDecoded.scope.slice(
     config.upload.scope_prefix.length,
   );
-  console.log("current file:", fileName);
-  console.log("last uploaded file:", lastUploadedFileName);
 
   await auth.onFileUpload({
     fileName,

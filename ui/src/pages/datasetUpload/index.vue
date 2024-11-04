@@ -186,7 +186,7 @@ const getStatusChipColor = (value) => {
       color = "danger";
       break;
     default:
-      console.log("received unexpected value for Upload Status");
+      console.log("received unexpected value for Upload Status", value);
   }
   return color;
 };

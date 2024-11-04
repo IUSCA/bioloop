@@ -54,23 +54,16 @@ router.post(
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
-      name, data_product_id, total, index, size, checksum, chunk_checksum, file_upload_log_id,
+      name, data_product_id, index, checksum, chunk_checksum,
     } = req.body;
-
-    // eslint-disable-next-line no-console
-    console.log('Processing file chunk ...', data_product_id, name, total, index, size, checksum, chunk_checksum, file_upload_log_id);
 
     const scopes = (req.token?.scope || '').split(' ');
 
     const matching_scopes = scopes.filter((scope) => scope === `${UPLOAD_SCOPE}:${name}`);
     if (matching_scopes.length === 0) {
-      // eslint-disable-next-line no-console
-      // console.log('Expected one, but found no matching scopes');
       return next(createError.Forbidden('Expected one, but found no matching scopes'));
     }
     if (matching_scopes.length > 1) {
-      // eslint-disable-next-line no-console
-      // console.log('Expected one, but found multiple matching scopes');
       return next(createError.Forbidden('Expected one, but found multiple matching scopes'));
     }
 
@@ -81,21 +74,13 @@ router.post(
     const receivedFilePath = req.file.path;
     fs.readFile(receivedFilePath, (err, data) => {
       if (err) {
-        // eslint-disable-next-line no-console
-        // console.log('Error reading file:', err);
         throw err;
       }
 
       const evaluated_checksum = createHash('md5').update(data).digest('hex');
       if (evaluated_checksum !== chunk_checksum) {
-        // eslint-disable-next-line no-console
-        // console.log('Evaluated checksum of chunk does not match checksum received in the request');
         return next(createError.BadRequest('Evaluated checksum of chunk does not match checksum received in the request'));
       }
-      // eslint-disable-next-line no-console
-      // console.log('checksums match');
-      // eslint-disable-next-line no-console
-      // console.log('writing file...');
       res.sendStatus(200);
     });
   }),
