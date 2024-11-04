@@ -600,7 +600,12 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
 
+    // persist token in store
+    console.log("tokeb before refresh", uploadToken.value);
+    await auth.onFileUpload(chunkData.get("name"));
+    console.log("tokeb after refresh", uploadToken.value);
     uploadService.setToken(uploadToken.value);
+
     try {
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
@@ -693,9 +698,6 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  // persist token in store
-  await auth.onFileUpload(fileDetails.name);
-
   fileDetails.uploadStatus = config.upload.status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
 

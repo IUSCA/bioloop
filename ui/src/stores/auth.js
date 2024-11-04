@@ -117,36 +117,6 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  function refreshUploadTokenBeforeExpiry(fileName) {
-    // idempotent method - will not create a timeout if one already exists
-    if (!refreshUploadTokenTimer) {
-      // timer is not running
-      try {
-        const payload = jwtDecode(uploadToken.value);
-        const expiresAt = new Date(payload.exp * 1000);
-        const now = new Date();
-        if (now < expiresAt) {
-          // token is still alive
-          const delay =
-            expiresAt -
-            now -
-            config.refreshTokenTMinusSeconds.uploadToken * 1000;
-          console.log(
-            "auth store: refreshUploadTokenBeforeExpiry: triggering refreshToken in ",
-            delay / 1000,
-            "seconds",
-          );
-          refreshUploadTokenTimer = setInterval(() => {
-            refreshUploadToken(fileName);
-          }, delay);
-        }
-        // else - do nothing, navigation guard will redirect to /auth
-      } catch (err) {
-        console.error("Errored trying to decode upload token", err);
-      }
-    }
-  }
-
   function refreshToken() {
     refreshTokenTimer = null; // reset timer state
     authService
@@ -156,17 +126,6 @@ export const useAuthStore = defineStore("auth", () => {
       })
       .catch((err) => {
         console.error("Unable to refresh token", err);
-      });
-  }
-
-  function refreshUploadToken(fileName) {
-    uploadTokenService
-      .getUploadToken({ data: { file_name: fileName } })
-      .then((res) => {
-        uploadToken.value = res.data.accessToken;
-      })
-      .catch((err) => {
-        console.error("Unable to refresh upload token", err);
       });
   }
 
@@ -207,8 +166,6 @@ export const useAuthStore = defineStore("auth", () => {
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
         uploadToken.value = res.data.accessToken;
-        // console.log("uploadToken.value ", uploadToken.value);
-        refreshUploadTokenBeforeExpiry(fileName);
       })
       .catch((err) => {
         console.error(err);
