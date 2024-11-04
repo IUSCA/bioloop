@@ -12,7 +12,7 @@ from sca_rhythm import Workflow
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-WORKFLOW_NAME = 'process_dataset_upload'
+PROCESS_DATASET_UPLOAD_WORKFLOW = 'process_dataset_upload'
 DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
                  config['DONE_STATUSES']['SUCCESS']]
@@ -40,26 +40,16 @@ def main():
         # retry processing this upload if it hasn't been updated in the last 72 hours
         if difference <= UPLOAD_RETRY_THRESHOLD_HOURS:
             logger.info(f'Upload {upload["id"]} has been in state {upload["status"]} for {UPLOAD_RETRY_THRESHOLD_HOURS} hours.'
-                  f' Retrying processing of upload')
-            # retry processing this upload
+                  f' Retrying processing of upload.')
             dataset_id = upload['dataset_upload_log']['dataset_id']
-            dataset = api.get_dataset(dataset_id, workflows=True)
-            duplicate_workflows = [
-                wf for wf in dataset['workflows']
-                # Todo - wf['name'] won't work
-                if wf['name'] == WORKFLOW_NAME and
-                   wf['status'] not in DONE_STATUSES
-            ]
-            if len(duplicate_workflows) == 0:
-                logger.info(f'Beginning workflow {WORKFLOW_NAME} for dataset {dataset_id}')
-                wf_body = wf_utils.get_wf_body(wf_name=WORKFLOW_NAME)
-                wf = Workflow(celery_app=celery_app, **wf_body)
-                api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
-                wf.start(dataset_id)
-            else:
-                logger.info(f'Found active workflow {WORKFLOW_NAME} for dataset {dataset_id}')
+            # retry processing this upload
+            logger.info(f'Beginning workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for dataset {dataset_id}')
+            wf_body = wf_utils.get_wf_body(wf_name=PROCESS_DATASET_UPLOAD_WORKFLOW)
+            wf = Workflow(celery_app=celery_app, **wf_body)
+            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+            wf.start(dataset_id)
         else:
-            # mark uploads which could not be processed as FAILED and clean up resources
+            # mark uploads which could not be processed as FAILED and clean up their resources
             logger.info(
                 f"Upload id {upload['id']} has been in status {upload['status']} for more than"
                 f" ${UPLOAD_RETRY_THRESHOLD_HOURS} hours.")

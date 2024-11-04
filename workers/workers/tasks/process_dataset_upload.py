@@ -4,7 +4,6 @@ from celery import Celery
 from celery.utils.log import get_task_logger
 from celery import current_app
 from sca_rhythm import WorkflowTask, Workflow
-import json
 
 from workers import exceptions as exc
 import workers.api as api
@@ -17,6 +16,7 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 logger = get_task_logger(__name__)
 
+INTEGRATED_WORKFLOW = 'integrated'
 DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
                  config['DONE_STATUSES']['SUCCESS']]
@@ -155,8 +155,8 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     has_errors = len(failed_files) > 0
 
     if not has_errors:
-        # Update status of upload to COMPLETE
         try:
+            # Update status of upload to COMPLETE
             api.update_upload_log(upload_log_id, {
                 'status': config['upload']['status']['PROCESSING_FAILED'] if has_errors else config['upload']['status'][
                     'COMPLETE'],
@@ -164,14 +164,17 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         except Exception as e:
             raise exc.RetryableException(e)
 
-        # todo - check if integrated is not already running for this dataset
         print(f'All uploaded files for dataset {dataset_id} (upload_log_id: {upload_log_id})\
     have been processed successfully.')
-        workflow_name = 'integrated'
-        print(f"Beginning {workflow_name} workflow for dataset {dataset['id']} (upload_log_id: {upload_log_id})")
-        integrated_wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
-        int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
-        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
-        int_wf.start(dataset_id)
+
+        active_integrated_wfs = [wf for wf in dataset['workflows'] if wf['name'] == INTEGRATED_WORKFLOW]
+        if len(active_integrated_wfs) > 0:
+            print(f"Integrated workflow {INTEGRATED_WORKFLOW} is already for dataset {dataset_id} (upload_log_id: {upload_log_id})")
+        else:
+            print(f"Beginning {INTEGRATED_WORKFLOW} workflow for dataset {dataset['id']} (upload_log_id: {upload_log_id})")
+            integrated_wf_body = wf_utils.get_wf_body(wf_name=INTEGRATED_WORKFLOW)
+            int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
+            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
+            int_wf.start(dataset_id)
 
     return dataset_id,
