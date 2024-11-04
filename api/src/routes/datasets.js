@@ -32,8 +32,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -294,6 +294,7 @@ router.get(
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
+    console.log("include_upload_log: ", req.query.include_upload_log)
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is
     // true
@@ -310,6 +311,10 @@ router.get(
       initiator: req.query.initiator || false,
       include_upload_log: req.query.include_upload_log,
     });
+
+    console.log("endpoint")
+    console.dir(dataset, { depth: null });
+
     res.json(dataset);
   }),
 );

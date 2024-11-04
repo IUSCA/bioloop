@@ -688,7 +688,7 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append(
       "data_product_id",
-      uploadLog.value.dataset_upload_log.dataset.id,
+      uploadLog.value.dataset_upload.dataset.id,
     );
     chunkData.append(
       "file_upload_log_id",
@@ -841,7 +841,7 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return uploadService.processUpload(uploadLog.value.id);
+      return uploadService.processUpload(uploadLog.value.dataset_upload.dataset.id, config.upload.types.DATASET);
     })
     .catch((err) => {
       console.error(err);

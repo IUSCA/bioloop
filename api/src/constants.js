@@ -53,7 +53,7 @@ const INCLUDE_AUDIT_LOGS = {
 
 // todo - rename
 const INCLUDE_UPLOAD_LOG_RELATIONS = {
-  dataset_upload_log: {
+  dataset_upload: {
     select: {
       dataset: {
         select: {

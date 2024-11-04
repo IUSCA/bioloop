@@ -121,7 +121,7 @@ const exports = {
     },
   },
   upload: {
-    type: [{ DATASET: "DATASET" }],
+    types: { DATASET: "DATASET" },
     status: {
       UPLOADING: "UPLOADING",
       UPLOAD_FAILED: "UPLOAD_FAILED",

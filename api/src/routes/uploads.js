@@ -50,7 +50,7 @@ router.get(
     const { status, upload_type, entity_name } = req.query;
 
     const nameFilter = upload_type === config.upload.types.DATASET ? {
-      dataset_upload_log: {
+      dataset_upload: {
         dataset: {
           name: { contains: entity_name },
         },
@@ -93,7 +93,7 @@ router.post(
     } = req.body;
 
     const createDatasetQuery = {
-      dataset_upload_log: {
+      dataset_upload: {
         create: {
           dataset: {
             create: {
@@ -136,7 +136,7 @@ router.post(
         include: INCLUDE_UPLOAD_LOG_RELATIONS,
       });
 
-      const uploadedDatasetId = upload_log.dataset_upload_log.dataset.id;
+      const uploadedDatasetId = upload_log.dataset_upload.dataset.id;
       await tx.dataset.update({
         where: { id: uploadedDatasetId },
         data: {
@@ -243,21 +243,24 @@ router.post(
   '/:id/process',
   validate([
     param('id').isInt().toInt(),
+    query('upload_type').isIn(Object.values(Object.values(config.upload.types))).optional(),
   ]),
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
+    console.log('req.params.upload_type:', req.query.upload_type);
+
     const upload_log = await prisma.upload_log.findUnique({
       where: { id: req.params.id },
     });
-    let uploadType;
-    if (upload_log.dataset_upload_log) {
-      uploadType = config.upload.types.DATASET;
-    } else {
-      // Handle other upload types
-    }
+    // let uploadType;
+    // if (upload_log.dataset_upload) {
+    //   uploadType = config.upload.types.DATASET;
+    // } else {
+    //   // Handle other upload types
+    // }
 
     // Conditionally handle different upload types
-    if (uploadType === config.upload.types.DATASET) {
+    if (req.query.upload_type === config.upload.types.DATASET) {
       const dataset = await prisma.dataset.findFirst({
         where: {
           id: Number(req.params.id),

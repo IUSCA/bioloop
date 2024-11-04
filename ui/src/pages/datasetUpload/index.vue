@@ -60,10 +60,10 @@
 </template>
 
 <script setup>
+import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import config from "@/config";
 import uploadService from "@/services/upload";
 import { useNavStore } from "@/stores/nav";
-import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 
 const nav = useNavStore();
 const router = useRouter();
@@ -78,7 +78,7 @@ const uploads = computed(() => {
   console.log("computed uploads");
   // console.dir(pastUploads.value, { depth: null });
   return pastUploads.value.map((e) => {
-    const dataset_upload_log = e.dataset_upload_log;
+    const dataset_upload_log = e.dataset_upload;
     const dataset = dataset_upload_log.dataset;
     const source_dataset =
       dataset.source_datasets.length > 0
@@ -157,7 +157,7 @@ const getStatusChipColor = (value) => {
 onMounted(() => {
   uploadService
     .getUploadLogs({
-      upload_type: config.upload.type.DATASET,
+      upload_type: config.upload.types.DATASET,
     })
     .then((res) => {
       pastUploads.value = res.data;
@@ -167,7 +167,7 @@ onMounted(() => {
 watch(filterInput, () => {
   const filters = filterInput.value && {
     entity_name: filterInput.value,
-    upload_type: config.upload.type.DATASET,
+    upload_type: config.upload.types.DATASET,
   };
   uploadService.getUploadLogs(filters).then((res) => {
     pastUploads.value = res.data;

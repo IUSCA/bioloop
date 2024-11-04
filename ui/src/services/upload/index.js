@@ -1,5 +1,5 @@
-import UploadApi from "./uploadApi";
 import api from "../api";
+import UploadApi from "./uploadApi";
 
 class UploadService {
   constructor() {
@@ -40,8 +40,8 @@ class UploadService {
     );
   }
 
-  processUpload(upload_log_id) {
-    return api.post(`/uploads/${upload_log_id}/process`);
+  processUpload(upload_log_id, upload_type) {
+    return api.post(`/uploads/${upload_log_id}/process`, null, { params: { upload_type: upload_type } });
   }
 
   uploadFile(data) {
