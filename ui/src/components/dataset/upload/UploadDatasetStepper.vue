@@ -446,7 +446,6 @@ const FILE_TYPE = {
 };
 
 const setUploadedFileType = (fileType) => {
-  filesToUpload.value.type = fileType;
   if (fileType === FILE_TYPE.FILE) {
     selectingFiles.value = true;
     selectingDirectory.value = false;

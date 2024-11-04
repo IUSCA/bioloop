@@ -207,7 +207,7 @@ export const useAuthStore = defineStore("auth", () => {
       .getUploadToken({ data: { file_name: fileName } })
       .then((res) => {
         uploadToken.value = res.data.accessToken;
-        console.log("uploadToken.value ", uploadToken.value);
+        // console.log("uploadToken.value ", uploadToken.value);
         refreshUploadTokenBeforeExpiry(fileName);
       })
       .catch((err) => {
