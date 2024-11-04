@@ -195,11 +195,8 @@ const getUploadLogs = async () => {
   return uploadService
     .getUploadLogs(filter_query.value)
     .then((res) => {
-      console.log("received upload logs:");
       pastUploads.value = res.data.uploads;
       total_results.value = res.data.metadata.count;
-      console.log("res.data.metadata.count:", res.data.metadata.count);
-      console.log("total results:", total_results.value);
     })
     .catch((err) => {
       toast.error("Could not retrieve past uploads");

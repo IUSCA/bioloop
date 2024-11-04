@@ -717,13 +717,14 @@ const uploadFile = async (fileDetails) => {
   let updated = false;
   if (uploaded) {
     try {
-      await uploadService.updateFileUploadLog(
-        uploadLog.value.id,
-        fileUploadLogId,
-        {
-          status: config.upload.status.UPLOADED,
-        },
-      );
+      await uploadService.updateUploadLog(uploadLog.value.id, {
+        files: [
+          {
+            id: fileUploadLogId,
+            data: { status: config.upload.status.UPLOADED },
+          },
+        ],
+      });
       updated = true;
     } catch (e) {
       console.error(e);

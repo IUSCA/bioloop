@@ -48,6 +48,9 @@ router.get(
   ]),
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Retrieve past uploads'
+
     const {
       status, upload_type, entity_name, offset, limit,
     } = req.query;
@@ -103,6 +106,9 @@ router.post(
     body('files_metadata').isArray(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Create a record for a dataset upload'
+
     const {
       name, source_dataset_id, files_metadata,
     } = req.body;
@@ -180,6 +186,9 @@ router.get(
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Retrieve past upload by id'
+
     const upload_log = await prisma.upload_log.findFirstOrThrow({
       where: { id: req.params.id },
       include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
@@ -198,6 +207,9 @@ router.patch(
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Update past upload'
+
     const { status, files } = req.body;
     const update_query = _.omitBy(_.isUndefined)({
       status,
@@ -224,38 +236,38 @@ router.patch(
 );
 
 // Update the attributes of an uploaded file - worker
-router.patch(
-  '/:id/file-upload-log/:file_upload_log_id',
-  isPermittedTo('update'),
-  validate([
-    param('id').isInt().toInt(),
-    param('file_upload_log_id').isInt().toInt(),
-    body('status').notEmpty().escape(),
-    body('upload_status').notEmpty().escape().optional(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    const { status, upload_status } = req.body;
-
-    const upload_log = await prisma.upload_log.update({
-      where: {
-        id: req.params.id,
-      },
-      data: {
-        ...(upload_status && { status: upload_status }),
-        files: {
-          update: {
-            where: { id: req.params.file_upload_log_id },
-            data: {
-              status,
-            },
-          },
-        },
-      },
-    });
-
-    res.json(upload_log);
-  }),
-);
+// router.patch(
+//   '/:id/file-upload-log/:file_upload_log_id',
+//   isPermittedTo('update'),
+//   validate([
+//     param('id').isInt().toInt(),
+//     param('file_upload_log_id').isInt().toInt(),
+//     body('status').notEmpty().escape(),
+//     body('upload_status').notEmpty().escape().optional(),
+//   ]),
+//   asyncHandler(async (req, res, next) => {
+//     const { status, upload_status } = req.body;
+//
+//     const upload_log = await prisma.upload_log.update({
+//       where: {
+//         id: req.params.id,
+//       },
+//       data: {
+//         ...(upload_status && { status: upload_status }),
+//         files: {
+//           update: {
+//             where: { id: req.params.file_upload_log_id },
+//             data: {
+//               status,
+//             },
+//           },
+//         },
+//       },
+//     });
+//
+//     res.json(upload_log);
+//   }),
+// );
 
 // Initiate the processing of uploaded files - worker
 router.post(
@@ -266,6 +278,9 @@ router.post(
   ]),
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Initiate the processing of a completed upload'
+
     // Conditionally handle different upload types
     if (req.query.upload_type === config.upload.types.DATASET) {
       const dataset = await prisma.dataset.findFirst({

@@ -259,9 +259,9 @@ def get_upload_logs(upload_type: str):
         return r.json()
 
 
-def update_upload_log(upload_log_id, log):
+def update_upload_log(upload_log_id, log_data):
     with APIServerSession() as s:
-        r = s.patch(f'uploads/{upload_log_id}', json=log)
+        r = s.patch(f'uploads/{upload_log_id}', json=log_data)
         r.raise_for_status()
 
 

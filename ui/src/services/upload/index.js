@@ -37,13 +37,6 @@ class UploadService {
     return api.patch(`/uploads/${upload_log_id}`, data);
   }
 
-  updateFileUploadLog(upload_log_id, file_upload_log_id, data) {
-    return api.patch(
-      `/uploads/${upload_log_id}/file-upload-log/${file_upload_log_id}`,
-      data,
-    );
-  }
-
   processUpload(upload_log_id, upload_type) {
     return api.post(`/uploads/${upload_log_id}/process`, null, {
       params: { upload_type: upload_type },
