@@ -97,9 +97,6 @@
             class="flex flex-row"
             v-if="selectingFiles || selectingDirectory"
           >
-            <!--            :data-product-directory="dataProductDirectory"-->
-
-            <!--         todo - should not be dataProductDirectory - use 'dataset' instead -->
             <div class="flex-1">
               <va-card class="upload-details">
                 <va-card-title>
@@ -110,8 +107,9 @@
                 <va-card-content>
                   <UploadedDatasetDetails
                     v-if="selectingFiles || selectingDirectory"
-                    v-model:dataset-name-input="datasetNameInput"
-                    v-model:dataset-name="dataProductDirectoryName"
+                    :dataset="uploadLog?.dataset_upload?.dataset"
+                    v-model:dataset-name="selectedDirectoryName"
+                    v-model:dataset-name-input="datasetToUploadInputName"
                     :selecting-files="selectingFiles"
                     :selecting-directory="selectingDirectory"
                     :uploaded-data-product-error-messages="
@@ -346,10 +344,9 @@ const submitAttempted = ref(false);
 const filesToUpload = ref([]);
 const displayedFilesToUpload = ref([]);
 
-const dataProductDirectory = ref(null);
-
-const dataProductDirectoryName = ref("");
-const datasetNameInput = ref("");
+const datasetToUploadInputName = ref("");
+const selectedDirectory = ref(null);
+const selectedDirectoryName = ref("");
 
 const step = ref(0);
 const uploadCancelled = ref(false);
@@ -368,9 +365,9 @@ const isLastStep = computed(() => {
 
 const uploadFormData = computed(() => {
   const datasetName = selectingFiles.value
-    ? datasetNameInput.value
+    ? datasetToUploadInputName.value
     : selectingDirectory.value
-      ? dataProductDirectory.value?.name
+      ? selectedDirectory.value?.name
       : "";
   return {
     name: datasetName,
@@ -389,9 +386,9 @@ const resetFormErrors = () => {
 
 const validateDatasetName = async () => {
   const datasetName = selectingFiles.value
-    ? datasetNameInput.value
+    ? datasetToUploadInputName.value
     : selectingDirectory.value
-      ? dataProductDirectory.value?.name
+      ? selectedDirectory.value?.name
       : "";
 
   if (datasetNameIsNull(datasetName)) {
@@ -414,14 +411,14 @@ const clearSelectedDirectoryToUpload = () => {
   // clear files within the directory being deleted
   clearSelectedFilesToUpload();
   // clear directory being deleted
-  dataProductDirectory.value = null;
+  selectedDirectory.value = null;
   // clear directory name
-  dataProductDirectoryName.value = "";
+  selectedDirectoryName.value = "";
 };
 
 const clearSelectedFilesToUpload = ({ clearNameInput = false } = {}) => {
   if (clearNameInput) {
-    datasetNameInput.value = "";
+    datasetToUploadInputName.value = "";
   }
   filesToUpload.value = [];
 };
@@ -469,15 +466,6 @@ const setFormErrors = async () => {
 
     const { isNameValid: datasetNameIsValid, error } =
       await validateDatasetName();
-
-    // if (
-    //   (selectingFiles.value && filesToUpload.value?.length === 0) ||
-    //   (selectingDirectory.value && !dataProductDirectory.value)
-    // ) {
-    //   formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
-    //   return;
-    // }
-
     if (datasetNameIsValid) {
       formErrors.value[STEP_KEYS.UPLOAD] = null;
     } else {
@@ -694,7 +682,7 @@ const uploadFileChunks = async (fileDetails) => {
     } else {
       const chunkUploadProgress = Math.trunc(((i + 1) / blockCount) * 100);
       if (isDirectory.value) {
-        dataProductDirectory.value.progress += chunkUploadProgress;
+        selectedDirectory.value.progress += chunkUploadProgress;
       } else {
         fileDetails.progress = chunkUploadProgress;
       }
@@ -936,16 +924,16 @@ const setDirectory = (directoryDetails) => {
     });
     directorySize += file.size;
   });
-  dataProductDirectory.value = {
+  selectedDirectory.value = {
     type: FILE_TYPE.DIRECTORY,
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: undefined,
     uploadStatus: config.upload.status.PROCESSING_FAILED,
   };
-  dataProductDirectoryName.value = dataProductDirectory.value.name;
+  selectedDirectoryName.value = selectedDirectory.value.name;
 
-  displayedFilesToUpload.value = [dataProductDirectory.value];
+  displayedFilesToUpload.value = [selectedDirectory.value];
 };
 
 // const validateDatasetName = async () => {
@@ -981,8 +969,8 @@ onMounted(() => {
 watch(
   [
     rawDataSelected,
-    datasetNameInput,
-    dataProductDirectoryName,
+    datasetToUploadInputName,
+    selectedDirectoryName,
     selectingFiles,
     selectingDirectory,
     // selectedFile,

@@ -13,7 +13,17 @@
         <tr v-if="props.selectingFiles || props.selectingDirectory">
           <td>Data Product</td>
           <td>
+            <div v-if="props.dataset">
+              <router-link
+                :to="`/datasets/${props.dataset.id}`"
+                target="_blank"
+              >
+                {{ props.dataset.name }}
+              </router-link>
+            </div>
+
             <UploadedDatasetName
+              v-else
               v-model:dataset-name-input="datasetNameInput"
               v-model:dataset-name="datasetName"
               :dataset-name-error="props.uploadedDataProductError"
@@ -29,14 +39,9 @@
         <tr v-if="sourceRawData">
           <td>Source Raw Data</td>
           <td class="source-raw-data-name">
-            <span>
-              <router-link
-                :to="`/datasets/${sourceRawData?.id}`"
-                target="_blank"
-              >
-                {{ sourceRawData?.name }}
-              </router-link>
-            </span>
+            <router-link :to="`/datasets/${sourceRawData?.id}`" target="_blank">
+              {{ sourceRawData?.name }}
+            </router-link>
           </td>
         </tr>
 
@@ -55,10 +60,17 @@
 
 <script setup>
 const props = defineProps({
+  dataset: {
+    type: Object,
+  },
+  // `datasetName`: Pre-selected name for a dataset that is to be uploaded.
+  // Used when a directory is being uploaded.
   datasetName: {
     type: String,
     default: "",
   },
+  // `datasetNameInput`: User-entered name for a dataset that is to be
+  // uploaded. Used when individual files are being uploaded.
   datasetNameInput: {
     type: String,
     required: true,
@@ -125,6 +137,14 @@ const datasetName = computed({
 });
 
 const sourceRawData = computed(() => props.sourceRawData[0]);
+
+watch(
+  () => props.datasetId,
+  () => {
+    console.log("datasetId updated");
+    console.log(props.datasetId);
+  },
+);
 </script>
 
 <style scoped>
