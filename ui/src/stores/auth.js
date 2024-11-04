@@ -169,9 +169,6 @@ export const useAuthStore = defineStore("auth", () => {
     let willRefreshUploadToken = false;
     if (now < expiresAt) {
       const uploadTokenExpiresInSeconds = (expiresAt - now) / 1000;
-      console.log("now: ", now);
-      console.log("expiresAt: ", expiresAt);
-      console.log("uploadTokenExpiresInSeconds: ", uploadTokenExpiresInSeconds);
       willRefreshUploadToken =
         uploadTokenExpiresInSeconds <
         config.refreshTokenTMinusSeconds.uploadToken;
