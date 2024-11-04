@@ -1,12 +1,15 @@
 <template>
+  <!-- Alert to be shown when an upload finishes successfully or encounters an error -->
   <va-alert
     v-if="props.isSubmissionAlertVisible"
     dense
-    icon="warning"
+    :icon="submissionAlertIcon"
     :color="props.submissionAlertColor"
   >
     {{ props.submissionAlert }}
   </va-alert>
+
+  <!-- Details of the dataset being uploaded -->
   <div class="va-table-responsive">
     <table class="va-table">
       <tbody>
@@ -143,6 +146,9 @@ const datasetName = computed({
 });
 
 const sourceRawData = computed(() => props.sourceRawData[0]);
+const submissionAlertIcon = computed(() => {
+  return props.submissionAlertColor === "success" ? "check_circle" : "warning";
+});
 
 watch(
   () => props.datasetId,
