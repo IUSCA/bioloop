@@ -193,14 +193,10 @@ import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-import { useBreakpoint, useForm } from "vuestic-ui";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
 
-const breakpoint = useBreakpoint();
-
-const { errorMessages, isDirty } = useForm("datasetUploadForm");
 const isDirectory = ref(false);
 
 const SUBMISSION_STATES = {
@@ -343,7 +339,7 @@ const datasetNameValidationRules = [
 const loading = ref(true);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
-const uploadLog = ref();
+const uploadLog = ref(null);
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
 const statusChipColor = ref("");
 const submissionAlert = ref(""); // For handling network errors before upload begins
@@ -356,8 +352,6 @@ const displayedFilesToUpload = ref([]);
 
 const dataProductDirectory = ref(null);
 
-// TODO - set pristine to false when step === 1 and file or directory selection
-//  changes
 const dataProductDirectoryName = ref("");
 const datasetNameInput = ref("");
 

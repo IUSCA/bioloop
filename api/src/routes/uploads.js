@@ -202,8 +202,10 @@ router.patch(
       }));
     });
 
-    const uploadLog = await prisma.$transaction(updates)[0];
-    res.json(uploadLog);
+    const results = await prisma.$transaction(updates);
+    // results of Prisma transaction promises are returned in the order in
+    // which the promises were submitted
+    res.json(results[0]);
   }),
 );
 
