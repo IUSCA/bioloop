@@ -120,6 +120,7 @@ const exports = {
     },
   },
   upload: {
+    scope_prefix: "upload_file:",
     types: { DATASET: "DATASET" },
     status: {
       UPLOADING: "UPLOADING",

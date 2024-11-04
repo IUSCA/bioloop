@@ -161,21 +161,24 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
-  const onFileUpload = async (fileName) => {
+  const onFileUpload = async ({ fileName, willRefreshToken = false }) => {
     const payload = jwtDecode(uploadToken.value);
     const expiresAt = new Date(payload.exp * 1000);
     const now = new Date();
 
-    let willRefreshUploadToken = false;
-    if (now < expiresAt) {
-      const uploadTokenExpiresInSeconds = (expiresAt - now) / 1000;
-      willRefreshUploadToken =
-        uploadTokenExpiresInSeconds <
-        config.refreshTokenTMinusSeconds.uploadToken;
-    } else {
-      willRefreshUploadToken = true;
+    let willRefreshUploadToken = willRefreshToken;
+    // If client has not explicitly requested for the token to be refreshed,
+    // check if the token is about to expire. If so, refresh the token.
+    if (!willRefreshUploadToken) {
+      if (now < expiresAt) {
+        const uploadTokenExpiresInSeconds = (expiresAt - now) / 1000;
+        willRefreshUploadToken =
+          uploadTokenExpiresInSeconds <
+          config.refreshTokenTMinusSeconds.uploadToken;
+      } else {
+        willRefreshUploadToken = true;
+      }
     }
-
     return new Promise((resolve, reject) => {
       if (willRefreshUploadToken) {
         uploadTokenService

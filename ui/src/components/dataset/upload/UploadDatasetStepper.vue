@@ -188,6 +188,7 @@ import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
+import { jwtDecode } from "jwt-decode";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
@@ -590,6 +591,22 @@ const evaluateChecksums = (filesToUpload) => {
   });
 };
 
+const updateToken = async (fileName) => {
+  const currentToken = uploadToken.value;
+  const currentTokenDecoded = jwtDecode(currentToken);
+  const lastUploadedFileName = currentTokenDecoded.scope.slice(
+    config.upload.scope_prefix.length,
+  );
+  console.log("current file:", fileName);
+  console.log("last uploaded file:", lastUploadedFileName);
+
+  await auth.onFileUpload({
+    fileName,
+    willRefreshToken: fileName !== lastUploadedFileName,
+  });
+  uploadService.setToken(uploadToken.value);
+};
+
 // Uploads a chunk. Retries to upload chunk upto 5 times in case of network
 // errors.
 const uploadChunk = async (chunkData) => {
@@ -600,11 +617,8 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
 
-    // persist token in store
-    console.log("tokeb before refresh", uploadToken.value);
-    await auth.onFileUpload(chunkData.get("name"));
-    console.log("tokeb after refresh", uploadToken.value);
-    uploadService.setToken(uploadToken.value);
+    // update upload token if needed
+    await updateToken(chunkData.get("name"));
 
     try {
       await uploadService.uploadFile(chunkData);
