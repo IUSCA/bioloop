@@ -1,11 +1,4 @@
 <template>
-  <!--  <va-card class="">-->
-  <!--    <va-card-title>-->
-  <!--      <div class="flex flex-nowrap items-center w-full">-->
-  <!--        <span class="text-lg">Details</span>-->
-  <!--      </div>-->
-  <!--    </va-card-title>-->
-  <!--    <va-card-content>-->
   <div class="va-table-responsive">
     <table class="va-table">
       <tbody>
@@ -23,14 +16,14 @@
           </td>
         </tr>
 
-        <!--            <tr>-->
-        <!--              <td>Status</td>-->
-        <!--              <td>-->
-        <!--                <va-chip size="small" :color="props.statusChipColor">-->
-        <!--                  {{ props.submissionStatus }}-->
-        <!--                </va-chip>-->
-        <!--              </td>-->
-        <!--            </tr>-->
+        <tr>
+          <td>Status</td>
+          <td>
+            <va-chip size="small" :color="props.statusChipColor">
+              {{ props.submissionStatus }}
+            </va-chip>
+          </td>
+        </tr>
 
         <tr v-if="props.selectingFiles || props.selectingDirectory">
           <td>Data Product</td>
@@ -82,7 +75,11 @@ const props = defineProps({
   },
   statusChipColor: {
     type: String,
-    default: "success",
+    required: true,
+  },
+  submissionStatus: {
+    type: String,
+    required: true,
   },
   sourceRawData: {
     type: Array,

@@ -121,6 +121,8 @@
                       !!formErrors[STEP_KEYS.UPLOAD]
                     "
                     :source-raw-data="rawDataSelected"
+                    :submission-status="submissionStatus"
+                    :status-chip-color="statusChipColor"
                   /> </va-card-content
               ></va-card>
             </div>
@@ -343,9 +345,9 @@ const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const uploadLog = ref();
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
-const statusChipColor = ref();
-const submissionAlert = ref(); // For handling network errors before upload begins
-const submissionAlertColor = ref();
+const statusChipColor = ref("");
+const submissionAlert = ref(""); // For handling network errors before upload begins
+const submissionAlertColor = ref("");
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
 
