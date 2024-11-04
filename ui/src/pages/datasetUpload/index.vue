@@ -38,9 +38,11 @@
     </template>
 
     <template #cell(uploaded_dataset)="{ rowData }">
-      <router-link :to="`/datasets/${rowData.dataset.id}`" class="va-link">{{
-        rowData.dataset.name
-      }}</router-link>
+      <router-link
+        :to="`/datasets/${rowData.uploaded_dataset.id}`"
+        class="va-link"
+        >{{ rowData.uploaded_dataset.name }}</router-link
+      >
     </template>
 
     <template #cell(source_dataset)="{ rowData }">
