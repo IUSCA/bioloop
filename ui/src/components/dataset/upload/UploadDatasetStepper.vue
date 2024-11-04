@@ -212,7 +212,7 @@ const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const HAS_SPACES_ERROR = "cannot contain spaces";
 
-const RETRY_COUNT_THRESHOLD = 1;
+const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // Blob.slice method is used to segment files.
 // At the same time, this method is used in different browsers in different
@@ -950,23 +950,6 @@ const setDirectory = (directoryDetails) => {
   displayedFilesToUpload.value = [selectedDirectory.value];
 };
 
-// const validateDatasetName = async () => {
-//   const datasetName = selectedUploadFiles.value?.name;
-//   if (datasetNameIsNull(datasetName)) {
-//     return { isNameValid: false, error: UPLOAD_FILE_REQUIRED_ERROR };
-//   } else if (!datasetNameHasMinimumChars(datasetName)) {
-//     return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
-//   }
-//
-//   return validateNotExists(datasetName).then((res) => {
-//     return {
-//       isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
-//       error:
-//         res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
-//     };
-//   });
-// };
-
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
   window.addEventListener("beforeunload", (e) => {
@@ -987,10 +970,6 @@ watch(
     selectedDirectoryName,
     selectingFiles,
     selectingDirectory,
-    // selectedFile,
-    // fileListSearchText,
-    // isFileSearchAutocompleteOpen,
-    // searchSpace,
     isAssignedSourceRawData,
     filesToUpload,
   ],

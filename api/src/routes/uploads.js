@@ -234,40 +234,6 @@ router.patch(
   }),
 );
 
-// Update the attributes of an uploaded file - worker
-// router.patch(
-//   '/:id/file-upload-log/:file_upload_log_id',
-//   isPermittedTo('update'),
-//   validate([
-//     param('id').isInt().toInt(),
-//     param('file_upload_log_id').isInt().toInt(),
-//     body('status').notEmpty().escape(),
-//     body('upload_status').notEmpty().escape().optional(),
-//   ]),
-//   asyncHandler(async (req, res, next) => {
-//     const { status, upload_status } = req.body;
-//
-//     const upload_log = await prisma.upload_log.update({
-//       where: {
-//         id: req.params.id,
-//       },
-//       data: {
-//         ...(upload_status && { status: upload_status }),
-//         files: {
-//           update: {
-//             where: { id: req.params.file_upload_log_id },
-//             data: {
-//               status,
-//             },
-//           },
-//         },
-//       },
-//     });
-//
-//     res.json(upload_log);
-//   }),
-// );
-
 // Initiate the processing of uploaded files - worker
 router.post(
   '/:id/process',

@@ -30,7 +30,9 @@
   "download_server": {
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
   },
-  "upload_path": "UPLOAD_PATH",
+  "upload": {
+    "path": "UPLOADS_DIR"
+  },
   "e2e": {
     "users": {
       "admin": {

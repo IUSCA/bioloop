@@ -24,7 +24,7 @@
   "files.associations": {
     "*.css": "postcss"
   },
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   "files.exclude": {
     "**/.git": true,
     "**/.DS_Store": true,

@@ -31,14 +31,14 @@ To meet the requirements outlined above, a distributed architecture is employed.
 
 For each upload, information is logged to the following relational tables (PostgreSQL):
 1. `upload_log` - contains metadata about the upload itself. Is linked to one or more `file_upload_log` objects.
-2. `file_upload_log` - contains metadata about a file being uploaded
+2. `dataset_upload_log` - contains metadata specific to a dataset's upload. Is linked to one `upload_log` object, and one `dataset` object.
+3. `file_upload_log` - contains metadata about a file being uploaded.
 
 ### 4.2 Steps
 
 1. Before an upload begins, the following things happen sequentially:
    - Checksum evaluation - MD5 checksums are evaluated for each file being uploaded, as well as for each chunk per file. 
-   - Any metadata associated with the upload (like the source raw data, the file type, the names/checksums/paths of files being uploaded, etc.), are logged into persistent storage.
-      - This information is logged in a single transaction.
+   - Any metadata associated with the upload (like the source raw data, the file type, the names/checksums/relative paths of files being uploaded, etc.), are logged into persistent storage.
 2. The actual upload begins once the above steps are successful.
 3. Chunks are uploaded sequentially. If a chunk upload fails, the client-side retries the upload upto 5 times before failing.
 4. The client sends an HTTP request to upload a chunk to our File Upload Server, which writes the received chunk to the filesystem, after validating its checksum (this is the first stage of checksum validation).
@@ -50,15 +50,15 @@ The following directories on the File Upload Server are used for uploads:
 ```
 upload_dir = config['paths']['DATA_PRODUCT']['upload']
 ```
-2. Each uploaded chunk for an uploaded file is stored in:
+2. The individual chunks for an uploaded file are stored in:
 ```
-[upload_dir] / [dataset_name] / chunked_files / [file_md5]`
+[upload_dir] / [dataset_id] / chunked_files / [file_upload_log_id]`
 ```
-Here, `dataset_name` is the name chosen for the dataset before the upload, and `file_md5` is the evaluated MD5 checksum of the file being uploaded.
-3. Within this directory, individual chunks are named as `[file_md5]-[i]` where `i` serves as an index for this chunk, identifying the order of this chunk in the file. When merging a file's chunks into the corresponding file, chunks will be processed sequentially based on this index.
+Here, `dataset_id` is the unique id created for the dataset before the upload began, and `file_upload_log_id` is the unique id for the record of this file's upload.
+3. Within this directory, individual chunks are named as `[file_md5]-[i]` where `i` serves as an index for this chunk among all of the file's sequentially-uploaded chunks, identifying the order of this chunk in the file. When merging a file's chunks into the corresponding file, chunks will be processed sequentially based on this index.
 4. Once a file has been processed, and it's chunks have been merged into the corresponding file, the recreated file is stored at:
 ```
-[upload_dir] / [dataset_name] / merged_chunks
+[upload_dir] / [dataset_id] / merged_chunks
 ```
 
 ### 4.4 Access Control
@@ -71,24 +71,24 @@ Here, `dataset_name` is the name chosen for the dataset before the upload, and `
 
 The status of the upload, as well the status of each file in the upload goes through the following values:
 
-| Status    | Description                                                                                                                                                  |
-|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| UPLOADING    | Upload initiated through the browser                                                                                                                         |
-| UPLOAD_FAILED | Upload could not be completed (network errors)                                                                                                               |
-| UPLOADED | All files successfully uploaded                                                                                                                              |
-| PROCESSING | Upload currently being processed                                                                                                                             |
-| PROCESSING_FAILED | Encountered errors while processing a file in this upload                                                                                                    |
-| COMPLETE | All files in the upload processed successfully                                                                                                               |
-| FAILED | Upload was failing processing (i.e. `status == PROCESSING_FAILED`) for more than 72 hours, and was marked as `FAILED`, and its filesystem resources deleted. |
+| Status    | Description                                                                                                                                                           |
+|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| UPLOADING    | Upload initiated through the browser                                                                                                                                  |
+| UPLOAD_FAILED | Upload could not be completed (network errors)                                                                                                                        |
+| UPLOADED | All files successfully uploaded                                                                                                                                       |
+| PROCESSING | Upload currently being processed                                                                                                                                      |
+| PROCESSING_FAILED | Encountered errors while processing a file in this upload                                                                                                             |
+| COMPLETE | All files in the upload processed successfully                                                                                                                        |
+| FAILED | Upload was failing processing (i.e. `status == PROCESSING_FAILED`) for more than 72 hours, and was therefore marked as `FAILED` and its filesystem resources deleted. |
 
 ## 5. Processing
 Uploaded file chunks are merged into the corresponding file by the worker `process_dataset_upload`. After the file has been recreated from its chunks, the MD5 checksum of the recreated file is matched with the expected MD5 checksum of the file that was persisted to the database before the upload (this is the second stage of checksum validation).
 
-After all uploaded files have been processed successfully, the resources (chunks) associated with them are deleted.
+After all uploaded files have been processed successfully, the resources (uploaded file chunks) associated with them are deleted.
 
 ## 6. Data Integrity
 The uploaded data goes through two stages of checksum validation:
-1. Validating MD5 checksum of an individual chunk before writing it to the filesystem.
+1. Validating MD5 checksum of an uploaded file chunk before writing it to the filesystem.
 2. Validating MD5 checksum of the file, once it has been recreated from its chunks by the worker.
 
 ## 7. Retry
