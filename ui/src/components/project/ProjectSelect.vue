@@ -4,6 +4,7 @@
     :data="projects"
     filter-by="name"
     placeholder="Search projects by name"
+    data-test-id="project-search-autocomplete"
   >
     <template #filtered="{ item }">
       <div class="flex">
@@ -43,7 +44,7 @@ const searchText = ref("");
 const projects = ref([]);
 
 projectService.getAll({ forSelf: false }).then((res) => {
-  projects.value = (res.data || []).filter(
+  projects.value = (res.data.projects || []).filter(
     (p) => !props.excludeIds.includes(p.id),
   );
 });

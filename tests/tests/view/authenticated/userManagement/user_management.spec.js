@@ -1,6 +1,10 @@
 const { test, expect } = require('@playwright/test');
 const { v4: uuidv4 } = require('uuid');
 
+const {
+  testIdSelector, elementTestIdSelector, fillAndAssertText,
+} = require('../../../../utils');
+
 const TEXT = 'some_text';
 
 const random_username = uuidv4();
@@ -19,9 +23,6 @@ const TEST_ID_EMAIL = 'user-email-input';
 const TEST_ID_CAS_ID = 'user-cas-id-input';
 const TEST_ID_NOTES = 'user-notes-input';
 
-const testIdSelector = (testId) => `[data-testid=${testId}]`;
-const elementTestIdLocator = ({ elementType = null, testId }) => (elementType ? `${elementType}${testIdSelector(testId)}` : `div${testIdSelector(testId)}`);
-
 test.describe.serial('User management', () => {
   let userNameInputLocator;
   let userUsernameInputLocator;
@@ -39,23 +40,23 @@ test.describe.serial('User management', () => {
   });
 
   test('Create User modal opened', async ({ page }) => {
-    userNameInputLocator = page.locator(elementTestIdLocator({
+    userNameInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_NAME,
     }));
-    userUsernameInputLocator = page.locator(elementTestIdLocator({
+    userUsernameInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_USERNAME,
     }));
-    userEmailInputLocator = page.locator(elementTestIdLocator({
+    userEmailInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_EMAIL,
     }));
-    userCasIdInputLocator = page.locator(elementTestIdLocator({
+    userCasIdInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_CAS_ID,
     }));
-    userNotesInputLocator = page.locator(elementTestIdLocator({
+    userNotesInputLocator = page.locator(elementTestIdSelector({
       elementType: 'textarea',
       testId: TEST_ID_NOTES,
     }));
@@ -69,19 +70,19 @@ test.describe.serial('User management', () => {
 
   test('Cancel Modal action taken', async ({ page }) => {
     // fill-in fields
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNameInputLocator, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userUsernameInputLocator, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userEmailInputLocator, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userCasIdInputLocator, text: TEXT,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNotesInputLocator, text: TEXT,
     });
 
@@ -99,13 +100,13 @@ test.describe.serial('User management', () => {
 
   test('User created', async ({ page }) => {
     // fill-in fields
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNameInputLocator, text: TEST_USER.name,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userEmailInputLocator, text: TEST_USER.email,
     });
-    await fillAndAssertValue({
+    await fillAndAssertText({
       locator: userNotesInputLocator, text: TEST_USER.notes,
     });
 
@@ -121,14 +122,3 @@ test.describe.serial('User management', () => {
     await expect(userNotesInputLocator).toHaveText('');
   });
 });
-
-const fillAndAssertValue = async ({
-  locator, text,
-}) => {
-  await fillText({ locator, text });
-  await expect(locator).toHaveValue(text);
-};
-
-const fillText = async ({ locator, text }) => {
-  await locator.fill(text);
-};
