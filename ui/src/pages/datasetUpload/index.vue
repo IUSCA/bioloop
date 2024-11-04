@@ -59,6 +59,14 @@
       <span>{{ rowData.user.name }} ({{ rowData.user.username }})</span>
     </template>
   </va-data-table>
+
+  <Pagination
+    v-model:page="currentPageIndex"
+    v-model:page_size="pageSize"
+    :total_results="total_results"
+    :curr_items="uploads.length"
+    :page_size_options="PAGE_SIZE_OPTIONS"
+  />
 </template>
 
 <script setup>
@@ -66,19 +74,21 @@ import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import config from "@/config";
 import uploadService from "@/services/upload";
 import { useNavStore } from "@/stores/nav";
+import _ from "lodash";
+import toast from "@/services/toast";
 
 const nav = useNavStore();
 const router = useRouter();
 
 nav.setNavItems([{ label: "Dataset Uploads" }]);
+
 useSearchKeyShortcut();
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const filterInput = ref("");
 const pastUploads = ref([]);
-
 const uploads = computed(() => {
-  console.log("computed uploads");
-  // console.dir(pastUploads.value, { depth: null });
   return pastUploads.value.map((e) => {
     const dataset_upload_log = e.dataset_upload;
     const dataset = dataset_upload_log.dataset;
@@ -93,6 +103,31 @@ const uploads = computed(() => {
       uploaded_dataset: dataset,
     };
   });
+});
+
+const currentPageIndex = ref(1);
+const pageSize = ref(10);
+const total_results = ref(0);
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch
+// of results
+const offset = computed(() => (currentPageIndex.value - 1) * pageSize.value);
+// Criterion based on search input
+const search_query = computed(() => {
+  return filterInput.value?.length > 0 && { entity_name: filterInput.value };
+});
+// Criteria used to limit the number of results retrieved, and to define the
+// offset starting at which the next batch of results will be retrieved.
+const uploads_batching_query = computed(() => {
+  return { offset: offset.value, limit: pageSize.value };
+});
+// Aggregation of all filtering criteria. Used for retrieving results, and
+// configuring number of pages for pagination.
+const filter_query = computed(() => {
+  return {
+    upload_type: config.upload.types.DATASET,
+    ...uploads_batching_query.value,
+    ...(!!search_query.value && { ...search_query.value }),
+  };
 });
 
 const columns = [
@@ -156,24 +191,35 @@ const getStatusChipColor = (value) => {
   return color;
 };
 
-onMounted(() => {
-  uploadService
-    .getUploadLogs({
-      upload_type: config.upload.types.DATASET,
-    })
+const getUploadLogs = async () => {
+  return uploadService
+    .getUploadLogs(filter_query.value)
     .then((res) => {
-      pastUploads.value = res.data;
+      console.log("received upload logs:");
+      pastUploads.value = res.data.uploads;
+      total_results.value = res.data.metadata.count;
+      console.log("res.data.metadata.count:", res.data.metadata.count);
+      console.log("total results:", total_results.value);
+    })
+    .catch((err) => {
+      toast.error("Could not retrieve past uploads");
+      console.error("Error fetching upload logs:", err);
     });
+};
+
+onMounted(() => {
+  getUploadLogs();
 });
 
 watch(filterInput, () => {
-  const filters = filterInput.value && {
-    entity_name: filterInput.value,
-    upload_type: config.upload.types.DATASET,
-  };
-  uploadService.getUploadLogs(filters).then((res) => {
-    pastUploads.value = res.data;
-  });
+  currentPageIndex.value = 1;
+});
+
+watch(filter_query, (newQuery, oldQuery) => {
+  // Retrieve updated results whenever retrieval criteria changes
+  if (!_.isEqual(newQuery, oldQuery)) {
+    getUploadLogs();
+  }
 });
 </script>
 

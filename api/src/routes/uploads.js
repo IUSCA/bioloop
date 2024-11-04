@@ -43,10 +43,14 @@ router.get(
     query('status').isIn(Object.values(config.upload.status)).optional(),
     query('upload_type').isIn(Object.values(Object.values(config.upload.types))).optional(),
     query('entity_name').notEmpty().escape().optional(),
+    query('limit').isInt({ min: 1 }).toInt().optional(),
+    query('offset').isInt({ min: 0 }).toInt().optional(),
   ]),
   isPermittedTo('read'),
   asyncHandler(async (req, res, next) => {
-    const { status, upload_type, entity_name } = req.query;
+    const {
+      status, upload_type, entity_name, offset, limit,
+    } = req.query;
 
     const isDatasetUpload = upload_type === config.upload.types.DATASET;
 
@@ -58,17 +62,27 @@ router.get(
       },
     } : null;
 
-    const query_obj = _.omitBy(_.isUndefined)({
-      status,
-      ...nameFilter,
-    });
-
-    const upload_logs = await prisma.upload_log.findMany({
-      where: query_obj,
+    const query_obj = {
+      where: _.omitBy(_.isUndefined)({
+        status,
+        ...nameFilter,
+      }),
+    };
+    const filter_query = {
+      skip: offset,
+      take: limit,
+      ...query_obj,
       include: isDatasetUpload ? INCLUDE_DATASET_UPLOAD_LOG_RELATIONS : null,
-    });
+    };
 
-    res.json(upload_logs);
+    const [upload_logs, count] = await prisma.$transaction([
+      prisma.upload_log.findMany({
+        ...filter_query,
+      }),
+      prisma.upload_log.count({ ...query_obj }),
+    ]);
+
+    res.json({ metadata: { count }, uploads: upload_logs });
   }),
 );
 
