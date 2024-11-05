@@ -28,7 +28,7 @@
             <UploadedDatasetName
               v-else
               v-model:dataset-name-input="datasetNameInput"
-              v-model:dataset-name="datasetName"
+              :dataset-name="props.datasetName"
               :input-disabled="props.inputDisabled"
               :dataset-name-error="props.uploadedDataProductError"
               :dataset-name-error-messages="
@@ -133,15 +133,6 @@ const datasetNameInput = computed({
   },
   set(value) {
     emit("update:datasetNameInput", value);
-  },
-});
-
-const datasetName = computed({
-  get() {
-    return props.datasetName;
-  },
-  set(value) {
-    emit("update:datasetName", value);
   },
 });
 

@@ -107,7 +107,7 @@
                   <UploadedDatasetDetails
                     v-if="selectingFiles || selectingDirectory"
                     :dataset="uploadLog?.dataset_upload?.dataset"
-                    v-model:dataset-name="selectedDirectoryName"
+                    :dataset-name="selectedDirectoryName"
                     v-model:dataset-name-input="datasetToUploadInputName"
                     :input-disabled="submitAttempted"
                     :selecting-files="selectingFiles"

@@ -1,5 +1,5 @@
 <template>
-  <CopyText v-if="props.selectingDirectory" v-model:text="datasetName" />
+  <CopyText v-if="props.selectingDirectory" :text="props.datasetName" />
 
   <va-input
     v-else-if="props.selectingFiles"
@@ -57,15 +57,4 @@ const datasetNameInput = computed({
     emit("update:datasetNameInput", value);
   },
 });
-
-const datasetName = computed({
-  get() {
-    return props.datasetName;
-  },
-  set(value) {
-    emit("update:datasetName", value);
-  },
-});
 </script>
-
-<style scoped></style>
