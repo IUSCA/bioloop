@@ -19,7 +19,6 @@ services:
         APP_UID: ${APP_UID} # read from .env file
         APP_GID: ${APP_GID} # read from .env file
     volumes:
-      - ${UPLOAD_DIR}:/opt/sca/uploads
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
       - ${FILESYSTEM_BASE_DIR_SCRATCH}:${FILESYSTEM_MOUNT_DIR_SCRATCH}
