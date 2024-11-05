@@ -2,15 +2,9 @@
   <va-list
     :class="['grid', 'gap-3', props.wrap ? 'grid-cols-2' : 'grid-cols-1']"
   >
-    <va-list-item
-      v-for="(user, index) in props.users"
-      :key="index"
-      class="col-span-1"
-    >
+    <va-list-item v-for="(user, index) in props.users" :key="index" class="">
       <va-list-item-section avatar>
-        <va-avatar :color="stringToRGB(user.name || '')" size="small">
-          <span class="text-sm uppercase">{{ initials(user.name) }}</span>
-        </va-avatar>
+        <UserAvatar :username="user?.username" :name="user?.name" />
       </va-list-item-section>
 
       <va-list-item-section>
@@ -23,13 +17,19 @@
         </va-list-item-label>
       </va-list-item-section>
 
-      <va-list-item-section v-if="user?.assigned_at && props.showAssignedDate">
+      <va-list-item-section v-if="user?.assigned_at && props.showAssignData">
         <va-list-item-label class="self-end">
-          {{ datetime.date(user.assigned_at) }}
+          <span v-if="user?.assignor" class="text-sm">
+            by
+            <span class="font-semibold">
+              {{ user.assignor.username }}
+            </span>
+          </span>
+          <span v-else> Assigned </span>
         </va-list-item-label>
 
         <va-list-item-label caption class="self-end">
-          Access granted
+          <span> on {{ datetime.date(user.assigned_at) }} </span>
         </va-list-item-label>
       </va-list-item-section>
 
@@ -48,9 +48,7 @@
 </template>
 
 <script setup>
-import { stringToRGB } from "@/services/colors";
 import * as datetime from "@/services/datetime";
-import { initials } from "@/services/utils";
 
 const props = defineProps({
   users: {
@@ -61,7 +59,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  showAssignedDate: {
+  showAssignData: {
     type: Boolean,
     default: false,
   },

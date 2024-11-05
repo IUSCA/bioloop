@@ -1,0 +1,22 @@
+{
+  "baseURL": "https://localhost",
+  "apiPrefix": "/api",
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": ""
+      },
+      "operator": {
+        "username": ""
+      },
+      "user": {
+        "username": ""
+      }
+    }
+  },
+  "enabledFeatures": {
+    "notifications": {
+      "enabledForRoles": []
+    }
+  }
+}

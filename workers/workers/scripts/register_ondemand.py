@@ -18,14 +18,16 @@ class Registration:
     def register_candidate(self, dataset_name, dataset_path):
         print(f'registering {self.dataset_type} {dataset_name}')
         wf = Workflow(celery_app=celery_app, **self.wf_body)
-        dataset = {
-            'name': dataset_name,
-            'type': self.dataset_type,
-            'workflow_id': wf.workflow['_id'],
-            'origin_path': dataset_path
+        dataset_payload = {
+            'data': {
+                'name': dataset_name,
+                'type': self.dataset_type,
+                'workflow_id': wf.workflow['_id'],
+                'origin_path': dataset_path
+            }
         }
         # HTTP POST
-        created_dataset = api.create_dataset(dataset)
+        created_dataset = api.create_dataset(dataset_payload)
         wf.start(created_dataset['id'])
 
 

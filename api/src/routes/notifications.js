@@ -1,7 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const {
-  query, param,
+  query, body, param,
 } = require('express-validator');
 const _ = require('lodash/fp');
 
@@ -20,7 +20,6 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('by_active_action_items').optional().toBoolean(),
-    query('active').optional().toBoolean(),
     query('status').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -35,7 +34,6 @@ router.get(
           status: 'CREATED',
         },
       } : undefined,
-      active: req.query.active || true,
       status: req.query.status || 'CREATED',
     });
 
@@ -56,6 +54,57 @@ router.get(
     });
 
     res.json(notifications);
+  }),
+);
+
+router.post(
+  '/',
+  isPermittedTo('create'),
+  validate([
+    body('label').escape().notEmpty(),
+    body('text').escape().notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Post a notification
+
+    const createdNotification = await prisma.notification.create({
+      data: {
+        ...req.body,
+      },
+    });
+
+    res.json(createdNotification);
+  }),
+);
+
+router.delete(
+  '/',
+  isPermittedTo('delete'),
+  validate([
+    query('status').optional().escape().notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Delete matching notifications
+
+    const queryParams = req.query;
+
+    if (Object.keys(queryParams).length === 0) {
+      res.send({
+        count: 0,
+      });
+      return;
+    }
+
+    const updatedCount = await prisma.notification.updateMany({
+      where: queryParams,
+      data: {
+        status: 'RESOLVED',
+      },
+    });
+
+    res.json(updatedCount);
   }),
 );
 

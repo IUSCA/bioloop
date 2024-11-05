@@ -8,7 +8,7 @@ datasource db {
 }
 
 model dataset {
-  id               Int                   @id @default(autoincrement())
+  id               Int                 @id @default(autoincrement())
   name             String
   type             String
   num_directories  Int?
@@ -17,20 +17,20 @@ model dataset {
   size             BigInt?
   bundle_size      BigInt?
   description      String?
-  created_at       DateTime              @default(now()) @db.Timestamp(6)
-  updated_at       DateTime              @default(now()) @updatedAt @db.Timestamp(6)
+  created_at       DateTime            @default(now()) @db.Timestamp(6)
+  updated_at       DateTime            @default(now()) @updatedAt @db.Timestamp(6)
   origin_path      String?
   archive_path     String?
   staged_path      String?
-  is_deleted       Boolean               @default(false)
-  is_staged        Boolean               @default(false)
+  is_deleted       Boolean             @default(false)
+  is_staged        Boolean             @default(false)
   metadata         Json?
   workflows        workflow[]
   files            dataset_file[]
   audit_logs       dataset_audit[]
   states           dataset_state[]
-  derived_datasets dataset_hierarchy[]   @relation("source_datasets")
-  source_datasets  dataset_hierarchy[]   @relation("derived_datasets")
+  derived_datasets dataset_hierarchy[] @relation("source_datasets")
+  source_datasets  dataset_hierarchy[] @relation("derived_datasets")
   projects         project_dataset[]
   accesses         data_access_log[]
   stage_requests   stage_request_log[]
@@ -186,26 +186,30 @@ model stage_request_log {
 }
 
 model user {
-  id             Int                 @id @default(autoincrement())
-  username       String              @unique @db.VarChar(100)
-  name           String?             @db.VarChar(100)
-  email          String              @unique @db.VarChar(100)
-  cas_id         String?             @unique @db.VarChar(100)
-  notes          String?
-  created_at     DateTime            @default(now()) @db.Timestamp(6)
-  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  is_deleted     Boolean             @default(false)
-  user_role      user_role[]
-  settings       user_settings?
-  contacts       contact[]
-  dataset_audit  dataset_audit[]
-  projects       project_user[]
-  password       user_password?
-  login          user_login?
-  accesses       data_access_log[]
-  stage_requests stage_request_log[]
-  about_edits    about[]
-  notifications  notification[]
+  id                        Int                 @id @default(autoincrement())
+  username                  String              @unique @db.VarChar(100)
+  name                      String?             @db.VarChar(100)
+  email                     String              @unique @db.VarChar(100)
+  cas_id                    String?             @unique @db.VarChar(100)
+  notes                     String?
+  created_at                DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  is_deleted                Boolean             @default(false)
+  user_role                 user_role[]
+  settings                  user_settings?
+  contacts                  contact[]
+  dataset_audit             dataset_audit[]
+  projects                  project_user[]      @relation("project_user_user")
+  password                  user_password?
+  login                     user_login?
+  accesses                  data_access_log[]
+  stage_requests            stage_request_log[]
+  about_edits               about[]
+  project_users_assigned    project_user[]      @relation("project_user_assignor")
+  project_datasets_assigned project_dataset[]
+  project_contacts_assigned project_contact[]
+  initiated_workflows       workflow[]       @relation("initiated_workflows")
+  acknowledged_notifications notification[]
 }
 
 model user_password {
@@ -230,6 +234,16 @@ model user_settings {
   user_id  Int  @unique
   settings Json
   users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model notification {
+  id                 Int                 @id @default(autoincrement())
+  created_at         DateTime            @default(now()) @db.Timestamp(6)
+  label              String
+  text               String?
+  status             NOTIFICATION_STATUS @default(CREATED)
+  acknowledged_by_id Int?
+  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
 }
 
 model contact {
@@ -265,6 +279,8 @@ model workflow {
   id         String   @id
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  initiator_id Int?
+  initiator    user? @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
 }
 
 model metric {
@@ -298,8 +314,10 @@ model project_user {
   project_id  String
   user_id     Int
   assigned_at DateTime @default(now()) @db.Timestamp(6)
+  assignor_id Int?
   project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
-  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade, name: "project_user_user")
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull, name: "project_user_assignor")
 
   @@id([project_id, user_id])
 }
@@ -307,9 +325,11 @@ model project_user {
 model project_dataset {
   project_id  String
   dataset_id  Int
+  assignor_id Int?
   assigned_at DateTime @default(now()) @db.Timestamp(6)
   project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
   dataset     dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull)
 
   @@id([project_id, dataset_id])
 }
@@ -318,8 +338,10 @@ model project_contact {
   project_id  String
   contact_id  Int
   assigned_at DateTime @default(now()) @db.Timestamp(6)
+  assignor_id Int?
   project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
   contact     contact  @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull)
 
   @@id([project_id, contact_id])
 }
@@ -360,17 +382,17 @@ enum access_type {
   SLATE_SCRATCH
 }
 
-enum DATASET_ACTION_ITEM_TYPE {
-  DUPLICATE_DATASET_INGESTION
-}
-
-enum DATASET_ACTION_ITEM_STATUS {
+enum NOTIFICATION_STATUS {
   CREATED
   ACKNOWLEDGED
   RESOLVED
 }
 
-enum NOTIFICATION_STATUS {
+enum DATASET_ACTION_ITEM_TYPE {
+  DUPLICATE_DATASET_INGESTION
+}
+
+enum DATASET_ACTION_ITEM_STATUS {
   CREATED
   ACKNOWLEDGED
   RESOLVED

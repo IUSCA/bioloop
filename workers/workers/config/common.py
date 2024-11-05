@@ -84,7 +84,7 @@ config = {
         'alias_salt': ALIAS_SALT
     },
     'workflow_registry': {
-        'prepare_bundle_downloads': {
+        'stage': {
             'steps': [
                 {
                     'name': 'stage',
@@ -194,6 +194,10 @@ config = {
         'mongo': {
             'uri': f'mongodb://{MONGO_USER}:{urllib.parse.quote(MONGO_PASSWORD)}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource={MONGO_AUTH_SOURCE}',
         }
+    },
+    'email': {
+        'from_addr': 'scauser@iu.edu',
+        'sendmail_path': '/usr/sbin/sendmail'
     },
     'workflow': {
         'purge': {

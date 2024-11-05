@@ -137,7 +137,7 @@ function downloadFile({ url, filename = null }) {
 }
 
 function initials(name) {
-  const parts = (name || "").split(" ");
+  const parts = (name || "").trim().split(" ");
   if (parts.length == 1) return parts[0][0];
   else {
     return `${parts[0][0]}${parts[parts.length - 1][0]}`;

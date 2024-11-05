@@ -6,14 +6,19 @@
           :offset="[-3, 10]"
           :text="`${notifications.length > 0 ? notifications.length : ''}`"
           overlap
+          data-testid="notification-count"
         >
-          <va-button class="notification-bell" plain>
+          <va-button
+            data-testid="notification-icon"
+            class="notification-bell"
+            plain
+          >
             <Icon icon="mdi-bell-outline" height="36px" width="36px" />
           </va-button>
         </va-badge>
       </template>
 
-      <div class="max-w-md max-h-96">
+      <div class="max-w-md max-h-96" data-testid="notification-menu-items">
         <va-menu-item v-if="notifications.length === 0">
           No pending notifications
         </va-menu-item>
@@ -34,6 +39,7 @@
 <script setup>
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
+import config from "@/config";
 
 const notificationStore = useNotificationStore();
 
@@ -41,13 +47,19 @@ const { notifications } = storeToRefs(notificationStore);
 const { fetchActiveNotifications } = notificationStore;
 
 // retrieve notifications every 5 seconds
-const { resume } = useIntervalFn(fetchActiveNotifications, 5000, {
-  immediateCallback: true,
-});
+const { resume } = useIntervalFn(
+  fetchActiveNotifications,
+  config.notifications.pollingInterval,
+  {
+    immediateCallback: true,
+  },
+);
 
 onMounted(() => {
   resume();
 });
+
+const open = ref(true);
 </script>
 
 <style lang="scss" scoped>

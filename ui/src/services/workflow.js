@@ -6,19 +6,25 @@ class WorkflowService {
   getAll({
     last_task_run = false,
     prev_task_runs = false,
-    workflow_ids = null,
+    workflow_id = null,
+    dataset_id = null,
+    dataset_name = null,
     status = null,
     skip = 0,
     limit = 10,
+    initiator = false,
   } = {}) {
     return api.get("/workflows", {
       params: {
         last_task_run,
         prev_task_runs,
         status,
-        workflow_id: workflow_ids,
+        workflow_id: workflow_id,
         skip,
         limit,
+        dataset_id,
+        dataset_name,
+        initiator,
       },
       paramsSerializer: {
         // to create workflow_id=123&workflow_id=456

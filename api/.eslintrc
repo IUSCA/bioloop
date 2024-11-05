@@ -17,7 +17,8 @@
         "ignoreCommentsWithCode": true,
         "tabSize": 2
       }
-    ]
+    ],
+    "max-len": ["error", { "ignoreComments": true, "code": 120 }]
   },
   "env": {
     "node": true,

@@ -13,7 +13,45 @@
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
     }
   },
+  "auth": {
+    "google": {
+      "client_id": "GOOGLE_OAUTH_CLIENT_ID",
+      "client_secret": "GOOGLE_OAUTH_CLIENT_SECRET"
+    },
+    "cilogon": {
+      "client_id": "CILOGON_OAUTH_CLIENT_ID",
+      "client_secret": "CILOGON_OAUTH_CLIENT_SECRET"
+    }
+  },
   "download_server": {
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
+  },
+  "e2e": {
+    "users": {
+      "admin": {
+        "username": "E2E_ADMIN"
+      },
+      "operator": {
+        "username": "E2E_OPERATOR"
+      },
+      "user": {
+        "username": "E2E_USER"
+      }
+    }
+  },
+  "filesystem": {
+    "search_spaces": "FILESYSTEM_SEARCH_SPACES",
+    "base_dir": {
+      "slateScratch": "FILESYSTEM_BASE_DIR_SCRATCH",
+      "slateProject": "FILESYSTEM_BASE_DIR_PROJECT"
+    },
+    "mount_dir": {
+      "slateScratch": "FILESYSTEM_MOUNT_DIR_SCRATCH",
+      "slateProject": "FILESYSTEM_MOUNT_DIR_PROJECT"
+    }
+  },
+  "restricted_ingestion_dirs": {
+    "slateScratch": "SCRATCH_INGESTION_RESTRICTED_DIRS",
+    "slateProject": "PROJECT_INGESTION_RESTRICTED_DIRS"
   }
 }

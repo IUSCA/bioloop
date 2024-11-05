@@ -3,13 +3,15 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import DatasetService from "@/services/dataset";
 import { useNavStore } from "@/stores/nav";
+import { useUIStore } from "@/stores/ui";
 import { storeToRefs } from "pinia";
-import config from "@/config";
 
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
+const ui = useUIStore();
 
 const props = defineProps({ datasetId: String });
 
@@ -25,5 +27,11 @@ DatasetService.getById({ id: props.datasetId }).then((res) => {
     },
   ]);
   sidebarDatasetType.value = dataset.type;
+  ui.setTitle(dataset.name);
 });
 </script>
+
+<route lang="yaml">
+meta:
+  title: Dataset Details
+</route>

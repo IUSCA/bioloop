@@ -200,6 +200,11 @@ function numericStringsToNumbers(arr, numericStringFields = []) {
   })(arr);
 }
 
+function decodeJWT(token) {
+  const payload = token.split('.')[1];
+  return JSON.parse(Buffer.from(payload, 'base64').toString());
+}
+
 function readUsersFromJSON(fname) {
   try {
     const fpath = path.join(global.__basedir, fname);
@@ -235,5 +240,6 @@ module.exports = {
   sanitize_timestamp,
   groupByAndAggregate,
   numericStringsToNumbers,
+  decodeJWT,
   readUsersFromJSON,
 };

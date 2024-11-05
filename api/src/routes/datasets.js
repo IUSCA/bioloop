@@ -9,6 +9,8 @@ const {
 const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
+const dayjs = require('dayjs');
+const pm = require('picomatch');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -277,8 +279,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Get summary statistics of datasets.'
+  // #swagger.tags = ['datasets']
+  // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -355,25 +357,39 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, processed, archived, staged, is_duplicate, type, name, days_since_last_staged,
+  deleted, archived, staged, type, name, days_since_last_staged,
+  has_workflows, has_derived_data, has_source_data,
+  created_at_start, created_at_end, updated_at_start, updated_at_end,
+  match_name_exact, is_duplicate,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
-    archive_path: archived ? { not: null } : undefined,
     is_staged: staged,
     is_duplicate,
     type,
     name: name ? {
-      contains: name,
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
 
-  // processed=true: datasets with one or more workflows associated
-  // processed=false: datasets with no workflows associated
-  // processed=undefined/null: no query based on workflow association
-  if (!_.isNil(processed)) {
-    query_obj.workflows = { [processed ? 'some' : 'none']: {} };
+  // has_workflows=true: datasets with one or more workflows associated
+  // has_workflows=false: datasets with no workflows associated
+  // has_workflows=undefined/null: no query based on workflow association
+  if (!_.isNil(has_workflows)) {
+    query_obj.workflows = { [has_workflows ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_derived_data)) {
+    query_obj.derived_datasets = { [has_derived_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_source_data)) {
+    query_obj.source_datasets = { [has_source_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(archived)) {
+    query_obj.archive_path = archived ? { not: null } : null;
   }
 
   // staged datasets where there is no STAGED state in last x days
@@ -394,23 +410,23 @@ const buildQueryObject = ({
     };
   }
 
-  return query_obj;
-};
-
-const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-  const nullable_order_by_fields = ['num_directories', 'num_files', 'du_size', 'size'];
-
-  if (!field || !sortOrder) {
-    return {};
-  }
-  if (nullable_order_by_fields.includes(field)) {
-    return {
-      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
+  // created_at filter
+  if (created_at_start && created_at_end) {
+    query_obj.created_at = {
+      gte: new Date(created_at_start),
+      lte: new Date(created_at_end),
     };
   }
-  return {
-    [field]: sortOrder,
-  };
+
+  // updated_at filter
+  if (updated_at_start && updated_at_end) {
+    query_obj.updated_at = {
+      gte: new Date(updated_at_start),
+      lte: new Date(updated_at_end),
+    };
+  }
+
+  return query_obj;
 };
 
 router.post(
@@ -436,7 +452,9 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('deleted').toBoolean().default(false),
-    query('processed').toBoolean().optional(),
+    query('has_workflows').toBoolean().optional(),
+    query('has_derived_data').toBoolean().optional(),
+    query('has_source_data').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
     query('is_duplicate').toBoolean().optional(),
@@ -445,10 +463,16 @@ router.get(
       .optional(),
     query('name').notEmpty().escape().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
-    query('limit').isInt().toInt().optional(),
-    query('offset').isInt().toInt().optional(),
-    query('sortBy').isObject().optional(),
     query('bundle').optional().toBoolean(),
+    query('created_at_start').isISO8601().optional(),
+    query('created_at_end').isISO8601().optional(),
+    query('updated_at_start').isISO8601().optional(),
+    query('updated_at_end').isISO8601().optional(),
+    query('limit').isInt({ min: 1 }).toInt().optional(), // optional because watch script needs all datasets at once
+    query('offset').isInt({ min: 0 }).toInt().optional(),
+    query('sort_by').default('updated_at'),
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('match_name_exact').toBoolean().optional().default(true),
     query('include_action_items').optional().toBoolean(),
     query('include_duplications').optional().toBoolean(),
     query('include_states').toBoolean().optional(),
@@ -456,25 +480,17 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
-    const sortBy = req.query.sortBy || {};
-
-    const query_obj = buildQueryObject({
-      deleted: req.query.deleted,
-      processed: req.query.processed,
-      archived: req.query.archived,
-      staged: req.query.staged,
-      is_duplicate: req.query.is_duplicate || false,
-      type: req.query.type,
-      name: req.query.name,
-      days_since_last_staged: req.query.days_since_last_staged,
-    });
+    const query_obj = buildQueryObject(req.query);
 
     const filterQuery = { where: query_obj };
+    const orderBy = {
+      [req.query.sort_by]: req.query.sort_order,
+    };
     const datasetRetrievalQuery = {
       skip: req.query.offset,
       take: req.query.limit,
       ...filterQuery,
-      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
+      orderBy,
       include: {
         ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
@@ -544,6 +560,8 @@ router.get(
     query('prev_task_runs').toBoolean().default(false),
     query('only_active').toBoolean().default(false),
     query('bundle').optional().toBoolean(),
+    query('include_projects').optional().toBoolean(),
+    query('initiator').optional().toBoolean(),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
   ]),
@@ -561,6 +579,8 @@ router.get(
       prev_task_runs: req.query.prev_task_runs,
       only_active: req.query.only_active,
       bundle: req.query.bundle || false,
+      includeProjects: req.query.include_projects || false,
+      initiator: req.query.initiator || false,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
     });
@@ -576,15 +596,38 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('ingestion_space').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    // #swagger.description = 'workflow_id is optional. If the request body has
-    // workflow_id, a new relation is created between dataset and given
-    // workflow_id'
+    /*
+    * #swagger.description = 'workflow_id is optional. If the request body has
+    * workflow_id,
+        a new relation is created between dataset and given workflow_id'
+    */
+    const {
+      workflow_id, state, ingestion_space, data,
+    } = req.body;
 
-    const { workflow_id, state, ...data } = req.body;
+    const { origin_path } = data;
+
+    // remove whitespaces from dataset name
+    data.name = data.name.split(' ').join('');
+
+    if (ingestion_space) {
+      // if dataset's origin_path is a restricted for dataset creation, throw
+      // error
+      const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+      const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+        const isMatch = pm(glob);
+        const matches = isMatch(origin_path, glob);
+        return matches.isMatch;
+      });
+      if (origin_path_is_restricted) {
+        return next(createError.Forbidden());
+      }
+    }
 
     if (data.is_duplicate) {
       next(createError.BadRequest('Created datasets cannot be duplicate.'));
@@ -841,6 +884,7 @@ router.post(
       data: {
         id: req.body.workflow_id,
         dataset_id: req.params.id,
+        initiator_id: req.user.id,
       },
     });
     res.sendStatus(200);
@@ -955,7 +999,7 @@ router.post(
     });
 
     const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
     return res.json(wf);
   }),
 );
@@ -1103,9 +1147,11 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const download_token = await authService.get_download_token(download_file_path);
-
       const url = new URL(download_file_path, config.get('download_server.base_url'));
+
+      // use url.pathname instead of download_file_path to deal with spaces in
+      // the file path oauth scope cannot contain spaces
+      const download_token = await authService.get_download_token(url.pathname);
       res.json({
         url: url.href,
         bearer_token: download_token.accessToken,

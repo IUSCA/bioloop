@@ -1,5 +1,6 @@
 <template>
   <AutoComplete
+    v-model:search-text="searchText"
     :data="users"
     :filter-fn="filterFn"
     placeholder="Search users by name, username, or email"
@@ -17,6 +18,7 @@ import userService from "@/services/user";
 // const emit = defineEmits(["select"]);
 
 const users = ref([]);
+const searchText = ref("");
 
 const filterFn = (text) => (user) => {
   const _text = text.toLowerCase();
@@ -28,6 +30,6 @@ const filterFn = (text) => (user) => {
 };
 
 userService.getAll().then((data) => {
-  users.value = data;
+  users.value = data.users;
 });
 </script>

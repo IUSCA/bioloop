@@ -4,12 +4,16 @@
     :search-results="datasets"
     :selected-results="props.selectedResults"
     :search-result-count="totalResultCount"
+    :selectMode="props.selectMode"
     placeholder="Search Datasets by name"
-    selected-label="Datasets to assign"
+    :selected-label="props.selectedLabel"
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
+    :show-error="props.showError"
+    :error="props.error"
+    :messages="props.messages"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -21,6 +25,7 @@
   >
     <template #filters>
       <va-button-dropdown
+        v-if="!props.datasetType"
         :label="`Filters${activeCountText}`"
         :close-on-content-click="false"
       >
@@ -31,10 +36,17 @@
       </va-button-dropdown>
     </template>
 
+    <template #name="slotProps">
+      <va-popover placement="top" :message="slotProps['value'].raw">
+        {{ slotProps["value"].formatted }}
+      </va-popover>
+    </template>
+
     <template #type="slotProps">
       <DatasetType
-        :type="slotProps['value']"
-        :show-icon="!(breakpoint.sm || breakpoint.xs)"
+        :type="slotProps['value'].raw"
+        :show-icon="true"
+        :show-type="false"
       />
     </template>
   </SearchAndSelect>
@@ -42,16 +54,17 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
-import { date } from "@/services/datetime";
-import { formatBytes, lxor } from "@/services/utils";
-import { useBreakpoint } from "vuestic-ui";
 import toast from "@/services/toast";
 import _ from "lodash";
+import { lxor } from "@/services/utils";
 
-const NAME_TRIM_THRESHOLD = 13;
+const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
+  datasetType: {
+    type: String,
+  },
   selectedResults: {
     type: Array,
     default: () => [],
@@ -60,13 +73,30 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  selectMode: {
+    type: String,
+    default: () => "multiple",
+  },
+  showError: {
+    type: Boolean,
+    default: false,
+  },
+  error: {
+    type: String,
+  },
+  selectedLabel: {
+    type: String,
+    default: () => "Selected Datasets",
+  },
+  messages: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(["loading", "loaded"]);
 
 const loadingResources = inject("loadingResources");
-
-const breakpoint = useBreakpoint();
 
 const page = ref(1);
 const skip = computed(() => {
@@ -96,39 +126,21 @@ const primaryColumns = computed(() => {
     {
       key: "name",
       label: "Name",
-      width: props.columnWidths.name,
+      width: props.columnWidths?.name,
       formatFn: trimName,
+      slotted: true,
     },
     {
       key: "type",
       label: "Type",
       slotted: true,
-      width: props.columnWidths.type,
-    },
-  ];
-});
-
-const secondaryColumns = computed(() => {
-  return [
-    {
-      key: "size",
-      label: "Size",
-      formatFn: (val) => formatBytes(val),
-      width: props.columnWidths.size,
-    },
-    {
-      key: "created_at",
-      label: "Registered On",
-      formatFn: (val) => date(val),
-      width: props.columnWidths.created_at,
+      width: props.columnWidths?.type,
     },
   ];
 });
 
 const retrievedDatasetColumns = computed(() => {
-  return breakpoint.sm || breakpoint.xs
-    ? primaryColumns.value
-    : primaryColumns.value.concat(secondaryColumns.value);
+  return primaryColumns.value;
 });
 
 const selectedDatasetColumns = computed(() =>
@@ -148,15 +160,21 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
-  return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
-    ? {
-        type: checkboxes.value.rawData
-          ? "RAW_DATA"
-          : checkboxes.value.dataProduct
-            ? "DATA_PRODUCT"
-            : undefined,
-      }
-    : undefined;
+  if (props.datasetType) {
+    return {
+      type: props.datasetType,
+    };
+  } else {
+    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+      ? {
+          type: checkboxes.value.rawData
+            ? "RAW_DATA"
+            : checkboxes.value.dataProduct
+              ? "DATA_PRODUCT"
+              : undefined,
+        }
+      : undefined;
+  }
 });
 
 const batchingQuery = computed(() => {

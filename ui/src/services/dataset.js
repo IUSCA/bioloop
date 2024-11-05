@@ -22,35 +22,9 @@ class DatasetService {
    * @param include_states Boolean field to include dataset's state history
    * @returns          Object containing matching datasets, and count of matching datasets
    */
-  getAll({
-    deleted = null,
-    processed = null,
-    archived = null,
-    staged = null,
-    type = null,
-    name = null,
-    limit = null,
-    offset = null,
-    sortBy = null,
-    is_duplicate = false,
-    include_action_items = false,
-    include_states = false,
-  } = {}) {
+  getAll(params) {
     return api.get("/datasets", {
-      params: {
-        deleted,
-        processed,
-        archived,
-        staged,
-        type,
-        name,
-        limit,
-        offset,
-        sortBy,
-        is_duplicate,
-        include_action_items,
-        include_states,
-      },
+      params,
     });
   }
 
@@ -62,6 +36,8 @@ class DatasetService {
     prev_task_runs = false,
     only_active = false,
     bundle = false,
+    include_projects = false,
+    initiator = false,
     include_duplications = false,
     include_states = false,
     include_action_items = false,
@@ -74,6 +50,8 @@ class DatasetService {
         prev_task_runs,
         only_active,
         bundle,
+        include_projects,
+        initiator,
         include_duplications,
         include_states,
         include_action_items,
@@ -168,6 +146,14 @@ class DatasetService {
         max_file_size: maxSize,
       },
     });
+  }
+
+  create_dataset(data) {
+    return api.post("/datasets", data);
+  }
+
+  initiate_workflow_on_dataset({ dataset_id, workflow }) {
+    return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
   }
 
   getActionItem({ action_item_id } = {}) {
