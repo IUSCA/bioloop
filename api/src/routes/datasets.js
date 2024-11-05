@@ -342,28 +342,18 @@ router.post(
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('');
 
-    // if dataset's origin_path is a restricted for dataset creation, throw
-    // error
-    const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
-    const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
-      const isMatch = pm(glob);
-      const matches = isMatch(origin_path, glob);
-      return matches.isMatch;
-    });
-
-    if (origin_path_is_restricted) {
-      return next(createError.Forbidden());
-    }
-
-    // create workflow association
-    if (workflow_id) {
-      data.workflows = {
-        create: [
-          {
-            id: workflow_id,
-          },
-        ],
-      };
+    if (ingestion_space) {
+      // if dataset's origin_path is a restricted for dataset creation, throw
+      // error
+      const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+      const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+        const isMatch = pm(glob);
+        const matches = isMatch(origin_path, glob);
+        return matches.isMatch;
+      });
+      if (origin_path_is_restricted) {
+        return next(createError.Forbidden());
+      }
     }
 
     // create workflow association
@@ -740,13 +730,14 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const url = new URL(download_file_path, config.get('download_server.base_url'));
-
+      const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
+
+      const downloadUrl = new URL(`download/${download_file_path}`, config.get('download_server.base_url'));
       res.json({
-        url: url.href,
+        url: downloadUrl.href,
         bearer_token: download_token.accessToken,
       });
     } else {

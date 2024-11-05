@@ -12,7 +12,7 @@
     @cancel="hide"
   >
     <va-inner-loading :loading="loading">
-      <div class="w-96">
+      <div>
         <va-textarea
           label="Description"
           v-model="description"

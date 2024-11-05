@@ -10,7 +10,7 @@
   >
     <va-inner-loading
       :loading="loading"
-      class="sm:min-h-[50vh] sm:max-h-[65vh]"
+      class="sm:min-h-[50vh] sm:max-h-[50vh] min-h-[65vh] max-h-[65vh]"
     >
       <ProjectUsersForm />
     </va-inner-loading>

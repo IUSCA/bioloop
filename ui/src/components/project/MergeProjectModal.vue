@@ -1,5 +1,6 @@
 <template>
   <va-modal
+    data-testid="merge-projects-modal"
     v-model="visible"
     title="Merge Projects"
     fixed-layout
