@@ -31,7 +31,7 @@
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
   },
   "upload": {
-    "path": "UPLOADS_DIR"
+    "path": "UPLOAD_DIR"
   },
   "e2e": {
     "users": {
