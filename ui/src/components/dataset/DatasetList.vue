@@ -240,7 +240,8 @@ const delete_modal = ref({
 const searchModal = ref(null);
 const total_results = ref(0);
 
-// used for OFFSET clause in the SQL used to retrieve the next paginated batch of results
+// used for OFFSET clause in the SQL used to retrieve the next paginated batch
+// of results
 const offset = computed(() => (query.value.page - 1) * query.value.page_size);
 
 useQueryPersistence({
@@ -382,7 +383,8 @@ watch(
     if (query.value.page === 1) {
       fetch_items();
     } else {
-      // change current page to 1 triggers the watch on currPage and fetches items
+      // change current page to 1 triggers the watch on currPage and fetches
+      // items
       query.value.page = 1;
     }
   },
@@ -404,7 +406,8 @@ const handleMainFilter = useDebounceFn((value) => {
 }, 300);
 
 function handleSearch() {
-  // clear the search input when search is emitted either from filter chips or from search modal
+  // clear the search input when search is emitted either from filter chips or
+  // from search modal
   params.value.inclusive_query = null;
   if (query.value.page === 1) {
     fetch_items();

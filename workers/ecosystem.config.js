@@ -69,5 +69,30 @@ module.exports = {
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
     },
+    // {
+    //   name: "populate_bundles",
+    //   script: "python",
+    //   args: "-u -m workers.scripts.populate_bundles",
+    //   watch: false,
+    //   interpreter: "",
+    //   log_date_format: "YYYY-MM-DD HH:mm Z",
+    //   error_file: "../logs/workers/populate_bundles.err",
+    //   out_file: "../logs/workers/populate_bundles.log",
+    //   autorestart: false,
+    // },
+    {
+      name: "manage_pending_dataset_uploads",
+      script: "python",
+      args: "-u -m workers.scripts.manage_pending_dataset_uploads",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/workers/manage_pending_dataset_uploads.err",
+      out_file: "../logs/workers/manage_pending_dataset_uploads.log",
+      cron_restart: "00 07 * * *",
+      autorestart: false,
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
+    }
   ]
 }

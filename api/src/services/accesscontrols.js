@@ -55,6 +55,12 @@ const grantsObject = {
     fs: {
       'read:any': ['*'],
     },
+    upload: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 
   // user role permissions
@@ -126,6 +132,11 @@ const grantsObject = {
     },
     fs: {
       'read:any': ['*'],
+    },
+    upload: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
     },
   },
 };

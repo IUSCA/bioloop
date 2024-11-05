@@ -1,5 +1,4 @@
 const fsPromises = require('fs/promises');
-
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
@@ -18,6 +17,7 @@ const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -32,8 +32,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -238,7 +238,7 @@ router.get(
       ...filterQuery,
       orderBy,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
@@ -290,6 +290,7 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
+    query('include_upload_log').toBoolean().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -307,7 +308,9 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
+      include_upload_log: req.query.include_upload_log,
     });
+
     res.json(dataset);
   }),
 );
@@ -377,7 +380,7 @@ router.post(
     const dataset = await prisma.dataset.create({
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     });
     res.json(dataset);
@@ -431,7 +434,7 @@ router.patch(
       },
       data,
       include: {
-        ...datasetService.INCLUDE_WORKFLOWS,
+        ...CONSTANTS.INCLUDE_WORKFLOWS,
         source_datasets: true,
         derived_datasets: true,
       },
@@ -570,7 +573,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
@@ -727,13 +730,14 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const url = new URL(download_file_path, config.get('download_server.base_url'));
-
+      const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
+
+      const downloadUrl = new URL(`download/${download_file_path}`, config.get('download_server.base_url'));
       res.json({
-        url: url.href,
+        url: downloadUrl.href,
         bearer_token: download_token.accessToken,
       });
     } else {

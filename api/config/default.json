@@ -44,6 +44,24 @@
       "client_id": "",
       "client_secret": "",
       "scope_prefix": "download_file:"
+    },
+    "upload": {
+      "scope_prefix": "upload_file:"
+    }
+  },
+  "upload": {
+    "path": "",
+    "types": {
+      "DATASET": "DATASET"
+    },
+    "status": {
+      "UPLOADING": "UPLOADING",
+      "UPLOAD_FAILED": "UPLOAD_FAILED",
+      "UPLOADED": "UPLOADED",
+      "PROCESSING": "PROCESSING",
+      "PROCESSING_FAILED": "PROCESSING_FAILED",
+      "COMPLETE": "COMPLETE",
+      "FAILED": "FAILED"
     }
   },
   "download_server": {
@@ -100,6 +118,14 @@
         {
           "name": "delete",
           "task": "delete_dataset"
+        }
+      ]
+    },
+    "process_dataset_upload": {
+      "steps": [
+        {
+          "name": "Process Dataset Upload",
+          "task": "process_dataset_upload"
         }
       ]
     }

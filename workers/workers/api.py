@@ -149,11 +149,17 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str, files: bool = False, bundle: bool = False):
+def get_dataset(dataset_id: str,
+                files: bool = False,
+                bundle: bool = False,
+                include_upload_log: bool = False,
+                workflows: bool = False):
     with APIServerSession() as s:
         payload = {
             'files': files,
-            'bundle': bundle
+            'bundle': bundle,
+            'workflows': workflows,
+            'include_upload_log': include_upload_log
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 
@@ -239,6 +245,28 @@ def get_all_workflows():
         r = s.get('workflows/current')
         r.raise_for_status()
         return r.json()
+
+
+def get_upload_log(upload_log_id: str):
+    with APIServerSession() as s:
+        r = s.get(f'uploads/{upload_log_id}')
+        r.raise_for_status()
+        return r.json()
+
+
+def get_upload_logs(upload_type: str):
+    with APIServerSession() as s:
+        r = s.get(f'uploads', params={
+            'upload_type': upload_type
+        })
+        r.raise_for_status()
+        return r.json()
+
+
+def update_upload_log(upload_log_id, log_data):
+    with APIServerSession() as s:
+        r = s.patch(f'uploads/{upload_log_id}', json=log_data)
+        r.raise_for_status()
 
 
 if __name__ == '__main__':

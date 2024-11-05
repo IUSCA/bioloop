@@ -32,6 +32,7 @@ services:
       network:
         ipv4_address: 172.19.0.2
 
+
   postgres:
     image: postgres:14.5
     restart: unless-stopped

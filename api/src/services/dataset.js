@@ -9,45 +9,11 @@ const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
+const {
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
+} = require('../constants');
 
 const prisma = new PrismaClient();
-
-const INCLUDE_STATES = {
-  states: {
-    select: {
-      state: true,
-      timestamp: true,
-      metadata: true,
-    },
-    orderBy: {
-      timestamp: 'desc',
-    },
-  },
-};
-
-const INCLUDE_WORKFLOWS = {
-  workflows: {
-    select: {
-      id: true,
-    },
-  },
-};
-
-const INCLUDE_AUDIT_LOGS = {
-  audit_logs: {
-    include: {
-      user: {
-        include: {
-          user_role: {
-            select: { roles: true },
-          },
-        },
-      },
-    },
-  },
-};
-
-const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
@@ -134,6 +100,7 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
+  include_upload_log = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -167,6 +134,17 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
+      dataset_upload_log: include_upload_log ? {
+        include: {
+          upload_log: {
+            select: {
+              id: true,
+              files: true,
+            },
+          },
+        },
+      } : false,
+      // dataset_upload_log: true,
     },
   });
   const dataset_workflows = dataset.workflows;
@@ -196,6 +174,7 @@ async function get_dataset({
     // eslint-disable-next-line no-param-reassign
     if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
   });
+
   return dataset;
 }
 
@@ -503,8 +482,6 @@ async function add_files({ dataset_id, data }) {
 
 module.exports = {
   soft_delete,
-  INCLUDE_STATES,
-  INCLUDE_WORKFLOWS,
   get_dataset,
   create_workflow,
   create_filetree,
