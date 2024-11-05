@@ -592,10 +592,10 @@ const evaluateChecksums = (filesToUpload) => {
 
 const updateToken = async (fileName) => {
   const currentToken = uploadToken.value;
-  const currentTokenDecoded = jwtDecode(currentToken);
-  const lastUploadedFileName = currentTokenDecoded.scope.slice(
-    config.upload.scope_prefix.length,
-  );
+  const currentTokenDecoded = currentToken ? jwtDecode(currentToken) : null;
+  const lastUploadedFileName = currentTokenDecoded
+    ? currentTokenDecoded.scope.slice(config.upload.scope_prefix.length)
+    : null;
 
   await auth.onFileUpload({
     fileName,
