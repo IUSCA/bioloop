@@ -1,7 +1,8 @@
 const _ = require('lodash');
 const { test, expect } = require('@playwright/test');
-
 const config = require('config');
+
+const { createNotification, deleteNotifications } = require('../../../../api/notification');
 
 // These tests will be skipped if
 // config.enabledFeatures.notifications.enabledRoles === []
@@ -12,18 +13,49 @@ const NOTIFICATION_LABELS = _.range(NUMBER_OF_NOTIFICATIONS)
 const NOTIFICATION_TEXTS = _.range(NUMBER_OF_NOTIFICATIONS)
   .map((e, i) => `Notification Text ${i + 1}`);
 
-test.describe.configure({ mode: 'serial' });
+const notificationBadgeLocator = (page) => page.getByTestId('notification-count')
+  .locator('span.va-badge__text');
+
+const notificationMenuItemLocator = (page) => page.getByTestId('notification-menu-items')
+  .locator('tr.va-menu-item');
+
+const createNotifications = async ({ request, token }) => {
+  const created = [];
+  // eslint-disable-next-line no-plusplus
+  for (let i = 0; i < NUMBER_OF_NOTIFICATIONS; i++) {
+    // eslint-disable-next-line no-await-in-loop
+    const createNotificationResponse = await createNotification({
+      requestContext: request,
+      token,
+      data: {
+        label: NOTIFICATION_LABELS[i],
+        text: NOTIFICATION_TEXTS[i],
+      },
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const notification = await createNotificationResponse.json();
+    created.push(notification);
+  }
+  return created;
+};
 
 test.beforeEach(async ({ page }) => {
   // delete active notifications before each test
   await page.goto('/');
-  const { request } = page;
+  // const { request } = page;
   const token = await page.evaluate(() => localStorage.getItem('token'));
 
-  await deleteActiveNotifications(request, token);
+  // await deleteActiveNotifications(request, token);
+  await deleteNotifications({
+    requestContext: page.request,
+    params: {
+      status: 'CREATED',
+    },
+    token,
+  });
 });
 
-test.describe('Notifications', () => {
+test.describe.serial('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
     test.skip(config.enabledFeatures.notifications.enabledForRoles.length === 0, 'Notifications feature is not enabled');
 
@@ -73,55 +105,3 @@ test.describe('Notifications', () => {
     });
   });
 });
-
-const createNotifications = async ({ request, token }) => {
-  const created = [];
-  // eslint-disable-next-line no-plusplus
-  for (let i = 0; i < NUMBER_OF_NOTIFICATIONS; i++) {
-    // eslint-disable-next-line no-await-in-loop
-    const notification = await createNotification(
-      {
-        request,
-        token,
-        label: NOTIFICATION_LABELS[i],
-        text: NOTIFICATION_TEXTS[i],
-      },
-    );
-    created.push(notification);
-  }
-
-  return created;
-};
-
-const notificationBadgeLocator = (page) => page.getByTestId('notification-count')
-  .locator('span.va-badge__text');
-
-const notificationMenuItemLocator = (page) => page.getByTestId('notification-menu-items')
-  .locator('tr.va-menu-item');
-
-const createNotification = async ({
-  request, token, label, text,
-}) => {
-  const createResponse = await request.post(`${config.apiBasePath}/notifications`, {
-    data: {
-      label,
-      text,
-    },
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    ignoreHTTPSErrors: true,
-  });
-  const createdNotification = await createResponse.json();
-  return createdNotification;
-};
-
-const deleteActiveNotifications = async (request, token) => {
-  const deleteResponse = await request.delete(`${config.apiBasePath}/notifications?status=CREATED`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    ignoreHTTPSErrors: true,
-  });
-  await deleteResponse.json();
-};

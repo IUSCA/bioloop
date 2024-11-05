@@ -116,12 +116,14 @@ class Register:
 
     def register_candidate(self, candidate: Path):
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
-        dataset = {
-            'name': slugify_(candidate.name),
-            'type': self.dataset_type,
-            'origin_path': str(candidate.resolve()),
+        dataset_payload = {
+            'data': {
+                'name': slugify_(candidate.name),
+                'type': self.dataset_type,
+                'origin_path': str(candidate.resolve()),
+            }
         }
-        created_dataset = api.create_dataset(dataset)
+        created_dataset = api.create_dataset(dataset_payload)
         self.run_workflows(created_dataset)
 
     def run_workflows(self, dataset):

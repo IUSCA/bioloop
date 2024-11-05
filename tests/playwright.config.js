@@ -47,6 +47,7 @@ module.exports = {
 
     /* Configure projects for major browsers */
     projects: [
+      //   todo - organize tests by role type
       {
         name: 'admin_login',
         testMatch: path.join(__dirname, '/tests/setup/admin_login.setup.js'),
@@ -60,39 +61,46 @@ module.exports = {
         testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
       },
       {
-        name: 'unauthenticated_views',
+        name: 'unauthenticated',
         use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/unauthenticated/*.spec.js',
+        testMatch: '/view/unauthenticated/project.spec.js',
       },
       {
-        name: 'admin_views',
+        name: 'admin_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/admin_*_view.spec.js',
+        testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
+      },
+
+      {
+        name: 'operator_sidebar',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
       },
       {
-        name: 'user_views',
+        name: 'user_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
-        testMatch: '/view/authenticated/user_*_view.spec.js',
+        testMatch: '/view/authenticated/sidebar/user_role_sidebar_view.spec.js',
       },
       {
         name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
       },
       {
         name: 'operator_notifications',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['operator_login', 'admin_notifications'],
-        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+        dependencies: ['admin_notifications', 'operator_login'],
+        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
       },
       {
         name: 'user_notifications',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
-        dependencies: ['operator_login'],
-        testMatch: '/view/authenticated/notifications/notifications_user.spec.js',
+        dependencies: ['user_login'],
+        testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
       },
       {
         name: 'admin_user_management',
@@ -103,8 +111,8 @@ module.exports = {
       {
         name: 'operator_user_management',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['operator_login', 'admin_notifications'],
-        testMatch: '/view/authenticated/notifications/notifications.spec.js',
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/userManagement/*.spec.js',
       },
       {
         name: 'project',

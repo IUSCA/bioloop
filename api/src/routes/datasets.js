@@ -342,28 +342,18 @@ router.post(
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('');
 
-    // if dataset's origin_path is a restricted for dataset creation, throw
-    // error
-    const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
-    const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
-      const isMatch = pm(glob);
-      const matches = isMatch(origin_path, glob);
-      return matches.isMatch;
-    });
-
-    if (origin_path_is_restricted) {
-      return next(createError.Forbidden());
-    }
-
-    // create workflow association
-    if (workflow_id) {
-      data.workflows = {
-        create: [
-          {
-            id: workflow_id,
-          },
-        ],
-      };
+    if (ingestion_space) {
+      // if dataset's origin_path is a restricted for dataset creation, throw
+      // error
+      const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+      const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+        const isMatch = pm(glob);
+        const matches = isMatch(origin_path, glob);
+        return matches.isMatch;
+      });
+      if (origin_path_is_restricted) {
+        return next(createError.Forbidden());
+      }
     }
 
     // create workflow association
