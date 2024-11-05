@@ -162,8 +162,8 @@ export const useAuthStore = defineStore("auth", () => {
   const getTheme = () => user.value.theme;
 
   const onFileUpload = async ({ fileName, willRefreshToken = false }) => {
-    const payload = jwtDecode(uploadToken.value);
-    const expiresAt = new Date(payload.exp * 1000);
+    const payload = uploadToken.value ? jwtDecode(uploadToken.value) : null;
+    const expiresAt = payload ? new Date(payload.exp * 1000) : null;
     const now = new Date();
 
     let willRefreshUploadToken = willRefreshToken;
