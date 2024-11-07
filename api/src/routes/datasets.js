@@ -30,13 +30,7 @@ const dataset_state_check = asyncHandler(async (req, res, next) => {
     where: {
       id: req.params.id,
     },
-    include: {
-      states: {
-        orderBy: {
-          timestamp: 'desc',
-        },
-      },
-    },
+    ...CONSTANTS.INCLUDE_STATES,
   });
 
   const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
@@ -64,11 +58,7 @@ const state_write_check = asyncHandler(async (req, res, next) => {
       id: parseInt(req.params.id, 10),
     },
     include: {
-      states: {
-        orderBy: {
-          timestamp: 'desc',
-        },
-      },
+      ...CONSTANTS.INCLUDE_STATES,
     },
   });
 
@@ -170,11 +160,7 @@ router.patch(
         id: req.params.id,
       },
       include: {
-        states: {
-          orderBy: {
-            timestamp: 'desc',
-          },
-        },
+        ...CONSTANTS.INCLUDE_STATES,
       },
     });
 
@@ -244,23 +230,8 @@ router.get(
         ingestion_checks: true,
         dataset: {
           include: {
-            states: {
-              orderBy: {
-                timestamp: 'desc',
-              },
-            },
-            duplicated_from: {
-              include: {
-                original_dataset: true,
-                duplicate_dataset: true,
-              },
-            },
-            duplicated_by: {
-              include: {
-                duplicate_dataset: true,
-                original_dataset: true,
-              },
-            },
+            ...CONSTANTS.INCLUDE_STATES,
+            ...CONSTANTS.INCLUDE_DATASET_DUPLICATION_DETAILS,
           },
         },
       },
@@ -497,7 +468,7 @@ router.get(
         bundle: req.query.bundle || false,
         action_items: req.query.include_action_items || false,
         ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
-        ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DUPLICATIONS }),
+        ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DATASET_DUPLICATION_DETAILS }),
       },
     };
 
@@ -1211,7 +1182,7 @@ router.post(
       duplicate_dataset = await datasetDuplicationService.initiate_duplicate_acceptance(
         {
           duplicate_dataset_id: req.params.id,
-          accepted_by_id: req.user.id,
+          accepted_by_user_id: req.user.id,
         },
       );
     } catch (err) {
@@ -1241,7 +1212,7 @@ router.post(
       duplicate_dataset = await datasetDuplicationService.initiate_duplicate_rejection(
         {
           duplicate_dataset_id: req.params.id,
-          rejected_by_id: req.user.id,
+          rejected_by_user_id: req.user.id,
         },
       );
     } catch (err) {

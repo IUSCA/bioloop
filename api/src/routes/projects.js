@@ -293,7 +293,7 @@ router.get(
         ...CONSTANTS.INCLUDE_WORKFLOWS,
         ...(req.query.include_dataset_states && CONSTANTS.INCLUDE_STATES),
         ...(req.query.include_dataset_duplications
-            && CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS),
+            && CONSTANTS.INCLUDE_DATASET_DUPLICATION_DETAILS),
         bundle: true,
         projects: {
           include: {

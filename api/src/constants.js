@@ -1,4 +1,4 @@
-const INCLUDE_DUPLICATIONS = {
+const INCLUDE_DATASET_DUPLICATION_DETAILS = {
   duplicated_from: {
     include: {
       duplicate_dataset: {
@@ -17,26 +17,6 @@ const INCLUDE_DUPLICATIONS = {
         },
       },
       original_dataset: true,
-    },
-  },
-};
-
-const DUPLICATION_PROCESSING_INCLUSIONS = {
-  duplicated_from: {
-    include: {
-      original_dataset: true,
-      duplicate_dataset: true,
-    },
-  },
-  duplicated_by: {
-    include: {
-      original_dataset: true,
-      duplicate_dataset: true,
-    },
-  },
-  states: {
-    orderBy: {
-      timestamp: 'desc',
     },
   },
 };
@@ -130,6 +110,5 @@ module.exports = {
   INCLUDE_AUDIT_LOGS,
   DONE_STATUSES,
   INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
-  INCLUDE_DUPLICATIONS,
-  DUPLICATION_PROCESSING_INCLUSIONS,
+  INCLUDE_DATASET_DUPLICATION_DETAILS,
 };

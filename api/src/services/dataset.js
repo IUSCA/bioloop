@@ -10,7 +10,7 @@ const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
-  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_DUPLICATIONS
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_DATASET_DUPLICATION_DETAILS,
 } = require('../constants');
 
 const prisma = new PrismaClient();
@@ -147,7 +147,7 @@ async function get_dataset({
         },
       } : false,
       // dataset_upload_log: true,
-      ...(include_duplications && INCLUDE_DUPLICATIONS),
+      ...(include_duplications && INCLUDE_DATASET_DUPLICATION_DETAILS),
       action_items: include_action_items ? {
         where: {
           active: true,
