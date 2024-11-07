@@ -12,8 +12,8 @@ const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
-const datasetService = require('../services/dataset');
 const CONSTANTS = require('../constants');
+const datasetService = require('../services/dataset');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -98,7 +98,8 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects.
-    // #swagger.description = admin and operator roles are allowed and user role is forbidden
+    // #swagger.description = admin and operator roles are allowed and user
+    // role is forbidden
     const { search, sort_order, sort_by } = req.query;
 
     const filters = search
@@ -237,8 +238,11 @@ router.get(
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all datasets associated with a project, with
     // optional params for filtering;
-    // #swagger.description = user role: can only see datasets if they have
-    // access to the project. operator, admin: can see any project's datasets
+    /*
+    * #swagger.description = user role:
+    * can only see datasets if they have access to the project.
+      operator, admin: can see any project's datasets
+    */
 
     const hasProjectAssociation = await projectService.has_project_assoc({
       projectId: req.params.id,
@@ -363,7 +367,8 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
-    // #swagger.summary = get all projects associated with a username with pagination.
+    // #swagger.summary = get all projects associated with a username with
+    // pagination.
     /* #swagger.description = user role: can only see their projects.
       operator, admin: can see anyone's projects
     */
@@ -525,9 +530,10 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = create a project
-    // #swagger.description = admin and operator roles are allowed and user
-    // role is forbidden
-
+    /*
+    * #swagger.description = admin and operator roles are allowed and user role
+    * is forbidden
+    */
     const { user_ids, dataset_ids, ...projectData } = req.body;
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
@@ -584,8 +590,10 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = merge multiple projects into a source project
-    // #swagger.description = admin and operator roles are allowed and user
-    // role is forbidden
+    /*
+    * #swagger.description = admin and operator roles are allowed and user role
+    * is forbidden
+    */
 
     // get source project
     const source_porject = await prisma.project.findFirstOrThrow({
@@ -668,7 +676,9 @@ router.put(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate users to a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    /*
+    * #swagger.description = admin and operator roles are allowed and user role
+    * is forbidden
     */
 
     // get project or send 404 if not found
@@ -719,7 +729,9 @@ router.put(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate contacts / external users to a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    /*
+    * #swagger.description = admin and operator roles are allowed and user role
+    * is forbidden
     */
 
     // get project or send 404 if not found
@@ -771,7 +783,9 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    /*
+     * #swagger.description = admin and operator roles are allowed and user
+     * role is forbidden
      */
 
     // get project or send 404 if not found
@@ -834,7 +848,9 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = update a project
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    /*
+     * #swagger.description = admin and operator roles are allowed and user
+     * role is forbidden
      */
 
     const data = _.flow([
@@ -877,7 +893,9 @@ router.delete(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = delete a project and all its associations
-    /* #swagger.description = admin and operator roles are allowed and user role is forbidden
+    /*
+    * #swagger.description = admin and operator roles are allowed and user role
+    * is forbidden
     */
 
     const deleted_project = await prisma.project.delete({

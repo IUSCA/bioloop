@@ -3,12 +3,17 @@ const exports = {
   // vite server redirects traffic on starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
+  uploadApiBasePath:
+    import.meta.env.VITE_UPLOAD_API_BASE_PATH || "https://localhost",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   googleReturn:
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
-  refreshTokenTMinusSeconds: 300,
+  refreshTokenTMinusSeconds: {
+    appToken: 300,
+    uploadToken: 5,
+  },
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
   contact: {
@@ -112,6 +117,19 @@ const exports = {
         import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
         "/project/space/restricted",
       key: "project",
+    },
+  },
+  upload: {
+    scope_prefix: "upload_file:",
+    types: { DATASET: "DATASET" },
+    status: {
+      UPLOADING: "UPLOADING",
+      UPLOAD_FAILED: "UPLOAD_FAILED",
+      UPLOADED: "UPLOADED",
+      PROCESSING: "PROCESSING",
+      PROCESSING_FAILED: "PROCESSING_FAILED",
+      COMPLETE: "COMPLETE",
+      FAILED: "FAILED",
     },
   },
   DATASET_STATES: {

@@ -51,6 +51,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
+            'upload': '/path/to/data_product/upload',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
@@ -74,6 +75,26 @@ config = {
         'minimum_dataset_size': ONE_GIGABYTE,
         'wait_between_stability_checks_seconds': FIVE_MINUTES,
         'poll_interval_seconds': 10
+    },
+    'upload': {
+        'UPLOAD_RETRY_THRESHOLD_HOURS': 72,
+        'types': {
+            'DATASET': 'DATASET'
+        },
+        'status': {
+            'UPLOADING': 'UPLOADING',
+            'UPLOAD_FAILED': 'UPLOAD_FAILED',
+            'UPLOADED': 'UPLOADED',
+            'PROCESSING': 'PROCESSING',
+            'PROCESSING_FAILED': 'PROCESSING_FAILED',
+            'COMPLETE': 'COMPLETE',
+            'FAILED': 'FAILED'
+        },
+    },
+    'DONE_STATUSES': {
+        'REVOKED': 'REVOKED',
+        'FAILURE': 'FAILURE',
+        'SUCCESS': 'SUCCESS'
     },
     'service_user': 'bioloopuser',
     'stage': {
@@ -181,6 +202,14 @@ config = {
                 {
                     'name': 'setup_download',
                     'task': 'setup_dataset_download'
+                }
+            ]
+        },
+        'process_dataset_upload': {
+            'steps': [
+                {
+                    'name': 'Process Dataset Upload',
+                    'task': 'process_dataset_upload'
                 }
             ]
         }

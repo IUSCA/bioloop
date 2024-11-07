@@ -139,7 +139,7 @@ The `SearchAndSelect` widget offers these features:
 2. Applying additional filters for the search
 3. Fetching results in batches via infinite-scrolling (the ability to load more results once the user has scrolled past
    the currently retrieved results)
-4. Selecting / unselecting individual or multiple entities.
+4. Selecting / unselecting individual entities, or multiple entities at once.
 5. Emitting events to make client aware of entities being selected/unselected, or of the search being reset.
 6. Load this widget with certain results pre-selected
 

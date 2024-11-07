@@ -16,12 +16,14 @@
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-lodash-fp": "2.2.0-a1",
     "git-hooks": "^1.1.10",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "cors": "^2.8.5"
   },
   "dependencies": {
     "axios": "^1.7.4",
     "config": "^3.3.9",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dotenv-safe": "^8.2.0",
     "express": "^4.21.1",
     "express-validator": "^7.0.1",
@@ -30,6 +32,8 @@
     "jwks-rsa": "^3.0.1",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "spark-md5": "^3.0.2",
     "winston": "^3.9.0"
   }
 }

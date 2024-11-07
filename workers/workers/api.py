@@ -160,12 +160,16 @@ def get_all_datasets(
 def get_dataset(dataset_id: str,
                 files: bool = False,
                 bundle: bool = False,
+                include_upload_log: bool = False,
+                workflows: bool = False,
                 include_duplications: bool = False,
                 include_action_items: bool = False):
     with APIServerSession() as s:
         payload = {
-            'bundle': bundle,
             'files': files,
+            'bundle': bundle,
+            'workflows': workflows,
+            'include_upload_log': include_upload_log
             'include_duplications': include_duplications,
             'include_action_items': include_action_items,
         }
@@ -304,6 +308,28 @@ def get_all_workflows():
         r = s.get('workflows/current')
         r.raise_for_status()
         return r.json()
+
+
+def get_upload_log(upload_log_id: str):
+    with APIServerSession() as s:
+        r = s.get(f'uploads/{upload_log_id}')
+        r.raise_for_status()
+        return r.json()
+
+
+def get_upload_logs(upload_type: str):
+    with APIServerSession() as s:
+        r = s.get(f'uploads', params={
+            'upload_type': upload_type
+        })
+        r.raise_for_status()
+        return r.json()
+
+
+def update_upload_log(upload_log_id, log_data):
+    with APIServerSession() as s:
+        r = s.patch(f'uploads/{upload_log_id}', json=log_data)
+        r.raise_for_status()
 
 
 if __name__ == '__main__':

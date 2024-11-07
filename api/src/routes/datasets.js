@@ -1,5 +1,4 @@
 const fsPromises = require('fs/promises');
-
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
@@ -279,8 +278,8 @@ router.get(
     query('type').isIn(config.dataset_types).optional(),
   ]),
   asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = 'Get summary statistics of datasets.'
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get summary statistics of datasets.'
     let result;
     let n_wf_result;
     if (req.query.type) {
@@ -562,6 +561,7 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
+    query('include_upload_log').toBoolean().default(false),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
   ]),
@@ -581,9 +581,11 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
+      include_upload_log: req.query.include_upload_log,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
     });
+
     res.json(dataset);
   }),
 );
@@ -1147,13 +1149,14 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const url = new URL(download_file_path, config.get('download_server.base_url'));
-
+      const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
+
+      const downloadUrl = new URL(`download/${download_file_path}`, config.get('download_server.base_url'));
       res.json({
-        url: url.href,
+        url: downloadUrl.href,
         bearer_token: download_token.accessToken,
       });
     } else {

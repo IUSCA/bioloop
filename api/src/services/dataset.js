@@ -9,7 +9,9 @@ const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
-const CONSTANTS = require('../constants');
+const {
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_DUPLICATIONS
+} = require('../constants');
 
 const prisma = new PrismaClient();
 
@@ -35,7 +37,7 @@ async function create_workflow(dataset, wf_name, initiator_id) {
   // this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
-    .filter((_wf) => !CONSTANTS.DONE_STATUSES.includes(_wf.status));
+    .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
 
   assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
 
@@ -98,9 +100,22 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
+  include_upload_log = false,
   include_duplications = false,
   include_action_items = false,
 }) {
+  const fileSelect = files ? {
+    select: {
+      path: true,
+      md5: true,
+    },
+    where: {
+      NOT: {
+        filetype: 'directory',
+      },
+    },
+  } : false;
+
   const workflow_include = initiator ? {
     workflows: {
       select: {
@@ -108,20 +123,31 @@ async function get_dataset({
         initiator: true,
       },
     },
-  } : CONSTANTS.INCLUDE_WORKFLOWS;
+  } : INCLUDE_WORKFLOWS;
 
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
-      ...(files && CONSTANTS.INCLUDE_FILES),
+      files: fileSelect,
       ...workflow_include,
-      ...CONSTANTS.INCLUDE_AUDIT_LOGS,
-      ...CONSTANTS.INCLUDE_STATES,
+      ...INCLUDE_AUDIT_LOGS,
+      ...INCLUDE_STATES,
       bundle,
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      ...(include_duplications && CONSTANTS.INCLUDE_DUPLICATIONS),
+      dataset_upload_log: include_upload_log ? {
+        include: {
+          upload_log: {
+            select: {
+              id: true,
+              files: true,
+            },
+          },
+        },
+      } : false,
+      // dataset_upload_log: true,
+      ...(include_duplications && INCLUDE_DUPLICATIONS),
       action_items: include_action_items ? {
         where: {
           active: true,
@@ -156,6 +182,7 @@ async function get_dataset({
     // eslint-disable-next-line no-param-reassign
     if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
   });
+
   return dataset;
 }
 
