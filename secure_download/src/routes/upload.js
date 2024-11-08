@@ -86,11 +86,4 @@ router.post(
   }),
 );
 
-router.get(
-  '/test',
-  (req, res) => {
-    res.json('upload hello changed');
-  },
-);
-
 module.exports = router;
