@@ -57,14 +57,14 @@ router.post(
       name, data_product_id, index, checksum, chunk_checksum,
     } = req.body;
 
-    const scopes = (req.token?.scope || '').split(' ');
+    const request_scope = req.token?.scope || '';
 
-    const matching_scopes = scopes.filter((scope) => scope === `${UPLOAD_SCOPE}:${name}`);
-    if (matching_scopes.length === 0) {
-      return next(createError.Forbidden('Expected one, but found no matching scopes'));
-    }
-    if (matching_scopes.length > 1) {
-      return next(createError.Forbidden('Expected one, but found multiple matching scopes'));
+    const hyphen_delimited_file_name = name.split(' ').join('-'); // replace whitespaces with hyphens
+    const expected_scope = `${UPLOAD_SCOPE}:${hyphen_delimited_file_name}`;
+
+    if (request_scope !== expected_scope) {
+      return next(createError.Forbidden(`Authorization token should have scope ${expected_scope} `
+          + `for the contents of file ${name} to be uploaded`));
     }
 
     if (!(data_product_id && checksum && chunk_checksum) || Number.isNaN(index)) {

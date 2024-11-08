@@ -63,9 +63,15 @@ Here, `dataset_id` is the unique id created for the dataset before the upload be
 
 ### 4.4 Access Control
 
-1. To verify that a user is authorized to initiate an upload, we perform role-based checking when our API receives a request to initiate an upload. This validation cannot be performed on the secure_upload NGINX server, since we only maintain access-control data on the API server.
-2. After verifying that the user is authorized to upload datasets, the client-side gets a token using the Signet service (with the appropriate scope for uploads), and attaches it to the Authorization header before sending the request to the File Upload Server to upload the file chunk.
-3. Each uploaded file is assigned a scope, which is a concatenation of the upload scope and the file name. The File Upload Server verifies that this is the scope of the received request before writing a file chunk to the filesystem.
+1. To verify that a user is authorized to initiate an upload, we perform role-based checking when our `/upload` API receives a request to initiate an upload. This validation cannot be performed on the secure_upload NGINX server, since we only maintain access-control data on the API server.
+2. After verifying that the user is authorized to upload datasets, the client requests a Bearer token from the Signet service, and attaches it to the Authorization header before sending a request to the `/upload` API to upload a file chunk.
+   - The scope included in the granted token contains the name of the file prefixed with the scope prefix `upload_file:`.
+   - If the name of the file being uploaded has spaces in it, the spaces are replaced by hyphens in the granted token's scope.
+3. Before the `/upload` endpoint accepts a file chunk that needs to be uploaded, it verifies that the scope contained in the Bearer token is the same as the expected scope. If these scopes do not match, the `/upload` API rejects the HTTP request.
+
+#### Example
+
+As an example, to upload file `my file.json`, the Bearer token that is used to call the `/upload` API file will be expected to have scope `upload_file:my-file.json`.
 
 ### 4.5 Status
 
