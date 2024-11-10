@@ -19,6 +19,7 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
 
 UPLOAD_RETRY_THRESHOLD_HOURS = config['upload']['UPLOAD_RETRY_THRESHOLD_HOURS']
 
+
 # todo - send notification to admin for when a dataset has been PROCESSING for >= 72 hours,
 # todo - send notification to admin for uploads that have been in state UPLOADED for more than 72 hours
 
@@ -33,26 +34,33 @@ def main():
         dataset_id = upload['dataset_upload']['dataset_id']
         logger.info(f"Processing upload {upload['id']} for dataset_id: {dataset_id}")
 
-        last_updated_time = datetime.fromisoformat(upload['last_updated'][:-1])
+        dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
+
+        upload_last_updated_time = datetime.fromisoformat(upload['last_updated'][:-1])
         current_time = datetime.now()
-        difference = (current_time - last_updated_time).total_seconds() / 3600
+        difference = (current_time - upload_last_updated_time).total_seconds() / 3600
 
         # retry processing this upload if it hasn't been updated in the last 72 hours
         if difference <= UPLOAD_RETRY_THRESHOLD_HOURS:
-            logger.info(f'Upload {upload["id"]} has been in state {upload["status"]} for {UPLOAD_RETRY_THRESHOLD_HOURS} hours.'
-                  f' Retrying processing of upload.')
-            dataset_id = upload['dataset_upload_log']['dataset_id']
-            # retry processing this upload
-            logger.info(f'Beginning workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for dataset {dataset_id}')
-            wf_body = wf_utils.get_wf_body(wf_name=PROCESS_DATASET_UPLOAD_WORKFLOW)
-            wf = Workflow(celery_app=celery_app, **wf_body)
-            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
-            wf.start(dataset_id)
+            logger.info(f'Upload {upload["id"]} has been in state {upload["status"]} for {difference} hours.'
+                        f' Retrying processing of upload.')
+            active_process_dataset_upload_wfs = [wf for wf in dataset['workflows'] if wf['name'] ==
+                                                 PROCESS_DATASET_UPLOAD_WORKFLOW]
+            if len(active_process_dataset_upload_wfs) > 0:
+                print(f"Workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} is already running for dataset {dataset_id}"
+                      f" (upload_log_id: {upload['id']})")
+            else:
+                # retry processing this upload
+                logger.info(f'Beginning workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for dataset {dataset_id}')
+                wf_body = wf_utils.get_wf_body(wf_name=PROCESS_DATASET_UPLOAD_WORKFLOW)
+                wf = Workflow(celery_app=celery_app, **wf_body)
+                api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+                wf.start(dataset_id)
         else:
             # mark uploads which could not be processed as FAILED and clean up their resources
             logger.info(
-                f"Upload id {upload['id']} has been in status {upload['status']} for more than"
-                f" ${UPLOAD_RETRY_THRESHOLD_HOURS} hours.")
+                f"Upload id {upload['id']} has been in status {upload['status']} for {difference} hours,"
+                f" which exceeds the threshold of ${UPLOAD_RETRY_THRESHOLD_HOURS} hours.")
             logger.info(f"Marking upload {upload['id']} as {config['upload']['status']['FAILED']}.")
 
             uploaded_dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset_id)
