@@ -95,7 +95,9 @@ const getUploadedDataProductPath = (datasetId) => path.join(
   'merged_chunks',
 );
 
-// Post a Dataset's upload log, files' info and the Dataset to the database - UI
+// - Create upload logs for the dataset being uploaded and its files.
+// - Register the dataset in the system
+// - Used by UI
 router.post(
   '/dataset',
   isPermittedTo('update'),
@@ -107,6 +109,7 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Create a record for a dataset upload'
+    // todo - add swagger docs for query parameters
 
     const {
       name, source_dataset_id, files_metadata,
@@ -125,7 +128,6 @@ router.post(
                 },
               }),
               name,
-              // origin_path: getUploadedDataProductPath(data_product_id),
               type: 'DATA_PRODUCT',
             },
           },
@@ -133,8 +135,8 @@ router.post(
       },
     };
 
-    const datasetUploadLog = await prisma.$transaction(async (tx) => {
-      const upload_log = await tx.upload_log.create({
+    const upload_log = await prisma.$transaction(async (tx) => {
+      const created_upload_log = await tx.upload_log.create({
         data: {
           status: config.upload.status.UPLOADING,
           user: {
@@ -156,7 +158,7 @@ router.post(
         include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
 
-      const uploadedDatasetId = upload_log.dataset_upload.dataset.id;
+      const uploadedDatasetId = created_upload_log.dataset_upload.dataset.id;
       await tx.dataset.update({
         where: { id: uploadedDatasetId },
         data: {
@@ -166,18 +168,19 @@ router.post(
 
       const updated_upload_log = await tx.upload_log.findUnique({
         where: {
-          id: upload_log.id,
+          id: created_upload_log.id,
         },
         include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
       return updated_upload_log;
     });
 
-    res.json(datasetUploadLog);
+    res.json(upload_log);
   }),
 );
 
-// Get an upload log - UI, worker
+// - Get an upload log
+// - Used by UI, workers
 router.get(
   '/:id',
   isPermittedTo('update'),
@@ -186,7 +189,7 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
-    // #swagger.summary = 'Retrieve past upload by id'
+    // #swagger.summary = 'Retrieve an upload log by id'
 
     const upload_log = await prisma.upload_log.findFirstOrThrow({
       where: { id: req.params.id },
@@ -196,7 +199,8 @@ router.get(
   }),
 );
 
-// Update an upload log and it's files - UI, workers
+// - Update the upload logs created for an uploaded entity or its files
+// - Used by UI, workers
 router.patch(
   '/:id',
   isPermittedTo('update'),
@@ -234,7 +238,8 @@ router.patch(
   }),
 );
 
-// Initiate the processing of uploaded files - worker
+// - Initiate the processing of uploaded files
+// - Used by workers
 router.post(
   '/:id/process',
   validate([
