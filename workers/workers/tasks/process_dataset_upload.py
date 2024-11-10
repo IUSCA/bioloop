@@ -66,6 +66,8 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         print(f'file_md5: {file_md5}')
         processing_error = evaluated_checksum != file_md5
 
+    raise Exception("test exception")
+
     return config['upload']['status']['PROCESSING_FAILED'] \
         if processing_error \
         else config['upload']['status']['COMPLETE']
@@ -179,7 +181,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
         active_integrated_wfs = [wf for wf in dataset['workflows'] if wf['name'] == INTEGRATED_WORKFLOW]
         if len(active_integrated_wfs) > 0:
-            print(f"Integrated workflow {INTEGRATED_WORKFLOW} is already for dataset {dataset_id} (upload_log_id: {upload_log_id})")
+            print(f"Workflow {INTEGRATED_WORKFLOW} is already running for dataset {dataset_id} (upload_log_id: {upload_log_id})")
         else:
             print(f"Beginning {INTEGRATED_WORKFLOW} workflow for dataset {dataset['id']} (upload_log_id: {upload_log_id})")
             integrated_wf_body = wf_utils.get_wf_body(wf_name=INTEGRATED_WORKFLOW)
