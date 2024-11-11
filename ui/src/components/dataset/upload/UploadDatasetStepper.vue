@@ -282,17 +282,15 @@ const stepIsPristine = computed(() => {
 });
 
 const removeFile = (index) => {
-  filesToUpload.value.splice(index, 1);
-  // clear selection state, once all files are removed
-  if (filesToUpload.value.length === 0) {
-    if (selectingFiles.value) {
+  if (selectingDirectory.value) {
+    selectingDirectory.value = false;
+    clearSelectedDirectoryToUpload();
+  } else if (selectingFiles.value) {
+    filesToUpload.value.splice(index, 1);
+    if (filesToUpload.value.length === 0) {
       selectingFiles.value = false;
-    } else if (selectingDirectory.value) {
-      selectingDirectory.value = false;
-      clearSelectedDirectoryToUpload({ clearDirectoryFiles: false });
     }
   }
-  //   set directory to null
 };
 
 const stringHasSpaces = (name) => {
