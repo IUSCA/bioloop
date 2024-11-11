@@ -63,6 +63,10 @@ const props = defineProps({
 const emit = defineEmits(["files-added", "directory-added"]);
 
 const onDirectorySelection = (e) => {
+  if (e.target.files.length === 0) {
+    return;
+  }
+
   const isWindows = (path) =>
     path.indexOf("/") === -1 && path.indexOf("\\") > 0;
   const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;
