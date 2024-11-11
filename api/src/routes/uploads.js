@@ -199,6 +199,42 @@ router.get(
   }),
 );
 
+router.post(
+  '/:id/cancel',
+  isPermittedTo('delete'),
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Cancel a pending upload'
+    const dataset = await prisma.dataset.findFirst({
+      where: {
+        id: req.params.id,
+      },
+    });
+    // const workflow = await datasetService.create_workflow(dataset,
+    // 'cancel_dataset_upload', req.user.id);
+
+    const [res1, res2] = await prisma.$transaction([
+      prisma.upload_log.delete({
+        where: {
+          id: req.params.id,
+        },
+      }),
+      prisma.dataset.delete({
+        where: {
+          id: dataset.id,
+        },
+      }),
+    ]);
+
+    console.log('res1:', res1);
+    console.log('res2:', res2);
+    res.json({ message: 'Upload cancelled' });
+  }),
+);
+
 // - Update the upload logs created for an uploaded entity or its files
 // - Used by UI, workers
 router.patch(

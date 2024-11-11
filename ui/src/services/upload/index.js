@@ -11,6 +11,10 @@ class UploadService {
     this.uploadApi.setToken(token);
   }
 
+  cancelUpload(upload_log_id) {
+    return api.post(`/uploads/${upload_log_id}/cancel`);
+  }
+
   getUploadLogs({
     status = null,
     upload_type = null,

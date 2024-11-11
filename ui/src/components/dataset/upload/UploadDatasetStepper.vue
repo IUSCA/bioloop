@@ -1011,7 +1011,7 @@ onMounted(() => {
   setFormErrors();
 });
 
-// show warning before user moves to a different route
+// show alert before user moves to a different route
 onBeforeRouteLeave(() => {
   return submitAttempted.value &&
     submissionStatus.value !== SUBMISSION_STATES.UPLOADED
@@ -1023,8 +1023,20 @@ onBeforeRouteLeave(() => {
 });
 
 onBeforeUnmount(() => {
-  // Cancels pending uploads and prompts cleanup activities before page unload
+  // todo - remove event listener
   uploadCancelled.value = true;
+  // todo - handle incomplete uploads on tab close
+  //  1. tab/window close
+  //  2. User choosing to simply type a different address in the URL bar and
+  // navigate elsewhere
+  //    - if can't detect, then:
+  //      - Keep polling for upload completion
+  //      - persist number of expected chunks in the upload before the upload
+  // begins. Keep polling for remaining chunks for some time, before canceling
+  // the upload.
+  //
+  // todo - handle cases where this call may fail
+  uploadService.cancelUpload(uploadLog.value.id);
 });
 </script>
 
