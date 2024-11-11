@@ -67,6 +67,7 @@ router.get(
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
         status,
+        type: upload_type,
         ...nameFilter,
       }),
     };
@@ -99,7 +100,7 @@ const getUploadedDataProductPath = (datasetId) => path.join(
 // - Register the dataset in the system
 // - Used by UI
 router.post(
-  '/dataset',
+  `/${config.upload.types.DATASET}`,
   isPermittedTo('update'),
   validate([
     body('name').escape().notEmpty().isLength({ min: 3 }),
@@ -109,7 +110,7 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Create a record for a dataset upload'
-    // todo - add swagger docs for query parameters
+    // todo - add swagger docs for query parameters, for 'upload_type'
 
     const {
       name, source_dataset_id, files_metadata,
@@ -144,6 +145,7 @@ router.post(
               id: req.user.id,
             },
           },
+          type: config.upload.types.DATASET,
           files: {
             create: files_metadata.map((file) => ({
               name: file.name,
@@ -191,10 +193,28 @@ router.get(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Retrieve an upload log by id'
 
-    const upload_log = await prisma.upload_log.findFirstOrThrow({
+    let upload_log = await prisma.upload_log.findFirstOrThrow({
       where: { id: req.params.id },
-      include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
     });
+    // todo - reading upload record twice - once to get the upload type and
+    //  once to get the actual upload log with all its inclusions, is not good
+    //  - HOW MUCH of these includes to I really need?
+    //  - Return { upload_log: {...type, entity: {...entity }
+    // -  Might be able to get awa with only returning the upload log itself,
+    // without any inclusions? Make it the client's responsible for determining
+    // the type?
+
+    // how to know the upload type without getting it from the upload log?
+
+    const upload_type = upload_log.type;
+    const isDatasetUpload = upload_type === config.upload.types.DATASET;
+    const upload_log_inclusions = isDatasetUpload ? INCLUDE_DATASET_UPLOAD_LOG_RELATIONS : undefined;
+
+    upload_log = await prisma.upload_log.findFirstOrThrow({
+      where: { id: req.params.id },
+      include: upload_log_inclusions,
+    });
+
     res.json(upload_log);
   }),
 );
@@ -208,30 +228,51 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Cancel a pending upload'
-    const dataset = await prisma.dataset.findFirst({
-      where: {
-        id: req.params.id,
-      },
-    });
-    // const workflow = await datasetService.create_workflow(dataset,
-    // 'cancel_dataset_upload', req.user.id);
 
-    const [res1, res2] = await prisma.$transaction([
-      prisma.upload_log.delete({
+    const upload_log = await prisma.upload_log.findFirstOrThrow({
+      where: { id: req.params.id },
+    });
+    const isDatasetUpload = upload_log.type === config.upload.types.DATASET;
+    const uploadLogInclusions = isDatasetUpload ? INCLUDE_DATASET_UPLOAD_LOG_RELATIONS : undefined;
+
+    let uploadedEntity;
+    let workflowName;
+    let workflowCreateFn;
+
+    if (isDatasetUpload) {
+      uploadedEntity = await prisma.dataset.findFirst({
         where: {
           id: req.params.id,
         },
-      }),
-      prisma.dataset.delete({
-        where: {
-          id: dataset.id,
-        },
-      }),
+      });
+      workflowName = 'cancel_dataset_upload';
+      workflowCreateFn = datasetService.create_workflow;
+    }
+
+    await workflowCreateFn(
+      uploadedEntity,
+      workflowName,
+      req.user.id,
+    );
+
+    const uploadedEntityPrismaDeletePromise = prisma.dataset.delete({
+      where: {
+        id: uploadedEntity.id,
+      },
+    });
+    const uploadLogPrismaDeletePromise = prisma.upload_log.delete({
+      where: {
+        id: req.params.id,
+      },
+      include: uploadLogInclusions,
+    });
+
+    const [deletedUpload] = await prisma.$transaction([
+      uploadLogPrismaDeletePromise,
+      uploadedEntityPrismaDeletePromise,
     ]);
 
-    console.log('res1:', res1);
-    console.log('res2:', res2);
-    res.json({ message: 'Upload cancelled' });
+    res.json(deletedUpload);
   }),
 );
 
@@ -254,11 +295,17 @@ router.patch(
       status,
     });
 
+    const upload_log = await prisma.upload_log.findFirstOrThrow({
+      where: { id: req.params.id },
+    });
+    const isDatasetUpload = upload_log.type === config.upload.types.DATASET;
+    const uploadLogInclusions = isDatasetUpload ? INCLUDE_DATASET_UPLOAD_LOG_RELATIONS : undefined;
+
     const updates = [];
     updates.push(prisma.upload_log.update({
       where: { id: req.params.id },
       data: update_query,
-      include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+      include: uploadLogInclusions,
     }));
     (files || []).forEach((f) => {
       updates.push(prisma.file_upload_log.update({
@@ -280,18 +327,23 @@ router.post(
   '/:id/process',
   validate([
     param('id').isInt().toInt(),
-    query('upload_type').isIn(Object.values(Object.values(config.upload.types))).optional(),
   ]),
   isPermittedTo('update'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
 
+    const upload_log = await prisma.upload_log.findFirstOrThrow({
+      where: { id: req.params.id },
+      include: { dataset_upload: true },
+    });
+    const upload_type = upload_log.type;
+
     // Conditionally handle different upload types
-    if (req.query.upload_type === config.upload.types.DATASET) {
+    if (upload_type === config.upload.types.DATASET) {
       const dataset = await prisma.dataset.findFirst({
         where: {
-          id: Number(req.params.id),
+          id: upload_log.dataset_upload.dataset_id,
         },
         include: {
           workflows: true,

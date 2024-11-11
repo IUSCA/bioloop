@@ -79,6 +79,11 @@ model dataset_file_hierarchy {
   @@index([child_id])
 }
 
+// // todo: all /upload endpoints should return upload_log: {uploaded_entity: {}}
+// model uploaded_entity {
+//
+// }
+
 model upload_log {
   id             Int                 @id @default(autoincrement())
   status         upload_status
@@ -87,7 +92,9 @@ model upload_log {
   updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
   user_id        Int
   user           user                @relation(fields: [user_id], references: [id])
+  type           upload_type
   dataset_upload dataset_upload_log?
+  //   entity uploaded_entity
 }
 
 model dataset_upload_log {
@@ -376,4 +383,9 @@ enum upload_status {
   PROCESSING_FAILED
   COMPLETE
   FAILED
+}
+
+enum upload_type {
+  // FILE
+  DATASET
 }

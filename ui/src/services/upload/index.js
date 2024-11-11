@@ -1,5 +1,6 @@
 import api from "../api";
 import UploadApi from "./uploadApi";
+import config from "@/config";
 
 class UploadService {
   constructor() {
@@ -34,7 +35,7 @@ class UploadService {
   }
 
   logDatasetUpload(data) {
-    return api.post("/uploads/dataset", data);
+    return api.post(`/uploads/${config.upload.types.DATASET}`, data);
   }
 
   updateUploadLog(upload_log_id, data) {
