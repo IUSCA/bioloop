@@ -425,11 +425,11 @@ const validateDatasetName = async () => {
 const clearSelectedDirectoryToUpload = ({
   clearDirectoryFiles = true,
 } = {}) => {
-  // clear files within the directory being deleted
+  // clear files within the directory being removed
   if (clearDirectoryFiles) {
     clearSelectedFilesToUpload();
   }
-  // clear directory being deleted
+  // clear directory being removed
   selectedDirectory.value = null;
   // clear directory name
   selectedDirectoryName.value = "";
