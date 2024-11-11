@@ -82,7 +82,8 @@
             "
             @directory-added="
               (directoryDetails) => {
-                clearSelectedFilesToUpload({ clearNameInput: true });
+                clearSelectedFilesToUpload();
+                datasetToUploadInputName = '';
                 setDirectory(directoryDetails);
                 isSubmissionAlertVisible = false;
                 setUploadedFileType(FILE_TYPE.DIRECTORY);
@@ -282,6 +283,16 @@ const stepIsPristine = computed(() => {
 
 const removeFile = (index) => {
   filesToUpload.value.splice(index, 1);
+  // clear selection state, once all files are removed
+  if (filesToUpload.value.length === 0) {
+    if (selectingFiles.value) {
+      selectingFiles.value = false;
+    } else if (selectingDirectory.value) {
+      selectingDirectory.value = false;
+      clearSelectedDirectoryToUpload({ clearDirectoryFiles: false });
+    }
+  }
+  //   set directory to null
 };
 
 const stringHasSpaces = (name) => {
@@ -413,19 +424,20 @@ const validateDatasetName = async () => {
   });
 };
 
-const clearSelectedDirectoryToUpload = () => {
+const clearSelectedDirectoryToUpload = ({
+  clearDirectoryFiles = true,
+} = {}) => {
   // clear files within the directory being deleted
-  clearSelectedFilesToUpload();
+  if (clearDirectoryFiles) {
+    clearSelectedFilesToUpload();
+  }
   // clear directory being deleted
   selectedDirectory.value = null;
   // clear directory name
   selectedDirectoryName.value = "";
 };
 
-const clearSelectedFilesToUpload = ({ clearNameInput = false } = {}) => {
-  if (clearNameInput) {
-    datasetToUploadInputName.value = "";
-  }
+const clearSelectedFilesToUpload = () => {
   filesToUpload.value = [];
 };
 
