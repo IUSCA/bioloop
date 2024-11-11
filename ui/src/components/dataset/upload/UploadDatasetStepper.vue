@@ -240,11 +240,13 @@ const formErrors = ref({
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.UPLOAD]: null,
 });
-const formHasErrors = computed(() => {
-  const errors = Object.values(formErrors.value);
-  return errors.some((error) => {
-    return error !== null;
-  });
+
+const stepHasErrors = computed(() => {
+  if (step.value === 0) {
+    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+  } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.UPLOAD];
+  }
 });
 
 const isAssignedSourceRawData = ref(true);
@@ -256,7 +258,7 @@ const isPreviousButtonDisabled = computed(() => {
 
 const isNextButtonDisabled = computed(() => {
   return (
-    formHasErrors.value ||
+    stepHasErrors.value ||
     submissionSuccess.value ||
     [
       SUBMISSION_STATES.PROCESSING,

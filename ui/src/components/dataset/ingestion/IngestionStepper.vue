@@ -228,7 +228,7 @@ const isLastStep = computed(() => {
 
 const isNextButtonDisabled = computed(() => {
   return (
-    formHasErrors.value ||
+    stepHasErrors.value ||
     submissionSuccess.value ||
     loadingResources.value ||
     searchingFiles.value ||
@@ -264,11 +264,15 @@ const formErrors = ref({
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
 });
-const formHasErrors = computed(() => {
-  const errors = Object.values(formErrors.value);
-  return errors.some((error) => {
-    return error !== null;
-  });
+// todo - test
+const stepHasErrors = computed(() => {
+  if (step.value === 0) {
+    return !!formErrors.value[STEP_KEYS.DIRECTORY];
+  } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+  } else {
+    return false;
+  }
 });
 
 const isFileSearchAutocompleteOpen = ref(false);

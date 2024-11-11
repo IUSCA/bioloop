@@ -88,7 +88,7 @@ router.get(
 
       fs.readdir(mounted_search_dir, {
         withFileTypes: true,
-      }, (err, files) => {
+      }, (_err, files) => {
         let filesData = files.map((f) => {
           const file = {
             name: f.name,
