@@ -191,8 +191,7 @@ import { jwtDecode } from "jwt-decode";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
-
-const isDirectory = ref(false);
+// const token = ref(useLocalStorage("token", ""));
 
 const SUBMISSION_STATES = {
   UNINITIATED: "Uninitiated",
@@ -347,6 +346,13 @@ const displayedFilesToUpload = ref([]);
 const datasetToUploadInputName = ref("");
 const selectedDirectory = ref(null);
 const selectedDirectoryName = ref("");
+const selectedDirectoryChunkCount = ref(0);
+const totalUploadedChunkCount = ref(0);
+const directoryUploadedChunksPercentage = computed(() => {
+  return Math.floor(
+    (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) * 100,
+  );
+});
 
 const step = ref(0);
 const uploadCancelled = ref(false);
@@ -558,6 +564,9 @@ const evaluateChecksums = (filesToUpload) => {
       if (!fileDetails.checksumsEvaluated) {
         const file = fileDetails.file;
         fileDetails.numChunks = Math.ceil(file.size / CHUNK_SIZE); // total number of fragments
+        if (selectingDirectory.value) {
+          selectedDirectoryChunkCount.value += fileDetails.numChunks;
+        }
 
         filePromises.push(
           new Promise((resolve, reject) => {
@@ -601,6 +610,7 @@ const updateToken = async (fileName) => {
     fileName,
     willRefreshToken: fileName !== lastUploadedFileName,
   });
+  // uploadService.setToken(token.value);
   uploadService.setToken(uploadToken.value);
 };
 
@@ -697,8 +707,10 @@ const uploadFileChunks = async (fileDetails) => {
       break;
     } else {
       const chunkUploadProgress = Math.trunc(((i + 1) / blockCount) * 100);
-      if (isDirectory.value) {
-        selectedDirectory.value.progress += chunkUploadProgress;
+      if (selectingDirectory.value) {
+        totalUploadedChunkCount.value += 1;
+        selectedDirectory.value.progress =
+          directoryUploadedChunksPercentage.value;
       } else {
         fileDetails.progress = chunkUploadProgress;
       }
@@ -913,7 +925,7 @@ const setFiles = (files) => {
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
-      progress: undefined,
+      progress: 0,
     });
   });
   displayedFilesToUpload.value = filesToUpload.value;
@@ -921,9 +933,6 @@ const setFiles = (files) => {
 
 // two files can't have the same name and path
 const setDirectory = (directoryDetails) => {
-  isDirectory.value = true;
-  // dataProductDirectory.value = directoryDetails;
-
   const directoryFiles = directoryDetails.files;
   let directorySize = 0;
   _.range(0, directoryFiles.length).forEach((i) => {
@@ -933,7 +942,7 @@ const setDirectory = (directoryDetails) => {
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
-      progress: undefined,
+      progress: 0,
       path: file.path,
     });
     directorySize += file.size;
@@ -942,7 +951,7 @@ const setDirectory = (directoryDetails) => {
     type: FILE_TYPE.DIRECTORY,
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
-    progress: undefined,
+    progress: 0,
     uploadStatus: config.upload.status.PROCESSING_FAILED,
   };
   selectedDirectoryName.value = selectedDirectory.value.name;
