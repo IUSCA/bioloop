@@ -254,15 +254,21 @@ def get_dataset_upload_logs():
         return r.json()
 
 
-def update_dataset_upload_log(uploaded_dataset_id, log_data):
+def update_dataset_upload_log(uploaded_dataset_id: int, log_data: dict):
     with APIServerSession() as s:
         r = s.patch(f'datasetUploads/{uploaded_dataset_id}', json=log_data)
         r.raise_for_status()
 
 
-def delete_dataset_upload_log(uploaded_dataset_id):
+def delete_dataset_upload_log(uploaded_dataset_id: int):
     with APIServerSession() as s:
         r = s.delete(f'datasetUploads/{uploaded_dataset_id}')
+        r.raise_for_status()
+
+
+def create_notification(payload: dict):
+    with APIServerSession() as s:
+        r = s.post('notifications', json=payload)
         r.raise_for_status()
 
 

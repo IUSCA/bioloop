@@ -65,6 +65,7 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
   },
   upload_log: {
     select: {
+      id: true,
       user: true,
       status: true,
       files: {

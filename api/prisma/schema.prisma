@@ -190,7 +190,7 @@ model user {
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
   uploads                    upload_log[]
-  user_notification          user_notification[]
+  user_notifications         user_notification[]
 }
 
 model user_password {
@@ -225,8 +225,8 @@ model notification {
   status             NOTIFICATION_STATUS @default(CREATED)
   acknowledged_by_id Int?
   acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
-  role_notification  role_notification[]
-  user_notification  user_notification[]
+  role_notifications role_notification[]
+  user_notifications user_notification[]
 }
 
 model role_notification {
@@ -235,6 +235,8 @@ model role_notification {
   role            role         @relation(fields: [role_id], references: [id])
   notification_id Int
   notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@unique([notification_id, role_id])
 }
 
 model user_notification {
@@ -243,6 +245,8 @@ model user_notification {
   user            user         @relation(fields: [user_id], references: [id])
   notification_id Int
   notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@unique([notification_id, user_id])
 }
 
 model contact {

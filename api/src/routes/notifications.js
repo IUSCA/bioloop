@@ -1,7 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const {
-  query, body, param,
+  query, body,
 } = require('express-validator');
 const _ = require('lodash/fp');
 
@@ -33,19 +33,14 @@ router.get(
     });
 
     const notifications = await prisma.$transaction(async (tx) => {
-      const user_role = await tx.user_role.findUniqueOrThrow({
+      const matching_user_roles = await tx.role.findMany({
         where: {
-          roles: {
-            some: {
-              role: {
-                name: currentUserRole,
-              },
-            },
-          },
+          name: currentUserRole,
         },
       });
+      const user_role = matching_user_roles[0];
 
-      await tx.notification.findMany({
+      const filtered_notifications = await tx.notification.findMany({
         where: {
           ...filterQuery,
           OR: [
@@ -66,6 +61,7 @@ router.get(
           ],
         },
       });
+      return filtered_notifications;
     });
 
     res.json(notifications);
@@ -86,33 +82,35 @@ router.post(
     // #swagger.summary = Post a notification
 
     if (req.body.user_ids?.length === 0 && req.body.role_ids?.length === 0) {
-      return next(createError.BadRequest('A recipient user or user role for the notification must be specified'));
+      return next(createError.BadRequest('A user or user role must be specified as the recipient of the notification'));
     }
-
-    // todo - test posting notifications for role/user
 
     const createdNotification = await prisma.notification.create({
       data: {
         label: req.body.label,
         text: req.body.text,
-        role_notifications: {
-          createMany: {
-            data: req.body.role_ids.map((id) => (
-              {
-                role_id: id,
-              }
-            )),
+        ...(req.body.role_ids?.length > 0 && {
+          role_notifications: {
+            createMany: {
+              data: req.body.role_ids.map((id) => (
+                {
+                  role_id: id,
+                }
+              )),
+            },
           },
-        },
-        user_notifications: {
-          createMany: {
-            data: req.body.user_ids.map((id) => (
-              {
-                user_id: id,
-              }
-            )),
+        }),
+        ...(req.body.user_ids?.length > 0 && {
+          user_notifications: {
+            createMany: {
+              data: req.body.user_ids.map((id) => (
+                {
+                  user_id: id,
+                }
+              )),
+            },
           },
-        },
+        }),
       },
     });
 

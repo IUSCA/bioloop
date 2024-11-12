@@ -25,11 +25,17 @@ UPLOAD_RETRY_THRESHOLD_HOURS = config['upload']['UPLOAD_RETRY_THRESHOLD_HOURS']
 #   PROCESSING for more than 72 hours
 
 def main():
-    dataset_uploads = api.get_dataset_upload_logs()
+    past_dataset_uploads = api.get_dataset_upload_logs()
+    dataset_uploads = past_dataset_uploads['uploads']
+
+    logger.info(f"Processing {len(dataset_uploads)} dataset uploads")
+
     dataset_uploads_failing_processing = [
         upload for upload in dataset_uploads if (
-                upload['status'] == config['upload']['status']['PROCESSING_FAILED']
+                upload['upload_log']['status'] == config['upload']['status']['PROCESSING_FAILED']
         )]
+
+    logger.info(f"Processing {len(dataset_uploads_failing_processing)} dataset uploads that failed processing")
 
     for ds_upload in dataset_uploads_failing_processing:
         dataset_id = ds_upload['dataset_id']
@@ -50,7 +56,7 @@ def main():
             active_process_dataset_upload_wfs = [wf for wf in dataset['workflows'] if wf['name'] ==
                                                  PROCESS_DATASET_UPLOAD_WORKFLOW]
             if len(active_process_dataset_upload_wfs) > 0:
-                print(f"Workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} is already running for dataset {dataset_id}"
+                logger.info(f"Workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} is already running for dataset {dataset_id}"
                       f" (upload_log_id: {upload_log['id']})")
             else:
                 # retry processing this upload

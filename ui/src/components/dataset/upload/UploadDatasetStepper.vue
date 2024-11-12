@@ -351,6 +351,12 @@ const submissionAlert = ref(""); // For handling network errors before upload be
 const submissionAlertColor = ref("");
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
+const isUploadIncomplete = computed(() => {
+  return (
+    submitAttempted.value &&
+    submissionStatus.value !== SUBMISSION_STATES.UPLOADED
+  );
+});
 
 const filesToUpload = ref([]);
 const displayedFilesToUpload = ref([]);
@@ -975,13 +981,6 @@ const setDirectory = (directoryDetails) => {
 
   displayedFilesToUpload.value = [selectedDirectory.value];
 };
-
-const isUploadIncomplete = computed(() => {
-  return (
-    submitAttempted.value &&
-    submissionStatus.value !== SUBMISSION_STATES.UPLOADED
-  );
-});
 
 const beforeUnload = (e) => {
   if (isUploadIncomplete.value) {
