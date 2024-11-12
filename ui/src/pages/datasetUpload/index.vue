@@ -58,6 +58,12 @@
     <template #cell(user)="{ rowData }">
       <span>{{ rowData.user.name }} ({{ rowData.user.username }})</span>
     </template>
+
+    <template #cell(initiated_at)="{ value }">
+      <span class="text-sm lg:text-base">
+        {{ datetime.date(value) }}
+      </span>
+    </template>
   </va-data-table>
 
   <Pagination
@@ -76,6 +82,7 @@ import datasetUploadService from "@/services/upload/dataset";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
 import toast from "@/services/toast";
+import * as datetime from "@/services/datetime";
 
 const nav = useNavStore();
 const router = useRouter();
@@ -145,7 +152,7 @@ const columns = [
   {
     key: "source_dataset",
     label: "Source Dataset",
-    width: "30%",
+    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -161,6 +168,15 @@ const columns = [
     tdAlign: "center",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
+  {
+    key: "initiated_at",
+    label: "Uploaded On",
+    width: "20%",
+    thAlign: "right",
+    tdAlign: "right",
     thStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
@@ -196,7 +212,12 @@ const getUploadLogs = async () => {
   return datasetUploadService
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
-      pastUploads.value = res.data.uploads;
+      pastUploads.value = res.data.uploads.map((e) => {
+        return {
+          ...e,
+          initiated_at: e.upload_log.initiated_at,
+        };
+      });
       total_results.value = res.data.metadata.count;
     })
     .catch((err) => {
