@@ -30,6 +30,14 @@ def main():
 
     logger.info(f"Processing {len(dataset_uploads)} dataset uploads")
 
+    # dataset_uploads_not_processed = [
+    #     upload for upload in dataset_uploads if (
+    #             upload['upload_log']['status'] == config['upload']['status']['UPLOADED']
+    #     )]
+    # dataset_uploads_being_processed = [
+    #     upload for upload in dataset_uploads if (
+    #             upload['upload_log']['status'] == config['upload']['status']['PROCESSING']
+    #     )]
     dataset_uploads_failing_processing = [
         upload for upload in dataset_uploads if (
                 upload['upload_log']['status'] == config['upload']['status']['PROCESSING_FAILED']
@@ -38,10 +46,11 @@ def main():
     logger.info(f"Processing {len(dataset_uploads_failing_processing)} dataset uploads that failed processing")
 
     for ds_upload in dataset_uploads_failing_processing:
+        dataset_upload_log_id = ds_upload['id']
         dataset_id = ds_upload['dataset_id']
         upload_log = ds_upload['upload_log']
 
-        logger.info(f"Processing upload {upload_log['id']} for dataset_id: {dataset_id}")
+        logger.info(f"Processing dataset upload {dataset_upload_log_id} for dataset_id: {dataset_id}")
 
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
 
@@ -51,13 +60,16 @@ def main():
 
         # retry processing this upload if it hasn't been updated in the last 72 hours
         if difference <= UPLOAD_RETRY_THRESHOLD_HOURS:
-            logger.info(f'Upload {upload_log["id"]} has been in state {upload_log["status"]} for {difference} hours.'
-                        f' Retrying processing of upload.')
+            logger.info(f'Upload {dataset_upload_log_id} has been in state {upload_log["status"]} '
+                        f'for {difference} hours. Retrying processing of upload.')
             active_process_dataset_upload_wfs = [wf for wf in dataset['workflows'] if wf['name'] ==
                                                  PROCESS_DATASET_UPLOAD_WORKFLOW]
             if len(active_process_dataset_upload_wfs) > 0:
-                logger.info(f"Workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} is already running for dataset {dataset_id}"
-                      f" (upload_log_id: {upload_log['id']})")
+                logger.info(f"The following workflows of type {PROCESS_DATASET_UPLOAD_WORKFLOW} "
+                            f"are already running for dataset {dataset_id} "
+                            f"(dataset_upload_log id: {dataset_upload_log_id}):")
+                active_process_dataset_upload_wf_ids = [wf['_id'] for wf in active_process_dataset_upload_wfs]
+                logger.info(active_process_dataset_upload_wf_ids)
             else:
                 # retry processing this upload
                 logger.info(f'Beginning workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for dataset {dataset_id}')
@@ -68,14 +80,14 @@ def main():
         else:
             # mark dataset uploads which could not be processed as FAILED and clean up their resources
             logger.info(
-                f"Upload id {upload_log['id']} has been in status {upload_log['status']} for {difference} hours,"
-                f" which exceeds the threshold of ${UPLOAD_RETRY_THRESHOLD_HOURS} hours.")
-            logger.info(f"Marking upload {upload_log['id']} as {config['upload']['status']['FAILED']}.")
+                f"Dataset Upload {dataset_upload_log_id} has been in status {upload_log['status']} for"
+                f" {difference} hours, which exceeds the threshold of ${UPLOAD_RETRY_THRESHOLD_HOURS} hours.")
+            logger.info(f"Marking dataset upload {dataset_upload_log_id} as {config['upload']['status']['FAILED']}.")
 
             uploaded_dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset_id)
 
-            logger.info(f"Deleting upload {upload_log['id']}'s uploaded resources and processed artifacts from"
-                        f" {str(uploaded_dataset_path)}")
+            logger.info(f"Deleting dataset upload {dataset_upload_log_id}'s uploaded resources "
+                        f"and processed artifacts from {str(uploaded_dataset_path)}")
             if uploaded_dataset_path.exists():
                 shutil.rmtree(uploaded_dataset_path)
             logger.info(f"Deleted dataset directory {uploaded_dataset_path}")
