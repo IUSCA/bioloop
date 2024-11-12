@@ -976,17 +976,19 @@ const setDirectory = (directoryDetails) => {
   displayedFilesToUpload.value = [selectedDirectory.value];
 };
 
+const beforeUnload = (e) => {
+  if (
+    submitAttempted.value &&
+    submissionStatus.value !== SUBMISSION_STATES.UPLOADED
+  ) {
+    // show warning before user leaves page
+    e.returnValue = true;
+  }
+};
+
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
-  window.addEventListener("beforeunload", (e) => {
-    if (
-      submitAttempted.value &&
-      submissionStatus.value !== SUBMISSION_STATES.UPLOADED
-    ) {
-      // show warning before user leaves page
-      e.returnValue = true;
-    }
-  });
+  window.addEventListener("beforeunload", beforeUnload);
 });
 
 watch(
@@ -1028,19 +1030,11 @@ onBeforeRouteLeave(() => {
 });
 
 onBeforeUnmount(async () => {
-  // todo - remove event listener
+  // stop any pending uploads before this component unmounts
   uploadCancelled.value = true;
-  // todo - handle incomplete uploads on tab close
-  //  1. tab/window close
-  //  2. User choosing to simply type a different address in the URL bar and
-  // navigate elsewhere
-  //    - if can't detect, then:
-  //      - Keep polling for upload completion
-  //      - persist number of expected chunks in the upload before the upload
-  // begins. Keep polling for remaining chunks for some time, before canceling
-  // the upload.
-  //
-  // todo - handle cases where this call may fail
+
+  window.removeEventListener("beforeunload", beforeUnload);
+
   await datasetUploadService.cancelDatasetUpload(
     datasetUploadLog.value.dataset_id,
   );

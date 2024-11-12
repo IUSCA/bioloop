@@ -264,7 +264,6 @@ const formErrors = ref({
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
 });
-// todo - test
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.DIRECTORY];
