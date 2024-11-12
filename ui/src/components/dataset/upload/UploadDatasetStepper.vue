@@ -184,6 +184,7 @@ import config from "@/config";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
+import datasetUploadService from "@/services/upload/dataset";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
@@ -441,7 +442,6 @@ const clearSelectedFilesToUpload = () => {
   filesToUpload.value = [];
 };
 
-// todo - rename these to uploading...
 const selectingFiles = ref(false);
 const selectingDirectory = ref(false);
 
@@ -751,7 +751,7 @@ const uploadFile = async (fileDetails) => {
   let updated = false;
   if (uploaded) {
     try {
-      await uploadService.updateDatasetUploadLog(
+      await datasetUploadService.updateDatasetUploadLog(
         datasetUploadLog.value.dataset_id,
         {
           files: [
@@ -855,7 +855,7 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return uploadService.processDatasetUpload(
+      return datasetUploadService.processDatasetUpload(
         datasetUploadLog.value.dataset_id,
       );
     })
@@ -914,8 +914,8 @@ const preUpload = async () => {
 // Log (or update) upload status
 const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
-    ? uploadService.logDatasetUpload(data)
-    : uploadService.updateDatasetUploadLog(
+    ? datasetUploadService.logDatasetUpload(data)
+    : datasetUploadService.updateDatasetUploadLog(
         datasetUploadLog.value?.dataset_id,
         data,
       );
@@ -1041,7 +1041,7 @@ onBeforeUnmount(() => {
   // the upload.
   //
   // todo - handle cases where this call may fail
-  uploadService.cancelDatasetUpload(datasetUploadLog.value.dataset_id);
+  datasetUploadService.cancelDatasetUpload(datasetUploadLog.value.dataset_id);
 });
 </script>
 

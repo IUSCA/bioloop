@@ -72,7 +72,7 @@
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import config from "@/config";
-import uploadService from "@/services/upload";
+import datasetUploadService from "@/services/upload/dataset";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
 import toast from "@/services/toast";
@@ -90,7 +90,6 @@ const filterInput = ref("");
 const pastUploads = ref([]);
 const uploads = computed(() => {
   return pastUploads.value.map((upload) => {
-    const uploaded_by = upload.upload_log?.user;
     const uploaded_dataset = upload.dataset;
     const source_dataset =
       uploaded_dataset.source_datasets.length > 0
@@ -98,7 +97,8 @@ const uploads = computed(() => {
         : null;
     return {
       ...upload,
-      user: uploaded_by,
+      status: upload.upload_log?.status,
+      user: upload.upload_log?.user,
       source_dataset,
       uploaded_dataset,
     };
@@ -167,6 +167,8 @@ const columns = [
 ];
 
 const getStatusChipColor = (value) => {
+  console.log("received value for Upload Status", value);
+
   let color;
   switch (value) {
     case config.upload.status.UPLOADING:
@@ -191,7 +193,7 @@ const getStatusChipColor = (value) => {
 };
 
 const getUploadLogs = async () => {
-  return uploadService
+  return datasetUploadService
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads;

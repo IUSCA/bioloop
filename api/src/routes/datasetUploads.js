@@ -18,8 +18,6 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// todo - query params/body, invocations, returns, paths
-//  worker needs dataset_upload. UI needs dataset_upload and user
 router.get(
   '/',
   validate([
