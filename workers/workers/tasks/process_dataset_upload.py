@@ -74,6 +74,8 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
 
 
 def chunks_to_files(celery_task, dataset_id, **kwargs):
+    print(f'Processing dataset {dataset_id}\'s uploaded resources')
+
     try:
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
         dataset_upload_log = dataset['dataset_upload_log']

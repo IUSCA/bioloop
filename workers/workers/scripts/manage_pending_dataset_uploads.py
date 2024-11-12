@@ -21,7 +21,8 @@ UPLOAD_RETRY_THRESHOLD_HOURS = config['upload']['UPLOAD_RETRY_THRESHOLD_HOURS']
 
 
 # todo - send notification to admin for when a dataset has been PROCESSING for >= 72 hours,
-# todo - send notification to admin for uploads that have been in state UPLOADED for more than 72 hours
+# todo - send notification to admin for uploads whose state hasn't changed to UPLOADED to
+#   PROCESSING for more than 72 hours
 
 def main():
     dataset_uploads = api.get_dataset_upload_logs()
