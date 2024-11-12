@@ -9,6 +9,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const datasetService = require('../services/dataset');
+const workflowService = require('../services/workflow');
 const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
@@ -17,6 +18,14 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+const get_dataset_workflows = async ({ dataset } = {}) => {
+  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
+  const workflowQueryResponse = await workflowService.getAll({
+    workflow_ids: datasetWorkflowIds,
+  });
+  return workflowQueryResponse.data.results;
+};
 
 router.get(
   '/',
@@ -223,16 +232,22 @@ router.post(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
 
-    const dataset_upload_log = await prisma.dataset_upload_log.findFirstOrThrow({
+    const uploadedDataset = await prisma.dataset.findFirst({
       where: {
-        dataset_id: req.params.dataset_id,
+        id: req.params.dataset_id,
       },
-      include: { dataset: true },
+      include: {
+        workflows: true,
+        dataset_upload_log: true,
+      },
     });
 
+    uploadedDataset.workflows = await get_dataset_workflows({ dataset: uploadedDataset });
+
     const workflow = await datasetService.create_workflow(
-      dataset_upload_log.dataset,
+      uploadedDataset,
       'process_dataset_upload',
+      req.user.id,
     );
     res.json(workflow);
   }),
@@ -248,36 +263,48 @@ router.post(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Cancel a pending upload'
 
-    // todo - implement wf
     const cancelUploadWorkflowName = 'cancel_dataset_upload';
 
     const uploadedDataset = await prisma.dataset.findFirst({
       where: {
         id: req.params.dataset_id,
       },
+      include: {
+        workflows: true,
+        dataset_upload_log: true,
+      },
     });
 
-    // todo - what if this workflow is already running ?
+    uploadedDataset.workflows = await get_dataset_workflows({ dataset: uploadedDataset });
+
     await datasetService.create_workflow(
       uploadedDataset,
       cancelUploadWorkflowName,
       req.user.id,
     );
 
+    res.sendStatus(200);
+  }),
+);
+
+router.delete(
+  '/:dataset_id',
+  isPermittedTo('delete'),
+  validate([
+    param('dataset_id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Delete records of a dataset upload'
+
     await prisma.$transaction(async (tx) => {
       const uploadedDatasetUploadLog = await tx.dataset_upload_log.findUniqueOrThrow({
         where: {
-          id: req.params.id,
+          dataset_id: req.params.dataset_id,
         },
       });
-      // await tx.dataset_upload_log.delete({
-      //   where: {
-      //     id: uploadedDatasetUploadLog.dataset_id,
-      //   },
-      // });
-
-      // cascade-delete on `upload_log` and `dataset` will delete
-      // associated `dataset_upload_log` record
+      // cascade-delete on `upload_log` will delete associated
+      // `dataset_upload_log` record and `file_upload_log` records
       await tx.upload_log.delete({
         where: {
           id: uploadedDatasetUploadLog.upload_log_id,
@@ -285,12 +312,12 @@ router.post(
       });
       await tx.dataset.delete({
         where: {
-          id: uploadedDatasetUploadLog.dataset_id,
+          id: req.params.dataset_id,
         },
       });
     });
 
-    res.send(200);
+    res.sendStatus(200);
   }),
 );
 

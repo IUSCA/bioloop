@@ -1027,7 +1027,7 @@ onBeforeRouteLeave(() => {
     : true;
 });
 
-onBeforeUnmount(() => {
+onBeforeUnmount(async () => {
   // todo - remove event listener
   uploadCancelled.value = true;
   // todo - handle incomplete uploads on tab close
@@ -1041,7 +1041,9 @@ onBeforeUnmount(() => {
   // the upload.
   //
   // todo - handle cases where this call may fail
-  datasetUploadService.cancelDatasetUpload(datasetUploadLog.value.dataset_id);
+  await datasetUploadService.cancelDatasetUpload(
+    datasetUploadLog.value.dataset_id,
+  );
 });
 </script>
 

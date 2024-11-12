@@ -29,6 +29,8 @@ class DatasetUploadService {
     return api.post(`/datasetUploads/${dataset_id}/process`);
   }
 
+  // todo - if this method returns throws 404, handle it - the dataset may have
+  // been deleted previously
   cancelDatasetUpload(dataset_id) {
     return api.post(`/datasetUploads/${dataset_id}/cancel`);
   }

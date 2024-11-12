@@ -260,5 +260,11 @@ def update_dataset_upload_log(uploaded_dataset_id, log_data):
         r.raise_for_status()
 
 
+def delete_dataset_upload_log(uploaded_dataset_id):
+    with APIServerSession() as s:
+        r = s.delete(f'datasetUploads/{uploaded_dataset_id}')
+        r.raise_for_status()
+
+
 if __name__ == '__main__':
     pass
