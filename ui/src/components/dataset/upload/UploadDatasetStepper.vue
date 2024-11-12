@@ -976,11 +976,15 @@ const setDirectory = (directoryDetails) => {
   displayedFilesToUpload.value = [selectedDirectory.value];
 };
 
-const beforeUnload = (e) => {
-  if (
+const isUploadIncomplete = computed(() => {
+  return (
     submitAttempted.value &&
     submissionStatus.value !== SUBMISSION_STATES.UPLOADED
-  ) {
+  );
+});
+
+const beforeUnload = (e) => {
+  if (isUploadIncomplete.value) {
     // show warning before user leaves page
     e.returnValue = true;
   }
@@ -1035,9 +1039,11 @@ onBeforeUnmount(async () => {
 
   window.removeEventListener("beforeunload", beforeUnload);
 
-  await datasetUploadService.cancelDatasetUpload(
-    datasetUploadLog.value.dataset_id,
-  );
+  if (isUploadIncomplete.value) {
+    await datasetUploadService.cancelDatasetUpload(
+      datasetUploadLog.value.dataset_id,
+    );
+  }
 });
 </script>
 
