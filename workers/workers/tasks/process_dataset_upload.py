@@ -66,7 +66,7 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         print(f'file_md5: {file_md5}')
         processing_error = evaluated_checksum != file_md5
 
-    raise Exception("test exception")
+    # raise Exception("test exception")
 
     return config['upload']['status']['PROCESSING_FAILED'] \
         if processing_error \
@@ -184,13 +184,17 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
         active_integrated_wfs = [wf for wf in dataset['workflows'] if wf['name'] == INTEGRATED_WORKFLOW]
         if len(active_integrated_wfs) > 0:
-            print(f"Workflow {INTEGRATED_WORKFLOW} is already running for dataset {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
+            print(f"Workflow {INTEGRATED_WORKFLOW} is already running for dataset {dataset_id}"
+                  f" (dataset_upload_log_id: {dataset_upload_log_id})")
         else:
-            print(f"Beginning {INTEGRATED_WORKFLOW} workflow for dataset {dataset['id']} (dataset_upload_log_id: {dataset_upload_log_id})")
+            print(f"Starting {INTEGRATED_WORKFLOW} workflow for dataset {dataset['id']}"
+                  f" (dataset_upload_log_id: {dataset_upload_log_id})")
             integrated_wf_body = wf_utils.get_wf_body(wf_name=INTEGRATED_WORKFLOW)
             int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
-            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf.workflow['_id'])
+            int_wf_id = int_wf.workflow['_id']
+            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf_id)
             int_wf.start(dataset_id)
+            print(f"Started workflow {int_wf} for dataset {dataset_id}")
 
         # purge uploaded files from the filesystem
         shutil.rmtree(dataset_path / 'chunked_files')
