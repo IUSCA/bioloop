@@ -188,7 +188,7 @@ router.patch(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Update past upload'
 
-    const { status, files } = req.body;
+    const { status, files = [] } = req.body;
     const update_query = _.omitBy(_.isUndefined)({
       status,
     });
