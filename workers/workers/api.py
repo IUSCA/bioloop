@@ -247,25 +247,16 @@ def get_all_workflows():
         return r.json()
 
 
-def get_upload_log(upload_log_id: str):
+def get_dataset_upload_logs():
     with APIServerSession() as s:
-        r = s.get(f'uploads/{upload_log_id}')
+        r = s.get(f'datasetUploads')
         r.raise_for_status()
         return r.json()
 
 
-def get_upload_logs(upload_type: str):
+def update_dataset_upload_log(uploaded_dataset_id, log_data):
     with APIServerSession() as s:
-        r = s.get(f'uploads', params={
-            'upload_type': upload_type
-        })
-        r.raise_for_status()
-        return r.json()
-
-
-def update_upload_log(upload_log_id, log_data):
-    with APIServerSession() as s:
-        r = s.patch(f'uploads/{upload_log_id}', json=log_data)
+        r = s.patch(f'datasetUploads/{uploaded_dataset_id}', json=log_data)
         r.raise_for_status()
 
 

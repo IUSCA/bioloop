@@ -107,7 +107,7 @@
                 <va-card-content>
                   <UploadedDatasetDetails
                     v-if="selectingFiles || selectingDirectory"
-                    :dataset="uploadLog?.dataset_upload?.dataset"
+                    :dataset="datasetUploadLog?.dataset"
                     :dataset-name="selectedDirectoryName"
                     v-model:dataset-name-input="datasetToUploadInputName"
                     :input-disabled="submitAttempted"
@@ -343,7 +343,7 @@ const datasetNameValidationRules = [
 const loading = ref(true);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
-const uploadLog = ref(null);
+const datasetUploadLog = ref(null);
 const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
 const statusChipColor = ref("");
 const submissionAlert = ref(""); // For handling network errors before upload begins
@@ -670,11 +670,13 @@ const getFileUploadLog = ({ name, path }) => {
   // console.log("uploadLog files", uploadLog.value.files);
   // console.log("selectingFiles", selectingFiles.value);
   // console.log("selectingDirectory", selectingDirectory.value);
-  const fileToUpload = uploadLog.value.files.find((fileUploadLog) => {
-    return selectingDirectory.value
-      ? fileUploadLog.name === name && fileUploadLog.path === path
-      : fileUploadLog.name === name;
-  });
+  const fileToUpload = datasetUploadLog.value.upload_log.files.find(
+    (fileUploadLog) => {
+      return selectingDirectory.value
+        ? fileUploadLog.name === name && fileUploadLog.path === path
+        : fileUploadLog.name === name;
+    },
+  );
   // console.log("fileToUpload", fileToUpload);
 
   return fileToUpload;
@@ -702,10 +704,7 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("size", file.size);
     // chunkData.append("data_product_name", fileDetails.name);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append(
-      "data_product_id",
-      uploadLog.value.dataset_upload.dataset.id,
-    );
+    chunkData.append("data_product_id", datasetUploadLog.value.dataset.id);
     chunkData.append(
       "file_upload_log_id",
       getFileUploadLog({ name: fileDetails.name, path: fileDetails.path })?.id,
@@ -741,7 +740,7 @@ const uploadFile = async (fileDetails) => {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
-  const fileUploadLogId = uploadLog.value.files.find(
+  const fileUploadLogId = datasetUploadLog.value.upload_log.files.find(
     (e) => e.md5 === checksum,
   )?.id;
 
@@ -752,14 +751,17 @@ const uploadFile = async (fileDetails) => {
   let updated = false;
   if (uploaded) {
     try {
-      await uploadService.updateUploadLog(uploadLog.value.id, {
-        files: [
-          {
-            id: fileUploadLogId,
-            data: { status: config.upload.status.UPLOADED },
-          },
-        ],
-      });
+      await uploadService.updateDatasetUploadLog(
+        datasetUploadLog.value.dataset_id,
+        {
+          files: [
+            {
+              id: fileUploadLogId,
+              data: { status: config.upload.status.UPLOADED },
+            },
+          ],
+        },
+      );
       updated = true;
     } catch (e) {
       console.error(e);
@@ -825,22 +827,24 @@ const postSubmit = () => {
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {
-      id: uploadLog.value.files.find((f) => f.md5 === file.fileChecksum).id,
+      id: datasetUploadLog.value.upload_log.files.find(
+        (f) => f.md5 === file.fileChecksum,
+      ).id,
       data: {
         status: config.upload.status.UPLOAD_FAILED,
       },
     };
   });
 
-  if (uploadLog.value) {
-    createOrUpdateUploadLog(uploadLog.value.id, {
+  if (datasetUploadLog.value) {
+    createOrUpdateUploadLog({
       status: someFilesPendingUpload.value
         ? config.upload.status.UPLOAD_FAILED
         : config.upload.status.UPLOADED,
       files: failedFileUpdates,
     })
       .then((res) => {
-        uploadLog.value = res.data;
+        datasetUploadLog.value = res.data;
       })
       .catch((err) => {
         console.error(err);
@@ -851,9 +855,8 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return uploadService.processUpload(
-        uploadLog.value.dataset_upload.dataset.id,
-        config.upload.types.DATASET,
+      return uploadService.processDatasetUpload(
+        datasetUploadLog.value.dataset_id,
       );
     })
     .catch((err) => {
@@ -888,7 +891,7 @@ const preUpload = async () => {
   console.log("preUpload");
   await evaluateChecksums(filesNotUploaded.value);
 
-  const logData = uploadLog.value?.id
+  const logData = datasetUploadLog.value?.id
     ? {
         status: config.upload.status.UPLOADING,
       }
@@ -904,16 +907,18 @@ const preUpload = async () => {
         }),
       };
 
-  const res = await createOrUpdateUploadLog(uploadLog.value?.id, logData);
-  uploadLog.value = res.data;
+  const res = await createOrUpdateUploadLog(logData);
+  datasetUploadLog.value = res.data;
 };
 
 // Log (or update) upload status
-const createOrUpdateUploadLog = (uploadLogId, data) => {
-  // console.log("createOrUpdateUploadLog", uploadLogId, data);
-  return !uploadLogId
+const createOrUpdateUploadLog = (data) => {
+  return !datasetUploadLog.value
     ? uploadService.logDatasetUpload(data)
-    : uploadService.updateUploadLog(uploadLogId, data);
+    : uploadService.updateDatasetUploadLog(
+        datasetUploadLog.value?.dataset_id,
+        data,
+      );
 };
 
 const uploadFiles = async (files) => {
@@ -1036,7 +1041,7 @@ onBeforeUnmount(() => {
   // the upload.
   //
   // todo - handle cases where this call may fail
-  uploadService.cancelUpload(uploadLog.value.id);
+  uploadService.cancelDatasetUpload(datasetUploadLog.value.dataset_id);
 });
 </script>
 

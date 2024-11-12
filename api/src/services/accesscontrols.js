@@ -135,9 +135,6 @@ const grantsObject = {
     },
     upload: {
       'create:any': ['*'],
-      'read:any': ['*'],
-      'update:any': ['*'],
-      'delete:any': ['*'],
     },
   },
 };

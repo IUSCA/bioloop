@@ -52,28 +52,29 @@ const INCLUDE_AUDIT_LOGS = {
 };
 
 const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
-  dataset_upload: {
+  dataset: {
     select: {
-      dataset: {
+      id: true,
+      name: true,
+      source_datasets: {
         select: {
-          id: true,
-          name: true,
-          source_datasets: {
-            select: {
-              source_dataset: true,
-            },
-          },
+          source_dataset: true,
         },
       },
     },
   },
-  user: true,
-  files: {
+  upload_log: {
     select: {
-      id: true,
-      md5: true,
-      name: true,
-      path: true,
+      user: true,
+      status: true,
+      files: {
+        select: {
+          id: true,
+          md5: true,
+          name: true,
+          path: true,
+        },
+      },
     },
   },
 };

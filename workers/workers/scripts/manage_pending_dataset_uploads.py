@@ -24,31 +24,33 @@ UPLOAD_RETRY_THRESHOLD_HOURS = config['upload']['UPLOAD_RETRY_THRESHOLD_HOURS']
 # todo - send notification to admin for uploads that have been in state UPLOADED for more than 72 hours
 
 def main():
-    uploads = api.get_upload_logs(upload_type='DATASET')
-    uploads_failing_processing = [
-        upload for upload in uploads if (
+    dataset_uploads = api.get_dataset_upload_logs()
+    dataset_uploads_failing_processing = [
+        upload for upload in dataset_uploads if (
                 upload['status'] == config['upload']['status']['PROCESSING_FAILED']
         )]
 
-    for upload in uploads_failing_processing:
-        dataset_id = upload['dataset_upload']['dataset_id']
-        logger.info(f"Processing upload {upload['id']} for dataset_id: {dataset_id}")
+    for ds_upload in dataset_uploads_failing_processing:
+        dataset_id = ds_upload['dataset_id']
+        upload_log = ds_upload['upload_log']
+
+        logger.info(f"Processing upload {upload_log['id']} for dataset_id: {dataset_id}")
 
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
 
-        upload_last_updated_time = datetime.fromisoformat(upload['last_updated'][:-1])
+        upload_last_updated_time = datetime.fromisoformat(upload_log['last_updated'][:-1])
         current_time = datetime.now()
         difference = (current_time - upload_last_updated_time).total_seconds() / 3600
 
         # retry processing this upload if it hasn't been updated in the last 72 hours
         if difference <= UPLOAD_RETRY_THRESHOLD_HOURS:
-            logger.info(f'Upload {upload["id"]} has been in state {upload["status"]} for {difference} hours.'
+            logger.info(f'Upload {upload_log["id"]} has been in state {upload_log["status"]} for {difference} hours.'
                         f' Retrying processing of upload.')
             active_process_dataset_upload_wfs = [wf for wf in dataset['workflows'] if wf['name'] ==
                                                  PROCESS_DATASET_UPLOAD_WORKFLOW]
             if len(active_process_dataset_upload_wfs) > 0:
                 print(f"Workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} is already running for dataset {dataset_id}"
-                      f" (upload_log_id: {upload['id']})")
+                      f" (upload_log_id: {upload_log['id']})")
             else:
                 # retry processing this upload
                 logger.info(f'Beginning workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for dataset {dataset_id}')
@@ -57,15 +59,15 @@ def main():
                 api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
                 wf.start(dataset_id)
         else:
-            # mark uploads which could not be processed as FAILED and clean up their resources
+            # mark dataset uploads which could not be processed as FAILED and clean up their resources
             logger.info(
-                f"Upload id {upload['id']} has been in status {upload['status']} for {difference} hours,"
+                f"Upload id {upload_log['id']} has been in status {upload_log['status']} for {difference} hours,"
                 f" which exceeds the threshold of ${UPLOAD_RETRY_THRESHOLD_HOURS} hours.")
-            logger.info(f"Marking upload {upload['id']} as {config['upload']['status']['FAILED']}.")
+            logger.info(f"Marking upload {upload_log['id']} as {config['upload']['status']['FAILED']}.")
 
             uploaded_dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset_id)
 
-            logger.info(f"Deleting upload {upload['id']}'s uploaded resources and processed artifacts from"
+            logger.info(f"Deleting upload {upload_log['id']}'s uploaded resources and processed artifacts from"
                         f" {str(uploaded_dataset_path)}")
             if uploaded_dataset_path.exists():
                 shutil.rmtree(uploaded_dataset_path)
@@ -78,12 +80,15 @@ def main():
                         'status': config['upload']['status']['FAILED']
                     }
                 }
-                for file in upload['files']
+                for file in upload_log['files']
             ]
-            api.update_upload_log(upload['id'], {
-                'status': config['upload']['status']['FAILED'],
-                'files': file_updates
-            })
+            api.update_dataset_upload_log(
+                uploaded_dataset_id=dataset_id,
+                log_data={
+                    'status': config['upload']['status']['FAILED'],
+                    'files': file_updates
+                }
+            )
 
 
 if __name__ == "__main__":

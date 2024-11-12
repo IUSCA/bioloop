@@ -89,18 +89,18 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const filterInput = ref("");
 const pastUploads = ref([]);
 const uploads = computed(() => {
-  return pastUploads.value.map((e) => {
-    const dataset_upload_log = e.dataset_upload;
-    const dataset = dataset_upload_log.dataset;
+  return pastUploads.value.map((upload) => {
+    const uploaded_by = upload.upload_log?.user;
+    const uploaded_dataset = upload.dataset;
     const source_dataset =
-      dataset.source_datasets.length > 0
-        ? dataset.source_datasets[0].source_dataset
+      uploaded_dataset.source_datasets.length > 0
+        ? uploaded_dataset.source_datasets[0].source_dataset
         : null;
     return {
-      ...e,
-      user: e.user,
+      ...upload,
+      user: uploaded_by,
       source_dataset,
-      uploaded_dataset: dataset,
+      uploaded_dataset,
     };
   });
 });
@@ -113,7 +113,7 @@ const total_results = ref(0);
 const offset = computed(() => (currentPageIndex.value - 1) * pageSize.value);
 // Criterion based on search input
 const search_query = computed(() => {
-  return filterInput.value?.length > 0 && { entity_name: filterInput.value };
+  return filterInput.value?.length > 0 && { dataset_name: filterInput.value };
 });
 // Criteria used to limit the number of results retrieved, and to define the
 // offset starting at which the next batch of results will be retrieved.
@@ -124,7 +124,6 @@ const uploads_batching_query = computed(() => {
 // configuring number of pages for pagination.
 const filter_query = computed(() => {
   return {
-    upload_type: config.upload.types.DATASET,
     ...uploads_batching_query.value,
     ...(!!search_query.value && { ...search_query.value }),
   };
@@ -193,7 +192,7 @@ const getStatusChipColor = (value) => {
 
 const getUploadLogs = async () => {
   return uploadService
-    .getUploadLogs(filter_query.value)
+    .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads;
       total_results.value = res.data.metadata.count;

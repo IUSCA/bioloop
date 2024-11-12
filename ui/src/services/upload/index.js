@@ -12,22 +12,16 @@ class UploadService {
     this.uploadApi.setToken(token);
   }
 
-  cancelUpload(upload_log_id) {
-    return api.post(`/uploads/${upload_log_id}/cancel`);
-  }
-
-  getUploadLogs({
+  getDatasetUploadLogs({
     status = null,
-    upload_type = null,
-    entity_name = null,
+    dataset_name = null,
     limit = null,
     offset = null,
   } = {}) {
-    return api.get(`/uploads`, {
+    return api.get(`/datasetUploads`, {
       params: {
         status,
-        upload_type,
-        entity_name,
+        dataset_name,
         offset,
         limit,
       },
@@ -35,19 +29,26 @@ class UploadService {
   }
 
   logDatasetUpload(data) {
-    return api.post(`/uploads/${config.upload.types.DATASET}`, data);
+    return api.post(`/datasetUploads`, data);
   }
 
-  updateUploadLog(upload_log_id, data) {
-    return api.patch(`/uploads/${upload_log_id}`, data);
+  // todo - all usages - use dataset_upload_log_id, and change args/returns
+  // todo - rename this to datasetUploadService
+  // todo - would it be better to expose use datasetId instead of
+  //  dataset_upload_log_id to identify the upload?
+  updateDatasetUploadLog(dataset_id, data) {
+    return api.patch(`/datasetUploads/${dataset_id}`, data);
   }
 
-  processUpload(upload_log_id, upload_type) {
-    return api.post(`/uploads/${upload_log_id}/process`, null, {
-      params: { upload_type: upload_type },
-    });
+  processDatasetUpload(dataset_id) {
+    return api.post(`/datasetUploads/${dataset_id}/process`);
   }
 
+  cancelDatasetUpload(dataset_id) {
+    return api.post(`/datasetUploads/${dataset_id}/cancel`);
+  }
+
+  // todo - separate upload service from token service
   uploadFile(data) {
     return this.uploadAxios.post("/upload", data);
   }
