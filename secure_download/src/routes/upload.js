@@ -14,13 +14,13 @@ const router = express.Router();
 
 const UPLOAD_SCOPE = String(config.get('upload_scope'));
 
-const getUploadPath = (datasetId) => path.join(
+const getUploadPath = (uploadedEntityId) => path.join(
   config.upload_path.data_products,
-  datasetId,
+  uploadedEntityId,
 );
 
-const getFileChunksStorageDir = (datasetId, fileUploadLogId) => path.join(
-  getUploadPath(datasetId),
+const getFileChunksStorageDir = (uploadedEntityId, fileUploadLogId) => path.join(
+  getUploadPath(uploadedEntityId),
   'chunked_files',
   fileUploadLogId,
 );
@@ -31,7 +31,7 @@ const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
     logger.info('Received request to persist file to filesystem');
     const chunkStorage = getFileChunksStorageDir(
-      req.body.data_product_id,
+      req.body.uploaded_entity_id,
       req.body.file_upload_log_id,
     );
     await fsPromises.mkdir(chunkStorage, {
@@ -55,12 +55,12 @@ router.post(
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
-      name, data_product_id, index, checksum, chunk_checksum,
+      name, uploaded_entity_id, index, checksum, chunk_checksum,
     } = req.body;
 
     logger.info('Received request to accept file:');
     logger.info(`name: ${name}`);
-    logger.info(`data_product_id: ${data_product_id}`);
+    logger.info(`uploaded_entity_id: ${uploaded_entity_id}`);
     logger.info(`index: ${index}`);
     logger.info(`checksum: ${checksum}`);
     logger.info(`chunk_checksum: ${chunk_checksum}`);
@@ -78,9 +78,9 @@ router.post(
           + `for the contents of file ${name} to be uploaded`));
     }
 
-    if (!data_product_id) {
-      logger.error('Missing data_product_id in request body');
-      return next(createError.BadRequest('Missing data_product_id in request body'));
+    if (!uploaded_entity_id) {
+      logger.error('Missing uploaded_entity_id in request body');
+      return next(createError.BadRequest('Missing uploaded_entity_id in request body'));
     } if (!checksum) {
       logger.error('Missing checksum in request body');
       return next(createError.BadRequest('Missing checksum in request body'));

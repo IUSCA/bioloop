@@ -644,7 +644,7 @@ const evaluateChecksums = (filesToUpload) => {
   });
 };
 
-const updateToken = async (fileName) => {
+const updateUploadToken = async (fileName) => {
   const currentToken = uploadToken.value;
   const currentTokenDecoded = currentToken ? jwtDecode(currentToken) : null;
   const lastUploadedFileName = currentTokenDecoded
@@ -669,10 +669,9 @@ const uploadChunk = async (chunkData) => {
 
     let chunkUploaded = false;
 
-    // update upload token if needed
-    await updateToken(chunkData.get("name"));
-
     try {
+      // update upload token if needed
+      await updateUploadToken(chunkData.get("name"));
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
@@ -735,9 +734,8 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("total", numberOfChunksToUpload);
     chunkData.append("index", i);
     chunkData.append("size", file.size);
-    // chunkData.append("data_product_name", fileDetails.name);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append("data_product_id", datasetUploadLog.value.dataset.id);
+    chunkData.append("uploaded_entity_id", datasetUploadLog.value.dataset.id);
     chunkData.append(
       "file_upload_log_id",
       getFileUploadLog({ name: fileDetails.name, path: fileDetails.path })?.id,
@@ -745,12 +743,13 @@ const uploadFileChunks = async (fileDetails) => {
     // After setting the request's body, set the request's file
     chunkData.append("file", fileData);
 
-    // Try uploading chunk, or retry until retry threshold is reached
+    // Try uploading chunk
     uploaded = await uploadChunk(chunkData);
     if (!uploaded) {
       break;
     } else {
-      // Update file's/directory's upload percentage progress
+      // Update the percentage upload progress of the file/directory currently
+      // being uploaded
       if (selectingDirectory.value) {
         totalUploadedChunkCount.value += 1;
         selectedDirectory.value.progress = Math.trunc(
