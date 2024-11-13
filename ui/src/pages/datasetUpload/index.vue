@@ -113,7 +113,7 @@ const uploads = computed(() => {
 });
 
 const currentPageIndex = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(20);
 const total_results = ref(0);
 // used for OFFSET clause in the SQL used to retrieve the next paginated batch
 // of results
