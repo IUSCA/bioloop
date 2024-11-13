@@ -97,6 +97,7 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
+    body('type').escape().notEmpty().isIn(config.dataset_types),
     body('name').escape().notEmpty().isLength({ min: 3 }),
     body('source_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
@@ -106,7 +107,7 @@ router.post(
     // #swagger.summary = 'Create a record for a dataset upload'
 
     const {
-      name, source_dataset_id, files_metadata,
+      name, source_dataset_id, files_metadata, type,
     } = req.body;
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
@@ -122,7 +123,7 @@ router.post(
                 },
               }),
               name,
-              type: 'DATA_PRODUCT',
+              type,
             },
           },
           upload_log: {
@@ -133,7 +134,6 @@ router.post(
                   id: req.user.id,
                 },
               },
-              // type: config.upload.types.DATASET,
               files: {
                 create: files_metadata.map((file) => ({
                   name: file.name,

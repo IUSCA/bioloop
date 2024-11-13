@@ -415,6 +415,7 @@ const uploadFormData = computed(() => {
       : "";
   return {
     name: datasetName,
+    type: "DATA_PRODUCT",
     ...(rawDataSelected.value.length > 0 && {
       source_dataset_id: rawDataSelected.value[0].id,
     }),
