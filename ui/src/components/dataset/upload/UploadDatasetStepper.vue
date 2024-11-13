@@ -609,7 +609,10 @@ const evaluateChecksums = (filesToUpload) => {
       let fileDetails = filesToUpload[i];
       if (!fileDetails.checksumsEvaluated) {
         const file = fileDetails.file;
-        fileDetails.numChunks = Math.ceil(file.size / CHUNK_SIZE); // total number of fragments
+        // Total number of chunks to be uploaded.
+        // A single chunk is uploaded for an empty file
+        fileDetails.numChunks =
+          file.size > 0 ? Math.ceil(file.size / CHUNK_SIZE) : 1;
         if (selectingDirectory.value) {
           selectedDirectoryChunkCount.value += fileDetails.numChunks;
         }
@@ -720,8 +723,7 @@ const uploadFileChunks = async (fileDetails) => {
   let file = fileDetails.file;
   let uploaded = false;
 
-  // If the file is empty, a single chunk will be uploaded for it.
-  const numberOfChunksToUpload = file.size === 0 ? 1 : fileDetails.numChunks;
+  const numberOfChunksToUpload = fileDetails.numChunks;
 
   for (let i = 0; i < numberOfChunksToUpload; i++) {
     const start = i * CHUNK_SIZE;
@@ -752,15 +754,14 @@ const uploadFileChunks = async (fileDetails) => {
     if (!uploaded) {
       break;
     } else {
-      const chunkUploadProgress = Math.trunc(
-        ((i + 1) / numberOfChunksToUpload) * 100,
-      );
       if (selectingDirectory.value) {
         totalUploadedChunkCount.value += 1;
         selectedDirectory.value.progress =
           directoryUploadedChunksPercentage.value;
       } else {
-        fileDetails.progress = chunkUploadProgress;
+        fileDetails.progress = Math.trunc(
+          ((i + 1) / numberOfChunksToUpload) * 100,
+        );
       }
     }
   }
