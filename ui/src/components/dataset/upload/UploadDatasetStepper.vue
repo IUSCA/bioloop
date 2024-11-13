@@ -69,7 +69,7 @@
       <template #step-content-1>
         <div class="flex flex-col">
           <SelectFileButtons
-            :submit-attempted="submitAttempted"
+            :disabled="submitAttempted || loading || validatingForm"
             @files-added="
               (files) => {
                 clearSelectedDirectoryToUpload();
@@ -211,6 +211,8 @@ const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const HAS_SPACES_ERROR = "cannot contain spaces";
 
+const FORM_VALIDATION_ERROR = "An unknown error occurred";
+
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // Blob.slice method is used to segment files.
@@ -323,7 +325,7 @@ const datasetNameIsNull = (name) => {
 };
 
 const validateNotExists = (value) => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     // Vuestic claims that it should not run async validation if synchronous
     // validation fails, but it seems to be triggering async validation
     // nonetheless when `value` is ''. Hence the explicit check for whether
@@ -334,7 +336,10 @@ const validateNotExists = (value) => {
       datasetService
         .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
         .then((res) => {
-          resolve(res.data.datasets.length !== 0 ? DATASET_EXISTS_ERROR : true);
+          resolve(res.data.datasets.length > 0 ? DATASET_EXISTS_ERROR : true);
+        })
+        .catch(() => {
+          reject();
         });
     }
   });
@@ -445,6 +450,9 @@ const validateDatasetName = async () => {
         isNameValid: res !== DATASET_EXISTS_ERROR,
         error: DATASET_EXISTS_ERROR,
       };
+    })
+    .catch(() => {
+      return { isNameValid: false, error: FORM_VALIDATION_ERROR };
     })
     .finally(() => {
       validatingForm.value = false;
