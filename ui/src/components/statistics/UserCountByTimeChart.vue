@@ -80,9 +80,15 @@ const processUserCountLogs = (user_count_logs) => {
 const chartOptions = computed(() => {
   if (!chartData.value.XAxisData || !chartData.value.YAxisData) return {};
 
+  // Extract the final cumulative_sum value
+  const totalUsers =
+    chartData.value.YAxisData.length > 0
+      ? chartData.value.YAxisData[chartData.value.YAxisData.length - 1].value
+      : 0;
+
   return {
     title: {
-      text: "Registered User Count by Date", // Chart Title
+      text: `Total no. of users registered: ${totalUsers}`, // Chart Title
       left: "center",
     },
     tooltip: {
@@ -115,13 +121,6 @@ const chartOptions = computed(() => {
     yAxis: {
       type: "value",
       minInterval: 1, // Ensure Y-axis is in whole numbers
-      name: "Count", // Y-axis title
-      nameLocation: "middle",
-      nameGap: 30, // Gap between axis name and axis line
-      nameTextStyle: {
-        fontSize: 16, // Increase font size
-        fontWeight: "bold", // Make it bold
-      },
     },
     series: [
       {

@@ -130,6 +130,12 @@ const chartOptions = computed(() => ({
       fontSize: 18, // Title font size
       fontWeight: "bold",
     },
+    subtext:
+      "Bandwidth: The total data volume the user has accessed/interacted with.", // Subtext below title
+    subtextStyle: {
+      fontSize: 14, // Subtext font size smaller than title
+      color: "#666", // Slightly muted color for subtext
+    },
   },
   grid: { containLabel: true },
   xAxis: {
@@ -147,15 +153,13 @@ const chartOptions = computed(() => ({
   },
   yAxis: {
     type: "category",
-    name: "User",
-    nameLocation: "middle",
-    nameGap: 120,
-    nameTextStyle: {
-      fontSize: 16, // Increase font size
-      fontWeight: "bold", // Make it bold
-    },
-    data: chartData.value.users,
+    data: chartData.value.users.map((user) =>
+      user.length > 15 ? `${user.slice(0, 10)}...` : user,
+    ), // Truncate long usernames to 10 characters and add '...'
     inverse: true, // to match the user consumption descending order
+    axisLabel: {
+      formatter: (value) => value, // This ensures the modified usernames are displayed correctly
+    },
   },
   tooltip: {
     trigger: "item",
@@ -176,6 +180,7 @@ const chartOptions = computed(() => ({
     inRange: {
       color: ["#65B581", "#FFCE34", "#FD665F"],
     },
+    formatter: (value) => formatBytes(value), // Applies formatBytes function to display formatted values
   },
   series: [
     {

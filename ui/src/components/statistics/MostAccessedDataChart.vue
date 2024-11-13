@@ -155,15 +155,13 @@ const chartOptions = computed(() => ({
   },
   yAxis: {
     type: "category",
-    name: "Dataset Name",
-    nameLocation: "middle",
-    nameGap: 230, // Increase the gap between axis title and axis line
-    nameTextStyle: {
-      fontSize: 16, // Increase font size
-      fontWeight: "bold", // Make it bold
-    },
-    data: chartData.value.names,
+    data: chartData.value.names.map((name) =>
+      name.length > 15 ? `${name.slice(0, 10)}...` : name,
+    ),
     inverse: true,
+    axisLabel: {
+      formatter: (value) => value, // This ensures the modified usernames are displayed correctly
+    },
   },
   tooltip: {
     trigger: "item",

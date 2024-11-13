@@ -71,7 +71,6 @@ const props = defineProps({
       [
         config.metric_measurements.SDA,
         config.metric_measurements.SLATE_SCRATCH,
-        config.metric_measurements.SLATE_SCRATCH_FILES,
       ].includes(val),
   },
 });
@@ -98,10 +97,8 @@ const chartOptions = computed(() => {
         const timestamp = firstDataPoint.value
           ? firstDataPoint.value[0] // This is the timestamp
           : firstDataPoint[0];
-
-        // Convert timestamp to a readable date
-        const formattedDate = new Date(timestamp).toLocaleString();
-        let tooltipText = `${formattedDate}<br/>`; // Display date & time
+        const formattedDate = new Date(timestamp).toISOString().split("T")[0];
+        let tooltipText = `${formattedDate}<br/>`; // Display date
 
         // Find usage value based on the timestamp in tooltipData
         const matchedData = tooltipData.value.find(
@@ -120,21 +117,8 @@ const chartOptions = computed(() => {
           const usageValue = matchedData
             ? matchedData.usage
             : "No usage data available";
+          const formattedValue = formatBytes(usageValue);
 
-          // Handle different measurement types
-          let formattedValue;
-          switch (props.measurement) {
-            case config.metric_measurements.SDA:
-            case config.metric_measurements.SLATE_SCRATCH:
-              formattedValue = formatBytes(usageValue); // Convert usage to human-readable format
-              break;
-            case config.metric_measurements.SLATE_SCRATCH_FILES:
-              formattedValue = usageValue; // Display raw usage value
-              break;
-            default:
-              console.log("Measurement type did not match expected values");
-              formattedValue = "Unknown measurement";
-          }
           tooltipText += `${param.seriesName}: ${formattedValue}<br/>`;
         });
 
@@ -199,10 +183,6 @@ const currentUsage = computed(() => {
       metricTitle = "Current Slate-Scratch Space Usage";
       metricCount = `${formatBytes(_being_used.value)} / ${formatBytes(_limit.value)}`;
       break;
-    case config.metric_measurements.SLATE_SCRATCH_FILES:
-      metricTitle = "Current Slate-Scratch File Quota Usage";
-      metricCount = `${_being_used.value} / ${_limit.value}`;
-      break;
     default:
       console.log("Provided measurement value did not match expected values");
   }
@@ -218,8 +198,6 @@ const chartTitleCallBack = () => {
       return "SDA Space Utilization";
     case config.metric_measurements.SLATE_SCRATCH:
       return "Slate-Scratch Space Utilization";
-    case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return "Slate-Scratch File Quota Utilization";
     default:
       console.log("Provided measurement value did not match expected values");
   }
@@ -240,24 +218,13 @@ const getDatasetLabel = () => {
       return "SDA Usage";
     case config.metric_measurements.SLATE_SCRATCH:
       return "Slate-Scratch Usage";
-    case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return "Slate-Scratch Files Usage";
     default:
       return "Unknown Measurement";
   }
 };
 
 const yAxisTicksCallback = (val) => {
-  // If the range of data-point values provided to chart.js is small enough
-  switch (props.measurement) {
-    case config.metric_measurements.SDA:
-    case config.metric_measurements.SLATE_SCRATCH:
-      return val % 1 !== 0 ? formatBytes(Math.floor(val)) : formatBytes(val);
-    case config.metric_measurements.SLATE_SCRATCH_FILES:
-      return val % 1 !== 0 ? Math.floor(val) : val;
-    default:
-      console.log("Provided measurement value did not match expected values");
-  }
+  return val % 1 !== 0 ? formatBytes(Math.floor(val)) : formatBytes(val);
 };
 
 const retrieveAndConfigureChartData = () => {
@@ -266,18 +233,39 @@ const retrieveAndConfigureChartData = () => {
 
   MetricsService.getSpaceUtilizationByTimeAndMeasurement(props.measurement)
     .then((res) => {
-      chartData.value = res.data;
-      _being_used.value = res.data.length > 0 ? res.data[0].usage : 0;
-      _limit.value = res.data.length > 0 ? res.data[0].limit : 0;
+      // Group by day and select the last hourly entry per day
+      const dataByDay = res.data.reduce((acc, item) => {
+        const day = item.timestamp.split("T")[0];
 
-      // Populate tooltipData with timestamp and usage
-      tooltipData.value = res.data.map((item) => ({
+        // If the day is already in the accumulator, compare timestamps
+        if (acc[day]) {
+          // Keep the entry with the later timestamp
+          const currentTime = new Date(item.timestamp).getTime();
+          const existingTime = new Date(acc[day].timestamp).getTime();
+          if (currentTime > existingTime) {
+            acc[day] = item;
+          }
+        } else {
+          // Add the first occurrence for the day
+          acc[day] = item;
+        }
+
+        return acc;
+      }, {});
+      const filteredData = Object.values(dataByDay);
+
+      // Set chartData to the filtered data
+      chartData.value = filteredData;
+
+      _being_used.value = filteredData.length > 0 ? filteredData[0].usage : 0;
+      _limit.value = filteredData.length > 0 ? filteredData[0].limit : 0;
+
+      tooltipData.value = filteredData.map((item) => ({
         timestamp: item.timestamp,
         usage: item.usage,
       }));
-
-      const totalUsageValues = res.data.map((item) => item.usage).length;
-      const totalTimestampValues = res.data.map(
+      const totalUsageValues = filteredData.map((item) => item.usage).length;
+      const totalTimestampValues = filteredData.map(
         (item) => item.timestamp,
       ).length;
 

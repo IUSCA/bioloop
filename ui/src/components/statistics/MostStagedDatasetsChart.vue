@@ -153,15 +153,13 @@ const chartOptions = computed(() => ({
   },
   yAxis: {
     type: "category",
-    name: "Dataset Name",
-    nameLocation: "middle",
-    nameGap: 230,
-    nameTextStyle: {
-      fontSize: 16, // Increase font size
-      fontWeight: "bold", // Make it bold
-    },
-    data: chartData.value.datasets,
+    data: chartData.value.datasets.map((dataset) =>
+      dataset.length > 15 ? `${dataset.slice(0, 10)}...` : dataset,
+    ),
     inverse: true,
+    axisLabel: {
+      formatter: (value) => value, // This ensures the modified usernames are displayed correctly
+    },
   },
   tooltip: {
     trigger: "item",
