@@ -58,6 +58,11 @@ router.get(
       skip: offset,
       take: limit,
       ...query_obj,
+      orderBy: {
+        upload_log: {
+          initiated_at: 'desc',
+        },
+      },
       include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
     };
 
