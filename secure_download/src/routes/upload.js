@@ -5,8 +5,9 @@ const path = require('path');
 const multer = require('multer');
 const createError = require('http-errors');
 const { createHash } = require('node:crypto');
-
 const config = require('config');
+
+const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
@@ -28,6 +29,7 @@ const getFileChunkName = (fileChecksum, index) => `${fileChecksum}-${index}`;
 
 const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
+    logger.info('Received request to persist file to filesystem');
     const chunkStorage = getFileChunksStorageDir(
       req.body.data_product_id,
       req.body.file_upload_log_id,
@@ -57,30 +59,58 @@ router.post(
       name, data_product_id, index, checksum, chunk_checksum,
     } = req.body;
 
+    logger.info('Received request to accept file:');
+    logger.info(`name: ${name}`);
+    logger.info(`data_product_id: ${data_product_id}`);
+    logger.info(`index: ${index}`);
+    logger.info(`checksum: ${checksum}`);
+    logger.info(`chunk_checksum: ${chunk_checksum}`);
+
     const request_scope = req.token?.scope || '';
+    logger.info(`Request scope: ${request_scope}`);
 
     const hyphen_delimited_file_name = name.split(' ').join('-'); // replace whitespaces with hyphens
     const expected_scope = `${UPLOAD_SCOPE}:${hyphen_delimited_file_name}`;
+    logger.info(`Expected scope: ${expected_scope}`);
 
     if (request_scope !== expected_scope) {
+      logger.error('Request scope does not match expected scope');
       return next(createError.Forbidden(`Authorization token should have scope ${expected_scope} `
           + `for the contents of file ${name} to be uploaded`));
     }
 
-    if (!(data_product_id && checksum && chunk_checksum) || Number.isNaN(index)) {
-      return next(createError.BadRequest());
+    if (!data_product_id) {
+      logger.error('Missing data_product_id in request body');
+      return next(createError.BadRequest('Missing data_product_id in request body'));
+    } if (!checksum) {
+      logger.error('Missing checksum in request body');
+      return next(createError.BadRequest('Missing checksum in request body'));
+    } if (!chunk_checksum) {
+      logger.error('Missing chunk_checksum in request body');
+      return next(createError.BadRequest('Missing chunk_checksum in request body'));
+    } if (Number.isNaN(index)) {
+      logger.error('Invalid index in request body');
+      return next(createError.BadRequest('Invalid index in request body'));
     }
 
     const receivedFilePath = req.file.path;
+
+    logger.info('Reading file', receivedFilePath);
     fs.readFile(receivedFilePath, (err, data) => {
       if (err) {
+        logger.error(`Error reading file ${receivedFilePath}`);
+        logger.error(err);
         throw err;
       }
 
       const evaluated_checksum = createHash('md5').update(data).digest('hex');
+      logger.info(`Evaluated checksum: ${evaluated_checksum}`);
       if (evaluated_checksum !== chunk_checksum) {
+        logger.error('Evaluated checksum of chunk does not match checksum received in the request');
         return next(createError.BadRequest('Evaluated checksum of chunk does not match checksum received in the request'));
       }
+
+      logger.info('Successfully wrote uploaded file to disk');
       res.sendStatus(200);
     });
   }),
