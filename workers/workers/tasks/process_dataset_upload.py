@@ -55,11 +55,7 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
 
     num_chunks_found = len([p for p in chunks_path.iterdir()])
 
-    # For uploaded empty files, the expected number of chunks will always be zero.
-    # A single chunk is written to the filesystem through the upload.
-    is_file_empty = num_chunks_expected == 0 and num_chunks_found == 1
-
-    if is_file_empty or (num_chunks_expected > 0 and (num_chunks_found != num_chunks_expected)):
+    if num_chunks_found == num_chunks_expected:
         create_file_from_chunks(chunks_path=chunks_path,
                                 file_md5=file_md5,
                                 file_destination_path=file_destination_path,
@@ -67,7 +63,7 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         print(f'Chunks for file upload {file_upload_log_id} ({file_name}) merged successfully')
         evaluated_checksum = utils.checksum(file_destination_path)
         print(f'evaluated_checksum: {evaluated_checksum}')
-        print(f'file_md5: {file_md5}')
+        print(f'expected file_md5: {file_md5}')
         processing_error = evaluated_checksum != file_md5
     else:
         processing_error = True
