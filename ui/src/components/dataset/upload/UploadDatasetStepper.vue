@@ -20,9 +20,7 @@
             'step-button--completed': isCompleted,
           }"
           @click="setStep(i)"
-          :disabled="
-            submitAttempted || submissionSuccess || step < i || loading
-          "
+          :disabled="isStepperButtonDisabled(i)"
           preset="secondary"
         >
           <div class="flex flex-col items-center">
@@ -254,7 +252,12 @@ const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
 
 const isPreviousButtonDisabled = computed(() => {
-  return step.value === 0 || submitAttempted.value || loading.value;
+  return (
+    step.value === 0 ||
+    submitAttempted.value ||
+    loading.value ||
+    validatingForm.value
+  );
 });
 
 const isNextButtonDisabled = computed(() => {
@@ -266,9 +269,20 @@ const isNextButtonDisabled = computed(() => {
       SUBMISSION_STATES.UPLOADING,
       SUBMISSION_STATES.UPLOADED,
     ].includes(submissionStatus.value) ||
-    loading.value
+    loading.value ||
+    validatingForm.value
   );
 });
+
+const isStepperButtonDisabled = (stepIndex) => {
+  return (
+    submitAttempted.value ||
+    submissionSuccess.value ||
+    step.value < stepIndex ||
+    loading.value ||
+    validatingForm.value
+  );
+};
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine.
@@ -341,7 +355,8 @@ const datasetNameValidationRules = [
   validateNotExists,
 ];
 
-const loading = ref(true);
+const loading = ref(false);
+const validatingForm = ref(false);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const datasetUploadLog = ref(null);
@@ -423,12 +438,17 @@ const validateDatasetName = async () => {
     return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
   }
 
-  return datasetNameValidationRules[3](datasetName).then((res) => {
-    return {
-      isNameValid: res !== DATASET_EXISTS_ERROR,
-      error: DATASET_EXISTS_ERROR,
-    };
-  });
+  validatingForm.value = true;
+  return datasetNameValidationRules[3](datasetName)
+    .then((res) => {
+      return {
+        isNameValid: res !== DATASET_EXISTS_ERROR,
+        error: DATASET_EXISTS_ERROR,
+      };
+    })
+    .finally(() => {
+      validatingForm.value = false;
+    });
 };
 
 const clearSelectedDirectoryToUpload = ({
