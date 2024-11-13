@@ -386,11 +386,6 @@ const selectedDirectory = ref(null);
 const selectedDirectoryName = ref("");
 const selectedDirectoryChunkCount = ref(0);
 const totalUploadedChunkCount = ref(0);
-const directoryUploadedChunksPercentage = computed(() => {
-  return Math.floor(
-    (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) * 100,
-  );
-});
 
 const step = ref(0);
 const uploadCancelled = ref(false);
@@ -755,10 +750,13 @@ const uploadFileChunks = async (fileDetails) => {
     if (!uploaded) {
       break;
     } else {
+      // Update file's/directory's upload percentage progress
       if (selectingDirectory.value) {
         totalUploadedChunkCount.value += 1;
-        selectedDirectory.value.progress =
-          directoryUploadedChunksPercentage.value;
+        selectedDirectory.value.progress = Math.trunc(
+          (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) *
+            100,
+        );
       } else {
         fileDetails.progress = Math.trunc(
           ((i + 1) / numberOfChunksToUpload) * 100,
@@ -812,7 +810,6 @@ const uploadFile = async (fileDetails) => {
     delete fileDetails.progress;
   }
 
-  auth.postFileUpload();
   return successful;
 };
 

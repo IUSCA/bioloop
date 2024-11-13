@@ -197,10 +197,6 @@ export const useAuthStore = defineStore("auth", () => {
     });
   };
 
-  const postFileUpload = () => {
-    clearInterval(refreshUploadTokenTimer);
-  };
-
   return {
     user,
     loggedIn,
@@ -220,7 +216,6 @@ export const useAuthStore = defineStore("auth", () => {
     env,
     setEnv,
     onFileUpload,
-    postFileUpload,
   };
 });
 
