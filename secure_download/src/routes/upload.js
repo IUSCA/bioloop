@@ -50,7 +50,6 @@ const uploadFileStorage = multer.diskStorage({
  * filesystem. Path of the file is constructed from metadata fields present in
  * the request body.
  */
-
 router.post(
   '/',
   multer({ storage: uploadFileStorage }).single('file'),
@@ -90,7 +89,7 @@ router.post(
       return next(createError.BadRequest('Missing chunk_checksum in request body'));
     } if (Number.isNaN(index)) {
       logger.error('Invalid index in request body');
-      return next(createError.BadRequest('Invalid index in request body'));
+      return next(createError.BadRequest('Invalid index received in request body'));
     }
 
     const receivedFilePath = req.file.path;
@@ -106,8 +105,9 @@ router.post(
       const evaluated_checksum = createHash('md5').update(data).digest('hex');
       logger.info(`Evaluated checksum: ${evaluated_checksum}`);
       if (evaluated_checksum !== chunk_checksum) {
-        logger.error('Evaluated checksum of chunk does not match checksum received in the request');
-        return next(createError.BadRequest('Evaluated checksum of chunk does not match checksum received in the request'));
+        const checksumValidationError = `Evaluated checksum of uploaded chunk ${evaluated_checksum} does not match the expected checksum ${chunk_checksum} received in the request`;
+        logger.error(checksumValidationError);
+        return next(createError.BadRequest(checksumValidationError));
       }
 
       logger.info('Successfully wrote uploaded file to disk');
