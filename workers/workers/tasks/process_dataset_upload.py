@@ -53,7 +53,7 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
     file_destination_path.touch()
     print('Destination path created: ', file_destination_path.exists())
 
-    num_chunks_found = len([p for p in chunks_path.iterdir()])
+    num_chunks_found = len([p for p in chunks_path.iterdir() if str(p).startswith(f'{file_md5}-')])
 
     if num_chunks_found == num_chunks_expected:
         create_file_from_chunks(chunks_path=chunks_path,
