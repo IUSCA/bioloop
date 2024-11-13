@@ -24,10 +24,11 @@ const prisma = new PrismaClient();
 const CANCEL_DATASET_UPLOAD_WORKFLOW = 'cancel_dataset_upload';
 const PROCESS_DATASET_UPLOAD_WORKFLOW = 'process_dataset_upload';
 
-const get_dataset_workflows = async ({ dataset } = {}) => {
+const get_dataset_active_workflows = async ({ dataset } = {}) => {
   const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
   const workflowQueryResponse = await workflowService.getAll({
     workflow_ids: datasetWorkflowIds,
+    status: 'ACTIVE',
   });
   return workflowQueryResponse.data.results;
 };
@@ -224,36 +225,57 @@ router.post(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
 
-    const uploadedDataset = await prisma.dataset.findFirst({
-      where: {
-        id: req.params.dataset_id,
-      },
-      include: {
-        workflows: true,
-        dataset_upload_log: true,
-      },
-    });
+    logger.info('info');
+    logger.warn('warning');
+    logger.error('Received request to initiate processing of dataset upload');
 
-    uploadedDataset.workflows = await get_dataset_workflows({ dataset: uploadedDataset });
+    setTimeout(async () => {
+      logger.error('Started processing dataset upload');
+      const uploadedDataset = await prisma.dataset.findUnique({
+        where: {
+          id: req.params.dataset_id,
+        },
+        include: {
+          workflows: true,
+          dataset_upload_log: true,
+        },
+      });
 
-    const cancelUploadWorkflow = uploadedDataset.workflows.find(
-      (wf) => wf.name === CANCEL_DATASET_UPLOAD_WORKFLOW,
-    );
-    const isCancelUploadWorkflowRunning = !!cancelUploadWorkflow;
+      // todo - test different points of conflict
 
-    if (!isCancelUploadWorkflowRunning) {
-      const processUploadWorkflow = await datasetService.create_workflow(
-        uploadedDataset,
-        PROCESS_DATASET_UPLOAD_WORKFLOW,
-        req.user.id,
+      // todo - if cancel wf is started before this, dataset may not exist
+      if (!uploadedDataset) {
+        return next(createError.NotFound(`Dataset ${req.params.dataset_id} not found`));
+      }
+
+      uploadedDataset.workflows = await get_dataset_active_workflows({ dataset: uploadedDataset });
+
+      const workflowIds = uploadedDataset.workflows.map((wf) => wf.id);
+      logger.error('workflowIds');
+      logger.error(workflowIds);
+
+      const cancelUploadWorkflow = uploadedDataset.workflows.find(
+        (wf) => wf.name === CANCEL_DATASET_UPLOAD_WORKFLOW,
       );
-      res.json(processUploadWorkflow);
-    } else {
-      const error = 'Cannot process upload. A request to cancel this upload '
+      const isCancelUploadWorkflowRunning = !!cancelUploadWorkflow;
+
+      // todo - the wf 8a9c59fa-7123-437a-87b5-fb9a3fc753d6 doesn't have a
+      // dataset
+      if (!isCancelUploadWorkflowRunning) {
+        logger.error('starting process workflow');
+        const processUploadWorkflow = await datasetService.create_workflow(
+          uploadedDataset,
+          PROCESS_DATASET_UPLOAD_WORKFLOW,
+          req.user.id,
+        );
+        res.json(processUploadWorkflow);
+      } else {
+        const error = 'Cannot process upload. A request to cancel this upload '
           + `(workflow ${cancelUploadWorkflow.id}) is already in progress.`;
-      logger.error(error);
-      return next(createError.Conflict(error));
-    }
+        logger.error(error);
+        return next(createError.Conflict(error));
+      }
+    }, 10000);
   }),
 );
 
@@ -267,7 +289,7 @@ router.post(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Cancel a pending upload'
 
-    const uploadedDataset = await prisma.dataset.findFirst({
+    const uploadedDataset = await prisma.dataset.findUniqueOrThrow({
       where: {
         id: req.params.dataset_id,
       },
@@ -277,7 +299,7 @@ router.post(
       },
     });
 
-    uploadedDataset.workflows = await get_dataset_workflows({ dataset: uploadedDataset });
+    uploadedDataset.workflows = await get_dataset_active_workflows({ dataset: uploadedDataset });
 
     const processUploadWorkflow = uploadedDataset.workflows.find(
       (wf) => wf.name === PROCESS_DATASET_UPLOAD_WORKFLOW,
@@ -310,6 +332,7 @@ router.delete(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Delete records of a dataset upload'
 
+    // todo - this fails after Cancel
     await prisma.$transaction(async (tx) => {
       const uploadedDatasetUploadLog = await tx.dataset_upload_log.findUniqueOrThrow({
         where: {
