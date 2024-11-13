@@ -152,7 +152,7 @@ const columns = [
   {
     key: "source_dataset",
     label: "Source Dataset",
-    width: "20%",
+    width: "30%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -174,7 +174,7 @@ const columns = [
   {
     key: "initiated_at",
     label: "Uploaded On",
-    width: "20%",
+    width: "10%",
     thAlign: "right",
     tdAlign: "right",
     thStyle:
