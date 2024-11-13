@@ -837,7 +837,6 @@ const onSubmit = async () => {
         if (filesUploaded) {
           resolve();
         } else {
-          // console.log("reject upload");
           submissionStatus.value = SUBMISSION_STATES.UPLOAD_FAILED;
           submissionAlert.value = "Some files could not be uploaded.";
           reject();
@@ -853,7 +852,7 @@ const onSubmit = async () => {
   });
 };
 
-const postSubmit = () => {
+const setPostSubmissionSuccessState = () => {
   if (!someFilesPendingUpload.value) {
     submissionStatus.value = SUBMISSION_STATES.UPLOADED;
     statusChipColor.value = "primary";
@@ -862,6 +861,10 @@ const postSubmit = () => {
       "All files have been uploaded successfully. You may close this window.";
     isSubmissionAlertVisible.value = true;
   }
+};
+
+const postSubmit = () => {
+  setPostSubmissionSuccessState();
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {

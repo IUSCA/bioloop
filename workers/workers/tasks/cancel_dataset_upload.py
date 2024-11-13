@@ -13,8 +13,9 @@ logger = get_task_logger(__name__)
 
 
 def purge_uploaded_resources(celery_task, dataset_id, **kwargs):
-    dataset = api.get_dataset(dataset_id=dataset_id)
     print(f"Purging uploaded resources for dataset {dataset_id}")
+
+    dataset = api.get_dataset(dataset_id=dataset_id)
 
     dataset_path = Path(config['paths'][dataset['type']]['upload']) / str(dataset_id)
     if dataset_path.exists():

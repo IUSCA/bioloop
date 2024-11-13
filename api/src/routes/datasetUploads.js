@@ -5,6 +5,7 @@ const _ = require('lodash/fp');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
+const createError = require('http-errors');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
@@ -18,6 +19,9 @@ const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+const CANCEL_DATASET_UPLOAD_WORKFLOW = 'cancel_dataset_upload';
+const PROCESS_DATASET_UPLOAD_WORKFLOW = 'process_dataset_upload';
 
 const get_dataset_workflows = async ({ dataset } = {}) => {
   const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
@@ -249,12 +253,22 @@ router.post(
 
     uploadedDataset.workflows = await get_dataset_workflows({ dataset: uploadedDataset });
 
-    const workflow = await datasetService.create_workflow(
-      uploadedDataset,
-      'process_dataset_upload',
-      req.user.id,
+    const cancelUploadWorkflow = uploadedDataset.workflows.find(
+      (wf) => wf.name === CANCEL_DATASET_UPLOAD_WORKFLOW,
     );
-    res.json(workflow);
+    const isCancelUploadWorkflowRunning = !!cancelUploadWorkflow;
+
+    if (!isCancelUploadWorkflowRunning) {
+      const processUploadWorkflow = await datasetService.create_workflow(
+        uploadedDataset,
+        PROCESS_DATASET_UPLOAD_WORKFLOW,
+        req.user.id,
+      );
+      res.json(processUploadWorkflow);
+    } else {
+      return next(createError.Conflict('Cannot process upload. A request to cancel this upload '
+          + `(workflow ${cancelUploadWorkflow.id}) is already in progress.`));
+    }
   }),
 );
 
@@ -268,8 +282,6 @@ router.post(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Cancel a pending upload'
 
-    const cancelUploadWorkflowName = 'cancel_dataset_upload';
-
     const uploadedDataset = await prisma.dataset.findFirst({
       where: {
         id: req.params.dataset_id,
@@ -282,13 +294,22 @@ router.post(
 
     uploadedDataset.workflows = await get_dataset_workflows({ dataset: uploadedDataset });
 
-    await datasetService.create_workflow(
-      uploadedDataset,
-      cancelUploadWorkflowName,
-      req.user.id,
+    const processUploadWorkflow = uploadedDataset.workflows.find(
+      (wf) => wf.name === PROCESS_DATASET_UPLOAD_WORKFLOW,
     );
+    const isProcessUploadWorkflowRunning = !!processUploadWorkflow;
 
-    res.sendStatus(200);
+    if (!isProcessUploadWorkflowRunning) {
+      const cancelUploadWorkflow = await datasetService.create_workflow(
+        uploadedDataset,
+        CANCEL_DATASET_UPLOAD_WORKFLOW,
+        req.user.id,
+      );
+      res.json(cancelUploadWorkflow);
+    } else {
+      return next(createError.Conflict('Cannot cancel upload. A request to process this upload '
+          + `(workflow ${processUploadWorkflow.id}) is already in progress.`));
+    }
   }),
 );
 
