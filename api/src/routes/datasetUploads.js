@@ -6,6 +6,7 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const createError = require('http-errors');
+const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
@@ -165,24 +166,6 @@ router.post(
   }),
 );
 
-// router.get(
-//   '/:dataset_id',
-//   isPermittedTo('read'),
-//   validate([
-//     param('dataset_id').isInt().toInt(),
-//   ]),
-//   asyncHandler(async (req, res, next) => {
-//     // #swagger.tags = ['uploads']
-//     // #swagger.summary = 'Retrieve an upload log by id'
-//
-// const dataset_upload_log = await
-// prisma.dataset_upload_log.findFirstOrThrow({ where: { dataset_id:
-// req.params.dataset_id, }, include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS, });
-//
-//     res.json(dataset_upload_log);
-//   }),
-// );
-
 // - Update the upload logs created for an uploaded entity or its files
 // - Used by UI, workers
 router.patch(
@@ -266,8 +249,10 @@ router.post(
       );
       res.json(processUploadWorkflow);
     } else {
-      return next(createError.Conflict('Cannot process upload. A request to cancel this upload '
-          + `(workflow ${cancelUploadWorkflow.id}) is already in progress.`));
+      const error = 'Cannot process upload. A request to cancel this upload '
+          + `(workflow ${cancelUploadWorkflow.id}) is already in progress.`;
+      logger.error(error);
+      return next(createError.Conflict(error));
     }
   }),
 );
@@ -307,8 +292,10 @@ router.post(
       );
       res.json(cancelUploadWorkflow);
     } else {
-      return next(createError.Conflict('Cannot cancel upload. A request to process this upload '
-          + `(workflow ${processUploadWorkflow.id}) is already in progress.`));
+      const error = 'Cannot cancel upload. A request to process this upload '
+          + `(workflow ${processUploadWorkflow.id}) is already in progress.`;
+      logger.error(error);
+      return next(createError.Conflict(error));
     }
   }),
 );
