@@ -677,7 +677,6 @@ const uploadChunk = async (chunkData) => {
     } catch (e) {
       console.error(`Encountered error uploading chunk`, e);
     }
-
     return chunkUploaded;
   };
 
@@ -689,7 +688,9 @@ const uploadChunk = async (chunkData) => {
       retry_count += 1;
     }
     if (retry_count > RETRY_COUNT_THRESHOLD) {
-      console.error("Exceeded retry threshold");
+      console.error(
+        `Exceeded retry threshold of ${RETRY_COUNT_THRESHOLD} times`,
+      );
       break;
     }
   }
