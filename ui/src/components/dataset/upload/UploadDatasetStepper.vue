@@ -693,9 +693,9 @@ const uploadFileChunks = async (fileDetails) => {
   let uploaded = false;
 
   // If the file is empty, a single chunk will be uploaded for it.
-  const blockCount = file.size === 0 ? 1 : fileDetails.numChunks;
+  const numberOfChunksToUpload = file.size === 0 ? 1 : fileDetails.numChunks;
 
-  for (let i = 0; i < blockCount; i++) {
+  for (let i = 0; i < numberOfChunksToUpload; i++) {
     const start = i * CHUNK_SIZE;
     const end = Math.min(file.size, start + CHUNK_SIZE);
 
@@ -706,7 +706,7 @@ const uploadFileChunks = async (fileDetails) => {
     // the body's fields should be set before the `file` field.
     chunkData.append("checksum", fileDetails.fileChecksum);
     chunkData.append("name", fileDetails.name);
-    chunkData.append("total", blockCount);
+    chunkData.append("total", numberOfChunksToUpload);
     chunkData.append("index", i);
     chunkData.append("size", file.size);
     // chunkData.append("data_product_name", fileDetails.name);
@@ -724,7 +724,9 @@ const uploadFileChunks = async (fileDetails) => {
     if (!uploaded) {
       break;
     } else {
-      const chunkUploadProgress = Math.trunc(((i + 1) / blockCount) * 100);
+      const chunkUploadProgress = Math.trunc(
+        ((i + 1) / numberOfChunksToUpload) * 100,
+      );
       if (selectingDirectory.value) {
         totalUploadedChunkCount.value += 1;
         selectedDirectory.value.progress =

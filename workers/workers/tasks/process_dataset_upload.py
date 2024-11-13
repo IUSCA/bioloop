@@ -22,11 +22,19 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['SUCCESS']]
 
 
+def create_file_from_chunks(chunks_path, file_md5, file_destination_path, num_chunks_found):
+    for i in range(num_chunks_found):
+        chunk_file = chunks_path / f'{file_md5}-{i}'
+        print(f'Processing chunk {chunk_file}')
+        with open(chunk_file, 'rb') as chunk:
+            with open(file_destination_path, 'ab') as destination:
+                destination.write(chunk.read())
+
+
 def merge_file_chunks(file_upload_log_id, file_name, file_path,
                       file_md5, chunks_path, dataset_merged_chunks_path,
                       num_chunks_expected):
     print(f'Processing file {file_name}')
-    processing_error = False
 
     if file_path is not None:
         file_base_path = Path(dataset_merged_chunks_path) / file_path
@@ -46,25 +54,26 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
     print('Destination path created: ', file_destination_path.exists())
 
     num_chunks_found = len([p for p in chunks_path.iterdir()])
-    if num_chunks_found != num_chunks_expected:
-        processing_error = True
-        print(f'Expected number of chunks for file\
- id {file_upload_log_id} ({num_chunks_expected}) don\'t\
- equal number of chunks found {num_chunks_found}.\
- This file\'s chunks will not be merged')
-    else:
-        for i in range(num_chunks_found):
-            chunk_file = chunks_path / f'{file_md5}-{i}'
-            print(f'Processing chunk {chunk_file}')
-            with open(chunk_file, 'rb') as chunk:
-                with open(file_destination_path, 'ab') as destination:
-                    destination.write(chunk.read())
-        print(f'Chunks for file id {file_upload_log_id} ({file_name}) merged successfully')
 
+    # For uploaded empty files, the expected number of chunks will always be zero.
+    # A single chunk is written to the filesystem through the upload.
+    is_file_empty = num_chunks_expected == 0 and num_chunks_found == 1
+
+    if is_file_empty or (num_chunks_expected > 0 and (num_chunks_found != num_chunks_expected)):
+        create_file_from_chunks(chunks_path=chunks_path,
+                                file_md5=file_md5,
+                                file_destination_path=file_destination_path,
+                                num_chunks_found=num_chunks_found)
+        print(f'Chunks for file upload {file_upload_log_id} ({file_name}) merged successfully')
         evaluated_checksum = utils.checksum(file_destination_path)
         print(f'evaluated_checksum: {evaluated_checksum}')
         print(f'file_md5: {file_md5}')
         processing_error = evaluated_checksum != file_md5
+    else:
+        processing_error = True
+        print(f'Expected number of chunks for file id {file_upload_log_id}'
+              f' ({num_chunks_expected}) don\'t equal number of chunks found'
+              f' ({num_chunks_found}). This file\'s will not be processed')
 
     # raise Exception("test exception")
 
@@ -145,7 +154,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         file_upload_log_payload = {
             'status': f['status']
         }
-        upload_status = config['upload']['status']['PROCESSING_FAILED'] if (
+        updated_upload_status = config['upload']['status']['PROCESSING_FAILED'] if (
                 f['status'] == config['upload']['status']['PROCESSING_FAILED']
         ) else None
         upload_log_payload = {
@@ -154,8 +163,8 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
                 'data': file_upload_log_payload
             }]
         }
-        if upload_status is not None:
-            upload_log_payload['status'] = upload_status
+        if updated_upload_status is not None:
+            upload_log_payload['status'] = updated_upload_status
         api.update_dataset_upload_log(
             uploaded_dataset_id=dataset_id,
             log_data=upload_log_payload
