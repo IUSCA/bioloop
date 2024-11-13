@@ -26,7 +26,6 @@ router.get(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
 
-      //   todo - workflows must be kept decoupled from datasets
       const { dataset_id, dataset_name, workflow_id } = req.query;
       let workflow_ids = null;
 
@@ -104,10 +103,14 @@ router.get(
 
       res.json({
         metadata: api_res.data.metadata,
-        results: api_res.data.results.map((wf) => ({
-          ...wf,
-          initiator: id_initiator_map[wf.id],
-        })),
+        results: api_res.data.results.map((wf) => {
+          const app_workflow = rows.find((app_wf) => app_wf.id === wf.id);
+          return {
+            ...wf,
+            dataset_id: app_workflow?.dataset_id,
+            initiator: id_initiator_map[wf.id],
+          };
+        }),
       });
     },
   ),
