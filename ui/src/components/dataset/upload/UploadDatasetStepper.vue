@@ -692,7 +692,8 @@ const uploadFileChunks = async (fileDetails) => {
   let file = fileDetails.file;
   let uploaded = false;
 
-  const blockCount = fileDetails.numChunks;
+  // If the file is empty, a single chunk will be uploaded for it.
+  const blockCount = file.size === 0 ? 1 : fileDetails.numChunks;
 
   for (let i = 0; i < blockCount; i++) {
     const start = i * CHUNK_SIZE;
@@ -894,7 +895,6 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  console.log("preUpload");
   await evaluateChecksums(filesNotUploaded.value);
 
   const logData = datasetUploadLog.value?.id
