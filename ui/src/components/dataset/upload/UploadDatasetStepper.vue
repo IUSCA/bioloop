@@ -378,6 +378,7 @@ const selectedDirectory = ref(null);
 const selectedDirectoryName = ref("");
 const selectedDirectoryChunkCount = ref(0);
 const totalUploadedChunkCount = ref(0);
+const uploadingFilesState = ref({});
 
 const step = ref(0);
 const uploadCancelled = ref(false);
@@ -691,25 +692,61 @@ const uploadChunk = async (chunkData) => {
 };
 
 const getFileUploadLog = ({ name, path }) => {
-  // console.log(`Getting file upload log for ${name} at ${path}`);
-  // console.log("uploadLog files", uploadLog.value.files);
-  // console.log("selectingFiles", selectingFiles.value);
-  // console.log("selectingDirectory", selectingDirectory.value);
-  const fileToUpload = datasetUploadLog.value.upload_log.files.find(
-    (fileUploadLog) => {
-      return selectingDirectory.value
-        ? fileUploadLog.name === name && fileUploadLog.path === path
-        : fileUploadLog.name === name;
-    },
-  );
-  // console.log("fileToUpload", fileToUpload);
+  return datasetUploadLog.value.upload_log.files.find((fileUploadLog) => {
+    return selectingDirectory.value
+      ? fileUploadLog.name === name && fileUploadLog.path === path
+      : fileUploadLog.name === name;
+  });
+};
 
-  return fileToUpload;
+const isFileUploadInProgress = ({ fileUploadLogId } = {}) => {
+  return !!uploadingFilesState.value[fileUploadLogId];
+};
+
+const isFileChunkUploadInterrupted = ({ fileUploadLogId, chunkIndex } = {}) => {
+  return (
+    isFileUploadInProgress({ fileUploadLogId }) &&
+    !uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] &&
+    uploadingFilesState.value[fileUploadLogId][
+      "resumeFileUploadAtChunkIndex"
+    ] === chunkIndex
+  );
+};
+
+const postChunkUploadAttempt = ({
+  fileUploadLogId,
+  chunkIndex,
+  isChunkUploaded,
+} = {}) => {
+  if (isChunkUploaded) {
+    totalUploadedChunkCount.value += 1;
+    uploadingFilesState.value[fileUploadLogId]["uploadedChunks"].push(
+      chunkIndex,
+    );
+    uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] = true;
+    uploadingFilesState.value[fileUploadLogId]["resumeFileUploadAtChunkIndex"] =
+      null;
+  } else {
+    uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] = false;
+    uploadingFilesState.value[fileUploadLogId]["resumeFileUploadAtChunkIndex"] =
+      chunkIndex;
+  }
 };
 
 const uploadFileChunks = async (fileDetails) => {
   let file = fileDetails.file;
-  let uploaded = false;
+  const fileUploadLog = getFileUploadLog({
+    name: fileDetails.name,
+    path: fileDetails.path,
+  });
+
+  // initialize state to track upload state of each file chunk
+  if (!uploadingFilesState.value[fileUploadLog.id]) {
+    uploadingFilesState.value[fileUploadLog.id] = {};
+  }
+  if (!uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"]) {
+    uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"] = [];
+  }
 
   const numberOfChunksToUpload = fileDetails.numChunks;
 
@@ -729,22 +766,39 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("size", file.size);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append("uploaded_entity_id", datasetUploadLog.value.dataset.id);
-    chunkData.append(
-      "file_upload_log_id",
-      getFileUploadLog({ name: fileDetails.name, path: fileDetails.path })?.id,
-    );
+    chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
     chunkData.append("file", fileData);
 
-    // Try uploading chunk
-    uploaded = await uploadChunk(chunkData);
-    if (!uploaded) {
-      break;
-    } else {
+    const isFileUploadNotInitiated = isFileUploadInProgress({
+      fileUploadLogId: chunkData.get("file_upload_log_id"),
+    });
+    let isChunkUploadInterrupted = isFileChunkUploadInterrupted({
+      fileUploadLogId: chunkData.get("file_upload_log_id"),
+      chunkIndex: chunkData.get("index"),
+    });
+    let isChunkUploaded = uploadingFilesState.value[fileUploadLog.id][
+      "uploadedChunks"
+    ].includes(chunkData.get("index"));
+    const willUploadChunk =
+      !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted;
+
+    if (willUploadChunk) {
+      isChunkUploaded = await uploadChunk(chunkData);
+      postChunkUploadAttempt({
+        fileUploadLogId: chunkData.get("file_upload_log_id"),
+        chunkIndex: chunkData.get("index"),
+        isChunkUploaded,
+      });
+      if (!isChunkUploaded) {
+        break;
+      }
+    }
+
+    if (isChunkUploaded) {
       // Update the percentage upload progress of the file/directory currently
       // being uploaded
       if (selectingDirectory.value) {
-        totalUploadedChunkCount.value += 1;
         selectedDirectory.value.progress = Math.trunc(
           (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) *
             100,
@@ -757,7 +811,10 @@ const uploadFileChunks = async (fileDetails) => {
     }
   }
 
-  return uploaded;
+  return (
+    uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"].length ===
+    numberOfChunksToUpload
+  );
 };
 
 const uploadFile = async (fileDetails) => {
