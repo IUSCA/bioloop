@@ -651,9 +651,9 @@ const updateUploadToken = async (fileName) => {
     ? currentTokenDecoded.scope.slice(config.upload.scope_prefix.length)
     : null;
 
-  await auth.onFileUpload({
+  await auth.refreshUploadToken({
     fileName,
-    willRefreshToken: fileName !== lastUploadedFileName,
+    refreshToken: fileName !== lastUploadedFileName,
   });
   // uploadService.setToken(token.value);
   uploadService.setToken(uploadToken.value);

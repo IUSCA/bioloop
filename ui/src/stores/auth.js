@@ -161,12 +161,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
-  const onFileUpload = async ({ fileName, willRefreshToken = false }) => {
+  const refreshUploadToken = async ({ fileName, refreshToken = false }) => {
     const payload = uploadToken.value ? jwtDecode(uploadToken.value) : null;
     const expiresAt = payload ? new Date(payload.exp * 1000) : null;
     const now = new Date();
 
-    let willRefreshUploadToken = willRefreshToken;
+    let willRefreshUploadToken = refreshToken;
     // If client has not explicitly requested for the token to be refreshed,
     // check if the token is about to expire. If so, refresh the token.
     if (!willRefreshUploadToken) {
@@ -215,7 +215,7 @@ export const useAuthStore = defineStore("auth", () => {
     ciLogin,
     env,
     setEnv,
-    onFileUpload,
+    refreshUploadToken,
   };
 });
 
