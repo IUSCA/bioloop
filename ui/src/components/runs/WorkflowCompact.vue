@@ -127,7 +127,7 @@ const props = defineProps({
   workflow: Object,
   show_dataset: {
     type: Boolean,
-    default: true,
+    default: false,
   },
 });
 
