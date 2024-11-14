@@ -1,7 +1,7 @@
 <template>
   <i-mdi-upload-circle
     v-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADING"
-    style="color: var(--va-info)"
+    style="color: var(--va-primary)"
   />
 
   <va-icon
