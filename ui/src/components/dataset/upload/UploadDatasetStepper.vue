@@ -799,7 +799,11 @@ const uploadFile = async (fileDetails) => {
 
   const successful = uploaded && updated;
   if (!successful) {
-    delete fileDetails.progress;
+    if (selectingDirectory.value) {
+      delete selectedDirectory.value.progress;
+    } else if (selectingFiles.value) {
+      delete fileDetails.progress;
+    }
   }
 
   return successful;
