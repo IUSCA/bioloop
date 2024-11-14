@@ -140,11 +140,11 @@ async function get_dataset({
             select: {
               id: true,
               files: true,
+              status: true,
             },
           },
         },
       } : false,
-      // dataset_upload_log: true,
     },
   });
   const dataset_workflows = dataset.workflows;

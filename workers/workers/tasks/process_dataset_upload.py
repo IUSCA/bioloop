@@ -197,11 +197,11 @@ def process_dataset_upload(dataset: dict) -> None:
                                file['status'] != config['upload']['status']['COMPLETE']]
     processed_with_errors = len(files_failed_processing) > 0
 
-    # Verify that the number of files processed matches the number of files uploaded
     processed_file_count = num_files_in_directory(dataset_merged_chunks_path)
     print(f"Number of files uploaded: {len(upload_log_files)}")
     print(f"Number of files processed {processed_file_count}")
     processed_with_errors = processed_with_errors and (processed_file_count != len(upload_log_files))
+    print(f"processed_with_errors: {processed_with_errors}")
 
     if not processed_with_errors:
         print(f'All uploaded files for dataset {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})\
