@@ -127,7 +127,7 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
           max_retries=3,
           default_retry_delay=5)
 def process_dataset_upload(celery_task, dataset_id, **kwargs):
-    from workers.tasks.process_dataset_upload import chunks_to_files as task_body
+    from workers.tasks.process_dataset_upload import process as task_body
     return task_body(celery_task, dataset_id, **kwargs)
 
 

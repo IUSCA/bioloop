@@ -190,13 +190,14 @@ def process_dataset_upload(dataset: dict) -> None:
         if f['status'] == config['upload']['status']['PROCESSING_FAILED']:
             raise Exception(f"Failed to process file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
-    failed_files = [file for file in files_pending_processing if file['status'] != config['upload']['status']['COMPLETE']]
-    has_errors = len(failed_files) > 0
-    if not has_errors:
+    files_failed_processing = [file for file in files_pending_processing if file['status'] != config['upload']['status']['COMPLETE']]
+    processed_with_errors = len(files_failed_processing) > 0
+    if not processed_with_errors:
         print(f'All uploaded files for dataset {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})\
             have been processed successfully.')
         try:
             # Update status of upload to COMPLETE
+            print(f"Updating upload status of dataset upload log {dataset_upload_log_id} to COMPLETE")
             api.update_dataset_upload_log(
                 uploaded_dataset_id=dataset_id,
                 log_data={
@@ -207,7 +208,7 @@ def process_dataset_upload(dataset: dict) -> None:
             raise exc.RetryableException(e)
 
 
-def chunks_to_files(celery_task, dataset_id, **kwargs):
+def process(celery_task, dataset_id, **kwargs):
     print(f'Processing dataset {dataset_id}\'s upload')
 
     try:
