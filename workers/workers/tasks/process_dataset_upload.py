@@ -1,4 +1,4 @@
-import time
+import os
 import shutil
 from pathlib import Path
 from celery import Celery
@@ -21,6 +21,10 @@ INTEGRATED_WORKFLOW = 'integrated'
 DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['FAILURE'],
                  config['DONE_STATUSES']['SUCCESS']]
+
+
+def num_files_in_directory(directory_path: Path) -> int:
+    return sum([len(files) for r, _, files in os.walk(directory_path) if files])
 
 
 def create_file_from_chunks(file_chunks_path: Path,
@@ -79,8 +83,6 @@ def merge_uploaded_file_chunks(file_upload_log_id: int,
               f' ({num_chunks_expected}) don\'t equal number of chunks found'
               f' ({num_chunks_found}). This file\'s will not be processed')
 
-    # raise Exception("test exception")
-
     return config['upload']['status']['PROCESSING_FAILED'] \
         if processing_error \
         else config['upload']['status']['COMPLETE']
@@ -130,7 +132,8 @@ def process_dataset_upload(dataset: dict) -> None:
         raise Exception(f"Upload directory {dataset_path} does not exist for\
         dataset id {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
 
-    files_pending_processing = [file for file in upload_log_files if file['status'] != config['upload']['status']['COMPLETE']]
+    files_pending_processing = [file for file in upload_log_files if
+                                file['status'] != config['upload']['status']['COMPLETE']]
 
     dataset_merged_chunks_path = dataset_path / 'processed'
     if not dataset_merged_chunks_path.exists():
@@ -190,8 +193,16 @@ def process_dataset_upload(dataset: dict) -> None:
         if f['status'] == config['upload']['status']['PROCESSING_FAILED']:
             raise Exception(f"Failed to process file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
-    files_failed_processing = [file for file in files_pending_processing if file['status'] != config['upload']['status']['COMPLETE']]
+    files_failed_processing = [file for file in files_pending_processing if
+                               file['status'] != config['upload']['status']['COMPLETE']]
     processed_with_errors = len(files_failed_processing) > 0
+
+    # Verify that the number of files processed matches the number of files uploaded
+    processed_file_count = num_files_in_directory(dataset_merged_chunks_path)
+    print(f"Number of files uploaded: {len(upload_log_files)}")
+    print(f"Number of files processed {processed_file_count}")
+    processed_with_errors = processed_with_errors and (processed_file_count != len(upload_log_files))
+
     if not processed_with_errors:
         print(f'All uploaded files for dataset {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})\
             have been processed successfully.')
@@ -234,10 +245,11 @@ def process(celery_task, dataset_id, **kwargs):
     print(f"Looking for active workflows of type {INTEGRATED_WORKFLOW} for dataset {dataset_id}")
     active_integrated_wfs = [wf for wf in dataset['workflows'] if wf['name'] == INTEGRATED_WORKFLOW]
     if len(active_integrated_wfs) > 0:
-        print(f"The following workflows of type {INTEGRATED_WORKFLOW} are already running\
+        print(f"One or more workflows of type {INTEGRATED_WORKFLOW} are already running\
                for dataset {dataset_id}, dataset_upload_log_id {dataset_upload_log_id}:")
         for wf in active_integrated_wfs:
             print(f"Workflow ID: {wf['id']}, Status: {wf['status']}")
+        print(f"A new {INTEGRATED_WORKFLOW} workflow will not be started.")
     else:
         print(f"No active workflows of type {INTEGRATED_WORKFLOW} found for dataset {dataset_id}")
         print(f"Starting {INTEGRATED_WORKFLOW} workflow for dataset {dataset['id']}")
@@ -250,6 +262,8 @@ def process(celery_task, dataset_id, **kwargs):
 
     # purge uploaded files from the filesystem
     dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
-    shutil.rmtree(dataset_path / 'uploaded_chunks')
+    uploaded_chunks_path = dataset_path / 'uploaded_chunks'
+    if uploaded_chunks_path.exists():
+        shutil.rmtree(uploaded_chunks_path)
 
     return dataset_id,
