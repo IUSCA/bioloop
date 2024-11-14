@@ -188,19 +188,11 @@ import { useAuthStore } from "@/stores/auth";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { jwtDecode } from "jwt-decode";
+import Constants from "@/constants";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
 // const token = ref(useLocalStorage("token", ""));
-
-const SUBMISSION_STATES = {
-  UNINITIATED: "Uninitiated",
-  PROCESSING: "Processing",
-  PROCESSING_FAILED: "Processing Failed",
-  UPLOADING: "Uploading",
-  UPLOAD_FAILED: "Upload Failed",
-  UPLOADED: "Uploaded",
-};
 
 const STEP_KEYS = {
   RAW_DATA: "rawData",
@@ -267,9 +259,9 @@ const isNextButtonDisabled = computed(() => {
     stepHasErrors.value ||
     submissionSuccess.value ||
     [
-      SUBMISSION_STATES.PROCESSING,
-      SUBMISSION_STATES.UPLOADING,
-      SUBMISSION_STATES.UPLOADED,
+      Constants.UPLOAD_STATES.PROCESSING,
+      Constants.UPLOAD_STATES.UPLOADING,
+      Constants.UPLOAD_STATES.UPLOADED,
     ].includes(submissionStatus.value) ||
     loading.value ||
     validatingForm.value
@@ -365,7 +357,7 @@ const validatingForm = ref(false);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const datasetUploadLog = ref(null);
-const submissionStatus = ref(SUBMISSION_STATES.UNINITIATED);
+const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED);
 const statusChipColor = ref("");
 const submissionAlert = ref(""); // For handling network errors before upload begins
 const submissionAlertColor = ref("");
@@ -374,7 +366,7 @@ const submitAttempted = ref(false);
 const isUploadIncomplete = computed(() => {
   return (
     submitAttempted.value &&
-    submissionStatus.value !== SUBMISSION_STATES.UPLOADED
+    submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
   );
 });
 
@@ -819,7 +811,7 @@ const onSubmit = async () => {
     return Promise.reject();
   }
 
-  submissionStatus.value = SUBMISSION_STATES.PROCESSING;
+  submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
   statusChipColor.value = "primary";
   submissionAlert.value = null; // reset any alerts from previous submissions
   isSubmissionAlertVisible.value = false;
@@ -829,20 +821,20 @@ const onSubmit = async () => {
     preUpload()
       .then(async () => {
         submissionSuccess.value = true;
-        submissionStatus.value = SUBMISSION_STATES.UPLOADING;
+        submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
 
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
           resolve();
         } else {
-          submissionStatus.value = SUBMISSION_STATES.UPLOAD_FAILED;
+          submissionStatus.value = Constants.UPLOAD_STATES.UPLOAD_FAILED;
           submissionAlert.value = "Some files could not be uploaded.";
           reject();
         }
       })
       .catch((err) => {
         console.error(err);
-        submissionStatus.value = SUBMISSION_STATES.PROCESSING_FAILED;
+        submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
         reject();
@@ -852,7 +844,7 @@ const onSubmit = async () => {
 
 const setPostSubmissionSuccessState = () => {
   if (!someFilesPendingUpload.value) {
-    submissionStatus.value = SUBMISSION_STATES.UPLOADED;
+    submissionStatus.value = Constants.UPLOAD_STATES.UPLOADED;
     statusChipColor.value = "primary";
     submissionAlertColor.value = "success";
     submissionAlert.value =
@@ -1056,7 +1048,7 @@ onMounted(() => {
 // show alert before user moves to a different route
 onBeforeRouteLeave(() => {
   return submitAttempted.value &&
-    submissionStatus.value !== SUBMISSION_STATES.UPLOADED
+    submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
     ? window.confirm(
         "Leaving this page before all files have been processed/uploaded will" +
           " cancel the upload. Do you wish to continue?",

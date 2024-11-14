@@ -52,9 +52,7 @@
         <tr>
           <td>Status</td>
           <td>
-            <va-chip size="small" :color="props.statusChipColor">
-              {{ props.submissionStatus }}
-            </va-chip>
+            <UploadStatusIcon :submission-status="props.submissionStatus" />
           </td>
         </tr>
       </tbody>
