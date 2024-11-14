@@ -147,7 +147,10 @@
       >
         <template #header-content>
           <div class="flex-[0_0_90%]">
-            <workflowCompact :workflow="workflow" show_dataset />
+            <workflowCompact
+              :workflow="workflow"
+              :show_dataset="!!workflow.dataset_id"
+            />
           </div>
         </template>
 
@@ -286,7 +289,8 @@ watch(
     }
 
     getData().then(() => {
-      // remove failure mode selection when user selects a status or changes page
+      // remove failure mode selection when user selects a status or changes
+      // page
       query_params.value.failure_mode = null;
     });
   },

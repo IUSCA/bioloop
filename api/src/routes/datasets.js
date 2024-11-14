@@ -340,7 +340,7 @@ router.post(
     const { origin_path } = data;
 
     // remove whitespaces from dataset name
-    data.name = data.name.split(' ').join('');
+    data.name = data.name.split(' ').join('-');
 
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw

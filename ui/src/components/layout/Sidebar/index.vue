@@ -36,7 +36,6 @@ import constants from "@/constants";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { storeToRefs } from "pinia";
-import { useUIStore } from "@/stores/ui";
 
 const props = defineProps({ isSidebarCollapsed: Boolean });
 

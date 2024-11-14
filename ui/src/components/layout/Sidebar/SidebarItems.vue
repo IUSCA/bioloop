@@ -73,7 +73,7 @@ const collapsibleStates = computed({
   get() {
     return props.items.some((item) => {
       return (item.children || []).some((child) => {
-        return child.path === route.path;
+        return route.path.startsWith(child.path);
       });
     });
   },

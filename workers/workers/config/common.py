@@ -152,6 +152,14 @@ config = {
                     'task': 'process_dataset_upload'
                 }
             ]
+        },
+        'cancel_dataset_upload': {
+            'steps': [
+                {
+                    'name': 'Cancel Dataset Upload',
+                    'task': 'cancel_dataset_upload'
+                }
+            ]
         }
     },
     'celery': {
