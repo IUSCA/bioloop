@@ -52,13 +52,13 @@ upload_dir = config['paths']['DATA_PRODUCT']['upload']
 ```
 2. The individual chunks for an uploaded file are stored in:
 ```
-[upload_dir] / [dataset_id] / chunked_files / [file_upload_log_id]`
+[upload_dir] / [dataset_id] / uploaded_chunks / [file_upload_log_id]`
 ```
 Here, `dataset_id` is the unique id created for the dataset before the upload began, and `file_upload_log_id` is the unique id for the record of this file's upload.
 3. Within this directory, individual chunks are named as `[file_md5]-[i]` where `i` serves as an index for this chunk among all of the file's sequentially-uploaded chunks, identifying the order of this chunk in the file. When merging a file's chunks into the corresponding file, chunks will be processed sequentially based on this index.
 4. Once a file has been processed, and it's chunks have been merged into the corresponding file, the recreated file is stored at:
 ```
-[upload_dir] / [dataset_id] / merged_chunks
+[upload_dir] / [dataset_id] / processed
 ```
 
 ### 4.4 Access Control

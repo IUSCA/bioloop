@@ -87,7 +87,7 @@ const getUploadedDataProductPath = (datasetId) => path.join(
   UPLOAD_PATH,
   'data_products',
   `${datasetId}`,
-  'merged_chunks',
+  'processed',
 );
 
 // - Create upload logs for the dataset being uploaded and its files.

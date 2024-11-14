@@ -21,7 +21,7 @@ const getUploadPath = (uploadedEntityId) => path.join(
 
 const getFileChunksStorageDir = (uploadedEntityId, fileUploadLogId) => path.join(
   getUploadPath(uploadedEntityId),
-  'chunked_files',
+  'uploaded_chunks',
   fileUploadLogId,
 );
 

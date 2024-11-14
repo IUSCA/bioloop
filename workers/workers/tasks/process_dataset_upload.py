@@ -117,12 +117,12 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
     pending_files = [file for file in upload_log_files if file['status'] != config['upload']['status']['COMPLETE']]
 
-    dataset_merged_chunks_path = dataset_path / 'merged_chunks'
+    dataset_merged_chunks_path = dataset_path / 'processed'
     if not dataset_merged_chunks_path.exists():
-        print(f"Creating merged_chunks path {dataset_merged_chunks_path} for\
+        print(f"Creating upload processing path {dataset_merged_chunks_path} for\
  dataset id {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
         dataset_merged_chunks_path.mkdir()
-        print(f"Created merged_chunks path {dataset_merged_chunks_path}")
+        print(f"Created upload processing path {dataset_merged_chunks_path}")
 
     for f in pending_files:
         file_name = f['name']
@@ -130,7 +130,7 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         file_md5 = f['md5']
         file_upload_log_id = f['id']
         file_path = f['path']
-        chunks_path = dataset_path / 'chunked_files' / str(file_upload_log_id)
+        chunks_path = dataset_path / 'uploaded_chunks' / str(file_upload_log_id)
 
         if not chunks_path.exists():
             raise Exception(f"Chunks directory {chunks_path} does not exist\
@@ -202,6 +202,6 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
             print(f"Started workflow {int_wf} for dataset {dataset_id}")
 
         # purge uploaded files from the filesystem
-        shutil.rmtree(dataset_path / 'chunked_files')
+        shutil.rmtree(dataset_path / 'uploaded_chunks')
 
     return dataset_id,
