@@ -1,3 +1,4 @@
+import time
 import shutil
 from pathlib import Path
 from celery import Celery
@@ -22,26 +23,33 @@ DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
                  config['DONE_STATUSES']['SUCCESS']]
 
 
-def create_file_from_chunks(chunks_path, file_md5, file_destination_path, num_chunks_found):
+def create_file_from_chunks(file_chunks_path: Path,
+                            file_destination_path: Path,
+                            file_md5: str,
+                            num_chunks_found: int) -> None:
     for i in range(num_chunks_found):
-        chunk_file = chunks_path / f'{file_md5}-{i}'
+        chunk_file = file_chunks_path / f'{file_md5}-{i}'
         print(f'Processing chunk {chunk_file}')
-        with open(chunk_file, 'rb') as chunk:
-            with open(file_destination_path, 'ab') as destination:
+        with open(str(chunk_file), 'rb') as chunk:
+            with open(str(file_destination_path), 'ab') as destination:
                 destination.write(chunk.read())
 
 
-def merge_file_chunks(file_upload_log_id, file_name, file_path,
-                      file_md5, chunks_path, dataset_merged_chunks_path,
-                      num_chunks_expected):
+def merge_uploaded_file_chunks(file_upload_log_id: int,
+                               file_name: str,
+                               file_md5: str,
+                               file_path: Path,
+                               uploaded_chunks_path: Path,
+                               merged_chunks_path: Path,
+                               num_chunks_expected: int) -> str:
     print(f'Processing file {file_name}')
 
     if file_path is not None:
-        file_base_path = Path(dataset_merged_chunks_path) / file_path
+        file_base_path = merged_chunks_path / file_path
         file_base_path.mkdir(parents=True, exist_ok=True)
         file_destination_path = file_base_path / file_name
     else:
-        file_destination_path = Path(dataset_merged_chunks_path) / file_name
+        file_destination_path = merged_chunks_path / file_name
 
     if file_destination_path.exists():
         print(f'Destination path {file_destination_path} already exists for file {file_name}\
@@ -53,10 +61,10 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
     file_destination_path.touch()
     print('Destination path created: ', file_destination_path.exists())
 
-    num_chunks_found = len([p for p in chunks_path.iterdir() if p.name.startswith(f'{file_md5}-')])
+    num_chunks_found = len([p for p in uploaded_chunks_path.iterdir() if p.name.startswith(f'{file_md5}-')])
 
     if num_chunks_found == num_chunks_expected:
-        create_file_from_chunks(chunks_path=chunks_path,
+        create_file_from_chunks(file_chunks_path=uploaded_chunks_path,
                                 file_md5=file_md5,
                                 file_destination_path=file_destination_path,
                                 num_chunks_found=num_chunks_found)
@@ -78,29 +86,27 @@ def merge_file_chunks(file_upload_log_id, file_name, file_path,
         else config['upload']['status']['COMPLETE']
 
 
-def chunks_to_files(celery_task, dataset_id, **kwargs):
-    print(f'Processing dataset {dataset_id}\'s uploaded resources')
+# Updates the upload status of a given dataset's upload and uploaded files to PROCESSING
+def update_upload_status_to_processing(dataset: dict):
+    dataset_upload_log = dataset['dataset_upload_log']
+    upload_log = dataset_upload_log['upload_log']
+    upload_log_files = upload_log['files']
 
+    file_log_updates = []
+    for file_log in upload_log_files:
+        if (file_log['status'] != config['upload']['status']['COMPLETE']
+                and file_log['status'] != config['upload']['status']['PROCESSING']):
+            file_log_updates.append({
+                'id': file_log['id'],
+                'data': {
+                    'status': config['upload']['status']['PROCESSING']
+                }
+            })
+    print(f"Updating upload status of dataset upload log {dataset_upload_log['id']} \
+          and it's files to {config['upload']['status']['PROCESSING']}")
     try:
-        dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
-        dataset_upload_log = dataset['dataset_upload_log']
-        dataset_upload_log_id = dataset_upload_log['id']
-
-        upload_log = dataset_upload_log['upload_log']
-        upload_log_files = upload_log['files']
-
-        file_log_updates = []
-        for file_log in upload_log_files:
-            if (file_log['status'] != config['upload']['status']['COMPLETE']
-                    and file_log['status'] != config['upload']['status']['PROCESSING']):
-                file_log_updates.append({
-                    'id': file_log['id'],
-                    'data': {
-                        'status': config['upload']['status']['PROCESSING']
-                    }
-                })
         api.update_dataset_upload_log(
-            uploaded_dataset_id=dataset_id,
+            uploaded_dataset_id=dataset['id'],
             log_data={
                 'status': config['upload']['status']['PROCESSING'],
                 'files': file_log_updates
@@ -109,22 +115,31 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
     except Exception as e:
         raise exc.RetryableException(e)
 
-    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
 
+def process_dataset_upload(dataset: dict) -> None:
+    dataset_id = dataset['id']
+    dataset_upload_log = dataset['dataset_upload_log']
+    dataset_upload_log_id = dataset_upload_log['id']
+    upload_log = dataset_upload_log['upload_log']
+    upload_log_files = upload_log['files']
+
+    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
+    # print(f"Upload directory: {dataset_path}")
+    # time.sleep(30)
     if not dataset_path.exists():
         raise Exception(f"Upload directory {dataset_path} does not exist for\
- dataset id {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
+        dataset id {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
 
-    pending_files = [file for file in upload_log_files if file['status'] != config['upload']['status']['COMPLETE']]
+    files_pending_processing = [file for file in upload_log_files if file['status'] != config['upload']['status']['COMPLETE']]
 
     dataset_merged_chunks_path = dataset_path / 'processed'
     if not dataset_merged_chunks_path.exists():
-        print(f"Creating upload processing path {dataset_merged_chunks_path} for\
- dataset id {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
+        print(f"Creating upload processing path {dataset_merged_chunks_path} for \
+         dataset id {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
         dataset_merged_chunks_path.mkdir()
         print(f"Created upload processing path {dataset_merged_chunks_path}")
 
-    for f in pending_files:
+    for f in files_pending_processing:
         file_name = f['name']
         num_chunks_expected = f['num_chunks']
         file_md5 = f['md5']
@@ -134,12 +149,16 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
 
         if not chunks_path.exists():
             raise Exception(f"Chunks directory {chunks_path} does not exist\
- for file {file_name} (file_upload_log_id: {file_upload_log_id})")
+        for file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
         try:
-            f['status'] = merge_file_chunks(file_upload_log_id, file_name, file_path,
-                                            file_md5, chunks_path, dataset_merged_chunks_path,
-                                            num_chunks_expected)
+            f['status'] = merge_uploaded_file_chunks(file_upload_log_id=file_upload_log_id,
+                                                     file_name=file_name,
+                                                     file_path=file_path,
+                                                     file_md5=file_md5,
+                                                     uploaded_chunks_path=chunks_path,
+                                                     merged_chunks_path=dataset_merged_chunks_path,
+                                                     num_chunks_expected=num_chunks_expected)
         except Exception as e:
             f['status'] = config['upload']['status']['PROCESSING_FAILED']
             print(f"Encountered error while processing file {file_name} (file_upload_log_id: {file_upload_log_id}):\n")
@@ -147,61 +166,89 @@ def chunks_to_files(celery_task, dataset_id, **kwargs):
         finally:
             print(f"Finished processing file {file_name}. Processing Status: {f['status']}")
 
-        file_upload_log_payload = {
-            'status': f['status']
+        upload_log_payload = {
+            'files': [{
+                'id': file_upload_log_id,
+                'data': {
+                    'status': f['status']
+                }
+            }]
         }
         updated_upload_status = config['upload']['status']['PROCESSING_FAILED'] if (
                 f['status'] == config['upload']['status']['PROCESSING_FAILED']
         ) else None
-        upload_log_payload = {
-            'files': [{
-                'id': file_upload_log_id,
-                'data': file_upload_log_payload
-            }]
-        }
         if updated_upload_status is not None:
             upload_log_payload['status'] = updated_upload_status
-        api.update_dataset_upload_log(
-            uploaded_dataset_id=dataset_id,
-            log_data=upload_log_payload
-        )
+        try:
+            api.update_dataset_upload_log(
+                uploaded_dataset_id=dataset_id,
+                log_data=upload_log_payload
+            )
+        except Exception as e:
+            raise exc.RetryableException(e)
+
         if f['status'] == config['upload']['status']['PROCESSING_FAILED']:
             raise Exception(f"Failed to process file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
-    failed_files = [file for file in pending_files if file['status'] != config['upload']['status']['COMPLETE']]
+    failed_files = [file for file in files_pending_processing if file['status'] != config['upload']['status']['COMPLETE']]
     has_errors = len(failed_files) > 0
-
     if not has_errors:
+        print(f'All uploaded files for dataset {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})\
+            have been processed successfully.')
         try:
             # Update status of upload to COMPLETE
             api.update_dataset_upload_log(
                 uploaded_dataset_id=dataset_id,
                 log_data={
-                    'status': config['upload']['status']['PROCESSING_FAILED'] if has_errors else config['upload']['status'][
-                        'COMPLETE'],
+                    'status': config['upload']['status']['COMPLETE'],
                 }
             )
         except Exception as e:
             raise exc.RetryableException(e)
 
-        print(f'All uploaded files for dataset {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})\
-    have been processed successfully.')
 
-        active_integrated_wfs = [wf for wf in dataset['workflows'] if wf['name'] == INTEGRATED_WORKFLOW]
-        if len(active_integrated_wfs) > 0:
-            print(f"Workflow {INTEGRATED_WORKFLOW} is already running for dataset {dataset_id}"
-                  f" (dataset_upload_log_id: {dataset_upload_log_id})")
-        else:
-            print(f"Starting {INTEGRATED_WORKFLOW} workflow for dataset {dataset['id']}"
-                  f" (dataset_upload_log_id: {dataset_upload_log_id})")
-            integrated_wf_body = wf_utils.get_wf_body(wf_name=INTEGRATED_WORKFLOW)
-            int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
-            int_wf_id = int_wf.workflow['_id']
-            api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf_id)
-            int_wf.start(dataset_id)
-            print(f"Started workflow {int_wf} for dataset {dataset_id}")
+def chunks_to_files(celery_task, dataset_id, **kwargs):
+    print(f'Processing dataset {dataset_id}\'s upload')
 
-        # purge uploaded files from the filesystem
-        shutil.rmtree(dataset_path / 'uploaded_chunks')
+    try:
+        dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
+    except Exception as e:
+        raise exc.RetryableException(e)
+    dataset_upload_log = dataset['dataset_upload_log']
+    dataset_upload_log_id = dataset_upload_log['id']
+    upload_log = dataset_upload_log['upload_log']
+
+    if upload_log['status'] == config['upload']['status']['COMPLETE']:
+        print(f"Dataset upload log {dataset_upload_log_id} has already been processed (current status: COMPLETE)")
+    else:
+        print(f"Dataset upload log {dataset_upload_log_id} will be processed (current status: {upload_log['status']})")
+        try:
+            update_upload_status_to_processing(dataset=dataset)
+        except Exception as e:
+            raise exc.RetryableException(e)
+        process_dataset_upload(dataset=dataset)
+
+    print(f"Workflow {INTEGRATED_WORKFLOW} can be started for dataset {dataset_id}")
+
+    print(f"Looking for active workflows of type {INTEGRATED_WORKFLOW} for dataset {dataset_id}")
+    active_integrated_wfs = [wf for wf in dataset['workflows'] if wf['name'] == INTEGRATED_WORKFLOW]
+    if len(active_integrated_wfs) > 0:
+        print(f"The following workflows of type {INTEGRATED_WORKFLOW} are already running\
+               for dataset {dataset_id}, dataset_upload_log_id {dataset_upload_log_id}:")
+        for wf in active_integrated_wfs:
+            print(f"Workflow ID: {wf['id']}, Status: {wf['status']}")
+    else:
+        print(f"No active workflows of type {INTEGRATED_WORKFLOW} found for dataset {dataset_id}")
+        print(f"Starting {INTEGRATED_WORKFLOW} workflow for dataset {dataset['id']}")
+        integrated_wf_body = wf_utils.get_wf_body(wf_name=INTEGRATED_WORKFLOW)
+        int_wf = Workflow(celery_app=current_app, **integrated_wf_body)
+        int_wf_id = int_wf.workflow['_id']
+        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf_id)
+        int_wf.start(dataset_id)
+        print(f"Started workflow {int_wf} for dataset {dataset_id}")
+
+    # purge uploaded files from the filesystem
+    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
+    shutil.rmtree(dataset_path / 'uploaded_chunks')
 
     return dataset_id,
