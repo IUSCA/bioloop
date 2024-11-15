@@ -310,25 +310,28 @@ def get_all_workflows():
         return r.json()
 
 
-def get_upload_log(upload_log_id: str):
+def get_dataset_upload_logs():
     with APIServerSession() as s:
-        r = s.get(f'uploads/{upload_log_id}')
+        r = s.get(f'datasetUploads')
         r.raise_for_status()
         return r.json()
 
 
-def get_upload_logs(upload_type: str):
+def update_dataset_upload_log(uploaded_dataset_id: int, log_data: dict):
     with APIServerSession() as s:
-        r = s.get(f'uploads', params={
-            'upload_type': upload_type
-        })
+        r = s.patch(f'datasetUploads/{uploaded_dataset_id}', json=log_data)
         r.raise_for_status()
-        return r.json()
 
 
-def update_upload_log(upload_log_id, log_data):
+def delete_dataset_upload_log(uploaded_dataset_id: int):
     with APIServerSession() as s:
-        r = s.patch(f'uploads/{upload_log_id}', json=log_data)
+        r = s.delete(f'datasetUploads/{uploaded_dataset_id}')
+        r.raise_for_status()
+
+
+def create_notification(payload: dict):
+    with APIServerSession() as s:
+        r = s.post('notifications', json=payload)
         r.raise_for_status()
 
 

@@ -6,7 +6,7 @@
       upload-button-text="Select Files"
       dropzone
       dropZoneText=""
-      :disabled="props.submitAttempted"
+      :disabled="props.disabled"
       @file-added="
         (f) => {
           emit('files-added', f);
@@ -29,7 +29,7 @@
             directory
             webkitdirectory
             multiple
-            :disabled="props.submitAttempted"
+            :disabled="props.disabled"
             @change="
               (e) => {
                 onDirectorySelection(e);
@@ -37,7 +37,7 @@
             "
           />
           <va-button
-            :disabled="props.submitAttempted"
+            :disabled="props.disabled"
             @click="
               () => {
                 folderUploadInput.click();
@@ -54,7 +54,7 @@
 
 <script setup>
 const props = defineProps({
-  submitAttempted: {
+  disabled: {
     type: Boolean,
     required: true,
   },
@@ -63,6 +63,10 @@ const props = defineProps({
 const emit = defineEmits(["files-added", "directory-added"]);
 
 const onDirectorySelection = (e) => {
+  if (e.target.files.length === 0) {
+    return;
+  }
+
   const isWindows = (path) =>
     path.indexOf("/") === -1 && path.indexOf("\\") > 0;
   const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;

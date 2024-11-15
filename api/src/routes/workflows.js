@@ -29,12 +29,14 @@ router.get(
       const { dataset_id, dataset_name, workflow_id } = req.query;
       let workflow_ids = null;
 
-      // if workflow_id is provided, then ignore dataset_id and dataset_name filters
+      // if workflow_id is provided, then ignore dataset_id and dataset_name
+      // filters
       if (workflow_id) {
         workflow_ids = workflow_id;
       }
 
-      // if dataset_id or dataset_name is provided, then get workflow ids from the app db
+      // if dataset_id or dataset_name is provided, then get workflow ids from
+      // the app db
       if (dataset_id || dataset_name) {
         const where = {};
         if (dataset_id) {
@@ -53,7 +55,8 @@ router.get(
         });
         workflow_ids = rows.map((wf) => wf.id);
 
-        // if no workflows found, then return empty results without calling the workflow service
+        // if no workflows found, then return empty results without calling the
+        // workflow service
         if (workflow_ids.length === 0) {
           return res.json({
             metadata: {
@@ -95,14 +98,19 @@ router.get(
         return acc;
       }, {});
 
-      // console.log('id_initiator_map', JSON.stringify(id_initiator_map, null, 2));
+      // console.log('id_initiator_map', JSON.stringify(id_initiator_map, null,
+      // 2));
 
       res.json({
         metadata: api_res.data.metadata,
-        results: api_res.data.results.map((wf) => ({
-          ...wf,
-          initiator: id_initiator_map[wf.id],
-        })),
+        results: api_res.data.results.map((wf) => {
+          const app_workflow = rows.find((app_wf) => app_wf.id === wf.id);
+          return {
+            ...wf,
+            dataset_id: app_workflow?.dataset_id,
+            initiator: id_initiator_map[wf.id],
+          };
+        }),
       });
     },
   ),

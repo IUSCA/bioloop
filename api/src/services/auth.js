@@ -103,7 +103,8 @@ const find_or_create_test_user = async ({ role }) => {
 };
 
 function get_upload_token(file_path) {
-  const scope = `${config.get('oauth.upload.scope_prefix')}${file_path}`;
+  const hyphen_delimited_file_path = file_path.split(' ').join('-'); // replace whitespaces with hyphens
+  const scope = `${config.get('oauth.upload.scope_prefix')}${hyphen_delimited_file_path}`;
   return oAuth2SecureTransferClient.clientCredentials({
     scope: [scope],
   });

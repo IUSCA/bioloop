@@ -142,6 +142,7 @@ async function get_dataset({
             select: {
               id: true,
               files: true,
+              status: true,
             },
           },
         },

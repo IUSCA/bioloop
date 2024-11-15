@@ -129,6 +129,14 @@
         }
       ]
     },
+    "cancel_dataset_upload": {
+      "steps": [
+        {
+          "name": "Cancel Dataset Upload",
+          "task": "cancel_dataset_upload"
+        }
+      ]
+    },
     "accept_duplicate_dataset": {
       "description": "Overwrites an existing dataset with its incoming duplicate.",
       "steps": [

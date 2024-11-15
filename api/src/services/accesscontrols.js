@@ -125,7 +125,6 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     notifications: {
-      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
@@ -135,8 +134,6 @@ const grantsObject = {
     },
     upload: {
       'create:any': ['*'],
-      'read:any': ['*'],
-      'update:any': ['*'],
     },
   },
 };

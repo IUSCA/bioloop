@@ -146,19 +146,6 @@ model dataset_state {
   @@id([timestamp, dataset_id, state])
 }
 
-model notification {
-  id                   Int                   @id @default(autoincrement())
-  created_at           DateTime              @default(now()) @db.Timestamp(6)
-  updated_at           DateTime              @default(now()) @updatedAt @db.Timestamp(6)
-  type                 NOTIFICATION_TYPE
-  label                String
-  text                 String?
-  status               NOTIFICATION_STATUS   @default(CREATED)
-  acknowledged_by_id   Int?
-  acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])
-  dataset_action_items dataset_action_item[]
-}
-
 model dataset_action_item {
   id               Int                        @id @default(autoincrement())
   created_at       DateTime                   @default(now()) @db.Timestamp(6)
@@ -244,6 +231,7 @@ model user {
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
   uploads                    upload_log[]
+  user_notifications         user_notification[]
 }
 
 model user_password {
@@ -270,16 +258,50 @@ model user_settings {
   users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
-// model notification {
-//   id                 Int                 @id @default(autoincrement())
-//   created_at         DateTime            @default(now()) @db.Timestamp(6)
-//   label              String
-//   text               String?
-//   status             NOTIFICATION_STATUS @default(CREATED)
-//   acknowledged_by_id Int?
-//   acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
-// }
+model notification {
+  id                   Int                   @id @default(autoincrement())
+  created_at           DateTime              @default(now()) @db.Timestamp(6)
+  updated_at           DateTime              @default(now()) @updatedAt @db.Timestamp(6)
+  type                 NOTIFICATION_TYPE?
+  label                String
+  text                 String?
+  status               NOTIFICATION_STATUS   @default(CREATED)
+  acknowledged_by_id   Int?
+  acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])
+  dataset_action_items dataset_action_item[]
+}
 
+model notification {
+  id                 Int                 @id @default(autoincrement())
+  created_at         DateTime            @default(now()) @db.Timestamp(6)
+  label              String
+  text               String?
+  status             NOTIFICATION_STATUS @default(CREATED)
+  acknowledged_by_id Int?
+  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
+  role_notifications role_notification[]
+  user_notifications user_notification[]
+}
+
+model role_notification {
+  id              Int          @id @default(autoincrement())
+  role_id         Int
+  role            role         @relation(fields: [role_id], references: [id])
+  notification_id Int
+  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@unique([notification_id, role_id])
+}
+
+model user_notification {
+  id              Int          @id @default(autoincrement())
+  user_id         Int
+  user            user         @relation(fields: [user_id], references: [id])
+  notification_id Int
+  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@unique([notification_id, user_id])
+}
 model contact {
   id          Int               @id @default(autoincrement())
   type        String
@@ -293,10 +315,11 @@ model contact {
 }
 
 model role {
-  id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(50)
-  description String      @default("") @db.VarChar(255)
-  user_role   user_role[]
+  id                 Int                 @id @default(autoincrement())
+  name               String              @db.VarChar(50)
+  description        String              @default("") @db.VarChar(255)
+  user_role          user_role[]
+  role_notifications role_notification[]
 }
 
 model user_role {
@@ -430,6 +453,12 @@ enum upload_status {
   PROCESSING_FAILED
   COMPLETE
   FAILED
+}
+
+enum upload_type {
+  // FILE
+  // DIRECTORY
+  DATASET
 }
 
 enum DATASET_ACTION_ITEM_TYPE {
