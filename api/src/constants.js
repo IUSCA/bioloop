@@ -106,6 +106,8 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
 
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
+// todo - move DATASET_STATES here
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,

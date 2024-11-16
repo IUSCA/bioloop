@@ -1,4 +1,5 @@
 import config from "@/config";
+import constants from "@/constants";
 
 function isDatasetLockedForWrite(dataset) {
   // Assume dataset is locked if it's current state can't be determined
@@ -13,11 +14,11 @@ function isDatasetLockedForWrite(dataset) {
   } else {
     isLocked =
       datasetLatestState ===
-        config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS ||
+        constants.DATASET_STATES.READY.DUPLICATE_ACCEPTANCE_IN_PROGRESS ||
       datasetLatestState ===
-        config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS ||
+        constants.DATASET_STATES.READY.DUPLICATE_REJECTION_IN_PROGRESS ||
       datasetLatestState ===
-        config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED;
+        constants.DATASET_STATES.READY.DUPLICATE_DATASET_RESOURCES_PURGED;
   }
 
   return datasetLatestState ? isLocked : true;
@@ -31,9 +32,10 @@ function isDatasetBeingOverwritten(dataset) {
       : undefined;
 
   return (
-    datasetLatestState === config.DATASET_STATES.OVERWRITE_IN_PROGRESS ||
     datasetLatestState ===
-      config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED
+      constants.DATASET_STATES.READY.OVERWRITE_IN_PROGRESS ||
+    datasetLatestState ===
+      constants.DATASET_STATES.READY.ORIGINAL_DATASET_RESOURCES_PURGED
   );
 }
 
@@ -55,12 +57,12 @@ function isActiveDatasetWithIncomingDuplicates(dataset) {
     !dataset.is_deleted &&
     datasetHasActiveDuplicates(dataset) &&
     [
-      config.DATASET_STATES.REGISTERED,
-      config.DATASET_STATES.READY,
-      config.DATASET_STATES.INSPECTED,
-      config.DATASET_STATES.ARCHIVED,
-      config.DATASET_STATES.FETCHED,
-      config.DATASET_STATES.STAGED,
+      constants.DATASET_STATES.READY.REGISTERED,
+      constants.DATASET_STATES.READY.READY,
+      constants.DATASET_STATES.READY.INSPECTED,
+      constants.DATASET_STATES.READY.ARCHIVED,
+      constants.DATASET_STATES.READY.FETCHED,
+      constants.DATASET_STATES.READY.STAGED,
     ].includes(datasetState)
   );
 }

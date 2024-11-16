@@ -85,6 +85,8 @@ router.post(
   validate([
     param('id').isInt().toInt(),
     body('action_item').isObject(),
+    // todo - post as part of notification?
+    //   todo - post notification separately?
     body('notification').isObject(),
     body('next_state').escape().notEmpty().optional(),
   ]),
@@ -637,25 +639,23 @@ router.post(
   }),
 );
 
+// todo - test duplication/action-item creation, and status update for
+// idempotence
 router.post(
   '/:id/duplicate',
   isPermittedTo('create'),
   validate([
     param('id').isInt().toInt(),
-    body('action_item').optional().isObject(),
-    body('notification').optional().isObject(),
-    body('next_state').optional().escape().notEmpty(),
+    // body('action_item').optional().isObject(),
+    // todo - create notification/action-item separately
+    // body('notification').optional().isObject(),
+    // todo - update state separately
+    // body('next_state').optional().escape().notEmpty(),
   ]),
   dataset_state_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a duplicate dataset.'
-
-    const { next_state } = req.body;
-
-    let {
-      action_item, notification,
-    } = req.body;
 
     const dataset = await prisma.dataset.findUnique({
       where: {
@@ -670,22 +670,21 @@ router.post(
       return next(createError.BadRequest(`Dataset ${dataset.name} cannot be duplicated, as it is a duplicate of another dataset.`));
     }
 
-    if (!action_item) {
-      action_item = {
-        type: config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION,
-        metadata: {
-          original_dataset_id: req.params.id,
-        },
-      };
-    }
-
-    if (!notification) {
-      notification = {
-        type: 'INCOMING_DUPLICATE_DATASET',
-        label: 'Duplicate Dataset Created',
-        text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
-      };
-    }
+    // if (!action_item) {
+    //   action_item = {
+    //     type: config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION,
+    //     metadata: {
+    //       original_dataset_id: req.params.id,
+    //     },
+    //   };
+    // }
+    //
+    // if (!notification) {
+    //   notification = {
+    //     type: 'INCOMING_DUPLICATE_DATASET',
+    //     label: 'Duplicate Dataset Created',
+    // text: `Dataset ${dataset.name} has been duplicated. Click here to
+    // review.`, }; }
 
     // check if other duplicates for this dataset exist in the system
     const existingDuplicates = await prisma.dataset.findMany({
@@ -718,27 +717,6 @@ router.post(
           create: {
             original_dataset_id: req.params.id,
           },
-        },
-        states: {
-          create: [
-            {
-              state: next_state || config.DATASET_STATES.DUPLICATE_REGISTERED,
-            },
-          ],
-        },
-        action_items: {
-          create: [
-            {
-              type: action_item.type,
-              title: action_item.title,
-              text: action_item.text,
-              to: action_item.to,
-              metadata: action_item.metadata,
-              notification: {
-                create: notification,
-              },
-            },
-          ],
         },
         projects: {
           createMany: {

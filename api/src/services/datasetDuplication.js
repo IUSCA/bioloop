@@ -641,6 +641,7 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
     await update_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
+      // todo - constants
       action_item_status: 'ACKNOWLEDGED',
       notification_status: 'ACKNOWLEDGED',
     });

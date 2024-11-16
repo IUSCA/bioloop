@@ -82,6 +82,18 @@ def slugify_(name: str) -> str:
     return slugify(name, lowercase=False, regex_pattern=r'[^a-zA-Z0-9_]')
 
 
+def get_duplicate_notification_payload(original_dataset_id: int) -> dict:
+    payload = dict()
+    payload['label'] = ''
+    payload['action_item'] = {
+        'type': config['ACTION_ITEM_TYPES']['DUPLICATE_DATASET_INGESTION'],
+        'metadata': {
+            'original_dataset_id': original_dataset_id,
+        }
+    }
+    return payload
+
+
 class Register:
     def __init__(self, dataset_type, default_wf_name='integrated'):
         self.dataset_type = dataset_type
@@ -162,7 +174,12 @@ class Register:
 
         original_dataset = matching_datasets[0]
         created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=original_dataset['id'])
-
+        # todo - test api calls for idempotence
+        duplication_notification_payload = get_duplicate_notification_payload(original_dataset_id=original_dataset['id'])
+        api.create_dataset_notification(dataset_id=created_duplicate_dataset['id'],
+                                        data=duplication_notification_payload)
+        api.add_state_to_dataset(dataset_id=created_duplicate_dataset['id'],
+                                 state=config['DATASET_STATES']['DUPLICATE_REGISTERED'])
         self.run_workflows(
             created_duplicate_dataset,
             'handle_duplicate_dataset'

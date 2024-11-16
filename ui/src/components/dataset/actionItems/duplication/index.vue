@@ -67,6 +67,7 @@ import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import { useNotificationStore } from "@/stores/notification";
 import config from "@/config";
+import constants from "@/constants";
 
 const props = defineProps({
   actionItem: {
@@ -154,7 +155,9 @@ const associatedDatasetState = computed(() => {
 });
 
 const isDuplicateDatasetReadyForProcessing = computed(() => {
-  return associatedDatasetState.value === config.DATASET_STATES.DUPLICATE_READY;
+  return (
+    associatedDatasetState.value === constants.DATASET_STATES.DUPLICATE_READY
+  );
 });
 
 const isActionItemActive = computed(() => {
@@ -163,8 +166,8 @@ const isActionItemActive = computed(() => {
 
 const isActionItemAcknowledged = computed(() => {
   return (
-    props.actionItem.status === "ACKNOWLEDGED" ||
-    props.actionItem.status === "RESOLVED"
+    props.actionItem.status === constants.ACTION_ITEM_STATUS.ACKNOWLEDGED ||
+    props.actionItem.status === constants.ACTION_ITEM_STATUS.RESOLVED
   );
 });
 

@@ -1,6 +1,7 @@
 import notificationService from "@/services/notification";
 import { defineStore } from "pinia";
 import toast from "@/services/toast";
+import constants from "@/constants";
 
 export const useNotificationStore = defineStore("notification", () => {
   const loading = ref(false);
@@ -26,7 +27,7 @@ export const useNotificationStore = defineStore("notification", () => {
     loading.value = true;
     return notificationService
       .getNotifications({
-        status: "CREATED",
+        status: constants.NOTIFICATION_STATUS.CREATED,
       })
       .then((res) => {
         setNotifications(res.data);

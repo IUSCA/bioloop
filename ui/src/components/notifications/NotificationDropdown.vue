@@ -58,8 +58,6 @@ const { resume } = useIntervalFn(
 onMounted(() => {
   resume();
 });
-
-const open = ref(true);
 </script>
 
 <style lang="scss" scoped>

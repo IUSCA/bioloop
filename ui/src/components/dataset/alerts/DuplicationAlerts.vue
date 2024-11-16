@@ -98,6 +98,7 @@ import {
 } from "@/services/datasetUtils";
 import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
+import constants from "@/constants";
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -121,10 +122,10 @@ const isActiveDuplicatePendingAction = computed(
   () =>
     props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
-    (datasetState.value === config.DATASET_STATES.DUPLICATE_REGISTERED || // state of duplicate upon registration
-      datasetState.value === config.DATASET_STATES.READY || // state of duplicate after `await_stability` step
-      datasetState.value === config.DATASET_STATES.INSPECTED || // state of duplicate after `inspect` step
-      datasetState.value === config.DATASET_STATES.DUPLICATE_READY), // state of duplicate after running a comparison of
+    (datasetState.value === constants.DATASET_STATES.DUPLICATE_REGISTERED || // state of duplicate upon registration
+      datasetState.value === constants.DATASET_STATES.READY.READY || // state of duplicate after `await_stability` step
+      datasetState.value === constants.DATASET_STATES.READY.INSPECTED || // state of duplicate after `inspect` step
+      datasetState.value === constants.DATASET_STATES.READY.DUPLICATE_READY), // state of duplicate after running a comparison of
   // duplicate dataset with the original dataset.
 );
 
@@ -135,7 +136,7 @@ const isActiveDuplicateBeingAccepted = computed(() => {
     props.dataset.is_duplicate &&
     !props.dataset.is_deleted &&
     datasetState.value ===
-      config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
+      constants.DATASET_STATES.READY.DUPLICATE_ACCEPTANCE_IN_PROGRESS
   );
 });
 
@@ -144,7 +145,7 @@ const isInactiveOverwrittenDataset = computed(() => {
   return (
     !props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
-    datasetState.value === config.DATASET_STATES.OVERWRITTEN
+    datasetState.value === constants.DATASET_STATES.READY.OVERWRITTEN
   );
 });
 
@@ -152,9 +153,9 @@ const isInactiveOverwrittenDataset = computed(() => {
 const isActiveDuplicateBeingRejected = computed(() => {
   return (
     datasetState.value ===
-      config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS ||
+      constants.DATASET_STATES.READY.DUPLICATE_REJECTION_IN_PROGRESS ||
     datasetState.value ===
-      config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
+      constants.DATASET_STATES.READY.DUPLICATE_DATASET_RESOURCES_PURGED
   );
 });
 
@@ -163,7 +164,7 @@ const isInactiveRejectedDuplicate = computed(() => {
   return (
     props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
-    datasetState.value === config.DATASET_STATES.DUPLICATE_REJECTED
+    datasetState.value === constants.DATASET_STATES.READY.DUPLICATE_REJECTED
   );
 });
 
@@ -172,7 +173,7 @@ const isInactiveDataset = computed(() => {
   return (
     !props.dataset.is_duplicate &&
     props.dataset.is_deleted &&
-    datasetState.value === config.DATASET_STATES.DELETED
+    datasetState.value === constants.DATASET_STATES.READY.DELETED
   );
 });
 </script>

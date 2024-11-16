@@ -31,11 +31,6 @@ router.get(
 
     const filterQuery = _.omitBy(_.isUndefined)({
       status: req.query.status || 'CREATED',
-      dataset_action_items: req.query.by_active_action_items ? {
-        some: {
-          status: 'CREATED',
-        },
-      } : undefined,
     });
 
     const notifications = await prisma.$transaction(async (tx) => {
@@ -65,13 +60,6 @@ router.get(
               },
             },
           ],
-        },
-        include: {
-          dataset_action_items: {
-            include: {
-              dataset: true,
-            },
-          },
         },
       });
       return filtered_notifications;
