@@ -292,7 +292,7 @@ const isDuplicateReadyForProcessing = (dataset) => {
   const datasetLatestState = dataset.states[0].state;
   const actionItem = dataset.action_items[0];
   return (
-    actionItem.status === constants.NOTIFICATION_STATUS. &&
+    actionItem.status === constants.NOTIFICATION_STATUS.CREATED &&
     actionItem.active &&
     datasetLatestState === constants.DATASET_STATES.DUPLICATE_READY
   );
