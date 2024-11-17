@@ -415,8 +415,9 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
-        // todo - return notifications instead of action_items
-        action_items: req.query.include_notifications || false,
+        // todo - change returns to expect notification objects instead of
+        // action_items
+        notifications: req.query.include_notifications || false,
         ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
         ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DATASET_DUPLICATION_DETAILS }),
       },
