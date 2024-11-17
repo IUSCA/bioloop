@@ -10,38 +10,110 @@ const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
-const datasetService = require('../services/dataset');
+const { dataset_write_check } = require('../services/dataset');
 const workflowService = require('../services/workflow');
-const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS } = require('../constants');
-
-const UPLOAD_PATH = config.upload.path;
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Build query to filter `notification` objects
-const buildNotificationFilterQuery = ({ status } = {}) => _.omitBy(_.isUndefined)({
-  status,
+const buildDatasetNotificationsForAuthorizedRolesQuery = ({ user_id, role_id } = {}) => ({
+  OR: [
+    {
+      user_notifications: {
+        some: {
+          user_id,
+        },
+      },
+    },
+    {
+      role_notifications: {
+        some: {
+          role_id,
+        },
+      },
+    },
+  ],
 });
 
+// Build query to filter `notification` objects
+const buildNotificationsFilterQuery = ({ status } = {}) => {
+  const notificationFilterQuery = _.omitBy(_.isUndefined)({
+    status,
+  });
+  return Object.entries(notificationFilterQuery).length > 0 ? notificationFilterQuery : undefined;
+};
+
 // Build query to filter `dataset` objects
-const buildDatasetFilterQuery = ({ dataset_state } = {}) => {
+const buildDatasetsFilterQuery = ({ dataset_id, dataset_state } = {}) => {
+  if (dataset_id) {
+    // No need to filter by other attributes if an ID is provided
+    return { dataset_id };
+  }
   const datasetFilterQuery = {
     ...(dataset_state && {
-      dataset: {
-        states: {
-          some: {
+      states: {
+        some: {
           // todo - check if dataset's latest state == dataset_state instead?
-            state: dataset_state,
-          },
+          state: dataset_state,
         },
       },
     }),
   };
   return Object.entries(datasetFilterQuery).length > 0 ? datasetFilterQuery : undefined;
 };
+
+router.get(
+  '/:dataset_id',
+  isPermittedTo('read'),
+  validate([
+    param('dataset_id').isInt().toInt(),
+    query('type').optional().escape().notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Get a single dataset's notifications
+
+    const { type } = req.query;
+
+    const currentUserRole = req.user.roles[0];
+
+    const datasetFilterQuery = buildDatasetsFilterQuery({ dataset_id: req.params.dataset_id });
+
+    // build query that will be used to filter `dataset_notification` objects
+    // based on the corresponding `dataset` objects
+    const datasetNotificationFilterQuery = {
+      ...(!!datasetFilterQuery && { dataset: datasetFilterQuery }),
+      type,
+    };
+
+    const datasetNotifications = await prisma.$transaction(async (tx) => {
+      const matching_user_roles = await tx.role.findMany({
+        where: {
+          name: currentUserRole,
+        },
+      });
+      const user_role = matching_user_roles[0];
+
+      const filteredNotifications = await tx.dataset_notification.findMany({
+        where: {
+          ...datasetNotificationFilterQuery,
+          ...buildDatasetNotificationsForAuthorizedRolesQuery({ user_id: req.user.id, role_id: user_role.id }),
+        },
+        include: {
+          dataset: {
+            action_items: true,
+          },
+        },
+      });
+      return filteredNotifications;
+    });
+
+    res.json(datasetNotifications);
+  }),
+);
 
 router.get(
   '/',
@@ -57,12 +129,8 @@ router.get(
 
     const currentUserRole = req.user.roles[0];
 
-    // use dataset_action_items filter on :/dataset_id/notifications
-    // will need to use single get endpoint for all notifications
-    // use notification_action_item > dataset_action_item instead?
-
-    const notificationFilterQuery = buildNotificationFilterQuery({ status: req.query.status });
-    const datasetFilterQuery = buildDatasetFilterQuery({ dataset_state: req.query.dataset_state });
+    const notificationFilterQuery = buildNotificationsFilterQuery({ status: req.query.status });
+    const datasetFilterQuery = buildDatasetsFilterQuery({ dataset_state: req.query.dataset_state });
 
     // build query that will be used to filter `dataset_notification` objects
     // based on the corresponding `dataset` and `notification` objects
@@ -70,8 +138,6 @@ router.get(
       ...notificationFilterQuery,
       ...datasetFilterQuery,
     };
-
-    // todo - retain check - replace with status
 
     const notifications = await prisma.$transaction(async (tx) => {
       const matching_user_roles = await tx.role.findMany({
@@ -81,32 +147,15 @@ router.get(
       });
       const user_role = matching_user_roles[0];
 
-      // todo - return dataset notifications now
+      // todo - returns dataset notifications now
       const filteredNotifications = await tx.dataset_notification.findMany({
         where: {
           ...datasetNotificationFilterQuery,
-          OR: [
-            {
-              user_notifications: {
-                some: {
-                  user_id: req.user.id,
-                },
-              },
-            },
-            {
-              role_notifications: {
-                some: {
-                  role_id: user_role.id,
-                },
-              },
-            },
-          ],
+          ...buildDatasetNotificationsForAuthorizedRolesQuery({ user_id: req.user.id, role_id: user_role.id }),
         },
         include: {
-          dataset_action_items: {
-            include: {
-              dataset: true,
-            },
+          dataset: {
+            action_items: true,
           },
         },
       });
@@ -190,7 +239,7 @@ router.post(
   }),
 );
 
-// todo - this should have a better way of selecting the notification to delete
+// todo - delete by dataset_ID/notification_Id here instead
 router.delete(
   '/',
   isPermittedTo('delete'),
@@ -218,6 +267,69 @@ router.delete(
     });
 
     res.json(updatedCount);
+  }),
+);
+
+router.patch(
+  '/:dataset_notification_id',
+  isPermittedTo('update'),
+  validate([
+    param('dataset_notification_id').isInt().toInt(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = patch an action item associated with a dataset.
+    // #swagger.description = provided `ingestion_checks` will overwrite
+    // existing ingestion checks associated with this action item.
+
+    const { ingestion_checks = [] } = req.body;
+
+    // const dataset = await prisma.dataset.findUnique({
+    //   where: {
+    //     id: req.params.id,
+    //   },
+    //   include: {
+    //     ...CONSTANTS.INCLUDE_STATES,
+    //   },
+    // });
+
+    // // delete existing checks associated with this action item
+    // update_queries.push(prisma.dataset_duplication_analysis_check.deleteMany({
+    //   where: {
+    //     action_item_id: req.params.action_item_id,
+    //   },
+    // }));
+
+    const updatedNotification = await prisma.$transaction(async (tx) => {
+      const notificationActionItems = await tx.dataset_action_item.findMany({
+        where: {
+          dataset_notification_id: req.params.dataset_notification_id,
+        },
+        include: {
+          action_items: true,
+        },
+      });
+      const duplicationNotificationActionItemId = notificationActionItems[0].id;
+      const updated = await tx.dataset_notification.update({
+        where: {
+          id: duplicationNotificationActionItemId,
+        },
+        data: {
+          action_items: {
+            update: {
+              data: {
+                ingestion_checks: {
+                  createMany: { data: ingestion_checks },
+                },
+              },
+            },
+          },
+        },
+      });
+      return updated;
+    });
+
+    res.json(updatedNotification);
   }),
 );
 

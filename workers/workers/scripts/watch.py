@@ -86,7 +86,7 @@ def get_duplicate_notification_payload(original_dataset_id: int) -> dict:
     payload = dict()
     payload['label'] = ''
     payload['action_item'] = {
-        'type': config['ACTION_ITEM_TYPES']['DUPLICATE_DATASET_INGESTION'],
+        'type': config['NOTIFICATION_TYPE']['DUPLICATE_DATASET_REGISTRATION'],
         'metadata': {
             'original_dataset_id': original_dataset_id,
         }

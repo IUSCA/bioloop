@@ -20,7 +20,7 @@ class DatasetService {
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
    * @param is_duplicate Boolean field to filter datasets by the is_duplicate attribute
-   * @param include_action_items Boolean field to includes any active action items on the dataset in the result
+   * @param include_notifications Boolean field to includes any active action items on the dataset in the result
    * @param include_states Boolean field to include dataset's state history
    * @returns          Object containing matching datasets, and count of matching datasets
    */
@@ -42,7 +42,7 @@ class DatasetService {
     initiator = false,
     include_duplications = false,
     include_states = false,
-    include_action_items = false,
+    include_notifications = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -56,7 +56,7 @@ class DatasetService {
         initiator,
         include_duplications,
         include_states,
-        include_action_items,
+        include_notifications,
       },
     });
   }

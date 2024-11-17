@@ -29,7 +29,7 @@ The results of the comparison analysis are shown to authorized users in the UI, 
 
 For each duplicate dataset registered by the system, an action item is created in the Postgres table `dataset_action_item`, and a notification is persisted to the `notification` table.
 
-Each action item is linked to multiple `dataset_ingestion_check` records, and each `dataset_ingestion_check` record represents the results of comparing a duplicate dataset with the original dataset based on a specific criteria.
+Each action item is linked to multiple `dataset_duplication_analysis_check` records, and each `dataset_duplication_analysis_check` record represents the results of comparing a duplicate dataset with the original dataset based on a specific criteria.
 
 A dataset is compared with another based on 3 criteria:
 1. There are no files in either dataset that have the same name and path as a file in the other dataset, but a different MD5 checksum. 

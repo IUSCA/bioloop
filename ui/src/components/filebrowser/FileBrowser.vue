@@ -71,7 +71,7 @@ function get_file_list(path) {
       id: props.datasetId,
       include_duplications: true,
       include_states: true,
-      include_action_items: true,
+      include_notifications: true,
     }),
     datasetService.list_files({ id: props.datasetId, basepath: path }),
   ])

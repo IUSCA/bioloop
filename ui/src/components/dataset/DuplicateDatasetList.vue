@@ -258,7 +258,7 @@ function fetch_datasets(query = {}, updatePageCount = true) {
     ...datasets_retrieval_query.value,
     ...query,
     is_duplicate: true,
-    include_action_items: true,
+    include_notifications: true,
     include_states: true,
   })
     .then((res) => {
@@ -282,7 +282,7 @@ const updateFiltersGroupQuery = (newVal) => {
 
 const actionItemURL = (dataset) => {
   const actionItem = dataset.action_items[0];
-  return actionItem.type === "DUPLICATE_DATASET_INGESTION"
+  return actionItem.type === "DUPLICATE_DATASET_REGISTRATION"
     ? `/datasets/${dataset.id}/actionItems/${actionItem.id}`
     : "#";
 };

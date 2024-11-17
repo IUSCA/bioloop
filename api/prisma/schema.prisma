@@ -8,39 +8,39 @@ datasource db {
 }
 
 model dataset {
-  id                   Int                    @id @default(autoincrement())
-  name                 String
-  type                 String
-  num_directories      Int?
-  num_files            Int?
-  du_size              BigInt?
-  size                 BigInt?
-  bundle_size          BigInt?
-  description          String?
-  created_at           DateTime               @default(now()) @db.Timestamp(6)
-  updated_at           DateTime               @default(now()) @updatedAt @db.Timestamp(6)
-  origin_path          String?
-  archive_path         String?
-  staged_path          String?
-  is_deleted           Boolean                @default(false)
-  is_staged            Boolean                @default(false)
-  metadata             Json?
-  workflows            workflow[]
-  files                dataset_file[]
-  audit_logs           dataset_audit[]
-  states               dataset_state[]
-  derived_datasets     dataset_hierarchy[]    @relation("source_datasets")
-  source_datasets      dataset_hierarchy[]    @relation("derived_datasets")
-  projects             project_dataset[]
-  accesses             data_access_log[]
-  stage_requests       stage_request_log[]
-  bundle               bundle?
-  dataset_upload_log   dataset_upload_log?
-  is_duplicate         Boolean                @default(false)
-  duplicated_from      dataset_duplication?   @relation("duplicated_from")
-  duplicated_by        dataset_duplication[]  @relation("duplicated_by")
-  version              Int                    @default(1)
-  dataset_notification dataset_notification[]
+  id                 Int                    @id @default(autoincrement())
+  name               String
+  type               String
+  num_directories    Int?
+  num_files          Int?
+  du_size            BigInt?
+  size               BigInt?
+  bundle_size        BigInt?
+  description        String?
+  created_at         DateTime               @default(now()) @db.Timestamp(6)
+  updated_at         DateTime               @default(now()) @updatedAt @db.Timestamp(6)
+  origin_path        String?
+  archive_path       String?
+  staged_path        String?
+  is_deleted         Boolean                @default(false)
+  is_staged          Boolean                @default(false)
+  metadata           Json?
+  workflows          workflow[]
+  files              dataset_file[]
+  audit_logs         dataset_audit[]
+  states             dataset_state[]
+  derived_datasets   dataset_hierarchy[]    @relation("source_datasets")
+  source_datasets    dataset_hierarchy[]    @relation("derived_datasets")
+  projects           project_dataset[]
+  accesses           data_access_log[]
+  stage_requests     stage_request_log[]
+  bundle             bundle?
+  dataset_upload_log dataset_upload_log?
+  is_duplicate       Boolean                @default(false)
+  duplicated_from    dataset_duplication?   @relation("duplicated_from")
+  duplicated_by      dataset_duplication[]  @relation("duplicated_by")
+  version            Int                    @default(1)
+  notification       dataset_notification[]
 
   @@unique([name, type, is_deleted, is_duplicate, version])
 }
@@ -153,7 +153,6 @@ model dataset_action_item {
   updated_at                  DateTime                             @default(now()) @updatedAt @db.Timestamp(6)
   title                       String?
   text                        String?
-  type                        DATASET_ACTION_ITEM_TYPE
   status                      DATASET_ACTION_ITEM_STATUS           @default(CREATED)
   // todo - not generic enough?
   // todo - rename to duplication_analysis_checks
@@ -268,7 +267,6 @@ model notification {
   id                   Int                   @id @default(autoincrement())
   created_at           DateTime              @default(now()) @db.Timestamp(6)
   updated_at           DateTime              @default(now()) @updatedAt @db.Timestamp(6)
-  type                 NOTIFICATION_TYPE?
   label                String
   text                 String?
   status               NOTIFICATION_STATUS   @default(CREATED)
@@ -283,14 +281,16 @@ model notification {
 
 // todo - separate tables for upload and duplication notificiations thru this, link action_items through those?
 model dataset_notification {
-  id                   Int                   @id @default(autoincrement())
-  dataset_id           Int
-  dataset              dataset               @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  id              Int                       @id @default(autoincrement())
+  dataset_id      Int
+  dataset         dataset                   @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   // todo - use composite key instead?
-  notification_id      Int                   @unique
-  notification         notification          @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  notification_id Int                       @unique
+  notification    notification              @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  type            DATASET_NOTIFICATION_TYPE
   // todo - dataset_action_item must npt have anything specific to duplication. Create duplication_notificaiton/upload_notification instead?
-  dataset_action_items dataset_action_item[]
+  // todo - dataset_action_items is now action_items
+  action_items    dataset_action_item[]
 
   @@unique([notification_id, dataset_id])
 }
@@ -474,19 +474,15 @@ enum upload_type {
   DATASET
 }
 
-enum DATASET_ACTION_ITEM_TYPE {
+enum DATASET_NOTIFICATION_TYPE {
   // DATASET_UPLOAD
-  DUPLICATE_DATASET_INGESTION
+  DUPLICATE_DATASET_REGISTRATION
 }
 
 enum DATASET_ACTION_ITEM_STATUS {
   CREATED
   ACKNOWLEDGED
   RESOLVED
-}
-
-enum NOTIFICATION_TYPE {
-  INCOMING_DUPLICATE_DATASET
 }
 
 enum DATASET_INGESTION_CHECK_TYPE {

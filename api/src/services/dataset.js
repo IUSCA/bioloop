@@ -5,6 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
 
+const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
@@ -12,6 +13,8 @@ const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_DATASET_DUPLICATION_DETAILS,
 } = require('../constants');
+const asyncHandler = require('../middleware/asyncHandler');
+const CONSTANTS = require('../constants');
 
 const prisma = new PrismaClient();
 
@@ -102,7 +105,7 @@ async function get_dataset({
   initiator = false,
   include_upload_log = false,
   include_duplications = false,
-  include_action_items = false,
+  include_notifications = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -149,7 +152,7 @@ async function get_dataset({
       } : false,
       // dataset_upload_log: true,
       ...(include_duplications && INCLUDE_DATASET_DUPLICATION_DETAILS),
-      action_items: include_action_items ? {
+      action_items: include_notifications ? {
         where: {
           active: true,
         },
@@ -489,6 +492,64 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+const dataset_write_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: req.params.id,
+    },
+    ...CONSTANTS.INCLUDE_STATES,
+  });
+
+  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  const locked_error = `Dataset cannot be written to while in state ${latest_state}.`;
+
+  if (!dataset.is_deleted) {
+    if (!dataset.is_duplicate) {
+      if (latest_state === CONSTANTS.DATASET_STATESOVERWRITE_IN_PROGRESS
+          || latest_state === CONSTANTS.DATASET_STATESORIGINAL_DATASET_RESOURCES_PURGED) {
+        return next(createError.InternalServerError(locked_error));
+      }
+    } else if (latest_state === CONSTANTS.DATASET_STATESDUPLICATE_ACCEPTANCE_IN_PROGRESS
+        || latest_state === CONSTANTS.DATASET_STATESDUPLICATE_REJECTION_IN_PROGRESS
+        || latest_state === CONSTANTS.DATASET_STATESDUPLICATE_DATASET_RESOURCES_PURGED) {
+      return next(createError.InternalServerError(locked_error));
+    }
+  }
+
+  next();
+});
+
+const dataset_state_write_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: req.params.id,
+    },
+    include: {
+      ...CONSTANTS.INCLUDE_STATES,
+    },
+  });
+
+  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  // Dataset's state can only be written to if:
+  // todo - comments: OVERWRITE_IN_PROGRESS -> ORIGINAL_DATASET_RESOURCES_PURGED
+  // DUPLICATE_REJECTION_IN_PROGRESS -> DUPLICATE_DATASET_RESOURCES_PURGED
+  // DUPLICATE_ACCEPTANCE_IN_PROGRESS
+  if (
+    ((latest_state === CONSTANTS.DATASET_STATESOVERWRITE_IN_PROGRESS
+            || latest_state === CONSTANTS.DATASET_STATESORIGINAL_DATASET_RESOURCES_PURGED)
+          && req.body.state !== CONSTANTS.DATASET_STATESORIGINAL_DATASET_RESOURCES_PURGED)
+      || ((latest_state === CONSTANTS.DATASET_STATESDUPLICATE_REJECTION_IN_PROGRESS
+              || latest_state === CONSTANTS.DATASET_STATESDUPLICATE_DATASET_RESOURCES_PURGED)
+          && req.body.state !== CONSTANTS.DATASET_STATESDUPLICATE_DATASET_RESOURCES_PURGED)
+      || (latest_state === CONSTANTS.DATASET_STATESDUPLICATE_ACCEPTANCE_IN_PROGRESS)
+  ) {
+    return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
+        + `while its current state is ${latest_state}`));
+  }
+
+  next();
+});
+
 module.exports = {
   soft_delete,
   get_dataset,
@@ -498,4 +559,6 @@ module.exports = {
   files_ls,
   search_files,
   add_files,
+  dataset_write_check,
+  dataset_state_write_check,
 };

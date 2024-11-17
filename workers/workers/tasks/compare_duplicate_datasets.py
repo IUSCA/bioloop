@@ -19,7 +19,11 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
     duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
                                               include_duplications=True,
-                                              include_action_items=True)
+                                              include_states=True)
+    duplicate_dataset_notifications = api.get_dataset_notifications(
+        dataset_id=duplicate_dataset_id,
+        notification_type=config['NOTIFICATION_TYPE']['DUPLICATE_DATASET_REGISTRATION']
+    )
 
     if not duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
@@ -38,8 +42,9 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     )
 
     if len(matching_datasets) != 1:
-        raise InspectionFailed(f"Expected to find one active (not deleted) original {duplicate_dataset['type']} named {duplicate_dataset['name']},"
-                               f" but found {len(matching_datasets)}.")
+        raise InspectionFailed(
+            f"Expected to find one active (not deleted) original {duplicate_dataset['type']} named {duplicate_dataset['name']},"
+            f" but found {len(matching_datasets)}.")
 
     original_dataset: dict = matching_datasets[0]
 
@@ -65,20 +70,23 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
     # create an action item for operators to review later. This way, operators will always have a chance
     # to review the incoming dataset before it is rejected.
-    # Exactly one action item of type DUPLICATE_DATASET_INGESTION is created for a duplicate dataset.
-    duplication_action_item: dict = [item for item in duplicate_dataset['action_items']
-                                     if item['type'] == config['ACTION_ITEM_TYPES']['DUPLICATE_DATASET_INGESTION']][0]
+    # Exactly one action item of type DUPLICATE_DATASET_REGISTRATION is created for a duplicate dataset.
+    duplication_notification: dict = [notification for notification in duplicate_dataset_notifications
+                                      if notification['type'] == config['NOTIFICATION_TYPE'][
+                                          'DUPLICATE_DATASET_REGISTRATION']][0]
 
     action_item_data: dict = {
-       "ingestion_checks": comparison_checks_report,
-        "next_state": config['DATASET_STATES']['DUPLICATE_READY'],
+        "ingestion_checks": comparison_checks_report,
     }
 
-    api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],
-                                   action_item_id=duplication_action_item['id'],
-                                   data=action_item_data)
+    if latest_state != config['DATASET_STATES']['DUPLICATE_READY']:
+        api.add_state_to_dataset(dataset_id=duplicate_dataset['id'],
+                                 state=config['DATASET_STATES']['DUPLICATE_READY'])
+    # todo - test idempotence
+    api.update_dataset_notification(notification_id=duplication_notification['id'],
+                                    data=action_item_data)
 
-    logger.info(f"Processed dataset {duplicate_dataset_id}")
+    logger.info(f"Processed duplication analysis of duplicate dataset {duplicate_dataset_id}")
     return duplicate_dataset_id,
 
 
@@ -161,7 +169,7 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
                 'original_md5': original_file_checksum,
                 'duplicate_md5': duplicate_file_checksum,
             })
-    
+
     logger.info(json.dumps(conflicting_checksum_files, indent=2))
 
     # Files that are present in the original dataset and missing from the duplicate

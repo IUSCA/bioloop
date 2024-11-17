@@ -113,12 +113,12 @@ async function validate_duplication_state_pre_overwrite_resource_purge({
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing acceptance.
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== config.DATASET_STATES.DUPLICATE_READY
-      && latest_state !== config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS) {
+  if (latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_READY
+      && latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS) {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
         // eslint-disable-next-line max-len
-        + `${config.DATASET_STATES.DUPLICATE_READY} or ${config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS}, but current state is `
+        + `${CONSTANTS.DATASET_STATES.DUPLICATE_READY} or ${CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS}, but current state is `
         + `${latest_state}.`);
   }
 
@@ -146,18 +146,19 @@ async function validate_duplication_state_post_overwrite_resource_purge({
     },
     include: {
       duplicated_from: true,
-      action_items: true,
+      // action_items: true,
+      notifications: true,
       ...CONSTANTS.INCLUDE_STATES,
       ...CONSTANTS.INCLUDE_WORKFLOWS,
     },
   });
 
   const duplicate_dataset_latest_state = duplicate_dataset.states[0].state;
-  if (duplicate_dataset_latest_state !== config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
-      && duplicate_dataset_latest_state !== config.DATASET_STATES.DUPLICATE_ACCEPTED) {
+  if (duplicate_dataset_latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
+      && duplicate_dataset_latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTED) {
     throw new Error(`Expected duplicate dataset ${duplicate_dataset.id} to be in one of states `
         // eslint-disable-next-line max-len
-        + `${config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS} or ${config.DATASET_STATES.DUPLICATE_ACCEPTED}, but current state `
+        + `${CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS} or ${CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTED}, but current state `
         + `is ${duplicate_dataset_latest_state}.`);
   }
 
@@ -169,13 +170,14 @@ async function validate_duplication_state_post_overwrite_resource_purge({
       ...CONSTANTS.INCLUDE_STATES,
     },
   });
-
   const original_dataset_latest_state = original_dataset.states[0].state;
-  if (original_dataset_latest_state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED
-      && original_dataset_latest_state !== config.DATASET_STATES.OVERWRITTEN) {
+
+  if (original_dataset_latest_state !== CONSTANTS.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED
+      && original_dataset_latest_state !== CONSTANTS.DATASET_STATES.OVERWRITTEN) {
     throw new Error(`Expected original dataset ${original_dataset.id} to be in one of states `
-        // eslint-disable-next-line max-len
-        + `${config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED} or ${config.DATASET_STATES.OVERWRITTEN}, but current state is ${original_dataset_latest_state}`);
+        + `${CONSTANTS.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED} or `
+        + `${CONSTANTS.DATASET_STATES.OVERWRITTEN}, but current state is `
+        + `${original_dataset_latest_state}`);
   }
 
   return {
@@ -203,12 +205,11 @@ async function validate_duplication_state_pre_rejection_resource_purge({
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing acceptance.
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== config.DATASET_STATES.DUPLICATE_READY
-      && latest_state !== config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS) {
-    // eslint-disable-next-line no-useless-concat
+  if (latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_READY
+      && latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS) {
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
-        // eslint-disable-next-line max-len
-        + `${config.DATASET_STATES.DUPLICATE_READY} or ${config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS}, but current state is `
+        + `${CONSTANTS.DATASET_STATES.DUPLICATE_READY} or `
+        + `${CONSTANTS.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS}, but current state is `
         + `${latest_state}.`);
   }
 
@@ -238,12 +239,12 @@ async function validate_duplication_state_post_rejection_resource_purge({
   // throw error if this dataset is not ready for acceptance or rejection yet,
   // or if it is not already undergoing rejection.
   const latest_state = duplicate_dataset.states[0].state;
-  if (latest_state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
-      && latest_state !== config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS) {
+  if (latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED
+      && latest_state !== CONSTANTS.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS) {
     // eslint-disable-next-line no-useless-concat
     throw new Error(`Expected dataset ${duplicate_dataset.id} to be in one of states `
-        + `${config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED} or `
-        + `${config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS}, but current state is `
+        + `${CONSTANTS.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED} or `
+        + `${CONSTANTS.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS}, but current state is `
         + `${latest_state}.`);
   }
 
@@ -296,13 +297,33 @@ const create_state_log = async ({
 /**
  *
  * @param prisma_transaction_instance Prisma transaction instance
- * @param action_item_id ID of the action item to be updated
- * @param action_item_status New status of the action item
+ * @param notification_id ID of the notification be updated
  * @param notification_status New status of the notification associated with the action item
  * @returns {Promise<{updated_action_item: T}>}
  */
-const update_action_item = async ({
-  prisma_transaction_instance, action_item_status, action_item_id, notification_status,
+const update_dataset_notification = async ({
+  prisma_transaction_instance, notification_id, notification_status,
+}) => {
+  const dataset_notification = await prisma_transaction_instance.dataset_notification.update({
+    where: {
+      id: notification_id,
+    },
+    data: {
+      status: notification_status,
+    },
+  });
+  return { updated_dataset_notification: dataset_notification };
+};
+/**
+ *
+ * @param prisma_transaction_instance Prisma transaction instance
+ * @param action_item_id ID of the action item to be updated
+ * @param action_item_status New status of the action item
+ * @returns {Promise<{updated_action_item: T}>}
+ */
+
+const update_dataset_action_item = async ({
+  prisma_transaction_instance, action_item_status, action_item_id,
 }) => {
   const action_item = await prisma_transaction_instance.dataset_action_item.update({
     where: {
@@ -310,17 +331,108 @@ const update_action_item = async ({
     },
     data: {
       status: action_item_status,
-      ...(notification_status && {
-        notification: {
-          update: {
-            status: notification_status,
-          },
-        },
-      }),
     },
   });
   return { updated_action_item: action_item };
 };
+
+/**
+ * For a given duplicate dataset, finds all other duplicate datasets with the
+ * same name and type, and rejects them.
+
+ * @param prisma_transaction_instance
+ * @param duplicate_dataset The duplicate dataset to be rejected
+ * @param rejected_by_user_id
+ * @returns {Promise<void>}
+ */
+const reject_concurrent_duplicates = async ({
+  prisma_transaction_instance,
+  duplicate_dataset,
+  rejected_by_user_id,
+}) => {
+  const other_duplicates = await prisma_transaction_instance.dataset.findMany({
+    where: {
+      name: duplicate_dataset.name,
+      type: duplicate_dataset.type,
+      is_deleted: false,
+      is_duplicate: true,
+      NOT: { id: duplicate_dataset.id },
+    },
+  });
+  let i = 0;
+  // eslint-disable-next-line no-restricted-syntax
+  for (const d of other_duplicates) {
+    i += 1;
+    // eslint-disable-next-line no-await-in-loop
+    const duplicate_to_be_rejected = await prisma_transaction_instance.dataset.findUnique({
+      where: {
+        id: d.id,
+      },
+      include: {
+        ...CONSTANTS.INCLUDE_STATES,
+        notifications: {
+          action_items: true,
+        },
+      },
+    });
+    // eslint-disable-next-line no-await-in-loop
+    await create_audit_log({
+      prisma_transaction_instance,
+      dataset_id: d.id,
+      user_id: rejected_by_user_id,
+      action: 'duplicate_rejected',
+    });
+    // eslint-disable-next-line no-await-in-loop
+    await create_state_log({
+      prisma_transaction_instance,
+      dataset_id: d.id,
+      // todo - CONSTANTS. Also move states to CONSTANTS
+      state: CONSTANTS.DATASET_STATES.DUPLICATE_REJECTED,
+    });
+    const duplicate_latest_state = duplicate_to_be_rejected.states[0].state;
+    // eslint-disable-next-line no-await-in-loop
+    const latest_rejected_duplicate_version = await get_dataset_latest_version({
+      prisma_transaction_instance,
+      dataset_name: duplicate_dataset.name,
+      dataset_type: duplicate_dataset.type,
+      is_deleted: true,
+      is_duplicate: true,
+    });
+
+    // eslint-disable-next-line no-await-in-loop
+    await prisma_transaction_instance.dataset.update({
+      where: {
+        id: d.id,
+      },
+      data: {
+        is_deleted: true,
+        ...(duplicate_latest_state === CONSTANTS.DATASET_STATES.DUPLICATE_READY
+            && {
+              version: latest_rejected_duplicate_version + i,
+            }),
+      },
+    });
+
+    const current_duplicate_dataset_notifications = (duplicate_to_be_rejected.notifications || [])
+      .filter((notification) => notification.type === CONSTANTS.NOTIFICATION_TYPES.DUPLICATE_DATASET_REGISTRATION
+          && notification.status === CONSTANTS.NOTIFICATION_STATUS.CREATED);
+    const duplication_notification = current_duplicate_dataset_notifications[0];
+    // eslint-disable-next-line no-await-in-loop
+    await update_dataset_notification({
+      prisma_transaction_instance,
+      notification_id: duplication_notification.id,
+      notification_status: CONSTANTS.DATASET_STATES.RESOLVED,
+    });
+    // eslint-disable-next-line no-await-in-loop
+    await update_dataset_action_item({
+      prisma_transaction_instance,
+      action_item_id: duplication_notification.action_items[0].id,
+      action_item_status: CONSTANTS.DATASET_STATES.RESOLVED,
+    });
+  }
+};
+
+// todo - move all usages of config.DATASET_STATES to CONSTANTS.DATASET_STATES
 
 /**
  * Initiates the overwriting of a dataset by its incoming duplicate.
@@ -342,29 +454,33 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     } = await
     validate_duplication_state_pre_overwrite_resource_purge({ prisma_transaction_instance: tx, duplicate_dataset_id });
 
-    const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
-      .filter((item) => item.type
-      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
-    await update_action_item({
-      prisma_transaction_instance: tx,
-      action_item_id: duplicate_dataset_action_item.id,
-      action_item_status: 'ACKNOWLEDGED',
-      notification_status: 'ACKNOWLEDGED',
-    });
+    const dataset_duplication_notifications = (duplicate_dataset.notifications || [])
+      .filter((notification) => (notification.type === CONSTANTS.NOTIFICATION_TYPES.DUPLICATE_DATASET_REGISTRATION)
+          && (notification.status === CONSTANTS.NOTIFICATION_STATUS.CREATED));
+    const duplication_notification = dataset_duplication_notifications[0];
+    const duplication_action_item = duplication_notification.action_items[0];
 
+    await update_dataset_notification({
+      prisma_transaction_instance: tx,
+      notification_id: duplication_notification.id,
+      notification_status: CONSTANTS.NOTIFICATION_STATUS.ACKNOWLEDGED,
+    });
+    await update_dataset_action_item({
+      prisma_transaction_instance: tx,
+      action_item_id: duplication_action_item.id,
+      action_item_status: CONSTANTS.ACTION_ITEM_STATUS.ACKNOWLEDGED,
+    });
     await create_audit_log({
       prisma_transaction_instance: tx,
       dataset_id: duplicate_dataset.id,
       user_id: accepted_by_user_id,
       action: 'duplicate_acceptance_initiated',
     });
-
     await create_state_log({
       prisma_transaction_instance: tx,
       dataset_id: duplicate_dataset.id,
-      state: config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS,
+      state: CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS,
     });
-
     await create_audit_log({
       prisma_transaction_instance: tx,
       dataset_id: original_dataset.id,
@@ -374,83 +490,15 @@ async function initiate_duplicate_acceptance({ duplicate_dataset_id, accepted_by
     await create_state_log({
       prisma_transaction_instance: tx,
       dataset_id: original_dataset.id,
-      state: config.DATASET_STATES.OVERWRITE_IN_PROGRESS,
+      state: CONSTANTS.DATASET_STATES.OVERWRITE_IN_PROGRESS,
     });
-
-    const latest_rejected_duplicate_version = await get_dataset_latest_version({
-      prisma_transaction_instance: tx,
-      dataset_name: duplicate_dataset.name,
-      dataset_type: duplicate_dataset.type,
-      is_deleted: true,
-      is_duplicate: true,
-    });
-
     // Check if other duplicates having this name and type are active in the
     // system. These will be rejected.
-    const other_duplicates = await tx.dataset.findMany({
-      where: {
-        name: duplicate_dataset.name,
-        type: duplicate_dataset.type,
-        is_deleted: false,
-        is_duplicate: true,
-        NOT: { id: duplicate_dataset_id },
-      },
+    await reject_concurrent_duplicates({
+      prisma_transaction_instance: tx,
+      duplicate_dataset,
+      rejected_by_user_id: accepted_by_user_id,
     });
-    let i = 0;
-    // eslint-disable-next-line no-restricted-syntax
-    for (const d of other_duplicates) {
-      i += 1;
-      // eslint-disable-next-line no-await-in-loop
-      await create_audit_log({
-        prisma_transaction_instance: tx,
-        dataset_id: d.id,
-        user_id: accepted_by_user_id,
-        action: 'duplicate_rejected',
-      });
-      // eslint-disable-next-line no-await-in-loop
-      await create_state_log({
-        prisma_transaction_instance: tx,
-        dataset_id: d.id,
-        // todo - constants. Also move states to constants
-        state: 'DUPLICATE_REJECTED',
-      });
-
-      // eslint-disable-next-line no-await-in-loop
-      const current_duplicate_dataset = await tx.dataset.findUnique({
-        where: {
-          id: d.id,
-        },
-        include: {
-          ...CONSTANTS.INCLUDE_STATES,
-          action_items: true,
-        },
-      });
-      const duplicate_latest_state = current_duplicate_dataset.states[0].state;
-
-      // eslint-disable-next-line no-await-in-loop
-      await tx.dataset.update({
-        where: {
-          id: d.id,
-        },
-        data: {
-          is_deleted: true,
-          ...(duplicate_latest_state === config.DATASET_STATES.DUPLICATE_READY && {
-            version: latest_rejected_duplicate_version + i,
-          }),
-        },
-      });
-
-      const current_duplicate_dataset_action_item = (current_duplicate_dataset.action_items || [])
-        .filter((item) => item.type
-      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
-      // eslint-disable-next-line no-await-in-loop
-      await update_action_item({
-        prisma_transaction_instance: tx,
-        action_item_id: current_duplicate_dataset_action_item.id,
-        action_item_status: 'RESOLVED',
-        notification_status: 'RESOLVED',
-      });
-    }
 
     const dataset_being_accepted = await tx.dataset.findUnique({
       where: {
@@ -499,7 +547,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
         is_duplicate: false,
         // if incoming duplicate's version is not already updated, update it
         ...((!original_dataset.is_deleted
-              && original_dataset_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+              && original_dataset_state === CONSTANTS.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
             && {
               version: original_dataset.version + 1,
             }
@@ -523,20 +571,25 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
       },
     });
 
-    const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
-      .filter((item) => item.type
-      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
-    await update_action_item({
+    const duplication_notification = (duplicate_dataset.notifications || [])
+      .filter((notification) => notification.type
+      === CONSTANTS.NOTIFICATION_TYPES.DUPLICATE_DATASET_REGISTRATION && notification.active)[0];
+    const duplicate_dataset_action_item = (duplication_notification.action_items || [])[0];
+    await update_dataset_notification({
+      prisma_transaction_instance: tx,
+      notification_id: duplication_notification.id,
+      action_item_status: CONSTANTS.NOTIFICATION_STATUS.RESOLVED,
+    });
+    await update_dataset_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
-      action_item_status: 'RESOLVED',
-      notification_status: 'RESOLVED',
+      action_item_status: CONSTANTS.ACTION_ITEM_STATUS.RESOLVED,
     });
 
     await create_state_log({
       prisma_transaction_instance: tx,
       dataset_id: duplicate_dataset_id,
-      state: config.DATASET_STATES.DUPLICATE_ACCEPTED,
+      state: CONSTANTS.DATASET_STATES.DUPLICATE_ACCEPTED,
     });
 
     await tx.dataset.update({
@@ -561,7 +614,7 @@ async function complete_duplicate_acceptance({ duplicate_dataset_id }) {
     await create_state_log({
       prisma_transaction_instance: tx,
       dataset_id: original_dataset.id,
-      state: config.DATASET_STATES.OVERWRITTEN,
+      state: CONSTANTS.DATASET_STATES.OVERWRITTEN,
     });
 
     // transfer associations of the original dataset to the duplicate dataset
@@ -635,15 +688,20 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
       duplicate_dataset_id,
     });
 
-    const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
-      .filter((item) => item.type
-      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
-    await update_action_item({
+    const duplication_notification = (duplicate_dataset.notifications || [])
+      .filter((notification) => notification.type
+      === CONSTANTS.NOTIFICATION_TYPES.DUPLICATE_DATASET_REGISTRATION
+          && notification.active)[0];
+    const duplicate_dataset_action_item = (duplication_notification.action_items || [])[0];
+    await update_dataset_notification({
+      prisma_transaction_instance: tx,
+      notification_id: duplication_notification.id,
+      notification_status: CONSTANTS.NOTIFICATION_STATUS.ACKNOWLEDGED,
+    });
+    await update_dataset_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
-      // todo - constants
-      action_item_status: 'ACKNOWLEDGED',
-      notification_status: 'ACKNOWLEDGED',
+      action_item_status: CONSTANTS.ACTION_ITEM_STATUS.ACKNOWLEDGED,
     });
 
     await create_audit_log({
@@ -656,8 +714,7 @@ async function initiate_duplicate_rejection({ duplicate_dataset_id, rejected_by_
       prisma_transaction_instance: tx,
       dataset_id: duplicate_dataset.id,
       user_id: rejected_by_user_id,
-      action: 'duplicate_rejected',
-      state: config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS,
+      state: CONSTANTS.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS,
     });
 
     const dataset_being_rejected = await tx.dataset.findUnique({
@@ -712,7 +769,7 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
         is_deleted: true,
         ...((!duplicate_dataset.is_deleted
               && duplicate_dataset_latest_state
-              === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+              === CONSTANTS.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
             && {
               version: latest_rejected_duplicate_version + 1,
             }
@@ -725,20 +782,25 @@ async function complete_duplicate_rejection({ duplicate_dataset_id }) {
       },
     });
 
-    const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
-      .filter((item) => item.type
-      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
-    await update_action_item({
+    const duplication_notification = (duplicate_dataset.action_items || [])
+      .filter((notification) => notification.type
+      === CONSTANTS.NOTIFICATION_TYPES.DUPLICATE_DATASET_REGISTRATION && notification.active)[0];
+    const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])[0];
+    await update_dataset_notification({
+      prisma_transaction_instance: tx,
+      notification_id: duplication_notification.id,
+      notification_status: CONSTANTS.NOTIFICATION_STATUS.RESOLVED,
+    });
+    await update_dataset_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
-      action_item_status: 'RESOLVED',
-      notification_status: 'RESOLVED',
+      action_item_status: CONSTANTS.ACTION_ITEM_STATUS.RESOLVED,
     });
 
     await create_state_log({
       prisma_transaction_instance: tx,
       dataset_id: duplicate_dataset.id,
-      state: 'DUPLICATE_REJECTED',
+      state: CONSTANTS.DATASET_STATES.DUPLICATE_REJECTED,
     });
 
     const rejected_dataset = await tx.dataset.findUnique({

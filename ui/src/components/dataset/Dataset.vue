@@ -382,7 +382,7 @@ function fetch_dataset(show_loading = false) {
     initiator: true,
     include_duplications: true,
     include_states: true,
-    include_action_items: true,
+    include_notifications: true,
   })
     .then((res) => {
       const _dataset = res.data;

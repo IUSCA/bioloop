@@ -163,7 +163,8 @@ def get_dataset(dataset_id: str,
                 include_upload_log: bool = False,
                 workflows: bool = False,
                 include_duplications: bool = False,
-                include_action_items: bool = False):
+                include_notifications: bool = False,
+                include_states: bool = False):
     with APIServerSession() as s:
         payload = {
             'files': files,
@@ -171,7 +172,8 @@ def get_dataset(dataset_id: str,
             'workflows': workflows,
             'include_upload_log': include_upload_log,
             'include_duplications': include_duplications,
-            'include_action_items': include_action_items,
+            'include_notifications': include_notifications,
+            'include_states': include_states,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 
@@ -261,13 +263,6 @@ def create_dataset_notification(dataset_id: int,
         r.raise_for_status()
 
 
-def update_dataset_action_item(dataset_id: int, action_item_id: int, data: dict):
-    with APIServerSession() as s:
-        r = s.patch(f'datasets/{dataset_id}/action-item/{action_item_id}', json=data)
-        r.raise_for_status()
-        return r.json()
-
-
 def complete_duplicate_dataset_acceptance(duplicate_dataset_id: str):
     with APIServerSession() as s:
         r = s.patch(f'datasets/duplicates/{duplicate_dataset_id}/accept_duplicate_dataset/complete')
@@ -329,11 +324,23 @@ def delete_dataset_upload_log(uploaded_dataset_id: int):
         r.raise_for_status()
 
 
-# def create_notification(payload: dict):
-#     with APIServerSession() as s:
-#         r = s.post('notifications', json=payload)
-#         r.raise_for_status()
-#
+def get_dataset_notifications(dataset_id: int,
+                              notification_type: str = None):
+    with APIServerSession() as s:
+        r = s.get(f'datasetNotifications/{dataset_id}', params={
+            'type': notification_type
+        })
+        r.raise_for_status()
+
+
+# TODO - continue at this method
+def update_dataset_notification(dataset_id: int, notification_id: int, data: dict):
+    with APIServerSession() as s:
+        r = s.patch(f'datasetNotifications/{dataset_id}/notifications/{notification_id}',
+                    json=data)
+        r.raise_for_status()
+        return r.json()
+
 
 if __name__ == '__main__':
     pass
