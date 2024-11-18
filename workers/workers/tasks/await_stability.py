@@ -1,5 +1,4 @@
 import datetime
-import itertools
 import time
 from pathlib import Path
 
@@ -10,36 +9,12 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
 from workers.dataset import is_dataset_locked_for_writes
+from workers.utils import dir_last_modified_time
 
 logger = get_task_logger(__name__)
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
-
-
-def dir_last_modified_time(dataset_path: Path) -> float:
-    """
-    Obtain the most recent modification time for a directory and all its contents in a recursive manner.
-    At times, when copying files, outdated modification times may be retained.
-    To address this, monitor the modification time of the root directory as well.
-
-    If the copy process is configured to preserve the metadata of the source file, it will update the m_time
-    of the target file after the copy process. This will update the c_time of the target file. In these cases,
-    c_time will be bigger than m_time. So, we will consider the maximum of c_time and m_time of the file / directory 
-    as the last modified time.
-
-
-    Args:
-    dataset_path (Path): Path object to the directory.
-
-    Returns:
-    float: The last modified time in epoch seconds.
-    """
-    paths = itertools.chain([dataset_path], dataset_path.rglob('*'))
-    return max(
-        (max(p.lstat().st_mtime, p.lstat().st_ctime) for p in paths if p.exists()),
-        default=time.time()
-    )
 
 
 def update_progress(celery_task, mod_time, delta):

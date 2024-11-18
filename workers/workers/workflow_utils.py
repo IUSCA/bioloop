@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import logging
 import time
 from contextlib import contextmanager
