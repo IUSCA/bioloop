@@ -268,19 +268,9 @@ model notification {
   status               NOTIFICATION_STATUS   @default(CREATED)
   acknowledged_by_id   Int?
   acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])
+  role_notifications   role_notification[]
+  user_notifications   user_notification[]
   dataset_action_items dataset_action_item[]
-}
-
-model notification {
-  id                 Int                 @id @default(autoincrement())
-  created_at         DateTime            @default(now()) @db.Timestamp(6)
-  label              String
-  text               String?
-  status             NOTIFICATION_STATUS @default(CREATED)
-  acknowledged_by_id Int?
-  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
-  role_notifications role_notification[]
-  user_notifications user_notification[]
 }
 
 model role_notification {
@@ -302,6 +292,7 @@ model user_notification {
 
   @@unique([notification_id, user_id])
 }
+
 model contact {
   id          Int               @id @default(autoincrement())
   type        String

@@ -102,7 +102,7 @@ router.post(
           title: action_item.title,
           text: action_item.text,
           to: action_item.to,
-          metadata: action_item.metadata,
+          // metadata: action_item.metadata,
           dataset: {
             connect: {
               id: req.params.id,
@@ -667,7 +667,8 @@ router.post(
     });
 
     if (dataset.is_duplicate) {
-      return next(createError.BadRequest(`Dataset ${dataset.name} cannot be duplicated, as it is a duplicate of another dataset.`));
+      return next(createError.BadRequest(`Dataset ${dataset.name} cannot `
+          + 'be duplicated, as it is a duplicate of another dataset.'));
     }
 
     if (!action_item) {
@@ -679,11 +680,36 @@ router.post(
       };
     }
 
+    // get `admin` and `operator` role IDs
+    const adminRole = await prisma.role.findUniqueOrThrow({
+      where: {
+        name: 'admin',
+      },
+    });
+    const operatorRole = await prisma.role.findUniqueOrThrow({
+      where: {
+        name: 'operator',
+      },
+    });
+
+    notification.role_notifications.create = notification.role_notifications.create.map((roleNotification) => ({
+      ...roleNotification,
+      role_id: roleNotification.role_id || adminRole.id,
+    }));
+
+    // create the duplicate dataset
     if (!notification) {
       notification = {
         type: 'INCOMING_DUPLICATE_DATASET',
         label: 'Duplicate Dataset Created',
         text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
+        role_notifications: {
+          create: [{
+            role_id: adminRole.id,
+          }, {
+            role_id: operatorRole.id,
+          }],
+        },
       };
     }
 
@@ -733,7 +759,7 @@ router.post(
               title: action_item.title,
               text: action_item.text,
               to: action_item.to,
-              metadata: action_item.metadata,
+              // metadata: action_item.metadata,
               notification: {
                 create: notification,
               },

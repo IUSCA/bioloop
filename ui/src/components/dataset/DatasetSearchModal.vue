@@ -57,6 +57,24 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          <!-- duplicate filter -->
+          <va-select
+            v-model="form.is_duplicate"
+            :options="[
+              { name: 'All', id: null },
+              { name: 'True', id: true },
+              { name: 'False', id: false },
+            ]"
+            text-by="name"
+            value-by="id"
+            label="Duplicate"
+            placeholder="Choose a value"
+          >
+            <template #prependInner>
+              <Icon icon="mdi:archive-arrow-down" class="text-xl" />
+            </template>
+          </va-select>
+
           <!-- has_workflows filter -->
           <va-select
             v-model="form.has_workflows"
