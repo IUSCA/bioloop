@@ -274,27 +274,10 @@ model notification {
   acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])
   role_notifications   role_notification[]
   user_notifications   user_notification[]
-  dataset_notification dataset_notification?
-
-  // dataset_upload_notification dataset_upload_notification
+  dataset_action_items dataset_action_item[]
 }
 
-// todo - separate tables for upload and duplication notificiations thru this, link action_items through those?
-model dataset_notification {
-  id              Int                       @id @default(autoincrement())
-  dataset_id      Int
-  dataset         dataset                   @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  // todo - use composite key instead?
-  notification_id Int                       @unique
-  notification    notification              @relation(fields: [notification_id], references: [id], onDelete: Cascade)
-  type            DATASET_NOTIFICATION_TYPE
-  // todo - dataset_action_item must npt have anything specific to duplication. Create duplication_notificaiton/upload_notification instead?
-  // todo - dataset_action_items is now action_items
-  action_items    dataset_action_item[]
-
-  @@unique([notification_id, dataset_id])
-}
-
+>>>>>>> origin/173-duplicates
 model role_notification {
   id              Int          @id @default(autoincrement())
   role_id         Int

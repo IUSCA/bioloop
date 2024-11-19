@@ -1,6 +1,7 @@
 from __future__ import annotations  # type unions by | are only available in versions > 3.10
 
 import hashlib
+import itertools
 import json
 import os
 from collections.abc import Iterable
@@ -9,6 +10,7 @@ from datetime import datetime, timezone, date, time
 from enum import Enum, unique
 from itertools import islice
 from pathlib import Path
+import time
 
 
 def str_func_call(func, args, kwargs):
@@ -149,3 +151,28 @@ class DateTimeEncoder(json.JSONEncoder):
         #     # Encode bytes as base64
         #     return obj.decode('utf-8')
         return super().default(obj)
+
+
+def dir_last_modified_time(dir_path: Path) -> float:
+    """
+    Obtain the most recent modification time for a directory and all its contents in a recursive manner.
+    At times, when copying files, outdated modification times may be retained.
+    To address this, monitor the modification time of the root directory as well.
+
+    If the copy process is configured to preserve the metadata of the source file, it will update the m_time
+    of the target file after the copy process. This will update the c_time of the target file. In these cases,
+    c_time will be bigger than m_time. So, we will consider the maximum of c_time and m_time of the file / directory
+    as the last modified time.
+
+
+    Args:
+    dir_path (Path): Path object to the directory.
+
+    Returns:
+    float: The last modified time in epoch seconds.
+    """
+    paths = itertools.chain([dir_path], dir_path.rglob('*'))
+    return max(
+        (max(p.lstat().st_mtime, p.lstat().st_ctime) for p in paths if p.exists()),
+        default=time.time()
+    )

@@ -26,140 +26,193 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// router.post(
-//   '/:id/action-item',
-//   isPermittedTo('update'),
-//   validate([
-//     param('id').isInt().toInt(),
-//     body('action_item').isObject(),
-//     // todo - post as part of notification?
-//     //   todo - post notification separately?
-//     body('notification').isObject(),
-//     body('next_state').escape().notEmpty().optional(),
-//   ]),
-//   dataset_write_check,
-//   asyncHandler(async (req, res, next) => {
-//     // #swagger.tags = ['Datasets']
-//     // #swagger.summary = Post an action item to a dataset
-//
-//     const { action_item, notification, next_state } = req.body;
-//
-//     const createQueries = [
-//       prisma.dataset_action_item.create({
-//         data: {
-//           type: action_item.type,
-//           title: action_item.title,
-//           text: action_item.text,
-//           to: action_item.to,
-//           metadata: action_item.metadata,
-//           dataset: {
-//             connect: {
-//               id: req.params.id,
-//             },
-//           },
-//           ingestion_checks: {
-//             createMany: { data: action_item.ingestion_checks },
-//           },
-//           notification: {
-//             create: notification,
-//           },
-//         },
-//       }),
-//     ];
-//
-//     if (next_state) {
-//       createQueries.push(prisma.dataset_state.create({
-//         data: {
-//           state: next_state,
-//           dataset: {
-//             connect: {
-//               id: action_item.dataset_id,
-//             },
-//           },
-//         },
-//       }));
-//     }
-//
-//     const [created_action_item] = await prisma.$transaction(createQueries);
-//
-//     res.json(created_action_item);
-//   }),
-// );
 
-// router.patch(
-//   '/:id/action-item/:action_item_id',
-//   isPermittedTo('update'),
-//   validate([
-//     param('id').isInt().toInt(),
-//     param('action_item_id').isInt().toInt(),
-//     body('ingestion_checks').optional().isArray(),
-//     body('next_state').optional().escape().notEmpty(),
-//   ]),
-//   dataset_write_check,
-//   asyncHandler(async (req, res, next) => {
-//     // #swagger.tags = ['Datasets']
-//     // #swagger.summary = patch an action item associated with a dataset.
-//     // #swagger.description = provided `ingestion_checks` will overwrite
-//     // existing ingestion checks associated with this action item.
-//
-//     const { ingestion_checks = [] } = req.body;
-//
-//     const dataset = await prisma.dataset.findUnique({
-//       where: {
-//         id: req.params.id,
-//       },
-//       include: {
-//         ...CONSTANTS.INCLUDE_STATES,
-//       },
-//     });
-//
-//     // check if dataset is already in state `next_state`
-//     const has_next_state = !!(
-// (dataset.states?.length > 0 && dataset.states[0].state ===
-// req.body.next_state) );
-//
-//     const update_queries = [];
-//
-//     // delete existing checks associated with this action item
-//     update_queries.push(prisma.dataset_duplication_analysis_check.deleteMany({
-//       where: {
-//         action_item_id: req.params.action_item_id,
-//       },
-//     }));
-//
-//     update_queries.push(prisma.dataset.update({
-//       where: {
-//         id: req.params.id,
-//       },
-//       data: {
-//         action_items: {
-//           update: {
-//             where: {
-//               id: req.params.action_item_id,
-//             },
-//             data: {
-//               ingestion_checks: {
-//                 createMany: { data: ingestion_checks },
-//               },
-//             },
-//           },
-//         },
-//         states: (req.body.next_state && !has_next_state) ? {
-//           createMany: {
-//             data: [
-//               {
-//                 state: req.body.next_state,
-//               },
-//             ],
-//           },
-//         } : undefined,
-//       },
-//     }));
-//
-//     const [updatedDataset] = await prisma.$transaction(update_queries);
-//     res.json(updatedDataset);
-//   }),
-// );
+const dataset_state_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: req.params.id,
+    },
+    ...CONSTANTS.INCLUDE_STATES,
+  });
+
+  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  const locked_error = `Dataset is locked and cannot be written to. Current state is ${latest_state}.`;
+
+  if (!dataset.is_deleted) {
+    if (!dataset.is_duplicate) {
+      if (latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
+          || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED) {
+        return next(createError.InternalServerError(locked_error));
+      }
+    } else if (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+        || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED) {
+      return next(createError.InternalServerError(locked_error));
+    }
+  }
+
+  next();
+});
+
+const state_write_check = asyncHandler(async (req, res, next) => {
+  const dataset = await prisma.dataset.findUnique({
+    where: {
+      id: parseInt(req.params.id, 10),
+    },
+    include: {
+      ...CONSTANTS.INCLUDE_STATES,
+    },
+  });
+
+  const latest_state = dataset.states?.length > 0 ? dataset.states[0].state : undefined;
+  if (
+    ((latest_state === config.DATASET_STATES.OVERWRITE_IN_PROGRESS
+            || latest_state === config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+          && req.body.state !== config.DATASET_STATES.ORIGINAL_DATASET_RESOURCES_PURGED)
+      || ((latest_state === config.DATASET_STATES.DUPLICATE_REJECTION_IN_PROGRESS
+              || latest_state === config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+          && req.body.state !== config.DATASET_STATES.DUPLICATE_DATASET_RESOURCES_PURGED)
+      || (latest_state === config.DATASET_STATES.DUPLICATE_ACCEPTANCE_IN_PROGRESS)
+  ) {
+    return next(createError.InternalServerError(`Dataset's state cannot be changed to ${req.body.state} `
+        + `while its current state is ${latest_state}`));
+  }
+
+  next();
+});
+
+router.post(
+  '/:id/action-item',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    body('action_item').isObject(),
+    body('notification').isObject(),
+    body('next_state').escape().notEmpty().optional(),
+  ]),
+  dataset_state_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = Post an action item to a dataset
+
+    const { action_item, notification, next_state } = req.body;
+
+    const createQueries = [
+      prisma.dataset_action_item.create({
+        data: {
+          type: action_item.type,
+          title: action_item.title,
+          text: action_item.text,
+          to: action_item.to,
+          // metadata: action_item.metadata,
+          dataset: {
+            connect: {
+              id: req.params.id,
+            },
+          },
+          ingestion_checks: {
+            createMany: { data: action_item.ingestion_checks },
+          },
+          notification: {
+            create: notification,
+          },
+        },
+      }),
+    ];
+
+    if (next_state) {
+      createQueries.push(prisma.dataset_state.create({
+        data: {
+          state: next_state,
+          dataset: {
+            connect: {
+              id: action_item.dataset_id,
+            },
+          },
+        },
+      }));
+    }
+
+    const [created_action_item] = await prisma.$transaction(createQueries);
+
+    res.json(created_action_item);
+  }),
+);
+
+router.patch(
+  '/:id/action-item/:action_item_id',
+  isPermittedTo('update'),
+  validate([
+    param('id').isInt().toInt(),
+    param('action_item_id').isInt().toInt(),
+    body('ingestion_checks').optional().isArray(),
+    body('next_state').optional().escape().notEmpty(),
+  ]),
+  dataset_state_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Datasets']
+    // #swagger.summary = patch an action item associated with a dataset.
+    // #swagger.description = provided `ingestion_checks` will overwrite
+    // existing ingestion checks associated with this action item.
+
+    const { ingestion_checks = [] } = req.body;
+
+    const dataset = await prisma.dataset.findUnique({
+      where: {
+        id: req.params.id,
+      },
+      include: {
+        ...CONSTANTS.INCLUDE_STATES,
+      },
+    });
+
+    // check if dataset is already in state `next_state`
+    const has_next_state = !!(
+      (dataset.states?.length > 0 && dataset.states[0].state === req.body.next_state)
+    );
+
+    const update_queries = [];
+
+    // delete existing checks associated with this action item
+    update_queries.push(prisma.dataset_ingestion_check.deleteMany({
+      where: {
+        action_item_id: req.params.action_item_id,
+      },
+    }));
+
+    update_queries.push(prisma.dataset.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        action_items: {
+          update: {
+            where: {
+              id: req.params.action_item_id,
+            },
+            data: {
+              ingestion_checks: {
+                createMany: { data: ingestion_checks },
+              },
+            },
+          },
+        },
+        states: (req.body.next_state && !has_next_state) ? {
+          createMany: {
+            data: [
+              {
+                state: req.body.next_state,
+              },
+            ],
+          },
+        } : undefined,
+      },
+    }));
+
+    const [updatedDataset] = await prisma.$transaction(update_queries);
+    res.json(updatedDataset);
+  }),
+);
 
 router.get(
   '/action-items/:id',
@@ -615,24 +668,52 @@ router.post(
     });
 
     if (dataset.is_duplicate) {
-      return next(createError.BadRequest(`Dataset ${dataset.name} cannot be duplicated, as it is a duplicate of another dataset.`));
+      return next(createError.BadRequest(`Dataset ${dataset.name} cannot `
+          + 'be duplicated, as it is a duplicate of another dataset.'));
     }
 
-    // if (!action_item) {
-    //   action_item = {
-    //     type: constants.NOTIFICATION_TYPE.DUPLICATE_DATASET_REGISTRATION,
-    //     metadata: {
-    //       original_dataset_id: req.params.id,
-    //     },
-    //   };
-    // }
-    //
-    // if (!notification) {
-    //   notification = {
-    //     type: 'INCOMING_DUPLICATE_DATASET',
-    //     label: 'Duplicate Dataset Created',
-    // text: `Dataset ${dataset.name} has been duplicated. Click here to
-    // review.`, }; }
+
+    if (!action_item) {
+      action_item = {
+        type: config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION,
+        metadata: {
+          original_dataset_id: req.params.id,
+        },
+      };
+    }
+
+    // get `admin` and `operator` role IDs
+    const adminRole = await prisma.role.findUniqueOrThrow({
+      where: {
+        name: 'admin',
+      },
+    });
+    const operatorRole = await prisma.role.findUniqueOrThrow({
+      where: {
+        name: 'operator',
+      },
+    });
+
+    notification.role_notifications.create = notification.role_notifications.create.map((roleNotification) => ({
+      ...roleNotification,
+      role_id: roleNotification.role_id || adminRole.id,
+    }));
+
+    // create the duplicate dataset
+    if (!notification) {
+      notification = {
+        type: 'INCOMING_DUPLICATE_DATASET',
+        label: 'Duplicate Dataset Created',
+        text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
+        role_notifications: {
+          create: [{
+            role_id: adminRole.id,
+          }, {
+            role_id: operatorRole.id,
+          }],
+        },
+      };
+    }
 
     // check if other duplicates for this dataset exist in the system
     const existingDuplicates = await prisma.dataset.findMany({
@@ -665,6 +746,27 @@ router.post(
           create: {
             original_dataset_id: req.params.id,
           },
+        },
+        states: {
+          create: [
+            {
+              state: next_state || config.DATASET_STATES.DUPLICATE_REGISTERED,
+            },
+          ],
+        },
+        action_items: {
+          create: [
+            {
+              type: action_item.type,
+              title: action_item.title,
+              text: action_item.text,
+              to: action_item.to,
+              // metadata: action_item.metadata,
+              notification: {
+                create: notification,
+              },
+            },
+          ],
         },
         projects: {
           createMany: {

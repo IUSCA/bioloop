@@ -1,3 +1,4 @@
+import datetime
 import fnmatch
 import logging
 import time
@@ -11,6 +12,7 @@ import workers.api as api
 import workers.workflow_utils as wf_utils
 from workers.celery_app import app as celery_app
 from workers.config import config
+from workers.utils import dir_last_modified_time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -113,6 +115,42 @@ class Register:
         datasets = api.get_all_datasets(is_duplicate=is_duplicate)
         return [b['name'] for b in datasets]
 
+    """
+    Args:
+    
+    duplicated_dataset_candidate_dirs: List of directories which are potentially duplicate datasets
+    """
+    def get_duplicate_datasets(self, duplicate_dataset_candidate_dirs: list[Path]) -> list[Path]:
+        logger.info("get_duplicate_datasets called")
+        duplicate_dataset_candidates: list[Path] = [p for p in duplicate_dataset_candidate_dirs if \
+                                                    slugify_(p.name) in self.completed]
+        duplicate_datasets: list[Path] = []
+        for p in duplicate_dataset_candidates:
+            logger.info(f'checking directory: {p.name}')
+            # last modified time of the file in seconds since epoch
+            candidate_last_modified_time = dir_last_modified_time(p)
+            logger.info(f'last modified time: {candidate_last_modified_time}')
+
+            duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=p.name)
+            duplicated_from_dataset_created_at = duplicated_from_dataset['created_at'] \
+                if duplicated_from_dataset is not None \
+                else 0
+            # dataset's creation time in seconds since epoch
+            duplicated_from_dataset_created_at_time = datetime.datetime.timestamp(duplicated_from_dataset_created_at)
+            logger.info(f'dir created at time: {duplicated_from_dataset_created_at_time}')
+
+            if candidate_last_modified_time > duplicated_from_dataset_created_at_time:
+                logger.info(f'Determined directory {p.name} to be a duplicate dataset')
+                duplicate_datasets.append(p)
+        return duplicate_datasets
+
+
+    def get_dataset(self):
+        # Get the dataset from the database
+        #...
+        # Return the dataset
+        pass
+
     def register(self, event: str, new_dirs: list[Path]) -> None:
         if event != 'add':
             return
@@ -125,10 +163,10 @@ class Register:
                 # cmd.total_size(p) >= config['registration']['minimum_dataset_size']
             ])
         ]
-        # If a candidate's name is in self.completed, it could potentially be a duplicate.
-        # In such cases, we create a dataset of duplicate dataset, which is later accepted or
-        # rejected by an authorized user.
-        duplicate_candidates: list[Path] = [p for p in new_dirs if slugify_(p.name) in self.completed]
+        # If a candidate's name is in self.completed, it could be a duplicate.
+        # After verifying that the candidate is indeed a duplicate, we register the candidate
+        # as a duplicate dataset in the system.
+        duplicate_candidates = self.get_duplicate_datasets(duplicate_dataset_candidate_dirs=new_dirs)
 
         for candidate in candidates:
             logger.info(f'processing candidate: {str(candidate.name)}')
@@ -136,15 +174,31 @@ class Register:
             self.completed.add(candidate.name)
 
         for candidate in duplicate_candidates:
-            # some duplicates might already be under processing when this script is run
+            # some duplicates with this directory's name and dataset_type might
+            # already be under processing when this script is run
             if slugify_(candidate.name) not in self.duplicates:
                 self.register_duplicate_candidate(candidate)
                 self.duplicates.add(candidate.name)
             else:
-                logger.warning(f'Attempted to process another duplicate candidate'
-                            f' named {str(candidate.name)} when a duplicate candidate'
-                            f' named {str(candidate.name)} is already being processed.')
+                logger.warning(f'Attempted to process a second duplicate candidate \
+                            named {str(candidate.name)} when a duplicate candidate \
+                            named {str(candidate.name)} (dataset type {self.dataset_type}) \
+                            is already being processed.')
                 pass
+
+    # Returns the dataset that is potentially being duplicated
+    def get_duplicated_from_dataset(self, dir_name: str) -> dict | None:
+        matching_datasets = api.get_all_datasets(dataset_type=self.dataset_type,
+                                                 name=dir_name,
+                                                 is_duplicate=False)
+        if len(matching_datasets) != 1:
+            logger.error(f'Expected one, but found {len(matching_datasets)} active \
+                         datasets having name {dir_name} \
+                         and type {self.dataset_type} that are eligible for \
+                         duplication. This is unexpected, and a duplicate dataset \
+                         will not be created.')
+            return None
+        return matching_datasets[0]
 
     def register_candidate(self, candidate: Path):
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
@@ -160,31 +214,16 @@ class Register:
 
     def register_duplicate_candidate(self, candidate: Path):
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
-        # Get any active datasets with the same name and type
-        matching_datasets = api.get_all_datasets(dataset_type=self.dataset_type,
-                                                 name=candidate.name,
-                                                 is_duplicate=False)
-        if len(matching_datasets) != 1:
-            logger.error(f'Expected one, but found {len(matching_datasets)} active '
-                         f'datasets having name {candidate.name} '
-                         f'and type {self.dataset_type} that are eligible for '
-                         f'duplication. The system is in an invalid '
-                         f'state, and a duplicate dataset will not be created.')
-            return
 
-        original_dataset = matching_datasets[0]
-        created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=original_dataset['id'])
-        # todo - test api calls for idempotence
-        duplication_notification_payload = get_duplicate_notification_payload(original_dataset_id=original_dataset['id'])
-        api.create_dataset_notification(dataset_id=created_duplicate_dataset['id'],
-                                        data=duplication_notification_payload)
-        api.add_state_to_dataset(dataset_id=created_duplicate_dataset['id'],
-                                 state=config['DATASET_STATES']['DUPLICATE_REGISTERED'])
-        self.run_workflows(
-            created_duplicate_dataset,
-            'handle_duplicate_dataset'
-        )
-
+        # Get any active and non-duplicate datasets with the same name and type
+        duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=candidate.name)
+        logger.info(f'Duplicated from dataset: {duplicated_from_dataset["name"]}')
+        if duplicated_from_dataset is not None:
+            created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=duplicated_from_dataset['id'])
+            self.run_workflows(
+                created_duplicate_dataset,
+                'handle_duplicate_dataset'
+            )
 
     def run_workflows(self, dataset, workflow_name=None):
         dataset_id = dataset['id']

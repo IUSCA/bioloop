@@ -11,9 +11,6 @@ CREATE TYPE "DATASET_NOTIFICATION_TYPE" AS ENUM ('DUPLICATE_DATASET_REGISTRATION
 CREATE TYPE "DATASET_ACTION_ITEM_STATUS" AS ENUM ('CREATED', 'ACKNOWLEDGED', 'RESOLVED');
 
 -- CreateEnum
-CREATE TYPE "NOTIFICATION_STATUS" AS ENUM ('CREATED', 'ACKNOWLEDGED', 'RESOLVED');
-
--- CreateEnum
 CREATE TYPE "NOTIFICATION_TYPE" AS ENUM ('INCOMING_DUPLICATE_DATASET');
 
 -- CreateEnum
@@ -26,6 +23,10 @@ DROP INDEX "dataset_name_type_is_deleted_key";
 ALTER TABLE "dataset" ADD COLUMN     "is_duplicate" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "version" INTEGER NOT NULL DEFAULT 1;
 
+-- AlterTable
+ALTER TABLE "notification" ADD COLUMN     "type" "NOTIFICATION_TYPE",
+ADD COLUMN     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
 -- CreateTable
 CREATE TABLE "dataset_duplication" (
     "duplicate_dataset_id" INTEGER NOT NULL,
@@ -36,29 +37,15 @@ CREATE TABLE "dataset_duplication" (
 );
 
 -- CreateTable
-CREATE TABLE "notification" (
-    "id" SERIAL NOT NULL,
-    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "type" "NOTIFICATION_TYPE" NOT NULL,
-    "label" TEXT NOT NULL,
-    "text" TEXT,
-    "active" BOOLEAN NOT NULL DEFAULT true,
-    "status" "NOTIFICATION_STATUS" NOT NULL DEFAULT 'CREATED',
-    "acknowledged_by_id" INTEGER,
-
-    CONSTRAINT "notification_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "dataset_action_item" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "title" TEXT,
     "text" TEXT,
     "redirect_url" TEXT,
     "type" "DATASET_NOTIFICATION_TYPE" NOT NULL,
     "status" "DATASET_ACTION_ITEM_STATUS" NOT NULL DEFAULT 'CREATED',
-    "active" BOOLEAN NOT NULL DEFAULT true,
     "notification_id" INTEGER,
     "dataset_id" INTEGER NOT NULL,
     "metadata" JSONB,
@@ -87,9 +74,6 @@ ALTER TABLE "dataset_duplication" ADD CONSTRAINT "dataset_duplication_duplicate_
 
 -- AddForeignKey
 ALTER TABLE "dataset_duplication" ADD CONSTRAINT "dataset_duplication_original_dataset_id_fkey" FOREIGN KEY ("original_dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "notification" ADD CONSTRAINT "notification_acknowledged_by_id_fkey" FOREIGN KEY ("acknowledged_by_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_notification_id_fkey" FOREIGN KEY ("notification_id") REFERENCES "notification"("id") ON DELETE CASCADE ON UPDATE CASCADE;
