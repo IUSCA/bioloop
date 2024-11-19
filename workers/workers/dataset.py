@@ -53,6 +53,10 @@ def is_dataset_locked_for_writes(dataset: dict) -> tuple:
     latest_state = dataset['states'][0] if \
         (dataset['states'] is not None and len(dataset['states']) > 0) else \
         None
+    if latest_state is None:
+        return False, None
+
+    # print(latest_state)
 
     if dataset['is_deleted']:
         locked = True
