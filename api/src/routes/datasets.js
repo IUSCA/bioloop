@@ -8,7 +8,6 @@ const {
 const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
-const dayjs = require('dayjs');
 const pm = require('picomatch');
 
 // const logger = require('../services/logger');
@@ -221,10 +220,14 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
-    query('match_name_exact').toBoolean().optional().default(true),
+    query('match_name_exact').isBoolean().toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
+
+    if (req.query.match_name_exact === undefined) {
+      req.query.match_name_exact = true; // default to true if not provided
+    }
 
     const query_obj = buildQueryObject(req.query);
 
