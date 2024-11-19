@@ -120,20 +120,37 @@ Each setup project and its dependent projects are run in an isolated browser con
 
 ### Using server-side state in test
 
-If a test needs to get/set the server-side state before or after it runs, it can be accomplished by making calls to the API layer. For authenticated API routes, the token that will need to be included in the `Authorization` header can be read from `localStorage` inside a test, thus:
+If a test needs to get/set the server-side state before or after it runs, it can be accomplished by making calls to the API layer.
+
+For making requests to Bioloop's authenticated API routes, the request will need a JWT token embedded in the `Authorization` header. This token can be read from `localStorage` inside a running test.
+
+- Playwright offers an `APIRequestContext` API which can be used to make REST calls.
+  - There are wrappers for standard REST API methods within `tests/api/index.js`, which use Playwright's `APIRequestContext` to make API calls. Using these wrappers instead of using `APIRequestContext` directly can make your test code less verbose.
+  - You can also wrap these REST-method wrappers further into entity-specific-REST-API invocations.
+- Third-party open-source REST-API libraries like Axios can also be used to make REST calls, if desired.
+
+The below example illustrates how to make a REST API call from within a test, using Playwright's `APIRequestContext` API. It is recommended to use the REST-API wrappers from `tests/api/index.js` instead of using `APIRequestContext` directly.
 
 ```
-test('test that needs to get/set server-side state', async ({ page }) => {
+test('test that needs to get server-side state', async ({ page }) => {
   ...
   // It's necessary to visit a route in the app first before accessing `localStorage`
   await page.goto('/');
-  
+  // retrieve token from local storage
   const token = await page.evaluate(() => localStorage.getItem('token'));
+  
   // use retrieved token to make API calls
+  const { request } = page;
+  const response = await request.get(`${config.apiBasePath}/datasets`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const retrievedDatasets = await response.json();
   ...
 })
 ```
-After retrieving the token, either `axios` or Playwright's `APIRequest` API can be used for making network calls from within a test.
+
 
 ---
 ## Running tests locally
@@ -180,3 +197,57 @@ docker-compose -f "docker-compose-e2e.yml" up -d
   - If these versions don't match, the Playwright running in Docker won't be able to detect the test suite.
 - Running the app in CI mode (i.e. when the API's env is set to `ci`) breaks the redirect that occurs after a successful IU Login, since the ticket included in the redirect is ignored in CI mode.
    - To bypass this, visit `/auth/iucas?role=[testRole]` where `testRole` can be one of `admin`, `operator` or `user`. This will log you in as a test user.
+
+---
+
+## Using VS Code's Playwright Plugin
+
+Playwright offers a plugin for VS Code, which allows us to:
+- Run tests within VS Code
+- Generate tests via actions taken in the browser
+
+### Install Playwright plugin
+- Install the Playwright plugin for VS Code (https://marketplace.visualstudio.com/items?itemName=ms-playwright.playwright)
+- Ensure that the tests that you need to run within VS Code are defined in `playwright.config.js`.
+
+Tests should now show up in VS Code's Playwright plugin, as pictured below.
+  - If tests are not showing up, click refresh
+
+<img width="220" height="500" src="assets/playwright_vs_code_plugin.png" >
+
+### Run tests
+
+- Once your tests show up within VS Code's Playwright plugin, you should see a 'Play' button next to each `test` block, clicking which will first run any dependencies (like the ones used to login) and then the actual test.
+  - You can decide whether to run these tests in headed or headless mode via the `Show browser` checkbox.
+
+### Record tests
+
+The Playwright plugin offers the ability to generate test scripts via actions performed in the browser, thus circumventing the need to write tests manually.
+
+
+The plugin offers two ways to record a test:
+- `Record New`
+  - Allows you to record a test with no pre-defined steps
+- `Record at cursor`
+  - Allows you to record a test which may have pre-defined steps. This option:
+    - first runs any dependency projects that you may have defined on your actual tests (for situations like logging-in prior to the test)
+    - then runs your actual test
+
+  
+To record a test via the `Record at cursor` feature:
+- Create your test file (`myTest.spec.js`), and add it to `playwright.config.js`.
+  - Define any dependency projects for your test, if needed
+- If needed, establish a base state in your test before you start recording.
+  - This could include navigating to a particular URL, setting database state, etc.
+- Hit the 'Play' button that's next to the `test` block to launch the test.
+  - Check the `Show browser` checkbox to ensure that tests run in a headed browser
+- Once Playwright is finished running the code in `myTest.spec.js`, the browser will stay open.
+- Now, go back to VS Code, and click `Record at cursor`.
+- Go back to the browser where your test is running.
+- You can now make Playwright generate the rest of the test via the actions that you take in the browser.
+  - Playwright will generate locators for each DOM element you that interact with, which can later be improved manually if needed.
+  - Assertions can be made on the value, the text and the visibility of DOM elements.
+
+---
+
+For details on using the Playwright plugin in VS Code, refer to https://playwright.dev/docs/getting-started-vscode.

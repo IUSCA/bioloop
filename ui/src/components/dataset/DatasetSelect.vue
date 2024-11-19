@@ -4,12 +4,16 @@
     :search-results="datasets"
     :selected-results="props.selectedResults"
     :search-result-count="totalResultCount"
+    :selectMode="props.selectMode"
     placeholder="Search Datasets by name"
-    selected-label="Datasets to assign"
+    :selected-label="props.selectedLabel"
     @scroll-end="loadNextPage"
     :search-result-columns="retrievedDatasetColumns"
     :selected-result-columns="selectedDatasetColumns"
     :loading="loadingResources"
+    :show-error="props.showError"
+    :error="props.error"
+    :messages="props.messages"
     @reset="
       () => {
         searchTerm = ''; // watcher on searchTerm takes care of resetting the search state
@@ -21,6 +25,7 @@
   >
     <template #filters>
       <va-button-dropdown
+        v-if="!props.datasetType"
         :label="`Filters${activeCountText}`"
         :close-on-content-click="false"
       >
@@ -57,6 +62,9 @@ const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
+  datasetType: {
+    type: String,
+  },
   selectedResults: {
     type: Array,
     default: () => [],
@@ -64,6 +72,25 @@ const props = defineProps({
   columnWidths: {
     type: Object,
     required: true,
+  },
+  selectMode: {
+    type: String,
+    default: () => "multiple",
+  },
+  showError: {
+    type: Boolean,
+    default: false,
+  },
+  error: {
+    type: String,
+  },
+  selectedLabel: {
+    type: String,
+    default: () => "Selected Datasets",
+  },
+  messages: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -133,21 +160,24 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
-  const query = lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
-    ? {
-        type: checkboxes.value.rawData
-          ? "RAW_DATA"
-          : checkboxes.value.dataProduct
-            ? "DATA_PRODUCT"
-            : undefined,
-      }
-    : {};
-  return {
-    ...query,
-    is_duplicate: false,
-    include_action_items: false,
-    include_states: false,
-  };
+  if (props.datasetType) {
+    return {
+      type: props.datasetType,
+    };
+  } else {
+    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+      ? {
+          type: checkboxes.value.rawData
+            ? "RAW_DATA"
+            : checkboxes.value.dataProduct
+              ? "DATA_PRODUCT"
+              : undefined,
+          is_duplicate: false,
+          include_action_items: false,
+          include_states: false,
+        }
+      : undefined;
+  }
 });
 
 const batchingQuery = computed(() => {

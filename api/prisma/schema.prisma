@@ -8,33 +8,34 @@ datasource db {
 }
 
 model dataset {
-  id               Int                   @id @default(autoincrement())
-  name             String
-  type             String
-  num_directories  Int?
-  num_files        Int?
-  du_size          BigInt?
-  size             BigInt?
-  bundle_size      BigInt?
-  description      String?
-  created_at       DateTime              @default(now()) @db.Timestamp(6)
-  updated_at       DateTime              @default(now()) @updatedAt @db.Timestamp(6)
-  origin_path      String?
-  archive_path     String?
-  staged_path      String?
-  is_deleted       Boolean               @default(false)
-  is_staged        Boolean               @default(false)
-  metadata         Json?
-  workflows        workflow[]
-  files            dataset_file[]
-  audit_logs       dataset_audit[]
-  states           dataset_state[]
-  derived_datasets dataset_hierarchy[]   @relation("source_datasets")
-  source_datasets  dataset_hierarchy[]   @relation("derived_datasets")
-  projects         project_dataset[]
-  accesses         data_access_log[]
-  stage_requests   stage_request_log[]
-  bundle           bundle?
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  type               String
+  num_directories    Int?
+  num_files          Int?
+  du_size            BigInt?
+  size               BigInt?
+  bundle_size        BigInt?
+  description        String?
+  created_at         DateTime            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  origin_path        String?
+  archive_path       String?
+  staged_path        String?
+  is_deleted         Boolean             @default(false)
+  is_staged          Boolean             @default(false)
+  metadata           Json?
+  workflows          workflow[]
+  files              dataset_file[]
+  audit_logs         dataset_audit[]
+  states             dataset_state[]
+  derived_datasets   dataset_hierarchy[] @relation("source_datasets")
+  source_datasets    dataset_hierarchy[] @relation("derived_datasets")
+  projects           project_dataset[]
+  accesses           data_access_log[]
+  stage_requests     stage_request_log[]
+  bundle             bundle?
+  dataset_upload_log dataset_upload_log?
   action_items     dataset_action_item[]
   is_duplicate     Boolean               @default(false)
   duplicated_from  dataset_duplication?  @relation("duplicated_from")
@@ -91,6 +92,38 @@ model dataset_file_hierarchy {
   @@index([child_id])
 }
 
+model upload_log {
+  id             Int                 @id @default(autoincrement())
+  status         upload_status
+  files          file_upload_log[]
+  initiated_at   DateTime            @default(now()) @db.Timestamp(6)
+  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  user_id        Int
+  user           user                @relation(fields: [user_id], references: [id])
+  dataset_upload dataset_upload_log?
+}
+
+model dataset_upload_log {
+  id            Int        @id @default(autoincrement())
+  dataset_id    Int        @unique
+  dataset       dataset    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  upload_log_id Int
+  upload_log    upload_log @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
+
+  @@unique([upload_log_id])
+}
+
+model file_upload_log {
+  id            Int           @id @default(autoincrement())
+  name          String
+  md5           String
+  num_chunks    Int
+  status        upload_status
+  path          String?
+  upload_log    upload_log?   @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
+  upload_log_id Int?
+}
+
 model dataset_audit {
   id         Int      @id @default(autoincrement())
   action     String
@@ -111,19 +144,6 @@ model dataset_state {
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 
   @@id([timestamp, dataset_id, state])
-}
-
-model notification {
-  id                   Int                   @id @default(autoincrement())
-  created_at           DateTime              @default(now()) @db.Timestamp(6)
-  type                 NOTIFICATION_TYPE
-  label                String
-  text                 String?
-  active               Boolean               @default(true)
-  status               NOTIFICATION_STATUS   @default(CREATED)
-  acknowledged_by_id   Int?
-  acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])
-  dataset_action_items dataset_action_item[]
 }
 
 model dataset_action_item {
@@ -210,6 +230,8 @@ model user {
   project_contacts_assigned  project_contact[]
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
+  uploads                    upload_log[]
+  user_notifications         user_notification[]
 }
 
 model user_password {
@@ -236,6 +258,41 @@ model user_settings {
   users    user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
+model notification {
+  id                   Int                   @id @default(autoincrement())
+  created_at           DateTime              @default(now()) @db.Timestamp(6)
+  type                 NOTIFICATION_TYPE
+  label                String
+  text                 String?
+  active               Boolean               @default(true)
+  status               NOTIFICATION_STATUS   @default(CREATED)
+  acknowledged_by_id   Int?
+  acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])
+  dataset_action_items dataset_action_item[]
+  role_notifications   role_notification[]
+  user_notifications   user_notification[]
+}
+
+model role_notification {
+  id              Int          @id @default(autoincrement())
+  role_id         Int
+  role            role         @relation(fields: [role_id], references: [id])
+  notification_id Int
+  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@unique([notification_id, role_id])
+}
+
+model user_notification {
+  id              Int          @id @default(autoincrement())
+  user_id         Int
+  user            user         @relation(fields: [user_id], references: [id])
+  notification_id Int
+  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@unique([notification_id, user_id])
+}
+
 model contact {
   id          Int               @id @default(autoincrement())
   type        String
@@ -249,10 +306,11 @@ model contact {
 }
 
 model role {
-  id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(50)
-  description String      @default("") @db.VarChar(255)
-  user_role   user_role[]
+  id                 Int                @id @default(autoincrement())
+  name               String             @db.VarChar(50)
+  description        String             @default("") @db.VarChar(255)
+  user_role          user_role[]
+  role_notifications role_notification[]
 }
 
 model user_role {
@@ -370,6 +428,28 @@ model about {
 enum access_type {
   BROWSER
   SLATE_SCRATCH
+}
+
+enum NOTIFICATION_STATUS {
+  CREATED
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum upload_status {
+  UPLOADING
+  UPLOAD_FAILED
+  UPLOADED
+  PROCESSING
+  PROCESSING_FAILED
+  COMPLETE
+  FAILED
+}
+
+enum upload_type {
+  // FILE
+  // DIRECTORY
+  DATASET
 }
 
 enum DATASET_ACTION_ITEM_TYPE {

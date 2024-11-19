@@ -10,7 +10,9 @@ const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
-const CONSTANTS = require('../constants');
+const {
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_FILES, INCLUDE_DUPLICATIONS,
+} = require('../constants');
 
 const prisma = new PrismaClient();
 
@@ -32,10 +34,11 @@ function get_wf_body(wf_name) {
 async function create_workflow(dataset, wf_name, initiator_id) {
   const wf_body = get_wf_body(wf_name);
 
-  // check if a workflow with the same name is not already running / pending on this dataset
+  // check if a workflow with the same name is not already running / pending on
+  // this dataset
   const active_wfs_with_same_name = dataset.workflows
     .filter((_wf) => _wf.name === wf_body.name)
-    .filter((_wf) => !CONSTANTS.DONE_STATUSES.includes(_wf.status));
+    .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
 
   assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
 
@@ -64,8 +67,6 @@ async function soft_delete(dataset, user_id) {
     await create_workflow(dataset, 'delete', user_id);
   } else {
     // if not archived, mark the dataset as deleted
-    // console.log('soft_delete');
-
     await prisma.dataset.update({
       data: {
         is_deleted: true,
@@ -102,8 +103,9 @@ async function get_dataset({
   include_action_items = false,
   includeProjects = false,
   initiator = false,
+  include_upload_log = false,
 }) {
-  const fileSelect = files ? CONSTANTS.INCLUDE_FILES : { files: false };
+  const fileSelect = files ? INCLUDE_FILES : { files: false };
   const workflow_include = initiator ? {
     workflows: {
       select: {
@@ -111,20 +113,31 @@ async function get_dataset({
         initiator: true,
       },
     },
-  } : CONSTANTS.INCLUDE_WORKFLOWS;
+  } : INCLUDE_WORKFLOWS;
 
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
       ...fileSelect,
       ...workflow_include,
-      ...CONSTANTS.INCLUDE_AUDIT_LOGS,
-      ...CONSTANTS.INCLUDE_STATES,
+      ...INCLUDE_AUDIT_LOGS,
+      ...INCLUDE_STATES,
       bundle,
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      ...(include_duplications && CONSTANTS.INCLUDE_DUPLICATIONS),
+      dataset_upload_log: include_upload_log ? {
+        include: {
+          upload_log: {
+            select: {
+              id: true,
+              files: true,
+              status: true,
+            },
+          },
+        },
+      } : false,
+      ...(include_duplications && INCLUDE_DUPLICATIONS),
       action_items: include_action_items ? {
         where: {
           active: true,
@@ -159,6 +172,7 @@ async function get_dataset({
     // eslint-disable-next-line no-param-reassign
     if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
   });
+
   return dataset;
 }
 
@@ -193,8 +207,8 @@ async function get_dataset({
 //   `;
 
 //   /**
-//    * Find directories of a dataset which are immediate children of `base` path
-//    *
+// * Find directories of a dataset which are immediate children of `base` path
+// *
 //    * Query: filter rows by dataset_id, rows starting with `base`,
 //    * and rows where the path after `base` does have / (these files are not immediate children)
 //    *
@@ -255,7 +269,6 @@ function create_filetree(files) {
         parent.children[dir_name] = curr;
         return curr;
       }, root);
-    // console.log(pathObject);
     parent_dir.children[pathObject.base] = {
       metadata: { ...rest },
     };

@@ -17,6 +17,10 @@ div.va-modal__title {
   font-size: initial;
 }
 
+div.va-modal--fixed-layout div.va-modal__header div.va-modal__title {
+  padding-left: 0;
+}
+
 /* va-select drop downs are not visible if the component is on a modal */
 div.va-dropdown__content.va-dropdown__content-wrapper {
   z-index: calc(var(--va-z-index-teleport-overlay) + 100);

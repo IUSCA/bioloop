@@ -1,5 +1,4 @@
 const fsPromises = require('fs/promises');
-
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
@@ -10,6 +9,7 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 const dayjs = require('dayjs');
+const pm = require('picomatch');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -26,16 +26,6 @@ const isPermittedToWorkflow = accessControl('workflow');
 
 const router = express.Router();
 const prisma = new PrismaClient();
-
-// Data Product ingestion - UI
-router.get(
-  '/file-types',
-  isPermittedTo('read'),
-  asyncHandler(async (req, res, next) => {
-    const dataset_file_types = await prisma.dataset_file_type.findMany();
-    res.json(dataset_file_types);
-  }),
-);
 
 router.post(
   '/:id/action-item',
@@ -306,6 +296,7 @@ const buildQueryObject = ({
   deleted, is_duplicate, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
+  match_name_exact,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
@@ -313,7 +304,7 @@ const buildQueryObject = ({
     is_duplicate,
     type,
     name: name ? {
-      contains: name,
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
@@ -390,9 +381,8 @@ router.post(
   }),
 );
 
-// Get all datasets, and the count of datasets. Results can optionally be filtered and sorted by
-// the criteria specified.
-// Used by workers + UI.
+// Get all datasets, and the count of datasets. Results can optionally be
+// filtered and sorted by the criteria specified. Used by workers + UI.
 router.get(
   '/',
   isPermittedTo('read'),
@@ -418,7 +408,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
-    query('match_name_exact').toBoolean().optional(),
+    query('match_name_exact').toBoolean().optional().default(true),
     query('include_file_type').toBoolean().optional(),
     query('include_action_items').optional().toBoolean(),
     query('include_duplications').optional().toBoolean(),
@@ -443,14 +433,12 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
-        file_type: req.query.include_file_type || false,
         action_items: req.query.include_action_items || false,
         ...(req.query.include_states && { ...CONSTANTS.INCLUDE_STATES }),
         ...(req.query.include_duplications && { ...CONSTANTS.INCLUDE_DUPLICATIONS }),
       },
     };
 
-    // console.log(JSON.stringify(filterQuery, null, 2));
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
       prisma.dataset.count({ ...filterQuery }),
@@ -511,7 +499,6 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
-    query('include_uploading_derived_datasets').toBoolean().default(false),
     query('include_upload_log').toBoolean().default(false),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
@@ -519,7 +506,8 @@ router.get(
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // only select path and md5 columns from the dataset_file table if files is true
+    // only select path and md5 columns from the dataset_file table if files is
+    // true
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
@@ -531,11 +519,11 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
-      include_uploading_derived_datasets: req.query.include_uploading_derived_datasets,
       include_upload_log: req.query.include_upload_log,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
     });
+
     res.json(dataset);
   }),
 );
@@ -548,6 +536,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('ingestion_space').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -558,22 +547,26 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, ...data
+      workflow_id, state, ingestion_space, data,
     } = req.body;
 
-    // create workflow association
-    if (workflow_id) {
-      data.workflows = {
-        create: [
-          {
-            id: workflow_id,
-          },
-        ],
-      };
-    }
+    const { origin_path } = data;
 
-    if (data.is_duplicate) {
-      next(createError.BadRequest('Created datasets cannot be duplicate.'));
+    // remove whitespaces from dataset name
+    data.name = data.name.split(' ').join('-');
+
+    if (ingestion_space) {
+      // if dataset's origin_path is a restricted for dataset creation, throw
+      // error
+      const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
+      const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+        const isMatch = pm(glob);
+        const matches = isMatch(origin_path, glob);
+        return matches.isMatch;
+      });
+      if (origin_path_is_restricted) {
+        return next(createError.Forbidden());
+      }
     }
 
     // create workflow association
@@ -971,7 +964,7 @@ router.post(
           },
         });
       } catch (e) {
-      // console.log()
+        // console.log()
       }
     }
 
@@ -1128,13 +1121,14 @@ router.get(
         ? `${dataset.metadata.stage_alias}/${file.path}`
         : `${dataset.metadata.bundle_alias}`;
 
-      const url = new URL(download_file_path, config.get('download_server.base_url'));
-
+      const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
+
+      const downloadUrl = new URL(`download/${download_file_path}`, config.get('download_server.base_url'));
       res.json({
-        url: url.href,
+        url: downloadUrl.href,
         bearer_token: download_token.accessToken,
       });
     } else {

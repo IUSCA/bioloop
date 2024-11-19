@@ -94,6 +94,36 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
+  dataset: {
+    select: {
+      id: true,
+      name: true,
+      source_datasets: {
+        select: {
+          source_dataset: true,
+        },
+      },
+    },
+  },
+  upload_log: {
+    select: {
+      id: true,
+      user: true,
+      status: true,
+      initiated_at: true,
+      files: {
+        select: {
+          id: true,
+          md5: true,
+          name: true,
+          path: true,
+        },
+      },
+    },
+  },
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 module.exports = {
@@ -101,7 +131,8 @@ module.exports = {
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
   INCLUDE_AUDIT_LOGS,
+  DONE_STATUSES,
+  INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
   INCLUDE_DUPLICATIONS,
   DUPLICATION_PROCESSING_INCLUSIONS,
-  DONE_STATUSES,
 };

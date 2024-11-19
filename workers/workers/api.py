@@ -160,12 +160,16 @@ def get_all_datasets(
 def get_dataset(dataset_id: str,
                 files: bool = False,
                 bundle: bool = False,
+                include_upload_log: bool = False,
+                workflows: bool = False,
                 include_duplications: bool = False,
                 include_action_items: bool = False):
     with APIServerSession() as s:
         payload = {
-            'bundle': bundle,
             'files': files,
+            'bundle': bundle,
+            'workflows': workflows,
+            'include_upload_log': include_upload_log,
             'include_duplications': include_duplications,
             'include_action_items': include_action_items,
         }
@@ -290,6 +294,31 @@ def get_all_workflows():
         r = s.get('workflows/current')
         r.raise_for_status()
         return r.json()
+
+
+def get_dataset_upload_logs():
+    with APIServerSession() as s:
+        r = s.get(f'datasetUploads')
+        r.raise_for_status()
+        return r.json()
+
+
+def update_dataset_upload_log(uploaded_dataset_id: int, log_data: dict):
+    with APIServerSession() as s:
+        r = s.patch(f'datasetUploads/{uploaded_dataset_id}', json=log_data)
+        r.raise_for_status()
+
+
+def delete_dataset_upload_log(uploaded_dataset_id: int):
+    with APIServerSession() as s:
+        r = s.delete(f'datasetUploads/{uploaded_dataset_id}')
+        r.raise_for_status()
+
+
+def create_notification(payload: dict):
+    with APIServerSession() as s:
+        r = s.post('notifications', json=payload)
+        r.raise_for_status()
 
 
 if __name__ == '__main__':

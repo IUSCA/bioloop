@@ -95,6 +95,7 @@
             <div class="flex gap-9">
               <!-- merge button -->
               <va-button
+                data-testid="merge-projects-button"
                 preset="secondary"
                 border-color="info"
                 class="flex-none"

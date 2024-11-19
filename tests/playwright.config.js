@@ -34,9 +34,8 @@ module.exports = {
     reporter: 'html',
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
-      /* Base URL to use in actions like `await page.goto('/')`. */
-      // baseURL: 'https://localhost',
-      baseURL: 'https://bioloop-dev.sca.iu.edu',
+    /* Base URL to use in actions like `await page.goto('/')`. */
+      baseURL: 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
@@ -48,48 +47,78 @@ module.exports = {
 
     /* Configure projects for major browsers */
     projects: [
+      //   todo - organize tests by role type
       {
         name: 'admin_login',
         testMatch: path.join(__dirname, '/tests/setup/admin_login.setup.js'),
-        // testIgnore: '*',
+      },
+      {
+        name: 'operator_login',
+        testMatch: path.join(__dirname, '/tests/setup/operator_login.setup.js'),
       },
       {
         name: 'user_login',
         testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
-        // testIgnore: '*',
       },
       {
-        name: 'unauthenticated_views',
+        name: 'unauthenticated',
         use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/unauthenticated/*.spec.js',
-        // testIgnore: '*',
+        testMatch: '/view/unauthenticated/project.spec.js',
       },
       {
-        name: 'admin_views',
+        name: 'admin_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/admin_*_view.spec.js',
-        // testIgnore: '*',
+        testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
+      },
+
+      {
+        name: 'operator_sidebar',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
       },
       {
-        name: 'user_views',
+        name: 'user_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
-        testMatch: '/view/authenticated/user_*_view.spec.js',
-        // testIgnore: '*',
+        testMatch: '/view/authenticated/sidebar/user_role_sidebar_view.spec.js',
       },
       {
-        name: 'dataset_duplication',
+        name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/datasetDuplication/notification.spec.js',
-        // testIgnore: '*',
+        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
       },
       {
-        name: 'test_project',
-        use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/cursor_test.spec.js',
-        testIgnore: '*',
+        name: 'operator_notifications',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['admin_notifications', 'operator_login'],
+        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+      },
+      {
+        name: 'user_notifications',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['user_login'],
+        testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
+      },
+      {
+        name: 'admin_user_management',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/userManagement/*.spec.js',
+      },
+      {
+        name: 'operator_user_management',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/userManagement/*.spec.js',
+      },
+      {
+        name: 'project',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/project/*.spec.js',
       },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
@@ -109,23 +138,23 @@ module.exports = {
       //   use: { ...devices['iPhone 12'] },
       // },
 
-      /* Test against branded browsers. */
-      // {
-      //   name: 'Microsoft Edge',
-      //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-      // },
-      // {
-      //   name: 'Google Chrome',
-      //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-      // },
+    /* Test against branded browsers. */
+    // {
+    //   name: 'Microsoft Edge',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    // },
+    // {
+    //   name: 'Google Chrome',
+    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    // },
     ],
 
-    /* Run your local dev server before starting the tests */
-    // webServer: {
-    //   command: 'npm run start',
-    //   url: 'http://127.0.0.1:3000',
-    //   reuseExistingServer: !process.env.CI,
-    // },
+  /* Run your local dev server before starting the tests */
+  // webServer: {
+  //   command: 'npm run start',
+  //   url: 'http://127.0.0.1:3000',
+  //   reuseExistingServer: !process.env.CI,
+  // },
   }),
   USER_STORAGE_STATE,
   OPERATOR_STORAGE_STATE,

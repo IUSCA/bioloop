@@ -7,8 +7,8 @@ const prisma = new PrismaClient();
 async function main() {
   /**
    * Deletes datasets by ids and all these following associations
-   * dataset_hierarchy, dataset_audit, dataset_state, dataset_file, dataset_file_hierarchy,
-   * project_dataset
+   * dataset_hierarchy, dataset_audit, dataset_state, dataset_file,
+   * dataset_file_hierarchy, project_dataset
    *
    * Usage: node src/scripts/delete_datasets.js <ids>
    * ex: node src/scripts/delete_datasets.js 1 2 3
@@ -24,7 +24,6 @@ async function main() {
         },
       },
     });
-    console.log(res);
     return res;
   }
   console.error('one or more args is not a integer');
