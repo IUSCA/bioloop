@@ -139,7 +139,7 @@ router.patch(
               id: req.params.action_item_id,
             },
             data: {
-              redirect_url: `/duplicateDatasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
+              redirect_url: `/datasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
               ingestion_checks: {
                 createMany: { data: ingestion_checks },
               },
@@ -629,7 +629,8 @@ router.post(
     });
 
     if (dataset.is_duplicate) {
-      return next(createError.BadRequest(`Dataset ${dataset.name} cannot be duplicated, as it is a duplicate of another dataset.`));
+      return next(createError.BadRequest(`Dataset ${dataset.name} cannot `
+          + 'be duplicated, as it is a duplicate of another dataset.'));
     }
 
     if (!action_item) {
@@ -641,11 +642,31 @@ router.post(
       };
     }
 
+    const adminRoles = await prisma.role.findMany({
+      where: {
+        name: 'admin',
+      },
+    });
+    const adminRole = adminRoles[0];
+    const operatorRoles = await prisma.role.findMany({
+      where: {
+        name: 'operator',
+      },
+    });
+    const operatorRole = operatorRoles[0];
+
     if (!notification) {
       notification = {
         type: 'INCOMING_DUPLICATE_DATASET',
         label: 'Duplicate Dataset Created',
         text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
+        role_notifications: {
+          create: [{
+            role_id: adminRole.id,
+          }, {
+            role_id: operatorRole.id,
+          }],
+        },
       };
     }
 
@@ -885,6 +906,11 @@ router.delete(
       },
     });
 
+    if (_dataset.is_duplicate) {
+      return next(createError.BadRequest('Deletion cannot be performed on active '
+          + `duplicate dataset ${req.params.id}.`));
+    }
+
     if (_dataset) {
       await datasetService.soft_delete(_dataset, req.user?.id);
       res.send();
@@ -895,34 +921,34 @@ router.delete(
 );
 
 // delete - UI
-router.delete(
-  '/',
-  validate([
-    query('is_duplicate').optional().isBoolean().toBoolean(),
-  ]),
-  isPermittedTo('delete'),
-  asyncHandler(async (req, res, next) => {
-    const filtered_query = buildQueryObject(req.query);
-
-    const matching_datasets = (Object.keys(filtered_query).length > 0)
-      ? await prisma.dataset.findMany({
-        where: filtered_query,
-        include: {
-          workflows: true,
-        },
-      }) : [];
-
-    // eslint-disable-next-line no-restricted-syntax
-    for (const dataset of matching_datasets) {
-      if (!dataset.is_deleted) {
-        // eslint-disable-next-line no-await-in-loop
-        await datasetService.soft_delete(dataset, req.user?.id);
-      }
-    }
-
-    res.send(`${matching_datasets.length}`);
-  }),
-);
+// router.delete(
+//   '/',
+//   validate([
+//     query('is_duplicate').optional().isBoolean().toBoolean(),
+//   ]),
+//   isPermittedTo('delete'),
+//   asyncHandler(async (req, res, next) => {
+//     const filtered_query = buildQueryObject(req.query);
+//
+//     const matching_datasets = (Object.keys(filtered_query).length > 0)
+//       ? await prisma.dataset.findMany({
+//         where: filtered_query,
+//         include: {
+//           workflows: true,
+//         },
+//       }) : [];
+//
+//     // eslint-disable-next-line no-restricted-syntax
+//     for (const dataset of matching_datasets) {
+//       if (!dataset.is_deleted) {
+//         // eslint-disable-next-line no-await-in-loop
+//         await datasetService.soft_delete(dataset, req.user?.id);
+//       }
+//     }
+//
+//     res.send(`${matching_datasets.length}`);
+//   }),
+// );
 
 const workflow_access_check = (req, res, next) => {
   // The workflows that a user is allowed to run depends on their role

@@ -8,6 +8,7 @@ export const useDatasetStore = defineStore("dataset", () => {
       deleted: false,
       archived: null,
       staged: null,
+      is_duplicate: false,
       has_workflows: null,
       has_derived_data: null,
       has_source_data: null,
