@@ -8,7 +8,7 @@ datasource db {
 }
 
 model dataset {
-  id                 Int                 @id @default(autoincrement())
+  id                 Int                   @id @default(autoincrement())
   name               String
   type               String
   num_directories    Int?
@@ -17,30 +17,30 @@ model dataset {
   size               BigInt?
   bundle_size        BigInt?
   description        String?
-  created_at         DateTime            @default(now()) @db.Timestamp(6)
-  updated_at         DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  created_at         DateTime              @default(now()) @db.Timestamp(6)
+  updated_at         DateTime              @default(now()) @updatedAt @db.Timestamp(6)
   origin_path        String?
   archive_path       String?
   staged_path        String?
-  is_deleted         Boolean             @default(false)
-  is_staged          Boolean             @default(false)
+  is_deleted         Boolean               @default(false)
+  is_staged          Boolean               @default(false)
   metadata           Json?
   workflows          workflow[]
   files              dataset_file[]
   audit_logs         dataset_audit[]
   states             dataset_state[]
-  derived_datasets   dataset_hierarchy[] @relation("source_datasets")
-  source_datasets    dataset_hierarchy[] @relation("derived_datasets")
+  derived_datasets   dataset_hierarchy[]   @relation("source_datasets")
+  source_datasets    dataset_hierarchy[]   @relation("derived_datasets")
   projects           project_dataset[]
   accesses           data_access_log[]
   stage_requests     stage_request_log[]
   bundle             bundle?
   dataset_upload_log dataset_upload_log?
-  action_items     dataset_action_item[]
-  is_duplicate     Boolean               @default(false)
-  duplicated_from  dataset_duplication?  @relation("duplicated_from")
-  duplicated_by    dataset_duplication[] @relation("duplicated_by")
-  version          Int                   @default(1)
+  action_items       dataset_action_item[]
+  is_duplicate       Boolean               @default(false)
+  duplicated_from    dataset_duplication?  @relation("duplicated_from")
+  duplicated_by      dataset_duplication[] @relation("duplicated_by")
+  version            Int                   @default(1)
 
   @@unique([name, type, is_deleted, is_duplicate, version])
 }
@@ -308,9 +308,9 @@ model contact {
 }
 
 model role {
-  id                 Int                @id @default(autoincrement())
-  name               String             @db.VarChar(50)
-  description        String             @default("") @db.VarChar(255)
+  id                 Int                 @id @default(autoincrement())
+  name               String              @db.VarChar(50)
+  description        String              @default("") @db.VarChar(255)
   user_role          user_role[]
   role_notifications role_notification[]
 }
@@ -459,12 +459,6 @@ enum DATASET_ACTION_ITEM_TYPE {
 }
 
 enum DATASET_ACTION_ITEM_STATUS {
-  CREATED
-  ACKNOWLEDGED
-  RESOLVED
-}
-
-enum NOTIFICATION_STATUS {
   CREATED
   ACKNOWLEDGED
   RESOLVED
