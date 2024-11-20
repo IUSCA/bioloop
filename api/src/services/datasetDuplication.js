@@ -42,7 +42,8 @@ async function validate_duplication_state({ prisma_transaction_instance, duplica
   // dataset. If not, the system is in an invalid state and should not
   // proceed.
   if (matching_original_datasets.length !== 1) {
-    throw new Error(`Expected to find one active (not deleted) original ${duplicate_dataset.type} named ${duplicate_dataset.name}, but found ${matching_original_datasets.length}.`);
+    throw new Error(`Expected to find one active (not deleted) original ${duplicate_dataset.type} `
+        + `named ${duplicate_dataset.name}, but found ${matching_original_datasets.length}.`);
   }
 
   // Ensure that the matching original dataset's id is the same as the
@@ -168,12 +169,12 @@ const create_state_log = async ({
  * @param prisma_transaction_instance Prisma transaction instance
  * @param action_item_id ID of the action item to be updated
  * @param action_item_status New status of the action item
- * @param notification_status New status of the notification associated with the action item
  * @param active_item_active New `active` flag status of the action item
- * @param notification_active New `active` flag status of the notification associated with the action item
+ * @param notification_status Optional. New status of the notification associated with the action item
+ * @param notification_active Optional. New `active` flag status of the notification associated with the action item
  * @returns {Promise<{updated_action_item: T}>}
  */
-const update_action_item = async ({
+const update_notification_and_action_item = async ({
   prisma_transaction_instance, action_item_status, action_item_id,
   active_item_active, notification_status, notification_active,
 }) => {
@@ -340,7 +341,7 @@ const reject_concurrent_active_duplicates = async ({
       .filter((item) => item.type
             === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
     // eslint-disable-next-line no-await-in-loop
-    await update_action_item({
+    await update_notification_and_action_item({
       prisma_transaction_instance,
       action_item_id: current_duplicate_dataset_action_item.id,
       action_item_status: 'RESOLVED',
@@ -422,7 +423,7 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
     const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
       .filter((item) => item.type
       === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
-    await update_action_item({
+    await update_notification_and_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
       action_item_status: 'RESOLVED',
@@ -497,7 +498,7 @@ async function reject_duplicate_dataset({ duplicate_dataset_id, rejected_by_id }
     const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
       .filter((item) => item.type
       === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
-    await update_action_item({
+    await update_notification_and_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
       action_item_status: 'RESOLVED',
