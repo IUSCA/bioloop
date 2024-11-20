@@ -1,222 +1,299 @@
-from __future__ import annotations  # type unions by | are only available in versions >= 3
+import datetime
+import fnmatch
+import logging
+import time
+from pathlib import Path
+from typing import Callable
 
-import json
-
-from celery import Celery
-from celery.utils.log import get_task_logger
+from sca_rhythm import Workflow
+from slugify import slugify
 
 import workers.api as api
-import workers.config.celeryconfig as celeryconfig
-from workers.exceptions import InspectionFailed
+import workers.workflow_utils as wf_utils
+from workers.celery_app import app as celery_app
 from workers.config import config
+from workers.utils import dir_last_modified_time
 
-app = Celery("tasks")
-app.config_from_object(celeryconfig)
-logger = get_task_logger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
-    logger.info(f"Processing dataset {duplicate_dataset_id}")
-    duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
-                                              include_duplications=True,
-                                              include_states=True)
-    duplicate_dataset_notifications = api.get_notifications(
-        dataset_id=duplicate_dataset_id,
-        notification_type=config['NOTIFICATION_TYPE']['DUPLICATE_DATASET_REGISTRATION']
-    )
+class Observer:
+    def __init__(self, name: str, dir_path: str, callback: Callable[[str, list[Path]], None], interval: int = 1):
+        self.name = name
+        self.dir_path = Path(dir_path)
+        self.callback = callback
+        self.interval = interval
 
-    if not duplicate_dataset['is_duplicate']:
-        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
+        # Keep track of the directories in the watched directory
+        self.directories = set()
 
-    # assumes states are sorted in descending order by timestamp
-    latest_state = duplicate_dataset['states'][0]['state']
-    if latest_state != config['DATASET_STATES']['INSPECTED']:
-        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} needs to reach state INSPECTED before it can be"
-                               f" compared for duplication. Current state is {latest_state}.")
+    def watch(self) -> None:
+        # Get the current subdirectories of the watched directory
+        current_directories = set(p.name for p in self.dir_path.iterdir() if p.is_dir())
 
-    matching_datasets = api.get_all_datasets(
-        name=duplicate_dataset['name'],
-        dataset_type=duplicate_dataset['type'],
-        is_duplicate=False,
-        deleted=False,
-    )
+        # Find the directories that have been added or renamed
+        added_directories = current_directories - self.directories
+        deleted_directories = self.directories - current_directories
 
-    if len(matching_datasets) != 1:
-        raise InspectionFailed(
-            f"Expected to find one active (not deleted) original {duplicate_dataset['type']} named {duplicate_dataset['name']},"
-            f" but found {len(matching_datasets)}.")
+        if len(added_directories) > 0:
+            self.callback('add', [self.dir_path / name for name in added_directories])
+        if len(deleted_directories) > 0:
+            self.callback('delete', [self.dir_path / name for name in deleted_directories])
 
-    original_dataset: dict = matching_datasets[0]
+        self.directories = current_directories
 
-    if original_dataset['id'] != duplicate_dataset['duplicated_from']['original_dataset_id']:
-        raise InspectionFailed(f"Expected dataset {duplicate_dataset['id']} to have "
-                               f"been duplicated from dataset "
-                               f"{duplicate_dataset['duplicated_from']['original_dataset_id']}, "
-                               f"but matching dataset has id {original_dataset['id']}.")
 
-    duplicate_files: list[dict] = api.get_dataset_files(
-        dataset_id=duplicate_dataset['id'],
-        filters={
-            "filetype": "file"
-        })
-    original_files: list[dict] = api.get_dataset_files(
-        dataset_id=original_dataset['id'],
-        filters={
-            "filetype": "file"
-        })
+class Poller:
+    def __init__(self):
+        self.observers = dict()
+        # print('observers', self.observers)
 
-    comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
+    def register(self, observer: Observer):
+        observer.interval = int(observer.interval)
+        assert observer.interval >= 1
+        self.observers[observer.name] = observer
+        logger.info(
+            f'Observer {observer.name} registered. '
+            f'{observer.dir_path} will be polled every {observer.interval} seconds'
+        )
 
-    # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
-    # create an action item for operators to review later. This way, operators will always have a chance
-    # to review the incoming dataset before it is rejected.
-    # Exactly one action item of type DUPLICATE_DATASET_REGISTRATION is created for a duplicate dataset.
-    duplication_notification: dict = [notification for notification in duplicate_dataset_notifications
-                                      if notification['type'] == config['NOTIFICATION_TYPE'][
-                                          'DUPLICATE_DATASET_REGISTRATION']][0]
+    def unregister(self, name):
+        self.observers.pop(name)
 
-    action_item_data: dict = {
-        "ingestion_checks": comparison_checks_report,
+    def poll(self):
+        last_call_times = {name: 0 for name in self.observers.keys()}
+        while True:
+            for observer in self.observers.values():
+                current_time = time.time()
+                elapsed_since_last_call = current_time - last_call_times[observer.name]
+                if elapsed_since_last_call >= observer.interval:
+                    # print('calling observer watch', observer.name, int(time.time()))
+                    try:
+                        observer.watch()
+                    except Exception as e:
+                        logger.error(f'exception in calling observer {observer.name}', exc_info=e)
+                    last_call_times[observer.name] = current_time
+            time.sleep(1)
+
+
+def slugify_(name: str) -> str:
+    """
+    Replace all characters except alphanumerics and underscore with hyphen
+    """
+    return slugify(name, lowercase=False, regex_pattern=r'[^a-zA-Z0-9_]')
+
+
+def get_duplicate_notification_payload(original_dataset_id: int) -> dict:
+    payload = dict()
+    payload['label'] = ''
+    payload['action_item'] = {
+        'type': config['NOTIFICATION_TYPE']['DUPLICATE_DATASET_REGISTRATION'],
+        'metadata': {
+            'original_dataset_id': original_dataset_id,
+        }
     }
-
-    if latest_state != config['DATASET_STATES']['DUPLICATE_READY']:
-        api.add_state_to_dataset(dataset_id=duplicate_dataset['id'],
-                                 state=config['DATASET_STATES']['DUPLICATE_READY'])
-    # todo - test idempotence
-    api.update_dataset_notification(notification_id=duplication_notification['id'],
-                                    data=action_item_data)
-
-    logger.info(f"Processed duplication analysis of duplicate dataset {duplicate_dataset_id}")
-    return duplicate_dataset_id,
+    return payload
 
 
-# Given two lists of dataset files, determines if the two sets of files are duplicates. The following checks are used
-# to determine whether files are same:
-#    1. Comparing checksums of files in both datasets
-#    2. Verifying if any files from the original dataset are missing from the incoming duplicate.
-#    3. Verifying if any files from the incoming duplicate dataset are missing from the original.
-#
-# Returns a dict, which contains the results for each of the 3 checks performed.
-#
-# Example of comparison report:
+class Register:
+    def __init__(self, dataset_type, default_wf_name='integrated'):
+        logger.info(f"init for type {dataset_type}")
 
-# [
-#   {
-#     type: 'CHECKSUMS_MATCH',
-#     label: 'Checksums Validated',
-#     passed: False,
-#     report: {
-#       conflicting_checksum_files: [{
-#         name: 'checksum_error_file_1',
-#         path: '/path/to/checksum_error_file_1',
-#         original_md5: 'original_md5',
-#         duplicate_md5: 'duplicate_md5',
-#       }, {
-#         name: 'checksum_error_file_2',
-#         path: '/path/to/checksum_error_file_2',
-#         original_md5: 'original_md5',
-#         duplicate_md5: 'duplicate_md5',
-#       }],
-#     },
-#   }, {
-#     type: 'FILES_MISSING_FROM_DUPLICATE',
-#     label: 'Original dataset\'s files missing from incoming duplicate',
-#     passed: False,
-#     report: {
-#       missing_files: [{
-#         name: 'missing_file_1',
-#         path: '/path/to/missing_file_1',
-#       }, {
-#         name: 'missing_file_2',
-#         path: '/path/to/missing_file_1',
-#       }],
-#     },
-#   }, {
-#     type: 'FILES_MISSING_FROM_ORIGINAL',
-#     label: 'Incoming duplicate dataset\'s files missing from original',
-#     passed: False,
-#     report: {
-#       missing_files: [{
-#         name: 'missing_file_1',
-#         path: '/path/to/missing_file_1',
-#       }, {
-#         name: 'missing_file_2',
-#         path: '/path/to/missing_file_1',
-#       }],
-#     },
-#   }
-# ]
-def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list[dict]:
-    comparison_checks: list[dict] = []
+        self.dataset_type = dataset_type
+        self.reg_config = config['registration'][self.dataset_type]
+        self.rejects: set[str] = set(self.reg_config['rejects'])
+        self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
+        # logger.info("got self.completed")
+        # for e in self.completed:
+        #     logger.info(e)
 
-    original_files_set: set[str] = set(map(lambda f: f['path'], original_dataset_files))
-    duplicate_files_set: set[str] = set(map(lambda f: f['path'], duplicate_dataset_files))
+        # self.duplicates: Datasets currently registered in the system as duplicates
+        self.duplicates: set[str] = set(self.get_registered_dataset_names({
+            'is_duplicate': True
+        }))  # HTTP GET
+        logger.info(f'duplicates:')
+        for e in self.duplicates:
+            logger.info(e)
+        self.default_wf_name = default_wf_name
 
-    common_files: set[str] = original_files_set.intersection(duplicate_files_set)
+    def is_a_reject(self, name):
+        return any([fnmatch.fnmatchcase(name, pat) for pat in self.rejects])
 
-    logger.info(f"len(common_files): {len(common_files)}")
+    def get_registered_dataset_names(self, filters: dict = None) -> list[str]:
+        is_duplicate = filters['is_duplicate'] if filters is not None else False
+        logger.info("get_registered_dataset_names called")
+        logger.info(f'Is duplicate: {is_duplicate}')
+        datasets = api.get_all_datasets(is_duplicate=is_duplicate)
+        return [b['name'] for b in datasets]
 
-    conflicting_checksum_files: list[dict] = []
-    for file_path in common_files:
-        original_file = [f for f in original_dataset_files if f['path'] == file_path][0]
-        original_file_checksum = original_file['md5']
-        duplicate_file_checksum = [f for f in duplicate_dataset_files if f['path'] == file_path][0]['md5']
+    """
+    Args:
 
-        if original_file_checksum != duplicate_file_checksum:
-            conflicting_checksum_files.append({
-                'name': original_file['name'],
-                'path': original_file['path'],
-                'original_md5': original_file_checksum,
-                'duplicate_md5': duplicate_file_checksum,
-            })
+    duplicated_dataset_candidate_dirs: List of directories which are potentially duplicate datasets
+    """
 
-    logger.info(json.dumps(conflicting_checksum_files, indent=2))
+    def get_duplicate_dataset_dirs(self, duplicate_dataset_candidate_dirs: list[Path]) -> list[Path]:
+        logger.info("get_duplicate_datasets called")
+        logger.info(f'Duplicate dataset candidate dirs:')
+        for e in duplicate_dataset_candidate_dirs:
+            logger.info(e)
+        # logger.info(f'Completed datasets:')
+        # for e in self.completed:
+        #     logger.info(e)
 
-    # Files that are present in the original dataset and missing from the duplicate
-    original_only_files: set[str] = original_files_set.difference(duplicate_files_set)
-    # Files that are present in the duplicate dataset and missing from the original
-    duplicate_only_files: set[str] = duplicate_files_set.difference(original_files_set)
+        duplicate_dataset_candidates: list[Path] = [p for p in duplicate_dataset_candidate_dirs if all([
+            slugify_(p.name) in self.completed,
+            not self.is_a_reject(slugify_(p.name)),
+        ])]
+        logger.info(f'Duplicate dataset candidates:')
+        for e in duplicate_dataset_candidates:
+            logger.info(e)
 
-    files_missing_from_duplicate = []
-    for file_path in original_only_files:
-        file = [f for f in original_dataset_files if f['path'] == file_path][0]
-        files_missing_from_duplicate.append({
-            'name': file['name'],
-            'path': file['path']
-        })
-    files_missing_from_original = []
-    for file_path in duplicate_only_files:
-        file = [f for f in duplicate_dataset_files if f['path'] == file_path][0]
-        files_missing_from_original.append({
-            'name': file['name'],
-            'path': file['path']
-        })
+        duplicate_datasets: list[Path] = []
+        for p in duplicate_dataset_candidates:
+            logger.info(f'checking directory: {p.name}')
+            # last modified time of the file in seconds since epoch
+            candidate_last_modified_time = dir_last_modified_time(p)
+            logger.info(f'last modified time: {candidate_last_modified_time}')
 
-    passed_checksum_validation = len(conflicting_checksum_files) == 0
-    comparison_checks.append({
-        'type': 'CHECKSUMS_MATCH',
-        'label': 'Checksums Validated',
-        'passed': passed_checksum_validation,
-        'report': {
-            'conflicting_checksum_files': conflicting_checksum_files
+            duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=p.name)
+            duplicated_from_dataset_created_at = duplicated_from_dataset['created_at'] \
+                if duplicated_from_dataset is not None \
+                else 0
+            # dataset's creation time in seconds since epoch
+            duplicated_from_dataset_created_at_time = datetime.datetime.timestamp(duplicated_from_dataset_created_at)
+            logger.info(f'dir created at time: {duplicated_from_dataset_created_at_time}')
+
+            if candidate_last_modified_time > duplicated_from_dataset_created_at_time:
+                logger.info(f'Determined directory {p.name} to be a duplicate dataset')
+                duplicate_datasets.append(p)
+            else:
+                logger.info(f'Determined directory {p.name} to not be a duplicate dataset')
+        return duplicate_datasets
+
+    def get_dataset(self):
+        # Get the dataset from the database
+        # ...
+        # Return the dataset
+        pass
+
+    def register(self, event: str, new_dirs: list[Path]) -> None:
+        logger.info(f"register called with event: {event}")
+
+        if event != 'add':
+            return
+
+        candidates: list[Path] = [
+            p for p in new_dirs
+            if all([
+                slugify_(p.name) not in self.completed,
+                not self.is_a_reject(slugify_(p.name)),
+                # cmd.total_size(p) >= config['registration']['minimum_dataset_size']
+            ])
+        ]
+        # If a candidate's name is in self.completed, it could be a duplicate.
+        # After verifying that the candidate is indeed a duplicate, we register the candidate
+        # as a duplicate dataset in the system.
+        logger.info(f"new_dirs:")
+        for e in candidates:
+            logger.info(e)
+        duplicate_candidates: list[Path] = self.get_duplicate_dataset_dirs(duplicate_dataset_candidate_dirs=new_dirs)
+
+        for candidate in candidates:
+            logger.info(f'processing candidate: {str(candidate.name)}')
+            self.register_candidate(candidate)
+            self.completed.add(candidate.name)
+
+        for candidate in duplicate_candidates:
+            # some duplicates with this directory's name and dataset_type might
+            # already be under processing when this script is run
+            if slugify_(candidate.name) not in self.duplicates:
+                self.register_duplicate_candidate(candidate)
+                self.duplicates.add(candidate.name)
+                # pass
+            else:
+                logger.warning(f"""
+                               Attempted to process a second duplicate candidate
+                               named {str(candidate.name)} when a duplicate candidate
+                               named {str(candidate.name)} (dataset type {self.dataset_type})
+                               is already being processed.
+                              """)
+                # pass
+
+    # Returns the dataset that is potentially being duplicated
+    def get_duplicated_from_dataset(self, dir_name: str) -> dict | None:
+        matching_datasets = api.get_all_datasets(dataset_type=self.dataset_type,
+                                                 name=dir_name,
+                                                 is_duplicate=False)
+        if len(matching_datasets) != 1:
+            logger.error(f"""
+                         Expected one, but found {len(matching_datasets)} active
+                         datasets having name {dir_name}
+                         and type {self.dataset_type} that are eligible for
+                         duplication. This is unexpected, and a duplicate dataset
+                         will not be created.
+                         """)
+            return None
+        return matching_datasets[0]
+
+    def register_candidate(self, candidate: Path):
+        logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
+        dataset_payload = {
+            'data': {
+                'name': slugify_(candidate.name),
+                'type': self.dataset_type,
+                'origin_path': str(candidate.resolve()),
+            }
         }
-    })
+        created_dataset = api.create_dataset(dataset_payload)
+        self.run_workflows(created_dataset, self.default_wf_name)
 
-    comparison_checks.append({
-        'type': 'FILES_MISSING_FROM_DUPLICATE',
-        'label': 'Original dataset\'s files missing from incoming duplicate',
-        'passed': len(original_only_files) == 0,
-        'report': {
-            'missing_files': files_missing_from_duplicate
-        }
-    })
-    comparison_checks.append({
-        'type': 'FILES_MISSING_FROM_ORIGINAL',
-        'label': 'Incoming duplicate dataset\'s files missing from original',
-        'passed': len(duplicate_only_files) == 0,
-        'report': {
-            'missing_files': files_missing_from_original
-        }
-    })
+    def register_duplicate_candidate(self, candidate: Path):
+        logger.info(f'registering duplicate {self.dataset_type} dataset - {candidate.name}')
 
-    return comparison_checks
+        # Get any active and non-duplicate datasets with the same name and type
+        duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=candidate.name)
+        logger.info(f'Duplicated from dataset: {duplicated_from_dataset["name"]}')
+        if duplicated_from_dataset is not None:
+            created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=duplicated_from_dataset['id'])
+            self.run_workflows(
+                created_duplicate_dataset,
+                'handle_duplicate_dataset'
+            )
+
+    def run_workflows(self, dataset, workflow_name=None):
+        dataset_id = dataset['id']
+        wf_body = wf_utils.get_wf_body(wf_name=workflow_name)
+        wf = Workflow(celery_app=celery_app, **wf_body)
+        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+        wf.start(dataset_id)
+
+
+class RegisterDataProduct(Register):
+    def __init__(self):
+        super().__init__(dataset_type='DATA_PRODUCT')
+
+    def run_workflows(self, dataset):
+        pass
+
+
+if __name__ == "__main__":
+    obs1 = Observer(
+        name='raw_data_obs',
+        dir_path=config['registration']['RAW_DATA']['source_dir'],
+        callback=Register('RAW_DATA').register,
+        interval=config['registration']['poll_interval_seconds']
+    )
+    obs2 = Observer(
+        name='data_products_obs',
+        dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
+        callback=Register('DATA_PRODUCT').register,
+        # callback=RegisterDataProduct().register,
+        interval=config['registration']['poll_interval_seconds']
+    )
+
+    poller = Poller()
+    poller.register(obs1)
+    poller.register(obs2)
+    poller.poll()

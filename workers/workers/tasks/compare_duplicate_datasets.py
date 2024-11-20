@@ -84,15 +84,25 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
 # Given two lists of dataset files, determines if the two sets of files are duplicates. The following checks are used
 # to determine whether files are same:
-#    1. Comparing checksums of files in both datasets
-#    2. Verifying if any files from the original dataset are missing from the incoming duplicate.
-#    3. Verifying if any files from the incoming duplicate dataset are missing from the original.
+#    1. Verifying if the number of files in both datasets is the same
+#    2. Comparing checksums of files in both datasets
+#    3. Verifying if any files from the original dataset are missing from the incoming duplicate.
+#    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
 #
 # Returns a dict, which contains the results for each of the 3 checks performed.
 #
 # Example of comparison report:
 
 # [
+#   {
+#     'type': 'FILE_COUNT',
+#       'label': 'Number of Files match',
+#       'passed': len(original_dataset_files) == len(duplicate_dataset_files),
+#         'report': {
+#           'num_files_original_dataset': len(original_dataset_files),
+#           'num_files_duplicate_dataset': len(duplicate_dataset_files),
+#     }
+#   },
 #   {
 #     type: 'CHECKSUMS_MATCH',
 #     label: 'Checksums Validated',
