@@ -158,9 +158,7 @@ class Register:
             logger.info(f'last modified time: {candidate_last_modified_time}')
 
             duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=p.name)
-            duplicated_from_dataset_created_at = duplicated_from_dataset['created_at'] \
-                if duplicated_from_dataset is not None \
-                else 0
+            duplicated_from_dataset_created_at = duplicated_from_dataset['created_at']
             # dataset's creation time in seconds since epoch
             duplicated_from_dataset_created_at_time = datetime.datetime.timestamp(duplicated_from_dataset_created_at)
             logger.info(f'dir created at time: {duplicated_from_dataset_created_at_time}')
