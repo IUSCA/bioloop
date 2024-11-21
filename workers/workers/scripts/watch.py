@@ -126,6 +126,8 @@ class Register:
     Args:
 
     duplicated_dataset_candidate_dirs: List of directories which are potentially duplicate datasets
+    
+    :returns list[Path]: List of directories which are actual duplicate datasets
     """
 
     def get_duplicate_dataset_dirs(self, duplicate_dataset_candidate_dirs: list[Path]) -> list[Path]:
@@ -146,6 +148,7 @@ class Register:
             candidate_last_modified_ts = dir_last_modified_time(p)
 
             # expected to be local time (UTC)
+
             candidate_last_modified_dt = datetime.datetime.fromtimestamp(candidate_last_modified_ts).astimezone()
             logger.info(f'last modified datetime: {candidate_last_modified_dt}')
             duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=p.name)
