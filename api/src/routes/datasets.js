@@ -863,18 +863,14 @@ router.get(
   validate([
     param('id').isInt().toInt(),
     query('status').optional().isArray(),
-    query('last_run_only').optional().isBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = get workflows associated with a dataset
 
-    const last_run_only = req.query.last_run_only || false;
-
     const retrievedWorkflows = await datasetService.get_workflows({
       dataset_id: req.params.id,
       statuses: ['PENDING', 'STARTED', 'FAILURE'],
-      last_run_only,
     });
 
     res.send(retrievedWorkflows);
