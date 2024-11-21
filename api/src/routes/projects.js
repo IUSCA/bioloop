@@ -549,19 +549,6 @@ router.post(
       };
     }
 
-    const duplicate_datasets = await prisma.dataset.findMany({
-      where: {
-        id: {
-          in: dataset_ids,
-        },
-        is_duplicate: true,
-      },
-    });
-    if (duplicate_datasets.length > 0) {
-      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
-        + `${duplicate_datasets.map((ds) => ds.id)}`));
-    }
-
     if ((dataset_ids || []).length > 0) {
       data.datasets = {
         create: dataset_ids.map((id) => ({
@@ -571,11 +558,28 @@ router.post(
       };
     }
 
-    const project = await prisma.project.create({
-      data,
-      include: build_include_object(),
+    const created_project = await prisma.$transaction(async (tx) => {
+      const duplicate_datasets = await tx.dataset.findMany({
+        where: {
+          id: {
+            in: dataset_ids,
+          },
+          is_duplicate: true,
+        },
+      });
+      if (duplicate_datasets.length > 0) {
+        next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
+        + `${duplicate_datasets.map((ds) => ds.id)}`));
+      }
+
+      const project_being_created = await tx.project.create({
+        data,
+        include: build_include_object(),
+      });
+      return project_being_created;
     });
-    res.json(project);
+
+    res.json(created_project);
   }),
 );
 
@@ -616,19 +620,6 @@ router.post(
     const target_dataset_ids = new Set(_.flatten(
       target_projects.map((p) => p.datasets.map((obj) => obj.dataset.id)),
     ));
-
-    const duplicate_datasets = await prisma.dataset.findMany({
-      where: {
-        id: {
-          in: target_dataset_ids,
-        },
-        is_duplicate: true,
-      },
-    });
-    if (duplicate_datasets.length > 0) {
-      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
-        + `${duplicate_datasets.map((ds) => ds.id)}`));
-    }
 
     // find dataset ids which are not already associated with the source project
     const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
