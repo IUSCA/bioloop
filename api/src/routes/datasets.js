@@ -8,7 +8,6 @@ const {
 const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
-const dayjs = require('dayjs');
 const pm = require('picomatch');
 
 // const logger = require('../services/logger');
@@ -16,7 +15,6 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl, getPermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
-const wfService = require('../services/workflow');
 const datasetDuplicationService = require('../services/datasetDuplication');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
@@ -101,65 +99,70 @@ router.patch(
 
     const { ingestion_checks = [] } = req.body;
 
-    const dataset = await prisma.dataset.findUnique({
-      where: {
-        id: req.params.id,
-      },
-      include: {
-        states: {
-          orderBy: {
-            timestamp: 'desc',
+    const updated_action_item = await prisma.$transaction(async (tx) => {
+      const dataset = await tx.dataset.findUnique({
+        where: {
+          id: req.params.id,
+        },
+        include: {
+          states: {
+            orderBy: {
+              timestamp: 'desc',
+            },
           },
         },
-      },
+      });
+
+      // check if dataset is already in state `next_state`
+      const has_next_state = !!(
+        (dataset.states?.length > 0 && dataset.states[0].state === req.body.next_state)
+      );
+
+      // delete existing checks associated with this action item
+      await tx.dataset_ingestion_check.deleteMany({
+        where: {
+          action_item_id: req.params.action_item_id,
+        },
+      });
+
+      await tx.dataset.update({
+        where: {
+          id: req.params.id,
+        },
+        data: {
+          action_items: {
+            update: {
+              where: {
+                id: req.params.action_item_id,
+              },
+              data: {
+                redirect_url: `/datasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
+                ingestion_checks: {
+                  createMany: { data: ingestion_checks },
+                },
+              },
+            },
+          },
+          states: (req.body.next_state && !has_next_state) ? {
+            createMany: {
+              data: [
+                {
+                  state: req.body.next_state,
+                },
+              ],
+            },
+          } : undefined,
+        },
+      });
+
+      const action_item_being_updated = await tx.dataset_action_item.findUnique({
+        where: {
+          id: req.params.action_item_id,
+        },
+      });
+      return action_item_being_updated;
     });
-
-    // check if dataset is already in state `next_state`
-    const has_next_state = !!(
-      (dataset.states?.length > 0 && dataset.states[0].state === req.body.next_state)
-    );
-
-    const update_queries = [];
-
-    // delete existing checks associated with this action item
-    update_queries.push(prisma.dataset_ingestion_check.deleteMany({
-      where: {
-        action_item_id: req.params.action_item_id,
-      },
-    }));
-
-    update_queries.push(prisma.dataset.update({
-      where: {
-        id: req.params.id,
-      },
-      data: {
-        action_items: {
-          update: {
-            where: {
-              id: req.params.action_item_id,
-            },
-            data: {
-              redirect_url: `/datasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
-              ingestion_checks: {
-                createMany: { data: ingestion_checks },
-              },
-            },
-          },
-        },
-        states: (req.body.next_state && !has_next_state) ? {
-          createMany: {
-            data: [
-              {
-                state: req.body.next_state,
-              },
-            ],
-          },
-        } : undefined,
-      },
-    }));
-
-    const [updatedDataset] = await prisma.$transaction(update_queries);
-    res.json(updatedDataset);
+    res.json(updated_action_item);
   }),
 );
 
