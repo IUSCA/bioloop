@@ -342,7 +342,6 @@ function fetch_items() {
       ? { name: params.value.inclusive_query }
       : null),
     type: props.dtype,
-    is_duplicate: false,
     include_action_items: false,
     include_states: false,
   };

@@ -25,6 +25,18 @@
       Deleted
     </va-chip>
 
+    <!-- duplicate filter -->
+    <va-chip
+      class="flex-none"
+      closeable
+      outline
+      v-if="filterStatus.is_duplicate"
+      @click="emit('open')"
+      @update:model-value="reset('is_duplicate')"
+    >
+      Duplicate
+    </va-chip>
+
     <!-- three state filters -->
     <va-chip
       v-for="fkey in ['archived', 'staged'].filter((k) => filterStatus[k])"
