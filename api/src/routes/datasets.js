@@ -619,20 +619,6 @@ router.post(
       action_item, notification,
     } = req.body;
 
-    const dataset = await prisma.dataset.findUnique({
-      where: {
-        id: req.params.id,
-      },
-      include: {
-        projects: true,
-      },
-    });
-
-    if (dataset.is_duplicate) {
-      return next(createError.BadRequest(`Dataset ${dataset.name} cannot `
-          + 'be duplicated, as it is a duplicate of another dataset.'));
-    }
-
     if (!action_item) {
       action_item = {
         type: config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION,
@@ -642,100 +628,108 @@ router.post(
       };
     }
 
-    const adminRoles = await prisma.role.findMany({
-      where: {
-        name: 'admin',
-      },
-    });
-    const adminRole = adminRoles[0];
-    const operatorRoles = await prisma.role.findMany({
-      where: {
-        name: 'operator',
-      },
-    });
-    const operatorRole = operatorRoles[0];
-
-    if (!notification) {
-      notification = {
-        type: 'INCOMING_DUPLICATE_DATASET',
-        label: 'Duplicate Dataset Created',
-        text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
-        role_notifications: {
-          create: [{
-            role_id: adminRole.id,
-          }, {
-            role_id: operatorRole.id,
-          }],
+    const createdDuplicate = await prisma.$transaction(async (tx) => {
+      const dataset = await tx.dataset.findUnique({
+        where: {
+          id: req.params.id,
         },
-      };
-    }
+        include: {
+          projects: true,
+        },
+      });
 
-    // check if other duplicates for this dataset exist in the system
-    const existingDuplicates = await prisma.dataset.findMany({
-      where: {
-        name: dataset.name,
-        type: dataset.type,
-        is_deleted: false,
-        is_duplicate: true,
-      },
-      orderBy: {
-        version: 'desc',
-      },
-    });
-    // if so, find the most recent duplicate (the one with the highest
-    // version), to determine the version to be assigned to the current
-    // duplicate dataset
-    const latestDuplicateVersion = existingDuplicates[0]?.version;
+      if (dataset.is_duplicate) {
+        return next(createError.BadRequest(`Dataset ${dataset.name} cannot `
+          + 'be duplicated, as it is a duplicate of another dataset.'));
+      }
 
-    const createQueries = [];
+      const adminRoles = await tx.role.findMany({
+        where: {
+          name: 'admin',
+        },
+      });
+      const adminRole = adminRoles[0];
+      const operatorRoles = await tx.role.findMany({
+        where: {
+          name: 'operator',
+        },
+      });
+      const operatorRole = operatorRoles[0];
 
-    createQueries.push(prisma.dataset.create({
-      data: {
-        name: dataset.name,
-        type: dataset.type,
-        description: dataset.description,
-        origin_path: dataset.origin_path,
-        is_duplicate: true,
-        version: existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined,
-        duplicated_from: {
-          create: {
-            original_dataset_id: req.params.id,
+      if (!notification) {
+        notification = {
+          type: 'INCOMING_DUPLICATE_DATASET',
+          label: 'Duplicate Dataset Created',
+          text: `Dataset ${dataset.name} has been duplicated. Click here to review.`,
+          role_notifications: {
+            create: [{
+              role_id: adminRole.id,
+            }, {
+              role_id: operatorRole.id,
+            }],
           },
+        };
+      }
+
+      // check if other duplicates for this dataset exist in the system
+      const existingDuplicates = await tx.dataset.findMany({
+        where: {
+          name: dataset.name,
+          type: dataset.type,
+          is_deleted: false,
+          is_duplicate: true,
         },
-        states: {
-          create: [
-            {
-              state: next_state || config.DATASET_STATES.DUPLICATE_REGISTERED,
+        orderBy: {
+          version: 'desc',
+        },
+      });
+      // if so, find the most recent duplicate (the one with the highest
+      // version), to determine the version to be assigned to the current
+      // duplicate dataset
+      const latestDuplicateVersion = existingDuplicates[0]?.version;
+
+      const duplicate_dataset_being_created = await tx.dataset.create({
+        data: {
+          name: dataset.name,
+          type: dataset.type,
+          description: dataset.description,
+          origin_path: dataset.origin_path,
+          is_duplicate: true,
+          version: existingDuplicates.length > 0 ? latestDuplicateVersion + 1 : undefined,
+          duplicated_from: {
+            create: {
+              original_dataset_id: req.params.id,
             },
-          ],
-        },
-        action_items: {
-          create: [
-            {
-              type: action_item.type,
-              title: action_item.title,
-              text: action_item.text,
-              metadata: action_item.metadata,
-              notification: {
-                create: notification,
+          },
+          states: {
+            create: [
+              {
+                state: next_state || config.DATASET_STATES.DUPLICATE_REGISTERED,
               },
-            },
-          ],
-        },
-        projects: {
-          createMany: {
-            data: dataset.projects.map((p) => ({
-              project_id: p.project_id,
-            })),
+            ],
+          },
+          action_items: {
+            create: [
+              {
+                type: action_item.type,
+                title: action_item.title,
+                text: action_item.text,
+                metadata: action_item.metadata,
+                notification: {
+                  create: notification,
+                },
+              },
+            ],
           },
         },
-      },
-      include: {
-        ...CONSTANTS.INCLUDE_WORKFLOWS,
-      },
-    }));
+        include: {
+          ...CONSTANTS.INCLUDE_WORKFLOWS,
+        },
+      });
+      return duplicate_dataset_being_created;
+    });
 
-    const [createdDuplicate] = await prisma.$transaction(createQueries);
+    // const [createdDuplicate] = await prisma.$transaction(createQueries);
     res.json(createdDuplicate);
   }),
 );
@@ -908,7 +902,7 @@ router.delete(
 
     if (_dataset.is_duplicate) {
       return next(createError.BadRequest('Deletion cannot be performed on active '
-          + `duplicate dataset ${req.params.id}.`));
+        + `duplicate dataset ${req.params.id}.`));
     }
 
     if (_dataset) {

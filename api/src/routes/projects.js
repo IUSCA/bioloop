@@ -251,7 +251,7 @@ router.get(
 
     if (
       req.user.roles.includes('user')
-        && !hasProjectAssociation
+      && !hasProjectAssociation
     ) {
       return next(createError(403)); // Forbidden
     }
@@ -292,7 +292,7 @@ router.get(
         ...CONSTANTS.INCLUDE_WORKFLOWS,
         ...(req.query.include_dataset_states && CONSTANTS.INCLUDE_STATES),
         ...(req.query.include_dataset_duplications
-            && CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS),
+          && { ...CONSTANTS.INCLUDE_DUPLICATIONS, ...CONSTANTS.INCLUDE_STATES }),
         bundle: true,
         projects: {
           include: {
@@ -559,7 +559,7 @@ router.post(
     });
     if (duplicate_datasets.length > 0) {
       next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
-          + `${duplicate_datasets.map((ds) => ds.id)}`));
+        + `${duplicate_datasets.map((ds) => ds.id)}`));
     }
 
     if ((dataset_ids || []).length > 0) {
@@ -627,7 +627,7 @@ router.post(
     });
     if (duplicate_datasets.length > 0) {
       next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
-          + `${duplicate_datasets.map((ds) => ds.id)}`));
+        + `${duplicate_datasets.map((ds) => ds.id)}`));
     }
 
     // find dataset ids which are not already associated with the source project
@@ -807,7 +807,7 @@ router.patch(
     });
     if (duplicate_datasets.length > 0) {
       next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
-          + `${duplicate_datasets.map((ds) => ds.id)}`));
+        + `${duplicate_datasets.map((ds) => ds.id)}`));
     }
 
     const create_data = add_dataset_ids.map((dataset_id) => ({

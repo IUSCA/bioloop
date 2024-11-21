@@ -28,7 +28,6 @@
           v-for="(notification, index) in notifications"
           :key="index"
         >
-          <notification :notification="notification"></notification>
           <notification
             :notification="notification"
             :to="`${notification.dataset_action_items[0].redirect_url}`"
@@ -41,9 +40,9 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
-import config from "@/config";
 
 const notificationStore = useNotificationStore();
 

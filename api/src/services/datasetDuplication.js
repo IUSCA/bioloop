@@ -43,7 +43,7 @@ async function validate_duplication_state({ prisma_transaction_instance, duplica
   // proceed.
   if (matching_original_datasets.length !== 1) {
     throw new Error(`Expected to find one active (not deleted) original ${duplicate_dataset.type} `
-        + `named ${duplicate_dataset.name}, but found ${matching_original_datasets.length}.`);
+      + `named ${duplicate_dataset.name}, but found ${matching_original_datasets.length}.`);
   }
 
   // Ensure that the matching original dataset's id is the same as the
@@ -257,15 +257,38 @@ const transfer_dataset_associations = async ({
       dataset_id: duplicate_dataset.id,
     },
   });
+
   // Update project-dataset relations
-  await prisma_transaction_instance.project_dataset.updateMany({
+  const original_dataset_project_associations = await prisma_transaction_instance.project_dataset.findMany({
     where: {
       dataset_id: original_dataset.id,
     },
-    data: {
-      dataset_id: duplicate_dataset.id,
-    },
   });
+
+  console.log(`Transferring ${original_dataset_project_associations.length} project-dataset associations.`);
+
+  // eslint-disable-next-line no-restricted-syntax
+  for (const association of original_dataset_project_associations) {
+    // console.log("associating dataset", duplicate_dataset.id, "with project", association.project_id);
+    const associated_project_id = association.project_id;
+    // eslint-disable-next-line no-await-in-loop
+    console.log("deleting associations with project", associated_project_id, "with dataset", duplicate_dataset.id);
+    // eslint-disable-next-line no-await-in-loop
+    await prisma_transaction_instance.project_dataset.delete({
+      where: {
+        project_id_dataset_id: {
+          dataset_id: original_dataset.id,
+          project_id: associated_project_id,
+        }
+      },
+    });
+    await prisma_transaction_instance.project_dataset.create({
+      data: {
+        dataset_id: duplicate_dataset.id,
+        project_id: associated_project_id,
+      },
+    });
+  }
 };
 
 const reject_concurrent_active_duplicates = async ({
@@ -319,7 +342,7 @@ const reject_concurrent_active_duplicates = async ({
       },
       include: {
         ...CONSTANTS.INCLUDE_STATES,
-        action_items: true,
+        ...CONSTANTS.INCLUDE_DUPLICATIONS,
       },
     });
     const duplicate_latest_state = current_duplicate.states[0].state;
@@ -337,9 +360,10 @@ const reject_concurrent_active_duplicates = async ({
       },
     });
 
-    const current_duplicate_dataset_action_item = (current_duplicate.action_items || [])
+    const current_duplicate_dataset_action_item = (current_duplicate.duplicated_from.duplicate_dataset
+      .action_items || [])
       .filter((item) => item.type
-            === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
+        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
     // eslint-disable-next-line no-await-in-loop
     await update_notification_and_action_item({
       prisma_transaction_instance,
@@ -417,12 +441,12 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
             ? original_dataset.version + 1
             : undefined,
       },
-      include: { ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS, ...CONSTANTS.INCLUDE_WORKFLOWS },
+      include: { ...CONSTANTS.INCLUDE_DUPLICATIONS, ...CONSTANTS.INCLUDE_STATES, ...CONSTANTS.INCLUDE_WORKFLOWS },
     });
 
-    const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
+    const duplicate_dataset_action_item = (duplicate_dataset.duplicated_from.duplicate_dataset.action_items || [])
       .filter((item) => item.type
-      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
+        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
     await update_notification_and_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
@@ -495,9 +519,9 @@ async function reject_duplicate_dataset({ duplicate_dataset_id, rejected_by_id }
       { prisma_transaction_instance: tx, duplicate_dataset_id },
     );
 
-    const duplicate_dataset_action_item = (duplicate_dataset.action_items || [])
+    const duplicate_dataset_action_item = (duplicate_dataset.duplicated_from.duplicate_dataset.action_items || [])
       .filter((item) => item.type
-      === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
+        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
     await update_notification_and_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
@@ -533,12 +557,13 @@ async function reject_duplicate_dataset({ duplicate_dataset_id, rejected_by_id }
       data: {
         is_deleted: true,
         version:
-        (!duplicate_dataset.is_deleted)
-          ? latest_rejected_duplicate_version + 1
-          : undefined,
+          (!duplicate_dataset.is_deleted)
+            ? latest_rejected_duplicate_version + 1
+            : undefined,
       },
       include: {
-        ...CONSTANTS.DUPLICATION_PROCESSING_INCLUSIONS,
+        ...CONSTANTS.INCLUDE_DUPLICATIONS,
+        ...CONSTANTS.INCLUDE_STATES,
         ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     });

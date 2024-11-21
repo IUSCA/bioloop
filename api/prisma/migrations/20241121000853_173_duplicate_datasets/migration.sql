@@ -25,7 +25,9 @@ ALTER TABLE "dataset" ADD COLUMN     "is_duplicate" BOOLEAN NOT NULL DEFAULT fal
 ADD COLUMN     "version" INTEGER NOT NULL DEFAULT 1;
 
 -- AlterTable
-ALTER TABLE "notification" ADD COLUMN     "type" "NOTIFICATION_TYPE" NOT NULL;
+ALTER TABLE "notification" ADD COLUMN     "active" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "type" "NOTIFICATION_TYPE" NOT NULL,
+ADD COLUMN     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- CreateTable
 CREATE TABLE "dataset_duplication" (
@@ -40,6 +42,7 @@ CREATE TABLE "dataset_duplication" (
 CREATE TABLE "dataset_action_item" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "title" TEXT,
     "text" TEXT,
     "redirect_url" TEXT,

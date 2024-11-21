@@ -21,26 +21,6 @@ const INCLUDE_DUPLICATIONS = {
   },
 };
 
-const DUPLICATION_PROCESSING_INCLUSIONS = {
-  duplicated_from: {
-    include: {
-      original_dataset: true,
-      duplicate_dataset: true,
-    },
-  },
-  duplicated_by: {
-    include: {
-      original_dataset: true,
-      duplicate_dataset: true,
-    },
-  },
-  states: {
-    orderBy: {
-      timestamp: 'desc',
-    },
-  },
-};
-
 const INCLUDE_STATES = {
   states: {
     select: {
@@ -134,5 +114,4 @@ module.exports = {
   DONE_STATUSES,
   INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
   INCLUDE_DUPLICATIONS,
-  DUPLICATION_PROCESSING_INCLUSIONS,
 };
