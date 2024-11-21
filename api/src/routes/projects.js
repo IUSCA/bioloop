@@ -12,7 +12,6 @@ const { validate } = require('../middleware/validators');
 const projectService = require('../services/project');
 const wfService = require('../services/workflow');
 const { setDifference, log_axios_error } = require('../utils');
-const datasetService = require('../services/dataset');
 const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('projects');
@@ -567,9 +566,11 @@ router.post(
           is_duplicate: true,
         },
       });
+
+      const error_str = `Request contains the following duplicate datasets which cannot be assigned to project: ${
+        duplicate_datasets.map((ds) => ds.id).join(', ')}`;
       if (duplicate_datasets.length > 0) {
-        next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
-        + `${duplicate_datasets.map((ds) => ds.id)}`));
+        throw new Error(error_str);
       }
 
       const project_being_created = await tx.project.create({
@@ -778,28 +779,8 @@ router.patch(
      * role is forbidden
      */
 
-    // get project or send 404 if not found
-    await prisma.project.findFirstOrThrow({
-      where: {
-        id: req.params.id,
-      },
-    });
-
     const add_dataset_ids = req.body.add_dataset_ids || [];
     const remove_dataset_ids = req.body.remove_dataset_ids || [];
-
-    const duplicate_datasets = await prisma.dataset.findMany({
-      where: {
-        id: {
-          in: add_dataset_ids,
-        },
-        is_duplicate: true,
-      },
-    });
-    if (duplicate_datasets.length > 0) {
-      next(createError.BadRequest('Request contains duplicate datasets which cannot be assigned to project: '
-        + `${duplicate_datasets.map((ds) => ds.id)}`));
-    }
 
     const create_data = add_dataset_ids.map((dataset_id) => ({
       project_id: req.params.id,
@@ -811,18 +792,41 @@ router.patch(
       dataset_id,
     }));
 
-    // create new associations
-    const add_assocs = prisma.project_dataset.createMany({
-      data: create_data,
-    });
-    // delete existing associations
-    const delete_assocs = prisma.project_dataset.deleteMany({
-      where: {
-        OR: delete_data,
-      },
-    });
+    await prisma.$transaction(async (tx) => {
+      // get project or send 404 if not found
+      await tx.project.findUniqueOrThrow({
+        where: {
+          id: req.params.id,
+        },
+      });
 
-    await prisma.$transaction([delete_assocs, add_assocs]);
+      const duplicate_datasets_being_assigned = await tx.dataset.findMany({
+        where: {
+          id: {
+            in: add_dataset_ids,
+          },
+          is_duplicate: true,
+        },
+      });
+
+      const duplicate_datasets_count = duplicate_datasets_being_assigned.length;
+      if (duplicate_datasets_count > 0) {
+        const error_str = `The following duplicate datasets cannot be assigned to project: ${
+          duplicate_datasets_being_assigned.map((ds) => (ds.id)).join(', ')}`;
+        throw new Error(error_str);
+      }
+
+      // create new associations
+      await tx.project_dataset.createMany({
+        data: create_data,
+      });
+      // delete existing associations
+      await tx.project_dataset.deleteMany({
+        where: {
+          OR: delete_data,
+        },
+      });
+    });
 
     res.send();
   }),
