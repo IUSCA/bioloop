@@ -41,9 +41,6 @@ const fetchDatasetWorkflows = (dataset_id) => {
     .getWorkflows({
       dataset_id,
       statuses: ["PENDING", "STARTED", "FAILURE"],
-      params: {
-        last_run_only: true,
-      },
     })
     .then((res) => {
       datasetWorkflows.value = res.data;
