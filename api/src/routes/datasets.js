@@ -220,7 +220,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
-    query('match_name_exact').default(true).toBoolean(),
+    query('match_name_exact').default(false).toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
