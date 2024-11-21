@@ -411,8 +411,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
-    query('match_name_exact').toBoolean().optional().default(true),
-    query('include_file_type').toBoolean().optional(),
+    query('match_name_exact').default(true).toBoolean(),
     query('include_action_items').optional().toBoolean(),
     query('include_duplications').optional().toBoolean(),
     query('include_states').toBoolean().optional(),
@@ -902,11 +901,6 @@ router.delete(
         },
       },
     });
-
-    if (_dataset.is_duplicate) {
-      return next(createError.BadRequest('Deletion cannot be performed on active '
-        + `duplicate dataset ${req.params.id}.`));
-    }
 
     if (_dataset) {
       await datasetService.soft_delete(_dataset, req.user?.id);
