@@ -1,6 +1,9 @@
 <template>
   <div class="flex justify-center">
     <div class="w-full flex-none">
+      <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
+      <DuplicationAlerts v-if="dataset" :dataset="dataset" />
+
       <va-inner-loading :loading="data_loading">
         <!-- BreadCrumbs Navigation / Search Filters -->
         <!-- Make height of the div fixed to prevent content jumping when v-if cond. changes -->
@@ -26,6 +29,7 @@
           :show-download="props.showDownload"
           :files="files"
           :dataset-id="props.datasetId"
+          @download-initiated="fetch_files"
         />
       </va-inner-loading>
     </div>
@@ -48,6 +52,7 @@ const props = defineProps({
   showDownload: Boolean,
 });
 
+const dataset = ref(null);
 const data_loading = ref(false);
 const fileList = ref([]);
 const searchResults = ref([]);
@@ -55,12 +60,24 @@ const files = computed(() => {
   return isInSearchMode.value ? searchResults.value : fileList.value;
 });
 
+const fetch_files = () => {
+  get_file_list(pwd.value);
+};
+
 function get_file_list(path) {
   data_loading.value = true;
-  datasetService
-    .list_files({ id: props.datasetId, basepath: path })
-    .then((res) => {
-      fileList.value = res.data;
+  Promise.all([
+    datasetService.getById({
+      id: props.datasetId,
+      include_duplications: true,
+      include_states: true,
+      include_action_items: true,
+    }),
+    datasetService.list_files({ id: props.datasetId, basepath: path }),
+  ])
+    .then((responses) => {
+      dataset.value = responses[0].data;
+      fileList.value = responses[1].data;
     })
     .catch((err) => {
       console.error(err);
@@ -107,7 +124,7 @@ watch(
     // navigating to a directory disables the search mode
     store.resetFilters();
     isInSearchMode.value = false;
-    get_file_list(pwd.value);
+    fetch_files();
   },
   { immediate: true },
 );

@@ -60,6 +60,16 @@ router.get(
             },
           ],
         },
+        include: {
+          dataset_action_items: {
+            include: {
+              dataset: true,
+            },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
       });
       return filtered_notifications;
     });
@@ -128,9 +138,7 @@ router.delete(
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    const queryParams = req.query;
-
-    if (Object.keys(queryParams).length === 0) {
+    if (Object.keys(req.query).length === 0) {
       res.send({
         count: 0,
       });
@@ -138,12 +146,11 @@ router.delete(
     }
 
     const updatedCount = await prisma.notification.updateMany({
-      where: queryParams,
+      where: { ...req.query },
       data: {
         status: 'RESOLVED',
       },
     });
-
     res.json(updatedCount);
   }),
 );

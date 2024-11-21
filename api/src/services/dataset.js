@@ -5,12 +5,13 @@ const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
 
+const dayjs = require('dayjs');
 const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
-  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_FILES, INCLUDE_DUPLICATIONS,
 } = require('../constants');
 
 const prisma = new PrismaClient();
@@ -98,22 +99,13 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   bundle = false,
+  include_duplications = false,
+  include_action_items = false,
   includeProjects = false,
   initiator = false,
   include_upload_log = false,
 }) {
-  const fileSelect = files ? {
-    select: {
-      path: true,
-      md5: true,
-    },
-    where: {
-      NOT: {
-        filetype: 'directory',
-      },
-    },
-  } : false;
-
+  const fileSelect = files ? INCLUDE_FILES : { files: false };
   const workflow_include = initiator ? {
     workflows: {
       select: {
@@ -126,7 +118,7 @@ async function get_dataset({
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
-      files: fileSelect,
+      ...fileSelect,
       ...workflow_include,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
@@ -145,6 +137,12 @@ async function get_dataset({
           },
         },
       } : false,
+      ...(include_duplications && INCLUDE_DUPLICATIONS),
+      action_items: include_action_items ? {
+        where: {
+          active: true,
+        },
+      } : undefined,
     },
   });
   const dataset_workflows = dataset.workflows;
@@ -480,10 +478,63 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+/**
+ * Get workflows for a dataset
+ * @param dataset_id    the id of the dataset whose workflows are to be retrieved
+ * @param last_run_only if true, only the last run of each workflow is returned
+ * @param statuses      an array of workflow statuses to filter retrieved workflows by
+ * @returns Array of workflows
+ */
+async function get_workflows({ dataset_id, last_run_only = false, statuses = [] }) {
+  const workflows = await prisma.workflow.findMany({
+    where: {
+      dataset_id,
+    },
+  });
+
+  const workflow_ids = workflows.map((w) => w.id);
+
+  const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
+
+  const retrievedWorkflowsResponses = await Promise.all(wf_promises);
+  let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
+
+  if (last_run_only) {
+    // filter last successful runs
+    let workflow_names = retrievedWorkflows
+      .map((wf) => wf.name);
+    // get distinct workflow names
+    workflow_names = workflow_names
+      .filter((name, i) => workflow_names.indexOf(name) === i);
+
+    // group workflows by distinct workflow names
+    const workflows_grouped_by_name = workflow_names.map((wf_name) => (
+      retrievedWorkflows
+        .filter((wf) => wf.name === wf_name)));
+
+    retrievedWorkflows = workflows_grouped_by_name.map(
+      (wfs_grouped_by_name) => wfs_grouped_by_name.reduce(
+        (acc, curr) => (dayjs(acc.updated_at).diff(dayjs(curr.updated_at)) >= 0 ? acc : curr),
+      ),
+    );
+
+    // console.log('retrievedWorkflows');
+    // console.dir(retrievedWorkflows, { depth: null });
+  }
+
+  // filter by status
+  if ((statuses || []).length > 0) {
+    retrievedWorkflows = retrievedWorkflows.filter((wf) => statuses.includes(wf.status));
+  }
+
+  return retrievedWorkflows;
+}
+
 module.exports = {
   soft_delete,
   get_dataset,
   create_workflow,
+  get_workflows,
   create_filetree,
   has_dataset_assoc,
   files_ls,
