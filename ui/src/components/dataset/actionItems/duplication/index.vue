@@ -189,14 +189,11 @@ const isDuplicateDatasetReadyForProcessing = computed(() => {
 });
 
 const isActionItemActive = computed(() => {
-  return props.actionItem.active;
+  return props.actionItem.status === "CREATED";
 });
 
 const isActionItemAcknowledged = computed(() => {
-  return (
-    props.actionItem.status === "ACKNOWLEDGED" ||
-    props.actionItem.status === "RESOLVED"
-  );
+  return props.actionItem.status === "RESOLVED";
 });
 
 const areControlsDisabled = computed(() => {

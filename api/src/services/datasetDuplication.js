@@ -169,14 +169,12 @@ const create_state_log = async ({
  * @param prisma_transaction_instance Prisma transaction instance
  * @param action_item_id ID of the action item to be updated
  * @param action_item_status New status of the action item
- * @param active_item_active New `active` flag status of the action item
  * @param notification_status Optional. New status of the notification associated with the action item
- * @param notification_active Optional. New `active` flag status of the notification associated with the action item
  * @returns {Promise<{updated_action_item: T}>}
  */
 const update_notification_and_action_item = async ({
   prisma_transaction_instance, action_item_status, action_item_id,
-  active_item_active, notification_status, notification_active,
+  notification_status,
 }) => {
   const action_item = await prisma_transaction_instance.dataset_action_item.update({
     where: {
@@ -184,12 +182,10 @@ const update_notification_and_action_item = async ({
     },
     data: {
       status: action_item_status,
-      active: active_item_active,
       ...(notification_status && {
         notification: {
           update: {
             status: notification_status,
-            active: notification_active,
           },
         },
       }),
@@ -265,23 +261,19 @@ const transfer_dataset_associations = async ({
     },
   });
 
-  console.log(`Transferring ${original_dataset_project_associations.length} project-dataset associations.`);
-
   // eslint-disable-next-line no-restricted-syntax
   for (const association of original_dataset_project_associations) {
-    // console.log("associating dataset", duplicate_dataset.id, "with project", association.project_id);
     const associated_project_id = association.project_id;
-    // eslint-disable-next-line no-await-in-loop
-    console.log("deleting associations with project", associated_project_id, "with dataset", duplicate_dataset.id);
     // eslint-disable-next-line no-await-in-loop
     await prisma_transaction_instance.project_dataset.delete({
       where: {
         project_id_dataset_id: {
           dataset_id: original_dataset.id,
           project_id: associated_project_id,
-        }
+        },
       },
     });
+    // eslint-disable-next-line no-await-in-loop
     await prisma_transaction_instance.project_dataset.create({
       data: {
         dataset_id: duplicate_dataset.id,
@@ -363,15 +355,13 @@ const reject_concurrent_active_duplicates = async ({
     const current_duplicate_dataset_action_item = (current_duplicate.duplicated_from.duplicate_dataset
       .action_items || [])
       .filter((item) => item.type
-        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
+        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.status === 'CREATED')[0];
     // eslint-disable-next-line no-await-in-loop
     await update_notification_and_action_item({
       prisma_transaction_instance,
       action_item_id: current_duplicate_dataset_action_item.id,
       action_item_status: 'RESOLVED',
-      action_item_active: false,
       notification_status: 'RESOLVED',
-      notification_active: false,
     });
   }
 
@@ -446,14 +436,12 @@ async function accept_duplicate_dataset({ duplicate_dataset_id, accepted_by_id }
 
     const duplicate_dataset_action_item = (duplicate_dataset.duplicated_from.duplicate_dataset.action_items || [])
       .filter((item) => item.type
-        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
+        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.status === 'CREATED')[0];
     await update_notification_and_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
       action_item_status: 'RESOLVED',
-      action_item_active: false,
       notification_status: 'RESOLVED',
-      notification_active: false,
     });
     await create_audit_log({
       prisma_transaction_instance: tx,
@@ -521,14 +509,12 @@ async function reject_duplicate_dataset({ duplicate_dataset_id, rejected_by_id }
 
     const duplicate_dataset_action_item = (duplicate_dataset.duplicated_from.duplicate_dataset.action_items || [])
       .filter((item) => item.type
-        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.active)[0];
+        === config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION && item.status === 'CREATED')[0];
     await update_notification_and_action_item({
       prisma_transaction_instance: tx,
       action_item_id: duplicate_dataset_action_item.id,
       action_item_status: 'RESOLVED',
-      action_item_active: false,
       notification_status: 'RESOLVED',
-      notification_active: false,
     });
     await create_audit_log({
       prisma_transaction_instance: tx,
