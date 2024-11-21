@@ -104,10 +104,6 @@ class Register:
         self.reg_config = config['registration'][self.dataset_type]
         self.rejects: set[str] = set(self.reg_config['rejects'])
         self.completed: set[str] = set(self.get_registered_dataset_names())  # HTTP GET
-        # logger.info("got self.completed")
-        # for e in self.completed:
-        #     logger.info(e)
-
         # self.duplicates: Datasets currently registered in the system as duplicates
         self.duplicates: set[str] = set(self.get_registered_dataset_names({
             'is_duplicate': True
@@ -146,9 +142,6 @@ class Register:
         for p in duplicate_dataset_candidates:
             logger.info(f'analyzing if directory {p.name} has been duplicated since it was registered as a dataset')
             candidate_last_modified_ts = dir_last_modified_time(p)
-
-            # expected to be local time (UTC)
-
             candidate_last_modified_dt = datetime.datetime.fromtimestamp(candidate_last_modified_ts).astimezone()
             logger.info(f'last modified datetime: {candidate_last_modified_dt}')
             duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=p.name)
@@ -224,14 +217,14 @@ class Register:
                          Expected one, but found {len(matching_datasets)} active
                          datasets having name {dir_name}
                          and type {self.dataset_type} that are eligible for
-                         duplication. This is unexpected, and a duplicate dataset
-                         will not be created.
+                         duplication. This is unexpected, and directory {dir_name}
+                         will not be registered as a duplicate dataset.
                          """)
             return None
         return matching_datasets[0]
 
     def register_candidate(self, candidate: Path):
-        logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
+        logger.info(f'registering {self.dataset_type} {candidate.name}')
         dataset_payload = {
             'data': {
                 'name': slugify_(candidate.name),
@@ -243,17 +236,20 @@ class Register:
         self.run_workflows(created_dataset, self.default_wf_name)
 
     def register_duplicate_candidate(self, candidate: Path):
-        logger.info(f'registering duplicate {self.dataset_type} dataset - {candidate.name}')
-
+        logger.info(f'Registering duplicate {self.dataset_type} {candidate.name}')
         # Get any active and non-duplicate datasets with the same name and type
         duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=candidate.name)
         logger.info(f'Duplicated from {self.dataset_type} {duplicated_from_dataset["name"]} (id: {duplicated_from_dataset["id"]})')
         if duplicated_from_dataset is not None:
-            created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=duplicated_from_dataset['id'])
-            self.run_workflows(
-                created_duplicate_dataset,
-                'handle_duplicate_dataset'
-            )
+            if not config['dry_run_features']['dataset_duplication']:
+                created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=duplicated_from_dataset['id'])
+                self.run_workflows(
+                    created_duplicate_dataset,
+                    'handle_duplicate_dataset'
+                )
+            else:
+                logger.info(f'Dry run: Skipping duplicate dataset creation for {self.dataset_type} {candidate.name}')
+                logger.info(f'Dry run: Will not launch workflow "handle_duplicate_dataset"')
 
     def run_workflows(self, dataset, workflow_name=None):
         dataset_id = dataset['id']

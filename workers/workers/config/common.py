@@ -246,5 +246,8 @@ config = {
     },
     'ACTION_ITEM_TYPES': {
         'DUPLICATE_DATASET_INGESTION': 'DUPLICATE_DATASET_INGESTION',
+    },
+    'dry_run_features': {
+        'dataset_duplication': True
     }
 }
