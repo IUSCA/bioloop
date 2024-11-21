@@ -35,6 +35,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
         dataset_type=duplicate_dataset['type'],
         is_duplicate=False,
         deleted=False,
+        match_name_exact=True
     )
 
     if len(matching_datasets) != 1:

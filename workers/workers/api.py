@@ -139,7 +139,8 @@ def get_all_datasets(
         archived=None,
         bundle=False,
         is_duplicate=False,
-        include_duplications=False):
+        include_duplications=False,
+        match_name_exact=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -150,6 +151,7 @@ def get_all_datasets(
             'is_duplicate': is_duplicate,
             'bundle': bundle,
             'include_duplications': include_duplications,
+            'match_name_exact': match_name_exact,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()

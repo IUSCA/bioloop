@@ -112,9 +112,6 @@ class Register:
         self.duplicates: set[str] = set(self.get_registered_dataset_names({
             'is_duplicate': True
         }))  # HTTP GET
-        logger.info(f'duplicates:')
-        for e in self.duplicates:
-            logger.info(e)
         self.default_wf_name = default_wf_name
 
     def is_a_reject(self, name):
@@ -122,8 +119,6 @@ class Register:
 
     def get_registered_dataset_names(self, filters: dict = None) -> list[str]:
         is_duplicate = filters['is_duplicate'] if filters is not None else False
-        logger.info("get_registered_dataset_names called")
-        logger.info(f'Is duplicate: {is_duplicate}')
         datasets = api.get_all_datasets(is_duplicate=is_duplicate)
         return [b['name'] for b in datasets]
 
@@ -134,40 +129,36 @@ class Register:
     """
 
     def get_duplicate_dataset_dirs(self, duplicate_dataset_candidate_dirs: list[Path]) -> list[Path]:
-        logger.info("get_duplicate_datasets called")
-        logger.info(f'Duplicate dataset candidate dirs:')
+        logger.info(f'Duplicate dataset candidate directories for type {self.dataset_type}:')
         for e in duplicate_dataset_candidate_dirs:
             logger.info(e)
-        # logger.info(f'Completed datasets:')
-        # for e in self.completed:
-        #     logger.info(e)
-
         duplicate_dataset_candidates: list[Path] = [p for p in duplicate_dataset_candidate_dirs if all([
             slugify_(p.name) in self.completed,
             not self.is_a_reject(slugify_(p.name)),
         ])]
-        logger.info(f'Duplicate dataset candidates:')
+        logger.info(f'Duplicate dataset candidates for type {self.dataset_type}:')
         for e in duplicate_dataset_candidates:
             logger.info(e)
 
         duplicate_datasets: list[Path] = []
         for p in duplicate_dataset_candidates:
-            logger.info(f'checking directory: {p.name}')
-            # last modified time of the file in seconds since epoch
-            candidate_last_modified_time = dir_last_modified_time(p)
-            logger.info(f'last modified time: {candidate_last_modified_time}')
+            logger.info(f'analyzing if directory {p.name} has been duplicated since it was registered as a dataset')
+            candidate_last_modified_ts = dir_last_modified_time(p)
 
+            # expected to be local time (UTC)
+            candidate_last_modified_dt = datetime.datetime.fromtimestamp(candidate_last_modified_ts).astimezone()
+            logger.info(f'last modified datetime: {candidate_last_modified_dt}')
             duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=p.name)
-            duplicated_from_dataset_created_at = duplicated_from_dataset['created_at']
-            # dataset's creation time in seconds since epoch
-            duplicated_from_dataset_created_at_time = datetime.datetime.timestamp(duplicated_from_dataset_created_at)
-            logger.info(f'dir created at time: {duplicated_from_dataset_created_at_time}')
+            # dataset's time is in UTC - convert to local time
+            duplicated_from_dataset_created_at_dt = (duplicated_from_dataset['created_at']
+                                                     .replace(tzinfo=datetime.timezone.utc).astimezone())
+            logger.info(f'duplicated from dataset created at: {duplicated_from_dataset_created_at_dt}')
 
-            if candidate_last_modified_time > duplicated_from_dataset_created_at_time:
-                logger.info(f'Determined directory {p.name} to be a duplicate dataset')
+            if candidate_last_modified_dt > duplicated_from_dataset_created_at_dt:
+                logger.info(f'Determined directory {p.name} to be a duplicate {self.dataset_type}')
                 duplicate_datasets.append(p)
             else:
-                logger.info(f'Determined directory {p.name} to not be a duplicate dataset')
+                logger.info(f'Determined directory {p.name} to not be a duplicate {self.dataset_type}')
         return duplicate_datasets
 
     def get_dataset(self):
@@ -223,6 +214,7 @@ class Register:
     def get_duplicated_from_dataset(self, dir_name: str) -> dict | None:
         matching_datasets = api.get_all_datasets(dataset_type=self.dataset_type,
                                                  name=dir_name,
+                                                 match_name_exact=True,
                                                  is_duplicate=False)
         if len(matching_datasets) != 1:
             logger.error(f"""
@@ -252,7 +244,7 @@ class Register:
 
         # Get any active and non-duplicate datasets with the same name and type
         duplicated_from_dataset = self.get_duplicated_from_dataset(dir_name=candidate.name)
-        logger.info(f'Duplicated from dataset: {duplicated_from_dataset["name"]}')
+        logger.info(f'Duplicated from {self.dataset_type} {duplicated_from_dataset["name"]} (id: {duplicated_from_dataset["id"]})')
         if duplicated_from_dataset is not None:
             created_duplicate_dataset = api.create_duplicate_dataset(dataset_id=duplicated_from_dataset['id'])
             self.run_workflows(
