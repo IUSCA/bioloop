@@ -136,7 +136,6 @@ router.patch(
                 id: req.params.action_item_id,
               },
               data: {
-                redirect_url: `/datasets/${req.params.id}/actionItems/${req.params.action_item_id}`,
                 ingestion_checks: {
                   createMany: { data: ingestion_checks },
                 },
@@ -690,7 +689,7 @@ router.post(
       // duplicate dataset
       const latestDuplicateVersion = existingDuplicates[0]?.version;
 
-      const duplicate_dataset_being_created = await tx.dataset.create({
+      let duplicate_dataset_being_created = await tx.dataset.create({
         data: {
           name: dataset.name,
           type: dataset.type,
@@ -726,8 +725,30 @@ router.post(
         },
         include: {
           ...CONSTANTS.INCLUDE_WORKFLOWS,
+          action_items: true,
         },
       });
+      const created_action_item = duplicate_dataset_being_created.action_items[0];
+      const notification_redirect_url = `/datasets/${req.params.id}/actionItems/${created_action_item.id}`;
+
+      await tx.dataset_action_item.update({
+        where: {
+          id: created_action_item.id,
+        },
+        data: {
+          redirect_url: notification_redirect_url,
+        },
+      });
+
+      duplicate_dataset_being_created = await tx.dataset.findUnique({
+        where: {
+          id: duplicate_dataset_being_created.id,
+        },
+        include: {
+          ...CONSTANTS.INCLUDE_WORKFLOWS,
+        },
+      });
+
       return duplicate_dataset_being_created;
     });
 
