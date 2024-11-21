@@ -912,11 +912,7 @@ router.delete(
     // mark the dataset as deleted on success.
     const _dataset = await datasetService.get_dataset({
       id: req.params.id,
-      workflows: {
-        select: {
-          id: true,
-        },
-      },
+      workflows: true,
     });
 
     if (_dataset) {
@@ -927,36 +923,6 @@ router.delete(
     }
   }),
 );
-
-// delete - UI
-// router.delete(
-//   '/',
-//   validate([
-//     query('is_duplicate').optional().isBoolean().toBoolean(),
-//   ]),
-//   isPermittedTo('delete'),
-//   asyncHandler(async (req, res, next) => {
-//     const filtered_query = buildQueryObject(req.query);
-//
-//     const matching_datasets = (Object.keys(filtered_query).length > 0)
-//       ? await prisma.dataset.findMany({
-//         where: filtered_query,
-//         include: {
-//           workflows: true,
-//         },
-//       }) : [];
-//
-//     // eslint-disable-next-line no-restricted-syntax
-//     for (const dataset of matching_datasets) {
-//       if (!dataset.is_deleted) {
-//         // eslint-disable-next-line no-await-in-loop
-//         await datasetService.soft_delete(dataset, req.user?.id);
-//       }
-//     }
-//
-//     res.send(`${matching_datasets.length}`);
-//   }),
-// );
 
 const workflow_access_check = (req, res, next) => {
   // The workflows that a user is allowed to run depends on their role
