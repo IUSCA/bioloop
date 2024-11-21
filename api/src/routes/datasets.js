@@ -396,7 +396,7 @@ router.get(
     query('has_source_data').toBoolean().optional(),
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
-    query('is_duplicate').toBoolean().optional(),
+    query('is_duplicate').default(false).toBoolean(),
     query('type')
       .isIn(config.dataset_types)
       .optional(),
@@ -411,7 +411,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
-    query('match_name_exact').default(true).toBoolean(),
+    query('match_name_exact').default(false).toBoolean(),
     query('include_action_items').optional().toBoolean(),
     query('include_duplications').optional().toBoolean(),
     query('include_states').toBoolean().optional(),
