@@ -6,7 +6,9 @@ Bioloop allows for duplicate datasets to be registered in the system.
 
 ## Registration
 
-Duplicate datasets are registered by the `watch.py` script, if it finds a dataset present in the `source_dir` directory which has the same name and type as an existing active dataset.
+Duplicate datasets are registered by the `watch.py` script, if:
+- it finds a directory present in the `source_dir` directory which has the same name as an existing active dataset.
+- the modification time on the directory found is later than the time when a dataset with that directory's name was registered.
 
 The duplicate dataset is registered at the database level, and action items and notifications are created in the system which allows authorized users to review the duplicate dataset.
 
@@ -23,19 +25,21 @@ The results of the comparison analysis are shown to authorized users in the UI, 
 
 - The system is designed to handle multiple co-existing duplicates of the same dataset. However, for simplicity, this feature is disabled at the moment, and only one duplicate is allowed to exist in the system.
   - If enabled, multiple concurrent duplicates of a dataset will only be registered at the database level, not at the filesystem level.
+    - This would mean that if one duplicate is currently registered for a dataset, and a user later places another directory with the dataset's name at the dataset's `origin_path`, a second duplicate dataset with that name/type will be registered in the database, however, the contents of the first dataset's `origin_path` will be overwritten by the more recent duplicate.
 - If multiple duplicates of the same dataset are allowed to co-exist in the system, they will be assigned versions to differentiate between them.
 - Overwritten datasets are also assigned versions, in case a dataset is overwritten more than once.
 
 ### Action Items
 
-For each duplicate dataset registered by the system, an action item is created in the Postgres table `dataset_action_item`, and a notification is persisted to the `notification` table.
+For each duplicate dataset registered by the system, an action item is created in the Postgres table `dataset_action_item`, and a notification is persisted to the `notification` table. Each notification can be created for a specific user, or a specific role.
 
 Each action item is linked to multiple `dataset_ingestion_check` records, and each `dataset_ingestion_check` record represents the results of comparing a duplicate dataset with the original dataset based on a specific criteria.
 
-A dataset is compared with another based on 3 criteria:
-1. There are no files in either dataset that have the same name and path as a file in the other dataset, but a different MD5 checksum. 
-2. Original dataset has files that the duplicate dataset doesn't.
-3. Duplicate dataset has files that the original dataset doesn't.
+A dataset is compared with another based on 4 criteria:
+1. The number of files in both datasets match 
+2. There are no files in either dataset that have the same name and path as a file in the other dataset, but a different MD5 checksum. 
+3. Original dataset has files that the duplicate dataset doesn't.
+4. Duplicate dataset has files that the original dataset doesn't.
 
 ---
 
@@ -54,7 +58,7 @@ Only Operator and Admin roles are authorized to accept or reject an incoming dup
 <img src="assets/datasetDuplication/assets/accept_duplicate_steps.png" />
 
 When an authorized user accepts a duplicate dataset into the system, the following steps take place:
-1. The action item and notification corresponding to the duplicate dataset are marked as resolved and marked as inactive.
+1. The action item and notification corresponding to the duplicate dataset are marked as resolved.
 2. An audit log is created for the incoming duplicate dataset's acceptance, and another one for the original dataset's overwrite.
 3. Any other duplicates that may have been created for the original dataset are rejected, and their action items and notifications are resolved. 
 4. The original dataset is deleted from the system by marking it as deleted in the database (i.e. setting its `is_deleted` to `true`).
@@ -69,7 +73,7 @@ When an authorized user accepts a duplicate dataset into the system, the followi
 <img src="assets/datasetDuplication/assets/reject_duplicate_steps.png" />
 
 When an authorized user rejects a duplicate dataset from the system, the following steps take place:
-1. The action item and notification corresponding to the duplicate dataset are acknowledged.
+1. The action item and notification corresponding to the duplicate dataset are resolved.
 2. An audit log is created for the incoming duplicate dataset's rejection.
 3. The state of the rejected dataset is changed to `DUPLICATE_REJECTED`
 4. The rejected dataset is marked as deleted in the database (by setting its `is_deleted` to `true`).
