@@ -266,7 +266,6 @@ model notification {
   type                 NOTIFICATION_TYPE
   label                String
   text                 String?
-  active               Boolean               @default(true)
   status               NOTIFICATION_STATUS   @default(CREATED)
   acknowledged_by_id   Int?
   acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])

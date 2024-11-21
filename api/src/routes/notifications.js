@@ -20,8 +20,6 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('by_active_action_items').optional().toBoolean(),
-    query('active').optional().toBoolean(),
     query('status').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -31,12 +29,6 @@ router.get(
     const currentUserRole = req.user.roles[0];
 
     const filterQuery = _.omitBy(_.isUndefined)({
-      dataset_action_items: req.query.by_active_action_items ? {
-        some: {
-          status: 'CREATED',
-        },
-      } : undefined,
-      active: req.query.active || true,
       status: req.query.status || 'CREATED',
     });
 
@@ -140,16 +132,13 @@ router.delete(
   '/',
   isPermittedTo('delete'),
   validate([
-    query('active').isBoolean().toBoolean().optional(),
     query('status').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    const filterQuery = buildFilterQuery(req.query);
-
-    if (Object.keys(filterQuery).length === 0) {
+    if (Object.keys(req.query).length === 0) {
       res.send({
         count: 0,
       });
@@ -157,18 +146,13 @@ router.delete(
     }
 
     const updatedCount = await prisma.notification.updateMany({
-      where: filterQuery,
+      where: { ...req.query },
       data: {
         status: 'RESOLVED',
-        active: false,
       },
     });
     res.json(updatedCount);
   }),
 );
-
-const buildFilterQuery = ({ active }) => _.omitBy(_.isUndefined)({
-  active,
-});
 
 module.exports = router;
