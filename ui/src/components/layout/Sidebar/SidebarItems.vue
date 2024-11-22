@@ -83,6 +83,7 @@ const collapsibleStates = computed({
       });
     });
   },
+  // eslint-disable-next-line no-unused-vars
   set(value) {},
 });
 
