@@ -76,6 +76,9 @@ const exports = {
     notifications: {
       enabledForRoles: [],
     },
+    ingestion: {
+      enabledForRoles: ["admin"],
+    },
     downloads: true,
   },
   notifications: {

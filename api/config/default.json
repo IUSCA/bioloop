@@ -173,6 +173,9 @@
     "slateProject": ""
   },
   "enabled_features": {
+    "fs": {
+      "enabled_for_roles": ["admin"]
+    },
     "downloads": true
   }
 }
