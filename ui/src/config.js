@@ -77,6 +77,7 @@ const exports = {
     notifications: {
       enabledForRoles: [],
     },
+    downloads: true,
   },
   notifications: {
     pollingInterval: 5000, // milliseconds

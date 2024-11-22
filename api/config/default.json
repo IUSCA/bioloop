@@ -171,5 +171,8 @@
   "restricted_ingestion_dirs": {
     "slateScratch": "",
     "slateProject": ""
+  },
+  "enabled_features": {
+    "downloads": true
   }
 }
