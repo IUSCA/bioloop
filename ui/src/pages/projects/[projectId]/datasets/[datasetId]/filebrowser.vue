@@ -1,7 +1,7 @@
 <template>
   <FileBrowser
     :dataset-id="props.datasetId"
-    :show-download="config.file_browser.enable_downloads && dataset.is_staged"
+    :show-download="config.enabledFeatures.downloads && dataset.is_staged"
   />
 </template>
 
