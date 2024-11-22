@@ -77,6 +77,9 @@ const exports = {
     notifications: {
       enabledForRoles: [],
     },
+    ingestion: {
+      enabledForRoles: ["admin"],
+    },
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
