@@ -171,5 +171,10 @@
   "restricted_ingestion_dirs": {
     "slateScratch": "",
     "slateProject": ""
+  },
+  "enabled_features": {
+    "fs": {
+      "enabled_for_roles": ["admin"]
+    }
   }
 }
