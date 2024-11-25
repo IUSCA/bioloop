@@ -194,11 +194,12 @@ const update_notification_and_action_item = async ({
   return { updated_action_item: action_item };
 };
 
+// TODO - change arg names?
 const check_for_pending_workflows = async ({ dataset_id, statuses = [] }) => {
   const retrievedWorkflows = await datasetService.get_workflows({
     dataset_id,
     statuses,
-    last_run_only: true,
+    last_runs_only: true,
   });
 
   if (retrievedWorkflows.length > 0) {
