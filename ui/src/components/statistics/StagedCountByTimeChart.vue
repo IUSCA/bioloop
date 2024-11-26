@@ -1,10 +1,31 @@
 <template>
   <div class="flex flex-col gap-5">
     <div>
-      <LineChart
-        :chart-data="chartData"
-        :chart-options="chartOptions"
-      ></LineChart>
+      <!-- Display 'Loading' while data is being fetched -->
+      <div
+        v-if="loading"
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        Loading...
+      </div>
+
+      <!-- Display 'No Data Found' if no data is fetched -->
+      <div
+        v-else-if="noData"
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        No Data Found
+      </div>
+
+      <!-- Show chart when data is loaded and available -->
+      <v-chart
+        v-else
+        :option="lineChartOption"
+        autoresize
+        style="height: 500px; width: 100%"
+      />
     </div>
     <div class="flex flex-row justify-center">
       <div class="max-w-max" v-if="isDateRangeLoaded">
@@ -29,141 +50,131 @@
 </template>
 
 <script setup>
-import { getDefaultChartColors } from "@/services/charts";
-import { date } from "@/services/datetime";
 import StatisticsService from "@/services/statistics";
 import toast from "@/services/toast";
-import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import dayjs from "dayjs";
 import "dayjs/locale/en";
-import _ from "lodash";
+import { LineChart } from "echarts/charts";
+import {
+  DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+} from "echarts/components";
+import { use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { computed, onMounted, ref } from "vue";
+import VChart from "vue-echarts";
 
-const isDark = useDark();
-
-const defaultChartColors = computed(() => {
-  return getDefaultChartColors(isDark.value);
-});
-
-const chartData = ref({});
-
-const chartOptions = computed(() => {
-  return getChartOptions({
-    colors: defaultChartColors.value,
-  });
-});
-
-// Date range will be shifted backwards or forwards by this many months, when user clicks the appropriate button
-const MONTH_DIFFERENCE = 3;
+// Register ECharts components
+use([
+  CanvasRenderer,
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  DataZoomComponent,
+]);
 
 const endDate = ref();
 const startDate = ref();
 const endDateMax = ref();
 const startDateMin = ref();
-
 const isDateRangeLoaded = ref(false);
+const chartData = ref({ dates: [], counts: [] }); // Initialize with empty arrays
+const loading = ref(true); // Add loading state
+const noData = ref(false); // Add noData state
 
-const getChartOptions = ({ colors }) => ({
-  color: colors.FONT,
-  scales: {
-    x: {
-      ticks: {
-        color: colors.FONT,
-      },
-      type: "time", // https://www.chartjs.org/docs/latest/axes/cartesian/time.html#configuration-options
-      time: {
-        unit: "month",
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-    y: {
-      min: 0,
-      ticks: {
-        color: colors.FONT,
-        callback: (val) => {
-          if (val % 1 === 0) {
-            return val;
-          }
-        },
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-  },
-  adapters: {
-    date: {
-      locale: dayjs().locale("en"),
-    },
-  },
-  plugins: {
-    tooltip: {
-      backgroundColor: colors.TOOLTIP.BACKGROUND,
-      titleColor: colors.TOOLTIP.FONT,
-      bodyColor: colors.TOOLTIP.FONT,
-      callbacks: {
-        title: (arr) => {
-          return date(arr[0].dataset.data[arr[0].dataIndex].x);
-        },
-        label: (context) => context.dataset.data[context.dataIndex].y,
-      },
-    },
+const MONTH_DIFFERENCE = 3;
+
+const lineChartOption = computed(() => {
+  return {
     title: {
-      display: true,
       text: "Stage Requests Per Day",
-      color: colors.FONT,
-      font: {
-        size: 18,
+      left: "center",
+      textStyle: {
+        fontSize: 18,
       },
     },
-  },
+    tooltip: {
+      trigger: "axis",
+    },
+    xAxis: {
+      type: "category",
+      data: chartData.value.dates,
+      name: "Date", // X-axis title
+      nameLocation: "middle",
+      nameGap: 50, // Increase the gap between axis title and axis line
+      nameTextStyle: {
+        fontSize: 16, // Increase font size
+        fontWeight: "bold", // Make it bold
+      },
+    },
+    yAxis: {
+      type: "value",
+      min: 0,
+      name: "Requests", // X-axis title
+      nameLocation: "middle",
+      nameGap: 50, // Increase the gap between axis title and axis line
+      nameTextStyle: {
+        fontSize: 16, // Increase font size
+        fontWeight: "bold", // Make it bold
+      },
+    },
+    series: [
+      {
+        name: "Count",
+        type: "line",
+        data: chartData.value.counts,
+        smooth: true,
+      },
+    ],
+  };
 });
 
-const getDatasetColorsByTheme = (isDark) => {
-  return {
-    backgroundColor: isDark ? "rgba(74, 77, 83, 1)" : "rgba(201, 203, 207, 1)",
-    borderColor: isDark ? "rgba(74, 77, 83, 1)" : "rgba(201, 203, 207, 1)",
+const configureChartData = (data) => {
+  // Function to format date as YYYY-MM-DD
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toISOString().split("T")[0]; // Format date as YYYY-MM-DD
   };
-};
 
-const configureChartStatistics = (datasets) => {
-  return {
-    datasets: datasets.map((e) => {
-      return {
-        data: e.map((log) => ({
-          x: log.date,
-          y: log.count,
-        })),
-      };
-    }),
-  };
+  // Process data to remove the 'T00:00:00.000Z' part
+  const processedData = data.map((item) => ({
+    date: formatDate(item.date),
+    count: item.count,
+  }));
+
+  // Prepare the data for the chart
+  chartData.value.dates = processedData.map((item) => item.date);
+  chartData.value.counts = processedData.map((item) => item.count);
 };
 
 const retrieveAndConfigureChartData = (startDate, endDate) => {
+  loading.value = true; // Set loading to true before data is fetched
+  noData.value = false; // Reset noData state
   StatisticsService.getStageRequestCountGroupedByDate(startDate, endDate)
     .then((res) => {
-      chartData.value = configureChartStatistics([res.data]);
-      chartData.value.datasets[0].label = "Number of all Stage Requests";
+      configureChartData(res.data);
 
-      const chartColors = getDatasetColorsByTheme(isDark.value);
-      chartData.value.datasets[0].backgroundColor = chartColors.backgroundColor;
-      chartData.value.datasets[0].borderColor = chartColors.borderColor;
+      // Check if the data arrays are empty, set noData to true if empty
+      if (
+        chartData.value.dates.length === 0 ||
+        chartData.value.counts.length === 0
+      ) {
+        noData.value = true;
+      }
     })
     .catch((err) => {
       console.log("Unable to retrieve stage request counts by date", err);
       toast.error("Unable to retrieve stage request counts by date");
+    })
+    .finally(() => {
+      loading.value = false; // Set loading to false after data is fetched
     });
 };
-
-watch(isDark, (newIsDark) => {
-  const colors = getDatasetColorsByTheme(newIsDark);
-  let updatedChartData = _.cloneDeep(chartData.value);
-  updatedChartData.datasets[0].backgroundColor = colors.backgroundColor;
-  updatedChartData.datasets[0].borderColor = colors.borderColor;
-
-  chartData.value = updatedChartData;
-});
 
 onMounted(() => {
   // retrieve the range of dates for which to retrieve staging request logs
@@ -198,3 +209,10 @@ onMounted(() => {
     });
 });
 </script>
+
+<style scoped>
+.chart {
+  height: 500px;
+  width: 100%;
+}
+</style>

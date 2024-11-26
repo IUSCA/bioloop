@@ -278,14 +278,15 @@ router.get(
     const user_counts_by_date = await prisma.$queryRaw`
     select
       u.created_at::DATE,
-      count(*)
+      count(*) as count,
+      sum(count(*)) over (order by u.created_at::DATE asc) as cumulative_sum
     from
       "user" u
     group by u.created_at::DATE
     order by 
       u.created_at::DATE asc
   `;
-    res.json(numericStringsToNumbers(user_counts_by_date, ['count']));
+    res.json(numericStringsToNumbers(user_counts_by_date, ['count', 'cumulative_sum']));
   }),
 );
 

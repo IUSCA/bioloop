@@ -1,8 +1,30 @@
 <template>
   <div class="flex flex-col gap-5">
     <div>
-      <BarChart :chart-data="chartData" :chart-options="chartOptions">
-      </BarChart>
+      <!-- Render the bar chart -->
+      <v-chart
+        v-if="!isLoading && !isNoData"
+        class="chart"
+        :option="chartOptions"
+        autoresize
+        @click="onChartClick"
+      />
+      <!-- <div v-else class="loading-message">Loading...</div> -->
+      <div
+        v-else-if="isLoading"
+        class="flex items-center justify-center"
+        style="height: 500px; width: 100%; font-size: 24px"
+      >
+        Loading...
+      </div>
+      <!-- Display 'No Data Found' if no data is fetched -->
+      <div
+        v-else
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        No Data Found
+      </div>
     </div>
     <div class="flex flex-row justify-center">
       <div class="max-w-max most-accessed-chart-select-container">
@@ -19,178 +41,172 @@
 </template>
 
 <script setup>
-import config from "@/config";
-import { getDefaultChartColors } from "@/services/charts";
 import StatisticsService from "@/services/statistics";
 import toast from "@/services/toast";
-import _ from "lodash";
+import { BarChart } from "echarts/charts";
+import {
+  GridComponent,
+  TitleComponent,
+  TooltipComponent,
+  VisualMapComponent,
+} from "echarts/components";
+import { use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { computed, onMounted, ref, watch } from "vue";
+import VChart from "vue-echarts";
 
-const isDark = useDark();
+// Register ECharts components
+use([
+  CanvasRenderer,
+  BarChart,
+  GridComponent,
+  TitleComponent,
+  TooltipComponent,
+  VisualMapComponent,
+]);
 
-const defaultChartColors = computed(() => {
-  return getDefaultChartColors(isDark.value);
-});
-
-const chartData = ref({});
-const chartOptions = computed(() => {
-  return getChartOptions({
-    colors: defaultChartColors.value,
-  });
-});
+// Reactive variables
+const chartData = ref({ names: [], counts: [], ids: [] });
+const isLoading = ref(false);
+const isNoData = ref(false); // Track if data is empty
 
 const dropdownOptions = [10, 20];
 const numberOfEntriesRetrieved = ref(dropdownOptions[0]);
 
-const getChartOptions = ({ colors }) => ({
-  // https://www.chartjs.org/docs/latest/charts/bar.html#dataset-properties
-  indexAxis: "y",
-  color: colors.FONT,
-  scales: {
-    x: {
-      ticks: {
-        color: colors.FONT,
-        callback: (val) => {
-          // If the range of data-point values provided to chart.js is small enough (say starting
-          // value is 1, and ending value is 2), chart.js's default behavior is to try and
-          // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
-          // the axis's ticks. To avoid this, round values down
-          return val % 1 !== 0 ? Math.floor(val) : val;
-        },
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-    y: {
-      ticks: {
-        color: colors.FONT,
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-  },
-  plugins: {
-    tooltip: {
-      backgroundColor: colors.TOOLTIP.BACKGROUND,
-      titleColor: colors.TOOLTIP.FONT,
-      bodyColor: colors.TOOLTIP.FONT,
-      // https://www.chartjs.org/docs/latest/configuration/tooltip.html#tooltip-callbacks
-      callbacks: {
-        label: (context) => context.dataset.data[context.dataIndex],
-        afterLabel: (context) => {
-          const accessType = context.dataset.accessTypes[context.dataIndex];
-          const path = context.dataset.paths[context.dataIndex];
-          const isDirectDownload = accessType === config.download_types.BROWSER;
-          const accessedEntityType = isDirectDownload ? "FILE" : "DATASET";
-          const datasetName = context.dataset.datasetNames[context.dataIndex];
-
-          const ret = [
-            `Access Method: ${accessType}`,
-            `Type: ${accessedEntityType}`,
-          ];
-          if (path) {
-            ret.push(`Path: ${path}`);
-          }
-          if (datasetName) {
-            ret.push(`Assoc. Dataset: ${datasetName}`);
-          }
-
-          return ret;
-        },
-      },
-    },
-    title: {
-      display: true,
-      text: "Most Frequently Accessed Files/Datasets",
-      color: colors.FONT,
-      font: {
-        size: 18,
-      },
-    },
-  },
-});
-
-const getDatasetColorsByTheme = (isDark) => {
+// Function to fetch and configure chart data
+const configureChartData = (most_accessed_stats) => {
   return {
-    FILE: {
-      backgroundColor: isDark
-        ? "rgba(83, 63, 33, 1)"
-        : "rgba(211, 183, 144, 1)",
-    },
-    DATASET: {
-      backgroundColor: isDark
-        ? "rgba(57, 68, 30, 1)"
-        : "rgba(200, 214, 163, 1)",
-    },
+    names: most_accessed_stats.map((stat) => stat.name),
+    counts: most_accessed_stats.map((stat) => stat.count),
+    ids: most_accessed_stats.map((stat) => stat.dataset_id), // Add dataset_id to the return object
   };
 };
 
-const configureChartData = (most_accessed_stats) => {
-  const label_delimit_count = 15;
-
-  const labels = most_accessed_stats.map((stat) => {
-    return stat.name.length <= label_delimit_count
-      ? stat.name
-      : `${stat.name.slice(0, label_delimit_count - 3)}...`;
-  });
-
-  const datasetColors = getDatasetColorsByTheme(isDark.value);
-
-  const datasets = [
-    {
-      label: "Number of Times File/Dataset was Accessed",
-      data: most_accessed_stats.map((stat) => stat.count),
-      names: most_accessed_stats.map((stat) => stat.count),
-      accessTypes: most_accessed_stats.map((stat) => stat.access_type),
-      paths: most_accessed_stats.map((stat) => stat.path),
-      datasetNames: most_accessed_stats.map((stat) => stat.dataset_name),
-      backgroundColor: most_accessed_stats.map((stat) =>
-        stat.access_type === config.download_types.BROWSER
-          ? datasetColors.FILE.backgroundColor
-          : datasetColors.DATASET.backgroundColor,
-      ),
-    },
-  ];
-
-  return { labels, datasets };
-};
-
 const retrieveAndConfigureChartData = () => {
+  isLoading.value = true; // Set flag to false while loading data
+  isNoData.value = false; // Reset noData state before fetching data
   StatisticsService.getMostAccessedData(numberOfEntriesRetrieved.value, true)
     .then((res) => {
+      // console.log(res.data);
       chartData.value = configureChartData(res.data);
+      if (
+        !chartData.value.names.length ||
+        !chartData.value.counts.length ||
+        !chartData.value.ids.length
+      ) {
+        isNoData.value = true; // Set no data found
+      } else {
+        isNoData.value = false; // Data found
+      }
     })
     .catch((err) => {
       console.log("Unable to retrieve most accessed files", err);
       toast.error("Unable to retrieve most accessed files");
+    })
+    .finally(() => {
+      isLoading.value = false; // Set loading to false after fetch completes
     });
 };
 
-watch(isDark, (newIsDark) => {
-  const colors = getDatasetColorsByTheme(newIsDark);
+// Add the click event listener on the chart component
+const onChartClick = (params) => {
+  if (params.componentType === "series") {
+    const datasetId = chartData.value.ids[params.dataIndex]; // Get dataset_id using dataIndex
+    if (datasetId) {
+      // Navigate to the dataset page using the dataset_id
+      window.location.href = `/datasets/${datasetId}`; // Use relative path for navigation
+    }
+  }
+};
 
-  let updatedChartData = _.cloneDeep(chartData.value);
-  const updatedColors = updatedChartData.datasets[0].accessTypes.map((type) => {
-    return type === config.download_types.BROWSER
-      ? colors.FILE.backgroundColor
-      : colors.DATASET.backgroundColor;
-  });
-  updatedChartData.datasets[0].backgroundColor = updatedColors;
-  chartData.value = updatedChartData;
-});
-
+// Watcher to handle dropdown selection change
 watch(numberOfEntriesRetrieved, () => {
   retrieveAndConfigureChartData();
 });
 
+// Initial data fetch when component is mounted
 onMounted(() => {
   retrieveAndConfigureChartData();
 });
+
+// Computed property for chart options
+const chartOptions = computed(() => ({
+  title: {
+    text: "Most Frequently Accessed Files/Datasets",
+    left: "center",
+    textStyle: {
+      fontSize: 18,
+      fontWeight: "bold",
+    },
+  },
+  grid: { containLabel: true },
+  xAxis: {
+    type: "value",
+    name: "Count",
+    nameLocation: "middle",
+    nameGap: 30, // Gap between axis name and axis line
+    nameTextStyle: {
+      fontSize: 16, // Increase font size
+      fontWeight: "bold", // Make it bold
+    },
+    axisLabel: {
+      formatter: (value) => Math.floor(value),
+    },
+  },
+  yAxis: {
+    type: "category",
+    data: chartData.value.names.map((name) =>
+      name.length > 15 ? `${name.slice(0, 10)}...` : name,
+    ),
+    inverse: true,
+    axisLabel: {
+      formatter: (value) => value, // This ensures the modified usernames are displayed correctly
+    },
+  },
+  tooltip: {
+    trigger: "item",
+    formatter: (params) => {
+      const { value, dataIndex } = params;
+      const name = chartData.value.names[dataIndex];
+      const count = value;
+      return `<strong>Name:</strong> ${name}<br><strong>Count:</strong> ${count}`;
+    },
+  },
+  visualMap: {
+    orient: "horizontal",
+    left: "center",
+    min: Math.min(...chartData.value.counts),
+    max: Math.max(...chartData.value.counts),
+    text: ["High Count", "Low Count"],
+    dimension: 0,
+    inRange: {
+      color: ["#65B581", "#FFCE34", "#FD665F"],
+    },
+  },
+  series: [
+    {
+      type: "bar",
+      data: chartData.value.counts,
+      itemStyle: {
+        color: function (params) {
+          return params.color;
+        },
+      },
+    },
+  ],
+}));
 </script>
 
 <style scoped>
+.chart {
+  height: 500px; /* Adjust height as necessary */
+}
 .most-accessed-chart-select-container {
   margin-top: 12px;
 }
+/* .loading-message {
+  text-align: center;
+  font-size: 16px;
+  color: gray;
+} */
 </style>

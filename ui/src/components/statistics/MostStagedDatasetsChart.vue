@@ -1,8 +1,30 @@
 <template>
   <div class="flex flex-col gap-5">
     <div>
-      <BarChart :chart-data="chartData" :chart-options="chartOptions">
-      </BarChart>
+      <!-- ECharts BarChart Component -->
+      <v-chart
+        v-if="!isLoading && !isNoData"
+        class="chart"
+        :option="chartOptions"
+        autoresize
+        @click="onChartClick"
+      />
+      <!-- <div v-else class="loading-message">Loading chart data...</div> -->
+      <div
+        v-else-if="isLoading"
+        class="flex items-center justify-center"
+        style="height: 500px; width: 100%; font-size: 24px"
+      >
+        Loading...
+      </div>
+      <!-- Display 'No Data Found' if no data is fetched -->
+      <div
+        v-else
+        class="flex justify-center items-center"
+        style="height: 500px; font-size: 24px"
+      >
+        No Data Found
+      </div>
     </div>
     <div class="flex flex-row justify-center">
       <div class="max-w-max most-staged-datasets-chart-select-container">
@@ -19,140 +41,169 @@
 </template>
 
 <script setup>
-import { getDefaultChartColors } from "@/services/charts";
 import StatisticsService from "@/services/statistics";
 import toast from "@/services/toast";
-import _ from "lodash";
+import { BarChart } from "echarts/charts";
+import {
+  GridComponent,
+  TitleComponent,
+  TooltipComponent,
+  VisualMapComponent,
+} from "echarts/components";
+import { use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { computed, onMounted, ref, watch } from "vue";
+import VChart from "vue-echarts";
 
-const isDark = useDark();
+// Register ECharts components
+use([
+  CanvasRenderer,
+  BarChart,
+  GridComponent,
+  TooltipComponent,
+  TitleComponent,
+  VisualMapComponent,
+]);
 
-const defaultChartColors = computed(() => {
-  return getDefaultChartColors(isDark.value);
-});
-
-const chartData = ref({});
-
-const chartOptions = computed(() => {
-  return getChartOptions({
-    colors: defaultChartColors.value,
-  });
-});
-
-const label_delimit_count = 15;
+// Default initialization to avoid undefined data
+const chartData = ref({ datasets: [], counts: [], ids: [] }); // Added ids array
+const isLoading = ref(false); // Flag to indicate if data has been loaded
+const isNoData = ref(false); // Track if data is empty
 
 const dropdownOptions = [10, 20];
 const numberOfEntriesRetrieved = ref(dropdownOptions[0]);
 
-const getChartOptions = ({ colors }) => ({
-  // https://www.chartjs.org/docs/latest/charts/bar.html#dataset-properties
-  indexAxis: "y",
-  color: colors.FONT,
-  scales: {
-    x: {
-      ticks: {
-        color: colors.FONT,
-        callback: (val) => {
-          // If the range of data-point values provided to chart.js is small enough (say starting
-          // value is 1, and ending value is 2), chart.js's default behavior is to try and
-          // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
-          // the axis's ticks. To avoid this, round values down
-          return val % 1 !== 0 ? Math.floor(val) : val;
-        },
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-    y: {
-      ticks: {
-        color: colors.FONT,
-      },
-      grid: {
-        color: colors.GRID,
-      },
-    },
-  },
-  plugins: {
-    tooltip: {
-      backgroundColor: colors.TOOLTIP.BACKGROUND,
-      titleColor: colors.TOOLTIP.FONT,
-      bodyColor: colors.TOOLTIP.FONT,
-      callbacks: {
-        label: (context) => context.dataset.data[context.dataIndex],
-      },
-    },
-    title: {
-      display: true,
-      text: "Most Frequently Staged Datasets",
-      color: colors.FONT,
-      font: {
-        size: 18,
-      },
-    },
-  },
-});
-
-const getDatasetColorsByTheme = (isDark) => {
+// Function to retrieve and format data for ECharts
+const formatChartStatistics = (dataset_stats) => {
   return {
-    backgroundColor: isDark ? "rgba(74, 77, 83, 1)" : "rgba(201, 203, 207, 1)",
+    datasets: dataset_stats.map((stat) => stat.dataset_name),
+    counts: dataset_stats.map((stat) => stat.count),
+    ids: dataset_stats.map((stat) => stat.dataset_id), // Add dataset_id to the return object
   };
 };
 
-const configureChartData = (most_staged_stats) => {
-  const labels = most_staged_stats.map((stat) => {
-    return stat.dataset_name.length <= label_delimit_count
-      ? stat.dataset_name
-      : `${stat.dataset_name.slice(0, label_delimit_count - 3)}...`;
-  });
-
-  const chartColors = getDatasetColorsByTheme(isDark.value);
-
-  const datasets = [
-    {
-      label: "Number of Times Dataset was Staged",
-      data: most_staged_stats.map((stat) => stat.count),
-      names: most_staged_stats.map((stat) => stat.dataset_name),
-      backgroundColor: chartColors.backgroundColor,
-    },
-  ];
-
-  // const labels = [["x,0", "1", "2"], "y", "z"];
-  // const datasets = [
-  //   { label: "test", data: [3, 4, 5], path: ["/3/", "/4", "5"] },
-  // ];
-  return { labels, datasets };
-};
-
+// Fetch data from backend and update chart
 const retrieveAndConfigureChartData = () => {
+  isLoading.value = true; // Set loading to true when starting the fetch
+  isNoData.value = false; // Reset noData state before fetching data
   StatisticsService.getMostStagedDatasets(numberOfEntriesRetrieved.value)
     .then((res) => {
-      chartData.value = configureChartData(res.data);
+      //console.log(res.data);
+      chartData.value = formatChartStatistics(res.data);
+      if (
+        !chartData.value.datasets.length ||
+        !chartData.value.counts.length ||
+        !chartData.value.ids.length
+      ) {
+        isNoData.value = true; // Set no data found
+      } else {
+        isNoData.value = false; // Data found
+      }
     })
     .catch((err) => {
-      console.log("Unable to retrieve most staged datasets", err);
-      toast.error("Unable to retrieve most staged datasets");
+      console.log("Unable to retrieve dataset count", err);
+      toast.error("Unable to retrieve dataset count");
+    })
+    .finally(() => {
+      isLoading.value = false; // Set loading to false after fetch completes
     });
 };
 
-watch(isDark, (newIsDark) => {
-  const colors = getDatasetColorsByTheme(newIsDark);
-  let updatedChartData = _.cloneDeep(chartData.value);
-  updatedChartData.datasets[0].backgroundColor = colors.backgroundColor;
+// Add the click event listener on the chart component
+const onChartClick = (params) => {
+  if (params.componentType === "series") {
+    const datasetId = chartData.value.ids[params.dataIndex]; // Get dataset_id using dataIndex
+    if (datasetId) {
+      // Navigate to the dataset page using the dataset_id
+      window.location.href = `/datasets/${datasetId}`; // Use relative path for navigation
+    }
+  }
+};
 
-  chartData.value = updatedChartData;
-});
-
+// Watch for dropdown change and fetch new data
 watch(numberOfEntriesRetrieved, () => {
   retrieveAndConfigureChartData();
 });
 
+// Initial fetch when component is mounted
 onMounted(() => {
   retrieveAndConfigureChartData();
 });
+
+// Computed chart options for ECharts
+const chartOptions = computed(() => ({
+  title: {
+    text: "Most Frequently Staged Datasets",
+    left: "center",
+    textStyle: {
+      fontSize: 18,
+      fontWeight: "bold",
+    },
+  },
+  grid: { containLabel: true },
+  xAxis: {
+    type: "value",
+    name: "Count",
+    nameLocation: "middle",
+    nameGap: 30,
+    nameTextStyle: {
+      fontSize: 16, // Increase font size
+      fontWeight: "bold", // Make it bold
+    },
+  },
+  yAxis: {
+    type: "category",
+    data: chartData.value.datasets.map((dataset) =>
+      dataset.length > 15 ? `${dataset.slice(0, 10)}...` : dataset,
+    ),
+    inverse: true,
+    axisLabel: {
+      formatter: (value) => value, // This ensures the modified usernames are displayed correctly
+    },
+  },
+  tooltip: {
+    trigger: "item",
+    formatter: (params) => {
+      const { value, dataIndex } = params;
+      const dataset = chartData.value.datasets[dataIndex];
+      return `<strong>Dataset:</strong> ${dataset}<br><strong>Count:</strong> ${value}`;
+    },
+  },
+  visualMap: {
+    orient: "horizontal",
+    left: "center",
+    min: Math.min(...chartData.value.counts),
+    max: Math.max(...chartData.value.counts),
+    text: ["High Count", "Low Count"],
+    dimension: 0,
+    inRange: {
+      color: ["#65B581", "#FFCE34", "#FD665F"],
+    },
+  },
+  series: [
+    {
+      type: "bar",
+      data: chartData.value.counts,
+      itemStyle: {
+        color: function (params) {
+          return params.color;
+        },
+      },
+    },
+  ],
+}));
 </script>
 
 <style scoped>
+.chart {
+  height: 500px; /* Adjust height as necessary */
+}
 .most-staged-datasets-chart-select-container {
   margin-top: 12px;
 }
+/* .loading-message {
+  text-align: center;
+  font-size: 16px;
+  color: gray;
+} */
 </style>
