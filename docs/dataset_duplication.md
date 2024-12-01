@@ -6,19 +6,24 @@ Bioloop allows for duplicate datasets to be registered in the system.
 
 ## Registration
 
+<img src="assets/datasetDuplication/assets/duplicate_dataset_registration.png">
+
+### Worker
 Duplicate datasets are registered by the `watch.py` script, if:
 - it finds a directory present in the `source_dir` directory which has the same name as an existing active dataset.
 - the modification time on the directory found is later than the time when a dataset with that directory's name was registered.
-
-The duplicate dataset is registered at the database level, and action items and notifications are created in the system which allows authorized users to review the duplicate dataset.
 
 Upon registration, the `watch` script launches the `handle_duplicate_datasets` workflow that runs the `await_stability`, `inspect_dataset` and `compare_duplicate_datasets` steps on the duplicate dataset.
 - The `compare_duplicae_datasets` step:
   - compares the newly created duplicate dataset with the original dataset, and generates a comparison report which is persisted to Postgres.
   - Updates the state of the dataset to `DUPLICATE_READY`, at which the dataset becomes available for acceptance/rejection.
 
-<img src="assets/datasetDuplication/assets/duplicate_dataset_registration.png">
+### Database
+- The duplicate dataset is registered at the database level, and action items and notifications are created in the system which allows authorized users to review the duplicate dataset.
+- During registration, a duplicate dataset is not assigned to the projects that the source dataset belongs to. Once an authorized user overwrites the source dataset with its duplicate, the duplicate dataset is assigned to any projects that the source dataset belonged to.
+  - Any other relational associations between the source dataset and other database tables are also transferred from the source dataset to the duplicate dataset during this overwrite.
 
+### UI
 The results of the comparison analysis are shown to authorized users in the UI, based on which they can either accept or reject a duplicate dataset.
 
 ### Versioning
