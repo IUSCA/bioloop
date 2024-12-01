@@ -472,21 +472,6 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
   next();
 });
 
-// Currently, operators and admins are allowed to delete any datasets.
-const dataset_delete_check = asyncHandler(async (req, res, next) => {
-  // assumes req.params.id is the dataset id user is requesting
-  // access check
-  const permission = getPermission({
-    resource: 'datasets',
-    action: 'delete',
-    requester_roles: req?.user?.roles,
-  });
-  if (!permission.granted) {
-    return next(createError.Forbidden());
-  }
-  next();
-});
-
 // get by id - worker + UI
 router.get(
   '/:id',
@@ -1172,7 +1157,7 @@ router.post(
     param('id').isInt().toInt(),
   ]),
   workflow_access_check,
-  dataset_delete_check,
+  isPermittedTo('delete'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Overwrites an active dataset with its
@@ -1196,7 +1181,7 @@ router.post(
     param('id').isInt().toInt(),
   ]),
   workflow_access_check,
-  dataset_delete_check,
+  isPermittedTo('delete'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Rejects a duplicate dataset.
