@@ -160,15 +160,16 @@
   />
 
   <!-- Download Modal -->
+  <!-- This modal re-fetches the dataset once a dataset download has been attempted, to check
+         if this dataset has not been duplicated by another right after the download was initiated.
+         If an active duplicate of this dataset is found, an alert is shown to authorized roles,
+         which tells them that the dataset they are downloading could possibly be outdated.
+  -->
   <DatasetDownloadModal
     ref="downloadModal"
     :dataset="datasetToDownload"
     @download-initiated="
       () => {
-        // refresh dataset after initiating download, in case a
-        // user triggered the dataset being overwritten by a duplicate
-        // before the download begins. This way, the user knows
-        // that the dataset they are downloading will soon be outdated.
         refresh_downloaded_dataset();
       }
     "

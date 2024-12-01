@@ -309,10 +309,15 @@
       </div>
     </div>
     <!-- Download Modal -->
+    <!-- This modal re-fetches the dataset once a dataset download has been attempted, to check
+         if this dataset has not been duplicated by another right after the download was initiated.
+         If an active duplicate of this dataset is found, an alert is shown to authorized roles,
+         which tells them that the dataset they are downloading could possibly be outdated.
+    -->
     <DatasetDownloadModal
       ref="downloadModal"
       :dataset="dataset"
-      @download-initiated="trigger_dataset_retrieval = true"
+      @download-initiated="fetch_dataset(true)"
     />
   </va-inner-loading>
 
@@ -343,9 +348,6 @@ const delete_archive_modal = ref({
   visible: false,
   input: "",
 });
-// Can be set to true to re-retrieve the dataset from the API without
-// refreshing the page.
-const trigger_dataset_retrieval = ref(false);
 
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
@@ -403,7 +405,6 @@ function fetch_dataset(show_loading = false) {
     })
     .finally(() => {
       loading.value = false;
-      trigger_dataset_retrieval.value = false;
     });
 }
 
@@ -494,10 +495,6 @@ const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
-
-watch(trigger_dataset_retrieval, () => {
-  fetch_dataset(true);
-});
 </script>
 
 <route lang="yaml">
