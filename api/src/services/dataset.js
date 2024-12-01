@@ -5,7 +5,6 @@ const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
 
-const dayjs = require('dayjs');
 const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
@@ -481,11 +480,10 @@ async function add_files({ dataset_id, data }) {
 /**
  * Get workflows for a dataset
  * @param dataset_id    the id of the dataset whose workflows are to be retrieved
- * @param last_runs_only if true, only the last runs of each workflow is returned
  * @param statuses      an array of workflow statuses to filter retrieved workflows by
  * @returns Array of workflows
  */
-async function get_workflows({ dataset_id, last_runs_only = false, statuses = [] }) {
+async function get_workflows({ dataset_id, statuses = [] }) {
   const workflows = await prisma.workflow.findMany({
     where: {
       dataset_id,
@@ -498,29 +496,6 @@ async function get_workflows({ dataset_id, last_runs_only = false, statuses = []
 
   const retrievedWorkflowsResponses = await Promise.all(wf_promises);
   let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
-
-  if (last_runs_only) {
-    // filter last successful runs
-    let retrieved_workflow_names = retrievedWorkflows
-      .map((wf) => wf.name);
-    // get distinct workflow names
-    retrieved_workflow_names = retrieved_workflow_names
-      .filter((name, i) => retrieved_workflow_names.indexOf(name) === i);
-
-    // group workflows by distinct workflow names
-    const retrieved_workflows_grouped_by_name = retrieved_workflow_names.map((wf_name) => (
-      retrievedWorkflows
-        .filter((wf) => wf.name === wf_name)));
-
-    retrievedWorkflows = retrieved_workflows_grouped_by_name.map(
-      (wfs_grouped_by_name) => wfs_grouped_by_name.reduce(
-        (acc, curr) => (dayjs(acc.updated_at).diff(dayjs(curr.updated_at)) >= 0 ? acc : curr),
-      ),
-    );
-
-    // console.log('retrievedWorkflows');
-    // console.dir(retrievedWorkflows, { depth: null });
-  }
 
   // filter by status
   if ((statuses || []).length > 0) {

@@ -199,7 +199,6 @@ const check_for_pending_workflows = async ({ dataset_id, statuses = [] }) => {
   const retrievedWorkflows = await datasetService.get_workflows({
     dataset_id,
     statuses,
-    last_runs_only: true,
   });
 
   if (retrievedWorkflows.length > 0) {
