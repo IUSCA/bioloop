@@ -484,25 +484,14 @@ async function add_files({ dataset_id, data }) {
  * @returns Array of workflows
  */
 async function get_workflows({ dataset_id, statuses = [] }) {
-  const workflows = await prisma.workflow.findMany({
-    where: {
-      dataset_id,
-    },
-  });
-
-  const workflow_ids = workflows.map((w) => w.id);
-
-  const wf_promises = workflow_ids.map((id) => wfService.getOne(id));
-
-  const retrievedWorkflowsResponses = await Promise.all(wf_promises);
-  let retrievedWorkflows = retrievedWorkflowsResponses.map((e) => e.data);
+  const dataset = await get_dataset({ id: dataset_id, workflows: true });
+  let retrieved_workflows = dataset.workflows;
 
   // filter by status
   if ((statuses || []).length > 0) {
-    retrievedWorkflows = retrievedWorkflows.filter((wf) => statuses.includes(wf.status));
+    retrieved_workflows = retrieved_workflows.filter((wf) => statuses.includes(wf.status));
   }
-
-  return retrievedWorkflows;
+  return retrieved_workflows;
 }
 
 module.exports = {
