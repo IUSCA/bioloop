@@ -128,6 +128,8 @@ router.post(
   }),
 );
 
+const getNotificationsFilterQuery = ({ status } = {}) => _.omitBy(_.isUndefined)({ status });
+
 router.delete(
   '/',
   isPermittedTo('delete'),
@@ -138,7 +140,9 @@ router.delete(
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    if (Object.keys(req.query).length === 0) {
+    const filter_query = getNotificationsFilterQuery({ status: req.query.status });
+
+    if (Object.keys(filter_query).length === 0) {
       res.send({
         count: 0,
       });
@@ -146,7 +150,7 @@ router.delete(
     }
 
     const updatedCount = await prisma.notification.updateMany({
-      where: { ...req.query },
+      where: { ...filter_query },
       data: {
         status: 'RESOLVED',
       },
