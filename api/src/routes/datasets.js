@@ -23,6 +23,60 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const build_include_object = ({
+  include_users = true,
+  include_datasets = true,
+  include_contacts = true,
+} = {}) => _.omitBy(_.isUndefined)({
+  users: include_users ? {
+    select: {
+      user: true,
+      assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
+    },
+  } : undefined,
+  datasets: include_datasets ? {
+    select: {
+      dataset: {
+        include: {
+          workflows: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      },
+      assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
+    },
+  } : undefined,
+  contacts: include_contacts ? {
+    select: {
+      contact: true,
+      assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
+    },
+  } : undefined,
+});
+
 // stats - UI
 router.get(
   '/stats',
@@ -62,9 +116,9 @@ router.get(
       });
     } else {
       result = await prisma.$queryRaw`
-        select 
-          count(*) as "count", 
-          sum(du_size) as total_size, 
+        select
+          count(*) as "count",
+          sum(du_size) as total_size,
           SUM(
                 CASE
                     WHEN metadata -> 'num_genome_files' IS NOT NULL
@@ -72,7 +126,7 @@ router.get(
                     ELSE 0
                     END
             )        AS total_num_genome_files
-        from dataset 
+        from dataset
         where is_deleted = false;
       `;
 
@@ -385,6 +439,105 @@ router.post(
     res.json(dataset);
   }),
 );
+
+// Route to fetch projects linked to a specific dataset ID
+router.get(
+  '/:id/projects', // Adding /:id to represent DatasetID
+  isPermittedTo('read'),
+  validate([
+    query('take').default(25).isInt().toInt(),
+    query('skip').default(0).isInt().toInt(),
+    query('search').default(''), // Adding search query validation
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    const { search, sort_order, sort_by } = req.query;
+    // const datasetID = req.params.id; // DatasetID is retrieved from the URL parameter
+    const datasetID = parseInt(req.params.id, 10);
+
+    // Check if the datasetID has any project association
+    const hasProjectDatasetAssociation = await datasetService.has_project_dataset_assoc({
+      DatasetId: datasetID,
+    });
+
+    if (!hasProjectDatasetAssociation) {
+      return res.status(404).json({
+        message: 'No projects found for the specified dataset',
+      });
+    }
+
+    // Building filters for project retrieval, including datasetID filter
+    const filters = {
+      datasets: {
+        some: {
+          dataset_id: datasetID, // Filter projects by the datasetID
+        },
+      },
+    };
+
+    if (search) {
+      filters.OR = [
+        {
+          name: {
+            contains: search,
+            mode: 'insensitive', // Case-insensitive search for project name
+          },
+        },
+        {
+          users: {
+            some: {
+              user: {
+                username: {
+                  contains: search,
+                  mode: 'insensitive', // Case-insensitive search for user username
+                },
+              },
+            },
+          },
+        },
+        {
+          datasets: {
+            some: {
+              dataset: {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+        },
+      ];
+    }
+
+    const sort_obj = {
+      [sort_by]: sort_order,
+    };
+
+    // Retrieving projects linked to the specified datasetID and applying the filters
+    const [projects, totalCount] = await prisma.$transaction([
+      prisma.project.findMany({
+        skip: req.query.skip,
+        take: req.query.take,
+        orderBy: sort_obj,
+        where: filters,
+        include: build_include_object(), // Including related data as per existing logic
+      }),
+      prisma.project.count({
+        where: filters, // Counting the total number of projects with the dataset filter
+      }),
+    ]);
+
+    // Sending back the retrieved projects and total count in the response
+    res.json({
+      metadata: { count: totalCount },
+      projects,
+    });
+  }),
+);
+
+module.exports = router;
 
 // modify - worker
 router.patch(

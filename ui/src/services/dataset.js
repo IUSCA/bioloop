@@ -85,6 +85,20 @@ class DatasetService {
     });
   }
 
+  //Code for displaying associated projects for a particular dataset
+
+  getProjects({ id, params }) {
+    return api
+      .get(`/datasets/${id}/projects`, {
+        params,
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Unable to fetch projects");
+        return Promise.reject(err);
+      });
+  }
+
   update({ id, updated_data }) {
     return api.patch(`/datasets/${id}`, updated_data);
   }
