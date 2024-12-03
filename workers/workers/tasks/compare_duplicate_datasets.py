@@ -7,7 +7,7 @@ from celery.utils.log import get_task_logger
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-from workers.exceptions import InspectionFailed
+from workers.exceptions import InspectionFailed, RetryableException
 from workers.config import config
 
 app = Celery("tasks")
@@ -17,18 +17,14 @@ logger = get_task_logger(__name__)
 
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing dataset {duplicate_dataset_id}")
+    # todo - retryable exception
     duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
                                               include_duplications=True,
                                               include_action_items=True)
 
+    # todo - dont retry
     if not duplicate_dataset['is_duplicate']:
         raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
-
-    # assumes states are sorted in descending order by timestamp
-    latest_state = duplicate_dataset['states'][0]['state']
-    if latest_state != config['DATASET_STATES']['INSPECTED']:
-        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} needs to reach state INSPECTED before it can be"
-                               f" compared for duplication. Current state is {latest_state}.")
 
     matching_datasets = api.get_all_datasets(
         name=duplicate_dataset['name'],
@@ -39,42 +35,52 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     )
 
     if len(matching_datasets) != 1:
+        # todo - no retry
         raise InspectionFailed(f"Expected to find one active (not deleted) original {duplicate_dataset['type']} named {duplicate_dataset['name']},"
                                f" but found {len(matching_datasets)}.")
 
     original_dataset: dict = matching_datasets[0]
 
     if original_dataset['id'] != duplicate_dataset['duplicated_from']['original_dataset_id']:
+        # todo - no retry
         raise InspectionFailed(f"Expected dataset {duplicate_dataset['id']} to have "
                                f"been duplicated from dataset "
                                f"{duplicate_dataset['duplicated_from']['original_dataset_id']}, "
                                f"but matching dataset has id {original_dataset['id']}.")
 
+    # todo - retryable exception
     duplicate_files: list[dict] = api.get_dataset_files(
         dataset_id=duplicate_dataset['id'],
         filters={
             "filetype": "file"
         })
+    # todo - retryable exception
     original_files: list[dict] = api.get_dataset_files(
         dataset_id=original_dataset['id'],
         filters={
             "filetype": "file"
         })
 
-    comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
+    comparison_checks_report = None
+
+    try:
+        comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
+    except Exception:
+        # todo - retryable exception
+        raise RetryableException("Failed to compare dataset files")
 
     # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
     # create an action item for operators to review later. This way, operators will always have a chance
     # to review the incoming dataset before it is rejected.
-    # Exactly one action item of type DUPLICATE_DATASET_INGESTION is created for a duplicate dataset.
     duplication_action_item: dict = [item for item in duplicate_dataset['action_items']
                                      if item['type'] == config['ACTION_ITEM_TYPES']['DUPLICATE_DATASET_INGESTION']][0]
 
     action_item_data: dict = {
        "ingestion_checks": comparison_checks_report,
-        "next_state": config['DATASET_STATES']['DUPLICATE_READY'],
+       "next_state": config['DATASET_STATES']['DUPLICATE_READY'],
     }
 
+    # todo - retryable exception
     api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],
                                    action_item_id=duplication_action_item['id'],
                                    data=action_item_data)
@@ -173,7 +179,7 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
                 'duplicate_md5': duplicate_file_checksum,
             })
     
-    logger.info(json.dumps(conflicting_checksum_files, indent=2))
+    # logger.info(json.dumps(conflicting_checksum_files, indent=2))
 
     # Files that are present in the original dataset and missing from the duplicate
     original_only_files: set[str] = original_files_set.difference(duplicate_files_set)
