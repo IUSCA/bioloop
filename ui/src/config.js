@@ -80,6 +80,7 @@ const exports = {
       enabledForRoles: ["admin"],
     },
     downloads: true,
+    uploads: true,
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
