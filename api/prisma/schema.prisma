@@ -74,6 +74,8 @@ model dataset_file {
   status     String?
   dataset_id Int
   dataset    dataset                  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  // ingestion_check_id Int?
+  // ingestion_check dataset_ingestion_check? @relation(fields: [ingestion_check_id], references: [id], onDelete: SetNull)
   parents    dataset_file_hierarchy[] @relation("child")
   children   dataset_file_hierarchy[] @relation("parent")
   accesses   data_access_log[]
@@ -164,15 +166,29 @@ model dataset_action_item {
   metadata         Json?
 }
 
+model dataset_ingestion_file_check {
+  id                 Int                      @id @default(autoincrement())
+  created_at         DateTime                 @default(now()) @db.Timestamp(6)
+  file_id            Int
+  file               dataset_file             @relation(fields: [file_id], references: [id], onDelete: Cascade)
+  ingestion_check_id Int
+  ingestion_check    dataset_ingestion_check? @relation(fields: [ingestion_check_id], references: [id], onDelete: Cascade)
+
+  @@unique([ingestion_check_id, file_id])
+}
+
+// todo - rename to dataset_ingestion_validation
 model dataset_ingestion_check {
   id             Int                          @id @default(autoincrement())
   created_at     DateTime                     @default(now()) @db.Timestamp(6)
   type           DATASET_INGESTION_CHECK_TYPE
   label          String
   passed         Boolean
-  report         Json?
+  file_checks    dataset_ingestion_file_check[]
   action_item_id Int?
   action_item    dataset_action_item?         @relation(fields: [action_item_id], references: [id], onDelete: Cascade)
+
+  @@unique([action_item_id, type])
 }
 
 model bundle {

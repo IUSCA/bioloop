@@ -97,7 +97,15 @@ router.patch(
     // #swagger.description = provided `ingestion_checks` will overwrite
     // existing ingestion checks associated with this action item.
 
+    // change ingestion_checks's mapping to file ids
     const { ingestion_checks = [] } = req.body;
+
+    // const create_quuery = ingestion_checks.map((check) => ({
+    //   return {
+    //     ...check,
+    //     // files:
+    //   }
+    // })
 
     const updated_action_item = await prisma.$transaction(async (tx) => {
       const dataset = await tx.dataset.findUnique({
@@ -118,30 +126,60 @@ router.patch(
         (dataset.states?.length > 0 && dataset.states[0].state === req.body.next_state)
       );
 
-      // delete existing checks associated with this action item
-      await tx.dataset_ingestion_check.deleteMany({
-        where: {
+      await tx.dataset_ingestion_check.createMany({
+        data: ingestion_checks.map((check) => ({
+          type: check.type,
+          label: check.label,
+          passed: check.passed,
           action_item_id: req.params.action_item_id,
-        },
+        })),
       });
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (const check of ingestion_checks) {
+        // retrieve check
+        // eslint-disable-next-line no-await-in-loop
+        const ingestion_check = await tx.dataset_ingestion_check.findUnique({
+          where: {
+            action_item_id: req.params.action_item_id,
+            type: check.type,
+          },
+        });
+        // eslint-disable-next-line no-await-in-loop
+        await tx.dataset_ingestion_file_check.createMany({
+          data: check.files.map((file) => ({ file_id: file.id, ingestion_check_id: ingestion_check.id })),
+        });
+      }
+
+      // await tx.dataset_ingestion_file_check.createMany({
+      //   data:
+      // })
 
       await tx.dataset.update({
         where: {
           id: req.params.id,
         },
         data: {
-          action_items: {
-            update: {
-              where: {
-                id: req.params.action_item_id,
-              },
-              data: {
-                ingestion_checks: {
-                  createMany: { data: ingestion_checks },
-                },
-              },
-            },
-          },
+          // action_items: {
+          //   update: {
+          //     where: {
+          //       id: req.params.action_item_id,
+          //     },
+          //     data: {
+          //       ingestion_checks: {
+          //         // createMany: { data: ingestion_checks: { files: data: [] }
+          //         // },
+          //         createMany: {
+          //           data: ingestion_checks.map((check) => ({
+          //             ...check,
+          //             // file_checks: {createMany: data:}
+          //             // check.files.map((file) => ({ file_id: file.id, })),
+          //           })),
+          //         },
+          //       },
+          //     },
+          //   },
+          // },
           states: (req.body.next_state && !has_next_state) ? {
             createMany: {
               data: [
