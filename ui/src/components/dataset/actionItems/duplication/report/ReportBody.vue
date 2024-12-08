@@ -44,7 +44,7 @@
           <div>
             <checksums-diff
               v-if="rowData.type === 'CHECKSUMS_MATCH'"
-              :conflicting-files="rowData.report.conflicting_checksum_files"
+              :conflicting-files="rowData.file_checks.map(check => check.file)"
             />
 
             <missing-files-diff
@@ -52,7 +52,7 @@
                 rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
                 rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
               "
-              :missing-files="rowData.report.missing_files"
+              :missing-files="rowData.file_checks.map(check => check.file)"
               :check-type="rowData.type"
             >
             </missing-files-diff>

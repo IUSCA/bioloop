@@ -56,17 +56,32 @@ CREATE TABLE "dataset_action_item" (
 );
 
 -- CreateTable
+CREATE TABLE "dataset_ingestion_file_check" (
+    "id" SERIAL NOT NULL,
+    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "file_id" INTEGER NOT NULL,
+    "ingestion_check_id" INTEGER NOT NULL,
+
+    CONSTRAINT "dataset_ingestion_file_check_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "dataset_ingestion_check" (
     "id" SERIAL NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "type" "DATASET_INGESTION_CHECK_TYPE" NOT NULL,
     "label" TEXT NOT NULL,
     "passed" BOOLEAN NOT NULL,
-    "report" JSONB,
-    "action_item_id" INTEGER,
+    "action_item_id" INTEGER NOT NULL,
 
     CONSTRAINT "dataset_ingestion_check_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "dataset_ingestion_file_check_ingestion_check_id_file_id_key" ON "dataset_ingestion_file_check"("ingestion_check_id", "file_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "dataset_ingestion_check_action_item_id_type_key" ON "dataset_ingestion_check"("action_item_id", "type");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "dataset_name_type_is_deleted_is_duplicate_version_key" ON "dataset"("name", "type", "is_deleted", "is_duplicate", "version");
@@ -82,6 +97,12 @@ ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_notificati
 
 -- AddForeignKey
 ALTER TABLE "dataset_action_item" ADD CONSTRAINT "dataset_action_item_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "dataset_ingestion_file_check" ADD CONSTRAINT "dataset_ingestion_file_check_file_id_fkey" FOREIGN KEY ("file_id") REFERENCES "dataset_file"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "dataset_ingestion_file_check" ADD CONSTRAINT "dataset_ingestion_file_check_ingestion_check_id_fkey" FOREIGN KEY ("ingestion_check_id") REFERENCES "dataset_ingestion_check"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "dataset_ingestion_check" ADD CONSTRAINT "dataset_ingestion_check_action_item_id_fkey" FOREIGN KEY ("action_item_id") REFERENCES "dataset_action_item"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -19,24 +19,31 @@
           </div>
         </template>
 
-        <template #cell(original_md5)="{ value }">
+        <!-- <template #cell(original_md5)="{ value }">
           <span class="text-sm">{{ value }}</span>
         </template>
 
         <template #cell(duplicate_md5)="{ value }">
           <span class="text-sm">{{ value }}</span>
-        </template>
+        </template> -->
       </va-data-table>
     </va-scroll-container>
   </div>
 </template>
 
 <script setup>
+import _ from "lodash";
+
 const props = defineProps({
   conflictingFiles: {
     type: Array,
     default: () => [],
   },
+});
+
+const items = computed(() => {
+  const filesGroupedByPath = _.groupBy(props.conflictingFiles, (e) => e.path )
+
 });
 
 const columns = [

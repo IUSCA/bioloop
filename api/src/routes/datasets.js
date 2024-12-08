@@ -100,6 +100,9 @@ router.patch(
     // change ingestion_checks's mapping to file ids
     const { ingestion_checks = [] } = req.body;
 
+    console.log("req.params.action_item_id", req.params.action_item_id)
+    console.log("ingestion_checks", ingestion_checks)
+
     // const create_quuery = ingestion_checks.map((check) => ({
     //   return {
     //     ...check,
@@ -139,15 +142,19 @@ router.patch(
       for (const check of ingestion_checks) {
         // retrieve check
         // eslint-disable-next-line no-await-in-loop
+        console.log("check", check)
+
         const ingestion_check = await tx.dataset_ingestion_check.findUnique({
           where: {
-            action_item_id: req.params.action_item_id,
-            type: check.type,
-          },
+            action_item_id_type: {
+              action_item_id: req.params.action_item_id,
+              type: check.type,
+            },
+          }
         });
         // eslint-disable-next-line no-await-in-loop
         await tx.dataset_ingestion_file_check.createMany({
-          data: check.files.map((file) => ({ file_id: file.id, ingestion_check_id: ingestion_check.id })),
+          data: (check.files || []).map((file) => ({ file_id: file.id, ingestion_check_id: ingestion_check.id })),
         });
       }
 
@@ -160,26 +167,6 @@ router.patch(
           id: req.params.id,
         },
         data: {
-          // action_items: {
-          //   update: {
-          //     where: {
-          //       id: req.params.action_item_id,
-          //     },
-          //     data: {
-          //       ingestion_checks: {
-          //         // createMany: { data: ingestion_checks: { files: data: [] }
-          //         // },
-          //         createMany: {
-          //           data: ingestion_checks.map((check) => ({
-          //             ...check,
-          //             // file_checks: {createMany: data:}
-          //             // check.files.map((file) => ({ file_id: file.id, })),
-          //           })),
-          //         },
-          //       },
-          //     },
-          //   },
-          // },
           states: (req.body.next_state && !has_next_state) ? {
             createMany: {
               data: [
@@ -218,7 +205,15 @@ router.get(
         id: req.params.id,
       },
       include: {
-        ingestion_checks: true,
+        ingestion_checks: {
+          include: {
+            file_checks: {
+              include: {
+                file: true,
+              },
+            },
+          },
+        },
         dataset: {
           include: {
             states: {
