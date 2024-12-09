@@ -7,10 +7,7 @@
 
       <va-card-content>
         <!-- Table for various checks performed as part of ingesting a dataset -->
-        <va-data-table
-          :columns="columns"
-          :items="props.ingestionChecks"
-        >
+        <va-data-table :columns="columns" :items="props.ingestionChecks">
           <template #cell(check)="{ rowData }">
             {{ rowData.label }}
           </template>
@@ -43,9 +40,12 @@
           <!-- Expanded details for current check -->
           <template #expandableRow="{ rowData }">
             <div>
-              <checksums-diff
+              <checksums-diff-report
                 v-if="rowData.type === 'CHECKSUMS_MATCH'"
-                :conflicting-files="rowData.file_checks.map(check => check.file)"
+                :passed="rowData.passed"
+                :conflicting-files="
+                  rowData.file_checks.map((check) => check.file)
+                "
                 :original-dataset-files="originalDatasetFiles"
                 :duplicate-dataset-files="duplicateDatasetFiles"
               />
@@ -55,7 +55,7 @@
                   rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
                   rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
                 "
-                :missing-files="rowData.file_checks.map(check => check.file)"
+                :missing-files="rowData.file_checks.map((check) => check.file)"
                 :check-type="rowData.type"
               >
               </missing-files-diff>
@@ -94,10 +94,10 @@ const props = defineProps({
   duplicateDataset: {
     type: Object,
     required: true,
-  }
+  },
 });
 
-console.log('ReportBody props.ingestionChecks');
+console.log("ReportBody props.ingestionChecks");
 console.log(props.ingestionChecks);
 
 const loading = ref(false);
@@ -120,18 +120,20 @@ const columns = ref([
 
 onMounted(() => {
   loading.value = true;
-  Promise.all(
-    [
-      datasetService.list_files({id: props.originalDataset.id}),
-      datasetService.list_files({id: props.duplicateDataset.id})
-    ]).then(([res1, res2]) => {
+  Promise.all([
+    datasetService.list_files({ id: props.originalDataset.id }),
+    datasetService.list_files({ id: props.duplicateDataset.id }),
+  ])
+    .then(([res1, res2]) => {
       originalDatasetFiles.value = res1.data;
       duplicateDatasetFiles.value = res2.data;
-    }).catch(err => {
-      toast.error("Failed to fetch resources")
-      console.error(err);
-    }).finally(() => {
-      loading.value = false;
     })
-})
+    .catch((err) => {
+      toast.error("Failed to fetch resources");
+      console.error(err);
+    })
+    .finally(() => {
+      loading.value = false;
+    });
+});
 </script>
