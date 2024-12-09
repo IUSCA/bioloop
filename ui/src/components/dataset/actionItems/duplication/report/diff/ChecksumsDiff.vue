@@ -38,12 +38,15 @@ const props = defineProps({
 });
 
 const items = computed(() => {
-  if (props.originalDatasetFiles.length === 0 || props.duplicateDatasetFiles.length === 0) {
+  if (
+    props.originalDatasetFiles.length === 0 ||
+    props.duplicateDatasetFiles.length === 0
+  ) {
     return [];
   }
-  
-  const conflictingFiles = _.groupBy(props.conflictingFiles, (e) => e.path)
-  console.log('conflictingFiles');
+
+  const conflictingFiles = _.groupBy(props.conflictingFiles, (e) => e.path);
+  console.log("conflictingFiles");
   console.log(conflictingFiles);
   const conflictingFilesPaths = Object.keys(conflictingFiles);
   // const conflictingFilesMap = new Map(conflictingFiles.map((files) =>

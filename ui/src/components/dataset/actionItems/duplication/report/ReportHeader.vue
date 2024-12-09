@@ -23,7 +23,10 @@
                   :to="`/datasets/${props.actionItem?.dataset.duplicated_from.original_dataset_id}`"
                   class="va-link"
                 >
-                  #{{ props.actionItem?.dataset.duplicated_from.original_dataset_id }}
+                  #{{
+                    props.actionItem?.dataset.duplicated_from
+                      .original_dataset_id
+                  }}
                 </router-link>
               </td>
             </tr>

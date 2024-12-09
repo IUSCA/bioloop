@@ -57,7 +57,7 @@
                   rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
                   rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
                 "
-                :missing-files="rowData.file_checks.map(check => check.file)"
+                :missing-files="rowData.file_checks.map((check) => check.file)"
                 :check-type="rowData.type"
               >
               </missing-files-diff>
@@ -121,19 +121,27 @@ const columns = ref([
 onMounted(() => {
   loading.value = true;
   if (props.originalDataset && props.duplicateDataset) {
-    Promise.all(
-      [
-        datasetService.filter_files({id: props.originalDataset.id, file_type: "file"}),
-        datasetService.filter_files({id: props.duplicateDataset.id, file_type: "file"})
-      ]).then(([res1, res2]) => {
+    Promise.all([
+      datasetService.filter_files({
+        id: props.originalDataset.id,
+        file_type: "file",
+      }),
+      datasetService.filter_files({
+        id: props.duplicateDataset.id,
+        file_type: "file",
+      }),
+    ])
+      .then(([res1, res2]) => {
         originalDatasetFiles.value = res1.data;
         duplicateDatasetFiles.value = res2.data;
-      }).catch(err => {
-        toast.error("Failed to fetch resources")
-        console.error(err);
-      }).finally(() => {
-        loading.value = false;
       })
-    }
-})
+      .catch((err) => {
+        toast.error("Failed to fetch resources");
+        console.error(err);
+      })
+      .finally(() => {
+        loading.value = false;
+      });
+  }
+});
 </script>

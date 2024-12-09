@@ -10,7 +10,6 @@
 </template>
 
 <script setup>
-
 const props = defineProps({
   notification: {
     type: Object,
@@ -19,8 +18,8 @@ const props = defineProps({
 });
 
 const actionItem = computed(() => {
-  return props.notification.dataset_action_items[0]
-})
+  return props.notification.dataset_action_items[0];
+});
 
 const _notification = computed(() => ({
   ...props.notification,
