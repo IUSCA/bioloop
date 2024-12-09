@@ -78,63 +78,30 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 #    3. Verifying if any files from the original dataset are missing from the incoming duplicate.
 #    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
 #
-# Returns a dict, which contains the results for each of the 3 checks performed.
+# Returns a dict, which contains the results for each of the 4 checks performed.
 #
 # Example of comparison report:
-
 # [
 #   {
-#     'type': 'FILE_COUNT',
-#       'label': 'Number of Files match',
-#       'passed': len(original_dataset_files) == len(duplicate_dataset_files),
-#         'report': {
-#           'num_files_original_dataset': len(original_dataset_files),
-#           'num_files_duplicate_dataset': len(duplicate_dataset_files),
-#     }
+#     type: 'FILE_COUNT',
+#     label: 'Number of Files match',
+#     passed: len(original_dataset_files) == len(duplicate_dataset_files),
 #   },
 #   {
 #     type: 'CHECKSUMS_MATCH',
 #     label: 'Checksums Validated',
 #     passed: False,
-#     report: {
-#       conflicting_checksum_files: [{
-#         name: 'checksum_error_file_1',
-#         path: '/path/to/checksum_error_file_1',
-#         original_md5: 'original_md5',
-#         duplicate_md5: 'duplicate_md5',
-#       }, {
-#         name: 'checksum_error_file_2',
-#         path: '/path/to/checksum_error_file_2',
-#         original_md5: 'original_md5',
-#         duplicate_md5: 'duplicate_md5',
-#       }],
-#     },
+#     files: [{id: 1, name: 'file_1', path: '/path/to/file_1', ...}, ...]
 #   }, {
 #     type: 'FILES_MISSING_FROM_DUPLICATE',
 #     label: 'Original dataset\'s files missing from incoming duplicate',
 #     passed: False,
-#     report: {
-#       missing_files: [{
-#         name: 'missing_file_1',
-#         path: '/path/to/missing_file_1',
-#       }, {
-#         name: 'missing_file_2',
-#         path: '/path/to/missing_file_1',
-#       }],
-#     },
+#     files: [{id: 1, name: 'file_1', path: '/path/to/file_1', ...}, ...]
 #   }, {
 #     type: 'FILES_MISSING_FROM_ORIGINAL',
 #     label: 'Incoming duplicate dataset\'s files missing from original',
 #     passed: False,
-#     report: {
-#       missing_files: [{
-#         name: 'missing_file_1',
-#         path: '/path/to/missing_file_1',
-#       }, {
-#         name: 'missing_file_2',
-#         path: '/path/to/missing_file_1',
-#       }],
-#     },
+#     files: [{id: 1, name: 'file_1', path: '/path/to/file_1', ...}, ...]
 #   }
 # ]
 def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list[dict]:
@@ -166,9 +133,8 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
     # logger.info(json.dumps(conflicting_checksum_files, indent=2))
 
     # if there are no common files between the two datasets, we consider that checksum validation failed
-    # todo - all files from both datasets should be shown in UI in case of two datasets not having any common files
-    #  under section 'files missing from original/duplicate dataset'. No files should be shown under checksum-diff section.
-    passed_checksum_validation: bool = len(common_files_paths) > 0 and len(conflicting_checksum_files) == 0
+    passed_checksum_validation: bool = len(conflicting_checksum_files) == 0 if \
+        len(common_files_paths) > 0 else None
     logger.info(f"Checksum validation passed: {passed_checksum_validation}")
     
     comparison_checks.append({
