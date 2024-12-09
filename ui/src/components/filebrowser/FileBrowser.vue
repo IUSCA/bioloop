@@ -67,6 +67,11 @@ const fetch_files = () => {
 function get_file_list(path) {
   data_loading.value = true;
   Promise.all([
+    // If a dataset has been duplicated after a user initiates downloading that
+    // dataset's file, the user needs to know. Hence, we re-retrieve the dataset
+    // with its duplication details every time a file is downloaded. If the
+    // dataset has been duplicated, the user sees an alert after the file
+    // download begins.
     datasetService.getById({
       id: props.datasetId,
       include_duplications: true,
