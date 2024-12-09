@@ -25,63 +25,6 @@ const isPermittedToWorkflow = accessControl('workflow');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-router.post(
-  '/:id/action-item',
-  isPermittedTo('update'),
-  validate([
-    param('id').isInt().toInt(),
-    body('action_item').isObject(),
-    body('notification').isObject(),
-    body('next_state').escape().notEmpty().optional(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Datasets']
-    // #swagger.summary = Post an action item to a dataset
-
-    const { action_item, notification, next_state } = req.body;
-
-    const createQueries = [
-      prisma.dataset_action_item.create({
-        data: {
-          type: action_item.type,
-          title: action_item.title,
-          text: action_item.text,
-          to: action_item.to,
-          metadata: action_item.metadata,
-          dataset: {
-            connect: {
-              id: req.params.id,
-            },
-          },
-          ingestion_checks: {
-            createMany: { data: action_item.ingestion_checks },
-          },
-          notification: {
-            create: notification,
-          },
-        },
-      }),
-    ];
-
-    if (next_state) {
-      createQueries.push(prisma.dataset_state.create({
-        data: {
-          state: next_state,
-          dataset: {
-            connect: {
-              id: action_item.dataset_id,
-            },
-          },
-        },
-      }));
-    }
-
-    const [created_action_item] = await prisma.$transaction(createQueries);
-
-    res.json(created_action_item);
-  }),
-);
-
 router.patch(
   '/:id/action-item/:action_item_id',
   isPermittedTo('update'),
@@ -94,14 +37,14 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Datasets']
     // #swagger.summary = patch an action item associated with a dataset.
-    // #swagger.description = provided `ingestion_checks` will overwrite
+    // #swagger.description = provided `ingestion_checks`. Will overwrite
     // existing ingestion checks associated with this action item.
 
     // change ingestion_checks's mapping to file ids
     const { ingestion_checks = [] } = req.body;
 
-    console.log("req.params.action_item_id", req.params.action_item_id)
-    console.log("ingestion_checks", ingestion_checks)
+    // console.log("req.params.action_item_id", req.params.action_item_id)
+    // console.log("ingestion_checks", ingestion_checks)
 
     // const create_quuery = ingestion_checks.map((check) => ({
     //   return {
@@ -134,7 +77,7 @@ router.patch(
           type: check.type,
           label: check.label,
           passed: check.passed,
-          action_item_id: req.params.action_item_id,
+          dataset_id: req.params.id,
         })),
       });
 
@@ -146,10 +89,10 @@ router.patch(
 
         const ingestion_check = await tx.dataset_ingestion_check.findUnique({
           where: {
-            action_item_id_type: {
-              action_item_id: req.params.action_item_id,
+            type_dataset_id: {
               type: check.type,
-            },
+              dataset_id: req.params.id,
+            }
           }
         });
         // eslint-disable-next-line no-await-in-loop
@@ -205,15 +148,6 @@ router.get(
         id: req.params.id,
       },
       include: {
-        ingestion_checks: {
-          include: {
-            file_checks: {
-              include: {
-                file: true,
-              },
-            },
-          },
-        },
         dataset: {
           include: {
             states: {
@@ -521,6 +455,7 @@ router.get(
     query('include_upload_log').toBoolean().default(false),
     query('include_duplications').toBoolean().optional(),
     query('include_action_items').toBoolean().optional(),
+    query('include_ingestion_checks').toBoolean().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -541,6 +476,7 @@ router.get(
       include_upload_log: req.query.include_upload_log,
       include_duplications: req.query.include_duplications || false,
       include_action_items: req.query.include_action_items || false,
+      include_ingestion_checks: req.query.include_ingestion_checks || false,
     });
 
     res.json(dataset);
@@ -641,9 +577,10 @@ router.post(
     if (!action_item) {
       action_item = {
         type: config.ACTION_ITEM_TYPES.DUPLICATE_DATASET_INGESTION,
-        metadata: {
-          original_dataset_id: req.params.id,
-        },
+        // todo - remove metadata
+        // metadata: {
+        //   original_dataset_id: req.params.id,
+        // },
       };
     }
 
@@ -733,7 +670,7 @@ router.post(
                 type: action_item.type,
                 title: action_item.title,
                 text: action_item.text,
-                metadata: action_item.metadata,
+                // metadata: action_item.metadata,
                 notification: {
                   create: notification,
                 },

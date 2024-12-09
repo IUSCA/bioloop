@@ -1,5 +1,5 @@
 <template>
-  <va-inner-loading :loading="loading">
+  <va-inner-loading :loading="initiatingResolution">
     <div class="flex flex-col gap-3">
       <va-alert v-if="!isActionItemActive" color="warning" class="mx-0">
         This action item is no longer active.
@@ -39,9 +39,9 @@
       >
         Dataset
         <a
-          :href="`/datasets/${props.actionItem.dataset.duplicated_from.original_dataset_id}`"
+          :href="`/datasets/${props.actionItem?.dataset.duplicated_from.original_dataset_id}`"
           >{{
-            props.actionItem.dataset.duplicated_from.original_dataset.name
+            props.actionItem?.dataset.duplicated_from.original_dataset.name
           }}</a
         >
         cannot be overwritten because it has pending workflows.
@@ -49,7 +49,11 @@
 
       <!-- The report generated for this duplication -->
       <duplication-report-header :action-item="props.actionItem" />
-      <duplication-report-body :action-item="props.actionItem" />
+      <duplication-report-body
+        :ingestion-checks="props.ingestionChecks"
+        :original-dataset="props.actionItem?.dataset.duplicated_from.original_dataset"
+        :duplicate-dataset="props.actionItem?.dataset.duplicated_from.duplicate_dataset"
+      />
 
       <!-- Accept / Reject buttons -->
       <div class="flex gap-5 mt-5">
@@ -70,13 +74,13 @@
       v-model:show-modal="showAcceptModal"
       :action-item="props.actionItem"
       :are-controls-disabled="areControlsDisabled"
-      @confirm="acceptDuplicate(props.actionItem.dataset_id)"
+      @confirm="acceptDuplicate(props.actionItem?.dataset_id)"
     />
     <duplication-reject-modal
       v-model:show-modal="showRejectModal"
       :action-item="props.actionItem"
       :are-controls-disabled="areControlsDisabled"
-      @confirm="rejectDuplicate(props.actionItem.dataset_id)"
+      @confirm="rejectDuplicate(props.actionItem?.dataset_id)"
     />
   </va-inner-loading>
 </template>
@@ -96,6 +100,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  ingestionChecks: {
+    type: Array,
+    default: () => [],
+  },
   datasetWorkflows: {
     type: Array,
     default: () => [],
@@ -105,6 +113,11 @@ const props = defineProps({
     default: false,
   },
 });
+
+console.log('index.vue props.ingestionChecks');
+console.log(props.ingestionChecks);
+console.log('index.vue props.actionItem');
+console.log(props.actionItem);
 
 const notificationStore = useNotificationStore();
 
@@ -118,9 +131,6 @@ const emit = defineEmits(["initiated-resolution"]);
 // the duplicate dataset is currently in progress.
 const initiatingResolution = ref(false);
 // aggregate loading indicator for the component
-const loading = computed(
-  () => props.loadingResources || initiatingResolution.value,
-);
 
 const showAcceptModal = ref(false);
 const showRejectModal = ref(false);
@@ -180,8 +190,10 @@ function rejectDuplicate(duplicate_dataset_id) {
 // the current state of the dataset associated with this action item
 const associatedDatasetState = computed(() => {
   // assumes states are sorted by descending timestamp
-  const latestState = props.actionItem.dataset.states[0];
-  return latestState.state;
+  console.log("associatedDatasetState:");
+  console.log(props.actionItem?.dataset);
+  const latestState = props.actionItem?.dataset?.states?.length > 0 ? props.actionItem.dataset.states[0] : null;
+  return latestState?.state || undefined;
 });
 
 const isDuplicateDatasetReadyForProcessing = computed(() => {
@@ -189,11 +201,11 @@ const isDuplicateDatasetReadyForProcessing = computed(() => {
 });
 
 const isActionItemActive = computed(() => {
-  return props.actionItem.status === "CREATED";
+  return props.actionItem?.status === "CREATED";
 });
 
 const isActionItemAcknowledged = computed(() => {
-  return props.actionItem.status === "RESOLVED";
+  return props.actionItem?.status === "RESOLVED";
 });
 
 const areControlsDisabled = computed(() => {
@@ -204,4 +216,8 @@ const areControlsDisabled = computed(() => {
     datasetHasPendingWorkflows.value
   );
 });
+
+onMounted(() => {
+  console.log("index.vue mounted")
+})
 </script>

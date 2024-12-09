@@ -22,6 +22,7 @@ class DatasetService {
    * @param is_duplicate Boolean field to filter datasets by the is_duplicate attribute
    * @param include_action_items Boolean field to includes any active action items on the dataset in the result
    * @param include_states Boolean field to include dataset's state history
+   * @param include_ingestion_checks Boolean field to include dataset's ingestion checks
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
@@ -42,6 +43,7 @@ class DatasetService {
     include_states = false,
     include_action_items = false,
     include_projects = false,
+    include_ingestion_checks = false,
     initiator = false,
   }) {
     return api.get(`/datasets/${id}`, {
@@ -56,6 +58,7 @@ class DatasetService {
         include_states,
         include_action_items,
         include_projects,
+        include_ingestion_checks,
         initiator,
       },
     });
