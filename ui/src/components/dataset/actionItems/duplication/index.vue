@@ -1,13 +1,19 @@
 <template>
   <va-inner-loading :loading="initiatingResolution">
     <div class="flex flex-col gap-3">
-      <va-alert v-if="!isActionItemActive" color="warning" class="mx-0">
+      <va-alert
+        v-if="!isActionItemActive"
+        color="warning"
+        icon="warning"
+        class="mx-0"
+      >
         This action item is no longer active.
       </va-alert>
 
       <va-alert
         v-if="isActionItemAcknowledged && isActionItemActive"
         color="success"
+        icon="success"
         class="mx-0"
       >
         This action item has been acknowledged.
@@ -20,6 +26,7 @@
           isActionItemActive
         "
         color="warning"
+        icon="warning"
         class="mx-0"
       >
         Duplicate dataset needs to reach a state of
@@ -35,6 +42,7 @@
           datasetHasPendingWorkflows
         "
         color="warning"
+        icon="warning"
         class="mx-0"
       >
         Dataset
@@ -51,8 +59,12 @@
       <duplication-report-header :action-item="props.actionItem" />
       <duplication-report-body
         :ingestion-checks="props.ingestionChecks"
-        :original-dataset="props.actionItem?.dataset.duplicated_from.original_dataset"
-        :duplicate-dataset="props.actionItem?.dataset.duplicated_from.duplicate_dataset"
+        :original-dataset="
+          props.actionItem?.dataset.duplicated_from.original_dataset
+        "
+        :duplicate-dataset="
+          props.actionItem?.dataset.duplicated_from.duplicate_dataset
+        "
       />
 
       <!-- Accept / Reject buttons -->
@@ -114,9 +126,9 @@ const props = defineProps({
   },
 });
 
-console.log('index.vue props.ingestionChecks');
+console.log("index.vue props.ingestionChecks");
 console.log(props.ingestionChecks);
-console.log('index.vue props.actionItem');
+console.log("index.vue props.actionItem");
 console.log(props.actionItem);
 
 const notificationStore = useNotificationStore();
@@ -192,7 +204,10 @@ const associatedDatasetState = computed(() => {
   // assumes states are sorted by descending timestamp
   console.log("associatedDatasetState:");
   console.log(props.actionItem?.dataset);
-  const latestState = props.actionItem?.dataset?.states?.length > 0 ? props.actionItem.dataset.states[0] : null;
+  const latestState =
+    props.actionItem?.dataset?.states?.length > 0
+      ? props.actionItem.dataset.states[0]
+      : null;
   return latestState?.state || undefined;
 });
 
@@ -218,6 +233,6 @@ const areControlsDisabled = computed(() => {
 });
 
 onMounted(() => {
-  console.log("index.vue mounted")
-})
+  console.log("index.vue mounted");
+});
 </script>
