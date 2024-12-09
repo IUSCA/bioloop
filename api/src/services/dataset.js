@@ -149,11 +149,11 @@ async function get_dataset({
             file_checks: {
               include: {
                 file: true,
-              }
-            }
-          }
-        }
-      })
+              },
+            },
+          },
+        },
+      }),
     },
   });
   const dataset_workflows = dataset.workflows;
