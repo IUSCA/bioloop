@@ -172,6 +172,9 @@ const filterQuery = computed(() => {
             : checkboxes.value.dataProduct
               ? "DATA_PRODUCT"
               : undefined,
+          is_duplicate: false,
+          include_action_items: false,
+          include_states: false,
         }
       : undefined;
   }

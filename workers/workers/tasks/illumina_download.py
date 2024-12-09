@@ -26,6 +26,7 @@ def download_recent_datasets(celery_task: WorkflowTask, download_dir: Path, n_da
 
 def download_illumina_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
+
     project_name = dataset['name']
     download_path = Path(config['paths']['scratch']) / project_name
 
