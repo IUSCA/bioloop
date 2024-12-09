@@ -109,6 +109,14 @@ class DatasetService {
     return api.patch(`/datasets/${id}`, updated_data);
   }
 
+  filter_files({ id, file_type }) {
+    return api.get(`/datasets/${id}/files/search`, {
+      params: {
+        filetype: file_type,
+      },
+    });
+  }
+
   list_files({ id, basepath }) {
     return api.get(`/datasets/${id}/files`, {
       params: {

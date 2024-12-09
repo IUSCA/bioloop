@@ -43,12 +43,14 @@
           <!-- Expanded details for current check -->
           <template #expandableRow="{ rowData }">
             <div>
-              <checksums-diff
-                v-if="rowData.type === 'CHECKSUMS_MATCH'"
-                :conflicting-files="rowData.file_checks.map(check => check.file)"
-                :original-dataset-files="originalDatasetFiles"
-                :duplicate-dataset-files="duplicateDatasetFiles"
-              />
+              <va-inner-loading :loading="loading">
+                <checksums-diff
+                  v-if="rowData.type === 'CHECKSUMS_MATCH'"
+                  :conflicting-files="rowData.file_checks.map(check => check.file)"
+                  :original-dataset-files="originalDatasetFiles"
+                  :duplicate-dataset-files="duplicateDatasetFiles"
+                />
+              </va-inner-loading>
 
               <missing-files-diff
                 v-if="
@@ -60,15 +62,13 @@
               >
               </missing-files-diff>
 
-              <number-of-files-diff
-                v-if="rowData.type === 'FILE_COUNT'"
-                :num-files-duplicate-dataset="
-                  rowData.report.num_files_duplicate_dataset
-                "
-                :num-files-original-dataset="
-                  rowData.report.num_files_original_dataset
-                "
-              />
+              <va-inner-loading :loading="loading">
+                <number-of-files-diff
+                  v-if="rowData.type === 'FILE_COUNT'"
+                  :num-files-duplicate-dataset="originalDatasetFiles?.length"
+                  :num-files-original-dataset="duplicateDatasetFiles?.length"
+                />
+              </va-inner-loading>
             </div>
           </template>
         </va-data-table>
@@ -120,18 +120,20 @@ const columns = ref([
 
 onMounted(() => {
   loading.value = true;
-  Promise.all(
-    [
-      datasetService.list_files({id: props.originalDataset.id}),
-      datasetService.list_files({id: props.duplicateDataset.id})
-    ]).then(([res1, res2]) => {
-      originalDatasetFiles.value = res1.data;
-      duplicateDatasetFiles.value = res2.data;
-    }).catch(err => {
-      toast.error("Failed to fetch resources")
-      console.error(err);
-    }).finally(() => {
-      loading.value = false;
-    })
+  if (props.originalDataset && props.duplicateDataset) {
+    Promise.all(
+      [
+        datasetService.filter_files({id: props.originalDataset.id, file_type: "file"}),
+        datasetService.filter_files({id: props.duplicateDataset.id, file_type: "file"})
+      ]).then(([res1, res2]) => {
+        originalDatasetFiles.value = res1.data;
+        duplicateDatasetFiles.value = res2.data;
+      }).catch(err => {
+        toast.error("Failed to fetch resources")
+        console.error(err);
+      }).finally(() => {
+        loading.value = false;
+      })
+    }
 })
 </script>
