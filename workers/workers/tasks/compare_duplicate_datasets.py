@@ -125,8 +125,7 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
             conflicting_checksum_files.append(duplicate_file)
 
     # if there are no common files between the two datasets, we consider that checksum validation failed
-    passed_checksum_validation: bool = len(conflicting_checksum_files) == 0 if \
-        len(common_files_paths) > 0 else None
+    passed_checksum_validation: bool = len(common_files_paths) > 0 and len(conflicting_checksum_files) == 0
     logger.info(f"Checksum validation passed: {passed_checksum_validation}")
     
     comparison_checks.append({
