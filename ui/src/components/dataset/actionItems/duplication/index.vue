@@ -13,7 +13,7 @@
       <va-alert
         v-if="isActionItemAcknowledged && isActionItemActive"
         color="success"
-        icon="success"
+        icon="check_circle_outline""
         class="mx-0"
       >
         This action item has been acknowledged.

@@ -2,7 +2,7 @@
   <va-alert
     v-if="props.missingFiles?.length === 0"
     color="success"
-    icon="success"
+    icon="check_circle_outline""
   >
     {{ successAlertText }}
   </va-alert>

@@ -7,7 +7,7 @@
     These datasets do not have any files in common
   </va-alert>
 
-  <va-alert v-else-if="props.passed" color="success" icon="success">
+  <va-alert v-else-if="props.passed" color="success" icon="check_circle_outline"">
     All files in the original dataset match checksums of corresponding files in
     the incoming duplicate
   </va-alert>

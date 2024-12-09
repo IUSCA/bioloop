@@ -2,7 +2,7 @@
   <va-alert
     v-if="props.numFilesOriginalDataset === props.numFilesDuplicateDataset"
     color="success"
-    icon="success"
+    icon="check_circle_outline""
   >
     Number of files match
   </va-alert>
