@@ -54,8 +54,6 @@ const props = defineProps({
 
 const { canAdmin, canOperate } = storeToRefs(useAuthStore());
 
-// console.log(canAdmin.value);
-
 const isAuthorized = computed(() => canAdmin.value || canOperate.value);
 
 // Gather and sort all duplicates of the current dataset

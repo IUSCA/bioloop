@@ -1,7 +1,7 @@
 <template>
   <va-inner-loading :loading="loading">
-      <!-- v-if="actionItem && ingestionChecks.length > 0" -->
-      <!-- :loading-resources="loading" -->
+    <!-- v-if="actionItem && ingestionChecks.length > 0" -->
+    <!-- :loading-resources="loading" -->
     <action-item-report
       v-if="!loading"
       :action-item="actionItem"
@@ -31,19 +31,18 @@ const loading = ref(false);
 
 const fetchDatasetIngestionChecks = (dataset_id) => {
   return datasetService
-   .getById({
+    .getById({
       id: dataset_id,
-      include_ingestion_checks: true
+      include_ingestion_checks: true,
     })
-   .then((res) => {
-      ingestionChecks.value = res.data.ingestion_checks  
-      console.log("Dataset ingestion checks:", res.data.ingestion_checks);
+    .then((res) => {
+      ingestionChecks.value = res.data.ingestion_checks;
     })
-   .catch((err) => {
+    .catch((err) => {
       toast.error("Failed to fetch dataset ingestion checks");
       console.error(err);
     });
-}
+};
 
 const fetchActionItemDetails = () => {
   return datasetService
@@ -79,21 +78,28 @@ const fetchResources = () => {
 
   let originalDatasetId, duplicateDatasetId;
 
-  fetchActionItemDetails().then(() => {
-    originalDatasetId = actionItem.value.dataset.duplicated_from.original_dataset_id;
-    duplicateDatasetId = actionItem.value.dataset.duplicated_from.duplicate_dataset_id;
-    return true
-  }).then(() => {
-    return fetchDatasetWorkflows(originalDatasetId);
-  }).then(() => {
-    return fetchDatasetIngestionChecks(duplicateDatasetId);
-  }).catch((err) => {
-    toast.error("Failed to fetch resources");
-    console.error(err);
-  }).finally(() => {
-    loading.value = false;
-    console.log("loading = false")
-  })
+  fetchActionItemDetails()
+    .then(() => {
+      originalDatasetId =
+        actionItem.value.dataset.duplicated_from.original_dataset_id;
+      duplicateDatasetId =
+        actionItem.value.dataset.duplicated_from.duplicate_dataset_id;
+      return true;
+    })
+    .then(() => {
+      return fetchDatasetWorkflows(originalDatasetId);
+    })
+    .then(() => {
+      return fetchDatasetIngestionChecks(duplicateDatasetId);
+    })
+    .catch((err) => {
+      toast.error("Failed to fetch resources");
+      console.error(err);
+    })
+    .finally(() => {
+      loading.value = false;
+      console.log("loading = false");
+    });
 
   // await fetchActionItemDetails();
   // // const originalDatasetId = actionItem.value.dataset.duplicated_from.original_dataset_id;
@@ -107,7 +113,7 @@ const fetchResources = () => {
 };
 
 onMounted(() => {
-  console.log("[actionItemId] mounted")
+  console.log("[actionItemId] mounted");
   fetchResources();
 });
 </script>

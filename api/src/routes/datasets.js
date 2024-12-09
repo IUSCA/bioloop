@@ -43,16 +43,6 @@ router.patch(
     // change ingestion_checks's mapping to file ids
     const { ingestion_checks = [] } = req.body;
 
-    // console.log("req.params.action_item_id", req.params.action_item_id)
-    // console.log("ingestion_checks", ingestion_checks)
-
-    // const create_quuery = ingestion_checks.map((check) => ({
-    //   return {
-    //     ...check,
-    //     // files:
-    //   }
-    // })
-
     const updated_action_item = await prisma.$transaction(async (tx) => {
       const dataset = await tx.dataset.findUnique({
         where: {
@@ -85,15 +75,15 @@ router.patch(
       for (const check of ingestion_checks) {
         // retrieve check
         // eslint-disable-next-line no-await-in-loop
-        console.log("check", check)
+        console.log('check', check);
 
         const ingestion_check = await tx.dataset_ingestion_check.findUnique({
           where: {
             type_dataset_id: {
               type: check.type,
               dataset_id: req.params.id,
-            }
-          }
+            },
+          },
         });
         // eslint-disable-next-line no-await-in-loop
         await tx.dataset_ingestion_file_check.createMany({
