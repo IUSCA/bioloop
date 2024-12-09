@@ -1,19 +1,18 @@
 <template>
-  <va-alert
-    v-if="props.passed === null || props.passed === undefined"
-    color="info"
-    icon="info"
-  >
-    These datasets do not have any files in common
-  </va-alert>
-
-  <va-alert v-else-if="props.passed" color="success" icon="check_circle_outline"">
+  <va-alert v-if="props.passed" color="success" icon="check_circle_outline">
     All files in the original dataset match checksums of corresponding files in
     the incoming duplicate
   </va-alert>
 
   <div v-else>
-    <div>
+    <va-alert
+      v-if="props.conflictingFiles.length === 0"
+      color="info"
+      icon="info"
+    >
+      These datasets do not have any files in common
+    </va-alert>
+    <div v-else>
       <va-alert class="mb-4" color="warning" icon="warning">
         The following files in the original dataset did not match checksums of
         corresponding files in the incoming duplicate
