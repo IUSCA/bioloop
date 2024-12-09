@@ -71,7 +71,7 @@ const emit = defineEmits(["confirm", "update:showModal"]);
 
 const modalInput = ref("");
 
-const associatedDataset = computed(() => props.actionItem.dataset);
+const associatedDataset = computed(() => props.actionItem?.dataset);
 
 const showModal = computed({
   get() {

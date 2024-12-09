@@ -103,6 +103,7 @@ async function get_dataset({
   includeProjects = false,
   initiator = false,
   include_upload_log = false,
+  include_ingestion_checks = false,
 }) {
   const fileSelect = files ? INCLUDE_FILES : { files: false };
   const workflow_include = initiator ? {
@@ -142,6 +143,17 @@ async function get_dataset({
           active: true,
         },
       } : undefined,
+      ...(include_ingestion_checks && {
+        ingestion_checks: {
+          include: {
+            file_checks: {
+              include: {
+                file: true,
+              }
+            }
+          }
+        }
+      })
     },
   });
   const dataset_workflows = dataset.workflows;

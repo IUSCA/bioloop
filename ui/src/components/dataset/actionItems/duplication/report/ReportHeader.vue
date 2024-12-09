@@ -13,17 +13,17 @@
             <tr>
               <td>Dataset Name</td>
               <td>
-                {{ props.actionItem.dataset.name }}
+                {{ props.actionItem?.dataset.name }}
               </td>
             </tr>
             <tr>
               <td>Original Dataset</td>
               <td>
                 <router-link
-                  :to="`/datasets/${props.actionItem.metadata.original_dataset_id}`"
+                  :to="`/datasets/${props.actionItem?.dataset.duplicated_from.original_dataset_id}`"
                   class="va-link"
                 >
-                  #{{ props.actionItem.metadata.original_dataset_id }}
+                  #{{ props.actionItem?.dataset.duplicated_from.original_dataset_id }}
                 </router-link>
               </td>
             </tr>
@@ -31,10 +31,10 @@
               <td>Duplicate Dataset</td>
               <td>
                 <router-link
-                  :to="`/datasets/${props.actionItem.dataset_id}`"
+                  :to="`/datasets/${props.actionItem?.dataset_id}`"
                   class="va-link"
                 >
-                  #{{ props.actionItem.dataset_id }}
+                  #{{ props.actionItem?.dataset_id }}
                 </router-link>
               </td>
             </tr>
