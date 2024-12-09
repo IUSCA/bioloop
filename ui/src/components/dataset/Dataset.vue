@@ -140,7 +140,9 @@
                   </va-button>
 
                   <va-button
-                    :disabled="!dataset.is_staged"
+                    :disabled="
+                      !dataset.is_staged || !config.enabledFeatures.downloads
+                    "
                     class="flex-initial"
                     color="primary"
                     border-color="primary"

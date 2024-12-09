@@ -1034,6 +1034,10 @@ router.get(
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
 
+    if (!config.enabled_features.downloads) {
+      return next(createError.Forbidden('The Download feature is currently disabled'));
+    }
+
     const isFileDownload = !!req.query.file_id;
 
     // Log the data access attempt first.

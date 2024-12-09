@@ -24,7 +24,6 @@ const exports = {
     download: "",
   },
   file_browser: {
-    enable_downloads: true,
     cache_busting_id: "fe09b01", // any random string different from the previous value will work
   },
   enable_delete_archive: true,
@@ -90,6 +89,10 @@ const exports = {
     notifications: {
       enabledForRoles: ["admin", "operator"],
     },
+    ingestion: {
+      enabledForRoles: ["admin"],
+    },
+    downloads: true,
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
