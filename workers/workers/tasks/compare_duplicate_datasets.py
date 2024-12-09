@@ -7,7 +7,7 @@ from celery.utils.log import get_task_logger
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-from workers.exceptions import InspectionFailed, RetryableException
+from workers.exceptions import ProcessingFailed, RetryableException, ValidationFailed
 from workers.config import config
 
 app = Celery("tasks")
@@ -17,27 +17,23 @@ logger = get_task_logger(__name__)
 
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     logger.info(f"Processing duplicate dataset {duplicate_dataset_id}")
-    # todo - retryable exception
     duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
                                               include_duplications=True,
                                               include_action_items=True)
 
-    # todo - dont retry
     if not duplicate_dataset['is_duplicate']:
-        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
+        raise ValidationFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
 
     original_dataset_id = duplicate_dataset['duplicated_from']['original_dataset_id']
     original_dataset: dict = api.get_dataset(dataset_id=original_dataset_id)
 
     logger.info(f"Dataset is duplicate of dataset {original_dataset['name']} (id: {original_dataset_id})")
 
-    # todo - retryable exception
     duplicate_files: list[dict] = api.get_dataset_files(
         dataset_id=duplicate_dataset['id'],
         filters={
             "filetype": "file"
         })
-    # todo - retryable exception
     original_files: list[dict] = api.get_dataset_files(
         dataset_id=original_dataset['id'],
         filters={
@@ -48,8 +44,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
     try:
         comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
     except Exception:
-        # todo - retryable exception
-        raise RetryableException("Failed to compare dataset files")
+        raise ProcessingFailed("Failed to compare dataset files")
 
     # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
     # create an action item for operators to review later. This way, operators will always have a chance
@@ -62,7 +57,6 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
        "next_state": config['DATASET_STATES']['DUPLICATE_READY'],
     }
 
-    # todo - retryable exception
     api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],
                                    action_item_id=duplication_action_item['id'],
                                    data=action_item_data)
@@ -129,8 +123,6 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
             logger.info(f"Checksum validation failed for file {file_path} (original: {original_file['id']}, duplicate: {duplicate_file['id']})")
             conflicting_checksum_files.append(original_file)
             conflicting_checksum_files.append(duplicate_file)
-    
-    # logger.info(json.dumps(conflicting_checksum_files, indent=2))
 
     # if there are no common files between the two datasets, we consider that checksum validation failed
     passed_checksum_validation: bool = len(conflicting_checksum_files) == 0 if \
