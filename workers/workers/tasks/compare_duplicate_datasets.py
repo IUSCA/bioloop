@@ -7,7 +7,7 @@ from celery.utils.log import get_task_logger
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-from workers.exceptions import ProcessingFailed, RetryableException, ValidationFailed
+from workers.exceptions import ProcessingFailed, InspectionFailed
 from workers.config import config
 
 app = Celery("tasks")
@@ -22,7 +22,7 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
                                               include_action_items=True)
 
     if not duplicate_dataset['is_duplicate']:
-        raise ValidationFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
+        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
 
     original_dataset_id = duplicate_dataset['duplicated_from']['original_dataset_id']
     original_dataset: dict = api.get_dataset(dataset_id=original_dataset_id)

@@ -43,7 +43,7 @@ def compare_duplicate_datasets(celery_task, duplicate_dataset_id, **kwargs):
     from workers.tasks.compare_duplicate_datasets import compare_datasets as task_body
     try:
         return task_body(celery_task, duplicate_dataset_id, **kwargs)
-    except exc.ValidationFailed:
+    except exc.InspectionFailed:
         raise
     except exc.ProcessingFailed:
         raise
