@@ -256,13 +256,6 @@ def add_state_to_dataset(dataset_id, state, metadata=None):
         r.raise_for_status()
 
 
-def post_dataset_action_item(dataset_id: int,
-                             data: dict = None):
-    with APIServerSession() as s:
-        r = s.post(f'datasets/{dataset_id}/action-item', json=data)
-        r.raise_for_status()
-
-
 def update_dataset_action_item(dataset_id: int, action_item_id: int, data: dict):
     with APIServerSession() as s:
         r = s.patch(f'datasets/{dataset_id}/action-item/{action_item_id}', json=data)
