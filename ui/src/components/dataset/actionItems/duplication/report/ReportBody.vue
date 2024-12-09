@@ -41,37 +41,34 @@
           <template #expandableRow="{ rowData }">
             <div>
               <va-inner-loading :loading="loading">
-
-              <checksums-diff-report
-                v-if="rowData.type === 'CHECKSUMS_MATCH'"
-                :passed="rowData.passed"
-                :conflicting-files="
-                  rowData.file_checks.map((check) => check.file)
-                "
-                :original-dataset-files="originalDatasetFiles"
-                :duplicate-dataset-files="duplicateDatasetFiles"
-              />
+                <checksums-diff-report
+                  v-if="rowData.type === 'CHECKSUMS_MATCH'"
+                  :passed="rowData.passed"
+                  :conflicting-files="
+                    rowData.file_checks.map((check) => check.file)
+                  "
+                  :original-dataset-files="originalDatasetFiles"
+                  :duplicate-dataset-files="duplicateDatasetFiles"
+                />
               </va-inner-loading>
 
+              <missing-files-diff
+                v-if="
+                  rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
+                  rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
+                "
+                :missing-files="rowData.file_checks.map(check => check.file)"
+                :check-type="rowData.type"
+              >
+              </missing-files-diff>
 
-                <missing-files-diff
-                  v-if="
-                    rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
-                    rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
-                  "
-                  :missing-files="rowData.file_checks.map(check => check.file)"
-                  :check-type="rowData.type"
-                >
-                </missing-files-diff>
-
-                <va-inner-loading :loading="loading">
-                  <number-of-files-diff
-                    v-if="rowData.type === 'FILE_COUNT'"
-                    :num-files-duplicate-dataset="originalDatasetFiles?.length"
-                    :num-files-original-dataset="duplicateDatasetFiles?.length"
-                  />
-                </va-inner-loading>
-              </div>
+              <va-inner-loading :loading="loading">
+                <number-of-files-diff
+                  v-if="rowData.type === 'FILE_COUNT'"
+                  :num-files-duplicate-dataset="originalDatasetFiles?.length"
+                  :num-files-original-dataset="duplicateDatasetFiles?.length"
+                />
+              </va-inner-loading>
             </div>
           </template>
         </va-data-table>
