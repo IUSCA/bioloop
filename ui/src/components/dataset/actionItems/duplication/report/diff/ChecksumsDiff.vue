@@ -1,34 +1,22 @@
 <template>
-  <va-alert v-if="props.conflictingFiles.length === 0" color="success">
-    All files in the original dataset match checksums of corresponding files in
-    the incoming duplicate
-  </va-alert>
+  <va-scroll-container class="max-h-52" vertical>
+    <va-data-table :columns="columns" :items="items">
+      <template #cell(name)="{ value }">
+        <div class="flex items-center gap-1">
+          <FileTypeIcon :filename="value" />
+          <span>{{ value }}</span>
+        </div>
+      </template>
 
-  <div v-else>
-    <va-alert class="mb-4" color="warning">
-      The following files in the original dataset did not match checksums of
-      corresponding files in the incoming duplicate
-    </va-alert>
+      <template #cell(original_md5)="{ value }">
+        <span class="text-sm">{{ value }}</span>
+      </template>
 
-    <va-scroll-container class="max-h-52" vertical>
-      <va-data-table :columns="columns" :items="items">
-        <template #cell(name)="{ value }">
-          <div class="flex items-center gap-1">
-            <FileTypeIcon :filename="value" />
-            <span>{{ value }}</span>
-          </div>
-        </template>
-
-        <template #cell(original_md5)="{ value }">
-          <span class="text-sm">{{ value }}</span>
-        </template>
-
-        <template #cell(duplicate_md5)="{ value }">
-          <span class="text-sm">{{ value }}</span>
-        </template>
-      </va-data-table>
-    </va-scroll-container>
-  </div>
+      <template #cell(duplicate_md5)="{ value }">
+        <span class="text-sm">{{ value }}</span>
+      </template>
+    </va-data-table>
+  </va-scroll-container>
 </template>
 
 <script setup>
@@ -57,13 +45,18 @@ const items = computed(() => {
   const conflictingFiles = _.groupBy(props.conflictingFiles, (e) => e.path)
   console.log('conflictingFiles');
   console.log(conflictingFiles);
-  const conflictingFilesPaths = Object.keys(conflictingFiles)
-  // const conflictingFilesMap = new Map(conflictingFiles.map((files) => [files[0].path, files]));
-  console.log('conflictingFilesPaths');
+  const conflictingFilesPaths = Object.keys(conflictingFiles);
+  // const conflictingFilesMap = new Map(conflictingFiles.map((files) =>
+  // [files[0].path, files]));
+  console.log("conflictingFilesPaths");
   console.log(conflictingFilesPaths);
-  const originalFilesMap = new Map(props.originalDatasetFiles.map((file) => [file.path, file]));
+  const originalFilesMap = new Map(
+    props.originalDatasetFiles.map((file) => [file.path, file]),
+  );
   // debugger
-  const duplicateFilesMap = new Map(props.duplicateDatasetFiles.map((file) => [file.path, file]));
+  const duplicateFilesMap = new Map(
+    props.duplicateDatasetFiles.map((file) => [file.path, file]),
+  );
   return conflictingFilesPaths.map((path) => {
     const originalFile = originalFilesMap.get(path);
     const duplicateFile = duplicateFilesMap.get(path);
@@ -73,7 +66,7 @@ const items = computed(() => {
       original_md5: originalFile.md5,
       duplicate_md5: duplicateFile.md5,
     };
-  })
+  });
 });
 
 const columns = [

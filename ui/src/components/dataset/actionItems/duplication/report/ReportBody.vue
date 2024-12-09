@@ -7,10 +7,7 @@
 
       <va-card-content>
         <!-- Table for various checks performed as part of ingesting a dataset -->
-        <va-data-table
-          :columns="columns"
-          :items="props.ingestionChecks"
-        >
+        <va-data-table :columns="columns" :items="props.ingestionChecks">
           <template #cell(check)="{ rowData }">
             {{ rowData.label }}
           </template>
@@ -44,31 +41,37 @@
           <template #expandableRow="{ rowData }">
             <div>
               <va-inner-loading :loading="loading">
-                <checksums-diff
-                  v-if="rowData.type === 'CHECKSUMS_MATCH'"
-                  :conflicting-files="rowData.file_checks.map(check => check.file)"
-                  :original-dataset-files="originalDatasetFiles"
-                  :duplicate-dataset-files="duplicateDatasetFiles"
-                />
-              </va-inner-loading>
 
-              <missing-files-diff
-                v-if="
-                  rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
-                  rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
+              <checksums-diff-report
+                v-if="rowData.type === 'CHECKSUMS_MATCH'"
+                :passed="rowData.passed"
+                :conflicting-files="
+                  rowData.file_checks.map((check) => check.file)
                 "
-                :missing-files="rowData.file_checks.map(check => check.file)"
-                :check-type="rowData.type"
-              >
-              </missing-files-diff>
-
-              <va-inner-loading :loading="loading">
-                <number-of-files-diff
-                  v-if="rowData.type === 'FILE_COUNT'"
-                  :num-files-duplicate-dataset="originalDatasetFiles?.length"
-                  :num-files-original-dataset="duplicateDatasetFiles?.length"
-                />
+                :original-dataset-files="originalDatasetFiles"
+                :duplicate-dataset-files="duplicateDatasetFiles"
+              />
               </va-inner-loading>
+
+
+                <missing-files-diff
+                  v-if="
+                    rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
+                    rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
+                  "
+                  :missing-files="rowData.file_checks.map(check => check.file)"
+                  :check-type="rowData.type"
+                >
+                </missing-files-diff>
+
+                <va-inner-loading :loading="loading">
+                  <number-of-files-diff
+                    v-if="rowData.type === 'FILE_COUNT'"
+                    :num-files-duplicate-dataset="originalDatasetFiles?.length"
+                    :num-files-original-dataset="duplicateDatasetFiles?.length"
+                  />
+                </va-inner-loading>
+              </div>
             </div>
           </template>
         </va-data-table>
@@ -94,10 +97,10 @@ const props = defineProps({
   duplicateDataset: {
     type: Object,
     required: true,
-  }
+  },
 });
 
-console.log('ReportBody props.ingestionChecks');
+console.log("ReportBody props.ingestionChecks");
 console.log(props.ingestionChecks);
 
 const loading = ref(false);

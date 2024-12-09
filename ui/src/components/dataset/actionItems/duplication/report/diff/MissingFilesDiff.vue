@@ -1,10 +1,14 @@
 <template>
-  <va-alert v-if="props.missingFiles?.length === 0" color="success">
+  <va-alert
+    v-if="props.missingFiles?.length === 0"
+    color="success"
+    icon="success"
+  >
     {{ successAlertText }}
   </va-alert>
 
   <div v-else>
-    <va-alert color="warning" class="mb-4">
+    <va-alert color="warning" class="mb-4" icon="warning">
       {{ warningAlertText }}
     </va-alert>
 

@@ -16,7 +16,7 @@ logger = get_task_logger(__name__)
 
 
 def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
-    logger.info(f"Processing dataset {duplicate_dataset_id}")
+    logger.info(f"Processing duplicate dataset {duplicate_dataset_id}")
     # todo - retryable exception
     duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
                                               include_duplications=True,
@@ -28,6 +28,8 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 
     original_dataset_id = duplicate_dataset['duplicated_from']['original_dataset_id']
     original_dataset: dict = api.get_dataset(dataset_id=original_dataset_id)
+
+    logger.info(f"Dataset is duplicate of dataset {original_dataset['name']} (id: {original_dataset_id})")
 
     # todo - retryable exception
     duplicate_files: list[dict] = api.get_dataset_files(
@@ -138,8 +140,8 @@ def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
 def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list[dict]:
     comparison_checks: list[dict] = []
 
-    files_only_in_original_dataset = get_missing_files(files_1=original_dataset_files, files_2=duplicate_dataset_files)
-    files_only_in_duplicate_dataset = get_missing_files(files_1=duplicate_dataset_files, files_2=original_dataset_files)
+    files_only_in_original_dataset: list[dict] = get_missing_files(files_1=original_dataset_files, files_2=duplicate_dataset_files)
+    files_only_in_duplicate_dataset: list[dict] = get_missing_files(files_1=duplicate_dataset_files, files_2=original_dataset_files)
 
     original_files_paths: set[str] = set(map(lambda f: f['path'], original_dataset_files))
     duplicate_files_paths: set[str] = set(map(lambda f: f['path'], duplicate_dataset_files))
@@ -157,6 +159,7 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
         original_file_checksum = original_file['md5']
         duplicate_file_checksum = duplicate_file['md5']
         if original_file_checksum != duplicate_file_checksum:
+            logger.info(f"Checksum validation failed for file {file_path} (original: {original_file['id']}, duplicate: {duplicate_file['id']})")
             conflicting_checksum_files.append(original_file)
             conflicting_checksum_files.append(duplicate_file)
     
@@ -165,7 +168,9 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
     # if there are no common files between the two datasets, we consider that checksum validation failed
     # todo - all files from both datasets should be shown in UI in case of two datasets not having any common files
     #  under section 'files missing from original/duplicate dataset'. No files should be shown under checksum-diff section.
-    passed_checksum_validation = len(common_files_paths) > 0 and len(conflicting_checksum_files) == 0
+    passed_checksum_validation: bool = len(common_files_paths) > 0 and len(conflicting_checksum_files) == 0
+    logger.info(f"Checksum validation passed: {passed_checksum_validation}")
+    
     comparison_checks.append({
         'type': 'FILE_COUNT',
         'label': 'Number of Files match',
@@ -179,12 +184,15 @@ def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files:
         'files': [{'id': f['id']} for f in conflicting_checksum_files]
     })
 
+    logger.info(f"Files only in original dataset: {len(files_only_in_original_dataset)}")
     comparison_checks.append({
         'type': 'FILES_MISSING_FROM_DUPLICATE',
         'label': 'Original dataset\'s files missing from incoming duplicate',
         'passed': len(files_only_in_original_dataset) == 0,
         'files': [{'id': f['id']} for f in files_only_in_original_dataset]
     })
+    
+    logger.info(f"Files only in duplicate dataset: {len(files_only_in_duplicate_dataset)}")
     comparison_checks.append({
         'type': 'FILES_MISSING_FROM_ORIGINAL',
         'label': 'Incoming duplicate dataset\'s files missing from original',
