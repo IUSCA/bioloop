@@ -1,5 +1,13 @@
 <template>
-  <div class="flex mb-3 gap-3">
+  <va-alert
+    color="warning"
+    icon="warning"
+    v-if="config.enabledFeatures.uploads"
+  >
+    This feature is currently disabled
+  </va-alert>
+
+  <div class="flex mb-3 gap-3" v-else>
     <!-- search bar -->
     <div class="flex-1">
       <va-input

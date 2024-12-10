@@ -54,6 +54,7 @@ const exports = {
             path: "/datasets/ingest",
           },
           {
+            feature_key: "uploads",
             icon: "mdi:folder-upload",
             title: "Upload",
             path: "/datasetUpload",

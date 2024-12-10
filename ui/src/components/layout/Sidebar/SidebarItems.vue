@@ -1,10 +1,12 @@
 <template>
   <va-accordion>
     <template v-for="item in props.items">
+      <!-- This sidebar menu item has nested sidebar menu items, some of whose corresponding
+       features are enabled -->
       <va-collapse
         v-model="collapsibleStates"
         :key="item.title + '-collapse'"
-        v-if="item.children"
+        v-if="item.children && someChildFeaturesEnabled(item.children)"
       >
         <template #header="{ value: isCollapsed }">
           <va-sidebar-item
@@ -43,8 +45,13 @@
         </template>
       </va-collapse>
 
+      <!-- This sidebar menu item does not have any nested sidebar menu items, and it's
+       corresponding feature is enabled for certain roles -->
       <va-sidebar-item
-        v-else-if="isFeatureEnabledForRole(item.feature_key)"
+        v-else-if="
+          isFeatureEnabledForRole(item.feature_key) &&
+          (item.children || []).length === 0
+        "
         :key="item.title"
         :to="item.path"
         :active="props.isActive(item.path)"
@@ -109,6 +116,12 @@ const isFeatureEnabledForRole = (featureKey) => {
     // invalid config found for feature's enabled status
     return false;
   }
+};
+
+const someChildFeaturesEnabled = (features) => {
+  return features.some((feature) => {
+    return isFeatureEnabledForRole(feature.feature_key);
+  });
 };
 </script>
 
