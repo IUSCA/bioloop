@@ -117,13 +117,6 @@
             </va-button>
           </va-popover>
         </div>
-
-        <!-- delete button -->
-        <div class="flex-none" v-if="auth.canAdmin">
-          <va-button size="small" preset="primary" color="danger">
-            <i-mdi-delete />
-          </va-button>
-        </div>
       </div>
     </template>
   </va-data-table>
@@ -191,19 +184,41 @@
           />
 
           <div class="flex-[1_1_100%] flex items-center gap-3">
-            <span
-              class="flex-none text-xs font-semibold"
-              style="color: var(--va-primary)"
-            >
-              STATUS
-            </span>
-            <va-switch
+            <div class="flex items-center gap-3">
+              <span
+                class="flex-none text-xs font-semibold"
+                style="color: var(--va-primary)"
+              >
+                STATUS
+              </span>
+              <va-switch
               v-model="editedUser.status"
               true-label="Enabled"
               false-label="Disabled"
               color="success"
-            />
+              />
+            </div>
+
+            <!-- Delete User Text and Trash Bin Button -->
+            <div v-if="auth.canAdmin" class="flex items-center gap-2 ml-auto">
+              <span
+                class="flex-none text-xs font-semibold"
+                style="color: var(--va-primary); font-size: 12px"
+              >
+                DELETE USER
+              </span>
+              <va-button
+                color="danger"
+                preset="plain"
+                size="small"
+                @click="confirmDeleteUser"
+              >
+                <i-mdi-delete class="text-2xl" />
+              </va-button>
+            </div>
           </div>
+
+
 
           <div class="flex-[1_1_100%]">
             <span
@@ -236,6 +251,58 @@
 
   <!-- Log in as User modal -->
   <SudoUserModal ref="sudoModal" :user="selected" />
+
+    <!-- Delete Confirmation Modal -->
+  <va-modal
+    v-model="isDeleteModalVisible"
+    title="DELETE USER?"
+    okText="Confirm"
+    cancelText="Cancel"
+    @ok="showUsernamePrompt"
+    @cancel="isDeleteModalVisible = false"
+  >
+    <p>Are you sure you want to delete the user record of <strong>{{ editedUser.name }}</strong> completely?</p>
+  </va-modal>
+
+  <!-- Username Confirmation Modal -->
+  <va-modal 
+    v-model="isUsernamePromptVisible"
+    title="CONFIRM DELETION"
+    hide-default-actions
+    @cancel="resetDeleteModal"
+  >
+    <p>This action is irreversible and will impact other data linked to this user.</p>
+    <p>Please type the username <strong>{{ editedUser.username }}</strong> to confirm deletion:</p>
+    <va-input v-model="usernameConfirmation" placeholder="Enter username" />
+
+    <!-- Radio buttons for delete cascade or update cascade -->
+    <div class="mt-4">
+      <label>
+        <input type="checkbox" :checked="deleteOption === 'hardDelete'" @change="toggleOption('hardDelete')" />
+        Hard Deletion
+      </label>
+      <label class="ml-4">
+        <input type="checkbox" :checked="deleteOption === 'softDelete'" @change="toggleOption('softDelete')" />
+        Soft Deletion
+      </label>
+    </div>
+
+    <!-- Display impact details -->
+    <div class="impact-details mt-4" v-if="impactDetails">
+      <p><strong>Impact Details of the selected deletion:</strong></p>
+      <ul>
+        <li v-for="detail in impactDetails" :key="detail">{{ detail }}</li>
+      </ul>
+    </div>
+    
+    <!-- Custom footer with "Confirm Delete" and "Cancel" buttons -->
+    <template #footer>
+      <va-button @click="resetDeleteModal">Cancel</va-button>
+      <va-button color="danger" :disabled="usernameConfirmation !== editedUser.username" @click="hardDeleteUser">
+        Confirm Delete
+      </va-button>
+    </template>
+  </va-modal>
 </template>
 
 <script setup>
@@ -261,6 +328,53 @@ const autofill = ref({
   username: "",
   cas_id: "",
 });
+
+// New variables for delete confirmation modals
+const isDeleteModalVisible = ref(false);
+const isUsernamePromptVisible = ref(false);
+const usernameConfirmation = ref("");
+const deleteOption = ref(null);
+const impactDetails = ref(null);
+
+// Open the initial delete confirmation modal
+function confirmDeleteUser() {
+  isDeleteModalVisible.value = true;
+}
+
+// Show the final username prompt after confirming initial delete dialog
+function showUsernamePrompt() {
+  isDeleteModalVisible.value = false;
+  isUsernamePromptVisible.value = true;
+  usernameConfirmation.value = ""; // reset input
+}
+
+function toggleOption(option) {
+  deleteOption.value = option; // Select the option
+
+  if (option === "hardDelete") {
+    impactDetails.value = [
+      "User profile, roles, and settings will be permanently removed.",
+      "Project assignments, notifications and login history will be removed.",
+      "Related system logs, project-related datasets, and uploads will no longer reference the user.",
+    ];
+  } else if (option === "softDelete") {
+    impactDetails.value = [
+      "The user's account will be marked as inactive but not permanently removed from the database.",
+      "Other data, such as linked projects and system logs, will remain intact.",
+    ];
+  } else {
+    impactDetails.value = null; // Clear the details
+  }
+}
+
+
+function resetDeleteModal() {
+  deleteOption.value = null; // Reset the delete option
+  impactDetails.value = null; // Clear the impact details
+  //usernameConfirmation.value = ""; 
+  isDeleteModalVisible.value = false; 
+  isUsernamePromptVisible.value = false; 
+}
 
 const debouncedUpdate = useDebounceFn((val) => {
   params.value.search = val;
@@ -468,6 +582,47 @@ function createUser() {
   }
 }
 
+function hardDeleteUser() {
+  if (usernameConfirmation.value !== editedUser.value.username) {
+    toast.error('Username does not match. Entered: "${usernameConfirmation.value}", Expected: "${editedUser.value.username}". ');
+    return;
+  }
+
+  if (!deleteOption.value) {
+    toast.error("Please select an action for deletion (hard or soft deletion).");
+    return;
+  }
+
+  modal_loading.value = true;
+
+  // Decide which deletion function to call
+  const deleteFn =
+    deleteOption.value === "hardDelete"
+      ? UserService.hardDeleteUser // Hard delete
+      : UserService.softDeleteUser; // Disassociate
+
+  deleteFn(editedUser.value.username)
+    .then(() => {
+      const successMessage =
+        deleteOption.value === "hardDelete"
+          ? "User record and their associated data have been successfully removed or disassociated."
+          : "User is temporarily disabled. Their associated data remains intact.";
+      toast.success(successMessage);
+      fetch_all_users(); 
+      resetEditModal(); // Close the Modify User modal
+      isUsernamePromptVisible.value = false;
+    })
+    .catch((err) => {
+      console.error(err);
+      toast.error("An error occurred while processing your request.");
+    })
+    .finally(() => {
+      modal_loading.value = false;
+      isUsernamePromptVisible.value = false;
+      resetDeleteModal(); 
+    });
+}
+
 watch(
   [
     () => params.value.itemsPerPage,
@@ -511,6 +666,32 @@ fetch_all_users();
 <style scoped>
 .usertable {
   --va-data-table-cell-padding: 3px;
+}
+
+/* Style checkboxes to look like radio buttons */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+}
+
+input[type="checkbox"]:checked::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  background-color: #007bff;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 </style>
 
