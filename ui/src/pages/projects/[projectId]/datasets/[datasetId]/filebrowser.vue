@@ -3,7 +3,7 @@
     :dataset-id="props.datasetId"
     :show-download="
       isFeatureEnabled({
-        featureKey: config.enabledFeatures.downloads,
+        featureKey: 'downloads',
         hasRole: auth.hasRole,
       }) && dataset.is_staged
     "

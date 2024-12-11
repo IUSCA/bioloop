@@ -4,7 +4,7 @@
     icon="warning"
     v-if="
       !isFeatureEnabled({
-        featureKey: config.enabledFeatures.uploads,
+        featureKey: 'uploads',
         hasRole: auth.hasRole,
       })
     "

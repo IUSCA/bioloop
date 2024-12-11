@@ -46,7 +46,7 @@
         <tr
           v-if="
             isFeatureEnabled({
-              featureKey: config.enabledFeatures.genomeBrowser,
+              featureKey: 'genomeBrowser',
               hasRole: auth.hasRole,
             })
           "
