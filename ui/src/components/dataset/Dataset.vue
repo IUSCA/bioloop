@@ -140,7 +140,7 @@
                     :disabled="
                       !dataset.is_staged ||
                       !isFeatureEnabled({
-                        featureKey: config.enabledFeatures.downloads,
+                        featureKey: 'downloads',
                         hasRole: auth.hasRole,
                       })
                     "
@@ -204,7 +204,7 @@
                     class="flex items-center gap-1"
                     v-if="
                       isFeatureEnabled({
-                        featureKey: config.enabledFeatures.genomeBrowser,
+                        featureKey: 'genomeBrowser',
                         hasRole: auth.hasRole,
                       })
                     "

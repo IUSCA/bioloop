@@ -46,7 +46,7 @@
         <tr
           v-if="
             isFeatureEnabled({
-              featureKey: config.enabledFeatures.genomeBrowser,
+              featureKey: 'genomeBrowser',
               hasRole: auth.hasRole,
             })
           "
@@ -74,7 +74,6 @@
 <script setup>
 import { formatBytes, isFeatureEnabled } from "@/services/utils";
 import * as datetime from "@/services/datetime";
-import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({ dataset: Object });

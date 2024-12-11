@@ -50,7 +50,7 @@ const columns = ref([
     sortingOptions: ["desc", "asc", null],
   },
   ...(isFeatureEnabled({
-    featureKey: config.enabledFeatures.genomeBrowser,
+    featureKey: "genomeBrowser",
     hasRole: auth.hasRole,
   })
     ? [

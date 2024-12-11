@@ -305,7 +305,7 @@ const columns = [
     width: "80px",
   },
   ...(isFeatureEnabled({
-    featureKey: config.enabledFeatures.genomeBrowser,
+    featureKey: "genomeBrowser",
     hasRole: auth.hasRole,
   })
     ? [
