@@ -23,7 +23,6 @@
 
 <script setup>
 import { useNavStore } from "@/stores/nav";
-import config from "@/config";
 import { isFeatureEnabled } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 

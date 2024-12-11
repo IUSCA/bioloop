@@ -95,7 +95,6 @@
 <script setup>
 import { formatBytes, isFeatureEnabled } from "@/services/utils";
 import { useColors } from "vuestic-ui";
-import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const { colors } = useColors();

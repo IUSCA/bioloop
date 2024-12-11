@@ -258,14 +258,6 @@ watch(filter_query, (newQuery, oldQuery) => {
     getUploadLogs();
   }
 });
-
-onMounted(() => {
-  const ret = !isFeatureEnabled({
-    featureKey: "uploads",
-    hasRole: auth.hasRole,
-  });
-  console.log("Is uploads feature enabled?", ret);
-});
 </script>
 
 <route lang="yaml">
