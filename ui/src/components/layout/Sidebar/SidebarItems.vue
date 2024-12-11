@@ -15,7 +15,12 @@
               item.children.some((child) => props.isActive(child.path))
             "
             :to="item.path"
-            v-if="isFeatureEnabledForRole(item.feature_key)"
+            v-if="
+              isFeatureEnabled({
+                featureKey: item.feature_key,
+                hasRole: hasRole,
+              })
+            "
           >
             <va-sidebar-item-content>
               <Icon :icon="item.icon" class="text-2xl" />
@@ -32,7 +37,12 @@
           <div v-for="child in item.children" :key="child.title">
             <va-sidebar-item
               class="ml-5"
-              v-if="isFeatureEnabledForRole(child.feature_key)"
+              v-if="
+                isFeatureEnabled({
+                  featureKey: child.feature_key,
+                  hasRole: hasRole,
+                })
+              "
               :to="child.path"
               :active="props.isActive(child.path)"
             >
@@ -49,8 +59,10 @@
        corresponding feature is enabled for certain roles -->
       <va-sidebar-item
         v-else-if="
-          isFeatureEnabledForRole(item.feature_key) &&
-          (item.children || []).length === 0
+          isFeatureEnabled({
+            featureKey: item.feature_key,
+            hasRole: hasRole,
+          }) && (item.children || []).length === 0
         "
         :key="item.title"
         :to="item.path"
@@ -69,8 +81,8 @@
 </template>
 
 <script setup>
-import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
+import { isFeatureEnabled } from "@/services/utils";
 
 const props = defineProps({
   items: { type: Array, required: true },
@@ -94,33 +106,12 @@ const collapsibleStates = computed({
   set(value) {},
 });
 
-const isFeatureEnabledForRole = (featureKey) => {
-  if (!featureKey) {
-    return true;
-  }
-
-  const featureEnabled = config.enabledFeatures[featureKey];
-  if (featureEnabled === undefined) {
-    // feature's enabled status is not present in the config
-    return true;
-  } else if (typeof featureEnabled === "boolean") {
-    // feature is either enabled or disabled for all roles
-    return featureEnabled;
-  } else if (
-    Array.isArray(featureEnabled.enabledForRoles) &&
-    featureEnabled.enabledForRoles.length > 0
-  ) {
-    // feature is enabled for certain roles
-    return featureEnabled.enabledForRoles.some((role) => hasRole(role));
-  } else {
-    // invalid config found for feature's enabled status
-    return false;
-  }
-};
-
 const someChildFeaturesEnabled = (features) => {
   return features.some((feature) => {
-    return isFeatureEnabledForRole(feature.feature_key);
+    return isFeatureEnabled({
+      featureKey: feature.feature_key,
+      hasRole,
+    });
   });
 };
 </script>
