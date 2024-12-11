@@ -2,7 +2,12 @@
   <va-alert
     color="warning"
     icon="warning"
-    v-if="config.enabledFeatures.uploads"
+    v-if="
+      !isFeatureEnabled({
+        featureKey: config.enabledFeatures.uploads,
+        hasRole: auth.hasRole,
+      })
+    "
   >
     This feature is currently disabled
   </va-alert>
@@ -91,9 +96,12 @@ import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
 import toast from "@/services/toast";
 import * as datetime from "@/services/datetime";
+import { isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const nav = useNavStore();
 const router = useRouter();
+const auth = useAuthStore();
 
 nav.setNavItems([{ label: "Dataset Uploads" }]);
 
