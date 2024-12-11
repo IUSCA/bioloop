@@ -43,7 +43,14 @@
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
-        <tr v-if="config.enabledFeatures.genomeBrowser">
+        <tr
+          v-if="
+            isFeatureEnabled({
+              featureKey: config.enabledFeatures.genomeBrowser,
+              hasRole: auth.hasRole,
+            })
+          "
+        >
           <td>Genome Files</td>
           <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
@@ -65,11 +72,14 @@
 </template>
 
 <script setup>
-import { formatBytes } from "@/services/utils";
+import { formatBytes, isFeatureEnabled } from "@/services/utils";
 import * as datetime from "@/services/datetime";
 import config from "@/config";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({ dataset: Object });
+
+const auth = useAuthStore();
 </script>
 
 <style lang="scss" scoped>

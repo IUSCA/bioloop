@@ -1,7 +1,12 @@
 <template>
   <FileBrowser
     :dataset-id="props.datasetId"
-    :show-download="config.enabledFeatures.downloads && dataset.is_staged"
+    :show-download="
+      isFeatureEnabled({
+        featureKey: config.enabledFeatures.downloads,
+        hasRole: auth.hasRole,
+      }) && dataset.is_staged
+    "
   />
 </template>
 
@@ -12,11 +17,14 @@ import toast from "@/services/toast";
 import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
 import { storeToRefs } from "pinia";
+import { isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 
 const ui = useUIStore();
+const auth = useAuthStore();
 
 const props = defineProps({ datasetId: String });
 

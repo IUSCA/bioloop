@@ -42,7 +42,15 @@
       <va-navbar-item class="flex items-center" v-if="auth.user?.username">
         <HeaderUserDropdown />
       </va-navbar-item>
-      <va-navbar-item class="flex items-center" v-if="areNotificationsEnabled">
+      <va-navbar-item
+        class="flex items-center"
+        v-if="
+          isFeatureEnabled({
+            featureKey: 'notifications',
+            hasRole: auth.hasRole,
+          })
+        "
+      >
         <NotificationDropdown />
       </va-navbar-item>
       <va-navbar-item class="flex items-center">
@@ -54,21 +62,12 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
-import config from "@/config";
-import { storeToRefs } from "pinia";
+import { isFeatureEnabled } from "@/services/utils";
 
 const auth = useAuthStore();
 
-const { hasRole } = auth;
-
 const props = defineProps({
   isSidebarCollapsed: Boolean,
-});
-
-const areNotificationsEnabled = computed(() => {
-  return config.enabledFeatures.notifications.enabledForRoles.some((role) =>
-    hasRole(role),
-  );
 });
 </script>
 
