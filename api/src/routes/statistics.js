@@ -293,10 +293,8 @@ router.get(
   }),
 );
 
-/**
-*/ * Returns users consuming maximum bandwidth, limited by the limit param.
-*/ * Returned results are sorted by bandwidth consumed (descending).
-*/
+// Returns users consuming maximum bandwidth, limited by the limit param.
+// Returned results are sorted by bandwidth consumed (descending).
 router.get(
   '/users-by-bandwidth',
   isPermittedTo('read'),

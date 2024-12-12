@@ -9,7 +9,7 @@ const path = require('node:path');
 const createError = require('http-errors');
 
 const config = require('config');
-const _ = require('lodash');
+const _ = require('lodash/fp');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 
