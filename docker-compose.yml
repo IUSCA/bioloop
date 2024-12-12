@@ -1,16 +1,15 @@
-version: "3"
 name: bioloop
 services:
   ui:
     image: node:19
+    env_file:
+      - ui/.env.example
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules
     ports:
       - 127.0.0.1:443:443
     working_dir: /opt/sca/app
-    # command: sh -c "npm install && exec /opt/sca/app/node_modules/.bin/vite --host"
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
     entrypoint:
       - sh
       - -c
@@ -19,15 +18,9 @@ services:
 
   api:
     image: node:19
-    # user: ${APP_UID}:${APP_GID}
-    # build:
-      # context: ./api
-      # args:
-        # APP_UID: ${APP_UID} # read from .env file
-        # APP_GID: ${APP_GID} # read from .env file
-    # environment:
-    #   - APP_UID=APP_UID
-    #   - APP_GID=APP_GID
+    env_file:
+      - db/postgres/.env.example
+      - api/.env.example
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
@@ -36,8 +29,6 @@ services:
     ports:
       - 127.0.0.1:3030:3030
     working_dir: /opt/sca/app
-    # entrypoint: ["tail", "-f", "/dev/null"]
-    # command: sh -c "sleep infinity"
     entrypoint:
       - sh
       - -c
@@ -45,8 +36,6 @@ services:
         npm install \
         && npx prisma generate client \
         && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
-
-
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
@@ -54,11 +43,8 @@ services:
 
   postgres:
     image: postgres:14.5
-    # restart: unless-stopped
-    environment:
-      - POSTGRES_USER=appuser
-      - POSTGRES_PASSWORD=example
-      - POSTGRES_DB=app
+    env_file:
+      - db/postgres/.env.example
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
@@ -69,17 +55,96 @@ services:
     expose:
       - 5432
 
-  nginx:
-    image: nginx:1.25
-    ports:
-        - 8000:8000
-    volumes:
-        - ./nginx/src:/usr/share/nginx/html
-        - ./nginx/conf:/etc/nginx/conf.d
-        - ./data:/opt/sca/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
+  # nginx:
+  #   image: nginx:1.25
+  #   ports:
+  #       - 8000:8000
+  #   volumes:
+  #       - ./nginx/src:/usr/share/nginx/html
+  #       - ./nginx/conf:/etc/nginx/conf.d
+  #       - ./data:/opt/sca/data
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
 
+  workers:
+    build:
+      context: ./workers
+    # entrypoint:
+    #   - tail
+    #   - -f
+    #   - /dev/null
+    depends_on:
+      - queue
+      - mongo
+
+
+
+#  This is only for rhythm_api
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    # includes web gui ?
+    image: rabbitmq:3-management
+    # image: rabbitmq:3
+    ports:
+      - 127.0.0.1:5672:5672
+      - 127.0.0.1:15672:15672
+    volumes:
+      - ./db/queue/data/:/var/lib/rabbitmq/
+      # - ./db/queue/log/:/var/log/rabbitmq/
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
+
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    ports:
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./db/db_mongo:/data/db
+      # for importing database files
+      - ./db/mongodump:/opt/sca/app/mongodump
+
+
+  rhythm:
+    restart: unless-stopped
+    build:
+      context: ./rhythm_api
+    expose:
+      - 5001
+    ports:
+      - 5001:5001
+    environment:
+      - PORT=5001
+    volumes:
+      - ./rhythm_api:/opt/sca
+    depends_on:
+      - queue
+      - mongo
+
+
+
+  # docker compose run --rm mongobackup
+  # mongobackup:
+  #   image: mongo:5
+  #   environment:
+  #     - MONGO_HOST=${MONGO_HOST}
+  #     - MONGO_PORT=${MONGO_PORT}
+  #     - MONGO_DB=${MONGO_DB}
+  #     - MONGO_AUTH_SOURCE=${MONGO_AUTH_SOURCE}
+  #     - MONGO_USER=${MONGO_USER}
+  #     - MONGO_PASS=${MONGO_PASS}
+  #     - PROJ_NAME=${COMPOSE_PROJECT_NAME}
+  #   volumes:
+  #     - ./db/backups:/backup
+  #   command: >
+  #     bash -c 'mongodump --uri="mongodb://$MONGO_USER:$MONGO_PASS@$MONGO_HOST:$MONGO_PORT/$MONGO_DB?authSource=$MONGO_AUTH_SOURCE" --archive=/backup/$$PROJ_NAME.mongo.$(date +%F).gz --gzip'
 
 volumes:
   ui_modules:

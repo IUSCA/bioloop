@@ -1,0 +1,73 @@
+name: bioloop-cicd
+services:
+  nginx:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/nginx:test
+    volumes:
+      - ui_modules:/usr/share/nginx/html
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    networks:
+      network:
+        ipv4_address: 172.20.0.2
+
+  ui:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:test
+    volumes:
+      - ui_modules:/opt/sca/app/dist
+    environment:
+      - VITE_CAS_RETURN=${VITE_CAS_RETURN}
+      - VITE_API_URL=${VITE_API_URL}
+    depends_on:
+      - api
+    restart: "no"
+    networks:
+      network:
+        ipv4_address: 172.20.0.3
+
+  e2e:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/e2e:test
+
+    depends_on:
+      - api
+    entrypoint: [ "tail", "-f", "/dev/null" ]
+    networks:
+      network:
+        ipv4_address: 172.20.0.4
+      
+  api:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:test
+    entrypoint:
+      - sh
+      - -c
+      - |
+        ./keys/genkeys.sh \
+        && npx prisma generate \
+        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+    expose:
+      - 3030
+    depends_on:
+     - postgres
+    networks:
+      network:
+        ipv4_address: 172.20.0.5
+
+  postgres:
+    image: postgres:14.5
+    restart: unless-stopped
+    expose:
+      - 5432
+    networks:
+      network:
+        ipv4_address: 172.20.0.6
+
+volumes:
+  ui_modules:
+    external: false
+
+networks:
+  network:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

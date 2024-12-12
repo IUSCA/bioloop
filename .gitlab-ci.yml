@@ -1,0 +1,120 @@
+variables:
+  PROJECT_NAME: 'ryanlong/bioloop'
+
+stages:
+  - build
+  - lint
+  - test
+  - tag
+  - deploy
+
+build:
+  stage: build
+  tags: ['builddev-shell']
+  before_script:
+    - docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin <<<$CI_REGISTRY_PASSWORD
+  script:
+    - cd nginx/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/nginx:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/nginx:test
+    - cd ../api/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/api:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/api:test
+    - cd ../ui/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/ui:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/ui:test
+    - cd ../test/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/e2e:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/e2e:test
+
+
+lint-api:
+  tags: ['builddev-docker']
+  image: '$CI_REGISTRY/$PROJECT_NAME/api:test'
+  stage: lint
+  script:
+    - cd /opt/sca/app
+    - npm run lint
+
+lint-ui:
+  tags: ['builddev-docker']
+  image: $CI_REGISTRY/$PROJECT_NAME/ui:test
+  stage: lint
+  script:
+    - cd /opt/sca/app
+    - npm run lint
+
+# test-migrations:
+#   tags: ['builddev-shell']
+#   environment:
+#     name: testing
+#   stage: test
+#   before_script:
+#     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+#   script:
+#     - cd test/
+#     - docker compose down 
+#     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
+#     - docker compose exec api npx prisma migrate deploy
+#     - docker compose  down
+#     - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
+
+test-e2e:
+  tags: ['builddev-shell']
+  environment:
+    name: testing
+  stage: test
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+  script:
+    - cd test/
+    - docker compose down
+    - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
+    - docker compose exec api npx prisma migrate deploy 
+    - docker compose exec api npx prisma db seed
+    - docker compose exec e2e npm run test
+    - docker compose  down
+    
+
+tag:
+  tags: ['builddev-shell']
+  stage: tag
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+  script:
+    - tag=$(git rev-parse @)
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/api:test $CI_REGISTRY/$PROJECT_NAME/api:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/api:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/api:test $CI_REGISTRY/$PROJECT_NAME/api:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/api:latest
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/ui:test $CI_REGISTRY/$PROJECT_NAME/ui:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/ui:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/ui:test $CI_REGISTRY/$PROJECT_NAME/ui:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/ui:latest
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/nginx:test $CI_REGISTRY/$PROJECT_NAME/nginx:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/nginx:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/nginx:test $CI_REGISTRY/$PROJECT_NAME/nginx:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/nginx:latest
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
+      when: always
+    - when: never
+
+
+
+#Release per deployment -using a runner on each environment
+deploy_test_app:
+  tags: ['buildtest-shell']
+  environment:
+    name: release
+  stage: deploy
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+  script:
+    - cd deploy/ 
+    - docker compose down # remove any existing containers/networks
+    - docker compose pull && docker compose up -d --force-recreate --remove-orphans
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
+      when: always
+    - when: never

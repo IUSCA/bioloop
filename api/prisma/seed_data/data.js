@@ -20,6 +20,10 @@ const admins = [
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
+  {
+    name: 'Ryan Long',
+    username: 'ryanlong',
+  }
 ];
 
 const operators = [
