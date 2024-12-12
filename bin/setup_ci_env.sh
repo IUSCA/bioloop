@@ -42,7 +42,7 @@ create_variable() {
     --data "{\"key\":\"$key\", \"value\":\"$value\"}"
 }
 
-echo "Getting environment variables from api/.env.example file ..."
+echo "Getting API environment variables from api/.env.example file ..."
 # Read environment variables from .env file into an array
 declare -A env_vars
 while IFS='=' read -r key value; do
@@ -57,7 +57,7 @@ for key in "${!env_vars[@]}"; do
   create_variable "$key" "${variables[$key]}"
 done
 
-echo "Getting environment variables from ui/.env.example file ..."
+echo "Getting UI environment variables from ui/.env.example file ..."
 # Read environment variables from .env file into an array
 declare -A env_vars
 while IFS='=' read -r key value; do
@@ -72,7 +72,7 @@ for key in "${!env_vars[@]}"; do
   create_variable "$key" "${variables[$key]}"
 done
 
-echo "Getting environment variables from tests/.env.example file ..."
+echo "Getting tests environment variables from tests/.env.example file ..."
 # Read environment variables from .env file into an array
 declare -A env_vars
 while IFS='=' read -r key value; do
