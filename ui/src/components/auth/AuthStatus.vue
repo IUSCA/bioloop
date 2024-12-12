@@ -78,8 +78,9 @@ if (paramsExist) {
   // console.log({ params, storedState: storedState.value });
 
   // csrf protection
-  // bypass csrf protection check when params does not include the state parameter - this auth has no state
-  // read stored state from local storage and reset it
+  // bypass csrf protection check when params does not include the state
+  // parameter - this auth has no state read stored state from local storage and
+  // reset it
   const _storedState = storedState.value;
   storedState.value = null;
   if (params.state === _storedState || !params.state) {

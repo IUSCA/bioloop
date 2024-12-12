@@ -52,7 +52,8 @@ const chartOptions = computed(() => {
   });
 });
 
-// Date range will be shifted backwards or forwards by this many months, when user clicks the appropriate button
+// Date range will be shifted backwards or forwards by this many months, when
+// user clicks the appropriate button
 const MONTH_DIFFERENCE = 3;
 
 const endDate = ref();

@@ -63,7 +63,8 @@ const chartOptions = computed(() => {
 const _being_used = ref(); // (unformatted) latest measure for given metric
 const _limit = ref(); // (unformatted) limit (max possible value) for given metric
 
-// Contains the formatted latest measure for given metric, and the title used to display said metric
+// Contains the formatted latest measure for given metric, and the title used
+// to display said metric
 const currentUsage = computed(() => {
   let metricTitle, metricCount;
   switch (props.measurement) {
@@ -161,10 +162,11 @@ const chartTitleCallBack = () => {
 const yAxisTicksCallback = (val) => {
   // https://www.chartjs.org/docs/latest/axes/labelling.html#creating-custom-tick-formats
 
-  // If the range of data-point values provided to chart.js is small enough (say starting
-  // value is 1, and ending value is 2), chart.js's default behavior is to try and
-  // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
-  // the axis's ticks. To avoid this, round values down
+  // If the range of data-point values provided to chart.js is small enough
+  // (say starting value is 1, and ending value is 2), chart.js's default
+  // behavior is to try and spread out this range over decimal values (1.1,
+  // 1.2,..., 1.9, 2) to calculate the axis's ticks. To avoid this, round values
+  // down
   switch (props.measurement) {
     case config.metric_measurements.SDA:
     case config.metric_measurements.SLATE_SCRATCH:
@@ -253,8 +255,8 @@ const retrieveAndConfigureChartData = () => {
       chartData.value = configureChartStatistics([res.data]);
       chartData.value.datasets[0].label = getDatasetLabel();
 
-      // Get most recent metric measurement (which is the first element, given that retrieved
-      // metrics are ordered (descending) by timestamps).
+      // Get most recent metric measurement (which is the first element, given
+      // that retrieved metrics are ordered (descending) by timestamps).
       _being_used.value = res.data.length > 0 ? res.data[0].usage : 0;
       _limit.value = res.data.length > 0 ? res.data[0].limit : 0;
     })

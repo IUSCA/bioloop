@@ -53,9 +53,8 @@
 </template>
 
 <script setup>
-import { useAuthStore } from "@/stores/auth";
 import config from "@/config";
-import { storeToRefs } from "pinia";
+import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 

@@ -13,7 +13,7 @@ export const useAuthStore = defineStore("auth", () => {
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
-  let refreshUploadTokenTimer = null;
+
   const canOperate = computed(() => {
     return hasRole("operator") || hasRole("admin");
   });

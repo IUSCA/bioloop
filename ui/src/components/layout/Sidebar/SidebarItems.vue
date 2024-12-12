@@ -77,7 +77,7 @@ const collapsibleStates = computed({
       });
     });
   },
-  set(value) {},
+  set() {},
 });
 </script>
 

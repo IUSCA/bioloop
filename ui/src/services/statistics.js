@@ -16,7 +16,8 @@ class StatisticsService {
    * @param {Date} start_date Starting date for the data access logs retrieved
    * @param {Date} end_date   End date for the data access logs retrieved
    * @param {Boolean} by_access_type   If true, results will be grouped by date and access type
-   *                                   (browser download vs Slate-Scratch access)
+   *                                   (browser download vs Slate-Scratch
+   *                                   access)
    * @returns Promise which resolves with the array of data access logs retrieved
    */
   getDataAccessCountGroupedByDate(start_date, end_date, by_access_type) {
@@ -30,8 +31,8 @@ class StatisticsService {
   }
 
   /**
-   * Retrieves data access logs grouped by type of data access (browser download vs Slate-Scratch
-   * access)
+   * Retrieves data access logs grouped by type of data access (browser
+   * download vs Slate-Scratch access)
    */
   getDataAccessCountGroupedByAccessMethod() {
     return api.get("/statistics/data-access-count-by-access-method");

@@ -51,11 +51,12 @@ const getChartOptions = ({ colors }) => ({
       ticks: {
         color: colors.FONT,
         callback: (val) => {
-          // If the range of data-point values provided to chart.js is small enough (say starting
-          // value is 1, and ending value is 2), chart.js's default behavior is to try and
-          // spread out this range over decimal values (1.1, 1.2,..., 1.9, 2) to calculate
-          // the axis's ticks. Since number of bytes should be an integer, we round the value
-          // down to nearest integer.
+          // If the range of data-point values provided to chart.js is small
+          // enough (say starting value is 1, and ending value is 2), chart.js's
+          // default behavior is to try and spread out this range over decimal
+          // values (1.1, 1.2,..., 1.9, 2) to calculate the axis's ticks. Since
+          // number of bytes should be an integer, we round the value down to
+          // nearest integer.
           return val % 1 !== 0
             ? formatBytes(Math.floor(val))
             : formatBytes(val);

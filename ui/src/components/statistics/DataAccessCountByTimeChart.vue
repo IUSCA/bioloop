@@ -46,7 +46,8 @@ const defaultChartColors = computed(() => {
   return getDefaultChartColors(isDark.value);
 });
 
-// Date range will be shifted backwards or forwards by this many months, when user clicks the appropriate button
+// Date range will be shifted backwards or forwards by this many months, when
+// user clicks the appropriate button
 const MONTH_DIFFERENCE = 3;
 
 const endDate = ref();
@@ -178,8 +179,9 @@ const configureChartDataByDataset = (datasets) => {
 };
 
 const configureChartData = (data) => {
-  // data retrieved is grouped by access_type (BROWSER or SLATE_SCRATCH). For getting total access
-  // counts per day, aggregate that day's data across both access types.
+  // data retrieved is grouped by access_type (BROWSER or SLATE_SCRATCH). For
+  // getting total access counts per day, aggregate that day's data across both
+  // access types.
   const aggregatedByAccessType = groupByAndAggregate(
     data,
     "date",

@@ -11,8 +11,8 @@
  * Props: target, duration, iterations, debounce
  * target: the target value
  * duration: the duration of the transition of each iteration in ms
- * iterations: the number of iterations to move from the current value to the target value
- * debounce: the debounce time in ms for props.target
+ * iterations: the number of iterations to move from the current value to the
+ * target value debounce: the debounce time in ms for props.target
  *
  * Example: <NumberTransition :target="100" :duration="50" :iterations="10" />
  *
