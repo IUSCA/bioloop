@@ -23,7 +23,7 @@ build:
     - cd ../ui/
     - docker build -t $CI_REGISTRY/$PROJECT_NAME/ui:test .
     - docker push $CI_REGISTRY/$PROJECT_NAME/ui:test
-    - cd ../test/
+    - cd ../tests/
     - docker build -t $CI_REGISTRY/$PROJECT_NAME/e2e:test .
     - docker push $CI_REGISTRY/$PROJECT_NAME/e2e:test
 
