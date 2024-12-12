@@ -67,7 +67,7 @@ test-e2e:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
-    - cd test/
+    - cd tests/
     - docker compose down
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
     - docker compose exec api npx prisma migrate deploy 
