@@ -23,7 +23,7 @@ const admins = [
   {
     name: 'Ryan Long',
     username: 'ryanlong',
-  }
+  },
 ];
 
 const operators = [

@@ -82,8 +82,9 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
 
-    // isPermittedTo('update') - stops requesters with just a user role from running this code
-    // clears the roles attribute when requester has no admin role
+    // isPermittedTo('update') - stops requesters with just a user role from
+    // running this code clears the roles attribute when requester has no admin
+    // role
     const updates = req.permission.filter(req.body);
 
     // operators can edit themselves - all attributes except roles
