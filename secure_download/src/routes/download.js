@@ -2,10 +2,11 @@ const express = require('express');
 const createError = require('http-errors');
 const config = require('config');
 const {
-  param,
+  param, query,
 } = require('express-validator');
 
 const { validate } = require('../middleware/validators');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -15,8 +16,12 @@ function remove_leading_slash(str) {
 
 router.get(
   '/:alias',
-  validate([param('alias').escape().notEmpty()]),
-  (req, res, next) => {
+  validate([
+    param('alias').escape().notEmpty(),
+    query('file').escape().notEmpty().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    console.log('inside /download/:alias');
     const SCOPE_PREFIX = config.get('scope_prefix');
 
     const scopes = (req.token?.scope || '').split(' ');
@@ -44,7 +49,7 @@ router.get(
     } else {
       return next(createError.Forbidden('Invalid path'));
     }
-  },
+  }),
 );
 
 module.exports = router;
