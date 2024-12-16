@@ -1,0 +1,28 @@
+stateDiagram
+    watch: Watch script detects duplicate dataset in 'source_dir'
+    create_duplicate: (API) Duplicate dataset registered in database
+    workflow: 'handle_duplicate_datasets' workflow launched
+    await_step: (worker) Await Stability
+        note right of await_step
+            Dataset state: 'READY'
+        end note
+    inspect_step: (worker) Inspect Dataset
+        note left of inspect_step
+            Dataset state: 'INSPECTED'
+        end note
+    compare_step: (worker) Compare Duplicate Datasets
+        note right of compare_step
+            (worker) Performs comparison
+            (API) Persists results of comparison process to database
+
+            Dataset state: 'DUPLICATE_READY'
+        end note
+
+
+    watch --> create_duplicate
+    create_duplicate --> workflow
+    workflow --> await_step
+    await_step --> inspect_step
+    inspect_step --> compare_step
+
+[![](https://mermaid.live/edit#pako:eNp9U9FKwzAU_ZVLXqqgP9AHYax7GIgMp4hQKDG5XYNtUu5NGSL-u0nbbbVzy0vam3NODveefAvlNIpUsJceMyN3JJvcQlh76VWVwlvcgBWZ1oNGj8oz6K6tjQoM0NJLRg_GQsKuI4WFNpQMEoowYIojOoWbxWZ9C9kZnXBn2COhjkqx-hHqoxFHn2Xt9ikklbS6nggWI5-TIwpq2VlVoR7Ici-NL4J0Gy6PGKRbWMQibMMlpjb-a0DGZV3wRGZXeXDlhHtCxJWNpvueBVfPq0X2npwwaHWvNFSM5TY0be5hPZQPYjMPNZa9hSn5uon103azWr6ssotGlGtaSTg3shzKk6GM0nypL1Ohv6aOohuk0lHDI9awszNkH4QA4zB3DvPnrg77UT0yoCWnkBm8m0XisK63JHvdPK6Xi5dVcXlCuZ2kHe7vH85C-3-Ue-ghc39z2h_Ns3P674_P5zqtDD4mXRZ3okFqpNHhqX5HQi58hQ3mIg2fWtJnLnL7E3Cy8277ZZVIPXV4J7pWn162SEtZM_78Anw8TOI)]

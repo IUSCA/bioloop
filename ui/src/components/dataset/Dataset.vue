@@ -1,5 +1,8 @@
 <template>
   <va-inner-loading :loading="loading">
+    <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
+    <DuplicationAlerts :dataset="dataset" class="mb-2" />
+
     <!-- Content -->
     <div class="flex flex-col gap-3">
       <!-- Dataset Info + Status Cards -->
@@ -317,7 +320,16 @@
       </div>
     </div>
     <!-- Download Modal -->
-    <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
+    <!-- This modal re-fetches the dataset once a dataset download has been attempted, to check
+         if this dataset has not been duplicated by another right after the download was initiated.
+         If an active duplicate of this dataset is found, an alert is shown to authorized roles,
+         which tells them that the dataset they are downloading could possibly be outdated.
+    -->
+    <DatasetDownloadModal
+      ref="downloadModal"
+      :dataset="dataset"
+      @download-initiated="fetch_dataset(true)"
+    />
   </va-inner-loading>
 
   <EditDatasetModal
@@ -376,6 +388,9 @@ function fetch_dataset(show_loading = false) {
     id: props.datasetId,
     bundle: true,
     initiator: true,
+    include_duplications: true,
+    include_states: true,
+    include_action_items: true,
   })
     .then((res) => {
       const _dataset = res.data;

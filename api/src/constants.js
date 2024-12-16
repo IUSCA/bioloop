@@ -1,3 +1,26 @@
+const INCLUDE_DUPLICATIONS = {
+  duplicated_from: {
+    include: {
+      duplicate_dataset: {
+        include: {
+          action_items: true,
+        },
+      },
+      original_dataset: true,
+    },
+  },
+  duplicated_by: {
+    include: {
+      duplicate_dataset: {
+        include: {
+          action_items: true,
+        },
+      },
+      original_dataset: true,
+    },
+  },
+};
+
 const INCLUDE_STATES = {
   states: {
     select: {
@@ -90,4 +113,5 @@ module.exports = {
   INCLUDE_AUDIT_LOGS,
   DONE_STATUSES,
   INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+  INCLUDE_DUPLICATIONS,
 };
