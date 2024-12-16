@@ -103,6 +103,12 @@ const exports = {
         test_id: "sidebar-profile",
       },
       {
+        icon: "mdi-message-reply",
+        title: "Feedback",
+        path: "/Feedback",
+        test_id: "sidebar-profile",
+      },
+      {
         icon: "mdi-logout-variant",
         title: "Logout",
         path: "/auth/logout",
