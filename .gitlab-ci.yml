@@ -68,8 +68,8 @@ test-e2e:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
     - cd tests/
-    - docker network rm bioloop-cicd_network
     - docker compose down
+    - docker network rm bioloop-cicd_network
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
     - docker compose exec api npx prisma migrate deploy 
     - docker compose exec api npx prisma db seed
