@@ -1,5 +1,11 @@
 const { patch, get } = require('./index');
 
+const getAll = async ({
+  requestContext, token, params,
+}) => get({
+  requestContext, url: '/api/projects/all', token, params,
+});
+
 const getProjectById = async ({
   requestContext, token, id,
 } = {}) => get({
@@ -13,6 +19,7 @@ const editProjectDatasets = async ({
 });
 
 module.exports = {
+  getAll,
   editProjectDatasets,
   getProjectById,
 };
