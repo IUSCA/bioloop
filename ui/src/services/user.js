@@ -28,8 +28,14 @@ class UserService {
       .then((response) => response.data);
   }
 
-  deleteUser(username) {
+ // Existing user deletion: soft delete
+  softDeleteUser(username) {
     return api.delete(`/users/${username}`).then((response) => response.data);
+  }
+
+  // New: Hard delete a user
+  hardDeleteUser(username) {
+    return api.delete(`/users/${username}/delete`).then((response) => response.data);
   }
 }
 
