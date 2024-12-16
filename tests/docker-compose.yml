@@ -1,4 +1,4 @@
-name: bioloop-cicd
+name: bioloop_cicd
 services:
   nginx:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/nginx:test
