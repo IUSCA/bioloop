@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-test('admin visible', async ({ page }) => {
+test('sidebar items visible', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByTestId('sidebar-projects')).toBeVisible();

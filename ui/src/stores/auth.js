@@ -1,5 +1,6 @@
 import config from "@/config";
 import authService from "@/services/auth";
+import uploadTokenService from "@/services/upload/token";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
@@ -8,6 +9,7 @@ export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
+  const uploadToken = ref(useLocalStorage("uploadToken", ""));
   const loggedIn = ref(false);
   const status = ref("");
   let refreshTokenTimer = null;
@@ -36,6 +38,7 @@ export const useAuthStore = defineStore("auth", () => {
     loggedIn.value = false;
     user.value = {};
     token.value = "";
+    uploadToken.value = "";
   }
 
   function casLogin({ ticket }) {
@@ -98,7 +101,7 @@ export const useAuthStore = defineStore("auth", () => {
         if (now < expiresAt) {
           // token is still alive
           const delay =
-            expiresAt - now - config.refreshTokenTMinusSeconds * 1000;
+            expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
           console.log(
             "auth store: refreshTokenBeforeExpiry: trigerring refreshToken in ",
             delay / 1000,
@@ -114,7 +117,6 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function refreshToken() {
-    console.log("refreshing token");
     refreshTokenTimer = null; // reset timer state
     authService
       .refreshToken()
@@ -158,6 +160,42 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
+  const refreshUploadToken = async ({ fileName, refreshToken = false }) => {
+    const payload = uploadToken.value ? jwtDecode(uploadToken.value) : null;
+    const expiresAt = payload ? new Date(payload.exp * 1000) : null;
+    const now = new Date();
+
+    let willRefreshUploadToken = refreshToken;
+    // If client has not explicitly requested for the token to be refreshed,
+    // check if the token is about to expire. If so, refresh the token.
+    if (!willRefreshUploadToken) {
+      if (now < expiresAt) {
+        const uploadTokenExpiresInSeconds = (expiresAt - now) / 1000;
+        willRefreshUploadToken =
+          uploadTokenExpiresInSeconds <
+          config.refreshTokenTMinusSeconds.uploadToken;
+      } else {
+        willRefreshUploadToken = true;
+      }
+    }
+    return new Promise((resolve, reject) => {
+      if (willRefreshUploadToken) {
+        uploadTokenService
+          .getUploadToken({ data: { file_name: fileName } })
+          .then((res) => {
+            uploadToken.value = res.data.accessToken;
+            resolve();
+          })
+          .catch((err) => {
+            console.error(err);
+            reject(err);
+          });
+      } else {
+        resolve();
+      }
+    });
+  };
+
   return {
     user,
     loggedIn,
@@ -176,6 +214,7 @@ export const useAuthStore = defineStore("auth", () => {
     ciLogin,
     env,
     setEnv,
+    refreshUploadToken,
   };
 });
 

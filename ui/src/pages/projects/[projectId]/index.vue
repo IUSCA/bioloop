@@ -91,6 +91,7 @@
             <div class="flex gap-9">
               <!-- merge button -->
               <va-button
+                data-testid="merge-projects-button"
                 preset="secondary"
                 border-color="info"
                 class="flex-none"
@@ -251,7 +252,8 @@ function handleEditUpdate() {
         path: `/projects/${new_slug}`,
       });
     } else {
-      // update prop which will trigger re-fetching of project-dataset associations
+      // update prop which will trigger re-fetching of project-dataset
+      // associations
       triggerDatasetsRetrieval.value = true;
     }
   });

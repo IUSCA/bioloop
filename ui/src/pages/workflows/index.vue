@@ -1,67 +1,66 @@
 <template>
-  <va-inner-loading :loading="loading">
-    <div class="flex flex-col gap-3 md:flex-row">
-      <!-- filters -->
-      <div
-        class="md:w-1/6 md:border-solid md:border-r md:h-screen md:min-w-[130px]"
-        style="border-color: var(--va-background-border)"
+  <div class="flex flex-col gap-3 md:flex-row">
+    <!-- filters -->
+    <div
+      class="md:w-1/6 md:border-solid md:border-r md:h-screen md:min-w-[130px]"
+      style="border-color: var(--va-background-border)"
+    >
+      <!-- reset -->
+      <div class="text-right px-3">
+        <button class="va-link text-center" @click="reset_query_params">
+          Reset
+        </button>
+      </div>
+
+      <!-- status filters -->
+      <div class="text-lg font-semibold hidden md:block">Status</div>
+      <!-- reset page when user selects a new filter -->
+
+      <va-tabs
+        v-model="query_params.status"
+        :vertical="!breakpoint_sm"
+        @update:model-value="query_params.page = 1"
+        class="md:min-h-[164px]"
       >
-        <!-- reset -->
-        <div class="text-right px-3">
-          <button class="va-link text-center" @click="reset_query_params">
-            Reset
-          </button>
-        </div>
+        <template #tabs>
+          <va-tab
+            v-for="status in Object.keys(status_counts)"
+            :key="status"
+            :name="status"
+          >
+            <span class="text-base font-normal">
+              {{ status }} ({{ status_counts[status] }})
+            </span>
+          </va-tab>
+        </template>
+      </va-tabs>
 
-        <!-- status filters -->
-        <div class="text-lg font-semibold hidden md:block">Status</div>
-        <!-- reset page when user selects a new filter -->
+      <va-divider />
 
-        <va-tabs
-          v-model="query_params.status"
-          :vertical="!breakpoint_sm"
-          @update:model-value="query_params.page = 1"
-          class="md:min-h-[164px]"
-        >
-          <template #tabs>
-            <va-tab
-              v-for="status in Object.keys(status_counts)"
-              :key="status"
-              :name="status"
-            >
-              <span class="text-base font-normal">
-                {{ status }} ({{ status_counts[status] }})
-              </span>
-            </va-tab>
-          </template>
-        </va-tabs>
+      <!-- group filters -->
+      <div class="text-lg font-semibold hidden md:block">Status Group</div>
 
-        <va-divider />
+      <va-tabs
+        v-model="query_params.status"
+        :vertical="!breakpoint_sm"
+        class="md:min-h-[100px]"
+      >
+        <template #tabs>
+          <va-tab
+            v-for="status in Object.keys(group_counts)"
+            :key="status"
+            :name="status"
+          >
+            <span class="text-base font-normal">
+              {{ status }} ({{ group_counts[status] }})
+            </span>
+          </va-tab>
+        </template>
+      </va-tabs>
 
-        <!-- group filters -->
-        <div class="text-lg font-semibold hidden md:block">Status Group</div>
+      <va-divider />
 
-        <va-tabs
-          v-model="query_params.status"
-          :vertical="!breakpoint_sm"
-          class="md:min-h-[100px]"
-        >
-          <template #tabs>
-            <va-tab
-              v-for="status in Object.keys(group_counts)"
-              :key="status"
-              :name="status"
-            >
-              <span class="text-base font-normal">
-                {{ status }} ({{ group_counts[status] }})
-              </span>
-            </va-tab>
-          </template>
-        </va-tabs>
-
-        <va-divider />
-
-        <!-- <div>
+      <!-- <div>
         <span>Sort By</span>
       </div>
       <div>
@@ -70,135 +69,127 @@
 
       <va-divider /> -->
 
-        <!-- auto refresh -->
-        <div class="text-lg font-semibold hidden md:block md:pb-2">
-          Auto Refresh
-        </div>
-        <div class="flex gap-1">
-          <va-button preset="primary" @click="getData" class="max-w-[120px]">
-            <div class="flex justify-between gap-1">
-              <i-mdi:refresh class="text-lg" />
-            </div>
-          </va-button>
-
-          <va-select
-            class="auto-refresh-select flex-none"
-            width="20px"
-            v-model="query_params.auto_refresh"
-            :options="auto_refresh_options"
-            value-by="valueBy"
-            @change="search_text = ''"
-          />
-        </div>
-
-        <!-- failure modes -->
-        <div v-if="Object.keys(failure_modes).length">
-          <va-divider />
-
-          <!-- failure modes -->
-          <div class="text-lg font-semibold hidden md:block md:pb-2">
-            Failure Modes
-            <span class="text-sm va-text-secondary ml-1 font-thin">
-              in this page
-            </span>
-          </div>
-          <!-- show failure modes -->
-          <div class="flex gap-1">
-            <va-tabs
-              v-model="query_params.failure_mode"
-              :vertical="!breakpoint_sm"
-              class="md:min-h-[100px]"
-            >
-              <template #tabs>
-                <va-tab
-                  v-for="fm in Object.keys(failure_modes)"
-                  :key="fm"
-                  :name="fm"
-                >
-                  <span class="text-base font-normal">
-                    {{ fm }} ({{ failure_modes[fm] }})
-                  </span>
-                </va-tab>
-              </template>
-            </va-tabs>
-          </div>
-        </div>
+      <!-- auto refresh -->
+      <div class="text-lg font-semibold hidden md:block md:pb-2">
+        Auto Refresh
       </div>
-
-      <!-- workflows -->
-      <div class="md:w-5/6 space-y-2">
-        <!-- filters container -->
-        <div class="flex flex-row gap-2">
-          <!-- Search filters     -->
-          <div class="flex w-full gap-2">
-            <va-select
-              class="flex-none"
-              v-model="selected_search_option"
-              :options="search_by_options"
-              label="Search by"
-              inner-label
-              :auto-select-first-option="true"
-              :track-by="(option) => option.key"
-              :text-by="(option) => option.label"
-            >
-            </va-select>
-
-            <va-input
-              class="flex-1"
-              v-model="search_text"
-              :placeholder="`Search by ${selected_search_option?.label}`"
-              clearable
-            />
+      <div class="flex gap-1">
+        <va-button preset="primary" @click="getData" class="max-w-[120px]">
+          <div class="flex justify-between gap-1">
+            <i-mdi:refresh class="text-lg" />
           </div>
-        </div>
+        </va-button>
 
-        <collapsible
-          v-for="workflow in filtered_workflows"
-          :key="workflow.id"
-          v-model="workflow.collapse"
-        >
-          <template #header-content>
-            <div class="flex-[0_0_90%]">
-              <workflowCompact :workflow="workflow" show_dataset />
-            </div>
-          </template>
-
-          <div>
-            <workflow :workflow="workflow" @update="getData"></workflow>
-          </div>
-        </collapsible>
-
-        <!-- no results -->
-        <div
-          v-if="workflows.length === 0"
-          class="text-center mt-24 flex flex-col gap-5 justify-center items-center"
-        >
-          <i-mdi:alert-circle-outline
-            style="color: var(--va-info)"
-            class="text-4xl"
-          />
-          <span class="text-lg">
-            Sorry, no results found for the selected filters.
-          </span>
-        </div>
-
-        <!-- pagination -->
-        <Pagination
-          class="mt-5 px-1 lg:px-3"
-          v-if="query_params.failure_mode == null"
-          v-model:page="query_params.page"
-          v-model:page_size="query_params.page_size"
-          :total_results="total_results"
-          :curr_items="workflows.length"
-          :page_size_options="PAGE_SIZE_OPTIONS"
+        <va-select
+          class="auto-refresh-select flex-none"
+          width="20px"
+          v-model="query_params.auto_refresh"
+          :options="auto_refresh_options"
+          value-by="valueBy"
+          @change="search_text = ''"
         />
       </div>
+
+      <!-- failure modes -->
+      <div v-if="Object.keys(failure_modes).length">
+        <va-divider />
+
+        <!-- failure modes -->
+        <div class="text-lg font-semibold hidden md:block md:pb-2">
+          Failure Modes
+          <span class="text-sm va-text-secondary ml-1 font-thin">
+            in this page
+          </span>
+        </div>
+        <!-- show failure modes -->
+        <div class="flex gap-1">
+          <va-tabs
+            v-model="query_params.failure_mode"
+            :vertical="!breakpoint_sm"
+            class="md:min-h-[100px]"
+          >
+            <template #tabs>
+              <va-tab
+                v-for="fm in Object.keys(failure_modes)"
+                :key="fm"
+                :name="fm"
+              >
+                <span class="text-base font-normal">
+                  {{ fm }} ({{ failure_modes[fm] }})
+                </span>
+              </va-tab>
+            </template>
+          </va-tabs>
+        </div>
+      </div>
     </div>
-  </va-inner-loading>
+
+    <!-- workflows -->
+    <div class="md:w-5/6">
+      <!-- filters container -->
+      <div class="flex flex-row gap-2">
+        <!-- Search filters     -->
+        <WorkflowSearchInputFilter
+          v-model:search_by="query_params.search_by"
+          v-model:search_text="query_params.search_text"
+        />
+      </div>
+
+      <!-- loading -->
+      <div :class="{ invisible: !loading }" class="">
+        <va-progress-bar indeterminate size="0.25rem" :rounded="false" />
+      </div>
+
+      <collapsible
+        v-for="workflow in filtered_workflows"
+        :key="workflow.id"
+        v-model="workflow.collapse"
+      >
+        <template #header-content>
+          <div class="flex-[0_0_90%]">
+            <workflowCompact
+              :workflow="workflow"
+              :show_dataset="!!workflow.dataset_id"
+            />
+          </div>
+        </template>
+
+        <div>
+          <workflow :workflow="workflow" @update="getData"></workflow>
+        </div>
+      </collapsible>
+
+      <!-- no results -->
+      <div
+        v-if="workflows.length === 0"
+        class="text-center mt-24 flex flex-col gap-5 justify-center items-center"
+      >
+        <i-mdi:alert-circle-outline
+          style="color: var(--va-info)"
+          class="text-4xl"
+        />
+        <span class="text-lg">
+          Sorry, no results found for the selected filters.
+        </span>
+      </div>
+
+      <!-- pagination -->
+      <Pagination
+        class="mt-5 px-1 lg:px-3"
+        v-if="query_params.failure_mode == null"
+        v-model:page="query_params.page"
+        v-model:page_size="query_params.page_size"
+        :total_results="total_results"
+        :curr_items="workflows.length"
+        :page_size_options="PAGE_SIZE_OPTIONS"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup>
 import useQueryPersistence from "@/composables/useQueryPersistence";
+import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import { useNavStore } from "@/stores/nav";
 import { useBreakpoint } from "vuestic-ui";
@@ -219,6 +210,8 @@ const default_query_params = () => ({
   auto_refresh: 10,
   failure_mode: null,
   page_size: 10,
+  search_by: "dataset_name",
+  search_text: "",
 });
 const auto_refresh_options = [
   { valueBy: 0, text: "Off" },
@@ -233,22 +226,6 @@ const loading = ref(false);
 const workflows = ref([]);
 const total_results = ref(0);
 const status_counts = ref({});
-const search_text = ref("");
-const search_by_options = ref([
-  {
-    label: "Dataset ID",
-    key: "dataset_id",
-  },
-  {
-    label: "Workflow ID",
-    key: "workflow_id",
-  },
-  {
-    label: "Dataset Name",
-    key: "dataset_name",
-  },
-]);
-const selected_search_option = ref(search_by_options.value[0]);
 
 const query_params = ref(default_query_params());
 useQueryPersistence({
@@ -288,34 +265,52 @@ const filtered_workflows = computed(() => {
   });
 });
 
+const getData = useThrottleFn(function () {
+  loading.value = true;
+
+  // remove loading when all promises are settled
+  return Promise.allSettled([getWorkflows(), getCounts()]).then(() => {
+    loading.value = false;
+  });
+}, 500);
+
 // fetch data when query params change
 watch(
   [
     () => query_params.value.status,
     () => query_params.value.page,
     () => query_params.value.page_size,
-    () => search_text.value,
-    () => selected_search_option.value.key,
   ],
   (newVals, oldVals) => {
     // set page to 1 when page_size changes
-    if (newVals[2] !== oldVals[2]) {
+    // on initial load, page_size is null, do not reset page
+    if (oldVals[2] != null && newVals[2] !== oldVals[2]) {
       query_params.value.page = 1;
     }
 
-    if (newVals[4] !== oldVals[4]) {
-      search_text.value = "";
-      query_params.value.search_by = newVals[4];
-    }
-
     getData().then(() => {
-      // remove failure mode selection when user selects a status or changes page
+      // remove failure mode selection when user selects a status or changes
+      // page
       query_params.value.failure_mode = null;
     });
   },
   {
     deep: true,
     immediate: true,
+  },
+);
+
+// fetch data when search text changes
+// reset page to 1
+watchDebounced(
+  () => query_params.value.search_text,
+  () => {
+    query_params.value.page = 1;
+    getData();
+  },
+  {
+    immediate: false,
+    debounce: 500,
   },
 );
 
@@ -348,19 +343,14 @@ watch(
 );
 
 function getWorkflows() {
-  const search_by_key =
-    query_params.value.search_by === "workflow_id"
-      ? "workflow_ids"
-      : query_params.value.search_by;
-
   const search_params = {
     last_task_run: true,
     status: query_params.value.status,
     skip: skip.value,
     limit: query_params.value.page_size,
     initiator: true,
-    ...(search_text.value.trim() !== "" && {
-      [search_by_key]: search_text.value,
+    ...(query_params.value.search_text.trim() !== "" && {
+      [query_params.value.search_by]: query_params.value.search_text,
     }),
   };
 
@@ -378,6 +368,7 @@ function getWorkflows() {
         res.data?.metadata?.total || workflows.value?.length || 0;
     })
     .catch((err) => {
+      toast.error("Failed to fetch workflows");
       console.error(err);
     });
 }
@@ -391,17 +382,6 @@ function getCounts() {
     .catch((err) => {
       console.error(err);
     });
-}
-
-function getData() {
-  loading.value = true;
-
-  return new Promise((resolve) => {
-    Promise.allSettled([getWorkflows(), getCounts()]).then((results) => {
-      loading.value = false;
-      resolve(results);
-    });
-  });
 }
 
 function reset_query_params() {

@@ -137,7 +137,13 @@
                   </va-button>
 
                   <va-button
-                    :disabled="!dataset.is_staged"
+                    :disabled="
+                      !dataset.is_staged ||
+                      !isFeatureEnabled({
+                        featureKey: 'downloads',
+                        hasRole: auth.hasRole,
+                      })
+                    "
                     class="flex-initial"
                     color="primary"
                     border-color="primary"
@@ -196,7 +202,12 @@
                   </div>
                   <div
                     class="flex items-center gap-1"
-                    v-if="config.enabledFeatures.genomeBrowser"
+                    v-if="
+                      isFeatureEnabled({
+                        featureKey: 'genomeBrowser',
+                        hasRole: auth.hasRole,
+                      })
+                    "
                   >
                     <i-mdi-file-multiple class="text-xl" />
                     <span> {{ dataset.metadata?.num_genome_files }} </span>
@@ -321,11 +332,14 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import { formatBytes } from "@/services/utils";
+import { formatBytes, isFeatureEnabled } from "@/services/utils";
 import workflowService from "@/services/workflow";
+import { useAuthStore } from "@/stores/auth";
+
 const router = useRouter();
 const route = useRoute();
 const isDark = useDark();
+const auth = useAuthStore();
 
 const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
 
@@ -404,8 +418,9 @@ watch(
 
 /**
  * providing the interval directly will kick of the polling immediately
- * provide a ref which will resolve to null when there are no active workflows and to 10s otherwise
- * now it can be controlled by resume and pause whenever active_wf changes
+ * provide a ref which will resolve to null when there are no active workflows
+ * and to 10s otherwise now it can be controlled by resume and pause whenever
+ * active_wf changes
  */
 const poll = useIntervalFn(fetch_dataset, polling_interval);
 
