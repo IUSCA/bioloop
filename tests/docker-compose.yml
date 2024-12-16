@@ -1,4 +1,4 @@
-name: bioloop_cicd
+name: bioloopcicd
 services:
   nginx:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/nginx:test
@@ -10,7 +10,7 @@ services:
       - api
     networks:
       network:
-        ipv4_address: 172.20.0.2
+        ipv4_address: 172.100.0.2
 
   ui:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:test
@@ -24,7 +24,7 @@ services:
     restart: "no"
     networks:
       network:
-        ipv4_address: 172.20.0.3
+        ipv4_address: 172.100.0.3
 
   e2e:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/e2e:test
@@ -34,7 +34,7 @@ services:
     entrypoint: [ "tail", "-f", "/dev/null" ]
     networks:
       network:
-        ipv4_address: 172.20.0.4
+        ipv4_address: 172.100.0.4
       
   api:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:test
@@ -51,7 +51,7 @@ services:
      - postgres
     networks:
       network:
-        ipv4_address: 172.20.0.5
+        ipv4_address: 172.100.0.5
 
   postgres:
     image: postgres:14.5
@@ -60,7 +60,7 @@ services:
       - 5432
     networks:
       network:
-        ipv4_address: 172.20.0.6
+        ipv4_address: 172.100.0.6
 
 volumes:
   ui_modules:
@@ -70,4 +70,4 @@ networks:
   network:
     ipam:
       config:
-        - subnet: 172.20.0.0/24
+        - subnet: 172.100.0.0/24
