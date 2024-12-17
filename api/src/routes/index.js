@@ -9,6 +9,7 @@ router.use('/auth', require('./auth/index'));
 router.use('/reports', require('./reports'));
 router.use('/about', require('./about'));
 router.use('/env', require('./env'));
+router.use('/feedback', require('./feedback'));
 
 // From this point on, all routes require authentication.
 router.use(authenticate);
@@ -23,6 +24,5 @@ router.use('/notifications', require('./notifications'));
 router.use('/fs', require('./fs'));
 router.use('/uploads', require('./uploads'));
 router.use('/datasetUploads', require('./datasetUploads'));
-router.use('/feedback', require('./feedback'));
 
 module.exports = router;

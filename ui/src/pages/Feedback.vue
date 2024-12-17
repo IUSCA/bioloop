@@ -71,6 +71,7 @@
 </template>
 
 <script setup>
+import FeedbackService from "@/services/feedback";
 import { ref } from "vue";
 
 // Reactive state variables
@@ -96,17 +97,31 @@ const updateEmoji = () => {
   selectedEmoji.value = emojis[roundedRating] || "🙂";
 };
 
-// Handle feedback submission
+// Submit feedback using FeedbackService with Promise chaining
 const submitFeedback = () => {
   const feedbackData = {
     rating: Math.round(rating.value),
     comments: comments.value,
     fullName: name.value,
     email: email.value,
-    contactAllowed: contactAllowed.value,
   };
-  console.log("Feedback Submitted:", feedbackData);
-  alert("Thank you for your feedback!");
+
+  FeedbackService.submitFeedback(feedbackData)
+    .then(() => {
+      resetForm();
+    })
+    .catch((error) => {
+      console.error("Failed to submit feedback.", error);
+    });
+};
+
+// Reset form after submission
+const resetForm = () => {
+  rating.value = 3;
+  selectedEmoji.value = "🙂";
+  comments.value = "";
+  name.value = "";
+  email.value = "";
 };
 </script>
 
