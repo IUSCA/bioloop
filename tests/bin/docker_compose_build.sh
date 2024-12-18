@@ -43,7 +43,7 @@ docker compose build \
 
 for key in "${!env_vars[@]}"; do
   echo "$key"="\${$key}" 
-  --build-arg "$key"="${$key}" \
-  
+  --build-arg "$key"="\${$key}" \
+
 done
 
