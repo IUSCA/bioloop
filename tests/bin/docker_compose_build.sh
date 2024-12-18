@@ -38,15 +38,12 @@ done < "../db/postgres/.env.example"
 
 #docker-compose build --build-arg db_username="${db_username}" --build-arg db_password="${db_password}"
 
-# docker compose build \
+docker compose build \
 # Make docker compose build passing in all environment variables
-declare -i x=0
+
 for key in "${!env_vars[@]}"; do
   echo "$key"="\${$key}" 
-  # --build-arg "$key"="${$key}" \
-
-  x=$((x + 1))
-
+  --build-arg "$key"="${$key}" \
+  
 done
 
-echo "$x"
