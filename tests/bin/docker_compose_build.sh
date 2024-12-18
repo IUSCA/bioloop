@@ -27,7 +27,7 @@ while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
     env_vars["$key"]="$value"
   fi
-done < ".env.example"
+done < "./.env.example"
 
 # DB
 while IFS='=' read -r key value; do
@@ -38,12 +38,13 @@ done < "../db/postgres/.env.example"
 
 #docker-compose build --build-arg db_username="${db_username}" --build-arg db_password="${db_password}"
 
-docker compose build \
-# Make docker compose build passing in all environment variables
 
+# Make docker compose build passing in all environment variables
+docker_compose_args=""
 for key in "${!env_vars[@]}"; do
   echo "$key"="\${$key}" 
-  --build-arg "$key"="\${$key}" \
+  docker_compose_args="${docker_compose_args} --build-arg \"$key\"=\"\${$key}\" "
 
 done
 
+docker compose build $docker_compose_args
