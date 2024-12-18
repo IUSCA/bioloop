@@ -69,7 +69,9 @@ test-e2e:
   script:
     - cd tests/
     - docker compose down
-    - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
+    - docker compose pull 
+    - bin/docker_compose_build.sh
+    - docker compose  up -d --force-recreate --remove-orphans
     - docker compose exec api npx prisma migrate deploy 
     - docker compose exec api npx prisma db seed
     - docker compose exec e2e npm run test
