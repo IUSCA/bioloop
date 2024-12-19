@@ -12,6 +12,8 @@ services:
 
   ui:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:test
+    env_file:
+      - ui.env
     volumes:
       - ui_modules:/opt/sca/app/dist
     environment:
@@ -25,7 +27,7 @@ services:
   e2e:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/e2e:test
     env_file:
-      - .env.example
+      - tests.env
     depends_on:
       - api
     entrypoint: [ "tail", "-f", "/dev/null" ]
@@ -33,6 +35,9 @@ services:
       
   api:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:test
+    env_file:
+      - db.env
+      - api.env
     entrypoint:
       - sh
       - -c
@@ -48,6 +53,8 @@ services:
 
   postgres:
     image: postgres:14.5
+    env_file:
+      - db.env
     restart: unless-stopped
     expose:
       - 5432
