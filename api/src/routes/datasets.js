@@ -736,8 +736,11 @@ router.get(
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
-      const download_url_base = `download/${encodeURIComponent(download_file_path)}`;
-      const downloadUrl = new URL(download_url_base, config.get('download_server.base_url'));
+
+      const downloadUrl = new URL(
+        `download/${encodeURIComponent(download_file_path)}`,
+        config.get('download_server.base_url'),
+      );
       res.json({
         url: downloadUrl.href,
         bearer_token: download_token.accessToken,
