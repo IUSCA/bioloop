@@ -728,30 +728,16 @@ router.get(
       },
     });
 
-    console.log('isFileDownload', isFileDownload);
     if (dataset.metadata.stage_alias) {
-      const download_file_path_prefix = isFileDownload
-        ? `${dataset.metadata.stage_alias}`
-        : `${dataset.metadata.bundle_alias}`;
-      console.log('download_file_path_prefix', download_file_path_prefix);
       const download_file_path = isFileDownload
-        ? `${download_file_path_prefix}/${file.path}`
-        : `${download_file_path_prefix}`;
-      console.log('download_file_path', download_file_path);
-
+        ? `${dataset.metadata.stage_alias}/${file.path}`
+        : `${dataset.metadata.bundle_alias}`;
       const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
-      console.log('url', url);
-      console.log('url.pathname', url.pathname);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
       const download_token = await authService.get_download_token(url.pathname);
-      console.log('download_token', download_token);
-
       const download_url_base = `download/${encodeURIComponent(download_file_path)}`;
-      console.log("download_url_base", download_url_base)
       const downloadUrl = new URL(download_url_base, config.get('download_server.base_url'));
-      // downloadUrl.search = isFileDownload ? `?file=${file.name}` : '';
-      console.log('downloadUrl', downloadUrl);
       res.json({
         url: downloadUrl.href,
         bearer_token: download_token.accessToken,
