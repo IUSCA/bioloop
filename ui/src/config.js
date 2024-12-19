@@ -97,17 +97,6 @@ const exports = {
         label: "Slate-Scratch",
       },
     },
-    {
-      slateProject: {
-        base_path:
-          import.meta.env.VITE_PROJECT_BASE_DIR || "/bioloop/project/space",
-        mount_path:
-          import.meta.env.VITE_PROJECT_MOUNT_DIR ||
-          "bioloop/user/project/mount/dir",
-        key: "slateProject",
-        label: "Slate-Project",
-      },
-    },
   ],
   restricted_ingestion_dirs: {
     slateScratch: {
@@ -115,12 +104,6 @@ const exports = {
         import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
         "/scratch/space/restricted",
       key: "scratch",
-    },
-    slateProject: {
-      paths:
-        import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
-        "/project/space/restricted",
-      key: "project",
     },
   },
   upload: {
