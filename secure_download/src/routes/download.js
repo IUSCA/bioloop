@@ -14,11 +14,12 @@ function remove_leading_slash(str) {
   return str?.replace(/^\/+/, '');
 }
 
+// The trailing * ensures that this route can accept a file path string after 
+// the dataset alias, in case a specific file is being requested for download.
 router.get(
-  '/:alias',
+  '/:alias*',
   validate([
     param('alias').escape().notEmpty(),
-    query('file').escape().notEmpty().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     console.log('inside /download/:alias');
