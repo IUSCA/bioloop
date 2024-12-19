@@ -38,7 +38,6 @@ done < "../db/postgres/.env.example"
 
 
 # Make docker compose build passing in all environment variables
-
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
   eval echo "$key"="\${$key}" >> .env
