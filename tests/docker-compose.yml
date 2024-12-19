@@ -36,6 +36,7 @@ services:
   api:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:test
     env_file:
+      - tests.env
       - db.env
       - api.env
     entrypoint:

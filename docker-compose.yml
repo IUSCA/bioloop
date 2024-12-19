@@ -19,6 +19,7 @@ services:
   api:
     image: node:19
     env_file:
+      - tests/.env.example
       - db/postgres/.env.example
       - api/.env.example
     volumes:
