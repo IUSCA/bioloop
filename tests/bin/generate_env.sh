@@ -36,15 +36,9 @@ while IFS='=' read -r key value; do
   fi
 done < "../db/postgres/.env.example"
 
-#docker-compose build --build-arg db_username="${db_username}" --build-arg db_password="${db_password}"
-
 
 # Make docker compose build passing in all environment variables
-docker_compose_args=""
 for key in "${!env_vars[@]}"; do
-  echo "$key"="\${$key}" 
-  docker_compose_args="${docker_compose_args} --build-arg \"$key\"=\"\${$key}\" "
-
+  echo "$key"="${$key}"
+  echo "$key"="${$key}" >> .env
 done
-
-docker compose build $docker_compose_args

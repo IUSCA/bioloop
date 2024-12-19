@@ -70,8 +70,8 @@ test-e2e:
     - cd tests/
     - docker compose down
     - docker compose pull 
-    - bin/docker_compose_build.sh
-    - docker compose  up -d --force-recreate --remove-orphans
+    - bin/generate_env.sh
+    - docker compose --env-file .env  up -d --force-recreate --remove-orphans
     - docker compose exec api npx prisma migrate deploy 
     - docker compose exec api npx prisma db seed
     - docker compose exec e2e npm run test
