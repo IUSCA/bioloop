@@ -7,6 +7,20 @@ echo "Getting environment variables from .env.example files ..."
 #
 
 
+# DB
+echo "Generating db.env file ..."
+declare -A env_vars
+while IFS='=' read -r key value; do
+  if [[ $key != \#* ]]; then
+    env_vars["$key"]="$value"
+  fi
+done < "../db/postgres/.env.example"
+
+for key in "${!env_vars[@]}"; do
+  eval echo "$key"="\${$key}"
+  eval echo "$key"="\${$key}" >> db.env
+done
+
 # API
 echo "Generating api.env file ..."
 declare -A env_vars
@@ -50,16 +64,4 @@ for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}" >> tests.env
 done
 
-# DB
-echo "Generating db.env file ..."
-declare -A env_vars
-while IFS='=' read -r key value; do
-  if [[ $key != \#* ]]; then
-    env_vars["$key"]="$value"
-  fi
-done < "../db/postgres/.env.example"
 
-for key in "${!env_vars[@]}"; do
-  eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> db.env
-done
