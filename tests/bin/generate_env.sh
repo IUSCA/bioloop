@@ -23,7 +23,7 @@ done
 
 # API
 echo "Generating api.env file ..."
-declare -A env_vars
+declare -A env_vars=()
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
     env_vars["$key"]="$value"
@@ -38,7 +38,7 @@ done
 
 # UI
 echo "Generating ui.env file ..."
-declare -A env_vars
+declare -A env_vars=()
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
     env_vars[$key]="$value"
@@ -52,7 +52,7 @@ done
 
 # Tests
 echo "Generating tests.env file ..."
-declare -A env_vars
+declare -A env_vars=()
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
     env_vars["$key"]="$value"
