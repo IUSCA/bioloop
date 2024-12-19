@@ -747,9 +747,10 @@ router.get(
       const download_token = await authService.get_download_token(url.pathname);
       console.log('download_token', download_token);
 
-      const download_url_base = `download/${download_file_path_prefix}`;
+      const download_url_base = `download/${encodeURIComponent(download_file_path)}`;
+      console.log("download_url_base", download_url_base)
       const downloadUrl = new URL(download_url_base, config.get('download_server.base_url'));
-      downloadUrl.search = isFileDownload ? `?file=${file.name}` : '';
+      // downloadUrl.search = isFileDownload ? `?file=${file.name}` : '';
       console.log('downloadUrl', downloadUrl);
       res.json({
         url: downloadUrl.href,
