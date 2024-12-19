@@ -104,6 +104,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["download-initiated"]);
+
 const columns = computed(() => {
   if (store.isInSearchMode) {
     return [
@@ -204,6 +206,7 @@ function initiate_file_download(row) {
     })
     .finally(() => {
       data_loading.value = false;
+      emit("download-initiated");
     });
 }
 
