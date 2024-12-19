@@ -1,9 +1,7 @@
 const express = require('express');
 const createError = require('http-errors');
 const config = require('config');
-const {
-  param, query,
-} = require('express-validator');
+const { param } = require('express-validator');
 
 const { validate } = require('../middleware/validators');
 const asyncHandler = require('../middleware/asyncHandler');
