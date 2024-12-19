@@ -162,6 +162,37 @@ async function softDeleteUser(username) {
   return updatedUser ? transformUser(updatedUser) : updatedUser;
 }
 
+async function hardDeleteUser(username) {
+  if (!username) {
+    throw new Error("Username is required for deletion.");
+  }
+
+  try {
+    console.log(`Starting deletion process for username: ${username}`);
+
+    // Find the user by username
+    const user = await prisma.user.findUnique({ where: { username } });
+    if (!user) {
+      throw new Error(`User with username "${username}" not found.`);
+    }
+    
+    // Store user details for logging purposes
+    const userDetails = { id: user.id, username: user.username };
+    // Delete the user (cascading delete and nullifications are handled by the schema)
+    await prisma.user.delete({ where: { id: user.id } });
+
+    console.log(`User ${username} and associated data deleted successfully.`);
+    return userDetails; 
+  } catch (error) {
+    if (error.code === 'P2025') {
+      console.error(`Record not found during deletion process: ${error.message}`);
+      throw new Error(`Unable to delete user "${username}". Record not found.`);
+    }
+    console.error(`Error deleting user and associated data for username "${username}":`, error.stack);
+    throw new Error("An unexpected error occurred during the deletion process.");
+  }
+}
+
 // async function setRoles(user_id, role_ids) {
 
 // }
@@ -224,6 +255,7 @@ module.exports = {
   createUser,
   setPassword,
   softDeleteUser,
+  hardDeleteUser,
   updateUser,
   findRoles,
   canUpdateUser,

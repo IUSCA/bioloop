@@ -121,6 +121,7 @@ router.patch(
   }),
 );
 
+// existing user deletion: soft delete
 router.delete(
   '/:username',
   isPermittedTo('delete', { checkOwnerShip: true }),
@@ -129,6 +130,21 @@ router.delete(
     const deletedUser = await userService.softDeleteUser(req.params.username);
     res.json(deletedUser);
   }),
+);
+
+// add new route to hard delete a user
+router.delete(
+  '/:username/delete',
+  isPermittedTo('delete', { checkOwnerShip: true }),
+  asyncHandler(async (req, res, next) => {
+    try {
+      await userService.hardDeleteUser(req.params.username);
+      res.status(200).json({ message: 'User and associated data deleted/disassociated successfully.' });
+    } catch (error) {
+      console.error('Error deleting user and associated data:', error);
+      return next(createError.InternalServerError('Error deleting user and associated data.'));
+    }
+  })
 );
 
 module.exports = router;
