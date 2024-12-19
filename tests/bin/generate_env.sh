@@ -8,6 +8,7 @@ echo "Getting environment variables from .env.example files ..."
 
 
 # API
+echo "Generating api.env file ..."
 declare -A env_vars
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
@@ -22,6 +23,7 @@ done
 
 
 # UI
+echo "Generating ui.env file ..."
 declare -A env_vars
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
@@ -35,6 +37,7 @@ for key in "${!env_vars[@]}"; do
 done
 
 # Tests
+echo "Generating tests.env file ..."
 declare -A env_vars
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
@@ -48,6 +51,7 @@ for key in "${!env_vars[@]}"; do
 done
 
 # DB
+echo "Generating db.env file ..."
 declare -A env_vars
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
@@ -59,10 +63,3 @@ for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
   eval echo "$key"="\${$key}" >> db.env
 done
-
-
-# Make docker compose build passing in all environment variables
-# for key in "${!env_vars[@]}"; do
-#   eval echo "$key"="\${$key}"
-#   eval echo "$key"="\${$key}" >> .env
-# done
