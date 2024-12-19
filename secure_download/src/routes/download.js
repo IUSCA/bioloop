@@ -1,11 +1,10 @@
 const express = require('express');
 const createError = require('http-errors');
 const config = require('config');
-const {
-  param,
-} = require('express-validator');
+const { param } = require('express-validator');
 
 const { validate } = require('../middleware/validators');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -13,10 +12,15 @@ function remove_leading_slash(str) {
   return str?.replace(/^\/+/, '');
 }
 
+// The trailing * ensures that this route can accept a file path string after 
+// the dataset alias, in case a specific file is being requested for download.
 router.get(
-  '/:alias',
-  validate([param('alias').escape().notEmpty()]),
-  (req, res, next) => {
+  '/:alias*',
+  validate([
+    param('alias').escape().notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    console.log('inside /download/:alias');
     const SCOPE_PREFIX = config.get('scope_prefix');
 
     const scopes = (req.token?.scope || '').split(' ');
@@ -44,7 +48,7 @@ router.get(
     } else {
       return next(createError.Forbidden('Invalid path'));
     }
-  },
+  }),
 );
 
 module.exports = router;
