@@ -1,4 +1,16 @@
 <template>
+    <!-- Reset Sort Button -->
+    <div class="flex justify-end mb-2" v-if="isResetVisible">
+      <va-button
+        icon="restart_alt"
+        @click="resetSortParams"
+        preset="primary"
+      >
+        Reset Sort
+      </va-button>
+    </div>
+
+
   <va-data-table
     :items="rows"
     :columns="columns"
@@ -104,12 +116,25 @@ const props = defineProps({
   },
 });
 
+// Default sort parameters
+const defaultSortBy = "typeSortableName";
+const defaultSortingOrder = "asc";
+
+// Sort state
+const sortBy = ref(defaultSortBy);
+const sortingOrder = ref(defaultSortingOrder);
+
+// Visibility of reset button
+const isResetVisible = computed(() => sortBy.value !== defaultSortBy || sortingOrder.value !== defaultSortingOrder);
+
 const columns = computed(() => {
   if (store.isInSearchMode) {
     return [
       {
         key: "typeSortableName",
         label: "name",
+        sortable: true, // Enable sorting
+        sortingFn: nameSortingFn, // Use the same sorting function as in Browser View
         tdStyle:
           "min-width: 300px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
       },
@@ -122,7 +147,10 @@ const columns = computed(() => {
           "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
         tdAlign: "center",
       },
-      { key: "size", width: "100px" },
+      { key: "size", label: "Size",
+        sortable: true, // Enable sorting
+        sortingFn: (a, b) => a - b, // Numeric comparison,
+        width: "100px" },
       { key: "md5", width: "250px", label: "MD5 Checksum" },
     ];
   } else {
@@ -149,15 +177,18 @@ const columns = computed(() => {
   }
 });
 
-// initial sorting order
-const sortBy = ref("typeSortableName");
-const sortingOrder = ref("asc");
+
 const data_loading = ref(false);
 
 function extension(name) {
   const parts = name.split(".");
   if (parts.length > 1) return parts.slice(-1)[0];
   else return "";
+}
+
+function resetSortParams() {
+  sortBy.value = defaultSortBy;
+  sortingOrder.value = defaultSortingOrder;
 }
 
 const rows = computed(() => {
@@ -212,6 +243,7 @@ function getRowBind(row) {
     return { class: ["cursor-pointer"] };
   }
 }
+
 
 function nameSortingFn(a, b) {
   // compare filetypes and then compare names

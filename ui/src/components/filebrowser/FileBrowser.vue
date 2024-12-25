@@ -8,6 +8,7 @@
           <FileBrowserSearchFilters
             v-if="isInSearchMode"
             class="flex-none"
+            :total-results-count="searchResults.length"
             @search="search_files"
             @advanced-search="openModal"
           />
@@ -36,9 +37,9 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
+import { filterByValues } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
-import { filterByValues } from "@/services/utils";
 
 const store = useFileBrowserStore();
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
@@ -92,6 +93,7 @@ function search_files() {
     })
     .then((res) => {
       searchResults.value = res.data;
+      totalResultsCount.value = res.data.length;
     })
     .catch((err) => {
       console.error(err);

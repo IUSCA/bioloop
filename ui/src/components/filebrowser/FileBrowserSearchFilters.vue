@@ -1,6 +1,6 @@
 <template>
   <div class="flex gap-2 w-full items-center">
-    <va-chip class="flex-none"> Search Results </va-chip>
+    <va-chip class="flex-none"> Search Results ({{ totalResultsCount }}) </va-chip>
 
     <!-- name filter -->
     <va-chip
@@ -93,13 +93,20 @@
 </template>
 
 <script setup>
+import { formatBytes } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
-import { formatBytes } from "@/services/utils";
 
 const store = useFileBrowserStore();
 const { filters, filterStatus } = storeToRefs(store);
 // const props = defineProps({})
+const props = defineProps({
+  totalResultsCount: {
+    type: Number,
+    default: 0,
+  },
+});
+
 
 const emit = defineEmits(["search", "advancedSearch"]);
 
