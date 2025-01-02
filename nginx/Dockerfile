@@ -13,6 +13,7 @@ RUN touch /var/run/nginx.pid && \
 
 USER nginx
 
+
 VOLUME /usr/share/nginx/html
 
 
