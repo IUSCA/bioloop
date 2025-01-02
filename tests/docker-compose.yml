@@ -8,6 +8,7 @@ services:
       - "8081:8081"
     depends_on:
       - api
+      - ui
 
 
   ui:
@@ -30,6 +31,7 @@ services:
       - tests.env
     depends_on:
       - api
+      - nginx
     entrypoint: [ "tail", "-f", "/dev/null" ]
 
       
