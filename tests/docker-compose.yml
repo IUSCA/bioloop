@@ -19,9 +19,6 @@ services:
       - ui.env
     volumes:
       - ui_modules:/opt/sca/app/dist
-    environment:
-      - VITE_CAS_RETURN=${VITE_CAS_RETURN}
-      - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - api
     restart: "no"
