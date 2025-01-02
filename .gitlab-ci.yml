@@ -72,7 +72,7 @@ test-e2e:
     - bin/generate_env.sh # Generate all the environment vars specified in .env.examples using gitlab environment vars values
     - docker compose down
     - docker compose pull 
-    - docker compose up -d --force-recreate --remove-orphans
+    - docker compose up -d --force-recreate --remove-orphans && sleep 10
     - docker compose exec api npx prisma migrate deploy 
     - docker compose exec api npx prisma db seed
     - docker compose exec e2e npm run test
