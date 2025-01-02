@@ -36,7 +36,7 @@ module.exports = {
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-      baseURL: config.get('baseURL') ? config.get('baseURL') : 'https://localhost',
+      baseURL: config.get('baseURL'),
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
