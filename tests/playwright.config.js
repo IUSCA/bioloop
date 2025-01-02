@@ -1,5 +1,6 @@
 const path = require('path');
 require('dotenv').config();
+const config = require('config');
 
 const { defineConfig, devices } = require('@playwright/test');
 
@@ -31,11 +32,11 @@ module.exports = {
     /* Opt out of parallel tests on CI. */
     workers: process.env.CI ? 1 : undefined,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-    reporter: 'html',
+    reporter: 'list',
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-      baseURL: 'https://localhost',
+      baseURL: config.get('baseURL') ? config.get('baseURL') : 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
