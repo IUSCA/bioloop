@@ -52,7 +52,7 @@ test-migrations:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
-    - cd test/
+    - cd tests/
     - bin/generate_env.sh # Generate all the environment vars specified in .env.examples using gitlab environment vars values
     - docker compose down 
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
