@@ -53,7 +53,9 @@ services:
       - sh
       - -c
       - |
-        ./keys/genkeys.sh \
+        cd keys \
+        && ./keys/genkeys.sh \
+        && cd .. \
         && npx prisma generate \
         && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
     expose:
