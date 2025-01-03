@@ -19,9 +19,19 @@ services:
       - ui.env
     volumes:
       - ui_modules:/opt/sca/app/dist
+      - ui/.cert:/opt/sca/app/.cert
     depends_on:
       - api
     restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir .cert \
+        && cd .cert \
+        && openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/C=US/ST=IN/L=Bloomington/O=IU/OU=SCA/CN=localhost" \
+        && cd .. \
+        && npm run build
 
 
   e2e:
