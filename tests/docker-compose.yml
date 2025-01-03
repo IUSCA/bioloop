@@ -19,7 +19,6 @@ services:
       - ui.env
     volumes:
       - ui_modules:/opt/sca/app/dist
-      - ui/.cert:/opt/sca/app/.cert
     depends_on:
       - api
     restart: "no"
