@@ -56,24 +56,9 @@ services:
     expose:
       - 5432
 
-  # nginx:
-  #   image: nginx:1.25
-  #   ports:
-  #       - 8000:8000
-  #   volumes:
-  #       - ./nginx/src:/usr/share/nginx/html
-  #       - ./nginx/conf:/etc/nginx/conf.d
-  #       - ./data:/opt/sca/data
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
-
   workers:
     build:
       context: ./workers
-    # entrypoint:
-    #   - tail
-    #   - -f
-    #   - /dev/null
     depends_on:
       - queue
       - mongo
@@ -128,24 +113,6 @@ services:
     depends_on:
       - queue
       - mongo
-
-
-
-  # docker compose run --rm mongobackup
-  # mongobackup:
-  #   image: mongo:5
-  #   environment:
-  #     - MONGO_HOST=${MONGO_HOST}
-  #     - MONGO_PORT=${MONGO_PORT}
-  #     - MONGO_DB=${MONGO_DB}
-  #     - MONGO_AUTH_SOURCE=${MONGO_AUTH_SOURCE}
-  #     - MONGO_USER=${MONGO_USER}
-  #     - MONGO_PASS=${MONGO_PASS}
-  #     - PROJ_NAME=${COMPOSE_PROJECT_NAME}
-  #   volumes:
-  #     - ./db/backups:/backup
-  #   command: >
-  #     bash -c 'mongodump --uri="mongodb://$MONGO_USER:$MONGO_PASS@$MONGO_HOST:$MONGO_PORT/$MONGO_DB?authSource=$MONGO_AUTH_SOURCE" --archive=/backup/$$PROJ_NAME.mongo.$(date +%F).gz --gzip'
 
 volumes:
   ui_modules:
