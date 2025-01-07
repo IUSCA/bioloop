@@ -252,40 +252,53 @@
   <!-- Log in as User modal -->
   <SudoUserModal ref="sudoModal" :user="selected" />
 
-    <!-- Delete Confirmation Modal -->
-  <va-modal
-    v-model="isDeleteModalVisible"
-    title="DELETE USER?"
-    okText="Confirm"
-    cancelText="Cancel"
-    @ok="showUsernamePrompt"
-    @cancel="isDeleteModalVisible = false"
-  >
-    <p>Are you sure you want to delete the user record of <strong>{{ editedUser.name }}</strong> completely?</p>
+  <!-- Delete Confirmation Modal -->
+  <va-modal v-model="isDeleteModalVisible" title="DELETE USER?" okText="Confirm" cancelText="Cancel"
+    @ok="showUsernamePrompt" @cancel="isDeleteModalVisible = false">
+    <p>Are you sure you want to delete the user record of <strong>{{ editedUser.name }}</strong>?</p>
   </va-modal>
 
   <!-- Username Confirmation Modal -->
-  <va-modal 
-    v-model="isUsernamePromptVisible"
-    title="CONFIRM DELETION"
-    hide-default-actions
-    @cancel="resetDeleteModal"
-  >
-    <p>This action is irreversible and will impact other data linked to this user.</p>
+  <va-modal v-model="isUsernamePromptVisible" title="CONFIRM DELETION" hide-default-actions
+    @cancel="isUsernamePromptVisible = false">
+    <p>Please note that hard deletion is irreversible and will impact other data linked to this user.</p>
     <p>Please type the username <strong>{{ editedUser.username }}</strong> to confirm deletion:</p>
-    <va-input v-model="usernameConfirmation" placeholder="Enter username" />
 
-    <!-- Radio buttons for delete cascade or update cascade -->
-    <div class="mt-4">
+    <!-- Username Input -->
+    <va-input v-model="usernameConfirmation" placeholder="Enter username" style="width: 300px;" />
+
+    <!-- Deletion Type Toggle Group -->
+    <div class="flex gap-4 items-center mt-2">
+
+      <!-- Deletion Type Label -->
+      <span style="font-size: 1rem; font-weight: bold;">Deletion Type:</span>
+      <!-- Soft Deletion: Disabled when already soft deleted -->
       <label>
-        <input type="checkbox" :checked="deleteOption === 'hardDelete'" @change="toggleOption('hardDelete')" />
-        Hard Deletion
+        <va-popover message="Soft Deletion is unavailable because the user is already soft deleted." placement="top"
+          v-if="isSoftDeleted">
+          <input type="radio" v-model="isHardDelete" :value="false" :disabled="isSoftDeleted"
+            @change="toggleOption(false)" />
+          <span :class="{ 'text-gray-400': isSoftDeleted }">Soft Deletion</span>
+        </va-popover>
+        <template v-else>
+          <input type="radio" v-model="isHardDelete" :value="false" :disabled="isSoftDeleted"
+            @change="toggleOption(false)" />
+          <span>Soft Deletion</span>
+        </template>
       </label>
-      <label class="ml-4">
-        <input type="checkbox" :checked="deleteOption === 'softDelete'" @change="toggleOption('softDelete')" />
-        Soft Deletion
+
+      <!-- Hard Deletion: Always enabled -->
+      <label>
+        <input type="radio" v-model="isHardDelete" :value="true" @change="toggleOption(true)" />
+        <span>Hard Deletion</span>
       </label>
     </div>
+    <!-- Inline Error Message -->
+    <div v-if="deleteOptionError" class="text-danger mt-1" style="color: red; font-size: 0.875rem;">
+      {{ deleteOptionError }}
+    </div>
+
+
 
     <!-- Display impact details -->
     <div class="impact-details mt-4" v-if="impactDetails">
@@ -294,11 +307,11 @@
         <li v-for="detail in impactDetails" :key="detail">{{ detail }}</li>
       </ul>
     </div>
-    
+
     <!-- Custom footer with "Confirm Delete" and "Cancel" buttons -->
     <template #footer>
-      <va-button @click="resetDeleteModal">Cancel</va-button>
-      <va-button color="danger" :disabled="usernameConfirmation !== editedUser.username" @click="hardDeleteUser">
+      <va-button @click="isUsernamePromptVisible = false">Cancel</va-button>
+      <va-button color="danger" :disabled="usernameConfirmation !== editedUser.username" @click="deleteUser">
         Confirm Delete
       </va-button>
     </template>
@@ -333,8 +346,11 @@ const autofill = ref({
 const isDeleteModalVisible = ref(false);
 const isUsernamePromptVisible = ref(false);
 const usernameConfirmation = ref("");
-const deleteOption = ref(null);
+//const deleteOption = ref(null);
+const isHardDelete = ref(false);
 const impactDetails = ref(null);
+const isSoftDeleted = computed(() => editedUser.value.is_deleted); //check soft delete status
+const deleteOptionError = ref(""); 
 
 // Open the initial delete confirmation modal
 function confirmDeleteUser() {
@@ -346,34 +362,50 @@ function showUsernamePrompt() {
   isDeleteModalVisible.value = false;
   isUsernamePromptVisible.value = true;
   usernameConfirmation.value = ""; // reset input
-}
-
-function toggleOption(option) {
-  deleteOption.value = option; // Select the option
-
-  if (option === "hardDelete") {
+  isHardDelete.value = false;
+  
+  if (!isSoftDeleted.value) {
     impactDetails.value = [
-      "User profile, roles, and settings will be permanently removed.",
-      "Project assignments, notifications and login history will be removed.",
-      "Related system logs, project-related datasets, and uploads will no longer reference the user.",
-    ];
-  } else if (option === "softDelete") {
-    impactDetails.value = [
-      "The user's account will be marked as inactive but not permanently removed from the database.",
+      "The user's account will be marked as inactive but not permanently removed.",
       "Other data, such as linked projects and system logs, will remain intact.",
     ];
   } else {
-    impactDetails.value = null; // Clear the details
+    impactDetails.value = null; // No soft delete available
   }
 }
 
+function toggleOption(isHardDeleteSelected) {
+  if (isSoftDeleted.value && !isHardDeleteSelected) {
+    impactDetails.value = null;
+    return;
+  }
 
-function resetDeleteModal() {
-  deleteOption.value = null; // Reset the delete option
-  impactDetails.value = null; // Clear the impact details
-  //usernameConfirmation.value = ""; 
-  isDeleteModalVisible.value = false; 
-  isUsernamePromptVisible.value = false; 
+  isHardDelete.value = isHardDeleteSelected;
+  deleteOptionError.value = "";
+
+  // Set impact details based on the selected option
+  impactDetails.value = isHardDeleteSelected
+    ? [
+        "User profile, roles, and settings will be permanently removed.",
+        "Project assignments, notifications, and login history will be removed.",
+        "Related system logs, project-related datasets, and uploads will no longer reference the user.",
+      ]
+    : [
+        "The user's account will be marked as inactive but not permanently removed.",
+        "Other data, such as linked projects and system logs, will remain intact.",
+      ];
+}
+
+function validateDeleteOption() {
+  console.log("Function Triggered");
+  debugger;
+  if (isSoftDeleted.value && !isHardDelete.value) {
+    // check for condition: User is already soft deleted and Hard Deletion isn't selected
+    deleteOptionError.value = "Please choose a valid deletion option";
+    return false;
+  }
+  deleteOptionError.value = ""; // Clear the error if the condition is not met
+  return true;
 }
 
 const debouncedUpdate = useDebounceFn((val) => {
@@ -582,44 +614,42 @@ function createUser() {
   }
 }
 
-function hardDeleteUser() {
+function deleteUser() {
+  // Prevent deletion if the username doesn't match
   if (usernameConfirmation.value !== editedUser.value.username) {
-    toast.error('Username does not match. Entered: "${usernameConfirmation.value}", Expected: "${editedUser.value.username}". ');
+    console.warn("Username mismatch detected during deletion attempt.");
     return;
   }
 
-  if (!deleteOption.value) {
-    toast.error("Please select an action for deletion (hard or soft deletion).");
+  // Prevent soft delete if the user is already soft deleted/ no options selected
+  if (!isHardDelete.value && isSoftDeleted.value) {
+    deleteOptionError.value = "Please select a valid delete option.";
+    console.warn("Soft delete attempted on an already soft-deleted user.");
     return;
   }
 
-  modal_loading.value = true;
+  modal_loading.value = true; 
 
-  // Decide which deletion function to call
-  const deleteFn =
-    deleteOption.value === "hardDelete"
-      ? UserService.hardDeleteUser // Hard delete
-      : UserService.softDeleteUser; // Disassociate
-
-  deleteFn(editedUser.value.username)
+  // Call the unified deletion function with the query parameter
+  UserService.deleteUser(editedUser.value.username, isHardDelete.value)
     .then(() => {
-      const successMessage =
-        deleteOption.value === "hardDelete"
-          ? "User record and their associated data have been successfully removed or disassociated."
-          : "User is temporarily disabled. Their associated data remains intact.";
+      const successMessage = isHardDelete.value
+        ? "User record and their associated data have been successfully removed or disassociated."
+        : "User is temporarily disabled. Their associated data remains intact.";
       toast.success(successMessage);
       fetch_all_users(); 
-      resetEditModal(); // Close the Modify User modal
-      isUsernamePromptVisible.value = false;
+      resetEditModal(); 
+      isUsernamePromptVisible.value = false; 
     })
     .catch((err) => {
-      console.error(err);
-      toast.error("An error occurred while processing your request.");
+      console.error(
+        `Error during ${isHardDelete.value ? "hard" : "soft"} delete for user ${editedUser.value.username}:`,
+        err
+      );
+      toast.error("Failed to delete the user. Please try again or contact support.");
     })
     .finally(() => {
-      modal_loading.value = false;
-      isUsernamePromptVisible.value = false;
-      resetDeleteModal(); 
+      modal_loading.value = false; 
     });
 }
 
@@ -668,31 +698,7 @@ fetch_all_users();
   --va-data-table-cell-padding: 3px;
 }
 
-/* Style checkboxes to look like radio buttons */
-input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1px solid #ccc;
-  border-radius: 50%;
-  position: relative;
-  cursor: pointer;
-}
 
-input[type="checkbox"]:checked::before {
-  content: '';
-  display: block;
-  width: 10px;
-  height: 10px;
-  background-color: #007bff;
-  border-radius: 50%;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
 </style>
 
 <route lang="yaml">

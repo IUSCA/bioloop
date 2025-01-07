@@ -149,48 +149,43 @@ async function createUser(data) {
   return user ? transformUser(user) : user;
 }
 
+// unified deleteUser on service layer
+async function deleteUser(username, isHardDelete = false) {
+  if (isHardDelete) {
+    // Hard delete: Directly delete the user + some data
+    return prisma.user.delete({
+      where: { username },
+      select: { id: true, username: true }, 
+    });
+  } else {
+    // Soft delete: Ensure user is not already soft-deleted
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    if (user?.is_deleted) {
+      // Return the user directly if already soft-deleted
+      return transformUser(user);
+    }
+
+    // Update user to mark status as disabled
+    const updatedUser = await prisma.user.update({
+      where: { username },
+      data: { is_deleted: true },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    return transformUser(updatedUser);
+  }
+}
+
 async function softDeleteUser(username) {
-  const updatedUser = await prisma.user.update({
-    where: {
-      username,
-    },
-    data: {
-      is_deleted: true,
-    },
-    include: INCLUDE_ROLES_LOGIN,
-  });
-  return updatedUser ? transformUser(updatedUser) : updatedUser;
+  return deleteUser(username, false);
 }
 
 async function hardDeleteUser(username) {
-  if (!username) {
-    throw new Error("Username is required for deletion.");
-  }
-
-  try {
-    console.log(`Starting deletion process for username: ${username}`);
-
-    // Find the user by username
-    const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) {
-      throw new Error(`User with username "${username}" not found.`);
-    }
-    
-    // Store user details for logging purposes
-    const userDetails = { id: user.id, username: user.username };
-    // Delete the user (cascading delete and nullifications are handled by the schema)
-    await prisma.user.delete({ where: { id: user.id } });
-
-    console.log(`User ${username} and associated data deleted successfully.`);
-    return userDetails; 
-  } catch (error) {
-    if (error.code === 'P2025') {
-      console.error(`Record not found during deletion process: ${error.message}`);
-      throw new Error(`Unable to delete user "${username}". Record not found.`);
-    }
-    console.error(`Error deleting user and associated data for username "${username}":`, error.stack);
-    throw new Error("An unexpected error occurred during the deletion process.");
-  }
+  return deleteUser(username, true);
 }
 
 // async function setRoles(user_id, role_ids) {
@@ -254,6 +249,7 @@ module.exports = {
   findAll,
   createUser,
   setPassword,
+  deleteUser,
   softDeleteUser,
   hardDeleteUser,
   updateUser,
