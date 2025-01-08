@@ -362,6 +362,7 @@ function showUsernamePrompt() {
   isDeleteModalVisible.value = false;
   isUsernamePromptVisible.value = true;
   usernameConfirmation.value = ""; // reset input
+  deleteOptionError.value = ""; // reset inline error msg 
   isHardDelete.value = false;
   
   if (!isSoftDeleted.value) {
@@ -394,18 +395,6 @@ function toggleOption(isHardDeleteSelected) {
         "The user's account will be marked as inactive but not permanently removed.",
         "Other data, such as linked projects and system logs, will remain intact.",
       ];
-}
-
-function validateDeleteOption() {
-  console.log("Function Triggered");
-  debugger;
-  if (isSoftDeleted.value && !isHardDelete.value) {
-    // check for condition: User is already soft deleted and Hard Deletion isn't selected
-    deleteOptionError.value = "Please choose a valid deletion option";
-    return false;
-  }
-  deleteOptionError.value = ""; // Clear the error if the condition is not met
-  return true;
 }
 
 const debouncedUpdate = useDebounceFn((val) => {
