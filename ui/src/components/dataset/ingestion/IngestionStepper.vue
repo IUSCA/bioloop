@@ -173,8 +173,8 @@ import config from "@/config";
 import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
-import pm from "picomatch";
 import { watchDebounced } from "@vueuse/core";
+import pm from "picomatch";
 
 const STEP_KEYS = {
   DIRECTORY: "directory",
@@ -461,12 +461,11 @@ const removeDataset = () => {
 };
 
 const preIngestion = () => {
+  const nameFormatted = selectedFile.value.name?.replace(/\s/g, "-");
   return datasetService.create_dataset({
-    data: {
-      name: selectedFile.value.name,
-      type: config.dataset.types.DATA_PRODUCT.key,
-      origin_path: selectedFile.value.path,
-    },
+    name: nameFormatted,
+    type: config.dataset.types.DATA_PRODUCT.key,
+    origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
   });
 };
