@@ -333,15 +333,11 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, ingestion_space, data,
+      workflow_id, state, ingestion_space, ...data
     } = req.body;
 
-    const { origin_path } = data;
-
-    // remove whitespaces from dataset name
-    data.name = data.name.split(' ').join('-');
-
     if (ingestion_space) {
+      const { origin_path } = data;
       // if dataset's origin_path is a restricted for dataset creation, throw
       // error
       const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
