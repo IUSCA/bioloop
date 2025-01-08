@@ -2,85 +2,92 @@
   <va-alert
     color="warning"
     icon="warning"
-    v-if="config.enabledFeatures.uploads"
+    v-if="
+      !isFeatureEnabled({
+        featureKey: 'uploads',
+        hasRole: auth.hasRole,
+      })
+    "
   >
     This feature is currently disabled
   </va-alert>
 
-  <div class="flex mb-3 gap-3" v-else>
-    <!-- search bar -->
-    <div class="flex-1">
-      <va-input
-        v-model="filterInput"
-        class="w-full"
-        placeholder="Type / to search Dataset Uploads"
-        outline
-        clearable
-        input-class="search-input"
-      >
-        <template #prependInner>
-          <Icon icon="material-symbols:search" class="text-xl" />
-        </template>
-      </va-input>
+  <div v-else>
+    <div class="flex mb-3 gap-3">
+      <!-- search bar -->
+      <div class="flex-1">
+        <va-input
+          v-model="filterInput"
+          class="w-full"
+          placeholder="Type / to search Dataset Uploads"
+          outline
+          clearable
+          input-class="search-input"
+        >
+          <template #prependInner>
+            <Icon icon="material-symbols:search" class="text-xl" />
+          </template>
+        </va-input>
+      </div>
+
+      <!-- create button -->
+      <div class="flex-none">
+        <va-button
+          icon="add"
+          class="px-1"
+          color="success"
+          @click="router.push('/datasetUpload/new')"
+        >
+          Upload Data Product
+        </va-button>
+      </div>
     </div>
 
-    <!-- create button -->
-    <div class="flex-none">
-      <va-button
-        icon="add"
-        class="px-1"
-        color="success"
-        @click="router.push('/datasetUpload/new')"
-      >
-        Upload Data Product
-      </va-button>
-    </div>
+    <!-- table -->
+    <va-data-table :items="uploads" :columns="columns">
+      <template #cell(status)="{ value }">
+        <va-chip size="small" :color="getStatusChipColor(value)">
+          {{ value }}
+        </va-chip>
+      </template>
+
+      <template #cell(uploaded_dataset)="{ rowData }">
+        <router-link
+          :to="`/datasets/${rowData.uploaded_dataset.id}`"
+          class="va-link"
+          >{{ rowData.uploaded_dataset.name }}</router-link
+        >
+      </template>
+
+      <template #cell(source_dataset)="{ rowData }">
+        <router-link
+          v-if="rowData.source_dataset"
+          :to="`/datasets/${rowData.source_dataset.id}`"
+          class="va-link"
+        >
+          {{ rowData.source_dataset.name }}
+        </router-link>
+      </template>
+
+      <template #cell(user)="{ rowData }">
+        <span>{{ rowData.user.name }} ({{ rowData.user.username }})</span>
+      </template>
+
+      <template #cell(initiated_at)="{ value }">
+        <span class="text-sm lg:text-base">
+          {{ datetime.date(value) }}
+        </span>
+      </template>
+    </va-data-table>
+
+    <Pagination
+      v-model:page="currentPageIndex"
+      v-model:page_size="pageSize"
+      :total_results="total_results"
+      :curr_items="uploads.length"
+      :page_size_options="PAGE_SIZE_OPTIONS"
+    />
   </div>
-
-  <!-- table -->
-  <va-data-table :items="uploads" :columns="columns">
-    <template #cell(status)="{ value }">
-      <va-chip size="small" :color="getStatusChipColor(value)">
-        {{ value }}
-      </va-chip>
-    </template>
-
-    <template #cell(uploaded_dataset)="{ rowData }">
-      <router-link
-        :to="`/datasets/${rowData.uploaded_dataset.id}`"
-        class="va-link"
-        >{{ rowData.uploaded_dataset.name }}</router-link
-      >
-    </template>
-
-    <template #cell(source_dataset)="{ rowData }">
-      <router-link
-        v-if="rowData.source_dataset"
-        :to="`/datasets/${rowData.source_dataset.id}`"
-        class="va-link"
-      >
-        {{ rowData.source_dataset.name }}
-      </router-link>
-    </template>
-
-    <template #cell(user)="{ rowData }">
-      <span>{{ rowData.user.name }} ({{ rowData.user.username }})</span>
-    </template>
-
-    <template #cell(initiated_at)="{ value }">
-      <span class="text-sm lg:text-base">
-        {{ datetime.date(value) }}
-      </span>
-    </template>
-  </va-data-table>
-
-  <Pagination
-    v-model:page="currentPageIndex"
-    v-model:page_size="pageSize"
-    :total_results="total_results"
-    :curr_items="uploads.length"
-    :page_size_options="PAGE_SIZE_OPTIONS"
-  />
 </template>
 
 <script setup>
@@ -91,9 +98,12 @@ import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
 import toast from "@/services/toast";
 import * as datetime from "@/services/datetime";
+import { isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const nav = useNavStore();
 const router = useRouter();
+const auth = useAuthStore();
 
 nav.setNavItems([{ label: "Dataset Uploads" }]);
 
