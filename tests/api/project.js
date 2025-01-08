@@ -1,4 +1,11 @@
+const { prefixedApiPath } = require('../utils/api');
 const { patch, get } = require('./index');
+
+const getAll = async ({
+  requestContext, token, params,
+}) => get({
+  requestContext, url: prefixedApiPath('projects/all'), token, params,
+});
 
 const getProjectById = async ({
   requestContext, token, id,
@@ -13,6 +20,7 @@ const editProjectDatasets = async ({
 });
 
 module.exports = {
+  getAll,
   editProjectDatasets,
   getProjectById,
 };

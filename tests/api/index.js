@@ -1,8 +1,8 @@
-const { authHeader, prefixedUrl } = require('./utils');
+const { authHeader, prefixedApiPath } = require('../utils/api');
 
 const get = async ({
   requestContext, token, url, params,
-}) => requestContext.get(prefixedUrl(url), {
+}) => requestContext.get(url, {
   params,
   headers: {
     Authorization: authHeader(token),
@@ -11,7 +11,7 @@ const get = async ({
 
 const post = async ({
   requestContext, token, url, data,
-}) => requestContext.post(prefixedUrl(url), {
+}) => requestContext.post(url, {
   data,
   headers: {
     Authorization: authHeader(token),
@@ -20,7 +20,7 @@ const post = async ({
 
 const patch = async ({
   requestContext, token, url, data,
-}) => requestContext.patch(prefixedUrl(url), {
+}) => requestContext.patch(url, {
   data,
   headers: {
     Authorization: authHeader(token),
@@ -29,7 +29,7 @@ const patch = async ({
 
 const deleteApi = async ({
   requestContext, token, url, params,
-}) => requestContext.delete(prefixedUrl(url), {
+}) => requestContext.delete(url, {
   params,
   headers: {
     Authorization: authHeader(token),

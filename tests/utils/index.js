@@ -1,4 +1,5 @@
 const { expect } = require('@playwright/test');
+const _ = require('lodash');
 
 const testIdSelector = (testId) => `[data-testid=${testId}]`;
 
@@ -15,12 +16,17 @@ const fillAndAssertText = async ({
   await expect(locator).toHaveValue(text);
 };
 
-const queryParamsToURL = (obj) => {
-  if (!obj || Object.entries(obj).length === 0) {
+const objectToQueryParams = (obj) => {
+  // remove undefined/null values
+  const _obj = _.omit(obj, _.isUndefined);
+  // console.log('objectToQueryParams', _obj);
+  if (!_obj || Object.entries(_obj).length === 0) {
     return '';
   }
-  const entries = Object.entries(obj);
-  return entries.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  const entries = Object.entries(_obj);
+  // console.log('entries', entries);
+  const ret = entries.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  return ret;
 };
 
 module.exports = {
@@ -28,5 +34,5 @@ module.exports = {
   elementTestIdSelector,
   fillText,
   fillAndAssertText,
-  queryParamsToURL
+  objectToQueryParams,
 };

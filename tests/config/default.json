@@ -1,6 +1,6 @@
 {
   "baseURL": "https://localhost",
-  "apiPrefix": "/api",
+  "apiPrefix": "api",
   "e2e": {
     "users": {
       "admin": {
