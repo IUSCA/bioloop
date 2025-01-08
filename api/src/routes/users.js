@@ -125,10 +125,29 @@ router.delete(
   '/:username',
   isPermittedTo('delete', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Users']
-    const deletedUser = await userService.softDeleteUser(req.params.username);
-    res.json(deletedUser);
-  }),
+    try {
+      // #swagger.tags = ['Users']
+      const { username } = req.params; // Retrieve username
+      const hardDelete = req.query.hard_delete === 'true'; // Check for hard_delete query param (default: false)
+
+      let result;
+      if (hardDelete) {
+        // Perform hard delete
+        result = await userService.hardDeleteUser(username);
+        res.status(200).json({
+          message: 'User and associated data deleted/disassociated successfully.',
+          data: result, // Return relevant details
+        });
+      } else {
+        // Perform soft delete
+        result = await userService.softDeleteUser(username);
+        res.status(200).json(result); // Return transformed user object
+      }
+    } catch (error) {
+      console.error(`Error deleting user (hardDelete=${req.query.hard_delete}):`, error);
+      return next(createError.InternalServerError('Error deleting user.'));
+    }
+  })
 );
 
 module.exports = router;

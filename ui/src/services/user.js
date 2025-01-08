@@ -27,10 +27,34 @@ class UserService {
       .patch(`/users/${username}`, updates)
       .then((response) => response.data);
   }
-
-  deleteUser(username) {
+/*
+ // Existing user deletion: soft delete
+  softDeleteUser(username) {
     return api.delete(`/users/${username}`).then((response) => response.data);
   }
+
+  // New: Hard delete a user
+  hardDeleteUser(username) {
+    return api.delete(`/users/${username}/delete`).then((response) => response.data);
+  }
+    */
+
+  // Unified deleteUser function
+  deleteUser(username, isHardDelete = false) {
+    const queryParam = isHardDelete ? "?hard_delete=true" : ""; 
+    return api.delete(`/users/${username}${queryParam}`).then((response) => response.data);
+  }
+
+  // calls deleteUser with default isHardDelete=false
+  softDeleteUser(username) {
+    return this.deleteUser(username, false); 
+  }
+
+  // calls deleteUser with isHardDelete=true
+  hardDeleteUser(username) {
+    return this.deleteUser(username, true); 
+  }
+
 }
 
 export default new UserService();
