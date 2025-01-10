@@ -7,12 +7,12 @@ const {
 
 const TEXT = 'some_text';
 
-const random_username = uuidv4();
+const test_user_username = 'testUser';
 const TEST_USER = {
   name: 'Test User',
-  username: random_username,
-  email: `${random_username}@example.com`,
-  cas_id: `${random_username}_cas_id`,
+  username: test_user_username,
+  email: `${test_user_username}@example.com`,
+  cas_id: `${test_user_username}_cas_id`,
   notes: 'Test user notes',
 };
 
@@ -23,13 +23,7 @@ const TEST_ID_EMAIL = 'user-email-input';
 const TEST_ID_CAS_ID = 'user-cas-id-input';
 const TEST_ID_NOTES = 'user-notes-input';
 
-test.describe.serial('User management', () => {
-  let userNameInputLocator;
-  let userUsernameInputLocator;
-  let userEmailInputLocator;
-  let userCasIdInputLocator;
-  let userNotesInputLocator;
-
+test.describe('User management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/users');
 
@@ -40,23 +34,7 @@ test.describe.serial('User management', () => {
   });
 
   test('Create User modal opened', async ({ page }) => {
-    userNameInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_NAME,
-    }));
-    userUsernameInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_USERNAME,
-    }));
-    userEmailInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_EMAIL,
-    }));
-    userCasIdInputLocator = page.locator(elementTestIdSelector({
-      elementType: 'input',
-      testId: TEST_ID_CAS_ID,
-    }));
-    userNotesInputLocator = page.locator(elementTestIdSelector({
+    const userNotesInputLocator = page.locator(elementTestIdSelector({
       elementType: 'textarea',
       testId: TEST_ID_NOTES,
     }));
@@ -69,6 +47,27 @@ test.describe.serial('User management', () => {
   });
 
   test('Cancel Modal action taken', async ({ page }) => {
+    const userNameInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_NAME,
+    }));
+    const userUsernameInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_USERNAME,
+    }));
+    const userEmailInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_EMAIL,
+    }));
+    const userCasIdInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_CAS_ID,
+    }));
+    const userNotesInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'textarea',
+      testId: TEST_ID_NOTES,
+    }));
+
     // fill-in fields
     await fillAndAssertText({
       locator: userNameInputLocator, text: TEXT,
@@ -99,6 +98,19 @@ test.describe.serial('User management', () => {
   });
 
   test('User created', async ({ page }) => {
+    const userNameInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_NAME,
+    }));
+    const userEmailInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'input',
+      testId: TEST_ID_EMAIL,
+    }));
+    const userNotesInputLocator = page.locator(elementTestIdSelector({
+      elementType: 'textarea',
+      testId: TEST_ID_NOTES,
+    }));
+
     // fill-in fields
     await fillAndAssertText({
       locator: userNameInputLocator, text: TEST_USER.name,
