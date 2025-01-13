@@ -7,6 +7,7 @@ stages:
   - test
   - tag
   - deploy
+  # - docs
 
 build:
   stage: build
@@ -68,12 +69,17 @@ test-e2e:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
-    - cd tests/
+    # Setup rhythm_api
+    - git clone https://github.com/IUSCA/rhythm_api.git
+    - bin/generate_rhythm_env.sh
+    - cd rhythm_api/keys/
+    - ./genkeys.sh
+    - cd ../../tests/
     # Generate all the environment vars specified in .env.examples using gitlab environment vars values
     - bin/generate_env.sh 
     # Setup the test environment
     - docker compose down
-    - docker compose pull 
+    - docker compose pull
     - docker compose up -d --force-recreate --remove-orphans 
     # Setup api container
     - docker compose exec api npx prisma migrate deploy 
@@ -108,7 +114,6 @@ tag:
     - when: never
 
 
-
 #Release per deployment -using a runner on each environment
 deploy_test_app:
   tags: ['buildtest-shell']
@@ -125,3 +130,10 @@ deploy_test_app:
     - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
       when: always
     - when: never
+
+# update_docs:
+#   tags: ['builddev-docs']
+#   stage: docs
+#   script:
+#     - npm install
+#     - npm run docs:build
