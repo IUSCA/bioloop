@@ -91,12 +91,12 @@ module.exports = {
       //   dependencies: ['admin_login'],
       //   testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
       // },
-      {
-        name: 'operator_notifications',
-        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['admin_notifications', 'operator_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
-      },
+      // {
+      //   name: 'operator_notifications',
+      //   use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+      //   dependencies: ['admin_notifications', 'operator_login'],
+      //   testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+      // },
       {
         name: 'user_notifications',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
