@@ -53,12 +53,13 @@ test-migrations:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
+    - touch rhythm_api/rhythm.env
     - cd tests/
     - bin/generate_env.sh # Generate all the environment vars specified in .env.examples using gitlab environment vars values
     - docker compose down 
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
     - docker compose exec api npx prisma migrate deploy
-    - docker compose  down
+    - docker compose down
     - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
 
 test-e2e:
