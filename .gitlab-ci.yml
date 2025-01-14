@@ -81,6 +81,11 @@ test-e2e:
     - docker compose down
     - docker compose pull
     - docker compose up -d --force-recreate --remove-orphans 
+    # Setup the appropriate token for communication with the workers and rhythm_api
+    - sed -i '/^WORKFLOW_AUTH_TOKEN/d' ../api/api.env
+    - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> ../api/api.env
+    - sed -i '/^APP_API_TOKEN/d' ../workers/workers.env
+    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks" >> ../workers/workers.env
     # Setup api container
     - docker compose exec api npx prisma migrate deploy 
     - docker compose exec api npx prisma db seed 

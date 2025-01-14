@@ -72,6 +72,57 @@ services:
     expose:
       - 5432
 
+
+#  This is only for rhythm_api
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    # includes web gui ?
+    image: rabbitmq:3-management
+    # image: rabbitmq:3
+    ports:
+      - 127.0.0.1:5672:5672
+      - 127.0.0.1:15672:15672
+    volumes:
+      - ./db/queue/data/:/var/lib/rabbitmq/
+      # - ./db/queue/log/:/var/log/rabbitmq/
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
+
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    ports:
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./db/db_mongo:/data/db
+      # for importing database files
+      - ./db/mongodump:/opt/sca/app/mongodump
+
+
+  rhythm:
+    restart: unless-stopped
+    build:
+      context: ./rhythm_api
+    expose:
+      - 5001
+    ports:
+      - 5001:5001
+    env_file:
+      - ./rhythm_api/rhythm.env
+    volumes:
+      - ./rhythm_api:/opt/sca
+    depends_on:
+      - queue
+      - mongo
+
+# Volumes
 volumes:
   ui_modules:
     external: false
