@@ -115,7 +115,7 @@ services:
     ports:
       - 5001:5001
     env_file:
-      - ./rhythm_api/rhythm.env
+      - rhythm.env
     volumes:
       - ./rhythm_api:/opt/sca
     depends_on:

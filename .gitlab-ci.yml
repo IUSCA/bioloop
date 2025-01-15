@@ -53,12 +53,21 @@ test-migrations:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
-    - mkdir -p rhythm_api
-    - touch rhythm_api/rhythm.env
-    - cd tests/
-    - bin/generate_env.sh # Generate all the environment vars specified in .env.examples using gitlab environment vars values
+    # Setup rhythm_api
+    - git clone https://github.com/IUSCA/rhythm_api.git
+    - bin/generate_rhythm_env.sh
+    - cd rhythm_api/keys/
+    - ./genkeys.sh
+    - cd ../../tests/
+    # Generate all the environment vars specified in .env.examples using gitlab environment vars values
+    - bin/generate_env.sh 
     - docker compose down 
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
+    # Setup the appropriate token for communication with the workers and rhythm_api
+    - sed -i '/^WORKFLOW_AUTH_TOKEN/d' ../api/api.env
+    - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> ../api/api.env
+    - sed -i '/^APP_API_TOKEN/d' ../workers/workers.env
+    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks" >> ../workers/workers.env
     - docker compose exec api npx prisma migrate deploy
     - docker compose down
     - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
@@ -71,23 +80,13 @@ test-e2e:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
-    # Setup rhythm_api
-    - git clone https://github.com/IUSCA/rhythm_api.git
-    - bin/generate_rhythm_env.sh
-    - cd rhythm_api/keys/
-    - ./genkeys.sh
-    - cd ../../tests/
     # Generate all the environment vars specified in .env.examples using gitlab environment vars values
     - bin/generate_env.sh 
     # Setup the test environment
     - docker compose down
     - docker compose pull
     - docker compose up -d --force-recreate --remove-orphans 
-    # Setup the appropriate token for communication with the workers and rhythm_api
-    - sed -i '/^WORKFLOW_AUTH_TOKEN/d' ../api/api.env
-    - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> ../api/api.env
-    - sed -i '/^APP_API_TOKEN/d' ../workers/workers.env
-    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks" >> ../workers/workers.env
+
     # Setup api container
     - docker compose exec api npx prisma migrate deploy 
     - docker compose exec api npx prisma db seed 
