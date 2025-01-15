@@ -53,6 +53,7 @@ test-migrations:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
+    - mkdir -p rhythm_api
     - touch rhythm_api/rhythm.env
     - cd tests/
     - bin/generate_env.sh # Generate all the environment vars specified in .env.examples using gitlab environment vars values
