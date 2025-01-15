@@ -67,7 +67,7 @@ test-migrations:
     - sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
     - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
     - sed -i '/^APP_API_TOKEN/d' workers.env
-    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks" >> workers.env
+    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
     - docker compose exec api npx prisma migrate deploy
     - docker compose down
     - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
