@@ -7,8 +7,8 @@ echo "Getting environment variables from .env.example file ..."
 #
 
 
-# DB
-echo "Generating db.env file ..."
+# Rhythm
+echo "Generating rhythm.env file ..."
 declare -A env_vars
 while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
