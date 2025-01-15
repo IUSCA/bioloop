@@ -73,7 +73,17 @@ services:
       - 5432
 
 
-#  This is only for rhythm_api
+  workers:
+    build:
+      context: ../workers
+    env_file:
+      - workers.env
+    depends_on:
+      - queue
+      - mongo
+
+
+  #  This is only for rhythm_api
   queue:
     # https://hub.docker.com/_/rabbitmq/
     # includes web gui ?
