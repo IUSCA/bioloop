@@ -14,9 +14,9 @@ while IFS='=' read -r key value; do
   if [[ $key != \#* ]]; then
     env_vars["$key"]="$value"
   fi
-done < "./rhythm_api/.env.example"
+done < "../rhythm_api/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> tests/rhythm.env
+  eval echo "$key"="\${$key}" >> rhythm.env
 done
