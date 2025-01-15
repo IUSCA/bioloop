@@ -83,7 +83,7 @@ services:
       - 127.0.0.1:5672:5672
       - 127.0.0.1:15672:15672
     volumes:
-      - ./db/queue/data/:/var/lib/rabbitmq/
+      - ../db/queue/data/:/var/lib/rabbitmq/
       # - ./db/queue/log/:/var/log/rabbitmq/
     environment:
       - RABBITMQ_DEFAULT_USER=user
@@ -101,15 +101,15 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
-      - ./db/db_mongo:/data/db
+      - ../db/db_mongo:/data/db
       # for importing database files
-      - ./db/mongodump:/opt/sca/app/mongodump
+      - ../db/mongodump:/opt/sca/app/mongodump
 
 
   rhythm:
     restart: unless-stopped
     build:
-      context: ./rhythm_api
+      context: ../rhythm_api
     expose:
       - 5001
     ports:
@@ -117,7 +117,7 @@ services:
     env_file:
       - rhythm.env
     volumes:
-      - ./rhythm_api:/opt/sca
+      - ../rhythm_api:/opt/sca
     depends_on:
       - queue
       - mongo
