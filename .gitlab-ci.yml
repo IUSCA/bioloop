@@ -45,7 +45,8 @@ lint-ui:
     - cd /opt/sca/app
     - npm run lint
 
-test-migrations:
+
+test-e2e:
   tags: ['builddev-shell']
   environment:
     name: testing
@@ -69,30 +70,11 @@ test-migrations:
     - sed -i '/^APP_API_TOKEN/d' workers.env
     - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
     - docker compose exec api npx prisma migrate deploy
-    - docker compose down
-    - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
-
-test-e2e:
-  tags: ['builddev-shell']
-  environment:
-    name: testing
-  stage: test
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
-  script:
-    # Generate all the environment vars specified in .env.examples using gitlab environment vars values
-    - cd tests/
-    - bin/generate_env.sh 
-    # Setup the test environment
-    - docker compose down
-    - docker compose pull
-    - docker compose up -d --force-recreate --remove-orphans 
-    # Setup api container
-    - docker compose exec api npx prisma migrate deploy 
     - docker compose exec api npx prisma db seed 
     - docker compose logs -t
     - docker compose exec e2e npm run test
     - docker compose down
+    - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
     
 
 tag:
