@@ -10,7 +10,7 @@ const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
-  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_FILES, INCLUDE_DUPLICATIONS,
 } = require('../constants');
 
 const prisma = new PrismaClient();
@@ -98,22 +98,14 @@ async function get_dataset({
   prev_task_runs = false,
   only_active = false,
   bundle = false,
+  include_duplications = false,
+  include_action_items = false,
   includeProjects = false,
   initiator = false,
   include_upload_log = false,
+  include_ingestion_checks = false,
 }) {
-  const fileSelect = files ? {
-    select: {
-      path: true,
-      md5: true,
-    },
-    where: {
-      NOT: {
-        filetype: 'directory',
-      },
-    },
-  } : false;
-
+  const fileSelect = files ? INCLUDE_FILES : { files: false };
   const workflow_include = initiator ? {
     workflows: {
       select: {
@@ -126,7 +118,7 @@ async function get_dataset({
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
-      files: fileSelect,
+      ...fileSelect,
       ...workflow_include,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
@@ -145,6 +137,23 @@ async function get_dataset({
           },
         },
       } : false,
+      ...(include_duplications && INCLUDE_DUPLICATIONS),
+      action_items: include_action_items ? {
+        where: {
+          active: true,
+        },
+      } : undefined,
+      ...(include_ingestion_checks && {
+        ingestion_checks: {
+          include: {
+            file_checks: {
+              include: {
+                file: true,
+              },
+            },
+          },
+        },
+      }),
     },
   });
   const dataset_workflows = dataset.workflows;
@@ -480,10 +489,28 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+/**
+ * Get workflows for a dataset
+ * @param dataset_id    the id of the dataset whose workflows are to be retrieved
+ * @param statuses      an array of workflow statuses to filter retrieved workflows by
+ * @returns Array of workflows
+ */
+async function get_workflows({ dataset_id, statuses = [] }) {
+  const dataset = await get_dataset({ id: dataset_id, workflows: true });
+  let retrieved_workflows = dataset.workflows;
+
+  // filter by status
+  if ((statuses || []).length > 0) {
+    retrieved_workflows = retrieved_workflows.filter((wf) => statuses.includes(wf.status));
+  }
+  return retrieved_workflows;
+}
+
 module.exports = {
   soft_delete,
   get_dataset,
   create_workflow,
+  get_workflows,
   create_filetree,
   has_dataset_assoc,
   files_ls,
