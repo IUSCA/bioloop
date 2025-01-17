@@ -39,23 +39,23 @@ const createNotifications = async ({ request, token }) => {
   return created;
 };
 
-test.beforeEach(async ({ page }) => {
-  // delete active notifications before each test
-  await page.goto('/');
-  // const { request } = page;
-  const token = await page.evaluate(() => localStorage.getItem('token'));
+test.describe('Notifications', () => {
+  test.beforeEach(async ({ page }) => {
+    // delete active notifications before each test
+    await page.goto('/');
+    // const { request } = page;
+    const token = await page.evaluate(() => localStorage.getItem('token'));
 
-  // await deleteActiveNotifications(request, token);
-  await deleteNotifications({
-    requestContext: page.request,
-    params: {
-      status: 'CREATED',
-    },
-    token,
+    // await deleteActiveNotifications(request, token);
+    await deleteNotifications({
+      requestContext: page.request,
+      params: {
+        status: 'CREATED',
+      },
+      token,
+    });
   });
-});
 
-test.describe.serial('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
     test.skip(config.enabledFeatures.notifications.enabledForRoles.length === 0, 'Notifications feature is not enabled');
 

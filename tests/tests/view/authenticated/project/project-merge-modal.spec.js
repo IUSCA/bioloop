@@ -8,7 +8,7 @@ const PROJECT_TO_MERGE_ID = '873d15e3-c221-4dc9-9357-2845d7fa25e2';
 const TEST_ID_PROJECT_MERGE_BUTTON = 'merge-projects-button';
 const TEST_ID_PROJECT_SEARCH_AUTOCOMPLETE = 'project-search-autocomplete';
 
-test.describe.serial('Project-datasets table', () => {
+test.describe('Project-datasets table', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/projects/${TEST_PROJECT_ID}`);
   });

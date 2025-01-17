@@ -6,7 +6,7 @@ const { getDatasets } = require('../../../../api/dataset');
 const PROJECT_ID = '98045a35-723c-4e1b-88e6-9462c1aff4c1';
 const DATASET_TO_ADD_ID = 1;
 
-test.describe.serial('Project-datasets table', () => {
+test.describe('Project-datasets table', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/projects/${PROJECT_ID}`);
   });
