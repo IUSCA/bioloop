@@ -98,10 +98,10 @@ tag:
     - docker push $CI_REGISTRY/$PROJECT_NAME/nginx:$tag
     - docker tag $CI_REGISTRY/$PROJECT_NAME/nginx:test $CI_REGISTRY/$PROJECT_NAME/nginx:latest
     - docker push $CI_REGISTRY/$PROJECT_NAME/nginx:latest
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
-      when: always
-    - when: never
+  # rules:
+  #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
+  #     when: always
+  #   - when: never
 
 
 #Release per deployment -using a runner on each environment
