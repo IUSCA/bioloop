@@ -18,5 +18,5 @@ done < "rhythm_api/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> rhythm.env
+  eval echo "$key"="\${$key}" >> deploy/rhythm.env
 done

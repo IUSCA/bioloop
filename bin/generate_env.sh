@@ -18,7 +18,7 @@ done < "db/postgres/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> db.env
+  eval echo "$key"="\${$key}" >> deploy/db.env
 done
 
 # API
@@ -32,7 +32,7 @@ done < "api/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> api.env
+  eval echo "$key"="\${$key}" >> deploy/api.env
 done
 
 
@@ -47,7 +47,7 @@ done < "ui/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> ui.env
+  eval echo "$key"="\${$key}" >> deploy/ui.env
 done
 
 # Workers
@@ -61,5 +61,5 @@ done < "workers/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> workers.env
+  eval echo "$key"="\${$key}" >> deploy/workers.env
 done
