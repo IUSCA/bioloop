@@ -7,7 +7,9 @@ stages:
   - test
   - tag
   - deploy
+  # - copy
   # - docs
+
 
 build:
   stage: build
@@ -104,7 +106,7 @@ tag:
 
 #Release per deployment -using a runner on each environment
 deploy_test_app:
-  tags: ['buildtest-shell']
+  tags: ['google-prod-bioloop']
   environment:
     name: release
   stage: deploy
@@ -114,10 +116,21 @@ deploy_test_app:
     - cd deploy/ 
     - docker compose down # remove any existing containers/networks
     - docker compose pull && docker compose up -d --force-recreate --remove-orphans
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
-      when: always
-    - when: never
+  # rules:
+  #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
+  #     when: always
+  #   - when: never
+
+# copy_to_github:
+#   tags: ['buildtest-shell']
+#   environment:
+#     name: release
+#   stage: deploy
+#   before_script:
+#     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+#   scripts:
+#     - git remote add gitHub git@github.com:ryanlong89/bioloop-clone.git
+#     - git push gitHub master —follow-tags 
 
 # update_docs:
 #   tags: ['builddev-docs']
