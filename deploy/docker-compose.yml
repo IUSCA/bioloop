@@ -14,6 +14,8 @@ services:
 
   ui:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:latest
+    env_file:
+      - ui.env
     volumes:
       - ui_modules:/opt/sca/app/dist
     depends_on:
@@ -33,6 +35,9 @@ services:
         && npx prisma generate \
         && npx prisma migrate deploy \
         && npm run start
+    env_file:
+      - api.env
+      - db.env
     expose:
       - 3030
     depends_on:
@@ -69,6 +74,65 @@ services:
     # networks:
     #   network:
     #     ipv4_address: 172.20.0.6
+
+  workers:
+    build:
+      context: ../workers
+    env_file:
+      - workers.env
+    depends_on:
+      - queue
+      - mongo
+
+
+  #  This is only for rhythm_api
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    # includes web gui ?
+    image: rabbitmq:3-management
+    # image: rabbitmq:3
+    ports:
+      - 127.0.0.1:5672:5672
+      - 127.0.0.1:15672:15672
+    volumes:
+      - ../db/queue/data/:/var/lib/rabbitmq/
+      # - ./db/queue/log/:/var/log/rabbitmq/
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
+
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    ports:
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ../db/db_mongo:/data/db
+      # for importing database files
+      - ../db/mongodump:/opt/sca/app/mongodump
+
+
+  rhythm:
+    restart: unless-stopped
+    build:
+      context: ../rhythm_api
+    expose:
+      - 5001
+    ports:
+      - 5001:5001
+    env_file:
+      - rhythm.env
+    volumes:
+      - ../rhythm_api:/opt/sca
+    depends_on:
+      - queue
+      - mongo
 
 volumes:
   ui_modules:

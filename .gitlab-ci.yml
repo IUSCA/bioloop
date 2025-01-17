@@ -113,9 +113,24 @@ deploy_test_app:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
+    - git clone https://github.com/IUSCA/rhythm_api.git
+    - cd rhythm_api/keys/
+    - ./genkeys.sh
+    - cd ../../
+    # Generate all the environment vars specified in .env.examples using gitlab environment vars values
+    - bin/generate_env.sh 
+    - bin/generate_rhythm_env.sh
     - cd deploy/ 
     - docker compose down # remove any existing containers/networks
     - docker compose pull && docker compose up -d --force-recreate --remove-orphans
+    # Setup the appropriate token for communication with the workers and rhythm_api
+    - sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
+    - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
+    - sed -i '/^APP_API_TOKEN/d' workers.env
+    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
+    # Deploy the prisma migrations and seed the database
+    - docker compose exec api npx prisma migrate deploy
+    - docker compose exec api npx prisma db seed 
   # rules:
   #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
   #     when: always
