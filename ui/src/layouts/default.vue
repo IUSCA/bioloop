@@ -2,64 +2,100 @@
   <Header
     :is-sidebar-collapsed="isSidebarCollapsed"
     @toggle-sidebar-visibility="toggleSidebarVisibility"
-  >
-  </Header>
+  />
   <div class="flex flex-row h-screen">
+    <!-- Sidebar -->
     <nav
       aria-label="menu nav"
-      class="relative h-full content-center flex-none shadow-xl"
+      class="relative h-full flex-none shadow-xl"
+      :style="{
+        width: isMobileView
+          ? isSidebarCollapsed
+            ? '0'
+            : '100%'
+          : isSidebarCollapsed
+            ? '0'
+            : '13rem',
+      }"
     >
-      <Sidebar :isSidebarCollapsed="isSidebarCollapsed"></Sidebar>
+      <Sidebar :isSidebarCollapsed="isSidebarCollapsed" />
     </nav>
-    <main id="main" class="w-full overflow-y-scroll">
+
+    <!-- Main Content -->
+    <main
+      id="main"
+      class="w-full overflow-y-scroll"
+      :class="[
+        isMobileView
+          ? ''
+          : isSidebarCollapsed
+            ? 'main-content--full'
+            : 'main-content--shifted',
+      ]"
+    >
       <div class="px-2 md:px-6 pb-10 pt-4 min-h-screen">
         <LeaveBreadcrumbs class="mb-2" />
-        <router-view></router-view>
+        <router-view />
       </div>
-      <Footer></Footer>
+      <Footer />
     </main>
   </div>
 </template>
 
 <script setup>
 import { useUIStore } from "@/stores/ui";
-import { ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
 
-const breakpoint = useBreakpoint();
 const ui = useUIStore();
+const breakpoint = useBreakpoint();
 
 let isSidebarCollapsed = ref(false);
+
+const isMobileView = computed(
+  () => breakpoint.current === "xs" || breakpoint.current === "sm",
+);
 
 watch(
   () => breakpoint.current,
   (newValue, oldValue) => {
-    // When going from screen size SM to XS, or XS to SM, the sidebar's
-    // open/collapsed state should not change
+    if (isMobileView.value) return; // Keep mobile behavior unchanged
     if (
       (oldValue === "xs" && newValue === "sm") ||
-      (oldValue === "sm" && newValue === "xs")
-    ) {
-      return;
-    }
-
-    // When going from screen size XL to LG, or LG to MD, if sidebar is
-    // already collapsed, it should stay collapsed
-    if (
+      (oldValue === "sm" && newValue === "xs") ||
       (oldValue === "xl" && newValue === "lg") ||
       (oldValue === "lg" && newValue === "md")
     ) {
-      if (isSidebarCollapsed.value) {
-        return;
-      }
+      return;
     }
-
-    // In all other cases, update the open/collapse state acc. to screen size
     isSidebarCollapsed.value = ui.isMobileView;
   },
 );
 
 const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
+
+  // Lock scrolling on mobile only
+  if (isMobileView.value) {
+    document.body.style.overflow = isSidebarCollapsed.value ? "auto" : "hidden";
+  }
 };
+
+onUnmounted(() => {
+  document.body.style.overflow = "auto";
+});
 </script>
+
+<style>
+/* Main content when sidebar is expanded */
+.main-content--shifted {
+  margin-left: 4rem; /* Push content */
+  transition: margin-left 0.3s ease-in-out;
+}
+
+/* Main content when sidebar is collapsed */
+.main-content--full {
+  margin-left: 0; /* Full width */
+  transition: margin-left 0.3s ease-in-out;
+}
+</style>
