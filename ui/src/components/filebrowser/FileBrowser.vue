@@ -36,9 +36,9 @@
 
 <script setup>
 import datasetService from "@/services/dataset";
+import { filterByValues } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
-import { filterByValues } from "@/services/utils";
 
 const store = useFileBrowserStore();
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
@@ -101,16 +101,17 @@ function search_files() {
     });
 }
 
-watch(
-  pwd,
-  () => {
-    // navigating to a directory disables the search mode
-    store.resetFilters();
-    isInSearchMode.value = false;
-    get_file_list(pwd.value);
-  },
-  { immediate: true },
-);
+onMounted(() => {
+  get_file_list(pwd.value);
+});
+
+watch(pwd, (newValue, oldValue) => {
+  if (oldValue == null) return;
+  // navigating to a directory disables the search mode
+  store.resetFilters();
+  isInSearchMode.value = false;
+  get_file_list(pwd.value);
+});
 
 const nameRef = toRefs(store.filters).name;
 const debouncedNameFilter = refDebounced(nameRef, 215);
