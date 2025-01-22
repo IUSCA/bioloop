@@ -31,9 +31,10 @@ services:
       - sh
       - -c
       - |
-        ./keys/genkeys.sh \
+        cd keys \
+        && ./genkeys.sh \
+        && cd .. \
         && npx prisma generate \
-        && npx prisma migrate deploy \
         && npm run start
     env_file:
       - api.env
