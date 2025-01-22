@@ -128,9 +128,6 @@ deploy_test_app:
     - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
     - sed -i '/^APP_API_TOKEN/d' workers.env
     - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
-    # Generate the keys
-    - docker compose exec api cd keys/ && ./genkeys.sh
-    - docker compose exec ui mkdir .cert && cd .cert && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem -subj "/C=US/ST=IN/L=Bloomington/O=IU/OU=IUSCA/CN=localhost"
     # Deploy the prisma migrations and seed the database
     - docker compose exec api npx prisma migrate deploy
     - docker compose exec api npx prisma db seed 
