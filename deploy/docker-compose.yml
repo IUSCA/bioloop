@@ -59,6 +59,8 @@ services:
   postgres:
     image: postgres:14.5
     restart: unless-stopped
+    env_file:
+      - db.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - postgres_scripts:/docker-entrypoint-initdb.d
@@ -105,7 +107,7 @@ services:
       - 127.0.0.1:5672:5672
       - 127.0.0.1:15672:15672
     volumes:
-      - ../db/queue/data/:/var/lib/rabbitmq/
+      - queue_data:/var/lib/rabbitmq/
       # - ./db/queue/log/:/var/log/rabbitmq/
     environment:
       - RABBITMQ_DEFAULT_USER=user
@@ -123,9 +125,9 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
-      - ../db/db_mongo:/data/db
+      - mongo_data:/data/db
       # for importing database files
-      - ../db/mongodump:/opt/sca/app/mongodump
+      - mongo_dump:/opt/sca/app/mongodump
 
 
   rhythm:
@@ -151,6 +153,13 @@ volumes:
     external: false
   postgres_scripts:
     external: false
+  mongo_data:
+    external: false
+  mongo_dump:
+    external: false
+  queue_data:
+    external: false
+  
   # postgres_backups:
   #   external: false
 
