@@ -28,6 +28,7 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
   const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
   const workflowQueryResponse = await workflowService.getAll({
     workflow_ids: datasetWorkflowIds,
+    app_id: config.get('app_id'),
     status: 'ACTIVE',
   });
   return workflowQueryResponse.data.results;
