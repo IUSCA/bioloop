@@ -10,7 +10,7 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
       location: "/",
       filetype: "any",
       extension: "",
-      minSize: null,
+      minSize: 0,
       maxSize: Infinity,
     };
   }
@@ -22,7 +22,7 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
 
   const params = computed({
     get: () => {
-      // console.log("params computed getting value");
+      console.log("params computed getting value");
       return {
         pwd: pwd.value,
         isInSearchMode: isInSearchMode.value,
@@ -30,7 +30,7 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
       };
     },
     set: (newValue) => {
-      // console.log("params computed setting new value", newValue);
+      console.log("params computed setting new value", newValue);
       pwd.value = newValue.pwd;
       isInSearchMode.value = newValue.isInSearchMode;
       filters.value = newValue.filters;
@@ -49,14 +49,14 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
   });
 
   function resetFilters() {
-    // console.log("resetting filters called");
+    console.log("resetting filters called");
     Object.keys(filters.value).forEach((key) => {
       filters.value[key] = defaults[key];
     });
   }
 
   function resetByKey(key) {
-    // console.log("resetting", key, filters.value[key], defaults[key]);
+    console.log("resetting", key, filters.value[key], defaults[key]);
     filters.value[key] = defaults[key];
   }
 
@@ -67,8 +67,12 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
   function reset() {
     pwd.value = "";
     isInSearchMode.value = false;
-    // console.log("resetting filters - reset");
+    console.log("resetting filters - reset");
     resetFilters();
+  }
+
+  function setFilters(val) {
+    filters.value = val;
   }
 
   return {
@@ -80,5 +84,6 @@ export const useFileBrowserStore = defineStore("fileBrowser", () => {
     defaultFilters,
     filterStatus,
     reset,
+    setFilters,
   };
 });
