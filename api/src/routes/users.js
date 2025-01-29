@@ -124,11 +124,17 @@ router.patch(
 router.delete(
   '/:username',
   isPermittedTo('delete', { checkOwnerShip: true }),
+  validate([
+    // Validate and transform hard_delete into a boolean with a default value of false
+    query('hard_delete')
+      .toBoolean() 
+      .default(false), // Defaults to false if the parameter is not provided
+  ]),
   asyncHandler(async (req, res, next) => {
     try {
       // #swagger.tags = ['Users']
-      const { username } = req.params; // Retrieve username
-      const hardDelete = req.query.hard_delete === 'true'; // Check for hard_delete query param (default: false)
+      const { username } = req.params; 
+      const hardDelete = req.query.hard_delete; // Already validated and transformed to a boolean
 
       let result;
       if (hardDelete) {
@@ -144,7 +150,7 @@ router.delete(
         res.status(200).json(result); // Return transformed user object
       }
     } catch (error) {
-      console.error(`Error deleting user (hardDelete=${req.query.hard_delete}):`, error);
+      console.error(`Error deleting user (hardDelete=${hardDelete}):`, error);
       return next(createError.InternalServerError('Error deleting user.'));
     }
   })

@@ -158,25 +158,25 @@ async function deleteUser(username, isHardDelete = false) {
       select: { id: true, username: true }, 
     });
   } else {
-    // Soft delete: Ensure user is not already soft-deleted
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: INCLUDE_ROLES_LOGIN,
+    // Soft delete: Use an interactive transaction
+    return prisma.$transaction(async (_prisma) => {
+      const user = await _prisma.user.findUniqueOrThrow({
+        where: { username },
+        include: INCLUDE_ROLES_LOGIN,
+      });
+
+      if (user?.is_deleted) {
+        return transformUser(user);
+      }
+
+      const updatedUser = await _prisma.user.update({
+        where: { username },
+        data: { is_deleted: true },
+        include: INCLUDE_ROLES_LOGIN,
+      });
+
+      return transformUser(updatedUser); 
     });
-
-    if (user?.is_deleted) {
-      // Return the user directly if already soft-deleted
-      return transformUser(user);
-    }
-
-    // Update user to mark status as disabled
-    const updatedUser = await prisma.user.update({
-      where: { username },
-      data: { is_deleted: true },
-      include: INCLUDE_ROLES_LOGIN,
-    });
-
-    return transformUser(updatedUser);
   }
 }
 

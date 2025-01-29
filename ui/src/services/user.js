@@ -41,8 +41,11 @@ class UserService {
 
   // Unified deleteUser function
   deleteUser(username, isHardDelete = false) {
-    const queryParam = isHardDelete ? "?hard_delete=true" : ""; 
-    return api.delete(`/users/${username}${queryParam}`).then((response) => response.data);
+    return api.delete(`/users/${username}`, {
+    params: {
+      hard_delete: isHardDelete, // Pass query parameter as an object
+    },
+  }).then((response) => response.data);
   }
 
   // calls deleteUser with default isHardDelete=false

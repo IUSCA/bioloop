@@ -202,8 +202,7 @@
             <!-- Delete User Text and Trash Bin Button -->
             <div v-if="auth.canAdmin" class="flex items-center gap-2 ml-auto">
               <span
-                class="flex-none text-xs font-semibold"
-                style="color: var(--va-primary); font-size: 12px"
+                class="trash-can-button-text"
               >
                 DELETE USER
               </span>
@@ -271,40 +270,33 @@
     <div class="flex gap-4 items-center mt-2">
 
       <!-- Deletion Type Label -->
-      <span style="font-size: 1rem; font-weight: bold;">Deletion Type:</span>
-      <!-- Soft Deletion: Disabled when already soft deleted -->
-      <label>
-        <va-popover message="Soft Deletion is unavailable because the user is already soft deleted." placement="top"
-          v-if="isSoftDeleted">
-          <input type="radio" v-model="isHardDelete" :value="false" :disabled="isSoftDeleted"
-            @change="toggleOption(false)" />
-          <span :class="{ 'text-gray-400': isSoftDeleted }">Soft Deletion</span>
-        </va-popover>
-        <template v-else>
-          <input type="radio" v-model="isHardDelete" :value="false" :disabled="isSoftDeleted"
-            @change="toggleOption(false)" />
-          <span>Soft Deletion</span>
-        </template>
-      </label>
+      <span class="deletion-type-label">Deletion Type:</span>
 
-      <!-- Hard Deletion: Always enabled -->
-      <label>
-        <input type="radio" v-model="isHardDelete" :value="true" @change="toggleOption(true)" />
-        <span>Hard Deletion</span>
-      </label>
-    </div>
-    <!-- Inline Error Message -->
-    <div v-if="deleteOptionError" class="text-danger mt-1" style="color: red; font-size: 0.875rem;">
-      {{ deleteOptionError }}
+      <!-- Deletion Options -->
+      <div class="deletion-options">
+        <VaRadio
+          v-for="option in deletionOptions"
+          :key="option.value"
+          v-model="selectedDeletionType"
+          :option="option.value"
+          :label="option.label"
+          :disabled="option.disabled"
+          :color="option.value === 'hard' ? 'danger' : 'info'"
+          name="deletionType"
+        />
+      </div>
     </div>
 
-
+    <!-- Display alert when Soft Deletion is disabled -->
+    <VaAlert v-if="isSoftDeleted" color="warning" class="mb-2">
+        Soft Deletion is unavailable because the user is already soft deleted.
+      </VaAlert>
 
     <!-- Display impact details -->
-    <div class="impact-details mt-4" v-if="impactDetails">
+    <div class="impact-details mt-4" v-if="getImpactDetails.length > 0">
       <p><strong>Impact Details of the selected deletion:</strong></p>
       <ul>
-        <li v-for="detail in impactDetails" :key="detail">{{ detail }}</li>
+        <li v-for="detail in getImpactDetails" :key="detail">{{ detail }}</li>
       </ul>
     </div>
 
@@ -348,44 +340,16 @@ const isUsernamePromptVisible = ref(false);
 const usernameConfirmation = ref("");
 //const deleteOption = ref(null);
 const isHardDelete = ref(false);
-const impactDetails = ref(null);
+const impactDetails = ref([]);
 const isSoftDeleted = computed(() => editedUser.value.is_deleted); //check soft delete status
-const deleteOptionError = ref(""); 
 
 // Open the initial delete confirmation modal
 function confirmDeleteUser() {
   isDeleteModalVisible.value = true;
 }
 
-// Show the final username prompt after confirming initial delete dialog
-function showUsernamePrompt() {
-  isDeleteModalVisible.value = false;
-  isUsernamePromptVisible.value = true;
-  usernameConfirmation.value = ""; // reset input
-  deleteOptionError.value = ""; // reset inline error msg 
-  isHardDelete.value = false;
-  
-  if (!isSoftDeleted.value) {
-    impactDetails.value = [
-      "The user's account will be marked as inactive but not permanently removed.",
-      "Other data, such as linked projects and system logs, will remain intact.",
-    ];
-  } else {
-    impactDetails.value = null; // No soft delete available
-  }
-}
-
-function toggleOption(isHardDeleteSelected) {
-  if (isSoftDeleted.value && !isHardDeleteSelected) {
-    impactDetails.value = null;
-    return;
-  }
-
-  isHardDelete.value = isHardDeleteSelected;
-  deleteOptionError.value = "";
-
-  // Set impact details based on the selected option
-  impactDetails.value = isHardDeleteSelected
+const getImpactDetails = computed(() => {
+  return isHardDelete.value
     ? [
         "User profile, roles, and settings will be permanently removed.",
         "Project assignments, notifications, and login history will be removed.",
@@ -395,7 +359,32 @@ function toggleOption(isHardDeleteSelected) {
         "The user's account will be marked as inactive but not permanently removed.",
         "Other data, such as linked projects and system logs, will remain intact.",
       ];
+});
+
+// Show the final username prompt after confirming initial delete dialog
+function showUsernamePrompt() {
+  isDeleteModalVisible.value = false;
+  isUsernamePromptVisible.value = true;
+  usernameConfirmation.value = ""; // reset input 
+  //isHardDelete.value = false;
+
+  isHardDelete.value = isSoftDeleted.value;
 }
+
+// define options for radio buttons
+const deletionOptions = computed(() => [
+  { label: "Soft Deletion", value: "soft", disabled: isSoftDeleted.value },
+  { label: "Hard Deletion", value: "hard"}
+]);
+
+// handle the radio button selection logic 
+const selectedDeletionType = computed({
+  get: () => (isHardDelete.value ? "hard" : "soft"),
+  set: (deletionType) => {
+    console.log("selectedDeletionType changed to:", deletionType);
+    isHardDelete.value = deletionType === "hard"; 
+  }
+});
 
 const debouncedUpdate = useDebounceFn((val) => {
   params.value.search = val;
@@ -612,7 +601,6 @@ function deleteUser() {
 
   // Prevent soft delete if the user is already soft deleted/ no options selected
   if (!isHardDelete.value && isSoftDeleted.value) {
-    deleteOptionError.value = "Please select a valid delete option.";
     console.warn("Soft delete attempted on an already soft-deleted user.");
     return;
   }
@@ -685,6 +673,23 @@ fetch_all_users();
 <style scoped>
 .usertable {
   --va-data-table-cell-padding: 3px;
+}
+
+.trash-can-button-text {
+  color: var(--va-primary); 
+  font-size: 12px; 
+  font-weight: 600; 
+  flex: none; 
+}
+
+.deletion-type-label {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.deletion-options {
+  display: flex;
+  gap: 10px; /* Space between radio buttons */
 }
 
 
