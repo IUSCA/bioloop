@@ -3,7 +3,6 @@ from pathlib import Path
 
 from glom import glom
 
-from workers import api
 from workers.config import config
 
 

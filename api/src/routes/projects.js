@@ -228,6 +228,10 @@ router.get(
     query('skip').isInt().toInt().optional(),
     query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
+    query('include_duplicates').toBoolean().optional(),
+    query('include_deleted').toBoolean().optional(),
+    query('include_dataset_states').toBoolean().optional(),
+    query('include_dataset_duplications').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -246,7 +250,7 @@ router.get(
 
     if (
       req.user.roles.includes('user')
-        && !hasProjectAssociation
+      && !hasProjectAssociation
     ) {
       return next(createError(403)); // Forbidden
     }
@@ -273,6 +277,8 @@ router.get(
         mode: 'insensitive', // case-insensitive search
       } : undefined,
       is_staged: req.query.staged,
+      is_duplicate: req.query.include_duplicates || false,
+      is_deleted: req.query.include_deleted || false,
     });
 
     const filterQuery = { where: query_obj };
@@ -283,6 +289,9 @@ router.get(
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...CONSTANTS.INCLUDE_WORKFLOWS,
+        ...(req.query.include_dataset_states && CONSTANTS.INCLUDE_STATES),
+        ...(req.query.include_dataset_duplications
+          && { ...CONSTANTS.INCLUDE_DUPLICATIONS, ...CONSTANTS.INCLUDE_STATES }),
         bundle: true,
         projects: {
           include: {
@@ -548,11 +557,30 @@ router.post(
       };
     }
 
-    const project = await prisma.project.create({
-      data,
-      include: build_include_object(),
+    const created_project = await prisma.$transaction(async (tx) => {
+      const duplicate_datasets = await tx.dataset.findMany({
+        where: {
+          id: {
+            in: dataset_ids,
+          },
+          is_duplicate: true,
+        },
+      });
+
+      const error_str = `Request contains the following duplicate datasets which cannot be assigned to project: ${
+        duplicate_datasets.map((ds) => ds.id).join(', ')}`;
+      if (duplicate_datasets.length > 0) {
+        throw new Error(error_str);
+      }
+
+      const project_being_created = await tx.project.create({
+        data,
+        include: build_include_object(),
+      });
+      return project_being_created;
     });
-    res.json(project);
+
+    res.json(created_project);
   }),
 );
 
@@ -751,13 +779,6 @@ router.patch(
      * role is forbidden
      */
 
-    // get project or send 404 if not found
-    await prisma.project.findFirstOrThrow({
-      where: {
-        id: req.params.id,
-      },
-    });
-
     const add_dataset_ids = req.body.add_dataset_ids || [];
     const remove_dataset_ids = req.body.remove_dataset_ids || [];
 
@@ -771,18 +792,41 @@ router.patch(
       dataset_id,
     }));
 
-    // create new associations
-    const add_assocs = prisma.project_dataset.createMany({
-      data: create_data,
-    });
-    // delete existing associations
-    const delete_assocs = prisma.project_dataset.deleteMany({
-      where: {
-        OR: delete_data,
-      },
-    });
+    await prisma.$transaction(async (tx) => {
+      // get project or send 404 if not found
+      await tx.project.findUniqueOrThrow({
+        where: {
+          id: req.params.id,
+        },
+      });
 
-    await prisma.$transaction([delete_assocs, add_assocs]);
+      const duplicate_datasets_being_assigned = await tx.dataset.findMany({
+        where: {
+          id: {
+            in: add_dataset_ids,
+          },
+          is_duplicate: true,
+        },
+      });
+
+      const duplicate_datasets_count = duplicate_datasets_being_assigned.length;
+      if (duplicate_datasets_count > 0) {
+        const error_str = `The following duplicate datasets cannot be assigned to project: ${
+          duplicate_datasets_being_assigned.map((ds) => (ds.id)).join(', ')}`;
+        throw new Error(error_str);
+      }
+
+      // create new associations
+      await tx.project_dataset.createMany({
+        data: create_data,
+      });
+      // delete existing associations
+      await tx.project_dataset.deleteMany({
+        where: {
+          OR: delete_data,
+        },
+      });
+    });
 
     res.send();
   }),

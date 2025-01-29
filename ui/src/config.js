@@ -71,10 +71,23 @@ const exports = {
     },
   },
   alertForEnvironments: ["ci"],
+  DATASET_STATES: {
+    REGISTERED: "REGISTERED",
+    READY: "READY",
+    INSPECTED: "INSPECTED",
+    ARCHIVED: "ARCHIVED",
+    FETCHED: "FETCHED",
+    STAGED: "STAGED",
+    DUPLICATE_REGISTERED: "DUPLICATE_REGISTERED",
+    DUPLICATE_READY: "DUPLICATE_READY",
+    DUPLICATE_REJECTED: "DUPLICATE_REJECTED",
+    OVERWRITTEN: "OVERWRITTEN",
+    DELETED: "DELETED",
+  },
   enabledFeatures: {
     genomeBrowser: true,
     notifications: {
-      enabledForRoles: [],
+      enabledForRoles: ["admin", "operator"],
     },
     ingestion: {
       enabledForRoles: ["admin"],

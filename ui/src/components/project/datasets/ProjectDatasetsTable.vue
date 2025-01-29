@@ -163,7 +163,20 @@
   />
 
   <!-- Download Modal -->
-  <DatasetDownloadModal ref="downloadModal" :dataset="datasetToDownload" />
+  <!-- This modal re-fetches the dataset once a dataset download has been attempted, to check
+         if this dataset has not been duplicated by another right after the download was initiated.
+         If an active duplicate of this dataset is found, an alert is shown to authorized roles,
+         which tells them that the dataset they are downloading could possibly be outdated.
+  -->
+  <DatasetDownloadModal
+    ref="downloadModal"
+    :dataset="datasetToDownload"
+    @download-initiated="
+      () => {
+        refresh_downloaded_dataset();
+      }
+    "
+  />
 
   <!-- Stage Modal -->
   <StageDatasetModal
@@ -200,14 +213,13 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["datasets-retrieved"]);
+const emit = defineEmits(["datasets-retrieved", "download-initiated"]);
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const pageSize = ref(10);
 const total_results = ref(0);
 
-const _triggerDatasetsRetrieval = toRef(() => props.triggerDatasetsRetrieval);
 const projectIdRef = toRef(() => props.project.id);
 const loading = ref(false);
 
@@ -276,23 +288,40 @@ const fetch_project_datasets = () => {
   projectService
     .getDatasets({
       id: props.project.id,
-      params: datasets_retrieval_query.value,
+      params: {
+        include_duplicates: false,
+        include_deleted: false,
+        ...datasets_retrieval_query.value,
+        include_dataset_states: true,
+        include_dataset_duplications: true,
+      },
     })
     .then((res) => {
       projectDatasets.value = res.data.datasets;
       total_results.value = res.data.metadata.count;
-      emit("datasets-retrieved");
     })
-    .catch(() => {
+    .catch((err) => {
+      console.log(err);
       toast.error("Failed to retrieve datasets");
     })
     .finally(() => {
       loading.value = false;
+      emit("datasets-retrieved");
     });
 };
 
-watch(_triggerDatasetsRetrieval, () => {
-  if (_triggerDatasetsRetrieval.value) {
+const refresh_downloaded_dataset = () => {
+  DatasetService.getById({
+    id: datasetToDownload.value.id,
+    include_states: true,
+    include_duplications: true,
+  }).then((res) => {
+    datasetToDownload.value = res.data;
+  });
+};
+
+watch(props.triggerDatasetsRetrieval, () => {
+  if (props.triggerDatasetsRetrieval) {
     currentPageIndex.value = 1;
     fetch_project_datasets();
   }

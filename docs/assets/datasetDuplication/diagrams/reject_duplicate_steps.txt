@@ -1,0 +1,17 @@
+stateDiagram
+    reject_ui: (UI) Reject action performed
+    reject_api: (API) Reject
+    note left of reject_api
+        Acknowledge action item/notification
+        Create audit logs
+        Marks rejected dataset as deleted
+        Updates state of rejected dataset to REJECTED
+    end note
+    rejection_wf: 'reject_duplicate_dataset' workflow launched
+    purge_step: (worker) Purge
+
+    reject_ui --> reject_api
+    reject_api --> rejection_wf
+    rejection_wf --> purge_step
+
+[![](https://mermaid.ink/img/pako:eNplUk1rwzAM_SvCl67QsnsOg9L2sMGgdOtlGIKJldSrYwdbJozS_z47H0226mTpvWc9yb6ywkpkGfMkCHdKVE7U3EAMh99YUB5UBk-n1yUcuxxEQcoaaNCV1tUo_5BFk9ibw53eo8YSgsaSwJYzag-m2BQXY1uNssKxgSKsn6NQlaoQqTKxtw6jWRBBKgJtKz9B78Jd_NACJUhBwmM07UGiRhrtpjg1EUUP3eSTsZmKLBz3b_vt537Xy9DIbpb5zNFZ3pYZLIa5ZGh0coz5cM0CWusupbYtaBFMcR5NNMFVmHvCJu4scdAt4ZCK3Px7AlivXx4WN-UzuLfzaLCjTB25YStWo6uFkvH1r0nAGZ2xRs6yeJRxkZxxc4s8Ech-_JiCZeQCrpizoTqzrBTaxyx0exy-zr3aCPNl7ZjffgHgdNCE?type=png)](https://mermaid.live/edit#pako:eNplUk1rwzAM_SvCl67QsnsOg9L2sMGgdOtlGIKJldSrYwdbJozS_z47H0226mTpvWc9yb6ywkpkGfMkCHdKVE7U3EAMh99YUB5UBk-n1yUcuxxEQcoaaNCV1tUo_5BFk9ibw53eo8YSgsaSwJYzag-m2BQXY1uNssKxgSKsn6NQlaoQqTKxtw6jWRBBKgJtKz9B78Jd_NACJUhBwmM07UGiRhrtpjg1EUUP3eSTsZmKLBz3b_vt537Xy9DIbpb5zNFZ3pYZLIa5ZGh0coz5cM0CWusupbYtaBFMcR5NNMFVmHvCJu4scdAt4ZCK3Px7AlivXx4WN-UzuLfzaLCjTB25YStWo6uFkvH1r0nAGZ2xRs6yeJRxkZxxc4s8Ech-_JiCZeQCrpizoTqzrBTaxyx0exy-zr3aCPNl7ZjffgHgdNCE)]

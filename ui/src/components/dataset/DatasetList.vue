@@ -90,6 +90,7 @@
 
       <template #cell(actions)="{ rowData }">
         <div class="flex gap-2">
+          <!-- Archive Button -->
           <va-popover
             message="Archive"
             placement="left"
@@ -109,7 +110,7 @@
           </va-popover>
 
           <!-- Delete button -->
-          <!-- Only show when the dataset has no workflows, is not archived, and has no workflows -->
+          <!-- Only show when the dataset has no workflows, is not archived, and is not deleted -->
           <va-popover
             message="Delete entry"
             placement="left"
@@ -347,6 +348,8 @@ function fetch_items() {
       ? { name: params.value.inclusive_query }
       : null),
     type: props.dtype,
+    include_action_items: false,
+    include_states: false,
   };
   if (filters_api.created_at) {
     filters_api.created_at_start = filters_api.created_at.start;

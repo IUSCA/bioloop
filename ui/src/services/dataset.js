@@ -19,6 +19,10 @@ class DatasetService {
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
+   * @param is_duplicate Boolean field to filter datasets by the is_duplicate attribute
+   * @param include_action_items Boolean field to includes any active action items on the dataset in the result
+   * @param include_states Boolean field to include dataset's state history
+   * @param include_ingestion_checks Boolean field to include dataset's ingestion checks
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
@@ -35,7 +39,11 @@ class DatasetService {
     prev_task_runs = false,
     only_active = false,
     bundle = false,
+    include_duplications = false,
+    include_states = false,
+    include_action_items = false,
     include_projects = false,
+    include_ingestion_checks = false,
     initiator = false,
   }) {
     return api.get(`/datasets/${id}`, {
@@ -46,7 +54,11 @@ class DatasetService {
         prev_task_runs,
         only_active,
         bundle,
+        include_duplications,
+        include_states,
+        include_action_items,
         include_projects,
+        include_ingestion_checks,
         initiator,
       },
     });
@@ -77,6 +89,14 @@ class DatasetService {
     });
   }
 
+  accept_duplicate_dataset({ duplicate_dataset_id }) {
+    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/accept`);
+  }
+
+  reject_duplicate_dataset({ duplicate_dataset_id }) {
+    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/reject`);
+  }
+
   getStats({ type }) {
     return api.get("/datasets/stats", {
       params: {
@@ -87,6 +107,14 @@ class DatasetService {
 
   update({ id, updated_data }) {
     return api.patch(`/datasets/${id}`, updated_data);
+  }
+
+  filter_files({ id, file_type }) {
+    return api.get(`/datasets/${id}/files/search`, {
+      params: {
+        filetype: file_type,
+      },
+    });
   }
 
   list_files({ id, basepath }) {
@@ -135,6 +163,14 @@ class DatasetService {
 
   initiate_workflow_on_dataset({ dataset_id, workflow }) {
     return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
+  }
+
+  getActionItem({ action_item_id } = {}) {
+    return api.get(`/datasets/action-items/${action_item_id}`);
+  }
+
+  getWorkflows({ dataset_id, params }) {
+    return api.get(`/datasets/${dataset_id}/workflows`, { params });
   }
 }
 
