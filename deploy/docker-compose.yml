@@ -1,7 +1,7 @@
 name: bioloop
 services:
   nginx:
-    image: git.sca.iu.edu:5050/${PROJECT_NAME}/nginx:latest
+    image: nginx:alpine
     volumes:
       - ui_modules:/usr/share/nginx/html
       - ${PROJECT_PATH}/nginx/certbot/conf:/etc/letsencrypt
