@@ -17,7 +17,7 @@ build:
   before_script:
     - docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin <<<$CI_REGISTRY_PASSWORD
   script:
-    - cd ../api/
+    - cd api/
     - docker build -t $CI_REGISTRY/$PROJECT_NAME/api:test .
     - docker push $CI_REGISTRY/$PROJECT_NAME/api:test
     - cd ../ui/
