@@ -105,8 +105,7 @@ services:
     #     ipv4_address: 172.20.0.6
 
   workers:
-    build:
-      context: ../workers
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:latest
     env_file:
       - workers.env
     depends_on:

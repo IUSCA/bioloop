@@ -26,7 +26,9 @@ build:
     - cd ../tests/
     - docker build -t $CI_REGISTRY/$PROJECT_NAME/e2e:test .
     - docker push $CI_REGISTRY/$PROJECT_NAME/e2e:test
-
+    - cd ../workers/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/workers:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/workers:test
 
 lint-api:
   tags: ['builddev-docker']
@@ -93,10 +95,10 @@ tag:
     - docker push $CI_REGISTRY/$PROJECT_NAME/ui:$tag
     - docker tag $CI_REGISTRY/$PROJECT_NAME/ui:test $CI_REGISTRY/$PROJECT_NAME/ui:latest
     - docker push $CI_REGISTRY/$PROJECT_NAME/ui:latest
-    - docker tag $CI_REGISTRY/$PROJECT_NAME/nginx:test $CI_REGISTRY/$PROJECT_NAME/nginx:$tag
-    - docker push $CI_REGISTRY/$PROJECT_NAME/nginx:$tag
-    - docker tag $CI_REGISTRY/$PROJECT_NAME/nginx:test $CI_REGISTRY/$PROJECT_NAME/nginx:latest
-    - docker push $CI_REGISTRY/$PROJECT_NAME/nginx:latest
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/workers:test $CI_REGISTRY/$PROJECT_NAME/workers:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/workers:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/workers:test $CI_REGISTRY/$PROJECT_NAME/workers:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/workers:latest
   # rules:
   #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
   #     when: always

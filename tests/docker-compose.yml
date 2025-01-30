@@ -74,8 +74,7 @@ services:
 
 
   workers:
-    build:
-      context: ../workers
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:test
     env_file:
       - workers.env
     depends_on:
@@ -93,7 +92,7 @@ services:
       - 127.0.0.1:5672:5672
       - 127.0.0.1:15672:15672
     volumes:
-      - ../db/queue/data/:/var/lib/rabbitmq/
+      - rabbitmq_data:/var/lib/rabbitmq/
       # - ./db/queue/log/:/var/log/rabbitmq/
     environment:
       - RABBITMQ_DEFAULT_USER=user
@@ -111,9 +110,9 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
-      - ../db/db_mongo:/data/db
+      - mongo_data:/data/db
       # for importing database files
-      - ../db/mongodump:/opt/sca/app/mongodump
+      - mongo_dump:/opt/sca/app/mongodump
 
 
   rhythm:
@@ -136,4 +135,9 @@ services:
 volumes:
   ui_modules:
     external: false
-
+  rabbitmq_data:
+    external: false
+  mongo_data:
+    external: false
+  mongo_dump:
+    external: false
