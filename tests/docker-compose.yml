@@ -2,6 +2,8 @@ name: bioloop_cicd
 services:
   nginx:
     image: nginx:alpine
+    expose:
+      - 80
     volumes:
       - ui_modules:/usr/share/nginx/html
     depends_on:
