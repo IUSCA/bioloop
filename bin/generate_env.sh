@@ -6,6 +6,8 @@ echo "Getting environment variables from .env.example files ..."
 # Read environment variables from .env.examples files into an array
 #
 
+folder=$1
+
 
 # DB
 echo "Generating db.env file ..."
@@ -18,7 +20,7 @@ done < "db/postgres/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> deploy/db.env
+  eval echo "$key"="\${$key}" >> $folder/db.env
 done
 
 # API
@@ -32,7 +34,7 @@ done < "api/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> deploy/api.env
+  eval echo "$key"="\${$key}" >> $folder/api.env
 done
 
 
@@ -47,7 +49,7 @@ done < "ui/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> deploy/ui.env
+  eval echo "$key"="\${$key}" >> $folder/ui.env
 done
 
 # Workers
@@ -61,5 +63,19 @@ done < "workers/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> deploy/workers.env
+  eval echo "$key"="\${$key}" >> $folder/workers.env
+done
+
+# NGINX
+echo "Generating nginx.env file ..."
+declare -A env_vars=()
+while IFS='=' read -r key value; do
+  if [[ $key != \#* ]]; then
+    env_vars[$key]="$value"
+  fi
+done < "nginx/.env.example"
+
+for key in "${!env_vars[@]}"; do
+  eval echo "$key"="\${$key}"
+  eval echo "$key"="\${$key}" >> $folder/nginx.env
 done

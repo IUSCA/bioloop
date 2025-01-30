@@ -6,6 +6,8 @@ echo "Getting environment variables from .env.example file ..."
 # Read environment variables from .env.examples files into an array
 #
 
+folder=$1
+
 
 # Rhythm
 echo "Generating rhythm.env file ..."
@@ -18,5 +20,5 @@ done < "rhythm_api/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
-  eval echo "$key"="\${$key}" >> deploy/rhythm.env
+  eval echo "$key"="\${$key}" >> $folder/rhythm.env
 done

@@ -60,10 +60,10 @@ test-e2e:
     - git clone https://github.com/IUSCA/rhythm_api.git
     - cd rhythm_api/keys/
     - ./genkeys.sh
-    - cd ../../tests/
+    - cd ../../
     # Generate all the environment vars specified in .env.examples using gitlab environment vars values
-    - bin/generate_env.sh 
-    - bin/generate_rhythm_env.sh
+    - bin/generate_env.sh tests
+    - bin/generate_rhythm_env.sh tests
     - docker compose down 
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
     # Setup the appropriate token for communication with the workers and rhythm_api
@@ -118,10 +118,12 @@ deploy_test_app:
     - ./genkeys.sh
     - cd ../../
     # Generate all the environment vars specified in .env.examples using gitlab environment vars values
-    - bin/generate_env.sh 
-    - bin/generate_rhythm_env.sh
+    - bin/generate_env.sh deploy
+    - bin/generate_rhythm_env.sh deploy
+    - nginx/bin/init-letsencrypt.sh
     - cd deploy/ 
-    - docker compose down # remove any existing containers/networks
+    # remove any existing containers/networks
+    - docker compose down 
     - docker compose pull && docker compose up -d --force-recreate --remove-orphans
     # Setup the appropriate token for communication with the workers and rhythm_api
     - sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env

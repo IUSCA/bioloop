@@ -4,6 +4,11 @@ services:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/nginx:latest
     volumes:
       - ui_modules:/usr/share/nginx/html
+      - ${PROJECT_PATH}/nginx/certbot/conf:/etc/letsencrypt
+      - ${PROJECT_PATH}/nginx/certbot/www:/var/www/certbot
+      - ../nginx/bin/99-autoreload.sh:/docker-entrypoint.d/99-autoreload.sh  # Script to autoreload Nginx when certs are renewed
+    env_file:
+      - nginx.env
     ports:
       - 127.0.0.1:8080:8080
     depends_on:
@@ -11,6 +16,18 @@ services:
     networks:
       network:
         ipv4_address: 172.20.0.2
+
+  # https://dev.to/marrouchi/the-challenge-about-ssl-in-docker-containers-no-one-talks-about-32gh
+  # https://eff-certbot.readthedocs.io/en/latest/install.html#alternative-1-docker
+  # https://hub.docker.com/r/certbot/certbot
+  certbot:
+    image: certbot/certbot
+    env_file:
+      - nginx.env
+    volumes:
+      - ${PROJECT_PATH}/nginx/certbot/conf:/etc/letsencrypt
+      - ${PROJECT_PATH}/nginx/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"  # Renew certificates every 12 hours
 
   ui:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:latest
