@@ -4,8 +4,8 @@ services:
     image: nginx:alpine
     volumes:
       - ui_modules:/usr/share/nginx/html
-    environment:
-      - NGINX_PORT=8081
+    ports:
+      - 8081:80
     expose:
       - 8081
     depends_on:
