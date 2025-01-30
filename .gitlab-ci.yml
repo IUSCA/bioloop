@@ -61,6 +61,7 @@ test-e2e:
     # Generate all the environment vars specified in .env.examples using gitlab environment vars values
     - bin/generate_env.sh tests
     - bin/generate_rhythm_env.sh tests
+    - cd tests/
     - docker compose down 
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
     # Setup the appropriate token for communication with the workers and rhythm_api
