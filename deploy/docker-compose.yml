@@ -20,7 +20,6 @@ services:
     networks:
       network:
         ipv4_address: 172.20.0.2
-    entrypoint: "/docker-entrypoint.d/start-nginx.sh"
 
   # https://dev.to/marrouchi/the-challenge-about-ssl-in-docker-containers-no-one-talks-about-32gh
   # https://eff-certbot.readthedocs.io/en/latest/install.html#alternative-1-docker
