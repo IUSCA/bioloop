@@ -6,6 +6,7 @@ services:
       - ui_modules:/usr/share/nginx/html
       - /opt/sca/nginx/certbot/conf:/etc/letsencrypt
       - /opt/sca/nginx/certbot/www:/var/www/certbot
+      - ../nginx/conf/nginx.conf:/etc/nginx/nginx.conf
       - ../nginx/bin/99-autoreload.sh:/docker-entrypoint.d/99-autoreload.sh  # Script to autoreload Nginx when certs are renewed
     env_file:
       - nginx.env
