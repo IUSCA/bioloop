@@ -8,8 +8,8 @@ services:
       - /opt/sca/nginx/certbot/www:/var/www/certbot
       - ../nginx/conf/nginx.conf:/etc/nginx/nginx.conf
       # Script to autoreload Nginx when certs are renewed
-      - ../nginx/bin/99-autoreload.sh:/docker-entrypoint.d/99-autoreload.sh  
-      
+      - ../nginx/bin/start-nginx.sh:/docker-entrypoint.d/start-nginx.sh
+      # - ../nginx/bin/99-autoreload.sh:/docker-entrypoint.d/99-autoreload.sh  
     env_file:
       - nginx.env
     ports:
@@ -20,6 +20,7 @@ services:
     networks:
       network:
         ipv4_address: 172.20.0.2
+    entrypoint: "/docker-entrypoint.d/start-nginx.sh"
 
   # https://dev.to/marrouchi/the-challenge-about-ssl-in-docker-containers-no-one-talks-about-32gh
   # https://eff-certbot.readthedocs.io/en/latest/install.html#alternative-1-docker
