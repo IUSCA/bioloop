@@ -1,7 +1,7 @@
 name: bioloop
 services:
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27.3
     volumes:
       - ui_modules:/usr/share/nginx/html
       - ${PROJECT_PATH}/nginx/certbot/conf:/etc/letsencrypt
