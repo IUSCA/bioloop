@@ -121,6 +121,8 @@ deploy_test_app:
     # Generate all the environment vars specified in .env.examples using gitlab environment vars values
     - bin/generate_env.sh deploy
     - bin/generate_rhythm_env.sh deploy
+    # Change the domain with the one for this environment
+    - sed -i 's/APP_DOMAIN/'"$APP_DOMAIN"'/g' nginx/conf/nginx.conf
     - nginx/bin/init-letsencrypt.sh
     - cd deploy/ 
     # remove any existing containers/networks
