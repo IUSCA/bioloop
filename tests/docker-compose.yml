@@ -2,6 +2,8 @@ name: bioloop_cicd
 services:
   nginx:
     image: nginx:alpine
+    ports:
+      - 80:80
     expose:
       - 80
     volumes:
