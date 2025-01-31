@@ -27,7 +27,10 @@ services:
     volumes:
       - ${PROJECT_PATH}/nginx/certbot/conf:/etc/letsencrypt
       - ${PROJECT_PATH}/nginx/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"  # Renew certificates every 12 hours
+    # Renew certificates every 12 hours
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"  
+    
+    
 
   ui:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:latest
