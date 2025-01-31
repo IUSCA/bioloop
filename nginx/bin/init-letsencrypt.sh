@@ -20,16 +20,17 @@ fi
 
 
 echo "### Checking config exists ..."
-if [ ! -e "$data_path/conf/ssl-dhparams.pem" ]; then
+if [ -e "$data_path/conf/ssl-dhparams.pem" ]; then
     echo "### Creating dhparam file ..."
     openssl dhparam -out $data_path/conf/ssl-dhparams.pem 4096 
 fi
 
-if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ]; then
+if [ -e "$data_path/conf/options-ssl-nginx.conf" ]; then
     echo "### Creating options-ssl-nginx.conf file ..."
     cp nginx/certbot/conf/options-ssl-nginx.conf $data_path/conf/options-ssl-nginx.conf
 fi
 
+docker compose -f "docker-compose.yml" up -d nginx certbot
 
 echo "### Creating dummy certificate for $domains ..."
 path="/etc/letsencrypt/live/$domains"
