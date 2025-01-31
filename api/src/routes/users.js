@@ -82,8 +82,9 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
 
-    // isPermittedTo('update') - stops requesters with just a user role from running this code
-    // clears the roles attribute when requester has no admin role
+    // isPermittedTo('update') - stops requesters with just a user role from
+    // running this code clears the roles attribute when requester has no admin
+    // role
     const updates = req.permission.filter(req.body);
 
     // operators can edit themselves - all attributes except roles
@@ -125,15 +126,16 @@ router.delete(
   '/:username',
   isPermittedTo('delete', { checkOwnerShip: true }),
   validate([
-    // Validate and transform hard_delete into a boolean with a default value of false
+    // Validate and transform hard_delete into a boolean with a default value
+    // of false
     query('hard_delete')
-      .toBoolean() 
+      .toBoolean()
       .default(false), // Defaults to false if the parameter is not provided
   ]),
   asyncHandler(async (req, res, next) => {
     try {
       // #swagger.tags = ['Users']
-      const { username } = req.params; 
+      const { username } = req.params;
       const hardDelete = req.query.hard_delete; // Already validated and transformed to a boolean
 
       let result;
@@ -150,10 +152,10 @@ router.delete(
         res.status(200).json(result); // Return transformed user object
       }
     } catch (error) {
-      console.error(`Error deleting user (hardDelete=${hardDelete}):`, error);
+      // console.error(`Error deleting user (hardDelete=${hardDelete}):`,error);
       return next(createError.InternalServerError('Error deleting user.'));
     }
-  })
+  }),
 );
 
 module.exports = router;
