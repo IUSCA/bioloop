@@ -6,7 +6,7 @@ if [ -f .env ]; then
 fi
 
 
-domains=(${APP_DOMAIN:-demo-bioloop.io})
+domains=(${APP_DOMAIN:-demo.bioloop.io})
 rsa_key_size=4096
 data_path="/opt/sca/nginx/certbot"
 email="${SSL_EMAIL:-sca-ops-l@iu.edu}" # Adding a valid address is strongly recommended
