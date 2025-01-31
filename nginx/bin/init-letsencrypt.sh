@@ -20,22 +20,22 @@ fi
 
 
 echo "### Checking config exists ..."
-if [ -e "$data_path/conf/ssl-dhparams.pem" ]; then
+if [ ! -e "$data_path/conf/ssl-dhparams.pem" ]; then
     echo "### Creating dhparam file ..."
     openssl dhparam -out $data_path/conf/ssl-dhparams.pem 4096 
 fi
 
-if [ -e "$data_path/conf/options-ssl-nginx.conf" ]; then
+if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ]; then
     echo "### Creating options-ssl-nginx.conf file ..."
     cp nginx/certbot/conf/options-ssl-nginx.conf $data_path/conf/options-ssl-nginx.conf
 fi
 
-docker compose -f "docker-compose.yml" up -d nginx certbot
+
 
 echo "### Creating dummy certificate for $domains ..."
 path="/etc/letsencrypt/live/$domains"
 mkdir -p "$data_path/conf/live/$domains"
-docker compose -f "docker-compose.yml" run --rm --entrypoint "\
+docker compose -f "deploy/docker-compose.yml" run --rm --entrypoint "\
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
     -keyout '$path/privkey.pem' \
     -out '$path/fullchain.pem' \
@@ -43,11 +43,11 @@ docker compose -f "docker-compose.yml" run --rm --entrypoint "\
 echo
 
 echo "### Starting nginx ..."
-docker compose  -f "docker-compose.yml" up --force-recreate -d nginx
+docker compose  -f "deploy/docker-compose.yml" up --force-recreate -d nginx
 echo
 
 echo "### Deleting dummy certificate for $domains ..."
-docker compose  -f "docker-compose.yml" run --rm --entrypoint "\
+docker compose  -f "deploy/docker-compose.yml" run --rm --entrypoint "\
   rm -Rf /etc/letsencrypt/live/$domains && \
   rm -Rf /etc/letsencrypt/archive/$domains && \
   rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
@@ -69,7 +69,7 @@ esac
 # Enable staging mode if needed
 if [ $staging != "0" ]; then staging_arg="--staging"; fi
 
-docker compose -f "docker-compose.yml" run --rm --entrypoint "\
+docker compose -f "deploy/docker-compose.yml" run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $email_arg \
@@ -80,4 +80,4 @@ docker compose -f "docker-compose.yml" run --rm --entrypoint "\
 echo
 
 #echo "### Reloading nginx ..."
-docker compose -f "docker-compose.yml" exec nginx nginx -s reload
+docker compose -f "deploy/docker-compose.yml" exec nginx nginx -s reload
