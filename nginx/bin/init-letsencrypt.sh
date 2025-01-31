@@ -13,6 +13,12 @@ email="${SSL_EMAIL:-sca-ops-l@iu.edu}" # Adding a valid address is strongly reco
 staging=0 # Set to 1 if you're testing your setup to avoid hitting request limits
 
 
+echo "### Checking data path exists ..."
+if [ -d "$data_path/conf" ]; then
+  mkdir -p "$data_path/conf"
+fi
+
+
 echo "### Checking config exists ..."
 if [ ! -e "$data_path/conf/ssl-dhparams.pem" ]; then
     echo "### Creating dhparam file ..."
