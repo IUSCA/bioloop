@@ -207,14 +207,13 @@
 
 <script setup>
 import useQueryPersistence from "@/composables/useQueryPersistence";
-import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes, isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 import { useDatasetStore } from "@/stores/dataset";
 import { storeToRefs } from "pinia";
-import { useAuthStore } from "@/stores/auth";
 
 useSearchKeyShortcut();
 
