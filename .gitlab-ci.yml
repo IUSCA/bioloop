@@ -135,7 +135,6 @@ deploy_test_app:
     - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
     # Deploy the prisma migrations and seed the database
     - docker compose exec api npx prisma migrate deploy
-    - docker compose exec api npx prisma db seed 
   # rules:
   #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
   #     when: always
