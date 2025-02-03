@@ -13,6 +13,12 @@ email="${SSL_EMAIL:-sca-ops-l@iu.edu}" # Adding a valid address is strongly reco
 staging=0 # Set to 1 if you're testing your setup to avoid hitting request limits
 
 
+# Check if certs already exist
+if [ -d "$data_path/conf/live/$domains" ]; then
+  echo "### Certs already exist for $domains ..."
+  exit 0
+fi
+
 echo "### Checking data path exists ..."
 if [ -d "$data_path/conf" ]; then
   mkdir -p "$data_path/conf"
@@ -69,11 +75,13 @@ esac
 # Enable staging mode if needed
 if [ $staging != "0" ]; then staging_arg="--staging"; fi
 
+
 docker compose -f "deploy/docker-compose.yml" run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $email_arg \
     $domain_args \
+    --config-dir /etc/letsencrypt \
     --rsa-key-size $rsa_key_size \
     --agree-tos \
     --force-renewal" certbot
