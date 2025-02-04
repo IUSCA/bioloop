@@ -310,12 +310,20 @@
     </VaAlert>
 
     <!-- Display impact details -->
-    <div class="impact-details mt-4" v-if="getImpactDetails.length > 0">
-      <p><strong>Impact Details of the selected deletion:</strong></p>
-      <ul>
-        <li v-for="detail in getImpactDetails" :key="detail">{{ detail }}</li>
-      </ul>
-    </div>
+    <VaAlert
+      v-if="getImpactDetails.length > 0"
+      color="transparent"
+      class="mt-4"
+    >
+      <template #title>
+        <strong> Impact Details of the Selected Deletion </strong>
+      </template>
+      <VaList>
+        <VaListItem v-for="detail in getImpactDetails" :key="detail">
+          {{ detail }}
+        </VaListItem>
+      </VaList>
+    </VaAlert>
 
     <!-- Custom footer with "Confirm Delete" and "Cancel" buttons -->
     <template #footer>
