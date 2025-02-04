@@ -32,7 +32,7 @@ services:
       - /opt/sca/nginx/certbot/conf:/etc/letsencrypt
       - /opt/sca/nginx/certbot/www:/var/www/certbot
     # Renew certificates every 12 hours
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"  
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --force-renewal --cert-name $APP_DOMAIN renew; sleep 1h & wait $${!}; done;'"  
     
     
 
