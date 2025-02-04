@@ -279,9 +279,9 @@
 
     <!-- Username Input -->
     <va-input
+      class="username-input"
       v-model="usernameConfirmation"
       placeholder="Enter username"
-      style="width: 300px"
     />
 
     <!-- Deletion Type Toggle Group -->
@@ -290,7 +290,7 @@
       <span class="deletion-type-label">Deletion Type:</span>
 
       <!-- Deletion Options -->
-      <div class="deletion-options">
+      <div class="flex gap-8">
         <VaRadio
           v-for="option in deletionOptions"
           :key="option.value"
@@ -311,7 +311,7 @@
 
     <!-- Display impact details -->
     <VaAlert
-      v-if="getImpactDetails.length > 0"
+      v-if="impactDetails.length > 0"
       border="top"
       border-color="primary"
       class="mt-4"
@@ -320,7 +320,7 @@
         <strong> Impact Details of the Selected Deletion </strong>
       </template>
       <ul class="va-unordered">
-        <li v-for="detail in getImpactDetails" :key="detail">
+        <li v-for="detail in impactDetails" :key="detail">
           {{ detail }}
         </li>
       </ul>
@@ -376,7 +376,7 @@ function confirmDeleteUser() {
   isDeleteModalVisible.value = true;
 }
 
-const getImpactDetails = computed(() => {
+const impactDetails = computed(() => {
   return isHardDelete.value
     ? [
         "User profile, roles, and settings will be permanently removed.",
@@ -718,9 +718,8 @@ fetch_all_users();
   font-weight: bold;
 }
 
-.deletion-options {
-  display: flex;
-  gap: 10px; /* Space between radio buttons */
+.username-input {
+  width: 300px;
 }
 </style>
 
