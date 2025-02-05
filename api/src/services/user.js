@@ -83,16 +83,19 @@ async function updateLastLogin({ id, method }) {
     },
   });
 }
-/** The function `findAll` is used to retrieve a list of users from the database with various filtering, sorting,
- * and pagination options. */
+/**
+ * The function `findAll` is used to retrieve a list of users from the database
+ * with various filtering, sorting, and pagination options.
+ */
 async function findAll({
   search, sortBy, sort_order, skip, take,
 }) {
   const sort_sql = Prisma.raw(`"${sortBy}" ${sort_order}`);
   /**
  * Constructs a SQL query to:
- * 1. Join `user`, `user_login`, `user_role`, and `role` tables to retrieve user details, roles, and last login info.
- * 2. Filter users based on the search term.
+ * 1. Join `user`, `user_login`, `user_role`,
+ * and `role` tables to retrieve user details, roles, and last login info. 2.
+ * Filter users based on the search term.
  * 3. Group results by user ID and login method.
  * 4. Sort results by the specified column and order, with nulls last.
  * 5. Apply pagination using limit and offset.
@@ -149,17 +152,42 @@ async function createUser(data) {
   return user ? transformUser(user) : user;
 }
 
-async function softDeleteUser(username) {
-  const updatedUser = await prisma.user.update({
-    where: {
-      username,
-    },
-    data: {
-      is_deleted: true,
-    },
-    include: INCLUDE_ROLES_LOGIN,
+async function deleteUser(username, isHardDelete = false) {
+  if (isHardDelete) {
+    // Hard delete: Directly delete the user + some data
+    return prisma.user.delete({
+      where: { username },
+      select: { id: true, username: true },
+    });
+  }
+
+  // Soft delete: Use an interactive transaction
+  return prisma.$transaction(async (_prisma) => {
+    const user = await _prisma.user.findUniqueOrThrow({
+      where: { username },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    if (user?.is_deleted) {
+      return transformUser(user);
+    }
+
+    const updatedUser = await _prisma.user.update({
+      where: { username },
+      data: { is_deleted: true },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    return transformUser(updatedUser);
   });
-  return updatedUser ? transformUser(updatedUser) : updatedUser;
+}
+
+async function softDeleteUser(username) {
+  return deleteUser(username, false);
+}
+
+async function hardDeleteUser(username) {
+  return deleteUser(username, true);
 }
 
 // async function setRoles(user_id, role_ids) {
@@ -223,7 +251,9 @@ module.exports = {
   findAll,
   createUser,
   setPassword,
+  deleteUser,
   softDeleteUser,
+  hardDeleteUser,
   updateUser,
   findRoles,
   canUpdateUser,
