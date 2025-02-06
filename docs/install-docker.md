@@ -8,7 +8,7 @@ Requires `docker`. Docker desktop should work too.
 
 For development purposes, shared volumes are used in `docker-compose.yml` to ensure container `node_modules` are not confused with host level `node_modules`. This approach also keeps `node_modules` folders out of the local directory to make it easier to `find` and `grep`.
 
-To make adjustments to the way the application runs, edit and review [docker-compose.yml](docker-compose.yml).
+To make adjustments to the way the application runs, edit and review [docker-compose.yml](https://github.com/IUSCA/bioloop/blob/main/docker-compose.yml).
 
 The UI and API containers have been set to run on start up to install / update dependencies.
 
