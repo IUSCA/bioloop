@@ -11,7 +11,7 @@ while :; do
     CURRENT_MOD_TIME=$(stat -c %Y "$CERT_FILE")
     if [ "$CURRENT_MOD_TIME" != "$LAST_MOD_TIME" ]; then
         LAST_MOD_TIME=$CURRENT_MOD_TIME
-        nginx -s reload
+        nginx -t && nginx -s reload
     fi
     sleep 10
 done &
