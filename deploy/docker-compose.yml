@@ -8,7 +8,6 @@ services:
       - /opt/sca/nginx/certbot/www:/var/www/certbot
       - ../nginx/conf/nginx.conf:/etc/nginx/nginx.conf
       # Script to autoreload Nginx when certs are renewed
-      # - ../nginx/bin/start-nginx.sh:/docker-entrypoint.d/start-nginx.sh
       - ../nginx/bin/99-autoreload.sh:/docker-entrypoint.d/99-autoreload.sh  
     env_file:
       - nginx.env
@@ -32,7 +31,7 @@ services:
       - /opt/sca/nginx/certbot/conf:/etc/letsencrypt
       - /opt/sca/nginx/certbot/www:/var/www/certbot
     # Renew certificates every 12 hours
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --force-renewal --cert-name $APP_DOMAIN renew; sleep 12h & wait $${!}; done;'"  
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --force-renewal --cert-name $APP_DOMAIN renew; sleep 1h & wait $${!}; done;'"  
     
     
 
