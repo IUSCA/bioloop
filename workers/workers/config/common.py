@@ -182,6 +182,8 @@ config = {
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
+    },
+    'inspect': {
+        'file_metadata_batch_size': 25000
     }
-
 }

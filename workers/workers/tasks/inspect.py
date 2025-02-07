@@ -82,6 +82,9 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
 
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
-    api.add_files_to_dataset(dataset_id=dataset_id, files=metadata)
+    # split metadata into batches and add to dataset
+    # this is to avoid large payloads to the API
+    for batch in utils.batched(metadata, n=config['inspect']['file_metadata_batch_size']):
+        api.add_files_to_dataset(dataset_id=dataset_id, files=batch)
 
     return dataset_id,
