@@ -19,6 +19,7 @@ services:
     networks:
       network:
         ipv4_address: 172.20.0.2
+    command: "/bin/sh -c 'while :; do sleep 30m & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   # https://dev.to/marrouchi/the-challenge-about-ssl-in-docker-containers-no-one-talks-about-32gh
   # https://eff-certbot.readthedocs.io/en/latest/install.html#alternative-1-docker
@@ -31,7 +32,7 @@ services:
       - /opt/sca/nginx/certbot/conf:/etc/letsencrypt
       - /opt/sca/nginx/certbot/www:/var/www/certbot
     # Renew certificates every 12 hours
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --force-renewal --cert-name $APP_DOMAIN renew; sleep 12h & wait $${!}; done;'"  
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --force-renewal --cert-name $APP_DOMAIN renew; sleep 1h & wait $${!}; done;'"  
     
     
 
