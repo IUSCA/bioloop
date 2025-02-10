@@ -1,10 +1,12 @@
 const { test, expect } = require('@playwright/test');
 
 test.describe('Raw Data Search', () => {
-  test('should search and verify results', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     // Navigate to the raw data page
     await page.goto('/rawdata');
+  });
 
+  test('should search and verify results', async ({ page }) => {
     // Wait for the page to load
     await page.waitForSelector('input[data-testid="datasets-search-input"]');
 
@@ -42,5 +44,21 @@ test.describe('Raw Data Search', () => {
 
     // Assert that we found at least one matching result
     expect(foundMatch).toBe(true);
+  });
+
+  // New test for opening the search modal
+  test('should open the search modal', async ({ page }) => {
+    // Wait for the page to load
+    await page.waitForSelector('input[data-testid="datasets-search-input"]');
+
+    await page.getByTestId('datasets-search-filters').click();
+    // click('button[data-testid="datasets-search-filters"]');
+
+    // Wait for the modal to appear
+    await page.waitForSelector('div[data-testid="datasets-search-modal"]');
+
+    // Verify that the modal is visible
+    const modalVisible = await page.isVisible('div[data-testid="datasets-search-modal"]');
+    expect(modalVisible).toBe(true);
   });
 });

@@ -20,7 +20,12 @@
       </div>
 
       <!-- Filter button -->
-      <va-button @click="searchModal.show()" preset="primary" class="flex-none">
+      <va-button
+        data-testid="datasets-search-filters"
+        @click="searchModal.show()"
+        preset="primary"
+        class="flex-none"
+      >
         <i-mdi-filter />
         <span> Filters </span>
       </va-button>
@@ -203,7 +208,11 @@
       </div>
     </va-modal>
 
-    <DatasetSearchModal ref="searchModal" @search="handleSearch" />
+    <DatasetSearchModal
+      data-testid="datasets-search-modal"
+      ref="searchModal"
+      @search="handleSearch"
+    />
   </div>
 </template>
 
