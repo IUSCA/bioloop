@@ -5,6 +5,7 @@
       <!-- search bar -->
       <div class="flex-1" v-if="activeFilters.length === 0">
         <va-input
+          data-testid="datasets-search-input"
           :model-value="params.inclusive_query"
           class="w-full"
           :placeholder="`Search ${props.label.toLowerCase()}`"
@@ -35,6 +36,7 @@
 
     <!-- table -->
     <va-data-table
+      data-testid="datasets-search-results"
       :items="datasets"
       :columns="columns"
       v-model:sort-by="query.sort_by"
@@ -207,14 +209,13 @@
 
 <script setup>
 import useQueryPersistence from "@/composables/useQueryPersistence";
-import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes, isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 import { useDatasetStore } from "@/stores/dataset";
 import { storeToRefs } from "pinia";
-import { useAuthStore } from "@/stores/auth";
 
 useSearchKeyShortcut();
 
