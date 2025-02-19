@@ -1,0 +1,93 @@
+commit c1505284f8fc7b851b70741d986dd1ee44166ffe
+Author: Deepak Duggirala <ddeepak6992@gmail.com>
+Date:   Thu Feb 6 16:02:03 2025 -0500
+
+    Add grafana dashboard for postgres metrics for local development
+
+diff --git a/api/src/services/auth.js b/api/src/services/auth.js
+index f105b7b1..39fb188e 100644
+--- a/api/src/services/auth.js
++++ b/api/src/services/auth.js
+@@ -1,5 +1,6 @@
+ const fs = require('fs');
+ const path = require('path');
++const crypto = require('crypto');
+ 
+ const jsonwt = require('jsonwebtoken');
+ const _ = require('lodash/fp');
+@@ -18,19 +19,20 @@ const signOpt = {
+   algorithm: config.get('auth.jwt.sign_algorithm'),
+ };
+ 
+-function issueJWT({ userProfile, forever = false }) {
++function issueJWT({ userProfile, forever = false, aud }) {
+   const claim = {
+     iss: config.get('auth.jwt.iss'),
+     ...(forever ? {} : { exp: (Date.now() + config.get('auth.jwt.ttl_milliseconds')) / 1000 }),
+     sub: userProfile.username,
+     profile: userProfile,
++    ...(aud ? { aud } : {}),
+   };
+   return jsonwt.sign(claim, key, signOpt);
+ }
+ 
+ const get_user_profile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id', 'protocol_ids']);
+ 
+-async function onLogin({ user, updateLastLogin = true, method = 'IUCAS' }) {
++async function onLogin({ user, updateLastLogin = true, method }) {
+   if (updateLastLogin) { await userService.updateLastLogin({ id: user.id, method }); }
+ 
+   const userProfile = get_user_profile(user);
+@@ -102,6 +104,45 @@ const find_or_create_test_user = async ({ role }) => {
+   return test_user;
+ };
+ 
++// Function to load and convert the public key to JWKS
++function getJWKS() {
++  // Parse the public key.  This will throw an error if the key is invalid.
++  const publicKey = crypto.createPublicKey(pub);
++
++  const keyExp = publicKey.export({ format: 'jwk' });
++
++  //  Get the key's thumbprint (SHA-256). This is a common way to identify a key.
++  const thumbprint = crypto
++    .createHash('sha256')
++    .update(publicKey.export({ type: 'spki', format: 'der' }))
++    .digest('hex');
++
++  //  Create a JWKS key object
++  const jwks = {
++    keys: [{
++      kty: 'RSA',
++      kid: thumbprint,
++      use: 'sig',
++      alg: 'RS256',
++      n: keyExp.n,
++      e: keyExp.e,
++    }],
++  };
++  return jwks;
++}
++
++function issueGrafanaToken(user) {
++  return issueJWT({
++    userProfile: {
++      username: user.username,
++      email: user.email,
++      name: user.name,
++      grafana_role: 'Admin',
++    },
++    aud: 'grafana',
++  });
++}
++
+ module.exports = {
+   onLogin,
+   issueJWT,
+@@ -109,4 +150,6 @@ module.exports = {
+   get_user_profile,
+   get_download_token,
+   find_or_create_test_user,
++  getJWKS,
++  issueGrafanaToken,
+ };

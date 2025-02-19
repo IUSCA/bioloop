@@ -64,6 +64,8 @@ services:
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
       - ./db/postgres/aux_scripts:/opt/sca/scripts
       - ./db/backups:/opt/sca/backups
+      - ./db/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf   # Mount the config file
+    command: -c 'config_file=/etc/postgresql/postgresql.conf'
     ports:
       - 127.0.0.1:5432:5432
     expose:
@@ -80,6 +82,44 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
 
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://appuser:example@postgres:5432/app?sslmode=disable"
+    depends_on:
+      - postgres
+    # ports:
+      # - "9187:9187"
+    volumes:
+      - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
+    command:
+      - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./metrics/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./metrics/prometheus/data:/prometheus  # Mount the volume for Prometheus data
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    # ports:
+      # - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ./metrics/grafana/data:/var/lib/grafana         # Mount for Grafana data (dashboards, plugins)
+      - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
+      - ./api/keys/auth.pub:/etc/grafana/auth.pub
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+      
 
 volumes:
   ui_modules:

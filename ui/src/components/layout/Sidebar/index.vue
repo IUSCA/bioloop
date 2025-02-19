@@ -20,6 +20,18 @@
     <!-- admin sidebar items   -->
     <div v-if="auth.canAdmin && admin_items.length > 0">
       <SidebarItems :items="admin_items" :isActive="isActive" />
+      <va-sidebar-item href="/grafana/dashboards" target="_blank">
+        <va-sidebar-item-content>
+          <Icon icon="mdi:chart-line" class="text-2xl" />
+          <!-- User can hide item with css if they want -->
+          <va-sidebar-item-title>
+            <div class="flex items-center">
+              <span>Metrics</span>
+              <i-mdi-open-in-new class="ml-1 text-sm" />
+            </div>
+          </va-sidebar-item-title>
+        </va-sidebar-item-content>
+      </va-sidebar-item>
       <va-divider />
     </div>
 
