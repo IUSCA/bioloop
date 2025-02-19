@@ -86,7 +86,7 @@ model upload_log {
   initiated_at   DateTime            @default(now()) @db.Timestamp(6)
   updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
   user_id        Int?
-  user           user?                @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user           user?               @relation(fields: [user_id], references: [id], onDelete: SetNull)
   dataset_upload dataset_upload_log?
 }
 
@@ -152,7 +152,7 @@ model data_access_log {
   dataset_id   Int?
   dataset      dataset?      @relation(fields: [dataset_id], references: [id])
   user_id      Int?
-  user         user?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user         user?         @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model stage_request_log {
@@ -161,36 +161,38 @@ model stage_request_log {
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id])
   user_id    Int?
-  user       user?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user       user?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model user {
-  id                         Int                 @id @default(autoincrement())
-  username                   String              @unique @db.VarChar(100)
-  name                       String?             @db.VarChar(100)
-  email                      String              @unique @db.VarChar(100)
-  cas_id                     String?             @unique @db.VarChar(100)
+  id                         Int                         @id @default(autoincrement())
+  username                   String                      @unique @db.VarChar(100)
+  name                       String?                     @db.VarChar(100)
+  email                      String                      @unique @db.VarChar(100)
+  cas_id                     String?                     @unique @db.VarChar(100)
   notes                      String?
-  created_at                 DateTime            @default(now()) @db.Timestamp(6)
-  updated_at                 DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  is_deleted                 Boolean             @default(false)
+  created_at                 DateTime                    @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime                    @default(now()) @updatedAt @db.Timestamp(6)
+  is_deleted                 Boolean                     @default(false)
   user_role                  user_role[]
   settings                   user_settings?
   contacts                   contact[]
   dataset_audit              dataset_audit[]
-  projects                   project_user[]      @relation("project_user_user")
+  projects                   project_user[]              @relation("project_user_user")
   password                   user_password?
   login                      user_login?
   accesses                   data_access_log[]
   stage_requests             stage_request_log[]
   about_edits                about[]
-  project_users_assigned     project_user[]      @relation("project_user_assignor")
+  project_users_assigned     project_user[]              @relation("project_user_assignor")
   project_datasets_assigned  project_dataset[]
   project_contacts_assigned  project_contact[]
-  initiated_workflows        workflow[]          @relation("initiated_workflows")
+  initiated_workflows        workflow[]                  @relation("initiated_workflows")
   acknowledged_notifications notification[]
   uploads                    upload_log[]
   user_notifications         user_notification[]
+  notification_preferences   notification_preference[]
+  notification_subscriptions notification_subscription[]
 }
 
 model user_password {
@@ -262,11 +264,12 @@ model contact {
 }
 
 model role {
-  id                 Int                 @id @default(autoincrement())
-  name               String              @db.VarChar(50)
-  description        String              @default("") @db.VarChar(255)
-  user_role          user_role[]
-  role_notifications role_notification[]
+  id                         Int                         @id @default(autoincrement())
+  name                       String                      @db.VarChar(50)
+  description                String                      @default("") @db.VarChar(255)
+  user_role                  user_role[]
+  role_notifications         role_notification[]
+  notification_subscriptions notification_subscription[]
 }
 
 model user_role {
@@ -377,8 +380,67 @@ model about {
   id                 Int      @id @default(autoincrement())
   html               String
   created_at         DateTime @default(now()) @db.Timestamp(6)
-  last_updated_by    user?     @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
+  last_updated_by    user?    @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
   last_updated_by_id Int?
+}
+
+/**
+ * An event looks like this:
+ * {
+ * type: "dataset_staging_complete",
+ * resource_type: "dataset",
+ * resource_id: dataset.id,
+ * timestamp: "2025-02-18T12:00:00Z",
+ * metadata: {}
+ * }
+ */
+
+model event_type {
+  id          Int      @id @default(autoincrement())
+  name        String
+  tags        String[]
+  description String?
+
+  notification_subscriptions notification_subscription[]
+}
+
+model notification_preference {
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  delivery_method String // EMAIL, SLACK, IN-APP, PUSH, SMS etc. 
+  enabled         Boolean  @default(true)
+  updated_at      DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, delivery_method])
+}
+
+// Information about whom to send notifications to for an event type
+// Notifications can be sent to individual users, roles (all users within a role), or system-wide
+// The system can generate notifications when a user performs an action that requires a notification to be sent when that workflow is complete
+// or when a user subscribes to a specific event type
+// Adminis can create system wide rules for notifications here.
+// Notifications can be selectively sent based on resource type and resource ID
+// Resource types can include dataset, workflow, user, project, etc.
+// Resource ID can be the identifier of the resource
+// If resource type or ID is not provided, notifications will be sent for all events of that type
+// Subscriptions can be active indefinitely or have an expiration date
+model notification_subscription {
+  id             Int       @id @default(autoincrement())
+  is_system_wide Boolean   @default(false)
+  user_id        Int?
+  role_id        Int?
+  is_active      Boolean   @default(true)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  expires_at     DateTime? @db.Timestamp(6)
+  event_type_id  Int
+  resource_id    String? // flexible, can be int or uuid
+  resource_type  String?
+
+  user       user?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role       role?      @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  event_type event_type @relation(fields: [event_type_id], references: [id], onDelete: Cascade)
 }
 
 enum access_type {
