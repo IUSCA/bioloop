@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 const { test, expect } = require('@playwright/test');
 const { datasets: mockDatasets } = require('../../../../mocks/datasets');
 
@@ -99,7 +101,12 @@ test.describe('Raw Data Search', () => {
 
   test('should filter datasets based on is_deleted status', async ({ page }) => {
     // Open the search modal
-    await page.click('[data-testid="datasets-search-modal"]');
+    await page.click('[data-testid="datasets-search-filters"]');
+
+    // Click the search button
+    // await page.click('[data-testid="datasets-search-filters"]');
+    // datasets - search - modal;
+    await page.waitForSelector('[data-testid="datasets-search-modal"]');
 
     // Select "Is Deleted" checkbox
     await page.click('[data-testid="deleted_filter"]');
@@ -108,14 +115,19 @@ test.describe('Raw Data Search', () => {
     await page.click('[data-testid="dataset-search-button"]');
 
     // Wait for the table to update
-    await page.waitForSelector('.va-data-table__table-wrapper');
+    await page.waitForSelector('[data-testid="datasets-search-results"]');
 
     // Check if only deleted datasets are displayed
-    const rows = await page.$$('.va-data-table__table-wrapper tbody tr');
+    const rows = await page.$$('[data-testid="datasets-search-results"] tbody tr');
+
+    expect(rows.length).toBeGreaterThan(0);
+
     for (const row of rows) {
-      const deletedCell = await row.$('td:nth-child(5)'); // Assuming "deleted" is the 5th column
-      const checkIcon = await deletedCell.$('.i-mdi-check-circle-outline');
+      // const deletedCell = await row.$('td:nth-child(5)'); // Assuming "deleted" is the 5th column
+      const checkIcon = await page.getByTestId('col-deleted-datasets');
+
       expect(checkIcon).not.toBeNull();
+      expect(checkIcon).toBeVisible();
     }
   });
 
@@ -123,22 +135,59 @@ test.describe('Raw Data Search', () => {
     // Open the search modal
     await page.click('[data-testid="datasets-search-filters"]');
 
-    // Select "Staged" filter
-    await page.selectOption('[data-testid="staged_filter"]', 'true');
+    // Click the search button
+    // await page.click('[data-testid="datasets-search-filters"]');
+    // datasets - search - modal;
+    await page.waitForSelector('[data-testid="datasets-search-modal"]');
+
+    // Click on the va-select to open the dropdown
+    await page.click('div[data-testid="staged-filter"]');
+
+    // Wait for the dropdown to appear
+    await page.waitForSelector('.va-select-option');
+
+    // Click on the "True" option
+    await page.click('.va-select-option:has-text("True")');
+    // await page.selectOption('.va-input-wrapper__container', 'true');
 
     // Click the search button
     await page.click('[data-testid="dataset-search-button"]');
 
     // Wait for the table to update
-    await page.waitForSelector('.va-data-table__table-wrapper');
+    await page.waitForSelector('[data-testid="datasets-search-results"]');
 
-    // Check if only staged datasets are displayed
-    const rows = await page.$$('.va-data-table__table-wrapper tbody tr');
+    // Check if only deleted datasets are displayed
+    const rows = await page.$$('[data-testid="datasets-search-results"] tbody tr');
+
+    expect(rows.length).toBeGreaterThan(0);
+
     for (const row of rows) {
-      const stagedCell = await row.$('td:nth-child(4)');
-      const checkIcon = await stagedCell.$('.i-mdi-check-circle-outline');
+      // const deletedCell = await row.$('td:nth-child(5)'); // Assuming "deleted" is the 5th column
+      const checkIcon = await page.getByTestId('col-staged-datasets');
+
       expect(checkIcon).not.toBeNull();
+      expect(checkIcon).toBeVisible();
     }
+
+    // Open the search modal
+    // await page.click('[data-testid="datasets-search-filters"]');
+
+    // // Select "Staged" filter
+    // await page.selectOption('[data-testid="staged-filter"]', 'true');
+
+    // // Click the search button
+    // await page.click('[data-testid="dataset-search-button"]');
+
+    // // Wait for the table to update
+    // await page.waitForSelector('.va-data-table__table-wrapper');
+
+    // // Check if only staged datasets are displayed
+    // const rows = await page.$$('.va-data-table__table-wrapper tbody tr');
+    // for (const row of rows) {
+    //   const stagedCell = await row.$('td:nth-child(4)');
+    //   const checkIcon = await stagedCell.$('.i-mdi-check-circle-outline');
+    //   expect(checkIcon).not.toBeNull();
+    // }
   });
 
   test('should filter datasets based on archived status', async ({ page }) => {

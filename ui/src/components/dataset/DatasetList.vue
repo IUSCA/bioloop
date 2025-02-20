@@ -60,19 +60,19 @@
       </template>
 
       <template #cell(archived)="{ source }">
-        <span v-if="source" class="flex justify-center">
+        <span v-if="source" class="flex justify-center" data-testid="col-archived-datasets">
           <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
 
       <template #cell(staged)="{ source }">
-        <span v-if="source" class="flex justify-center">
+        <span v-if="source" class="flex justify-center" data-testid="col-staged-datasets">
           <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
 
       <template #cell(deleted)="{ source }">
-        <span v-if="source" class="flex justify-center">
+        <span v-if="source" class="flex justify-center" data-testid="col-deleted-datasets">
           <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
@@ -215,7 +215,6 @@
     </va-modal>
 
     <DatasetSearchModal
-      data-testid="datasets-search-modal"
       ref="searchModal"
       @search="handleSearch"
     />

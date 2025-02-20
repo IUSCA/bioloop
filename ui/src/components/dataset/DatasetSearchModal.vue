@@ -6,7 +6,10 @@
     size="small"
     title="Dataset Search"
   >
-    <div class="w-full">
+    <div
+        class="w-full"
+        data-testid="datasets-search-modal"
+    >
       <va-form class="flex flex-col gap-3 md:gap-5">
         <!-- name filter -->
         <va-input
@@ -56,10 +59,10 @@
             value-by="id"
             label="Staged"
             placeholder="Choose a value"
-            data-testid="staged_filter"
+            data-testid="staged-filter"
           >
             <template #prependInner>
-              <Icon icon="mdi-cloud-sync" class="text-xl" />
+              <Icon icon="mdi-cloud-sync" class="text-xl" data-testid="staged-filter-icon"  />
             </template>
           </va-select>
         </div>
