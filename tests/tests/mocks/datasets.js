@@ -1,0 +1,55 @@
+const datasets = [
+  {
+    id: 1,
+    name: 'Dataset 1',
+    is_deleted: false,
+    is_staged: true,
+    archive_path: null,
+    type: 'raw',
+    created_at: '2023-05-01T10:00:00Z',
+    updated_at: '2023-05-01T10:00:00Z',
+    description: 'This is Dataset 1',
+    size: 1000000,
+  },
+  {
+    id: 2,
+    name: 'Dataset 2',
+    is_deleted: true,
+    is_staged: false,
+    archive_path: null,
+    type: 'processed',
+    created_at: '2023-05-02T11:00:00Z',
+    updated_at: '2023-05-02T11:00:00Z',
+    description: 'This is Dataset 2',
+    size: 2000000,
+  },
+  {
+    id: 3,
+    name: 'Dataset 3',
+    is_deleted: false,
+    is_staged: true,
+    archive_path: 'archive/2023/Subset_3.tar',
+    type: 'subset',
+    created_at: '2023-05-03T12:00:00Z',
+    updated_at: '2023-05-03T12:00:00Z',
+    description: 'This is Subset 3',
+    size: 500000,
+
+  },
+  {
+    id: 4,
+    name: 'Dataset 4',
+    is_deleted: false,
+    is_staged: true,
+    archive_path: 'archive/2023/Subset_3.tar',
+    type: 'subset',
+    created_at: '2023-05-03T12:00:00Z',
+    updated_at: '2023-05-03T12:00:00Z',
+    description: 'This is Subset 3',
+    size: 500000,
+  },
+];
+
+export {
+  datasets,
+};

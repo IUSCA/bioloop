@@ -13,10 +13,16 @@
           label="Name"
           v-model="form.name"
           placeholder="Enter a term that matches any part of the dataset name"
+          data-testid="dataset-name-search-input"
         />
 
         <!-- checkbox: deleted filter -->
-        <va-checkbox v-model="form.deleted" label="Is Deleted" class="mt-3" />
+        <va-checkbox
+          v-model="form.deleted"
+          label="Is Deleted"
+          class="mt-3"
+          data-testid="deleted_filter"
+        />
 
         <div class="flex gap-3">
           <!-- archived filter -->
@@ -31,6 +37,7 @@
             value-by="id"
             label="Archived"
             placeholder="Choose a value"
+            data-testid="archived_filter"
           >
             <template #prependInner>
               <Icon icon="mdi:archive-arrow-down" class="text-xl" />
@@ -49,6 +56,7 @@
             value-by="id"
             label="Staged"
             placeholder="Choose a value"
+            data-testid="staged_filter"
           >
             <template #prependInner>
               <Icon icon="mdi-cloud-sync" class="text-xl" />
@@ -69,6 +77,7 @@
             value-by="id"
             label="Workflows"
             placeholder="Choose a value"
+            data-testid="has_workflows_filter"
           >
             <template #prependInner>
               <Icon icon="mdi:map-marker-path" class="text-xl" />
@@ -87,6 +96,7 @@
             value-by="id"
             label="Derived Data"
             placeholder="Choose a value"
+            data-testid="has_derived_data_filter"
           >
             <template #prependInner>
               <Icon icon="mdi:source-commit-end" class="text-xl" />
@@ -105,6 +115,7 @@
             value-by="id"
             label="Source Data"
             placeholder="Choose a value"
+            data-testid="has_source_data_filter"
           >
             <template #prependInner>
               <Icon icon="mdi:source-commit-start" class="text-xl" />
@@ -118,6 +129,7 @@
           mode="range"
           placeholder="filter by created date range"
           label="Created At"
+          data-testid="created_at_filter"
         />
 
         <!-- updated_at range filter -->
@@ -126,6 +138,7 @@
           mode="range"
           placeholder="filter by updated date range"
           label="Updated At"
+          data-testid="updated_at_filter"
         />
       </va-form>
     </div>
@@ -148,7 +161,13 @@
         </va-button>
 
         <!-- search button -->
-        <va-button class="flex-none" @click="handleSearch"> Search </va-button>
+        <va-button
+          class="flex-none"
+          @click="handleSearch"
+          data-testid="dataset-search-button"
+        >
+          Search
+        </va-button>
       </div>
     </template>
   </va-modal>

@@ -71,6 +71,12 @@
         </span>
       </template>
 
+      <template #cell(deleted)="{ source }">
+        <span v-if="source" class="flex justify-center">
+          <i-mdi-check-circle-outline class="text-green-700" />
+        </span>
+      </template>
+
       <!-- <template #cell(num_genome_files)="{ rowData }">
         <Maybe :data="rowData?.metadata?.num_genome_files" />
       </template> -->
@@ -288,6 +294,14 @@ const columns = [
     key: "is_staged",
     name: "staged",
     label: "staged",
+    thAlign: "center",
+    tdAlign: "center",
+    width: "80px",
+  },
+  {
+    key: "is_deleted",
+    name: "deleted",
+    label: "deleted",
     thAlign: "center",
     tdAlign: "center",
     width: "80px",
