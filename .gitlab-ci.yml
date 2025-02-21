@@ -119,7 +119,7 @@ deploy_test_app:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
   script:
-    - git clone https://github.com/IUSCA/rhythm_api.git
+    - if [ ! -d "rhythm_api" ]; then git clone https://github.com/IUSCA/rhythm_api.git; fi
     - cd rhythm_api/keys/
     - ./genkeys.sh
     - cd ../../
