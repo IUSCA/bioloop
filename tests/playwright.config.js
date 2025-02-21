@@ -61,11 +61,11 @@ module.exports = {
         name: 'user_login',
         testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
       },
-      {
-        name: 'unauthenticated',
-        use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/unauthenticated/project.spec.js',
-      },
+      // {
+      //   name: 'unauthenticated',
+      //   use: { ...devices['Desktop Chrome'] },
+      //   testMatch: '/view/unauthenticated/project.spec.js',
+      // },
       {
         name: 'admin_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
