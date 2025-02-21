@@ -54,6 +54,7 @@ const exports = {
     SLATE_SCRATCH_FILES: "/N/scratch files",
   },
   auth_enabled: {
+    iucas: false,
     google: true,
     cilogon: true,
   },

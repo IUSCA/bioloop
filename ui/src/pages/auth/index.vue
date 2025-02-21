@@ -16,7 +16,8 @@
         </div>
 
         <!-- IU CAS -->
-        <div class="flex justify-center px-8 mb-3">
+        <div class="flex justify-center px-8 mb-3"
+          v-if="config.auth_enabled.iucas">
           <va-button
             class="flex-auto py-1"
             preset="secondary"
