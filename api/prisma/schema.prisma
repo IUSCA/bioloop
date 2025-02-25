@@ -384,20 +384,9 @@ model about {
   last_updated_by_id Int?
 }
 
-/**
- * An event looks like this:
- * {
- * type: "dataset_staging_complete",
- * resource_type: "dataset",
- * resource_id: dataset.id,
- * timestamp: "2025-02-18T12:00:00Z",
- * metadata: {}
- * }
- */
-
 model event_type {
   id          Int      @id @default(autoincrement())
-  name        String
+  name        String   @unique
   tags        String[]
   description String?
 
@@ -434,6 +423,7 @@ model notification_subscription {
   is_active      Boolean   @default(true)
   created_at     DateTime  @default(now()) @db.Timestamp(6)
   expires_at     DateTime? @db.Timestamp(6)
+  is_recurring   Boolean   @default(false)
   event_type_id  Int
   resource_id    String? // flexible, can be int or uuid
   resource_type  String?
