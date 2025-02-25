@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from urllib.parse import urljoin
-import json
 
 import requests
 from glom import glom, assign as glom_assign
@@ -128,12 +127,12 @@ def dataset_setter(dataset: dict):
 
 
 def get_all_datasets(
-        dataset_type=None,
-        name=None,
-        days_since_last_staged=None,
-        deleted=False,
-        archived=None,
-        bundle=False):
+    dataset_type=None,
+    name=None,
+    days_since_last_staged=None,
+    deleted=False,
+    archived=None,
+    bundle=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -167,9 +166,25 @@ def get_dataset(dataset_id: str,
         return dataset_getter(r.json())
 
 
+class DatasetAlreadyExistsError(Exception):
+    pass
+
+
 def create_dataset(dataset):
     with APIServerSession() as s:
         r = s.post('datasets', json=dataset_setter(dataset))
+        if r.status_code == 409:
+            raise DatasetAlreadyExistsError()
+        r.raise_for_status()
+        return r.json()
+
+
+def bulk_create_datasets(datasets):
+    with APIServerSession() as s:
+        # not using dataset_setter because each dataset only has name, type, and origin_path
+        r = s.post('datasets/bulk', json={
+            "datasets": datasets
+        })
         r.raise_for_status()
         return r.json()
 
