@@ -102,7 +102,7 @@
           </span>
         </div>
         <!-- show failure modes -->
-        <div class="flex gap-1">
+        <div class="">
           <va-tabs
             v-model="query_params.failure_mode"
             :vertical="!breakpoint_sm"

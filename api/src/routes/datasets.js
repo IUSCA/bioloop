@@ -1,6 +1,6 @@
 const fsPromises = require('fs/promises');
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Prisma } = require('@prisma/client');
 const createError = require('http-errors');
 const {
   query, param, body, checkSchema,
@@ -17,11 +17,14 @@ const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
+const logger = require('../services/logger');
 
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+});
 
 // stats - UI
 router.get(
@@ -209,7 +212,7 @@ router.get(
     query('archived').toBoolean().optional(),
     query('staged').toBoolean().optional(),
     query('type').isIn(config.dataset_types).optional(),
-    query('name').notEmpty().escape().optional(),
+    query('name').notEmpty().optional(),
     query('days_since_last_staged').isInt().toInt().optional(),
     query('bundle').optional().toBoolean(),
     query('created_at_start').isISO8601().optional(),
@@ -314,53 +317,90 @@ router.get(
   }),
 );
 
+function normalize_name(name) {
+  // replace all character other than a-z, 0-9, _ and - with -
+  // replace consecutive hyphens with one -
+
+  return (name || '')
+    .replaceAll(/[\W_]/g, '-')
+    .replaceAll(/-+/g, '-');
+}
+
+function createDataset(data) {
+  return prisma.$transaction(async (tx) => {
+    // find if a dataset with the same name and type already exists
+    const existingDataset = await tx.dataset.findFirst({
+      where: {
+        name: data.name,
+        type: data.type,
+        is_deleted: false,
+      },
+      select: {
+        id: true,
+      },
+    });
+    if (existingDataset) {
+      return;
+    }
+    // if it doesn't exist, create it
+    return tx.dataset.create({
+      data,
+    });
+  });
+}
+
 // create - worker
 router.post(
   '/',
   isPermittedTo('create'),
   validate([
+    body('name').notEmpty(),
+    body('type').isIn(config.get('dataset_types')),
+    body('origin_path').notEmpty(),
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
-    body('ingestion_space').optional().escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /*
     * #swagger.description = 'workflow_id is optional. If the request body has
-    * workflow_id,
-        a new relation is created between dataset and given workflow_id'
+    * workflow_id, a new relation is created between dataset and given workflow_id'
     */
-    const {
-      workflow_id, state, ingestion_space, data,
-    } = req.body;
 
-    const { origin_path } = data;
+    // gather non-null data to create a new dataset
+    const data = _.flow([
+      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size']),
+      _.omitBy(_.isNil),
+    ])(req.body);
 
-    // remove whitespaces from dataset name
-    data.name = data.name.split(' ').join('-');
-
+    const { ingestion_space } = req.body;
     if (ingestion_space) {
-      // if dataset's origin_path is a restricted for dataset creation, throw
-      // error
+      // if dataset's origin_path is a restricted for dataset creation, throw error
+      // TODO: config.restricted_ingestion_dirs[ingestion_space] should be an array of strings
       const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
-      const origin_path_is_restricted = restricted_ingestion_dirs.some((glob) => {
+      const is_origin_path_restricted = restricted_ingestion_dirs.some((glob) => {
         const isMatch = pm(glob);
-        const matches = isMatch(origin_path, glob);
+        const matches = isMatch(data.origin_path, glob);
         return matches.isMatch;
       });
-      if (origin_path_is_restricted) {
-        return next(createError.Forbidden());
+      if (is_origin_path_restricted) {
+        return next(createError.Forbidden({
+          message: `Ingestion space ${ingestion_space} is restricted for dataset creation`,
+        }));
       }
     }
 
+    // normalize name
+    data.name = normalize_name(data.name);
+
     // create workflow association
-    if (workflow_id) {
+    if (req.body.workflow_id) {
       data.workflows = {
         create: [
           {
-            id: workflow_id,
+            id: req.body.workflow_id,
           },
         ],
       };
@@ -370,19 +410,151 @@ router.post(
     data.states = {
       create: [
         {
-          state: state || 'REGISTERED',
+          state: req.body.state || 'REGISTERED',
         },
       ],
     };
 
-    // create dataset along with associations
-    const dataset = await prisma.dataset.create({
-      data,
-      include: {
-        ...CONSTANTS.INCLUDE_WORKFLOWS,
-      },
+    // idempotence: creates dataset or returns error 409 on repeated requests
+    // If many concurrent transactions are trying to create the same dataset, only one will succeed
+    // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
+    const dataset = await createDataset(data);
+
+    if (dataset) res.json(dataset);
+    else next(createError.Conflict('Unique constraint failed'));
+  }),
+);
+
+// create many - worker
+router.post(
+  '/bulk',
+  isPermittedTo('create'),
+  validate([
+    body('datasets').isArray({ min: 1, max: 100 }),
+    body('datasets.*.name').notEmpty(),
+    body('datasets.*.type').isIn(config.get('dataset_types')),
+    body('datasets.*.origin_path').notEmpty(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Create multiple datasets.'
+    /* #swagger.description =
+        This endpoint is used to create multiple datasets in a single request.
+        It is useful for bulk uploading datasets.
+    */
+
+    /* #swagger.requestBody = {
+        "description": "Array of datasets to be created",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "datasets": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": "string",
+                                    "type": "string",
+                                    "origin_path": "string"
+                                },
+                                "required": ["name", "type", "origin_path"]
+                            },
+                            "minItems": 1,
+                            "maxItems": 100
+                        }
+                    },
+                    "required": ["datasets"]
+                }
+            }
+        }
+    } */
+
+    /* #swagger.responses[200] = {
+        "description": "Array of datasets created",
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "created": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/components/schemas/Dataset"
+                            }
+                        },
+                        "conflicted": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": "string",
+                                    "type": "string"
+                                },
+                                "required": ["name", "type"]
+                            }
+                        },
+                        "errored": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": "string",
+                                    "type": "string"
+                                },
+                                "required": ["name", "type"]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } */
+
+    const data = req.body.datasets
+      .map((d) => {
+        const _d = _.pick(['name', 'type', 'origin_path'])(d);
+
+        // normalize name
+        _d.name = normalize_name(_d.name);
+
+        // add a state
+        _d.states = {
+          create: [
+            {
+              state: d.state || 'REGISTERED',
+            },
+          ],
+        };
+        return _d;
+      });
+
+    // create in separate transactions to avoid deadlocks
+    const results = await Promise.allSettled(data.map((d) => createDataset(d)));
+
+    // separate results into created and failed
+    const created = [];
+    const conflicted = [];
+    const errored = [];
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        if (result.value) created.push(result.value);
+        else conflicted.push(_.pick(['name', 'type'])(data[index]));
+      } else if (result.reason instanceof Prisma.PrismaClientKnownRequestError && result.reason?.code === 'P2002') {
+        // P2002 - Unique constraint failed
+        conflicted.push(_.pick(['name', 'type'])(data[index]));
+      } else {
+        logger.warn('Error creating dataset', JSON.stringify({ dataset: data[index], error: result.reason }));
+        errored.push(_.pick(['name', 'type'])(data[index]));
+      }
     });
-    res.json(dataset);
+    res.json({
+      created,
+      conflicted,
+      errored,
+    });
   }),
 );
 

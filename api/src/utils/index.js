@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const _ = require('lodash/fp');
+const { Prisma } = require('@prisma/client');
 
 function renameKey(oldKey, newKey) {
   return (obj) => {
@@ -231,6 +232,60 @@ function readUsersFromJSON(fname) {
   }
 }
 
+class TransactionRetryError extends Error {
+  constructor(maxRetries, message = 'Transaction failed after maximum retries') {
+    const _mesage = maxRetries ? `${message}. Maximum retries: ${maxRetries}` : message;
+    super(_mesage);
+    this.name = 'TransactionRetryError';
+  }
+}
+
+async function transactionWithRetry(
+  prisma,
+  statementsOrFn,
+  {
+    maxRetries = 5,
+    isolationLevel = Prisma.TransactionIsolationLevel.RepeatableRead,
+    ...kwargs
+  } = {},
+) {
+  let retries = 0;
+  const isFunction = typeof statementsOrFn === 'function';
+  const isArray = Array.isArray(statementsOrFn);
+
+  if (!isFunction && !isArray) {
+    throw new TypeError('Invalid transaction input. Must be a function or an array of statements.');
+  }
+  if (!prisma) {
+    throw new Error('Prisma client is not defined');
+  }
+  if (maxRetries < 1) {
+    throw new Error('maxRetries must be greater than 0');
+  }
+  while (retries < maxRetries) {
+    try {
+      if (isFunction) {
+        // Interactive transaction
+        // eslint-disable-next-line no-await-in-loop
+        return await prisma.$transaction(statementsOrFn, { isolationLevel, ...kwargs });
+      }
+      // Batch transaction
+      // eslint-disable-next-line no-await-in-loop
+      return await prisma.$transaction(statementsOrFn, { isolationLevel, ...kwargs });
+    } catch (error) {
+      if (error?.code === 'P2034') {
+        // P2034: "Transaction failed due to a write conflict or a deadlock. Please retry your transaction"
+        console.warn(`Transaction failed with error code P2034. Retrying (${retries + 1}/${maxRetries})...`);
+        retries += 1;
+      } else {
+        throw error;
+      }
+    }
+  }
+  // if we reach here, it means we have exhausted all retries
+  throw new TransactionRetryError(maxRetries);
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -242,4 +297,6 @@ module.exports = {
   numericStringsToNumbers,
   decodeJWT,
   readUsersFromJSON,
+  transactionWithRetry,
+  TransactionRetryError,
 };
