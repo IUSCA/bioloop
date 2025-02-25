@@ -480,6 +480,29 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+function createDataset(data) {
+  return prisma.$transaction(async (tx) => {
+    // find if a dataset with the same name and type already exists
+    const existingDataset = await tx.dataset.findFirst({
+      where: {
+        name: data.name,
+        type: data.type,
+        is_deleted: false,
+      },
+      select: {
+        id: true,
+      },
+    });
+    if (existingDataset) {
+      return;
+    }
+    // if it doesn't exist, create it
+    return tx.dataset.create({
+      data,
+    });
+  });
+}
+
 module.exports = {
   soft_delete,
   get_dataset,
@@ -489,4 +512,5 @@ module.exports = {
   files_ls,
   search_files,
   add_files,
+  createDataset,
 };

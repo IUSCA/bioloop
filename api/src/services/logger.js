@@ -8,6 +8,7 @@ const logger = winston.createLogger({
       format: 'YYYY-MM-DD HH:mm:ss',
     }),
     // format.json(),
+    // eslint-disable-next-line max-len
     format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}${info.splat !== undefined ? `${info.splat}` : ' '}`),
   ),
   transports: [
