@@ -182,5 +182,17 @@
       "enabled_for_roles": ["admin"]
     },
     "downloads": true
+  },
+  "queue": {
+    "url": "QUEUE_URL",
+    "username": "QUEUE_USERNAME",
+    "password": "QUEUE_PASSWORD"
+  },
+  "notifications": {
+    "event_queue": "events",
+    "notification_queues": {
+      "email": "email_notifications",
+      "app": "app_notifications"
+    }
   }
 }

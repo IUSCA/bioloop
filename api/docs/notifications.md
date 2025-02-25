@@ -1,7 +1,6 @@
-Based on out conversation, write up the requirements for this feature from system behavior perspective without delving into implementation details. 
-
-
 ### **Requirements for Notification Feature**
+
+<img src="assets/notifications.png" >
 
 #### **Overview**
 The notification feature is designed to provide users with alerts regarding important events within the system, including both user-specific events (e.g., dataset staging completion) and system-wide notifications (e.g., scheduled maintenance announcements). Users can opt-in to receive notifications for specific events and delivery methods while having the flexibility to opt-out of notifications for particular events.

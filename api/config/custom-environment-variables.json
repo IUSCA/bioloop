@@ -61,5 +61,10 @@
   },
   "restricted_ingestion_dirs": {
     "slateScratch": "SCRATCH_INGESTION_RESTRICTED_DIRS"
+  },
+  "queue": {
+    "url": "QUEUE_URL",
+    "username": "QUEUE_USERNAME",
+    "password": "QUEUE_PASSWORD"
   }
 }
