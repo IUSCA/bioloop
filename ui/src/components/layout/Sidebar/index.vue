@@ -18,7 +18,7 @@
     </div>
 
     <!-- admin sidebar items   -->
-    <div v-if="auth.canAdmin && admin_items.length > 0">
+    <div v-if="auth.canAdmin">
       <SidebarItems :items="admin_items" :isActive="isActive" />
       <va-sidebar-item href="/grafana/dashboards" target="_blank">
         <va-sidebar-item-content>

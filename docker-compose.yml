@@ -1,4 +1,3 @@
-version: "3"
 name: bioloop
 services:
   ui:
@@ -74,11 +73,15 @@ services:
   nginx:
     image: nginx:1.25
     ports:
-        - 8000:8000
+        - 80:80
+        - 443:443
     volumes:
-        - ./nginx/src:/usr/share/nginx/html
-        - ./nginx/conf:/etc/nginx/conf.d
-        - ./data:/opt/sca/data
+        - ./nginx/src:/usr/share/nginx/html     # Mount for Nginx static files
+        - ./nginx/conf:/etc/nginx/conf.d        # Mount for Nginx configuration files
+        - ./data:/opt/sca/data:ro               # Mount for data directory
+        - ./ui/dist:/opt/sca/ui:ro              # Mount for UI static files
+        - ./nginx/logs:/var/log/nginx           # Mount for Nginx logs
+        - ./ui/.cert:/etc/nginx/certs:ro       # Mount for SSL certificates
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
 
@@ -99,7 +102,7 @@ services:
     image: prom/prometheus
     volumes:
       - ./metrics/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./metrics/prometheus/data:/prometheus  # Mount the volume for Prometheus data
+      - prometheus_data:/prometheus  # Mount the volume for Prometheus data
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     # ports:
@@ -108,7 +111,7 @@ services:
   grafana:
     image: grafana/grafana
     volumes:
-      - ./metrics/grafana/data:/var/lib/grafana         # Mount for Grafana data (dashboards, plugins)
+      - grafana_data:/var/lib/grafana                   # Mount for Grafana data (dashboards, plugins)
       - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
       - ./api/keys/auth.pub:/etc/grafana/auth.pub
     depends_on:
@@ -127,3 +130,6 @@ volumes:
 
   api_modules:
     external: false
+
+  grafana_data:
+  prometheus_data:
