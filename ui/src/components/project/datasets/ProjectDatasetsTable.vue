@@ -151,6 +151,18 @@
         <div>on {{ datetime.date(rowData.assigned_at) }}</div>
       </div>
     </template>
+
+    <template #cell(share)="{ rowData }">
+      <div class="">
+        <va-button
+          class="shadow"
+          preset="primary"
+          color="info"
+          icon="share"
+          @click="openModalToShareProject(rowData)"
+        />
+      </div>
+    </template>
   </va-data-table>
 
   <Pagination
@@ -169,6 +181,12 @@
   <StageDatasetModal
     ref="stageModal"
     :dataset="datasetToStage"
+    @update="fetch_and_update_dataset"
+  />
+
+  <ShareDatasetModal
+    ref="shareModal"
+    :dataset="datasetToShare"
     @update="fetch_and_update_dataset"
   />
 </template>
@@ -203,6 +221,14 @@ const props = defineProps({
 const emit = defineEmits(["datasets-retrieved"]);
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
+
+const shareModal = ref(null);
+const datasetToShare = ref({});
+
+function openModalToShareProject(dataset) {
+  datasetToShare.value = dataset;
+  shareModal.value.show();
+}
 
 const pageSize = ref(10);
 const total_results = ref(0);
@@ -410,6 +436,7 @@ const columns = computed(() => [
   { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
   { key: "download", width: "100px", thAlign: "center", tdAlign: "center" },
   // { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
+  { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
   {
     key: "type",
     sortable: true,
