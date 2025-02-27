@@ -40,8 +40,18 @@ def process_and_register_subdirectories(dir_path: Path,
                         shutil.copytree(item, new_path)
                         print(f"Copied and renamed: {item.name} -> {new_name}")
                     else:  # move
-                        item.rename(new_path)
-                        print(f"Renamed: {item.name} -> {new_name}")
+                        # First, create a copy
+                        temp_copy = dir_path / f"temp_{item.name}"
+                        shutil.copytree(item, temp_copy)
+                        print(f"Created temporary copy: {item.name} -> temp_{item.name}")
+
+                        # Then, rename the copy
+                        temp_copy.rename(new_path)
+                        print(f"Renamed temporary copy: temp_{item.name} -> {new_name}")
+
+                        # Finally, delete the original
+                        shutil.rmtree(item)
+                        print(f"Deleted original directory: {item.name}")
 
                     register_cmd = [
                         "python",
@@ -56,7 +66,9 @@ def process_and_register_subdirectories(dir_path: Path,
                     if copy:
                         print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                     else:  # move
-                        print(f"Dry run: Would have renamed {item.name} to {new_name}")
+                        print(f"Dry run: Would have copied {item.name} to temp_{item.name}")
+                        print(f"Dry run: Would have renamed temp_{item.name} to {new_name}")
+                        print(f"Dry run: Would have deleted original directory {item.name}")
                     print(f"Dry run: Would have registered: {new_name}")
             except OSError as e:
                 print(f"Error processing {item.name}: {e}")
