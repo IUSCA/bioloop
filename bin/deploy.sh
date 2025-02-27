@@ -57,3 +57,7 @@ sudo docker compose -f "docker-compose-prod.yml" up -d postgres
 
 # recreates and starts api and ui
 sudo docker compose -f "docker-compose-prod.yml" up -d --force-recreate ui api
+
+# start grafana if it is not running
+# this will also start prometheus and postres-exporter if they are not running
+sudo docker compose -f "docker-compose-prod.yml" up -d grafana

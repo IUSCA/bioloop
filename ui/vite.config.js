@@ -1,16 +1,16 @@
-import { fileURLToPath, URL } from "node:url";
 import fs from "fs";
+import { fileURLToPath, URL } from "node:url";
 
-import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
-import Pages from "vite-plugin-pages";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
+import { defineConfig, loadEnv } from "vite";
+import Pages from "vite-plugin-pages";
 import Layouts from "vite-plugin-vue-layouts";
 // import basicSsl from "@vitejs/plugin-basic-ssl";
-import Icons from "unplugin-icons/vite";
-import IconsResolver from "unplugin-icons/resolver";
 import { visualizer } from "rollup-plugin-visualizer";
+import IconsResolver from "unplugin-icons/resolver";
+import Icons from "unplugin-icons/vite";
 
 // https://vitejs.dev/config/
 // eslint-disable-next-line no-unused-vars
@@ -98,6 +98,27 @@ export default defineConfig(({ command, mode }) => {
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, ""),
+        },
+        "/grafana": {
+          target: env.VITE_GRAFANA_REDIRECT_URL,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/grafana/, ""),
+          // retrieve the grafana_token from cookie and set it as a header
+          // X-JWT-Assertion
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq, req) => {
+              const grafana_token = req?.headers?.cookie
+                ?.split("; ")
+                ?.find((row) => row.startsWith("grafana_token"))
+                ?.split("=")?.[1];
+              if (!grafana_token) {
+                return;
+              }
+              proxyReq.setHeader("X-JWT-Assertion", grafana_token);
+              proxyReq.setHeader("X-Forwarded-Proto", "https");
+            });
+          },
         },
       },
     },
