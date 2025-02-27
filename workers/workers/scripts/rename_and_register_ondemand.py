@@ -4,6 +4,16 @@ import shutil
 import subprocess
 
 
+def delete_existing_renamed_dirs(dir_path: Path, project_name: str, dir_name: str, dry_run: bool):
+    for item in dir_path.iterdir():
+        if item.is_dir() and item.name.startswith(f"{project_name}-{dir_name}-"):
+            if not dry_run:
+                shutil.rmtree(item)
+                print(f"Deleted existing renamed directory: {item.name}")
+            else:
+                print(f"Dry run: Would have deleted existing renamed directory: {item.name}")
+
+
 def process_and_register_subdirectories(dir_path: Path,
                                         project_name: str,
                                         copy: bool = True,
@@ -15,24 +25,36 @@ def process_and_register_subdirectories(dir_path: Path,
     dir_name = dir_path.name
     print(f"Processing subdirectories in {dir_path.name}")
 
+    if move:
+        delete_existing_renamed_dirs(dir_path, project_name, dir_name, dry_run)
+
+    renamed_dir = dir_path / 'renamed_directories'
+    if renamed_dir.exists():
+        if not dry_run:
+            shutil.rmtree(renamed_dir)
+            print(f"Deleted existing 'renamed_directories' folder")
+        else:
+            print(f"Dry run: Would have deleted existing 'renamed_directories' folder")
+
     if copy:
-        renamed_dir = dir_path / 'renamed_directories'
         if not dry_run:
             renamed_dir.mkdir(exist_ok=True)
+        else:
+            print(f"Dry run: Would have created 'renamed_directories' folder")
 
     for item in dir_path.iterdir():
-        if item.is_dir() and item.name != 'renamed_directories':
+        if item.is_dir() and item.name != 'renamed_directories' and not item.name.startswith(
+                f"{project_name}-{dir_name}-"):
             print(f"Processing directory: {item.name}")
             new_name = f"{project_name}-{dir_name}-{item.name}"
 
             if copy:
                 new_path = renamed_dir / new_name
-                print(f"Original path: {item}")
-                print(f"New name: {new_path}")
             else:  # move
                 new_path = dir_path / new_name
-                print(f"Original path: {item}")
-                print(f"New name: {new_path}")
+
+            print(f"Original path: {item}")
+            print(f"New name: {new_path}")
 
             try:
                 if not dry_run:
