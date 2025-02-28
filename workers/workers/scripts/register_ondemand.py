@@ -17,6 +17,8 @@ class Registration:
 
     def register_candidate(self, dataset_name, dataset_path):
         print(f'registering {self.dataset_type} {dataset_name}')
+        print(f'Dataset path: {dataset_path}')
+
         wf = Workflow(celery_app=celery_app, **self.wf_body)
         dataset_payload = {
             'name': dataset_name,
@@ -24,6 +26,9 @@ class Registration:
             'workflow_id': wf.workflow['_id'],
             'origin_path': dataset_path
         }
+
+        print(f'Payload: {dataset_payload}')
+
         # HTTP POST
         created_dataset = api.create_dataset(dataset_payload)
         wf.start(created_dataset['id'])
@@ -50,7 +55,7 @@ if __name__ == '__main__':
 
     print(f'Dataset type: {dataset_type}')
     print(f'Dataset name: {dataset_name}')
-    print(f'Dataset path: {dataset_path}')
+    print(f'Dataset path: {str(dataset_path)}')
 
     if not dataset_path.exists():
         print(f'{dataset_path} does not exist')

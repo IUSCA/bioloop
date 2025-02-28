@@ -7,8 +7,7 @@ import os
 import hashlib
 from typing import Set, List, Tuple
 
-import api
-
+import workers.api as api
 
 def calculate_file_hash(filepath: str, block_size: int = 65536) -> str:
     """Calculate the MD5 hash of a file."""
@@ -86,9 +85,10 @@ def register_data_product(new_name: str, new_path: Path) -> None:
     print(f"Registered: {new_name}")
 
 
-def process_and_register_subdirectories(dir_path: Path,
+def process_and_register_subdirectories(dir_path: str,
                                         project_name: str,
                                         dry_run: bool = True) -> None:
+    dir_path = Path(dir_path)
     dir_name: str = dir_path.name
     print(f"Processing subdirectories in {dir_path.name}")
 
