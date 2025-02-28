@@ -3,12 +3,14 @@ import fire
 import shutil
 import subprocess
 import json
-import filecmp
 import os
 import hashlib
+from typing import Set, List, Tuple
+
+import api
 
 
-def calculate_file_hash(filepath, block_size=65536): # block_size = 64 KB
+def calculate_file_hash(filepath: str, block_size: int = 65536) -> str:
     """Calculate the MD5 hash of a file."""
     file_hash = hashlib.md5()
     with open(filepath, "rb") as f:
@@ -21,8 +23,8 @@ def directories_equal(dir1: Path, dir2: Path) -> bool:
     """
     Compare two directories by calculating and comparing checksums of all files.
     """
-    dir1_contents = list(os.walk(dir1))
-    dir2_contents = list(os.walk(dir2))
+    dir1_contents: List[Tuple[str, List[str], List[str]]] = list(os.walk(dir1))
+    dir2_contents: List[Tuple[str, List[str], List[str]]] = list(os.walk(dir2))
 
     if len(dir1_contents) != len(dir2_contents):
         return False
@@ -39,8 +41,8 @@ def directories_equal(dir1: Path, dir2: Path) -> bool:
             if f1 != f2:
                 return False
 
-            file1 = os.path.join(path1, f1)
-            file2 = os.path.join(path2, f2)
+            file1: str = os.path.join(path1, f1)
+            file2: str = os.path.join(path2, f2)
 
             # Compare file sizes first (quick check)
             if os.path.getsize(file1) != os.path.getsize(file2):
@@ -52,25 +54,28 @@ def directories_equal(dir1: Path, dir2: Path) -> bool:
 
     return True
 
-def load_processed_dirs(dir_path: Path) -> set:
-    processed_file = dir_path / '.processed_dirs.json'
+
+def load_processed_dirs(dir_path: Path) -> Set[str]:
+    processed_file: Path = dir_path / '.processed_dirs.json'
     if processed_file.exists():
         with open(processed_file, 'r') as f:
             return set(json.load(f))
     return set()
 
-def save_processed_dirs(dir_path: Path, processed_dirs: set):
-    processed_file = dir_path / '.processed_dirs.json'
+
+def save_processed_dirs(dir_path: Path, processed_dirs: Set[str]) -> None:
+    processed_file: Path = dir_path / '.processed_dirs.json'
     with open(processed_file, 'w') as f:
         json.dump(list(processed_dirs), f)
 
-def is_registered(new_name: str, new_path: Path) -> bool:
-    # TODO: Implement actual registration check
-    # This should check if the directory is already registered in your system
-    return False
 
-def register_data_product(new_name: str, new_path: Path):
-    register_cmd = [
+def is_data_product_registered(new_name: str) -> bool:
+    matching_datasets = api.get_all_datasets(dataset_type='DATA_PRODUCT', name=new_name)
+    return len(matching_datasets) > 0
+
+
+def register_data_product(new_name: str, new_path: Path) -> None:
+    register_cmd: List[str] = [
         "python",
         str(Path(__file__).parent / "register_ondemand.py"),
         "--data-product",
@@ -80,55 +85,31 @@ def register_data_product(new_name: str, new_path: Path):
     subprocess.run(register_cmd, check=True)
     print(f"Registered: {new_name}")
 
+
 def process_and_register_subdirectories(dir_path: Path,
                                         project_name: str,
-                                        copy: bool = True,
-                                        move: bool = False,
-                                        dry_run: bool = True):
-    if not (copy ^ move):  # Ensure exactly one of copy or move is True
-        raise ValueError("Exactly one of --copy or --move must be specified")
-
-    dir_name = dir_path.name
+                                        dry_run: bool = True) -> None:
+    dir_name: str = dir_path.name
     print(f"Processing subdirectories in {dir_path.name}")
 
-    processed_dirs = load_processed_dirs(dir_path)
-    renamed_dirs = []  # Keep track of renamed directories for potential rollback
+    processed_dirs: Set[str] = load_processed_dirs(dir_path)
+    renamed_dirs: List[Tuple[Path, Path]] = []  # Keep track of renamed directories for potential rollback
 
-    renamed_dir = dir_path / 'renamed_directories'
-    if copy:
-        if renamed_dir.exists():
-            if not dry_run:
-                shutil.rmtree(renamed_dir)
-                print(f"Deleted existing 'renamed_directories' folder")
-            else:
-                print(f"Dry run: Would have deleted existing 'renamed_directories' folder")
-        if not dry_run:
-            renamed_dir.mkdir(exist_ok=True)
-        else:
-            print(f"Dry run: Would have created 'renamed_directories' folder")
+    renamed_dirs_parent: Path = dir_path / 'renamed_directories'
 
     try:
         for item in dir_path.iterdir():
             if item.is_dir() and item.name != 'renamed_directories':
-                new_name = f"{project_name}-{dir_name}-{item.name}"
-                if copy:
-                    new_path = renamed_dir / new_name
-                else:  # move
-                    new_path = dir_path / new_name
+                new_name: str = f"{project_name}-{dir_name}-{item.name}"
+                new_path: Path = renamed_dirs_parent / new_name
 
                 if new_path.exists():
-                    # Check if the copy/move operation was completed successfully
-                    if directories_equal(item, new_path):
-                        if is_registered(new_name, new_path):
-                            print(f"Directory already renamed and registered: {new_name}")
-                            processed_dirs.add(item.name)
-                            continue
-                        else:
-                            print(f"Directory renamed but not registered: {new_name}")
-                            # TODO - Proceed with registration
+                    if is_data_product_registered(new_name):
+                        print(f"Directory already renamed and registered: {new_name}")
+                        processed_dirs.add(item.name)
+                        continue
                     else:
-                        print(f"Incomplete copy/move detected for {new_name}. Retrying operation.")
-                        # TODO - We'll redo the copy/move operation
+                        print(f"Directory renamed but not registered: {new_name}")
                 elif item.name in processed_dirs:
                     print(f"Skipping already processed directory: {item.name}")
                     continue
@@ -138,44 +119,68 @@ def process_and_register_subdirectories(dir_path: Path,
                 print(f"New name: {new_path}")
 
                 if not dry_run:
-                    if copy:
-                        shutil.copytree(item, new_path, dirs_exist_ok=True)
-                        print(f"Copied and renamed: {item.name} -> {new_name}")
-                    else:  # move
-                        if new_path.exists():
-                            shutil.rmtree(new_path)
-                        shutil.move(item, new_path)
-                        print(f"Moved and renamed: {item.name} -> {new_name}")
-                        renamed_dirs.append((item, new_path))
+                    if new_path.exists():
+                        # Remove potentially incomplete copies generated by the previous run
+                        shutil.rmtree(new_path)
+                    shutil.copytree(item, new_path)
+                    print(f"Copied and renamed: {item.name} -> {new_name}")
+                    renamed_dirs.append((item, new_path))
 
-                    if not is_registered(new_name, new_path):
+                    if not is_data_product_registered(new_name):
                         register_data_product(new_name, new_path)
                     else:
                         print(f"Already registered: {new_name}")
 
                     processed_dirs.add(item.name)
                 else:
-                    if copy:
-                        print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
-                    else:
-                        print(f"Dry run: Would have moved and renamed {item.name} to {new_name}")
+                    print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                     print(f"Dry run: Would have registered: {new_name}")
 
     except Exception as e:
         print(f"Error occurred during processing: {e}")
-        if not dry_run and move:
-            print("Rolling back all renamed directories...")
+        if not dry_run:
+            print("Rolling back renamed directories from this run...")
             for original, renamed in renamed_dirs:
                 if renamed.exists():
-                    shutil.move(renamed, original)
-                    print(f"Reverted {renamed.name} back to {original.name}")
-            # Clear the processed_dirs as we've reverted all changes
-            processed_dirs.clear()
+                    shutil.rmtree(renamed)
+                    print(f"Deleted renamed directory: {renamed}")
+                processed_dirs.discard(original.name)
             save_processed_dirs(dir_path, processed_dirs)
-        print("Rolled back all changes")
+        print("Rolled back changes from this run")
         raise  # Re-raise the exception after rollback
 
     print("Processing and registration complete.")
+    save_processed_dirs(dir_path, processed_dirs)
 
+
+"""
+This script processes subdirectories within a given directory, renames them according to
+a specific format, and registers them as data products.
+
+What it does:
+1. Processes all subdirectories within the specified DIR_PATH.
+2. Renames directories to the format: {PROJECT_NAME}-{DIR_NAME}-{SUBDIRECTORY_NAME}.
+3. Copies renamed directories to a new 'renamed_directories' folder.
+4. Registers each new directory as a data product via the register_ondemand script.
+5. Maintains a record of processed directories to avoid reprocessing.
+
+Usage:
+python -m workers.scripts.rename_and_register_ondemand [OPTIONS] DIR_PATH PROJECT_NAME
+
+Arguments:
+DIR_PATH: The path to the directory containing subdirectories to process.
+PROJECT_NAME: The name of the project to use in the new directory names.
+
+Options:
+--dry-run: If set to True (default), the script simulates the process without making
+           any actual changes. Set to False to perform actual renaming and registration.
+
+Example usage:
+1. Dry run (simulate without changes):
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz
+
+2. Actually process and register:
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz --dry-run=False
+"""
 if __name__ == "__main__":
     fire.Fire(process_and_register_subdirectories)
