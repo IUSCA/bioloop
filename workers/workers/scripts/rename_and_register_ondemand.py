@@ -135,8 +135,9 @@ def process_and_register_subdirectories(dir_path: str,
                         continue
                     else:
                         print(f"Directory renamed but not registered: {new_name}")
-                        # Delete the subdirectory that is renamed, but not registered, since this could potentially be
-                        # an incomplete or corrupted subdirectory from a previous run.
+                        # Delete the subdirectory that is renamed, but not registered, since this
+                        # could potentially be an incomplete or corrupted renamed subdirectory
+                        # from a previous run.
                         shutil.rmtree(new_path)
                 elif item.name in processed_dirs:
                     print(f"Skipping already processed directory: {item.name}")
@@ -168,6 +169,14 @@ def process_and_register_subdirectories(dir_path: str,
 
     if all_subdirs_processed(dir_path, processed_dirs):
         delete_processed_dirs_file(dir_path)
+
+        # Once all subdirectories have been successfully processed,
+        # delete the `renamed_directories` directory
+        if renamed_dirs_parent.exists() and not dry_run:
+            shutil.rmtree(renamed_dirs_parent)
+            print(f"Deleted renamed_directories folder: {renamed_dirs_parent}")
+        elif dry_run:
+            print(f"Dry run: Would have deleted renamed_directories folder: {renamed_dirs_parent}")
         print("All subdirectories processed. Deleted .processed_dirs.json file.")
     else:
         print("Some subdirectories are still unprocessed. Keeping .processed_dirs.json file for the next run.")
