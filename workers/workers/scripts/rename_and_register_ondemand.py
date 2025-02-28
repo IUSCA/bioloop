@@ -9,6 +9,7 @@ from typing import Set, List, Tuple
 
 import workers.api as api
 
+
 def calculate_file_hash(filepath: str, block_size: int = 65536) -> str:
     """Calculate the MD5 hash of a file."""
     file_hash = hashlib.md5()
@@ -47,13 +48,14 @@ def directories_equal(dir1: Path, dir2: Path) -> bool:
             if os.path.getsize(file1) != os.path.getsize(file2):
                 return False
 
-            # Compare checksums
+            # If file sizes are same, compare checksums
             if calculate_file_hash(file1) != calculate_file_hash(file2):
                 return False
 
     return True
 
 
+# Get directories on which registration has been initiated
 def load_processed_dirs(dir_path: Path) -> Set[str]:
     processed_file: Path = dir_path / '.processed_dirs.json'
     if processed_file.exists():
@@ -62,10 +64,18 @@ def load_processed_dirs(dir_path: Path) -> Set[str]:
     return set()
 
 
+# Set directories on which registration has been initiated
 def save_processed_dirs(dir_path: Path, processed_dirs: Set[str]) -> None:
     processed_file: Path = dir_path / '.processed_dirs.json'
     with open(processed_file, 'w') as f:
         json.dump(list(processed_dirs), f)
+
+
+def delete_processed_dirs_file(dir_path: Path) -> None:
+    processed_file: Path = dir_path / '.processed_dirs.json'
+    if processed_file.exists():
+        processed_file.unlink()
+        print(f"Deleted {processed_file}")
 
 
 def is_data_product_registered(new_name: str) -> bool:
@@ -73,6 +83,7 @@ def is_data_product_registered(new_name: str) -> bool:
     return len(matching_datasets) > 0
 
 
+# Initiates the registration of a directory as a Data Product, via the `register_ondemand.py` script
 def register_data_product(new_name: str, new_path: Path) -> None:
     register_cmd: List[str] = [
         "python",
@@ -103,6 +114,7 @@ def process_and_register_subdirectories(dir_path: str,
                 new_name: str = f"{project_name}-{dir_name}-{item.name}"
                 new_path: Path = renamed_dirs_parent / new_name
 
+                # Check if the renamed directory already exists (could be from a previous run).
                 if new_path.exists():
                     if is_data_product_registered(new_name):
                         print(f"Directory already renamed and registered: {new_name}")
@@ -151,6 +163,9 @@ def process_and_register_subdirectories(dir_path: str,
 
     print("Processing and registration complete.")
     save_processed_dirs(dir_path, processed_dirs)
+
+    # If the script completes successfully, delete the processed directories file
+    delete_processed_dirs_file(dir_path)
 
 
 """
