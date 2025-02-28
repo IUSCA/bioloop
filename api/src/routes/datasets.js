@@ -9,6 +9,7 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 const pm = require('picomatch');
+const he = require('he');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -333,10 +334,11 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, ingestion_space, data,
+      state, ingestion_space, data,
     } = req.body;
 
-    const { origin_path } = data;
+    let { origin_path, workflow_id } = data;
+    origin_path = he.decode(origin_path);
 
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('-');
@@ -365,7 +367,6 @@ router.post(
         ],
       };
     }
-
     // add a state
     data.states = {
       create: [
@@ -374,7 +375,6 @@ router.post(
         },
       ],
     };
-
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
       data,
