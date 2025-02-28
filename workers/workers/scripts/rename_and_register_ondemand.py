@@ -122,7 +122,12 @@ def process_and_register_subdirectories(dir_path: str,
                 if new_path.exists():
                     if is_data_product_registered(new_name):
                         if not directories_equal(item, new_path):
-                            print(f"Found existing Data Product with name {new_name}, but the contents of the original directory {item.name} have been modified since registration. This subdirectory will not be registered again.")
+                            print(f"""
+                            Found existing Data Product with name {new_name}, but the contents of the
+                            original subdirectory {item.name} do not match the contents of subdirectory
+                            {new_name}. One of these subdirectories may have been modified since
+                            registration. This subdirectory will not be registered again.
+                            """)
                         else:
                             print(f"Directory already renamed and registered: {new_name}")
                         processed_dirs.add(item.name)
@@ -130,6 +135,8 @@ def process_and_register_subdirectories(dir_path: str,
                         continue
                     else:
                         print(f"Directory renamed but not registered: {new_name}")
+                        # Delete the subdirectory that is renamed, but not registered, since this could potentially be
+                        # an incomplete or corrupted subdirectory from a previous run.
                         shutil.rmtree(new_path)
                 elif item.name in processed_dirs:
                     print(f"Skipping already processed directory: {item.name}")
@@ -140,8 +147,6 @@ def process_and_register_subdirectories(dir_path: str,
 
                 if not is_data_product_registered(new_name):
                     try:
-                        # if item.name == '1st':
-                        #     raise Exception(f"Error occurred during registration of {new_name}")
                         register_data_product(new_name, new_path)
                         processed_dirs.add(item.name)
                         save_processed_dirs(dir_path, processed_dirs)
