@@ -29,8 +29,6 @@ class Registration:
             }
         }
 
-        print(f'Payload: {dataset_payload}')
-
         # HTTP POST
         created_dataset = api.create_dataset(dataset_payload)
         wf.start(created_dataset['id'])
@@ -42,7 +40,6 @@ if __name__ == '__main__':
         description='Register a dataset - kicks off a full workflow')
     parser.add_argument('dataset_name', type=str, help='Dataset Name')
     parser.add_argument('dataset_path', type=str, help='Dataset Path')
-    # parser.add_argument('dataset_path', type=str, help='Dataset Path')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-r', '--raw-data', action='store_true', help="register raw_data dataset")
     group.add_argument('-d', '--data-product', action='store_true', help="register data_product dataset")
@@ -52,7 +49,6 @@ if __name__ == '__main__':
     dataset_type = 'RAW_DATA' if args.raw_data else 'DATA_PRODUCT'
 
     dataset_path = Path(args.dataset_path)
-    # dataset_path = Path(config['registration'][dataset_type]['source_dir']) / dataset_name
     dataset_name = args.dataset_name
 
     print(f'Dataset type: {dataset_type}')
