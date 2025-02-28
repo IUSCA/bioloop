@@ -9,6 +9,7 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 const pm = require('picomatch');
+const he = require('he');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -323,8 +324,16 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('ingestion_space').optional().escape().notEmpty(),
+    body('workflow_id').optional().escape().notEmpty(),
+    body('state').optional().escape().notEmpty(),
+    body('origin_path').escape().notEmpty(),
+    body('type').escape().notEmpty(),
+    body('name').escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
+    console.log('body')
+    console.log(req.body)
+
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /*
@@ -333,13 +342,15 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, ingestion_space, data,
+      workflow_id, state, ingestion_space, name, origin_path, type
     } = req.body;
 
-    const { origin_path } = data;
+    const data = {}
 
     // remove whitespaces from dataset name
-    data.name = data.name.split(' ').join('-');
+    data.name = name.split(' ').join('-');
+    data.type = type;
+    data.origin_path = he.decode(origin_path); // remove HTML entity encodings
 
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw
@@ -374,6 +385,9 @@ router.post(
         },
       ],
     };
+
+    console.log('data')
+    console.log(data)
 
     // create dataset along with associations
     const dataset = await prisma.dataset.create({

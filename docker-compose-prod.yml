@@ -31,6 +31,13 @@ services:
     networks:
       network:
         ipv4_address: 172.19.0.2
+    entrypoint:
+      - sh
+      - -c
+      - |
+        npm install \
+        && npx prisma generate client \
+        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
 
 
   postgres:
