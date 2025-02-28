@@ -386,9 +386,6 @@ router.post(
       ],
     };
 
-    console.log('data')
-    console.log(data)
-
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
       data,
