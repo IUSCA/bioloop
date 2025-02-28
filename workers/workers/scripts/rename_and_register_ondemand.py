@@ -168,9 +168,34 @@ def process_and_register_subdirectories(dir_path: str,
         print("Some subdirectories are still unprocessed. Keeping .processed_dirs.json file for the next run.")
 
 
-if __name__ == "__main__":
-    fire.Fire(process_and_register_subdirectories)
+"""
+This script processes subdirectories within a given directory, renames them according to
+a specific format, and registers them as data products.
 
+What it does:
+1. Processes all subdirectories within the specified DIR_PATH.
+2. Renames directories to the format: {PROJECT_NAME}-{DIR_NAME}-{SUBDIRECTORY_NAME}.
+3. Copies renamed directories to a new 'renamed_directories' folder.
+4. Registers each new directory as a data product via the register_ondemand script.
+5. Maintains a record of processed directories to avoid reprocessing.
 
+Usage:
+python -m workers.scripts.rename_and_register_ondemand [OPTIONS] DIR_PATH PROJECT_NAME
+
+Arguments:
+DIR_PATH: The path to the directory containing subdirectories to process.
+PROJECT_NAME: The name of the project to use in the new directory names.
+
+Options:
+--dry-run: If set to True (default), the script simulates the process without making
+           any actual changes. Set to False to perform actual renaming and registration.
+
+Example usage:
+1. Dry run (simulate without changes):
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz
+
+2. Actually process and register:
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz --dry-run=False
+"""
 if __name__ == "__main__":
     fire.Fire(process_and_register_subdirectories)
