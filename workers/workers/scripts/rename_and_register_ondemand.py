@@ -10,6 +10,12 @@ from typing import Set, List, Tuple
 import workers.api as api
 
 
+def all_subdirs_processed(dir_path: Path, processed_dirs: Set[str]) -> bool:
+    """Check if all subdirectories (excluding 'renamed_directories') have been processed."""
+    all_subdirs = {item.name for item in dir_path.iterdir() if item.is_dir() and item.name != 'renamed_directories'}
+    return all_subdirs.issubset(processed_dirs)
+
+
 def calculate_file_hash(filepath: str, block_size: int = 65536) -> str:
     """Calculate the MD5 hash of a file."""
     file_hash = hashlib.md5()
@@ -120,6 +126,7 @@ def process_and_register_subdirectories(dir_path: str,
                         else:
                             print(f"Directory already renamed and registered: {new_name}")
                         processed_dirs.add(item.name)
+                        save_processed_dirs(dir_path, processed_dirs)
                         continue
                     else:
                         print(f"Directory renamed but not registered: {new_name}")
@@ -137,26 +144,32 @@ def process_and_register_subdirectories(dir_path: str,
                         #     raise Exception(f"Error occurred during registration of {new_name}")
                         register_data_product(new_name, new_path)
                         processed_dirs.add(item.name)
-                        # raise Exception(f"Error occurred during registration of {new_name}")
+                        save_processed_dirs(dir_path, processed_dirs)
                     except Exception as e:
                         print(f"Error occurred during registration of {new_name}: {e}")
                         shutil.rmtree(new_path)
                         print(f"Deleted renamed directory due to registration failure: {new_path}")
-                        # Remove the directory from processed_dirs if it was added,
-                        # so it can be processed in the next run
                         processed_dirs.discard(item.name)
+                        save_processed_dirs(dir_path, processed_dirs)
                 else:
                     print(f"Already registered: {new_name}")
                     processed_dirs.add(item.name)
+                    save_processed_dirs(dir_path, processed_dirs)
             else:
                 print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                 print(f"Dry run: Would have registered: {new_name}")
 
     print("Processing and registration complete.")
-    save_processed_dirs(dir_path, processed_dirs)
 
-    # If the script completes successfully, delete the processed directories file
-    delete_processed_dirs_file(dir_path)
+    if all_subdirs_processed(dir_path, processed_dirs):
+        delete_processed_dirs_file(dir_path)
+        print("All subdirectories processed. Deleted .processed_dirs.json file.")
+    else:
+        print("Some subdirectories are still unprocessed. Keeping .processed_dirs.json file for the next run.")
+
+
+if __name__ == "__main__":
+    fire.Fire(process_and_register_subdirectories)
 
 
 if __name__ == "__main__":
