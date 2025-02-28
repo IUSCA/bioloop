@@ -21,10 +21,12 @@ class Registration:
 
         wf = Workflow(celery_app=celery_app, **self.wf_body)
         dataset_payload = {
-            'name': dataset_name,
-            'type': self.dataset_type,
-            'workflow_id': wf.workflow['_id'],
-            'origin_path': dataset_path
+            'data': {
+                'name': dataset_name,
+                'type': self.dataset_type,
+                'workflow_id': wf.workflow['_id'],
+                'origin_path': dataset_path
+            }
         }
 
         print(f'Payload: {dataset_payload}')
