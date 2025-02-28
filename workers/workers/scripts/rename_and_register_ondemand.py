@@ -152,6 +152,8 @@ def process_and_register_subdirectories(dir_path: str,
                         print(f"Already registered: {new_name}")
 
                     processed_dirs.add(item.name)
+
+                    # raise Exception(f"Error occurred during registration: {new_name}")  # Re-raise the exception after registration
                 else:
                     print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                     print(f"Dry run: Would have registered: {new_name}")
@@ -161,13 +163,13 @@ def process_and_register_subdirectories(dir_path: str,
         if not dry_run:
             print("Rolling back renamed directories from this run...")
             for original, renamed in renamed_dirs:
-                if renamed.exists():
+                if renamed.exists() and original.name not in processed_dirs:
                     shutil.rmtree(renamed)
                     print(f"Deleted renamed directory: {renamed}")
-                processed_dirs.discard(original.name)
+                    processed_dirs.discard(original.name)
             save_processed_dirs(dir_path, processed_dirs)
         print("Rolled back changes from this run")
-        raise  # Re-raise the exception after rollback
+        raise  # Re-raise the exception after rollback  # Re-raise the exception after rollback
 
     print("Processing and registration complete.")
     save_processed_dirs(dir_path, processed_dirs)
