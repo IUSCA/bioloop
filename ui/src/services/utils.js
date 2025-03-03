@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
+import config from "@/config";
 
 function formatBytes(bytes, decimals = 2) {
   bytes = parseInt(bytes);
@@ -244,6 +245,38 @@ function groupByAndAggregate(
   return ret;
 }
 
+/**
+ * Returns whether the given feature is enabled for any of the given roles or
+ * not.
+ *
+ * @param featureKey the key of the feature. Defined in config.js, under `enabled_features`
+ * @param hasRole function that returns true if the user has the given role.
+ // * @param roles the roles of the user whose access to this feature is to be determined.
+ */
+function isFeatureEnabled({ featureKey, hasRole = () => false } = {}) {
+  if (!featureKey) {
+    return true;
+  }
+
+  const featureEnabled = config.enabledFeatures[featureKey];
+  if (featureEnabled === undefined) {
+    // feature's enabled status is not present in the config
+    return true;
+  } else if (typeof featureEnabled === "boolean") {
+    // feature is either enabled or disabled for all roles
+    return featureEnabled;
+  } else if (
+    Array.isArray(featureEnabled.enabledForRoles) &&
+    featureEnabled.enabledForRoles.length > 0
+  ) {
+    // feature is enabled for certain roles
+    return featureEnabled.enabledForRoles.some((role) => hasRole(role));
+  } else {
+    // invalid config found for feature's enabled status
+    return false;
+  }
+}
+
 export {
   arrayEquals,
   capitalize,
@@ -264,4 +297,5 @@ export {
   setIntersection,
   union,
   validateEmail,
+  isFeatureEnabled,
 };
