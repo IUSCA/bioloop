@@ -1,13 +1,17 @@
 from pathlib import Path
 import fire
 import shutil
-
 import os
 import hashlib
-from typing import List, Tuple
-from workers.scripts.register_ondemand import Registration
+from typing import List, Tuple, Dict
+import time
 
+from workers.scripts.register_ondemand import Registration
 import workers.api as api
+
+
+# 60 seconds
+CHECK_INTERVAL = 60
 
 
 def generate_subdir_new_name(project_name: str, dir_name: str, item_name: str) -> str:
@@ -71,8 +75,31 @@ def directories_are_equal(dir1: Path, dir2: Path) -> bool:
 
 
 def is_data_product_registered(new_name: str) -> bool:
-    matching_datasets = api.get_all_datasets(dataset_type='DATA_PRODUCT', name=new_name)
-    return len(matching_datasets) > 0
+    """
+    Data Product is considered registered if it has reached the state 'ARCHIVED'.
+    """
+    while True:
+        matching_data_products_response: Dict = api.get_all_datasets(dataset_type='DATA_PRODUCT', name=new_name)
+        matching_data_products = matching_data_products_response['datasets']
+        matching_data_products_count = matching_data_products_response['metadata']['count']
+
+        if matching_data_products_count == 0:
+            print(f"Dataset {new_name} not found")
+            return False
+
+        matching_data_product = matching_data_products[0]
+        matching_data_product_states = [e['state'] for e in matching_data_product['states']]
+
+        print(f"Current states: {matching_data_product_states}")
+
+        if 'ARCHIVED' in matching_data_product_states:
+            print(f"Found registered data product: {new_name}, with state 'ARCHIVED'")
+            return True
+
+        print(
+            f"Data product {new_name} is currently in state {matching_data_product['state']}. Checking again in"
+            f" {CHECK_INTERVAL} seconds, until state 'ARCHIVED' is reached.")
+        time.sleep(CHECK_INTERVAL)
 
 
 def register_data_product(new_name: str, new_path: Path) -> None:
@@ -153,7 +180,6 @@ def process_and_register_subdirectories(dir_path: str,
 
     print("Processing and registration complete.")
 
-    # todo - dataset should at least be archived before it is considered processed
     if all_subdirs_processed(dir_path, project_name):
         # Once all subdirectories have been successfully processed,
         # delete the `renamed_directories` directory
