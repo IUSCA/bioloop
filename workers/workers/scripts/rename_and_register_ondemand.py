@@ -1,14 +1,13 @@
 from pathlib import Path
 import fire
 import shutil
-import subprocess
-import json
+
 import os
 import hashlib
-from typing import Set, List, Tuple
+from typing import List, Tuple
+from workers.scripts.register_ondemand import Registration
 
 import workers.api as api
-
 
 def generate_new_name(project_name: str, dir_name: str, item_name: str) -> str:
     """Generate the new name for a subdirectory."""
@@ -34,7 +33,7 @@ def calculate_file_hash(filepath: str, block_size: int = 65536) -> str:
     return file_hash.hexdigest()
 
 
-def directories_equal(dir1: Path, dir2: Path) -> bool:
+def directories_are_equal(dir1: Path, dir2: Path) -> bool:
     """
     Compare two directories by calculating and comparing checksums of all files.
     """
@@ -76,14 +75,18 @@ def is_data_product_registered(new_name: str) -> bool:
 
 
 def register_data_product(new_name: str, new_path: Path) -> None:
-    register_cmd: List[str] = [
-        "python",
-        str(Path(__file__).parent / "register_ondemand.py"),
-        "--data-product",
-        new_name,
-        str(new_path)
-    ]
-    subprocess.run(register_cmd, check=True)
+    dataset_type = 'DATA_PRODUCT'
+
+    print(f'Dataset type: {dataset_type}')
+    print(f'Dataset name: {new_name}')
+    print(f'Dataset path: {str(new_path)}')
+
+    if not new_path.exists():
+        print(f'{new_path} does not exist')
+        return
+
+    reg = Registration(dataset_type)
+    reg.register_candidate(new_name, str(new_path))
     print(f"Registered: {new_name}")
 
 
@@ -94,12 +97,12 @@ def process_and_register_subdirectories(dir_path: str,
     dir_name: str = dir_path.name
     print(f"Processing subdirectories in {dir_path.name}")
 
-    renamed_dirs_parent: Path = dir_path / 'renamed_directories'
+    renamed_dirs_parent_dir: Path = dir_path / 'renamed_directories'
 
     for item in dir_path.iterdir():
         if item.is_dir() and item.name != 'renamed_directories':
             new_name: str = generate_new_name(project_name, dir_name, item.name)
-            new_path: Path = renamed_dirs_parent / new_name
+            new_path: Path = renamed_dirs_parent_dir / new_name
 
             print(f"Processing directory: {item.name}")
             print(f"Original path: {item}")
@@ -108,7 +111,7 @@ def process_and_register_subdirectories(dir_path: str,
             if not dry_run:
                 if new_path.exists():
                     if is_data_product_registered(new_name):
-                        if not directories_equal(item, new_path):
+                        if not directories_are_equal(item, new_path):
                             print(f"""
                             Found existing Data Product with name {new_name}, but the contents of the
                             original subdirectory {item.name} do not match the contents of subdirectory
@@ -149,11 +152,11 @@ def process_and_register_subdirectories(dir_path: str,
     if all_subdirs_processed(dir_path, project_name):
         # Once all subdirectories have been successfully processed,
         # delete the `renamed_directories` directory
-        if renamed_dirs_parent.exists() and not dry_run:
-            shutil.rmtree(renamed_dirs_parent)
-            print(f"Deleted renamed_directories folder: {renamed_dirs_parent}")
+        if renamed_dirs_parent_dir.exists() and not dry_run:
+            shutil.rmtree(renamed_dirs_parent_dir)
+            print(f"Deleted renamed_directories folder: {renamed_dirs_parent_dir}")
         elif dry_run:
-            print(f"Dry run: Would have deleted renamed_directories folder: {renamed_dirs_parent}")
+            print(f"Dry run: Would have deleted renamed_directories folder: {renamed_dirs_parent_dir}")
         print("All subdirectories processed.")
     else:
         print("Some subdirectories are still unprocessed.")
