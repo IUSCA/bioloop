@@ -9,6 +9,7 @@ from workers.scripts.register_ondemand import Registration
 
 import workers.api as api
 
+
 def generate_subdir_new_name(project_name: str, dir_name: str, item_name: str) -> str:
     """Generate the new name for a subdirectory."""
     return f"{project_name}-{dir_name}-{item_name}"
@@ -97,12 +98,12 @@ def process_and_register_subdirectories(dir_path: str,
     dir_name: str = dir_path.name
     print(f"Processing subdirectories in {dir_path.name}")
 
-    renamed_dirs_parent_dir: Path = dir_path / 'renamed_directories'
+    renamed_subdirs_parent_dir: Path = dir_path / 'renamed_directories'
 
     for item in dir_path.iterdir():
         if item.is_dir() and item.name != 'renamed_directories':
             new_name: str = generate_subdir_new_name(project_name, dir_name, item.name)
-            new_path: Path = renamed_dirs_parent_dir / new_name
+            new_path: Path = renamed_subdirs_parent_dir / new_name
 
             print(f"Processing directory: {item.name}")
             print(f"Original path: {item}")
@@ -123,37 +124,26 @@ def process_and_register_subdirectories(dir_path: str,
                         continue
                     else:
                         print(f"Directory renamed but not registered: {new_name}")
-                        try:
-                            # Delete the subdirectory that is renamed, but not registered, since this
-                            # could potentially be an incomplete or corrupted renamed subdirectory
-                            # from a previous run.
-                            shutil.rmtree(path=new_path, ignore_errors=True)
-                            shutil.copytree(item, new_path)
-                            if new_name == "1st":
-                                raise Exception("1st directory will throw an exception")
-                            register_data_product(new_name, new_path)
-                            print(f"Copied and renamed: {item.name} -> {new_name}")
-                        except Exception as e:
-                            print(f"Error occurred during registration of {new_name}: {e}")
-                            shutil.rmtree(path=new_path, ignore_errors=True)
-                            print(f"Deleted renamed directory due to registration failure: {new_path}")
-                            continue
+                        # Delete the subdirectory that is renamed, but not registered, since this
+                        # could potentially be an incomplete or corrupted renamed subdirectory
+                        # from a previous run.
+                        shutil.rmtree(path=new_path)
                 elif is_data_product_registered(new_name):
                     print(f"Skipping already registered directory: {new_name}")
                     continue
 
-                # shutil.copytree(item, new_path)
-                # print(f"Copied and renamed: {item.name} -> {new_name}")
+                shutil.copytree(item, new_path)
+                print(f"Copied and renamed: {item.name} -> {new_name}")
 
-                # if not is_data_product_registered(new_name):
-                #     try:
-                #         register_data_product(new_name, new_path)
-                #     except Exception as e:
-                #         print(f"Error occurred during registration of {new_name}: {e}")
-                #         shutil.rmtree(path=new_path, ignore_errors=True)
-                #         print(f"Deleted renamed directory due to registration failure: {new_path}")
-                # else:
-                #     print(f"Already registered: {new_name}")
+                if not is_data_product_registered(new_name):
+                    try:
+                        register_data_product(new_name, new_path)
+                    except Exception as e:
+                        print(f"Error occurred during registration of {new_name}: {e}")
+                        shutil.rmtree(path=new_path, ignore_errors=True)
+                        print(f"Deleted renamed directory due to registration failure: {new_path}")
+                else:
+                    print(f"Already registered: {new_name}")
             else:
                 print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                 print(f"Dry run: Would have registered: {new_name}")
@@ -163,11 +153,11 @@ def process_and_register_subdirectories(dir_path: str,
     if all_subdirs_processed(dir_path, project_name):
         # Once all subdirectories have been successfully processed,
         # delete the `renamed_directories` directory
-        if renamed_dirs_parent_dir.exists() and not dry_run:
-            shutil.rmtree(path=renamed_dirs_parent_dir, ignore_errors=True)
-            print(f"Deleted renamed_directories folder: {renamed_dirs_parent_dir}")
+        if renamed_subdirs_parent_dir.exists() and not dry_run:
+            shutil.rmtree(path=renamed_subdirs_parent_dir)
+            print(f"Deleted renamed_directories folder: {renamed_subdirs_parent_dir}")
         elif dry_run:
-            print(f"Dry run: Would have deleted renamed_directories folder: {renamed_dirs_parent_dir}")
+            print(f"Dry run: Would have deleted renamed_directories folder: {renamed_subdirs_parent_dir}")
         print("All subdirectories processed.")
     else:
         print("Some subdirectories are still unprocessed.")
