@@ -32,7 +32,6 @@ class Registration:
         # HTTP POST
         created_dataset = api.create_dataset(dataset_payload)
         wf.start(created_dataset['id'])
-        # test comment
 
 
 if __name__ == '__main__':
