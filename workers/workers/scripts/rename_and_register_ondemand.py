@@ -10,10 +10,19 @@ from typing import Set, List, Tuple
 import workers.api as api
 
 
-def all_subdirs_processed(dir_path: Path, processed_dirs: Set[str]) -> bool:
+def generate_new_name(project_name: str, dir_name: str, item_name: str) -> str:
+    """Generate the new name for a subdirectory."""
+    return f"{project_name}-{dir_name}-{item_name}"
+
+
+def all_subdirs_processed(dir_path: Path, project_name: str) -> bool:
     """Check if all subdirectories (excluding 'renamed_directories') have been processed."""
-    all_subdirs = {item.name for item in dir_path.iterdir() if item.is_dir() and item.name != 'renamed_directories'}
-    return all_subdirs.issubset(processed_dirs)
+    all_subdirs = [item for item in dir_path.iterdir() if item.is_dir() and item.name != 'renamed_directories']
+    for subdir in all_subdirs:
+        new_name = generate_new_name(project_name, subdir.name, subdir.name)
+        if not is_data_product_registered(new_name):
+            return False
+    return True
 
 
 def calculate_file_hash(filepath: str, block_size: int = 65536) -> str:
@@ -61,27 +70,6 @@ def directories_equal(dir1: Path, dir2: Path) -> bool:
     return True
 
 
-def load_processed_dirs(dir_path: Path) -> Set[str]:
-    processed_file: Path = dir_path / '.processed_dirs.json'
-    if processed_file.exists():
-        with open(processed_file, 'r') as f:
-            return set(json.load(f))
-    return set()
-
-
-def save_processed_dirs(dir_path: Path, processed_dirs: Set[str]) -> None:
-    processed_file: Path = dir_path / '.processed_dirs.json'
-    with open(processed_file, 'w') as f:
-        json.dump(list(processed_dirs), f)
-
-
-def delete_processed_dirs_file(dir_path: Path) -> None:
-    processed_file: Path = dir_path / '.processed_dirs.json'
-    if processed_file.exists():
-        processed_file.unlink()
-        print(f"Deleted {processed_file}")
-
-
 def is_data_product_registered(new_name: str) -> bool:
     matching_datasets = api.get_all_datasets(dataset_type='DATA_PRODUCT', name=new_name)
     return len(matching_datasets) > 0
@@ -106,12 +94,11 @@ def process_and_register_subdirectories(dir_path: str,
     dir_name: str = dir_path.name
     print(f"Processing subdirectories in {dir_path.name}")
 
-    processed_dirs: Set[str] = load_processed_dirs(dir_path)
     renamed_dirs_parent: Path = dir_path / 'renamed_directories'
 
     for item in dir_path.iterdir():
         if item.is_dir() and item.name != 'renamed_directories':
-            new_name: str = f"{project_name}-{dir_name}-{item.name}"
+            new_name: str = generate_new_name(project_name, dir_name, item.name)
             new_path: Path = renamed_dirs_parent / new_name
 
             print(f"Processing directory: {item.name}")
@@ -130,8 +117,6 @@ def process_and_register_subdirectories(dir_path: str,
                             """)
                         else:
                             print(f"Directory already renamed and registered: {new_name}")
-                        processed_dirs.add(item.name)
-                        save_processed_dirs(dir_path, processed_dirs)
                         continue
                     else:
                         print(f"Directory renamed but not registered: {new_name}")
@@ -139,8 +124,8 @@ def process_and_register_subdirectories(dir_path: str,
                         # could potentially be an incomplete or corrupted renamed subdirectory
                         # from a previous run.
                         shutil.rmtree(new_path)
-                elif item.name in processed_dirs:
-                    print(f"Skipping already processed directory: {item.name}")
+                elif is_data_product_registered(new_name):
+                    print(f"Skipping already registered directory: {new_name}")
                     continue
 
                 shutil.copytree(item, new_path)
@@ -149,27 +134,19 @@ def process_and_register_subdirectories(dir_path: str,
                 if not is_data_product_registered(new_name):
                     try:
                         register_data_product(new_name, new_path)
-                        processed_dirs.add(item.name)
-                        save_processed_dirs(dir_path, processed_dirs)
                     except Exception as e:
                         print(f"Error occurred during registration of {new_name}: {e}")
                         shutil.rmtree(new_path)
                         print(f"Deleted renamed directory due to registration failure: {new_path}")
-                        processed_dirs.discard(item.name)
-                        save_processed_dirs(dir_path, processed_dirs)
                 else:
                     print(f"Already registered: {new_name}")
-                    processed_dirs.add(item.name)
-                    save_processed_dirs(dir_path, processed_dirs)
             else:
                 print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                 print(f"Dry run: Would have registered: {new_name}")
 
     print("Processing and registration complete.")
 
-    if all_subdirs_processed(dir_path, processed_dirs):
-        delete_processed_dirs_file(dir_path)
-
+    if all_subdirs_processed(dir_path, project_name):
         # Once all subdirectories have been successfully processed,
         # delete the `renamed_directories` directory
         if renamed_dirs_parent.exists() and not dry_run:
@@ -177,9 +154,9 @@ def process_and_register_subdirectories(dir_path: str,
             print(f"Deleted renamed_directories folder: {renamed_dirs_parent}")
         elif dry_run:
             print(f"Dry run: Would have deleted renamed_directories folder: {renamed_dirs_parent}")
-        print("All subdirectories processed. Deleted .processed_dirs.json file.")
+        print("All subdirectories processed.")
     else:
-        print("Some subdirectories are still unprocessed. Keeping .processed_dirs.json file for the next run.")
+        print("Some subdirectories are still unprocessed.")
 
 
 """
