@@ -124,10 +124,11 @@ def process_and_register_subdirectories(dir_path: str,
                         continue
                     else:
                         print(f"Directory renamed but not registered: {new_name}")
-                        # Delete the subdirectory that is renamed, but not registered, since this
+                        # Delete the subdirectory that is renamed but not registered, since this
                         # could potentially be an incomplete or corrupted renamed subdirectory
                         # from a previous run.
                         shutil.rmtree(path=new_path)
+                        print(f"Deleted renamed directory to avoid corrupt copies from previous runs: {new_path}")
                 elif is_data_product_registered(new_name):
                     print(f"Skipping already registered directory: {new_name}")
                     continue
@@ -136,7 +137,9 @@ def process_and_register_subdirectories(dir_path: str,
                 print(f"Copied and renamed: {item.name} -> {new_name}")
 
                 if not is_data_product_registered(new_name):
+                    print(f"{new_path} does not exist. This subdirectory is currently not registered: {new_name}")
                     try:
+                        print(f"Registering: {new_name}")
                         register_data_product(new_name, new_path)
                     except Exception as e:
                         print(f"Error occurred during registration of {new_name}: {e}")
@@ -150,6 +153,7 @@ def process_and_register_subdirectories(dir_path: str,
 
     print("Processing and registration complete.")
 
+    # todo - dataset should at least be archived before it is considered processed
     if all_subdirs_processed(dir_path, project_name):
         # Once all subdirectories have been successfully processed,
         # delete the `renamed_directories` directory
