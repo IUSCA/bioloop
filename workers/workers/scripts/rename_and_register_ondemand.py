@@ -6,6 +6,7 @@ import os
 import hashlib
 from typing import List, Tuple, Dict
 import time
+import traceback
 
 from workers.scripts.register_ondemand import Registration
 import workers.api as api
@@ -21,14 +22,12 @@ def generate_subdir_new_name(project_name: str, dir_name: str, item_name: str) -
 
 
 def all_subdirs_processed(dir_path: Path, project_name: str) -> bool:
-    print(f"Checking if all subdirectories of {dir_path} have been processed...")
     """Check if all subdirectories (excluding 'renamed_directories') have been processed."""
+    print(f"Checking if all subdirectories of {dir_path} have been processed...")
     all_subdirs = [item for item in dir_path.iterdir() if item.is_dir() and item.name != 'renamed_directories']
     print(f"Found {len(all_subdirs)} subdirectories.")
-    print("all_subdirs_processed:")
-    print(all_subdirs)
     for subdir in all_subdirs:
-        print(f"Processing subdirectory {subdir.name}...")
+        print(f"Checking subdirectory {subdir.name}...")
         new_name = generate_subdir_new_name(project_name, dir_path.name, subdir.name)
         if not is_data_product_registered(new_name):
             return False
@@ -91,11 +90,7 @@ def is_data_product_registered(new_name: str) -> bool:
                                                                   name=new_name,
                                                                   include_states=True)
         print(f"matching data products length: {len(matching_data_products)}")
-        print(f"matching data product[0]:")
         
-        if len(matching_data_products) > 0:
-            print(matching_data_products[0])
-
         if len(matching_data_products) == 0:
             print(f"Dataset {new_name} not found")
             return False
@@ -103,7 +98,7 @@ def is_data_product_registered(new_name: str) -> bool:
         matching_data_product: Dict = matching_data_products[0]
         matching_data_product_states: List[str] = [e['state'] for e in matching_data_product['states']]
 
-        print(f"Current states: {matching_data_product_states}")
+        print(f"States that have been reached by dataset {new_name}: {matching_data_product_states}")
 
         if 'ARCHIVED' in matching_data_product_states:
             print(f"Found registered data product: {new_name}, with state 'ARCHIVED'")
@@ -184,6 +179,7 @@ def process_and_register_subdirectories(dir_path: str,
                         register_data_product(new_name, new_path)
                     except Exception as e:
                         print(f"Error occurred during registration of {new_name}: {e}")
+                        traceback.print_exc()
                         shutil.rmtree(path=new_path, ignore_errors=True)
                         print(f"Deleted renamed directory due to registration failure: {new_path}")
                 else:
