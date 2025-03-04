@@ -9,7 +9,6 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 const pm = require('picomatch');
-const he = require('he');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -340,12 +339,7 @@ router.post(
     } = req.body;
 
     let { origin_path, workflow_id } = data;
-    origin_path = he.decode(origin_path);
-
-    // console.log("state: ", state);
-    // console.log("workflow_id: ", workflow_id);
-    // console.log("origin_path: ", origin_path);
-
+    
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('-');
 
