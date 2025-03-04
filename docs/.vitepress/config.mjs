@@ -20,17 +20,19 @@ export default defineConfig({
         { text: 'Architecture', link: '/architecture' },
         { text: 'Installation', items: [
           {text: 'Docker', link: '/install-docker', },
-          { text: 'Template', link: '/template' }
+          {text: 'Local', link: '/install-local', },
         ] },
-        { text: 'Ui', link: '/ui/', items: [
+        { text: 'UI', link: '/ui/', items: [
           { text: 'Auth', link: '/ui/auth_explained' },
           { text: 'Util', link: '/ui/util_components' },
         ] },
         
-        { text: 'Api', link: '/api/' },
+        { text: 'API', link: '/api/' },
         { text: 'Worker', link: '/worker/' },
         { text: 'Secure Download', link: '/secure_download' },
+        { text: 'Welcome Message', link: '/welcome-message' },
         { text: 'Contributing', link: '/pull_request_template' },
+        { text: 'Template', link: '/template' }
 
       ]}
     ],

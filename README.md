@@ -24,10 +24,10 @@ Bioloop is a web-based portal to simplify the management of large-scale datasets
 
 ## Getting started
 
-- [Install with Docker](README-docker.md)  
-- [API](api/README.md)  
-- [UI](ui/README.md)  
-- [Workers](workers/README.md)  
+- [Install with Docker](docs/install-docker.md)  
+- [API](docs/api/index.md)  
+- [UI](docs/ui/index.md)  
+- [Workers](docs/worker/index.md)  
 
 ## Dependencies
 

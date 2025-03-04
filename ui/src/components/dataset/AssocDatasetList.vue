@@ -24,8 +24,8 @@
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import { formatBytes } from "@/services/utils";
-import config from "@/config";
+import { formatBytes, isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   dataset_ids: {
@@ -33,6 +33,8 @@ const props = defineProps({
     default: () => [],
   },
 });
+
+const auth = useAuthStore();
 
 const datasets = ref([]);
 const data_loading = ref(false);
@@ -46,7 +48,10 @@ const columns = ref([
     sortable: true,
     sortingOptions: ["desc", "asc", null],
   },
-  ...(config.enabledFeatures.genomeBrowser
+  ...(isFeatureEnabled({
+    featureKey: "genomeBrowser",
+    hasRole: auth.hasRole,
+  })
     ? [
         {
           key: "num_genome_files",

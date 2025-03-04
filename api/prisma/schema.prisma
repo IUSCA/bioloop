@@ -85,8 +85,8 @@ model upload_log {
   files          file_upload_log[]
   initiated_at   DateTime            @default(now()) @db.Timestamp(6)
   updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  user_id        Int
-  user           user                @relation(fields: [user_id], references: [id])
+  user_id        Int?
+  user           user?                @relation(fields: [user_id], references: [id], onDelete: SetNull)
   dataset_upload dataset_upload_log?
 }
 
@@ -118,7 +118,7 @@ model dataset_audit {
   old_data   Json?
   new_data   Json?
   user_id    Int?
-  user       user?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user       user?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
 }
@@ -151,8 +151,8 @@ model data_access_log {
   dataset_file dataset_file? @relation(fields: [file_id], references: [id])
   dataset_id   Int?
   dataset      dataset?      @relation(fields: [dataset_id], references: [id])
-  user_id      Int
-  user         user          @relation(fields: [user_id], references: [id])
+  user_id      Int?
+  user         user?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model stage_request_log {
@@ -160,8 +160,8 @@ model stage_request_log {
   timestamp  DateTime @default(now()) @db.Timestamp(6)
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id])
-  user_id    Int
-  user       user     @relation(fields: [user_id], references: [id])
+  user_id    Int?
+  user       user?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model user {
@@ -224,7 +224,7 @@ model notification {
   text               String?
   status             NOTIFICATION_STATUS @default(CREATED)
   acknowledged_by_id Int?
-  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id])
+  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id], onDelete: Cascade)
   role_notifications role_notification[]
   user_notifications user_notification[]
 }
@@ -377,8 +377,8 @@ model about {
   id                 Int      @id @default(autoincrement())
   html               String
   created_at         DateTime @default(now()) @db.Timestamp(6)
-  last_updated_by    user     @relation(fields: [last_updated_by_id], references: [id])
-  last_updated_by_id Int
+  last_updated_by    user?     @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
+  last_updated_by_id Int?
 }
 
 enum access_type {

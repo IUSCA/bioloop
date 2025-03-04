@@ -244,7 +244,7 @@ require('dotenv-safe').config();
 
 The API uses IU CAS authnetication model. 
 
-<img src="/api_auth.png" >
+<img src="../public/api_auth.png" >
 
 All the routes and sub-routers added after the [`authenticate`](src/middleware/auth.js) middleware in [index router](src/routes/index.js) require authentication. The routes that do not require authentication such as [auth routes](src/routes/auth.js) are added before this.
 

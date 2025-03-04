@@ -67,15 +67,18 @@
         />
       </div>
       <div v-else class="flex justify-center">
-        <!-- dataset is not staged and has not been archived yet -->
-        <va-button
-          v-if="!rowData.archive_path"
-          class="shadow"
-          preset="primary"
-          color="info"
-          icon="cloud_sync"
-          disabled
-        />
+        <!-- dataset is not staged and is being archived -->
+        <va-popover
+          v-if="rowData.is_archival_pending"
+          :message="'Dataset is pending archival to SDA'"
+        >
+          <half-circle-spinner
+            class="flex-none"
+            :animation-duration="1000"
+            :size="24"
+            :color="colors.info"
+          />
+        </va-popover>
         <!-- dataset is not staged and is being staged -->
         <va-popover
           v-else-if="rowData.is_staging_pending"
@@ -332,6 +335,7 @@ const rows = computed(() => {
       assigned_at,
       assignor,
       is_staging_pending: wfService.is_step_pending("VALIDATE", ds.workflows),
+      is_archival_pending: wfService.is_step_pending("ARCHIVE", ds.workflows),
     };
   });
 });

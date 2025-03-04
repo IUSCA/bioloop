@@ -18,7 +18,7 @@ Users with access to the dataset should be able to download dataset files direct
 
 Dataset files must be staged before attempting to download.
 
-The staged files should be protected from unauthorizzed users who have access to slate scratch from navigating and/or downloading dataset files.
+The staged files should be protected from unauthorized users who have access to slate scratch from navigating and/or downloading dataset files.
 
 ### 2.1 Limitations
 
@@ -86,7 +86,7 @@ To meet the requirements outlined above, a distributed architecture is employed.
 - API: This node serves the user interface and API endpoints with user and dataset metadata stored in a PostgreSQL database but does not have direct access to the dataset files.
 - Workers / Colo Node: Staging of dataset files occurs on this node via a Celery task. The node also hosts an Nginx server with access to the staged files.
 - Signet: An OAuth server supporting client credential flow with download file scope to create secure tokens.
-- File Download Server (Nginx): A file server on the colo adjacent to data which recieves requests from users to download large dataset files.
+- File Download Server (Nginx): A file server on the colo adjacent to data which receives requests from users to download large dataset files.
 - Secure Download API: A lightweight app with one endpoint that validates the incoming requests to the file download server
 
 ### 6. Downloading a Dataset File
@@ -101,6 +101,6 @@ To download a dataset file:
 - Step 6. Responds to UI with the download file url and download token.
 - Step 7. UI Client constructs a URL by including the download token as a query parameter and requests the file download server.
 - Step 8. File server forwards the request to SecureDownloadAPI for validation.
-- Step 9.10. SecureDownloadAPI fetches the public JWT verfication keys from the Signet Oauth server in the form of JWKS and perform URL validation as described in section 4. 
+- Step 9.10. SecureDownloadAPI fetches the public JWT verification keys from the Signet Oauth server in the form of JWKS and perform URL validation as described in section 4. 
 - Step 11. If it is valid, it responds to file server (Nginx) with a special header x-accel-redirect with a value of the path of the requested file.
 - Step 12. Nginx performs internal redirect and sends the requested file to the UIclient with headers invoking a browser file download.

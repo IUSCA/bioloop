@@ -48,11 +48,13 @@ const exports = {
         test_id: "sidebar-create-dataset",
         children: [
           {
+            feature_key: "ingestion",
             icon: "mdi-file-cog-outline",
             title: "Ingest",
             path: "/datasets/ingest",
           },
           {
+            feature_key: "uploads",
             icon: "mdi:folder-upload",
             title: "Upload",
             path: "/datasetUpload",
