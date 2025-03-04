@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import fire
 import shutil
@@ -20,10 +21,15 @@ def generate_subdir_new_name(project_name: str, dir_name: str, item_name: str) -
 
 
 def all_subdirs_processed(dir_path: Path, project_name: str) -> bool:
+    print(f"Checking if all subdirectories of {dir_path} have been processed...")
     """Check if all subdirectories (excluding 'renamed_directories') have been processed."""
     all_subdirs = [item for item in dir_path.iterdir() if item.is_dir() and item.name != 'renamed_directories']
+    print(f"Found {len(all_subdirs)} subdirectories.")
+    print("all_subdirs_processed:")
+    print(all_subdirs)
     for subdir in all_subdirs:
-        new_name = generate_subdir_new_name(project_name, subdir.name, subdir.name)
+        print(f"Processing subdirectory {subdir.name}...")
+        new_name = generate_subdir_new_name(project_name, dir_path.name, subdir.name)
         if not is_data_product_registered(new_name):
             return False
     return True
@@ -78,17 +84,24 @@ def is_data_product_registered(new_name: str) -> bool:
     """
     Data Product is considered registered if it has reached the state 'ARCHIVED'.
     """
-    while True:
-        matching_data_products_response: Dict = api.get_all_datasets(dataset_type='DATA_PRODUCT', name=new_name)
-        matching_data_products = matching_data_products_response['datasets']
-        matching_data_products_count = matching_data_products_response['metadata']['count']
+    print(f"Checking if dataset {new_name} is registered...")
 
-        if matching_data_products_count == 0:
+    while True:
+        matching_data_products: List[Dict] = api.get_all_datasets(dataset_type='DATA_PRODUCT',
+                                                                  name=new_name,
+                                                                  include_states=True)
+        print(f"matching data products length: {len(matching_data_products)}")
+        print(f"matching data product[0]:")
+        
+        if len(matching_data_products) > 0:
+            print(matching_data_products[0])
+
+        if len(matching_data_products) == 0:
             print(f"Dataset {new_name} not found")
             return False
 
-        matching_data_product = matching_data_products[0]
-        matching_data_product_states = [e['state'] for e in matching_data_product['states']]
+        matching_data_product: Dict = matching_data_products[0]
+        matching_data_product_states: List[str] = [e['state'] for e in matching_data_product['states']]
 
         print(f"Current states: {matching_data_product_states}")
 
@@ -96,9 +109,10 @@ def is_data_product_registered(new_name: str) -> bool:
             print(f"Found registered data product: {new_name}, with state 'ARCHIVED'")
             return True
 
-        print(
-            f"Data product {new_name} is currently in state {matching_data_product['state']}. Checking again in"
-            f" {CHECK_INTERVAL} seconds, until state 'ARCHIVED' is reached.")
+        if matching_data_product:
+            print(
+                f"Data product {new_name} is currently has states {matching_data_product_states}. Checking again in"
+                f" {CHECK_INTERVAL} seconds, until state 'ARCHIVED' is reached.")
         time.sleep(CHECK_INTERVAL)
 
 
@@ -132,7 +146,7 @@ def process_and_register_subdirectories(dir_path: str,
             new_name: str = generate_subdir_new_name(project_name, dir_name, item.name)
             new_path: Path = renamed_subdirs_parent_dir / new_name
 
-            print(f"Processing directory: {item.name}")
+            print(f"Processing subdirectory: {item.name}")
             print(f"Original path: {item}")
             print(f"New name: {new_path}")
 
@@ -180,7 +194,9 @@ def process_and_register_subdirectories(dir_path: str,
 
     print("Processing and registration complete.")
 
+    print("Checking if all subdirectories have been processed and registered...")
     if all_subdirs_processed(dir_path, project_name):
+        print("All subdirectories processed and registered.")
         # Once all subdirectories have been successfully processed,
         # delete the `renamed_directories` directory
         if renamed_subdirs_parent_dir.exists() and not dry_run:
