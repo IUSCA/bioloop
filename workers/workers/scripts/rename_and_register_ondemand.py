@@ -214,7 +214,6 @@ What it does:
 2. Renames directories to the format: {PROJECT_NAME}-{DIR_NAME}-{SUBDIRECTORY_NAME}.
 3. Copies renamed directories to a new 'renamed_directories' folder.
 4. Registers each new directory as a data product via the register_ondemand script.
-5. Maintains a record of processed directories to avoid reprocessing.
 
 Usage:
 python -m workers.scripts.rename_and_register_ondemand [OPTIONS] DIR_PATH PROJECT_NAME
