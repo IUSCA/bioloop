@@ -221,6 +221,7 @@ router.get(
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').default(false).toBoolean(),
+    query('include_states').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -241,6 +242,7 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
+        states: req.query.include_states || false,
       },
     };
 
@@ -333,10 +335,10 @@ router.post(
         a new relation is created between dataset and given workflow_id'
     */
     const {
-      workflow_id, state, ingestion_space, data,
+      state, ingestion_space, data,
     } = req.body;
 
-    const { origin_path } = data;
+    const { origin_path, workflow_id } = data;
 
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('-');
@@ -366,6 +368,8 @@ router.post(
       };
     }
 
+    data.workflow_id = undefined;
+
     // add a state
     data.states = {
       create: [
@@ -374,7 +378,6 @@ router.post(
         },
       ],
     };
-
     // create dataset along with associations
     const dataset = await prisma.dataset.create({
       data,
