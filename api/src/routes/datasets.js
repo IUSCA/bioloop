@@ -338,8 +338,8 @@ router.post(
       state, ingestion_space, data,
     } = req.body;
 
-    let { origin_path, workflow_id } = data;
-    
+    const { origin_path, workflow_id } = data;
+
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('-');
 
@@ -385,7 +385,7 @@ router.post(
         ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     });
-      res.json(dataset);
+    res.json(dataset);
   }),
 );
 
