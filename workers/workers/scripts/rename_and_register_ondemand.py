@@ -111,7 +111,7 @@ def is_data_product_registered(new_name: str) -> bool:
 
         if matching_data_product:
             print(
-                f"Data product {new_name} is currently has states {matching_data_product_states}. Checking again in"
+                f"Data product {new_name} currently has states {matching_data_product_states}. Checking again in"
                 f" {CHECK_INTERVAL} seconds, until state 'ARCHIVED' is reached.")
         time.sleep(CHECK_INTERVAL)
 
