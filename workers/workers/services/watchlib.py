@@ -62,7 +62,7 @@ class Observer:
         self.directories = current_directories
 
     def __str__(self):
-        return f'Observer(name={self.name}, dir_path={self.dir_path}, interval={self.interval})'
+        return f'Observer(name={self.name}, dir_path={self.dir_path}, interval={self.interval}, full_scan_every_n_scans={self.full_scan_every_n_scans})'
 
 
 class Poller:
@@ -112,7 +112,10 @@ class Poller:
         for observer in self.observers.values():
             current_time = time.time()
             elapsed_since_last_call = current_time - self.last_call_times[observer.name]
+            # print(observer.name, elapsed_since_last_call, observer.interval)
+            # print(observer.name, observer.full_scan_every_n_scans, self.scan_count)
             if elapsed_since_last_call >= observer.interval:
+                self.scan_count[observer.name] = self.scan_count[observer.name] + 1
                 scan_type = 'incremental'
                 if observer.full_scan_every_n_scans and (
                     self.scan_count[observer.name] >= observer.full_scan_every_n_scans

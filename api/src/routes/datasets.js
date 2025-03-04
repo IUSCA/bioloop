@@ -22,9 +22,7 @@ const logger = require('../services/logger');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-});
+const prisma = new PrismaClient();
 
 // stats - UI
 router.get(

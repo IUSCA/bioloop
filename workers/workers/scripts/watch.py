@@ -28,7 +28,8 @@ class Register:
         return any([fnmatch.fnmatchcase(name, pat) for pat in self.reject_patterns])
 
     def register(self, event: str, new_dirs: list[Path]) -> None:
-        if event != 'add':
+        logger.info(f'event: {event}, new_dirs: {len(new_dirs)}')
+        if event not in ['add', 'full_scan']:
             return
 
         # apply node level rules to filter out bad directories
@@ -92,6 +93,7 @@ class Register:
             logger.error(f'Error bulk creating datasets: {e}')
 
     def run_workflows(self, dataset):
+        logger.info(f'Registered {self.dataset_type} {dataset["name"]}')
         dataset_id = dataset['id']
         wf_body = wf_utils.get_wf_body(wf_name=self.default_wf_name)
 
