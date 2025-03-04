@@ -222,6 +222,7 @@ router.get(
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').default(false).toBoolean(),
+    query('include_states').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -242,6 +243,7 @@ router.get(
         source_datasets: true,
         derived_datasets: true,
         bundle: req.query.bundle || false,
+        states: req.query.include_states || false,
       },
     };
 
@@ -340,6 +342,10 @@ router.post(
     let { origin_path, workflow_id } = data;
     origin_path = he.decode(origin_path);
 
+    // console.log("state: ", state);
+    // console.log("workflow_id: ", workflow_id);
+    // console.log("origin_path: ", origin_path);
+
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('-');
 
@@ -367,6 +373,9 @@ router.post(
         ],
       };
     }
+
+    data.workflow_id = undefined;
+
     // add a state
     data.states = {
       create: [
@@ -382,7 +391,7 @@ router.post(
         ...CONSTANTS.INCLUDE_WORKFLOWS,
       },
     });
-    res.json(dataset);
+      res.json(dataset);
   }),
 );
 
