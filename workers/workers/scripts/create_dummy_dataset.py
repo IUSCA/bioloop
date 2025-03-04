@@ -55,10 +55,18 @@ def create_dummy_directory(dir_path: str, subdirs: int = 3, size_gb: float = 1):
     Creates a dummy directory with the specified number of subdirectories,
     each containing the specified amount of data.
 
-    Args:
-        dir_path (str): The path where the dummy directory should be created.
-        subdirs (int): The number of subdirectories to create. Defaults to 3.
-        size_gb (float): The size of each subdirectory in GB. Defaults to 1.
+    Usage:
+        python -m workers.scripts.create_dummy_dataset [OPTIONS] DIR_PATH
+
+    Arguments:
+        DIR_PATH (str): The path where the dummy directory should be created.
+
+    Options:
+        --subdirs (int): The number of subdirectories to create. Defaults to 3.
+        --size_gb (float): The size of each subdirectory in GB. Defaults to 1.
+
+    Example:
+        python -m workers.scripts.create_dummy_dataset /path/to/dummy_directory --subdirs=5 --size_gb=2
 """
 if __name__ == "__main__":
     fire.Fire(create_dummy_directory)
