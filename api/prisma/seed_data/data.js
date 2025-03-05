@@ -22,7 +22,7 @@ const admins = [
   },
   {
     name: 'Ryan Long',
-    username: 'ryanlong',
+    username: 'ryanlong@iu.edu',
   },
 ];
 
