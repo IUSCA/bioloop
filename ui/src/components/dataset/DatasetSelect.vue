@@ -55,8 +55,8 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import _ from "lodash";
 import { lxor } from "@/services/utils";
+import _ from "lodash";
 
 const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
@@ -91,6 +91,10 @@ const props = defineProps({
   messages: {
     type: Array,
     default: () => [],
+  },
+  fetchInactive: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -160,12 +164,13 @@ const activeCountText = computed(() => {
 });
 
 const filterQuery = computed(() => {
+  let query;
   if (props.datasetType) {
-    return {
+    query = {
       type: props.datasetType,
     };
   } else {
-    return lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
+    query = lxor(checkboxes.value.rawData, checkboxes.value.dataProduct)
       ? {
           type: checkboxes.value.rawData
             ? "RAW_DATA"
@@ -175,6 +180,8 @@ const filterQuery = computed(() => {
         }
       : undefined;
   }
+
+  return { ...query, deleted: props.fetchInactive };
 });
 
 const batchingQuery = computed(() => {

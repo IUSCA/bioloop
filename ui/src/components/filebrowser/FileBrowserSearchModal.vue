@@ -88,7 +88,7 @@
 
 <script setup>
 import { useFileBrowserStore } from "@/stores/fileBrowser";
-import { storeToRefs } from "pinia";
+// import { storeToRefs } from "pinia";
 // const emit = defineEmits(["update"]);
 
 // parent component can invoke these methods through the template ref
@@ -100,10 +100,13 @@ defineExpose({
 const emit = defineEmits(["search"]);
 
 const store = useFileBrowserStore();
-const { filters } = storeToRefs(store);
+// const { filters: storeFilters } = storeToRefs(store);
 
 const loading = ref(false);
 const visible = ref(false);
+
+// use in component state to not update the store's filter for evey keystroke
+const filters = ref(store.defaultFilters());
 
 function hide() {
   loading.value = false;
@@ -111,6 +114,8 @@ function hide() {
 }
 
 function show() {
+  // on modal open. set components filter values from store
+  filters.value = { ...store.filters };
   visible.value = true;
 }
 
@@ -153,7 +158,9 @@ const fileTypeOptions = [
 // );
 
 function handleSearch() {
+  // on search click, set store filters to components filters and close modal
   store.isInSearchMode = true;
+  store.setFilters({ ...filters.value });
   hide();
   emit("search");
 }

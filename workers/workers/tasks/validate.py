@@ -22,6 +22,9 @@ def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: li
         rel_path = file_metadata['path']
         path = dataset_dir / rel_path
         if path.exists():
+            # for symlnks skip checksum validation
+            if path.is_symlink():
+                continue
             digest = utils.checksum(path)
             if digest != file_metadata['md5']:
                 validation_errors.append((str(path), 'checksum mismatch'))

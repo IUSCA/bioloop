@@ -160,16 +160,19 @@
   "filesystem": {
     "search_spaces": "",
     "base_dir": {
-      "slateScratch": "",
-      "slateProject": ""
+      "slateScratch": ""
     },
     "mount_dir": {
-      "slateScratch": "",
-      "slateProject": ""
+      "slateScratch": ""
     }
   },
   "restricted_ingestion_dirs": {
-    "slateScratch": "",
-    "slateProject": ""
+    "slateScratch": ""
+  },
+  "enabled_features": {
+    "fs": {
+      "enabled_for_roles": ["admin"]
+    },
+    "downloads": true
   }
 }

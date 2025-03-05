@@ -152,17 +152,42 @@ async function createUser(data) {
   return user ? transformUser(user) : user;
 }
 
-async function softDeleteUser(username) {
-  const updatedUser = await prisma.user.update({
-    where: {
-      username,
-    },
-    data: {
-      is_deleted: true,
-    },
-    include: INCLUDE_ROLES_LOGIN,
+async function deleteUser(username, isHardDelete = false) {
+  if (isHardDelete) {
+    // Hard delete: Directly delete the user + some data
+    return prisma.user.delete({
+      where: { username },
+      select: { id: true, username: true },
+    });
+  }
+
+  // Soft delete: Use an interactive transaction
+  return prisma.$transaction(async (_prisma) => {
+    const user = await _prisma.user.findUniqueOrThrow({
+      where: { username },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    if (user?.is_deleted) {
+      return transformUser(user);
+    }
+
+    const updatedUser = await _prisma.user.update({
+      where: { username },
+      data: { is_deleted: true },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    return transformUser(updatedUser);
   });
-  return updatedUser ? transformUser(updatedUser) : updatedUser;
+}
+
+async function softDeleteUser(username) {
+  return deleteUser(username, false);
+}
+
+async function hardDeleteUser(username) {
+  return deleteUser(username, true);
 }
 
 // async function setRoles(user_id, role_ids) {
@@ -226,7 +251,9 @@ module.exports = {
   findAll,
   createUser,
   setPassword,
+  deleteUser,
   softDeleteUser,
+  hardDeleteUser,
   updateUser,
   findRoles,
   canUpdateUser,
