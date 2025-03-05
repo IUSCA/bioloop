@@ -302,6 +302,14 @@ async function transactionWithRetry(
   throw new TransactionRetryError(maxRetries);
 }
 
+function base64urlEncode(buf) {
+  return buf
+    .toString('base64') // Regular base64 encoder
+    .replace(/=/g, '') // Remove any trailing '='s
+    .replace(/\+/g, '-') // Replace '+' with '-'
+    .replace(/\//g, '_'); // Replace '/' with '_'
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -315,4 +323,5 @@ module.exports = {
   readUsersFromJSON,
   transactionWithRetry,
   TransactionRetryError,
+  base64urlEncode,
 };
