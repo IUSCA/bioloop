@@ -1,4 +1,3 @@
-version: "3"
 name: bioloop
 services:
   ui:
@@ -8,7 +7,11 @@ services:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules
     working_dir: /opt/sca/app
-    command: sh -c "npm install && npm run builddev"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        npm install && exec npm run builddev
     
 
   api:
@@ -66,12 +69,62 @@ services:
     command: >
       bash -c "pg_dump -w -f /backup/$${PROJ_NAME}_postgres_backup.$$(date +%F).psql --username=$$POSTGRES_USER --host=postgres --dbname=$$POSTGRES_DB"
 
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      - postgres
+    # ports:
+      # - "9187:9187"
+    volumes:
+      - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
+    command:
+      - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+    networks:
+      network:
+        ipv4_address: 172.19.0.7
+  
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./metrics/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus  # Mount the volume for Prometheus data
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    # ports:
+      # - "9090:9090"
+    networks:
+      network:
+        ipv4_address: 172.19.0.6
+  
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana                   # Mount for Grafana data (dashboards, plugins)
+      - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
+      - ./api/keys/auth.pub:/etc/grafana/auth.pub
+    # ports:
+    #   - "3000:3000"
+    depends_on:
+      - postgres_exporter
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    networks:
+      network:
+        ipv4_address: 172.19.0.5
+
 volumes:
   ui_modules:
     external: false
 
   api_modules:
     external: false
+
+  grafana_data:
+  prometheus_data:
 
 networks:
   network:

@@ -20,6 +20,7 @@
     "bradlc.vscode-tailwindcss",
     "austenc.tailwind-docs",
     "foxundermoon.shell-format",
-    "tamasfe.even-better-toml"
+    "tamasfe.even-better-toml",
+    "ahmadalli.vscode-nginx-conf"
   ]
 }
