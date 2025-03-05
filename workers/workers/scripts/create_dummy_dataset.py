@@ -13,8 +13,22 @@ def random_string(length):
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
+# Ordinal numbers are formed by adding a suffix to the cardinal number.
+# Examples of ordinal suffixes:
+    # 1st -> st (used for 1, 21, 31, 41, etc.)
+    # 2nd -> nd  (used for 2, 22, 32, 42, etc.)
+    # 3rd -> rd (used for 3, 23, 33, 43, etc.)
+    # 4th -> th (used for all other numbers, like 4th, 5th, etc.)
 def get_ordinal(n):
-    return f"{n}{'tsnrhtdd'[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10::4]}"
+    if 11 <= (n % 100) <= 13:
+        # If the number, when divided by 100, leaves a remainder of 11, 12, or 13
+        # Example:
+        # Numbers ending in 11: 11, 111, 211, 311, ..., 1011, 1111, ...
+        suffix = 'th'
+    else:
+        # min(n % 10, 4): smaller among the last digit and 4
+        suffix = ['th', 'st', 'nd', 'rd', 'th'][min(n % 10, 4)]
+    return f"{n}{suffix}"
 
 
 def create_dummy_directory(dir_path: str, subdirs: int = 3, size_gb: float = 1):
