@@ -138,3 +138,12 @@ def process_dataset_upload(celery_task, dataset_id, **kwargs):
 def cancel_dataset_upload(celery_task, dataset_id, **kwargs):
     from workers.tasks.cancel_dataset_upload import purge_uploaded_resources as task_body
     return task_body(celery_task, dataset_id, **kwargs)
+
+
+@app.task(base=WorkflowTask, bind=True, name='deliver_dataset_aws',
+          autoretry_for=(exc.RetryableException,),
+          max_retries=3,
+          default_retry_delay=5)
+def cancel_dataset_upload(celery_task, dataset_id, **kwargs):
+    from workers.tasks.deliver_dataset_aws import deliver as task_body
+    return task_body(celery_task, dataset_id, **kwargs)

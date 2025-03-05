@@ -136,6 +136,10 @@ class DatasetService {
   initiate_workflow_on_dataset({ dataset_id, workflow }) {
     return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
   }
+
+  initiate_cloud_transfer({ dataset_id, data }) {
+    return api.post(`/datasets/${dataset_id}/push-to-cloud`, ...data);
+  }
 }
 
 export default new DatasetService();

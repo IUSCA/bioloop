@@ -160,6 +160,22 @@ config = {
                     'task': 'cancel_dataset_upload'
                 }
             ]
+        },
+        'deliver_dataset_aws': {
+            'steps': [
+                {
+                    'name': 'stage',
+                    'task': 'stage_dataset'
+                },
+                {
+                    'name': 'validate',
+                    'task': 'validate_dataset'
+                },
+                {
+                    'name': 'Deliver Dataset',
+                    'task': 'deliver_dataset'
+                }
+            ]
         }
     },
     'celery': {

@@ -152,6 +152,17 @@
                   >
                     <i-mdi-download class="pr-2 text-2xl" /> Download
                   </va-button>
+
+                  <va-button
+                    class="flex-initial"
+                    color="primary"
+                    border-color="primary"
+                    preset="secondary"
+                    @click="initiateTransfer"
+                  >
+                    <i-mdi-cloud-upload-outline class="pr-2 text-2xl" />
+                    Push to Cloud Storage
+                  </va-button>
                 </div>
               </va-card-content>
             </va-card>
@@ -494,6 +505,23 @@ const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
+
+const initiateTransfer = () => {
+  DatasetService.initiate_cloud_transfer({
+    dataset_id: dataset.value.id,
+    data: {
+      destination_storage_type: "get_from_user_input",
+      destination_path: "get_from_user_input",
+    },
+  })
+    .then(() => {
+      workflowService.create_workflow({});
+    })
+    .catch((error) => {
+      console.error("Error initiating transfer", error);
+      toast.error("Error initiating transfer");
+    });
+};
 </script>
 
 <route lang="yaml">

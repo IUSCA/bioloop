@@ -381,6 +381,22 @@ model about {
   last_updated_by_id Int?
 }
 
+model dataset_transfer {
+  id                       Int                 @id @default(autoincrement())
+  initiator_id             Int
+  initiator                user                @relation(fields: [initiator_id], references: [id], onDelete: SetNull)
+  dataset_id               Int
+  dataset                  dataset             @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  destination_storage_type CLOUD_TRANSFER_TYPE
+  destination_path         String
+  start_time               DateTime            @default(now()) @db.Timestamp(6)
+}
+
+enum CLOUD_TRANSFER_TYPE {
+  AWS
+  GCP
+}
+
 enum access_type {
   BROWSER
   SLATE_SCRATCH

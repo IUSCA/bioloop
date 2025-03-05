@@ -782,4 +782,35 @@ router.get(
   }),
 );
 
+router.post(
+  '/:id/push_to_cloud',
+  validate([
+    param('id').isInt().toInt(),
+    body('destination_storage_type').escape().notEmpty().optional(),
+    body('destination_path').escape().notEmpty().optional(),
+  ]),
+  dataset_access_check,
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = Push a dataset to a cloud storage
+    // todo - check for idempotence
+    const transfer_details = await prisma.dataset_transfer.create({
+      data: {
+        dataset_id: req.params.id,
+        destination_storage_type: req.body.destination_storage_type,
+        destination_path: req.body.destination_path,
+        initiator_id: req.user.id,
+      },
+      include: {
+        dataset: true,
+        initiator: true,
+      },
+    });
+
+    await datasetService.create_workflow(transfer_details.dataset, 'deliver_dataset_aws', req.user.id);
+
+    res.json(transfer_details);
+  }),
+);
+
 module.exports = router;
