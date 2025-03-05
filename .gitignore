@@ -68,5 +68,6 @@ todo.md
 
 .pm2
 
+
 # ignore data directory in the root
 /data
