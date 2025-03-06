@@ -21,17 +21,20 @@ class Registration:
 
         wf = Workflow(celery_app=celery_app, **self.wf_body)
         dataset_payload = {
-            'data': {
-                'name': dataset_name,
-                'type': self.dataset_type,
-                'workflow_id': wf.workflow['_id'],
-                'origin_path': dataset_path
-            }
+            'name': dataset_name,
+            'type': self.dataset_type,
+            'workflow_id': wf.workflow['_id'],
+            'origin_path': dataset_path
         }
 
         # HTTP POST
-        created_dataset = api.create_dataset(dataset_payload)
-        wf.start(created_dataset['id'])
+        try:
+            created_dataset = api.create_dataset(dataset_payload)
+            wf.start(created_dataset['id'])
+        except DatasetAlreadyExistsError:
+            print(f'{dataset_name} already exists')
+            return
+
 
 
 if __name__ == '__main__':
