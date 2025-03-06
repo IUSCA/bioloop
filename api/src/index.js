@@ -9,31 +9,40 @@ require('./db');
 const config = require('config');
 const app = require('./app');
 const logger = require('./services/logger');
+const eventPublisher = require('./services/events/publish');
+const { populateEventTypes } = require('./services/events');
 
 const port = config.get('express.port');
 const host = config.get('express.host');
-const server = app.listen(port, () => {
-  logger.info(`Listening: http://${host}:${port}`);
-});
 
-const shutdown = () => {
-  logger.warn('server: closing');
-  server.close((err) => {
-    if (err) {
-      logger.error('server: closed with ERROR', err);
-      process.exit(1);
-    }
-    logger.warn('server: closed');
-    process.exit();
+(async () => {
+  await populateEventTypes();
+  await eventPublisher.start();
+
+  const server = app.listen(port, () => {
+    logger.info(`Listening: http://${host}:${port}`);
   });
-};
 
-process.on('SIGINT', () => {
-  logger.warn('process received SIGINT');
-  shutdown();
-});
+  const shutdown = async () => {
+    logger.warn('server: closing');
+    await eventPublisher.close(); // does not throw an error
+    server.close((err) => {
+      if (err) {
+        logger.error('server: closed with ERROR', err);
+        process.exit(1);
+      }
+      logger.warn('server: closed');
+      process.exit();
+    });
+  };
 
-process.on('SIGTERM', () => {
-  logger.warn('process received SIGTERM');
-  shutdown();
-});
+  process.on('SIGINT', () => {
+    logger.warn('process received SIGINT');
+    shutdown();
+  });
+
+  process.on('SIGTERM', () => {
+    logger.warn('process received SIGTERM');
+    shutdown();
+  });
+})();

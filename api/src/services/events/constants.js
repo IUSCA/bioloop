@@ -1,0 +1,13 @@
+module.exports = Object.freeze({
+  DATASET: {
+    STAGED: 'DATASET_STAGED',
+    PROCESSED: 'DATASET_PROCESSED',
+  },
+  USER: {
+    LOGIN: 'USER_LOGIN',
+    LOGOUT: 'USER_LOGOUT',
+    CREATED: 'USER_CREATED',
+    UPDATED: 'USER_UPDATED',
+    DELETED: 'USER_DELETED',
+  },
+});

@@ -310,6 +310,25 @@ function base64urlEncode(buf) {
     .replace(/\//g, '_'); // Replace '/' with '_'
 }
 
+function isObjectWithKeys(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0;
+}
+
+function findDuplicates(array) {
+  const duplicates = new Set();
+  const unique = new Set();
+
+  array.forEach((item) => {
+    if (unique.has(item)) {
+      duplicates.add(item);
+    } else {
+      unique.add(item);
+    }
+  });
+
+  return { unique, duplicates };
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -324,4 +343,6 @@ module.exports = {
   transactionWithRetry,
   TransactionRetryError,
   base64urlEncode,
+  isObjectWithKeys,
+  findDuplicates,
 };
