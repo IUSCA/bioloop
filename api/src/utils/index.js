@@ -240,6 +240,22 @@ class TransactionRetryError extends Error {
   }
 }
 
+/**
+ * Executes a transaction with retry logic in case of write conflicts or deadlocks.
+ *
+ * @param {object} prisma - The Prisma client instance.
+ * @param {function|array} statementsOrFn - A function representing an interactive transaction or an array of statements for a batch transaction.
+ * @param {object} [options] - Optional settings for the transaction.
+ * @param {number} [options.maxRetries=5] - The maximum number of retry attempts.
+ * @param {string} [options.isolationLevel=Prisma.TransactionIsolationLevel.RepeatableRead] - The isolation level for the transaction.
+ * @param {} [options.kwargs] - Additional options to pass to the transaction.
+ *
+ * @throws {TypeError} If the input is not a function or an array of statements.
+ * @throws {Error} If the Prisma client is not defined.
+ * @throws {Error} If maxRetries is less than 1.
+ * @throws {TransactionRetryError} If all retry attempts are exhausted.
+ * @returns {Promise<*>} The result of the transaction.
+ */
 async function transactionWithRetry(
   prisma,
   statementsOrFn,

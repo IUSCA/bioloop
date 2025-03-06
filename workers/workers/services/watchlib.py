@@ -18,6 +18,7 @@ class Observer:
         events:
         - add: directory added
         - delete: directory deleted
+        - full_scan: full scan of the directory
 
         The first event will be "add" and it'll contain all the directories present at the time of registration.
 
@@ -46,6 +47,9 @@ class Observer:
         """
         Watch the directory for changes and call the callback function on changes.
         """
+        if not self.dir_path.exists():
+            logger.warning(f'Directory {self.dir_path} does not exist. Skipping.')
+            return
         dirs = [p for p in self.dir_path.iterdir() if p.is_dir()]
         current_directories = set(p.name for p in dirs)
         added_directories = current_directories - self.directories
@@ -118,7 +122,7 @@ class Poller:
                 self.scan_count[observer.name] = self.scan_count[observer.name] + 1
                 scan_type = 'incremental'
                 if observer.full_scan_every_n_scans and (
-                    self.scan_count[observer.name] >= observer.full_scan_every_n_scans
+                        self.scan_count[observer.name] >= observer.full_scan_every_n_scans
                 ):
                     scan_type = 'full'
                     self.scan_count[observer.name] = 0

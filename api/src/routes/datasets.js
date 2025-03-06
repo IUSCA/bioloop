@@ -355,7 +355,6 @@ router.post(
     const { ingestion_space } = req.body;
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
-      // TODO: config.restricted_ingestion_dirs[ingestion_space] should be an array of strings
       const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
       const is_origin_path_restricted = restricted_ingestion_dirs.some((glob) => {
         const isMatch = pm(glob);
