@@ -506,6 +506,7 @@ const onSubmit = async () => {
           // TODO
           return Promise.reject();
         }
+        return Promise.reject(err);
       })
       .then(() => {
         return initiateIngestion();
