@@ -734,7 +734,7 @@ router.get(
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${dataset.bundle.name}`;
+        : `${datasetService.get_bundle_name(dataset)}`;
       const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces

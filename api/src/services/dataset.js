@@ -480,6 +480,8 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+
 module.exports = {
   soft_delete,
   get_dataset,
@@ -489,4 +491,5 @@ module.exports = {
   files_ls,
   search_files,
   add_files,
+  get_bundle_name,
 };
