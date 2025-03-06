@@ -1,4 +1,6 @@
 const crypto = require('node:crypto');
+const util = require('node:util');
+
 const express = require('express');
 const { query, body } = require('express-validator');
 const config = require('config');
@@ -35,8 +37,9 @@ router.get(
     *
     * This is not necessary for confidential oauth clients, but microsoft requires it.
     */
-    const code_verifier = utils.base64urlEncode(crypto.randomBytes(32));
-    const hash = crypto.createHash('sha256').update(code_verifier).digest();
+    const randomBytes = await util.promisify(crypto.randomBytes)(32);
+    const code_verifier = utils.base64urlEncode(randomBytes);
+    const hash = crypto.createHash('sha256').update(code_verifier).digest(); // synchronous
     const code_challenge = utils.base64urlEncode(hash);
 
     const queryParams = {
