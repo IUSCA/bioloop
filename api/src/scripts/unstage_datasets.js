@@ -1,6 +1,5 @@
 /* eslint-disable no-console */
 const { PrismaClient } = require('@prisma/client');
-const _ = require('lodash/fp');
 
 const prisma = new PrismaClient();
 
@@ -19,9 +18,7 @@ async function main() {
     },
   });
 
-  console.log(`Deleted ${res.count} staged datasets`);
-  console.dir(res, { depth: null });
-
+  console.log(`Unstaged ${res.count} staged datasets`);
   return res;
 }
 
