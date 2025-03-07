@@ -23,18 +23,26 @@ class EventPublisher {
 
   async connect() {
     this.connection = await amqp.connect(this.url);
-    this.channel = await this.connection.createChannel();
+    this.channel = await this.connection.createConfirmChannel();
     // Ensure the queue exists
     await this.channel.assertQueue(event_queue, { durable: true });
     logger.info('Connected to RabbitMQ and channel created');
   }
 
   async publish(event) {
-    const buf = Buffer.from(JSON.stringify(event));
-    // channel behaves like stream.Writable, does not return a promise
-    // TODO: wait for drain event if channel is busy
-    this.channel.sendToQueue(event_queue, buf, {
-      persistent: true,
+    return new Promise((resolve, reject) => {
+      const buf = Buffer.from(JSON.stringify(event));
+      // channel behaves like stream.Writable, does not return a promise
+      // TODO: wait for drain event if channel is busy
+      this.channel.sendToQueue(event_queue, buf, {
+        persistent: true,
+      }, (err, ok) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(ok);
+        }
+      });
     });
   }
 
