@@ -70,7 +70,7 @@
             class="flex-auto py-1"
             preset="secondary"
             border-color="secondary"
-            @click="$router.push({ path: '/auth/cil', query: $route.query })"
+            @click="$router.push({ path: '/auth/cilogon', query: $route.query })"
           >
             <div class="flex justify-center items-center gap-3 w-full">
               <img
