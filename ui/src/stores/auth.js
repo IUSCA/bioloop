@@ -86,6 +86,21 @@ export const useAuthStore = defineStore("auth", () => {
       });
   }
 
+  function microsoftLogin({ code, state, code_verifier }) {
+    return authService
+      .microsoftVerify({ code, state, code_verifier })
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+        return res.data;
+      })
+      .catch((error) => {
+        console.error("Microsoft Login failed", error);
+        status.value = error;
+        onLogout();
+        return Promise.reject();
+      });
+  }
+
   function logout() {
     onLogout();
   }
@@ -212,6 +227,7 @@ export const useAuthStore = defineStore("auth", () => {
     getTheme,
     googleLogin,
     ciLogin,
+    microsoftLogin,
     env,
     setEnv,
     refreshUploadToken,

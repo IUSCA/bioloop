@@ -15,6 +15,7 @@ const router = express.Router();
 const googleRouter = require('./google');
 const cilogonRouter = require('./cilogon');
 const casRouter = require('./iucas');
+const microsoftRouter = require('./microsoft');
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Auth']
@@ -108,5 +109,9 @@ if (config.get('auth.google.enabled')) {
 
 if (config.get('auth.cilogon.enabled')) {
   router.use('/cilogon', cilogonRouter);
+}
+
+if (config.get('auth.microsoft.enabled')) {
+  router.use('/microsoft', microsoftRouter);
 }
 module.exports = router;

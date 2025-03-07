@@ -173,8 +173,8 @@ import config from "@/config";
 import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
-import pm from "picomatch";
 import { watchDebounced } from "@vueuse/core";
+import pm from "picomatch";
 
 const STEP_KEYS = {
   DIRECTORY: "directory",
@@ -462,11 +462,9 @@ const removeDataset = () => {
 
 const preIngestion = () => {
   return datasetService.create_dataset({
-    data: {
-      name: selectedFile.value.name,
-      type: config.dataset.types.DATA_PRODUCT.key,
-      origin_path: selectedFile.value.path,
-    },
+    name: selectedFile.value.name,
+    type: config.dataset.types.DATA_PRODUCT.key,
+    origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
   });
 };
@@ -500,6 +498,15 @@ const onSubmit = async () => {
       .then(async (res) => {
         datasetId.value = res.data.id;
         return datasetId.value;
+      })
+      .catch((err) => {
+        // handle 409 error when dataset already exists
+        if (err.response.status === 409) {
+          toast.error("A Data Product with this name already exists.");
+          // TODO
+          return Promise.reject();
+        }
+        return Promise.reject(err);
       })
       .then(() => {
         return initiateIngestion();
