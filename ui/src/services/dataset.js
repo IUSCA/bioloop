@@ -136,6 +136,10 @@ class DatasetService {
   initiate_workflow_on_dataset({ dataset_id, workflow }) {
     return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
   }
+
+  get_bundle_name(dataset) {
+    return `${dataset.name}.${dataset.type}.tar`;
+  }
 }
 
 export default new DatasetService();

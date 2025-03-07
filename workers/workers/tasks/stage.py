@@ -14,7 +14,7 @@ from workers.config import config
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers.dataset import compute_staging_path
-from workers.dataset import compute_bundle_path, get_bundle_staged_path
+from workers.dataset import get_bundle_staged_path
 from workers import exceptions as exc
 
 app = Celery("tasks")
@@ -66,7 +66,6 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     returns: stage_path
     """
     staging_dir, alias = compute_staging_path(dataset)
-    bundle_alias = compute_bundle_path(dataset)
 
     sda_bundle_path = dataset['archive_path']
     alias_dir = staging_dir.parent
@@ -92,18 +91,17 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     # delete the local tar copy after extraction
     # bundle_path.unlink()
 
-    return str(staging_dir), alias, bundle_alias
+    return str(staging_dir), alias
 
 
 def stage_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
-    staged_path, alias, bundle_alias = stage(celery_task, dataset)
+    staged_path, alias = stage(celery_task, dataset)
 
     update_data = {
         'staged_path': staged_path,
         'metadata': {
             'stage_alias': alias,
-            'bundle_alias': bundle_alias
         }
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)

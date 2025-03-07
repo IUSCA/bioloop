@@ -35,15 +35,9 @@ def compute_staging_path(dataset: dict) -> tuple[Path, str]:
     return staging_dir / alias / dataset['name'], alias
 
 
-def bundle_alias(bundle: dict) -> str:
-    salt = config['stage']['alias_salt']
-    return deterministic_uuid(f'{bundle["id"]}{bundle["name"]}{salt}')
-
-
-def compute_bundle_path(dataset: dict) -> str:
-    alias = glom(dataset, 'metadata.bundle_alias', default=bundle_alias(dataset['bundle']))
-    return alias
-
-
 def get_bundle_staged_path(dataset: dict) -> str:
-    return f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{dataset["bundle"]["name"]}'
+    return f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{get_bundle_name(dataset)}'
+
+
+def get_bundle_name(dataset: dict) -> str:
+    return f"{dataset['name']}.{dataset['type']}.tar"

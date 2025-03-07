@@ -84,7 +84,7 @@ services:
     networks:
       network:
         ipv4_address: 172.19.0.7
-  
+
   prometheus:
     image: prom/prometheus
     volumes:
@@ -97,7 +97,7 @@ services:
     networks:
       network:
         ipv4_address: 172.19.0.6
-  
+
   grafana:
     image: grafana/grafana
     volumes:
