@@ -12,7 +12,7 @@ const { validate } = require('../../middleware/validators');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { loginHandler } = require('../../middleware/auth');
 
-const userService = require('../../services/user');
+const authService = require('../../services/auth');
 const utils = require('../../utils');
 
 const router = express.Router();
@@ -122,7 +122,9 @@ router.post(
     // }
 
     const email = msft_user.mail || msft_user.userPrincipalName;
-    const user = await userService.findActiveUserBy('email', email);
+    const user = await authService.getLoginUser('email', email, {
+      name: msft_user.displayName,
+    });
     req.auth_user = user;
     req.auth_method = 'microsoft';
     next();
