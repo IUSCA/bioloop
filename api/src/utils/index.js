@@ -329,6 +329,36 @@ function findDuplicates(array) {
   return { unique, duplicates };
 }
 
+const setTimeoutPromise = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+/**
+ * Safely parses a JSON string and returns the resulting object.
+ * If parsing fails, it returns null and optionally logs the error.
+ *
+ * @param {string} jsonString - The JSON string to parse.
+ * @param {boolean} [log=false] - Whether to log the error to the console.
+ * @returns {Object|null} The parsed object, or null if parsing failed.
+ */
+function safeParseJSON(jsonString, log = false) {
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    if (log) console.error('Error parsing JSON:', error);
+
+    return null;
+  }
+}
+
+const safeAwait = async (fn, log = false) => {
+  try {
+    return await fn();
+  } catch (e) {
+    if (log) console.error('Error in safe await:', e);
+
+    return null; // or any default value you want to return when there's an error
+  }
+};
+
 module.exports = {
   renameKey,
   setDifference,
@@ -345,4 +375,7 @@ module.exports = {
   base64urlEncode,
   isObjectWithKeys,
   findDuplicates,
+  safeParseJSON,
+  safeAwait,
+  setTimeoutPromise,
 };

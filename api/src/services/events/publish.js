@@ -65,19 +65,19 @@ class EventPublisher {
         // onAny is invoked synchronously when an event is emitted
         // we need to publish the event asynchronously to avoid blocking the event loop
         // so we use setImmediate to defer the publishing to the next tick
-        eventBus.onAny((event, data) => {
-          if (data == null || typeof payload !== 'object') {
-            logger.warn(`Unable to publish event. Invalid payload: ${JSON.stringify(data)}`);
+        eventBus.onAny((name, data) => {
+          if (data == null || typeof data !== 'object') {
+            logger.warn(`Unable to publish event. Invalid data: ${JSON.stringify(data)}`);
             return;
           }
           const eventData = {
-            event,
+            name,
             data,
             timestamp: new Date().toISOString(),
           };
           setImmediate(() => {
             this.publish(eventData).catch((err) => {
-              logger.error(`Failed to publish event ${event}: ${err.message}`);
+              logger.error(`Failed to publish event ${name}: ${err.message}`);
             });
           });
         });

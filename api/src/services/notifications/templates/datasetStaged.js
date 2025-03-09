@@ -6,7 +6,7 @@ class DatasetStagedTemplate extends MessageTemplate {
   async build() {
     // Fetch the dataset details
 
-    const id = parseInt(this.event.resource_id, 10);
+    const id = parseInt(this.event?.data?.resource_id, 10);
     if (Number.isNaN(id)) {
       throw new NonRetryableError('Invalid dataset ID');
     }

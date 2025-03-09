@@ -5,6 +5,7 @@ const prisma = new PrismaClient({
 });
 
 function getUsersSubscribedToEvent({ event_name, resource_id = null, resource_type = null }) {
+  // console.log('getUsersSubscribedToEvent', event_name, resource_id, resource_type);
   const resource_type_condition = resource_type
     ? Prisma.sql`and ns.resource_type = ${resource_type}`
     : Prisma.sql`and ns.resource_type is null`;
