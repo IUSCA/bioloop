@@ -175,7 +175,11 @@ config = {
     },
     'email': {
         'from_addr': 'scauser@iu.edu',
-        'sendmail_path': '/usr/sbin/sendmail'
+        'sendmail_path': '/usr/sbin/sendmail',
+        'smtp': {
+            'host': 'localhost',
+            'port': 25
+        }
     },
     'workflow': {
         'purge': {
@@ -188,6 +192,7 @@ config = {
         'file_metadata_batch_size': 25000
     },
     'notifications': {
-        'event_queue': 'events'
-    }
+        'event_queue': 'events',
+        'email_queue': 'email_notifications',
+    },
 }
