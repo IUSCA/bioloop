@@ -186,5 +186,8 @@ config = {
     },
     'inspect': {
         'file_metadata_batch_size': 25000
+    },
+    'notifications': {
+        'event_queue': 'events'
     }
 }

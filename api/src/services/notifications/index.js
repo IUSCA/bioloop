@@ -1,8 +1,6 @@
 const { PrismaClient, Prisma } = require('@prisma/client');
 
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-});
+const prisma = new PrismaClient();
 
 function getUsersSubscribedToEvent({ event_name, resource_id = null, resource_type = null }) {
   // console.log('getUsersSubscribedToEvent', event_name, resource_id, resource_type);
