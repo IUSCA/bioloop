@@ -184,9 +184,9 @@
     "downloads": true
   },
   "queue": {
-    "url": "QUEUE_URL",
-    "username": "QUEUE_USERNAME",
-    "password": "QUEUE_PASSWORD"
+    "url": "",
+    "username": "",
+    "password": ""
   },
   "notifications": {
     "event_queue": "events",

@@ -52,12 +52,21 @@ class EventBus extends EventEmitter {
   }
 }
 
-async function populateEventTypes(eventNames) {
+async function populateEventTypes() {
+  // return prisma.event_type.createMany({
+  //   data: EVENT_NAMES.map((name) => ({ name })),
+  //   skipDuplicates: true,
+  // });
+  // cannot use above code because it increments the id even if the name already exists
+  // executing this function many times will result in large gaps in the id sequence
+  if (EVENT_NAMES == null || EVENT_NAMES.length === 0) {
+    return;
+  }
   return prisma.$transaction(async (tx) => {
     const existingEvents = await tx.event_type.findMany({
       where: {
         name: {
-          in: eventNames,
+          in: EVENT_NAMES,
         },
       },
       select: {
@@ -66,11 +75,12 @@ async function populateEventTypes(eventNames) {
     });
 
     const existingEventNames = new Set(existingEvents.map((e) => e.name));
-    const missingEventNames = eventNames.filter((name) => !existingEventNames.has(name));
+    const missingEventNames = EVENT_NAMES.filter((name) => !existingEventNames.has(name));
 
     if (missingEventNames.length > 0) {
       await tx.event_type.createMany({
         data: missingEventNames.map((name) => ({ name })),
+        skipDuplicates: true, // don't fail if a concurrent transaction already created the event
       });
     }
   });
