@@ -28,6 +28,9 @@ build:
     - cd ../workers/
     - docker build -t $CI_REGISTRY/$PROJECT_NAME/workers:test .
     - docker push $CI_REGISTRY/$PROJECT_NAME/workers:test
+    - cd ../secure_download/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/secure_download:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/secure_download:test
 
 lint-api:
   tags: ['builddev-docker']
@@ -104,6 +107,10 @@ tag:
     - docker push $CI_REGISTRY/$PROJECT_NAME/workers:$tag
     - docker tag $CI_REGISTRY/$PROJECT_NAME/workers:test $CI_REGISTRY/$PROJECT_NAME/workers:latest
     - docker push $CI_REGISTRY/$PROJECT_NAME/workers:latest
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/secure_download:test $CI_REGISTRY/$PROJECT_NAME/secure_download:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/secure_download:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/secure_download:test $CI_REGISTRY/$PROJECT_NAME/secure_download:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/secure_download:latest
   # rules:
   #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
   #     when: always
