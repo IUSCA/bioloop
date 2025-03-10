@@ -1,5 +1,7 @@
 FROM node:19
 
+WORKDIR /opt/sca/app
+
 COPY . /opt/sca/app
 
 ARG APP_GID
