@@ -14,6 +14,8 @@ services:
     ports:
       - 80:80
       - 443:443
+    expose:
+      - 8000
     depends_on:
       - api
     networks:
@@ -168,6 +170,20 @@ services:
     depends_on:
       - queue
       - mongo
+
+  # This is only for secure_download
+  secure_download:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/secure_download:latest
+    restart: unless-stopped
+    expose:
+      - 3080
+    ports:
+      - 3080:3080
+    env_file:
+      - secure_download.env
+
+
+
 
 volumes:
   ui_modules:
