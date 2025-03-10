@@ -41,10 +41,11 @@
             :messages="['Choose the type of dataset you are uploading']"
           />
         </div>
-      </template>
 
-      <template #step-content-1>
-        <div class="flex flex-col gap-10">
+        <div
+          v-if="selectedDatasetType && selectedDatasetType?.value !== config.dataset.types.RAW_DATA.key"
+          class="flex flex-col gap-10"
+        >
           <va-checkbox
             v-model="isAssignedSourceRawData"
             @update:modelValue="
@@ -70,7 +71,7 @@
               select-mode="single"
               :dataset-type="config.dataset.types.RAW_DATA.key"
               :show-error="!stepIsPristine"
-              :error="formErrors[STEP_KEYS.RAW_DATA]"
+              :error="formErrors[FIELDS.RAW_DATA]"
               placeholder="Search Raw Data"
               selected-label="Selected source Raw Data"
               :messages="['Select a Source Raw Data']"
@@ -79,7 +80,7 @@
         </div>
       </template>
 
-      <template #step-content-2>
+      <template #step-content-1>
         <div class="flex flex-col">
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
@@ -125,10 +126,10 @@
                     :selecting-files="selectingFiles"
                     :selecting-directory="selectingDirectory"
                     :uploaded-data-product-error-messages="
-                      formErrors[STEP_KEYS.UPLOAD]
+                      formErrors[FIELDS.UPLOAD]
                     "
                     :uploaded-data-product-error="
-                      !!formErrors[STEP_KEYS.UPLOAD]
+                      !!formErrors[FIELDS.UPLOAD]
                     "
                     :source-raw-data="rawDataSelected"
                     :submission-status="submissionStatus"
@@ -202,12 +203,11 @@ import { useAuthStore } from "@/stores/auth";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
 // const token = ref(useLocalStorage("token", ""));
 
-const STEP_KEYS = {
+const FIELDS = {
   DATASET_TYPE: "datasetType",
   RAW_DATA: "rawData",
   UPLOAD: "upload",
@@ -228,10 +228,10 @@ const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
 const steps = [
-  { key: STEP_KEYS.DATASET_TYPE, label: "Dataset Type", icon: "mdi:file-tree" },
-  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
+  { key: FIELDS.DATASET_TYPE, label: "Dataset Type", icon: "mdi:file-tree" },
+  { key: FIELDS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
   {
-    key: STEP_KEYS.UPLOAD,
+    key: FIELDS.UPLOAD,
     label: "Upload",
     icon: "material-symbols:folder",
   },
@@ -246,28 +246,34 @@ const SOURCE_RAW_DATA_REQUIRED_ERROR =
 const DATASET_TYPE_REQUIRED_ERROR = "Dataset type is required.";
 
 const formErrors = ref({
-  [STEP_KEYS.DATASET_TYPE]: null,
-  [STEP_KEYS.RAW_DATA]: null,
-  [STEP_KEYS.UPLOAD]: null,
+  [FIELDS.DATASET_TYPE]: null,
+  [FIELDS.RAW_DATA]: null,
+  [FIELDS.UPLOAD]: null,
 });
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !selectedDatasetType.value;
+    return (
+      !!formErrors[FIELDS.DATASET_TYPE] || !!formErrors.value[FIELDS.RAW_DATA]
+    );
   } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.RAW_DATA];
-  } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.UPLOAD];
+    return !!formErrors.value[FIELDS.UPLOAD];
   }
 });
 
-const isAssignedSourceRawData = ref(true);
+const isAssignedSourceRawData = ref(false);
 const submissionSuccess = ref(false);
 
 const selectedDatasetType = ref(null);
 const datasetTypeOptions = [
-  { text: "Raw Data", value: "RAW_DATA" },
-  { text: "Data Product", value: "DATA_PRODUCT" },
+  {
+    text: config.dataset.types.RAW_DATA.label,
+    value: config.dataset.types.RAW_DATA.key,
+  },
+  {
+    text: config.dataset.types.DATA_PRODUCT.label,
+    value: config.dataset.types.DATA_PRODUCT.key,
+  },
 ];
 
 const isPreviousButtonDisabled = computed(() => {
@@ -305,12 +311,13 @@ const isStepperButtonDisabled = (stepIndex) => {
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine.
-// For steps 0 to 2, <va-form-field> components track the pristine state of
-// their respective input fields. For step 3, pristine state is maintained by
+// For step 0, <va-form-field> components track the pristine state of
+// the input fields. For step 2, pristine state is maintained by
 // this component.
 const stepPristineStates = ref([
-  { [STEP_KEYS.RAW_DATA]: true },
-  { [STEP_KEYS.UPLOAD]: true },
+  { [FIELDS.DATASET_TYPE]: true },
+  { [FIELDS.RAW_DATA]: true },
+  { [FIELDS.UPLOAD]: true },
 ]);
 
 const stepIsPristine = computed(() => {
@@ -352,7 +359,7 @@ const validateNotExists = (value) => {
     } else {
       datasetService
         .getAll({
-          type: selectedDatasetType.value.value,
+          type: selectedDatasetType?.value?.value,
           name: value,
           match_name_exact: true,
         })
@@ -432,7 +439,7 @@ const uploadFormData = computed(() => {
       : "";
   return {
     name: datasetName,
-    type: selectedDatasetType.value.value,
+    type: selectedDatasetType?.value?.value,
     ...(rawDataSelected.value.length > 0 && {
       source_dataset_id: rawDataSelected.value[0].id,
     }),
@@ -441,9 +448,9 @@ const uploadFormData = computed(() => {
 
 const resetFormErrors = () => {
   formErrors.value = {
-    [STEP_KEYS.DATASET_TYPE]: null,
-    [STEP_KEYS.RAW_DATA]: null,
-    [STEP_KEYS.UPLOAD]: null,
+    [FIELDS.DATASET_TYPE]: null,
+    [FIELDS.RAW_DATA]: null,
+    [FIELDS.UPLOAD]: null,
   };
 };
 
@@ -516,38 +523,50 @@ const setUploadedFileType = (fileType) => {
 const setFormErrors = async () => {
   resetFormErrors();
   if (step.value === 0) {
+    console.log("selectedDatasetType.value");
+    console.log(selectedDatasetType.value);
     if (!selectedDatasetType.value) {
-      formErrors.value[STEP_KEYS.DATASET_TYPE] = DATASET_TYPE_REQUIRED_ERROR;
+      formErrors.value[FIELDS.DATASET_TYPE] = DATASET_TYPE_REQUIRED_ERROR;
+      console.log("(!selectedDatasetType.value): will return");
       return;
+    } else if (
+      selectedDatasetType.value !== config.dataset.types.RAW_DATA.key
+    ) {
+      console.log(
+        "else if (selectedDatasetType.value.value !== config.dataset.types.RAW_DATA.key)",
+      );
+      if (isAssignedSourceRawData.value && rawDataSelected.value.length === 0) {
+        console.log(
+          "if (isAssignedSourceRawData.value && rawDataSelected.value.length === 0) {",
+        );
+        formErrors.value[FIELDS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
+        return;
+      } else {
+        console.log("else");
+        formErrors.value[FIELDS.RAW_DATA] = null;
+      }
     }
   }
 
   if (step.value === 1) {
-    if (!isAssignedSourceRawData.value) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = null;
-      return;
-    }
-    if (rawDataSelected.value.length === 0) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
-      return;
-    }
-  }
-
-  if (step.value === 2) {
+    console.log("if (step.value === 1)");
     if (
       (selectingFiles.value || selectingDirectory.value) &&
       filesToUpload.value.length === 0
     ) {
-      formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
+      console.log(
+        "if (selectingFiles.value || selectingDirectory.value) && filesToUpload.value.length === 0",
+      );
+      formErrors.value[FIELDS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
       return;
     }
 
     const { isNameValid: datasetNameIsValid, error } =
       await validateDatasetName();
     if (datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.UPLOAD] = null;
+      formErrors.value[FIELDS.UPLOAD] = null;
     } else {
-      formErrors.value[STEP_KEYS.UPLOAD] = error;
+      formErrors.value[FIELDS.UPLOAD] = error;
     }
   }
 };
@@ -1129,7 +1148,7 @@ watch(
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    if (stepKey === STEP_KEYS.RAW_DATA) {
+    if (stepKey === FIELDS.RAW_DATA) {
       stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0];
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
@@ -1139,9 +1158,9 @@ watch(
   },
 );
 
-onMounted(() => {
-  setFormErrors();
-});
+// onMounted(() => {
+//   // setFormErrors();
+// });
 
 // show alert before user moves to a different route
 onBeforeRouteLeave(() => {
