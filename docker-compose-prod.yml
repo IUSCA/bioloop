@@ -11,7 +11,7 @@ services:
       - sh
       - -c
       - |
-        npm install && exec npm run builddev
+        npm install && exec /opt/sca/app/node_modules/.bin/vite --host
     
 
   api:

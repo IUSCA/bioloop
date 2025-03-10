@@ -28,6 +28,7 @@ services:
     #   - APP_UID=APP_UID
     #   - APP_GID=APP_GID
     volumes:
+      - ./logs:/var/log/api
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
     expose:
@@ -35,7 +36,7 @@ services:
     ports:
       - 127.0.0.1:3030:3030
     working_dir: /opt/sca/app
-    # entrypoint: ["tail", "-f", "/dev/null"]
+#    entrypoint: ["tail", "-f", "/dev/null"]
     # command: sh -c "sleep infinity"
     entrypoint:
       - sh
@@ -43,7 +44,7 @@ services:
       - |
         npm install \
         && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js  2>&1 | tee /var/log/api/startup.log
 
 
     extra_hosts:

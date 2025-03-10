@@ -123,8 +123,10 @@ export default defineConfig(({ command, mode }) => {
       },
     },
     // to disable minification - https://vitejs.dev/config/build-options.html#build-minify
-    // build: {
-    //   minify: false,
-    // },
+    build: {
+      // minify: false
+      // sourcemap: true,
+      sourcemap: 'inline',
+    },
   };
 });
