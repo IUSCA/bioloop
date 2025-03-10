@@ -192,16 +192,16 @@
 <script setup>
 import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 import config from "@/config";
+import Constants from "@/constants";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import datasetUploadService from "@/services/upload/dataset";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-import { jwtDecode } from "jwt-decode";
-import Constants from "@/constants";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
@@ -266,10 +266,8 @@ const submissionSuccess = ref(false);
 
 const selectedDatasetType = ref(null);
 const datasetTypeOptions = [
-  { label: "Raw Data", value: "raw_data" },
-  { label: "Processed Data", value: "processed_data" },
-  { label: "Analysis Results", value: "analysis_results" },
-  // Add more dataset types as needed
+  { text: "Raw Data", value: "RAW_DATA" },
+  { text: "Data Product", value: "DATA_PRODUCT" },
 ];
 
 const isPreviousButtonDisabled = computed(() => {
@@ -354,7 +352,7 @@ const validateNotExists = (value) => {
     } else {
       datasetService
         .getAll({
-          type: selectedDatasetType.value,
+          type: selectedDatasetType.value.value,
           name: value,
           match_name_exact: true,
         })
@@ -434,7 +432,7 @@ const uploadFormData = computed(() => {
       : "";
   return {
     name: datasetName,
-    type: selectedDatasetType.value,
+    type: selectedDatasetType.value.value,
     ...(rawDataSelected.value.length > 0 && {
       source_dataset_id: rawDataSelected.value[0].id,
     }),
