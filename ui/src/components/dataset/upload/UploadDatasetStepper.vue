@@ -30,7 +30,20 @@
         </va-button>
       </template>
 
+      <!-- Dataset Type Selection Step -->
       <template #step-content-0>
+        <div class="flex flex-col gap-4">
+          <h3 class="text-lg font-semibold">Select Dataset Type</h3>
+          <va-select
+            v-model="selectedDatasetType"
+            :options="datasetTypeOptions"
+            label="Dataset Type"
+            :messages="['Choose the type of dataset you are uploading']"
+          />
+        </div>
+      </template>
+
+      <template #step-content-1>
         <div class="flex flex-col gap-10">
           <va-checkbox
             v-model="isAssignedSourceRawData"
@@ -66,7 +79,7 @@
         </div>
       </template>
 
-      <template #step-content-1>
+      <template #step-content-2>
         <div class="flex flex-col">
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
@@ -195,6 +208,7 @@ const uploadToken = ref(useLocalStorage("uploadToken", ""));
 // const token = ref(useLocalStorage("token", ""));
 
 const STEP_KEYS = {
+  DATASET_TYPE: "datasetType",
   RAW_DATA: "rawData",
   UPLOAD: "upload",
 };
@@ -214,6 +228,7 @@ const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
 const steps = [
+  { key: STEP_KEYS.DATASET_TYPE, label: "Dataset Type", icon: "mdi:file-tree" },
   { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
   {
     key: STEP_KEYS.UPLOAD,
@@ -228,22 +243,34 @@ const DATASET_NAME_MAX_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
   "You have requested a source Raw Data to be assigned. Please select one.";
+const DATASET_TYPE_REQUIRED_ERROR = "Dataset type is required.";
 
 const formErrors = ref({
+  [STEP_KEYS.DATASET_TYPE]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.UPLOAD]: null,
 });
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+    return !selectedDatasetType.value;
   } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+  } else if (step.value === 2) {
     return !!formErrors.value[STEP_KEYS.UPLOAD];
   }
 });
 
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
+
+const selectedDatasetType = ref(null);
+const datasetTypeOptions = [
+  { label: "Raw Data", value: "raw_data" },
+  { label: "Processed Data", value: "processed_data" },
+  { label: "Analysis Results", value: "analysis_results" },
+  // Add more dataset types as needed
+];
 
 const isPreviousButtonDisabled = computed(() => {
   return (
@@ -326,7 +353,11 @@ const validateNotExists = (value) => {
       resolve(true);
     } else {
       datasetService
-        .getAll({ type: "DATA_PRODUCT", name: value, match_name_exact: true })
+        .getAll({
+          type: selectedDatasetType.value,
+          name: value,
+          match_name_exact: true,
+        })
         .then((res) => {
           resolve(res.data.datasets.length > 0 ? DATASET_EXISTS_ERROR : true);
         })
@@ -403,7 +434,7 @@ const uploadFormData = computed(() => {
       : "";
   return {
     name: datasetName,
-    type: "DATA_PRODUCT",
+    type: selectedDatasetType.value,
     ...(rawDataSelected.value.length > 0 && {
       source_dataset_id: rawDataSelected.value[0].id,
     }),
@@ -412,6 +443,7 @@ const uploadFormData = computed(() => {
 
 const resetFormErrors = () => {
   formErrors.value = {
+    [STEP_KEYS.DATASET_TYPE]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.UPLOAD]: null,
   };
@@ -486,6 +518,13 @@ const setUploadedFileType = (fileType) => {
 const setFormErrors = async () => {
   resetFormErrors();
   if (step.value === 0) {
+    if (!selectedDatasetType.value) {
+      formErrors.value[STEP_KEYS.DATASET_TYPE] = DATASET_TYPE_REQUIRED_ERROR;
+      return;
+    }
+  }
+
+  if (step.value === 1) {
     if (!isAssignedSourceRawData.value) {
       formErrors.value[STEP_KEYS.RAW_DATA] = null;
       return;
@@ -496,7 +535,7 @@ const setFormErrors = async () => {
     }
   }
 
-  if (step.value === 1) {
+  if (step.value === 2) {
     if (
       (selectingFiles.value || selectingDirectory.value) &&
       filesToUpload.value.length === 0
