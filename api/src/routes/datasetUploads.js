@@ -125,6 +125,11 @@ router.post(
               }),
               name,
               type,
+              ingestor_id: {
+                connect: {
+                  id: req.user.id,
+                },
+              },
             },
           },
           upload_log: {

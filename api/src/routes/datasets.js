@@ -391,6 +391,18 @@ router.post(
       ],
     };
 
+   data.users = {
+      create: [
+        {
+          ingestor: {
+            connect: {
+              id: req.user.id,
+            },
+          },
+        },
+      ],
+    };
+
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly

@@ -36,6 +36,8 @@ model dataset {
   stage_requests     stage_request_log[]
   bundle             bundle?
   dataset_upload_log dataset_upload_log?
+  ingestor_id        Int                @unique
+  ingestor           user               @relation(fields: [ingestor_id], references: [id])
 
   @@unique([name, type, is_deleted])
 }
@@ -191,6 +193,7 @@ model user {
   acknowledged_notifications notification[]
   uploads                    upload_log[]
   user_notifications         user_notification[]
+  ingested_datasets          dataset[]
 }
 
 model user_password {
