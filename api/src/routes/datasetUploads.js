@@ -42,7 +42,7 @@ router.get(
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
   ]),
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Retrieve past uploads'
@@ -96,7 +96,7 @@ const getUploadedDataProductPath = (datasetId) => path.join(
 // - Used by UI
 router.post(
   '/',
-  isPermittedTo('create'),
+  isPermittedTo('create', { checkOwnerShip: true }),
   validate([
     body('type').escape().notEmpty().isIn(config.dataset_types),
     body('name').escape().notEmpty().isLength({ min: 3 }),
@@ -172,7 +172,7 @@ router.post(
 // - Used by UI, workers
 router.patch(
   '/:dataset_id',
-  isPermittedTo('update'),
+  isPermittedTo('update', { checkOwnerShip: true }),
   validate([
     param('dataset_id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
@@ -221,7 +221,7 @@ router.post(
   validate([
     param('dataset_id').isInt().toInt(),
   ]),
-  isPermittedTo('update'),
+  isPermittedTo('update', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
@@ -271,7 +271,7 @@ router.post(
 
 router.post(
   '/:dataset_id/cancel',
-  isPermittedTo('delete'),
+  isPermittedTo('delete', { checkOwnerShip: true }),
   validate([
     param('dataset_id').isInt().toInt(),
   ]),
@@ -318,7 +318,7 @@ router.post(
 
 router.delete(
   '/:dataset_id',
-  isPermittedTo('delete'),
+  isPermittedTo('delete', { checkOwnerShip: true }), 
   validate([
     param('dataset_id').isInt().toInt(),
   ]),

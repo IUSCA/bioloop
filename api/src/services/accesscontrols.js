@@ -85,7 +85,13 @@ const grantsObject = {
     datasets: {
       'create:any': ['*'],
       'read:any': ['*'],
-    }
+    },
+    upload: {
+      'create:any': ['*'],
+      'read:own': ['*'],
+      'update:own': ['*'],
+      'delete:own': ['*']
+    },
   },
 
   // operator role permissions

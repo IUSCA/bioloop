@@ -19,9 +19,9 @@
 </template>
 
 <script setup>
-import { useNavStore } from "@/stores/nav";
-import { useAuthStore } from "@/stores/auth";
 import { isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
+import { useNavStore } from "@/stores/nav";
 
 const auth = useAuthStore();
 
@@ -37,5 +37,5 @@ nav.setNavItems([
 <route lang="yaml">
 meta:
   title: Ingest
-  requiresRoles: ["operator", "admin"]
+  requiresRoles: ["operator", "admin", "user"]
 </route>
