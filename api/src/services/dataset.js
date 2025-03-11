@@ -101,6 +101,7 @@ async function get_dataset({
   includeProjects = false,
   initiator = false,
   include_upload_log = false,
+  include_ingestor = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -134,6 +135,7 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
+      ingestor: include_ingestor, 
       dataset_upload_log: include_upload_log ? {
         include: {
           upload_log: {
@@ -147,6 +149,10 @@ async function get_dataset({
       } : false,
     },
   });
+
+  console.log("dataset:")
+  console.dir(dataset, { depth: null });
+
   const dataset_workflows = dataset.workflows;
 
   if (workflows && dataset.workflows.length > 0) {
