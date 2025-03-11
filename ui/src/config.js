@@ -80,10 +80,10 @@ const exports = {
       enabledForRoles: [],
     },
     ingestion: {
-      enabledForRoles: ["admin"],
+      enabledForRoles: ["admin", "operator", "user"],
     },
     downloads: true,
-    uploads: { enabledForRoles: ["admin"] },
+    uploads: { enabledForRoles: ["admin", "operator", "user"] },
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
