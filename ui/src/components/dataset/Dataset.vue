@@ -376,6 +376,7 @@ function fetch_dataset(show_loading = false) {
     id: props.datasetId,
     bundle: true,
     initiator: true,
+    include_ingestor: true,
   })
     .then((res) => {
       const _dataset = res.data;

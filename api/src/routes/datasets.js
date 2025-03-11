@@ -293,6 +293,7 @@ router.get(
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
     query('include_upload_log').toBoolean().default(false),
+    query('include_ingestor').toBoolean().optional(),    
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -311,6 +312,7 @@ router.get(
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
       include_upload_log: req.query.include_upload_log,
+      include_ingestor: req.query.include_ingestor || false,
     });
 
     res.json(dataset);
@@ -397,6 +399,18 @@ router.post(
       create: [
         {
           state: req.body.state || 'REGISTERED',
+        },
+      ],
+    };
+
+   data.users = {
+      create: [
+        {
+          ingestor: {
+            connect: {
+              id: req.user.id,
+            },
+          },
         },
       ],
     };

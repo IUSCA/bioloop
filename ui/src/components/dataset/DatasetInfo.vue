@@ -59,6 +59,14 @@
           <td>{{ props.dataset.num_directories }}</td>
         </tr>
         <tr>
+          <td>Registered by</td>
+          <td>
+            <div class="max-h-[11.5rem] overflow-y-scroll">
+              {{ `${props.dataset.ingestor?.name} (${props.dataset.ingestor?.username})` }}
+            </div>
+          </td>
+        </tr>
+        <tr>
           <td>Description</td>
           <td>
             <div class="max-h-[11.5rem] overflow-y-scroll">
@@ -72,8 +80,8 @@
 </template>
 
 <script setup>
-import { formatBytes, isFeatureEnabled } from "@/services/utils";
 import * as datetime from "@/services/datetime";
+import { formatBytes, isFeatureEnabled } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({ dataset: Object });

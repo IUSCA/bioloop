@@ -134,6 +134,7 @@ router.post(
                   }],
                 },
               }),
+              ingestor_id: req.user.id,
             },
           },
           upload_log: {
