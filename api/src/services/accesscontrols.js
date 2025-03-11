@@ -82,6 +82,10 @@ const grantsObject = {
       'create:any': ['*'],
       'read:any': ['*'],
     },
+    datasets: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+    }
   },
 
   // operator role permissions
