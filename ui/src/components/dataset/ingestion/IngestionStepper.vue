@@ -36,30 +36,6 @@
     </template>
 
     <template #step-content-0>
-        <!-- <div class="flex flex-col"> -->
-          <va-form-field
-            v-model="projectSelected"
-            v-slot="{ value: v }"
-          >
-          <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
-            <div class="space-y-4">
-              <ProjectSelect
-                @select="setProject"
-              ></ProjectSelect>
-
-          <ProjectList v-if="Object.values(projectSelected).length > 0"
-            :projects="Object.values(projectSelected)"
-            show-remove
-            @remove="resetSelectedProject">
-          </ProjectList>
-        </div>
-        </div>
-
-        </va-form-field>
-        <!-- </div> -->
-      </template>
-
-    <template #step-content-1>
       <div class="flex">
         <va-select
           class="mr-2"
@@ -113,6 +89,30 @@
       </div>
     </template>
 
+    <template #step-content-1>
+      <!-- <div class="flex flex-col"> -->
+        <va-form-field
+          v-model="projectSelected"
+          v-slot="{ value: v }"
+        >
+        <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
+          <div class="space-y-4">
+            <ProjectSelect
+              @select="setProject"
+            ></ProjectSelect>
+
+        <ProjectList v-if="Object.values(projectSelected).length > 0"
+          :projects="Object.values(projectSelected)"
+          show-remove
+          @remove="resetSelectedProject">
+        </ProjectList>
+      </div>
+      </div>
+
+      </va-form-field>
+      <!-- </div> -->
+    </template>
+
     <template #step-content-2>
       <div class="flex flex-col gap-10">
         <va-checkbox
@@ -153,7 +153,7 @@
       </div>
     </template>
 
-    <template #step-content-2>
+    <template #step-content-3>
       <IngestionInfo
         :ingestion-dir="selectedFile"
         :source-raw-data="rawDataSelected[0]"
