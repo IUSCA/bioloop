@@ -8,6 +8,7 @@ import workers.api as api
 import workers.workflow_utils as wf_utils
 from workers.celery_app import app as celery_app
 from workers.config import config
+# from workers.api import DatasetAlreadyExistsError
 
 
 class Registration:
@@ -31,7 +32,8 @@ class Registration:
         try:
             created_dataset = api.create_dataset(dataset_payload)
             wf.start(created_dataset['id'])
-        except DatasetAlreadyExistsError:
+            raise api.DatasetAlreadyExistsError(f'Failed to register dataset {dataset_name}')
+        except api.DatasetAlreadyExistsError:
             print(f'{dataset_name} already exists')
             return
 
