@@ -79,3 +79,17 @@ for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
   eval echo "$key"="\${$key}" >> $folder/nginx.env
 done
+
+# Secure Download
+echo "Generating secure_download.env file ..."
+declare -A env_vars=()
+while IFS='=' read -r key value; do
+  if [[ $key != \#* ]]; then
+    env_vars["$key"]="$value"
+  fi
+done < "secure_download/.env.example"
+
+for key in "${!env_vars[@]}"; do
+  eval echo "$key"="\${$key}"
+  eval echo "$key"="\${$key}" >> $folder/secure_download.env
+done

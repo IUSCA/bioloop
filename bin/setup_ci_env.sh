@@ -106,3 +106,34 @@ for key in "${!env_vars[@]}"; do
   echo "Creating key $key=${env_vars[$key]} ..."
   create_variable "$key" "${env_vars[$key]}"
 done
+
+
+echo "Getting workers environment variables from workers/.env.example file ..."
+# Read environment variables from .env file into an array
+declare -A env_vars
+while IFS='=' read -r key value; do
+  if [[ $key != \#* ]]; then
+    env_vars["$key"]="$value"
+  fi
+done < "workers/.env.example"
+
+# Print the environment variables
+for key in "${!env_vars[@]}"; do
+  echo "Creating key $key=${env_vars[$key]} ..."
+  create_variable "$key" "${env_vars[$key]}"
+done
+
+echo "Getting secure_download environment variables from secure_download/.env.example file ..."
+# Read environment variables from .env file into an array
+declare -A env_vars
+while IFS='=' read -r key value; do
+  if [[ $key != \#* ]]; then
+    env_vars["$key"]="$value"
+  fi
+done < "secure_download/.env.example"
+
+# Print the environment variables
+for key in "${!env_vars[@]}"; do
+  echo "Creating key $key=${env_vars[$key]} ..."
+  create_variable "$key" "${env_vars[$key]}"
+done
