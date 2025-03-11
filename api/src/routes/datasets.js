@@ -337,6 +337,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('project_id').escape().notEmpty().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -379,6 +380,15 @@ router.post(
             id: req.body.workflow_id,
           },
         ],
+      };
+    }
+
+    if (req.body.project_id) {
+      data.projects = {
+        create: [{
+          project_id: req.body.project_id,
+          assignor_id: req.user.id,
+        }],
       };
     }
 

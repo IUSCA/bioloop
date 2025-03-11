@@ -1074,6 +1074,7 @@ const preUpload = async () => {
             path: e.path,
           };
         }),
+        project_id: Object.values(projectSelected.value)[0].id,
       };
 
   const res = await createOrUpdateUploadLog(logData);
