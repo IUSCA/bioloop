@@ -31,6 +31,31 @@
       </template>
 
       <template #step-content-0>
+        <!-- <div class="flex flex-col"> -->
+          <va-form-field
+            v-model="projectSelected"
+            v-slot="{ value: v }"
+          >
+          <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
+            <div class="space-y-4">
+              <ProjectSelect
+                @select="setProject"
+              ></ProjectSelect>
+
+          <ProjectList v-if="Object.values(projectSelected).length > 0"
+            :projects="Object.values(projectSelected)"
+            show-remove
+            @remove="resetSelectedProject">
+          </ProjectList>
+        </div>
+        </div>
+
+        </va-form-field>
+        <!-- </div> -->
+      </template>
+
+
+      <template #step-content-1>
         <div class="flex flex-col gap-10">
           <va-checkbox
             v-model="isAssignedSourceRawData"
@@ -66,7 +91,7 @@
         </div>
       </template>
 
-      <template #step-content-1>
+      <template #step-content-2>
         <div class="flex flex-col">
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
@@ -179,22 +204,23 @@
 <script setup>
 import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 import config from "@/config";
+import Constants from "@/constants";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import datasetUploadService from "@/services/upload/dataset";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-import { jwtDecode } from "jwt-decode";
-import Constants from "@/constants";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
 // const token = ref(useLocalStorage("token", ""));
 
 const STEP_KEYS = {
+  PROJECT: "project",
   RAW_DATA: "rawData",
   UPLOAD: "upload",
 };
@@ -214,6 +240,7 @@ const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
 const steps = [
+  { key: STEP_KEYS.PROJECT, label: "Project", icon: "mdi:flask" },
   { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
   {
     key: STEP_KEYS.UPLOAD,
@@ -228,16 +255,24 @@ const DATASET_NAME_MAX_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
   "You have requested a source Raw Data to be assigned. Please select one.";
+const PROJECT_REQUIRED_ERROR = "Project must be selected.";
 
 const formErrors = ref({
+  [STEP_KEYS.PROJECT]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.UPLOAD]: null,
 });
 
 const stepHasErrors = computed(() => {
+  console.log("stepHasErrors")
+    console.log(formErrors.value)
+    console.log("!!formErrors.value[STEP_KEYS.RAW_DATA]", !!formErrors.value[STEP_KEYS.RAW_DATA])
+    
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+    return !!formErrors.value[STEP_KEYS.PROJECT];
   } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+  } else if (step.value === 2) {
     return !!formErrors.value[STEP_KEYS.UPLOAD];
   }
 });
@@ -284,6 +319,7 @@ const isStepperButtonDisabled = (stepIndex) => {
 // their respective input fields. For step 3, pristine state is maintained by
 // this component.
 const stepPristineStates = ref([
+  { [STEP_KEYS.PROJECT]: true },
   { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.UPLOAD]: true },
 ]);
@@ -352,10 +388,34 @@ const datasetNameValidationRules = [
   validateNotExists,
 ];
 
+const setProject  = project => {
+  // console.log('set project', project)
+  // console.log('projectSelected', projectSelected.value)
+  // console.log('projectId', project.id)
+  // resetSelectedProject(project)
+  projectSelected.value = { [project.id]: project }
+
+  // console.log('projectSelected after remove', projectSelected.value)
+  // projectSelected.value[project.id] = project
+  // console.log('projectSelected after set', projectSelected.value)
+}
+
+const resetSelectedProject = (project) => {
+  // console.log('remove project', project)
+  // console.log('projectSelected before remove', projectSelected.value)
+  // console.log("typeof projectSelected.value", typeof projectSelected.value)
+  // console.log("project.id", project.id)
+  // console.log("projectSelected.value[project.id]", projectSelected.value[project.id])
+  delete projectSelected.value[project.id];
+  // console.log('projectSelected after remove', projectSelected.value)
+}
+
+
 const loading = ref(false);
 const validatingForm = ref(false);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
+const projectSelected = ref({});
 const datasetUploadLog = ref(null);
 const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED);
 const statusChipColor = ref("");
@@ -411,7 +471,9 @@ const uploadFormData = computed(() => {
 });
 
 const resetFormErrors = () => {
+  console.log("resetFormErrors called");
   formErrors.value = {
+    [STEP_KEYS.PROJECT]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.UPLOAD]: null,
   };
@@ -484,8 +546,24 @@ const setUploadedFileType = (fileType) => {
 };
 
 const setFormErrors = async () => {
+  console.log("setFormErrors called");
   resetFormErrors();
+  console.log("setFormErrors after resetFormErrors");
+
+  console.log("step.value", step.value)
+
   if (step.value === 0) {
+    if (Object.values(projectSelected.value).length === 0) {
+      formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR;
+      return;
+    }
+  }
+
+  console.log("!isAssignedSourceRawData", !isAssignedSourceRawData)
+  console.log("formErrors", formErrors.value)
+  console.log("rawDataSelected", rawDataSelected.value)
+
+  if (step.value === 1) {
     if (!isAssignedSourceRawData.value) {
       formErrors.value[STEP_KEYS.RAW_DATA] = null;
       return;
@@ -496,7 +574,7 @@ const setFormErrors = async () => {
     }
   }
 
-  if (step.value === 1) {
+  if (step.value === 2) {
     if (
       (selectingFiles.value || selectingDirectory.value) &&
       filesToUpload.value.length === 0
@@ -1081,6 +1159,8 @@ onMounted(() => {
 
 watch(
   [
+    step,
+    projectSelected,
     rawDataSelected,
     datasetToUploadInputName,
     selectedDirectoryName,
@@ -1092,7 +1172,10 @@ watch(
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    if (stepKey === STEP_KEYS.RAW_DATA) {
+    // if (stepKey === STEP_KEYS.PROJECT) {
+    //   stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0];
+    // } else
+    if (stepKey === STEP_KEYS.PROJECT || stepKey === STEP_KEYS.RAW_DATA) {
       stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0];
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
