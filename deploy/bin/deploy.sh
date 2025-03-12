@@ -11,6 +11,18 @@ then
   cd ../../
 fi
 
+# Download the signet repository if it doesn't exist
+if [ ! -d "signet" ]; then git clone https://github.com/IUSCA/signet.git; fi
+
+# Generate keys if they don't exist
+if [ ! -d "signet/keys/" ]
+then
+  cd signet/keys/
+  ./genkeys.sh
+  cd ../../
+fi
+
+
 # Generate all the environment vars specified in .env.examples using gitlab environment vars values
 bin/generate_env.sh deploy
 bin/generate_rhythm_env.sh deploy
