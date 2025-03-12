@@ -185,7 +185,7 @@ services:
   signet:
     restart: unless-stopped
     build:
-      context: .
+      context: ../signet
     expose:
       - 5001
     environment:
