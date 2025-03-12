@@ -3,24 +3,19 @@
 # Download the rhythm_api repository if it doesn't exist
 if [ ! -d "rhythm_api" ]; then git clone https://github.com/IUSCA/rhythm_api.git; fi
 
-# Generate keys if they don't exist
-if [ ! -d "rhythm_api/keys/" ]
-then
-  cd rhythm_api/keys/
-  ./genkeys.sh
-  cd ../../
-fi
+# Generate keys
+cd rhythm_api/keys/
+./genkeys.sh
+cd ../../
 
 # Download the signet repository if it doesn't exist
 if [ ! -d "signet" ]; then git clone https://github.com/IUSCA/signet.git; fi
 
-# Generate keys if they don't exist
-if [ ! -d "signet/keys/" ]
-then
-  cd signet/keys/
-  ./genkeys.sh
-  cd ../../
-fi
+# Generate keys 
+cd signet/keys/
+./genkeys.sh
+cd ../../
+
 
 # Generate all the environment vars specified in .env.examples using gitlab environment vars values
 bin/generate_env.sh deploy
