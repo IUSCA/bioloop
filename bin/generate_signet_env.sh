@@ -43,3 +43,5 @@ for key in "${!env_vars[@]}"; do
 
   eval echo "$key"="\${$key}" >> $folder/signet.env
 done
+
+cat $folder/signet.env
