@@ -8,7 +8,6 @@ import json
 import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
-from workers.dataset import get_bundle_name
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from workers.config import config
@@ -47,7 +46,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{get_bundle_name(dataset)}')
+    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
