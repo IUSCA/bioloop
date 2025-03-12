@@ -201,7 +201,7 @@ services:
       - postgres
     networks:
       network:
-        ipv4_address: 172.19.1.2
+        ipv4_address: 172.20.0.7
 
 
 
