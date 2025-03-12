@@ -4,10 +4,12 @@
 if [ ! -d "rhythm_api" ]; then git clone https://github.com/IUSCA/rhythm_api.git; fi
 
 # Generate keys if they don't exist
-if [ -]
-cd rhythm_api/keys/
-./genkeys.sh
-cd ../../
+if [ ! -d "rhythm_api/keys/" ]
+then
+  cd rhythm_api/keys/
+  ./genkeys.sh
+  cd ../../
+fi
 
 # Generate all the environment vars specified in .env.examples using gitlab environment vars values
 bin/generate_env.sh deploy
