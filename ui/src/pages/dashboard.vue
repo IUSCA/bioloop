@@ -101,6 +101,13 @@ DatasetService.getStats({ type: "DATA_PRODUCT" })
     console.error(err);
     toast.error("Unable to fetch data products stats");
   });
+
+DatasetService.getStats().then((res) => {
+  console.log("Total stats", res.data);
+}).catch(err => {
+  console.error(err);
+  // toast.error("Unable to fetch total stats");
+})
 </script>
 
 <route lang="yaml">

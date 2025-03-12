@@ -77,12 +77,14 @@ class DatasetService {
     });
   }
 
-  getStats({ type }) {
-    return api.get("/datasets/stats", {
-      params: {
-        type,
-      },
-    });
+  getStats({ type = null } = {}) {
+    return api.get("/datasets/stats",
+        {
+          params: {
+            type,
+          }
+        },
+    );
   }
 
   update({ id, updated_data }) {

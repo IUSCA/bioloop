@@ -30,6 +30,7 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('type').isIn(config.dataset_types).optional(),
+    query('measurement').escape().notEmpty().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -83,7 +84,14 @@ router.get(
         },
       });
     }
+
+    console.log("result")
+    console.log(result);
+
     const stats = result[0];
+    console.log("      ..._.mapValues(Number)(stats)")
+    console.log(_.mapValues(Number)(stats))
+
     res.json({
       ..._.mapValues(Number)(stats),
       workflows: n_wf_result?._count.id || 0,
