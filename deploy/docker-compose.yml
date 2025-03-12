@@ -89,7 +89,6 @@ services:
       - db.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/postgres/scripts:/docker-entrypoint-initdb.d
     expose:
       - 5432
     networks:
@@ -194,15 +193,32 @@ services:
       - POSTGRES_DB=${SIGNET_DB}
       - POSTGRES_USER=${SIGNET_USER}
       - POSTGRES_PASSWORD=${SIGNET_PASSWORD}
+      - POSTGRES_HOST=signet_db
+      - POSTGRES_PORT=5432
     env_file:
       - signet.env
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
       - postgres
     networks:
       network:
         ipv4_address: 172.20.0.7
 
+  signet_db:
+    image: postgres:14.5
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${SIGNET_DB}
+      - POSTGRES_USER=${SIGNET_USER}
+      - POSTGRES_PASSWORD=${SIGNET_PASSWORD}
+      - POSTGRES_SCHEMA=signet
+      - POSTGRES_PORT=5432
+    volumes:
+      - signet_data:/var/lib/postgresql/data
+    expose:
+      - 5432
+    networks:
+      network:
+        ipv4_address: 172.20.0.8
 
 
 volumes:
@@ -218,7 +234,8 @@ volumes:
     external: false
   queue_data:
     external: false
-  
+  signet_data:
+    external: false
   # postgres_backups:
   #   external: false
 
