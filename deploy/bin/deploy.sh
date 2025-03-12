@@ -22,7 +22,6 @@ then
   cd ../../
 fi
 
-
 # Generate all the environment vars specified in .env.examples using gitlab environment vars values
 bin/generate_env.sh deploy
 bin/generate_rhythm_env.sh deploy
