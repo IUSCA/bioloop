@@ -29,7 +29,7 @@ cd deploy/
 
 # remove any existing containers/networks
 docker compose down 
-docker compose pull && docker compose up -d --force-recreate --remove-orphans
+docker compose pull && docker compose up -d --force-recreate --remove-orphans --build
 
 # Setup the appropriate token for communication with the workers and rhythm_api
 sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env

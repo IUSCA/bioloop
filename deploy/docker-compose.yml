@@ -197,6 +197,8 @@ services:
       - POSTGRES_PORT=5432
     env_file:
       - signet.env
+    volumes:
+      - ../signet:/opt/sca
     depends_on:
       - postgres
     networks:
