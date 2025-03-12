@@ -179,10 +179,6 @@ services:
       - 3080
     ports:
       - 3080:3080
-    environment:
-      - POSTGRES_DB=${SECURE_DOWNLOAD_DB}
-      - POSTGRES_USER=${SECURE_DOWNLOAD_USER}
-      - POSTGRES_PASSWORD=${SECURE_DOWNLOAD_PASSWORD}
     env_file:
       - secure_download.env
 

@@ -20,5 +20,18 @@ done < "signet/.env.example"
 
 for key in "${!env_vars[@]}"; do
   eval echo "$key"="\${$key}"
+  
+  if [ $key === "POSTGRES_DB" ]; then
+    eval echo "SIGNET_DB"="\${$key}" >> $folder/signet.env
+  fi
+
+  if [ $key === "POSTGRES_USER" ]; then
+    eval echo "SIGNET_USER"="\${$key}" >> $folder/signet.env
+  fi
+
+  if [ $key === "POSTGRES_PASSWORD" ]; then
+    eval echo "SIGNET_PASSWORD"="\${$key}" >> $folder/signet.env
+  fi
+  
   eval echo "$key"="\${$key}" >> $folder/signet.env
 done
