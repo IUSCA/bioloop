@@ -36,7 +36,6 @@ services:
     # Renew certificates every 12 hours
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot --force-renewal --cert-name $APP_DOMAIN renew; sleep 12h & wait $${!}; done;'"
     
-    
 
   ui:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:latest
@@ -138,7 +137,6 @@ services:
       - RABBITMQ_DEFAULT_PASS=password
       - RABBITMQ_DEFAULT_VHOST=myvhost
 
-
   mongo:
     # https://hub.docker.com/_/mongo
     image: mongo:5
@@ -221,7 +219,6 @@ services:
     networks:
       network:
         ipv4_address: 172.20.0.8
-
 
 volumes:
   ui_modules:
