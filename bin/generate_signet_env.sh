@@ -8,6 +8,8 @@ echo "Getting environment variables from .env.example file ..."
 
 folder=$1
 
+# Add a new line to the file
+echo "" >> $folder/signet.env
 
 # Signet
 echo "Generating signet.env file ..."
