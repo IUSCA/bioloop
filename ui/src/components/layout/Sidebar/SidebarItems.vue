@@ -12,7 +12,7 @@
           <va-sidebar-item
             :active="props.isActive(item.path)"
             :class="{
-              'custom-sidebar-item--active': isActive(item.path),
+              'custom-sidebar-item--active': props.isActive(item.path),
             }"
             :to="item.path"
             v-if="auth.isFeatureEnabled(item.feature_key)"
@@ -56,7 +56,7 @@
         :to="item.path"
         :active="props.isActive(item.path)"
         :class="{
-          'custom-sidebar-item--active': isActive(item.path),
+          'custom-sidebar-item--active': props.isActive(item.path),
         }"
       >
         <va-sidebar-item-content>
