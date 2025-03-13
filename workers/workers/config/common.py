@@ -186,5 +186,17 @@ config = {
     },
     'inspect': {
         'file_metadata_batch_size': 25000
+    },
+    # environment: Specifies the deployment environment for the application (on-premise or off-premise).
+    # Possible values:
+    # - 'on_premise': For local or on-premise deployment (default)
+    # - 'gcp': For Google Cloud Platform deployment
+    'environment': 'on_premise',
+    'gcp': {
+        'buckets': {
+            'archival': 'gcp-archival-bucket',
+            'registration': 'gcp-registration-bucket',
+            'staging': 'gcp-staging-bucket',
+        },
     }
 }
