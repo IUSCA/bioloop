@@ -37,5 +37,18 @@ echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scri
 sed -i '/^APP_API_TOKEN/d' workers.env
 echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
 
+# Create the client for the download service
+
+
+APP_download="${APP_DOMAIN%%.*}_download"
+curl --request POST \
+  --url http://172.20.0.7:5001/create_client \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data client_name=$APP_download \
+  --data scope=download_file\ upload_file \
+  --data client_uri=$APP_DOMAIN \
+  --data token_endpoint_auth_method=client_secret_basic \
+  --data grant_type=client_credentials
+
 # Deploy the prisma migrations and seed the database
 docker compose exec api npx prisma migrate deploy
