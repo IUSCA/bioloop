@@ -192,6 +192,8 @@ services:
       - 3080:3080
     env_file:
       - secure_download.env
+    volumes:
+      - /opt/sca/data:/opt/sca/data
     networks:
       network:
         ipv4_address: 172.20.0.9
