@@ -31,24 +31,42 @@ cd deploy/
 docker compose down 
 docker compose pull && docker compose up -d --force-recreate --remove-orphans --build
 
-# Setup the appropriate token for communication with the workers and rhythm_api
-sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
-echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
-sed -i '/^APP_API_TOKEN/d' workers.env
-echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
 
 # Create the client for the download service
-
-
 APP_download="${APP_DOMAIN%%.*}_download"
-curl --request POST \
+response=$(curl --silent --request POST \
   --url http://172.20.0.7:5001/create_client \
   --header 'Content-Type: application/x-www-form-urlencoded' \
   --data client_name=$APP_download \
   --data scope=download_file\ upload_file \
   --data client_uri=$APP_DOMAIN \
   --data token_endpoint_auth_method=client_secret_basic \
-  --data grant_type=client_credentials
+  --data grant_type=client_credentials)
+
+client_id=$(echo $response | jq -r '.client_id')
+client_secret=$(echo $response | jq -r '.client_secret')
+
+echo "Client ID: $client_id"
+echo "Client Secret: $client_secret"
+
+sed -i '/^OAUTH_DOWNLOAD_CLIENT_ID/d' api.env
+echo "OAUTH_DOWNLOAD_CLIENT_ID=$client_id" >> api.env
+
+sed -i '/^OAUTH_DOWNLOAD_CLIENT_SECRET/d' api.env
+echo "OAUTH_DOWNLOAD_CLIENT_SECRET=$client_secret" >> api.env
+
+sed -i '/^OAUTH_UPLOAD_CLIENT_ID/d' api.env
+echo "OAUTH_UPLOAD_CLIENT_ID=$client_id" >> api.env
+
+sed -i '/^OAUTH_UPLOAD_CLIENT_SECRET/d' api.env
+echo "OAUTH_UPLOAD_CLIENT_SECRET=$client_secret" >> api.env
+
+# Setup the appropriate token for communication with the workers and rhythm_api
+sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
+echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
+sed -i '/^APP_API_TOKEN/d' workers.env
+echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
+
 
 # Deploy the prisma migrations and seed the database
 docker compose exec api npx prisma migrate deploy
