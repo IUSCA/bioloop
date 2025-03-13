@@ -7,7 +7,6 @@ const { validate } = require('../../middleware/validators');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { loginHandler } = require('../../middleware/auth');
 
-const userService = require('../../services/user');
 const authService = require('../../services/auth');
 
 const router = express.Router();
@@ -39,7 +38,7 @@ router.post(
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
     const login = async (cas_id) => {
-      const user = await userService.findActiveUserBy('cas_id', cas_id);
+      const user = await authService.getLoginUser('cas_id', cas_id);
 
       req.auth_user = user;
       req.auth_method = 'IUCAS';
