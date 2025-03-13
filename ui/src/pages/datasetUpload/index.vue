@@ -2,12 +2,7 @@
   <va-alert
     color="warning"
     icon="warning"
-    v-if="
-      !isFeatureEnabled({
-        featureKey: 'uploads',
-        hasRole: auth.hasRole,
-      })
-    "
+    v-if="!auth.isFeatureEnabled('uploads')"
   >
     This feature is currently disabled
   </va-alert>
@@ -93,13 +88,12 @@
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import config from "@/config";
+import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
 import datasetUploadService from "@/services/upload/dataset";
+import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
-import toast from "@/services/toast";
-import * as datetime from "@/services/datetime";
-import { isFeatureEnabled } from "@/services/utils";
-import { useAuthStore } from "@/stores/auth";
 
 const nav = useNavStore();
 const router = useRouter();

@@ -1,6 +1,7 @@
 import config from "@/config";
 import authService from "@/services/auth";
 import uploadTokenService from "@/services/upload/token";
+import * as utils from "@/services/utils";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
@@ -211,6 +212,10 @@ export const useAuthStore = defineStore("auth", () => {
     });
   };
 
+  const isFeatureEnabled = (featureKey) => {
+    return utils.isFeatureEnabled({ featureKey, hasRole });
+  };
+
   return {
     user,
     loggedIn,
@@ -231,6 +236,7 @@ export const useAuthStore = defineStore("auth", () => {
     env,
     setEnv,
     refreshUploadToken,
+    isFeatureEnabled,
   };
 });
 

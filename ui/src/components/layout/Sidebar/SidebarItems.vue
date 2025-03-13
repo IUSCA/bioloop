@@ -10,17 +10,12 @@
       >
         <template #header="{ value: isCollapsed }">
           <va-sidebar-item
-            :active="
-              props.isActive(item.path) ||
-              item.children.some((child) => props.isActive(child.path))
-            "
+            :active="props.isActive(item.path)"
+            :class="{
+              'custom-sidebar-item--active': props.isActive(item.path),
+            }"
             :to="item.path"
-            v-if="
-              isFeatureEnabled({
-                featureKey: item.feature_key,
-                hasRole: hasRole,
-              })
-            "
+            v-if="auth.isFeatureEnabled(item.feature_key)"
           >
             <va-sidebar-item-content>
               <Icon :icon="item.icon" class="text-2xl" />
@@ -37,12 +32,7 @@
           <div v-for="child in item.children" :key="child.title">
             <va-sidebar-item
               class="ml-5"
-              v-if="
-                isFeatureEnabled({
-                  featureKey: child.feature_key,
-                  hasRole: hasRole,
-                })
-              "
+              v-if="auth.isFeatureEnabled(child.feature_key)"
               :to="child.path"
               :active="props.isActive(child.path)"
             >
@@ -59,14 +49,15 @@
        corresponding feature is enabled for certain roles -->
       <va-sidebar-item
         v-else-if="
-          isFeatureEnabled({
-            featureKey: item.feature_key,
-            hasRole: hasRole,
-          }) && (item.children || []).length === 0
+          auth.isFeatureEnabled(item.feature_key) &&
+          (item.children || []).length === 0
         "
         :key="item.title"
         :to="item.path"
         :active="props.isActive(item.path)"
+        :class="{
+          'custom-sidebar-item--active': props.isActive(item.path),
+        }"
       >
         <va-sidebar-item-content>
           <Icon :icon="item.icon" class="text-2xl" />
@@ -82,7 +73,6 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
-import { isFeatureEnabled } from "@/services/utils";
 
 const props = defineProps({
   items: { type: Array, required: true },
@@ -91,8 +81,6 @@ const props = defineProps({
 
 const auth = useAuthStore();
 const route = useRoute();
-
-const { hasRole } = auth;
 
 const collapsibleStates = computed({
   get() {
@@ -108,10 +96,7 @@ const collapsibleStates = computed({
 
 const someChildFeaturesEnabled = (features) => {
   return features.some((feature) => {
-    return isFeatureEnabled({
-      featureKey: feature.feature_key,
-      hasRole,
-    });
+    return auth.isFeatureEnabled(feature.feature_key);
   });
 };
 </script>
