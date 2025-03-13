@@ -8,7 +8,7 @@ RUN npm ci
 COPY . /opt/sca/app
 
 
-EXPOSE 3030
+EXPOSE 3080
 
 
 CMD ["npm", "run", "start"]

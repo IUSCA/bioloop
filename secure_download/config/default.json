@@ -1,7 +1,7 @@
 {
   "mode": "default",
   "express": {
-    "port": 3060,
+    "port": 3080,
     "host": "localhost"
   },
   "logger": {
