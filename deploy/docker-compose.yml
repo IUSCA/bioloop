@@ -188,8 +188,6 @@ services:
     restart: unless-stopped
     expose:
       - 3080
-    ports:
-      - 3080:3080
     env_file:
       - secure_download.env
     volumes:

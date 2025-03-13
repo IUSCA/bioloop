@@ -67,6 +67,11 @@ echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scri
 sed -i '/^APP_API_TOKEN/d' workers.env
 echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
 
+# stop the services so that the new environment vars can be loaded
+docker compose down
+
+# Start the services
+docker compose up -d
 
 # Deploy the prisma migrations and seed the database
 docker compose exec api npx prisma migrate deploy
