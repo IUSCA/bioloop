@@ -1,0 +1,71 @@
+name: bioloop_cicd
+services:
+  nginx:
+    image: nginx:1.27.3
+    ports:
+      - "8081:8081"
+    expose:
+      - 8081
+    volumes:
+      - ui_modules:/usr/share/nginx/html
+      - ../nginx/conf/test.nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - api
+      - ui
+
+
+  ui:
+    build:
+      context: ../ui
+    env_file:
+      - ../ui/.env.example
+    volumes:
+      - ui_modules:/opt/sca/app/dist
+    depends_on:
+      - api
+    restart: "no"
+
+
+  e2e:
+    build:
+      context: .
+    env_file:
+      - .env.example
+    depends_on:
+      - api
+      - nginx
+    entrypoint: [ "tail", "-f", "/dev/null" ]
+
+      
+  api:
+    build:
+      context: ../api
+    env_file:
+      - ./.env.example
+      - ../db/postgres/.env.example
+      - ../api/.env.example
+    entrypoint:
+      - sh
+      - -c
+      - |
+        ./keys/genkeys.sh \
+        && npx prisma generate \
+        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+    expose:
+      - 3030
+    depends_on:
+     - postgres
+
+
+  postgres:
+    image: postgres:14.5
+    env_file:
+      - ../db/postgres/.env.example
+    restart: unless-stopped
+    expose:
+      - 5432
+
+volumes:
+  ui_modules:
+    external: false
+

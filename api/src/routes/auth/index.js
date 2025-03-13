@@ -39,8 +39,8 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
     }
     return res.json(resObj);
   }
-  // User has a valid token but they are deleted soon after and are not a portal user
-  // Send an invalid request error
+  // User has a valid token but they are deleted soon after and are not a
+  // portal user Send an invalid request error
   return createError.BadRequest('Not a valid user');
 }));
 

@@ -1,0 +1,144 @@
+name: bioloop_cicd
+services:
+  nginx:
+    image: nginx:1.27.3
+    ports:
+      - "8081:8081"
+    expose:
+      - 8081
+    volumes:
+      - ui_modules:/usr/share/nginx/html
+      - ../nginx/conf/test.nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - api
+      - ui
+
+
+  ui:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/ui:test
+    env_file:
+      - ui.env
+    volumes:
+      - ui_modules:/opt/sca/app/dist
+    depends_on:
+      - api
+    restart: "no"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir .cert \
+        && cd .cert \
+        && openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/C=US/ST=IN/L=Bloomington/O=IU/OU=SCA/CN=localhost" \
+        && cd .. \
+        && npm run build
+
+
+  e2e:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/e2e:test
+    env_file:
+      - tests.env
+    depends_on:
+      - api
+      - nginx
+    entrypoint: [ "tail", "-f", "/dev/null" ]
+
+      
+  api:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:test
+    env_file:
+      - tests.env
+      - db.env
+      - api.env
+    entrypoint:
+      - sh
+      - -c
+      - |
+        cd keys \
+        && ./genkeys.sh \
+        && cd .. \
+        && npx prisma generate \
+        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+    expose:
+      - 3030
+    depends_on:
+     - postgres
+
+
+  postgres:
+    image: postgres:14.5
+    env_file:
+      - db.env
+    restart: unless-stopped
+    expose:
+      - 5432
+
+
+  workers:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:test
+    env_file:
+      - workers.env
+    depends_on:
+      - queue
+      - mongo
+
+
+  #  This is only for rhythm_api
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    # includes web gui ?
+    image: rabbitmq:3-management
+    # image: rabbitmq:3
+    ports:
+      - 127.0.0.1:5672:5672
+      - 127.0.0.1:15672:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/
+      # - ./db/queue/log/:/var/log/rabbitmq/
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
+
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    ports:
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo_data:/data/db
+      # for importing database files
+      - mongo_dump:/opt/sca/app/mongodump
+
+
+  rhythm:
+    restart: unless-stopped
+    build:
+      context: ../rhythm_api
+    expose:
+      - 5001
+    ports:
+      - 5001:5001
+    env_file:
+      - rhythm.env
+    volumes:
+      - ../rhythm_api:/opt/sca
+    depends_on:
+      - queue
+      - mongo
+
+# Volumes
+volumes:
+  ui_modules:
+    external: false
+  rabbitmq_data:
+    external: false
+  mongo_data:
+    external: false
+  mongo_dump:
+    external: false

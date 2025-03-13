@@ -72,9 +72,9 @@ router.post(
     //   auth_time: 1698418641,
     //   azp: 'cilogon:/client_id/',
     //   sub: 'http://cilogon.org/serverE/users/',
-    //   acr: 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
-    //   email: 'deduggi@iu.edu'
-    // }
+    // acr:
+    // 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
+    // email: 'deduggi@iu.edu' }
     const id_data = utils.decodeJWT(_res.data.id_token);
     const { email } = id_data;
 

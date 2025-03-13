@@ -1,0 +1,162 @@
+variables:
+  PROJECT_NAME: 'ryanlong/bioloop'
+
+stages:
+  - build
+  - lint
+  - test
+  - tag
+  - deploy
+  # - docs
+
+
+build:
+  stage: build
+  tags: ['builddev-shell']
+  before_script:
+    - docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin <<<$CI_REGISTRY_PASSWORD
+  script:
+    - cd api/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/api:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/api:test
+    - cd ../ui/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/ui:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/ui:test
+    - cd ../tests/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/e2e:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/e2e:test
+    - cd ../workers/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/workers:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/workers:test
+    - cd ../secure_download/
+    - docker build -t $CI_REGISTRY/$PROJECT_NAME/secure_download:test .
+    - docker push $CI_REGISTRY/$PROJECT_NAME/secure_download:test
+
+lint-api:
+  tags: ['builddev-docker']
+  image: '$CI_REGISTRY/$PROJECT_NAME/api:test'
+  stage: lint
+  script:
+    - cd /opt/sca/app
+    - npm run lint
+
+lint-ui:
+  tags: ['builddev-docker']
+  image: $CI_REGISTRY/$PROJECT_NAME/ui:test
+  stage: lint
+  script:
+    - cd /opt/sca/app
+    - npm run lint
+
+
+test-e2e:
+  tags: ['builddev-shell']
+  environment:
+    name: testing
+  stage: test
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+  script:
+    # Setup rhythm_api
+    - echo "Setting up rhythm_api..."
+    - git clone https://github.com/IUSCA/rhythm_api.git
+    - cd rhythm_api/keys/
+    - ./genkeys.sh
+    - cd ../../
+    # Generate all the environment vars specified in .env.examples using gitlab environment vars values
+    - echo "Generating environment variables..."
+    - bin/generate_env.sh tests
+    - bin/generate_rhythm_env.sh tests
+    - cd tests/
+    - bin/generate_test_env.sh
+    - echo "starting containers..."
+    - docker compose down 
+    - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
+    # Setup the appropriate token for communication with the workers and rhythm_api
+    - echo "Setting up tokens..."
+    - sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
+    - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
+    - sed -i '/^APP_API_TOKEN/d' workers.env
+    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
+    - echo "Deploying prisma migrations and seeding the database..."
+    - docker compose exec api npx prisma migrate deploy
+    - docker compose exec api npx prisma db seed 
+    - docker compose logs -t
+    - echo "Running tests..."
+    - docker compose exec e2e npm run test
+    - docker compose down
+    - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
+    
+
+tag:
+  tags: ['builddev-shell']
+  stage: tag
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+  script:
+    - tag=$(git rev-parse @)
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/api:test $CI_REGISTRY/$PROJECT_NAME/api:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/api:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/api:test $CI_REGISTRY/$PROJECT_NAME/api:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/api:latest
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/ui:test $CI_REGISTRY/$PROJECT_NAME/ui:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/ui:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/ui:test $CI_REGISTRY/$PROJECT_NAME/ui:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/ui:latest
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/workers:test $CI_REGISTRY/$PROJECT_NAME/workers:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/workers:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/workers:test $CI_REGISTRY/$PROJECT_NAME/workers:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/workers:latest
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/secure_download:test $CI_REGISTRY/$PROJECT_NAME/secure_download:$tag
+    - docker push $CI_REGISTRY/$PROJECT_NAME/secure_download:$tag
+    - docker tag $CI_REGISTRY/$PROJECT_NAME/secure_download:test $CI_REGISTRY/$PROJECT_NAME/secure_download:latest
+    - docker push $CI_REGISTRY/$PROJECT_NAME/secure_download:latest
+  # rules:
+  #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
+  #     when: always
+  #   - when: never
+
+
+#Release per deployment -using a runner on each environment
+deploy_test_app:
+  tags: ['google-prod-bioloop']
+  environment:
+    name: release
+  stage: deploy
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+  script:
+    - ./deploy/bin/deploy.sh
+  # rules:
+  #   - if: '$CI_COMMIT_REF_NAME == "main" || $CI_COMMIT_REF_NAME == "master"'
+  #     when: always
+  #   - when: never
+
+deploy_lifeloops_app:
+  tags: ['lifeloops-demo-vm']
+  environment:
+    name: lifeloops-demo
+  stage: deploy
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+  script:
+    - ./deploy/bin/deploy.sh
+
+
+# copy_to_github:
+#   tags: ['buildtest-shell']
+#   environment:
+#     name: release
+#   stage: deploy
+#   before_script:
+#     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+#   scripts:
+#     - git remote add gitHub git@github.com:ryanlong89/bioloop-clone.git
+#     - git push gitHub master —follow-tags 
+
+# update_docs:
+#   tags: ['builddev-docs']
+#   stage: docs
+#   script:
+#     - npm install
+#     - npm run docs:build

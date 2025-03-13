@@ -2,14 +2,14 @@ name: bioloop
 services:
   ui:
     image: node:19
+    env_file:
+      - ui/.env.example
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules
     ports:
       - 127.0.0.1:443:443
     working_dir: /opt/sca/app
-    # command: sh -c "npm install && exec /opt/sca/app/node_modules/.bin/vite --host"
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
     entrypoint:
       - sh
       - -c
@@ -18,15 +18,10 @@ services:
 
   api:
     image: node:19
-    # user: ${APP_UID}:${APP_GID}
-    # build:
-      # context: ./api
-      # args:
-        # APP_UID: ${APP_UID} # read from .env file
-        # APP_GID: ${APP_GID} # read from .env file
-    # environment:
-    #   - APP_UID=APP_UID
-    #   - APP_GID=APP_GID
+    env_file:
+      - tests/.env.example
+      - db/postgres/.env.example
+      - api/.env.example
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
@@ -35,8 +30,6 @@ services:
     ports:
       - 127.0.0.1:3030:3030
     working_dir: /opt/sca/app
-    # entrypoint: ["tail", "-f", "/dev/null"]
-    # command: sh -c "sleep infinity"
     entrypoint:
       - sh
       - -c
@@ -44,8 +37,6 @@ services:
         npm install \
         && npx prisma generate client \
         && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
-
-
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
@@ -53,76 +44,75 @@ services:
 
   postgres:
     image: postgres:14.5
-    # restart: unless-stopped
-    environment:
-      - POSTGRES_USER=appuser
-      - POSTGRES_PASSWORD=example
-      - POSTGRES_DB=app
+    env_file:
+      - db/postgres/.env.example
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
       - ./db/postgres/aux_scripts:/opt/sca/scripts
       - ./db/backups:/opt/sca/backups
-      - ./db/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf   # Mount the config file
-    command: -c 'config_file=/etc/postgresql/postgresql.conf'
     ports:
       - 127.0.0.1:5432:5432
     expose:
       - 5432
 
-  nginx:
-    image: nginx:1.25
-    ports:
-        - 80:80
-        - 443:443
-    volumes:
-        - ./nginx/src:/usr/share/nginx/html     # Mount for Nginx static files
-        - ./nginx/conf:/etc/nginx/conf.d        # Mount for Nginx configuration files
-        - ./data:/opt/sca/data:ro               # Mount for data directory
-        - ./ui/dist:/opt/sca/ui:ro              # Mount for UI static files
-        - ./nginx/logs:/var/log/nginx           # Mount for Nginx logs
-        - ./ui/.cert:/etc/nginx/certs:ro       # Mount for SSL certificates
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
-
-  postgres_exporter:
-    image: prometheuscommunity/postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: "postgresql://appuser:example@postgres:5432/app?sslmode=disable"
+  workers:
+    build:
+      context: ./workers
     depends_on:
-      - postgres
-    # ports:
-      # - "9187:9187"
-    volumes:
-      - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
-    command:
-      - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+      - queue
+      - mongo
 
-  prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./metrics/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus  # Mount the volume for Prometheus data
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-    # ports:
-      # - "9090:9090"
 
-  grafana:
-    image: grafana/grafana
-    volumes:
-      - grafana_data:/var/lib/grafana                   # Mount for Grafana data (dashboards, plugins)
-      - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
-      - ./api/keys/auth.pub:/etc/grafana/auth.pub
-    depends_on:
-      - prometheus
+
+#  This is only for rhythm_api
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    # includes web gui ?
+    image: rabbitmq:3-management
+    # image: rabbitmq:3
     ports:
-      - "3000:3000"
+      - 127.0.0.1:5672:5672
+      - 127.0.0.1:15672:15672
+    volumes:
+      - ./db/queue/data/:/var/lib/rabbitmq/
+      # - ./db/queue/log/:/var/log/rabbitmq/
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
 
-      
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    ports:
+      # helpful for using a GUI client like compass for troubleshooting
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./db/db_mongo:/data/db
+      # for importing database files
+      - ./db/mongodump:/opt/sca/app/mongodump
+
+
+  rhythm:
+    restart: unless-stopped
+    build:
+      context: ./rhythm_api
+    expose:
+      - 5001
+    ports:
+      - 5001:5001
+    environment:
+      - PORT=5001
+    volumes:
+      - ./rhythm_api:/opt/sca
+    depends_on:
+      - queue
+      - mongo
 
 volumes:
   ui_modules:
@@ -130,6 +120,3 @@ volumes:
 
   api_modules:
     external: false
-
-  grafana_data:
-  prometheus_data:

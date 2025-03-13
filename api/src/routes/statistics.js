@@ -13,8 +13,8 @@ const isPermittedTo = accessControl('statistics');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Retrieves the starting and ending extremes of the date range across which any files or datasets
-// have been accessed.
+// Retrieves the starting and ending extremes of the date range across which
+// any files or datasets have been accessed.
 router.get(
   '/data-access-timestamp-range',
   isPermittedTo('read'),
@@ -31,10 +31,11 @@ router.get(
 );
 
 /**
- * Retrieves the count of data access records grouped by date. Results are retrieved across the
- * given range specified through start_date and end_date. If optional param by_access_type
- * is true, results will be grouped by type of data access (browser download vs Slate-Scratch
- * access) as well.
+ * Retrieves the count of data access records grouped by date.
+ * Results are retrieved across the given range specified through start_date
+ * and end_date. If optional param by_access_type is true,
+ * results will be grouped by type of data access (browser download vs
+ * Slate-Scratch access) as well.
  *
  * Returned results are sorted by timestamp (ascending)
  */
@@ -51,9 +52,10 @@ router.get(
     const end_date = dayjs(req.query.end_date).toDate();
     const { by_access_type } = req.query;
 
-    // Retrieve records by including access_type in the GROUP BY clause first, and filter records
-    // based on value of by_access_type later. This is because Prisma does not allow including
-    // dynamic column names as template variables in raw queries.
+    // Retrieve records by including access_type in the GROUP BY clause first,
+    // and filter records based on value of by_access_type later. This is
+    // because Prisma does not allow including dynamic column names as template
+    // variables in raw queries.
     const data_access_counts = await prisma.$queryRaw`
       SELECT
         timestamp::DATE AS date,
@@ -107,10 +109,11 @@ router.get(
 );
 
 /**
- * Retrieves the most frequently accessed files (and optionally, datasets). The number of
- * entities retrieved is limited by the limit query param. If include_datasets is provided and is
- * true, access records for datasets (i.e. attempts to access the data directly from Slate-
- * Scratch) will be included in the results.
+ * Retrieves the most frequently accessed files (and optionally, datasets).
+ * The number of entities retrieved is limited by the limit query param.
+ * If include_datasets is provided and is true, access records for datasets
+ * (i.e. attempts to access the data directly from Slate- Scratch) will be
+ * included in the results.
  *
  * Returned results are sorted by count (descending).
  */
@@ -183,8 +186,9 @@ router.get(
 );
 
 /**
- * Retrieves the count of staging request records grouped by date. Results are retrieved across the
- * given range specified through start_date and end_date.
+ * Retrieves the count of staging request records grouped by date.
+ * Results are retrieved across the given range specified through start_date
+ * and end_date.
  *
  * Returned results are sorted by timestamp (descending).
  */
@@ -218,8 +222,8 @@ router.get(
 );
 
 /**
- * Retrieves the most frequently staged datasets. The number of datasets retrieved is limited by
- * the limit query param
+ * Retrieves the most frequently staged datasets.
+ * The number of datasets retrieved is limited by the limit query param
  *
  * Returned results are sorted by count (descending).
  */
@@ -250,8 +254,8 @@ router.get(
   }),
 );
 
-// Retrieves the starting and ending extremes of the date range across which staging
-// has been attempted on any datasets
+// Retrieves the starting and ending extremes of the date range across which
+// staging has been attempted on any datasets
 router.get(
   '/stage-request-timestamp-range',
   isPermittedTo('read'),
@@ -268,8 +272,8 @@ router.get(
 );
 
 /**
- * Returns the count of registered users grouped by date. Returned results are sorted by date
- * (ascending).
+ * Returns the count of registered users grouped by date.
+ * Returned results are sorted by date (ascending).
  */
 router.get(
   '/user-count',
@@ -290,10 +294,8 @@ router.get(
   }),
 );
 
-/**
- * Returns users consuming maximum bandwidth, limited by the limit param. Returned results are
- * sorted by bandwidth consumed (descending).
-*/
+// Returns users consuming maximum bandwidth, limited by the limit param.
+// Returned results are sorted by bandwidth consumed (descending).
 router.get(
   '/users-by-bandwidth',
   isPermittedTo('read'),

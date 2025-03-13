@@ -14,8 +14,10 @@ function convertEpochToDateString(epoch) {
 }
 
 function random_filename(rng) {
-  const names = ['document', 'image', 'report', 'backup', 'project', 'screenshot', 'data_analysis', 'readme', 'video', 'presentation'];
-  const extensions = ['txt', 'jpg', 'png', 'docx', 'zip', 'pdf', 'xlsx', 'mov', 'pptx', 'bak', 'tar.gz', 'tar', 'fastq', 'fastq.gz', 'bam', 'vcf'];
+  const names = ['document', 'image', 'report', 'backup', 'project',
+    'screenshot', 'data_analysis', 'readme', 'video', 'presentation'];
+  const extensions = ['txt', 'jpg', 'png', 'docx', 'zip', 'pdf',
+    'xlsx', 'mov', 'pptx', 'bak', 'tar.gz', 'tar', 'fastq', 'fastq.gz', 'bam', 'vcf'];
 
   return () => {
     const random_date = convertEpochToDateString(rng.integer(993082044, 1687306012));

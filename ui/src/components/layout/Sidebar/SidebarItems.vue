@@ -81,8 +81,8 @@
 </template>
 
 <script setup>
-import { useAuthStore } from "@/stores/auth";
 import { isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   items: { type: Array, required: true },
@@ -102,8 +102,7 @@ const collapsibleStates = computed({
       });
     });
   },
-  // eslint-disable-next-line no-unused-vars
-  set(value) {},
+  set() {},
 });
 
 const someChildFeaturesEnabled = (features) => {

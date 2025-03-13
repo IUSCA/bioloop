@@ -9,7 +9,8 @@ function date(value) {
   /**
    * This function is intended to convert an ISO 8601 datetime string
    * (with Z - UTC timezone) ex: "2023-06-14T01:18:40.501Z"
-   * to a date string of format MMM D YYYY in browser's local time zone ex: "Jun 13 2023"
+   * to a date string of format MMM D YYYY in browser's local time zone ex:
+   * "Jun 13 2023"
    *
    * date("2023-06-14T01:18:40.501Z") -> "Jun 14 2023"
    */
@@ -61,8 +62,8 @@ function readableDuration(t, withSuffix) {
 
 function formatDuration(duration) {
   /**
-   * represent a duration in milliseconds in human readable format with more precision
-   * duration: milliseconds - number
+   * represent a duration in milliseconds in human readable format with more
+   * precision duration: milliseconds - number
    *
    * formatDuration(12 * 1000)       -> "12s"
    * formatDuration(120 * 1000)      -> "2m 0s"

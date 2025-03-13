@@ -67,3 +67,7 @@ db/backups/*.psql
 todo.md
 
 .pm2
+
+rhythm_api/
+
+bin/.env

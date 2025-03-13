@@ -37,9 +37,9 @@
 </template>
 
 <script setup>
+import config from "@/config";
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
-import config from "@/config";
 
 const notificationStore = useNotificationStore();
 
@@ -58,8 +58,6 @@ const { resume } = useIntervalFn(
 onMounted(() => {
   resume();
 });
-
-const open = ref(true);
 </script>
 
 <style lang="scss" scoped>

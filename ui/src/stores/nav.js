@@ -7,7 +7,8 @@ const HOME = {
 };
 
 export const useNavStore = defineStore("nav", () => {
-  // Array containing the breadcrumb nav items currently being rendered in the app.
+  // Array containing the breadcrumb nav items currently being rendered in the
+  // app.
   const breadcrumbs = ref([]);
   const sidebarDatasetType = ref(null);
 

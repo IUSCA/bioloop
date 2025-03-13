@@ -25,7 +25,6 @@ import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes, isFeatureEnabled } from "@/services/utils";
-import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({

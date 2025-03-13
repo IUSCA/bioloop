@@ -11,3 +11,6 @@ COPY package.json /opt/sca/app/
 
 # Install dependencies
 RUN npm install
+
+
+COPY . /opt/sca/app/

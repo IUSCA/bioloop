@@ -63,8 +63,9 @@ function create_metrics_per_hour(num_hours) {
   return metrics_data;
 }
 
-// Given an array of entities, inserts a random date per entity, which is helpful for creating
-// variability in the dates that get inserted into persistent storage
+// Given an array of entities, inserts a random date per entity, which is
+// helpful for creating variability in the dates that get inserted into
+// persistent storage
 function insert_random_dates(arr) {
   const min_date = dayjs(
     new Date(),

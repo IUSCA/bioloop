@@ -56,7 +56,8 @@ const chartData = ref({});
 const loading = ref(true); // Track loading state
 const noData = ref(false); // Track if there's no data
 
-// Function to format the date using the provided 'processUserCountLogs' function
+// Function to format the date using the provided 'processUserCountLogs'
+// function
 const processUserCountLogs = (user_count_logs) => {
   const XAxisData = [];
   const YAxisData = [];

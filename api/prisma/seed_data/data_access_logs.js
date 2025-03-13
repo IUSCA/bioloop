@@ -5,7 +5,8 @@ const { generate_date_range } = require('../../src/services/datetime');
 
 const prisma = new PrismaClient();
 
-// generates records to be seeded into the data_access_log table, across the given number of years
+// generates records to be seeded into the data_access_log table, across the
+// given number of years
 async function generate_data_access_logs(num_years) {
   const dataset_files = await prisma.dataset_file.findMany();
   // exclude directories from retrieved files list
@@ -19,13 +20,15 @@ async function generate_data_access_logs(num_years) {
 
   const data_access_logs = [];
   generate_date_range(start_date, end_date).forEach(async (date) => {
-    // choose a random value (b/w 0 and 100) for number of files downloaded on any given day
+    // choose a random value (b/w 0 and 100) for number of files downloaded on
+    // any given day
     const num_downloaded_files = Math.floor(Math.random() * 100);
 
     _.range(0, num_downloaded_files).forEach((i) => {
-      // For seeding, it is sufficient to have every 4th download be an 'indirect' download (i.e.
-      // accessing entire dataset directly through Slate-Scratch, instead of downloading individual
-      // files using the web browser)
+      // For seeding, it is sufficient to have every 4th download be an
+      // 'indirect' download (i.e. accessing entire dataset directly through
+      // Slate-Scratch, instead of downloading individual files using the web
+      // browser)
       const is_direct_download = i % 4 !== 0;
       data_access_logs.push({
         timestamp: date,
