@@ -97,10 +97,14 @@ def is_data_product_registered(new_name: str) -> bool:
         matching_data_product: Dict = matching_data_products[0]
 
         if matching_data_product['archive_path'] is not None:
+            # Data Product is considered fully-registered if it has an `archive_path`
             print(f"Found registered data product: {new_name}, with archive_path {matching_data_product['archive_path']}")
             return True
 
+
         if matching_data_product:
+            # Data Product is considered partially-registered if it has no `archive_path` yet.
+            # Wait for archive_path to be assigned in this case.
             print(
                 f"Data product {new_name} currently has archive_path {matching_data_product['archive_path']}."
                 f" Checking again in {CHECK_INTERVAL} seconds, until archive_path has been assigned.")
