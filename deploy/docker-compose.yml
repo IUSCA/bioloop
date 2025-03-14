@@ -114,7 +114,7 @@ services:
     #   network:
     #     ipv4_address: 172.20.0.6
 
-  workers:
+  celery_worker:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:latest
     environment:
       - WORKER_TYPE=celery_worker
@@ -129,7 +129,7 @@ services:
       network:
         ipv4_address: 172.20.0.13
 
-  workers:
+  manage_pending_dataset_uploads:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:latest
     environment:
       - WORKER_TYPE=manage_pending_dataset_uploads
