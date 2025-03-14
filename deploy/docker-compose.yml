@@ -116,6 +116,8 @@ services:
 
   workers:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:latest
+    environment:
+      - WORKER_TYPE=celery_worker
     env_file:
       - workers.env
     depends_on:
@@ -127,6 +129,20 @@ services:
       network:
         ipv4_address: 172.20.0.13
 
+  workers:
+    image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:latest
+    environment:
+      - WORKER_TYPE=manage_pending_dataset_uploads
+    env_file:
+      - workers.env
+    depends_on:
+      - queue
+      - mongo
+    volumes:
+      - /opt/sca/data/:/opt/sca/data/
+    networks:
+      network:
+        ipv4_address: 172.20.0.15
 
   #  This is only for rhythm_api
   queue:
