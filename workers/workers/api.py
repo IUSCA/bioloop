@@ -132,7 +132,8 @@ def get_all_datasets(
     days_since_last_staged=None,
     deleted=False,
     archived=None,
-    bundle=False):
+    bundle=False,
+    include_states=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,

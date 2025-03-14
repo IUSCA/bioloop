@@ -172,18 +172,15 @@ def process_and_register_subdirectories(dir_path: str,
                 shutil.copytree(item, new_path)
                 print(f"Copied and renamed: {item.name} -> {new_name}")
 
-                if not is_data_product_registered(new_name):
-                    print(f"{new_path} does not exist. This subdirectory is currently not registered: {new_name}")
-                    try:
-                        print(f"Registering: {new_name}")
-                        register_data_product(new_name, new_path)
-                    except Exception as e:
-                        print(f"Error occurred during registration of {new_name}: {e}")
-                        traceback.print_exc()
-                        shutil.rmtree(path=new_path, ignore_errors=True)
-                        print(f"Deleted renamed directory due to registration failure: {new_path}")
-                else:
-                    print(f"Already registered: {new_name}")
+                print(f"{new_path} does not exist. This subdirectory is currently not registered: {new_name}")
+                try:
+                    print(f"Registering: {new_name}")
+                    register_data_product(new_name, new_path)
+                except Exception as e:
+                    print(f"Error occurred during registration of {new_name}: {e}")
+                    traceback.print_exc()
+                    shutil.rmtree(path=new_path, ignore_errors=True)
+                    print(f"Deleted renamed directory due to registration failure: {new_path}")
             else:
                 print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                 print(f"Dry run: Would have registered: {new_name}")
