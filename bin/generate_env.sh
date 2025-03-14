@@ -56,7 +56,7 @@ done
 echo "Generating workers.env file ..."
 declare -A env_vars=()
 while IFS='=' read -r key value; do
-  if [[ $key != \#* ]]; then
+  if [[ $key != \#* && $key != "WORKER_TYPE" ]]; then
     env_vars["$key"]="$value"
   fi
 done < "workers/.env.example"
