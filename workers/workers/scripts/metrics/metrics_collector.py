@@ -1,23 +1,11 @@
 from abc import ABC, abstractmethod
+import socket
 
 
 class MetricsCollector(ABC):
-    @abstractmethod
     def get_hostname(self):
-        pass
-
-    # @abstractmethod
-    # def get_disk_usages(self):
-    #     pass
+        return socket.getfqdn()
 
     @abstractmethod
-    def get_staging_space_usage(self):
-        pass
-
-    @abstractmethod
-    def get_registration_spaces_usage(self):
-        pass
-
-    @abstractmethod
-    def get_storage_spaces_usage(self):
+    def get_registration_metrics(self) -> List[Dict]:
         pass

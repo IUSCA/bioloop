@@ -1,5 +1,6 @@
-from google.cloud import storage
-from google.cloud import compute_v1
+import os
+
+from workers.cmd import total_size
 from .metrics_collector import MetricsCollector
 from workers.config import config
 
@@ -10,80 +11,82 @@ INSTANCE_NAME = config['gcp']['instance_name']
 
 
 class GCPMetricsCollector(MetricsCollector):
-    def __init__(self):
-        self.storage_client = storage.Client()
-        self.instance_client = compute_v1.InstancesClient()
-        self.instance = self.instance_client.get(
-            project=PROJECT_ID,
-            zone=ZONE,
-            instance=INSTANCE_NAME
+    def get_registration_metrics(self) -> List[Dict]:
+        metrics = []
+
+        registration_usage = get_registration_usage()
+        archived_usage = get_archived_usage()
+        staged_usage = get_staged_usage()
+
+        metrics.extend(
+            [
+                {
+                    'measurement': 'Registration',
+                    'subject': self.hostname(),
+                    'usage': registration_usage,
+                    'tags': []
+                }
+            ]
+        )
+        metrics.extend(
+            [
+                {
+                    'measurement': 'archived',
+                    'subject': self.hostname(),
+                    'usage': archived_usage,
+                    'tags': []
+                }
+            ]
+        )
+        metrics.extend(
+            [
+                {
+                    'measurement': 'staged',
+                    'subject': self.hostname(),
+                    'usage': staged_usage,
+                    'tags': []
+                }
+            ]
         )
 
-    def get_hostname(self):
-        return self.instance.name
-
-    def get_disk_usages(self):
-        metrics = []
-        for disk in self.instance.disks:
-            disk_info = self.instance_client.get_disk(
-                project=PROJECT_ID,
-                zone=ZONE,
-                # get disk name from the full URL of the disk resource
-                disk=disk.source.split('/')[-1]
-            )
-            # todo - filter only the disk usages that are needed
-            metrics.append({
-                'Filesystem': disk.device_name,
-                'usage': disk_info.used_gb * 1024 * 1024 * 1024,
-                'quota': disk_info.size_gb * 1024 * 1024 * 1024,
-            })
         return metrics
 
-    def get_staging_space_usage(self):
-        bucket_name = config['gcp']['buckets']['staging']
-        bucket = self.storage_client.get_bucket(bucket_name)
-        blobs = bucket.list_blobs()
 
-        total_size = sum(blob.size for blob in blobs)
-        quota = bucket.storage_class_size_limit or float('inf')
+def get_staged_usage():
+    total_usage = 0
+    for dataset_type in config['DATASET_TYPES']:
+        if dataset_type in config['paths']:
+            dataset_config = config['paths'][dataset_type]
+            if 'stage' in dataset_config:
+                stage_path = dataset_config['stage']
+                if os.path.exists(stage_path):
+                    total_usage += total_size(stage_path)
+            if 'bundle' in dataset_config and 'stage' in dataset_config['bundle']:
+                bundle_stage_path = dataset_config['bundle']['stage']
+                if os.path.exists(bundle_stage_path):
+                    total_usage += total_size(bundle_stage_path)
+    return total_usage
 
-        return [{
-            'Filesystem': f'gs://{bucket_name}',
-            'subject': self.get_hostname(),
-            'usage': total_size,
-            'limit': quota,
-            'tags': []
-        }]
 
-    def get_registration_spaces_usage(self):
-        hostname = self.get_hostname()
-        metrics = []
+def get_registration_usage():
+    total_usage = 0
+    for dataset_type in config['DATASET_TYPES']:
+        if dataset_type in config['registration']:
+            dataset_config = config['registration'][dataset_type]
+            if 'source_dir' in dataset_config:
+                registration_path = dataset_config['source_dir']
+                if os.path.exists(registration_path):
+                    total_usage += total_size(registration_path)
+    return total_usage
 
-        bucket_name = config['gcp']['registration']['bucket']
-        origin_spaces = [
-            ('raw_data', config['registration']['RAW_DATA']['source_dir']),
-            ('data_product', config['registration']['DATA_PRODUCT']['source_dir'])
-        ]
 
-        bucket = self.storage_client.get_bucket(bucket_name)
-        quota = bucket.storage_class_size_limit or float('inf')
-
-        total_used = 0
-        for space_name, source_dir in origin_spaces:
-            blobs = bucket.list_blobs(prefix=source_dir)
-            used = sum(blob.size for blob in blobs)
-            total_used += used
-
-        # todo - add staging space to this
-        metrics.append({
-            'measurement': 'origin space',
-            'subject': hostname,
-            'usage': total_used,
-            'limit': quota,
-            'tags': [],
-        })
-
-        return metrics
-
-    def get_storage_spaces_usage(self):
-
+def get_archived_usage():
+    total_usage = 0
+    for dataset_type in config['DATASET_TYPES']:
+        if dataset_type in config['paths']:
+            dataset_config = config['paths'][dataset_type]
+            if 'archive' in dataset_config:
+                archive_path = dataset_config['stage']
+                if os.path.exists(archive_path):
+                    total_usage += total_size(archive_path)
+    return total_usage

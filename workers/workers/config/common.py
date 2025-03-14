@@ -24,7 +24,6 @@ ALIAS_SALT = os.environ['ALIAS_SALT']
 ONE_HOUR = 60 * 60
 ONE_GIGABYTE = 1024 * 1024 * 1024
 FIVE_MINUTES = 5 * 60
-
 config = {
     'app_id': 'bioloop-dev.sca.iu.edu',
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
@@ -34,6 +33,10 @@ config = {
         'auth_token': APP_API_TOKEN,
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
+    },
+    'DATASET_TYPES': {
+        'RAW_DATA': 'RAW_DATA',
+        'DATA_PRODUCT': 'DATA_PRODUCT'
     },
     'paths': {
         'scratch': '/path/to/scratch',
@@ -189,7 +192,7 @@ config = {
     },
     # environment: Specifies the deployment environment for the application (on-premise or off-premise).
     # Possible values:
-    # - 'on_premise': For local or on-premise deployment (default)
+    # - 'on_premise' (default): For local or on-premise deployment
     # - 'gcp': For Google Cloud Platform deployment
     'environment': 'on_premise',
     'gcp': {
@@ -198,5 +201,11 @@ config = {
             'registration': 'gcp-registration-bucket',
             'staging': 'gcp-staging-bucket',
         },
+    },
+    'ingestion_points': {
+        'origin': {
+
+        }
     }
 }
+
