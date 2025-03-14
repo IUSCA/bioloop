@@ -157,7 +157,7 @@ services:
       - /opt/sca/data/:/opt/sca/data/
     networks:
       network:
-        ipv4_address: 172.20.0.15
+        ipv4_address: 172.20.0.16
 
   #  This is only for rhythm_api
   queue:
