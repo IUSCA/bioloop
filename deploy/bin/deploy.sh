@@ -46,8 +46,8 @@ response=$(curl --silent --request POST \
 client_id=$(echo $response | jq -r '.client_id')
 client_secret=$(echo $response | jq -r '.client_secret')
 
-echo "Client ID: $client_id"
-echo "Client Secret: $client_secret"
+# echo "Client ID: $client_id"
+# echo "Client Secret: $client_secret"
 
 sed -i '/^OAUTH_DOWNLOAD_CLIENT_ID/d' api.env
 echo "OAUTH_DOWNLOAD_CLIENT_ID=$client_id" >> api.env
@@ -66,6 +66,8 @@ sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
 echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
 sed -i '/^APP_API_TOKEN/d' workers.env
 echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
+
+echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)"
 
 # stop the services so that the new environment vars can be loaded
 docker compose down
