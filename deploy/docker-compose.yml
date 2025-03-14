@@ -49,15 +49,16 @@ services:
     depends_on:
       - api
     restart: "no"
-    entrypoint:
-      - sh
-      - -c
-      - |
-        mkdir .cert \
-        && cd .cert \
-        && openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/C=US/ST=IN/L=Bloomington/O=IU/OU=SCA/CN=localhost" \
-        && cd .. \
-        && npm run build
+    # entrypoint:
+    #   - sh
+    #   - -c
+    #   - |
+    #     mkdir .cert \
+    #     && cd .cert \
+    #     && openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/C=US/ST=IN/L=Bloomington/O=IU/OU=SCA/CN=localhost" \
+    #     && cd .. \
+    #     && npm run build
+    entrypoint: [ "tail", "-f", "/dev/null" ]
     networks:
       network:
         ipv4_address: 172.20.0.3
