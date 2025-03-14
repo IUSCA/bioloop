@@ -81,14 +81,13 @@ def directories_are_equal(dir1: Path, dir2: Path) -> bool:
 
 def is_data_product_registered(new_name: str) -> bool:
     """
-    Data Product is considered registered if it has reached the state 'ARCHIVED'.
+    Data Product is considered registered if it has been assigned an `archive_path`.
     """
     print(f"Checking if dataset {new_name} is registered...")
 
     while True:
         matching_data_products: List[Dict] = api.get_all_datasets(dataset_type='DATA_PRODUCT',
-                                                                  name=new_name,
-                                                                  include_states=True)
+                                                                  name=new_name)
         print(f"matching data products length: {len(matching_data_products)}")
         
         if len(matching_data_products) == 0:
@@ -96,18 +95,15 @@ def is_data_product_registered(new_name: str) -> bool:
             return False
 
         matching_data_product: Dict = matching_data_products[0]
-        matching_data_product_states: List[str] = [e['state'] for e in matching_data_product['states']]
 
-        print(f"States that have been reached by dataset {new_name}: {matching_data_product_states}")
-
-        if 'ARCHIVED' in matching_data_product_states:
-            print(f"Found registered data product: {new_name}, with state 'ARCHIVED'")
+        if matching_data_product['archive_path'] is not None:
+            print(f"Found registered data product: {new_name}, with archive_path {matching_data_product['archive_path']}")
             return True
 
         if matching_data_product:
             print(
-                f"Data product {new_name} currently has states {matching_data_product_states}. Checking again in"
-                f" {CHECK_INTERVAL} seconds, until state 'ARCHIVED' is reached.")
+                f"Data product {new_name} currently has archive_path {matching_data_product['archive_path']}."
+                f" Checking again in {CHECK_INTERVAL} seconds, until archive_path has been assigned.")
         time.sleep(CHECK_INTERVAL)
 
 
