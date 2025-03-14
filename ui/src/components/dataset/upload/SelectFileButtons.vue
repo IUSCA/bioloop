@@ -1,51 +1,43 @@
 <template>
-  <div class="flex flex-row">
-    <va-file-upload
-      class="w-full"
-      label="File"
-      upload-button-text="Select Files"
-      dropzone
-      dropZoneText=""
-      :disabled="props.disabled"
-      @file-added="
-        (f) => {
-          emit('files-added', f);
-        }
-      "
-    />
+  <div class="flex flex-col sm:flex-row">
+    <div class="w-full">
+      <va-file-upload
+        class="w-full upload-container"
+        label="File"
+        upload-button-text="Select Files"
+        dropzone
+        dropZoneText=""
+        :disabled="props.disabled"
+        @file-added="(f) => { emit('files-added', f); }"
+      />
+    </div>
 
-    <div
-      class="va-file-upload va-file-upload--dropzone w-full folder-upload--container"
-      style="background-color: rgba(51, 114, 240, 0.08)"
-    >
-      <div class="va-file-upload__field">
-        <div class="va-file-upload__field__text">
-          <input
-            label="Choose Folder"
-            ref="folderUploadInput"
-            class="folder-upload--input"
-            id="folder-upload--input"
-            type="file"
-            directory
-            webkitdirectory
-            multiple
-            :disabled="props.disabled"
-            @change="
-              (e) => {
-                onDirectorySelection(e);
-              }
-            "
-          />
-          <va-button
-            :disabled="props.disabled"
-            @click="
-              () => {
-                folderUploadInput.click();
-              }
-            "
-          >
-            Select Folder
-          </va-button>
+    <div class="w-full">
+      <div
+        class="va-file-upload va-file-upload--dropzone w-full folder-upload--container"
+        style="background-color: rgba(51, 114, 240, 0.08)"
+      >
+        <div class="va-file-upload__field">
+          <div class="va-file-upload__field__text">
+            <input
+              label="Choose Folder"
+              ref="folderUploadInput"
+              class="folder-upload--input"
+              id="folder-upload--input"
+              type="file"
+              directory
+              webkitdirectory
+              multiple
+              :disabled="props.disabled"
+              @change="(e) => { onDirectorySelection(e); }"
+            />
+            <va-button
+              :disabled="props.disabled"
+              @click="() => { folderUploadInput.click(); }"
+            >
+              Select Directory
+            </va-button>
+          </div>
         </div>
       </div>
     </div>
@@ -109,5 +101,45 @@ const folderUploadInput = ref(null);
 
 .folder-upload--container {
   cursor: default;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.va-file-upload {
+  height: 100%;
+}
+
+.va-file-upload__field {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-container {
+  height: 100%;
+}
+
+.flex {
+  gap: 1px;
+}
+
+@media (max-width: 639px) {
+  .va-file-upload,
+  .folder-upload--container {
+    height: 100px;
+  }
+
+  .flex {
+    gap: 1px;
+  }
+}
+
+@media (min-width: 640px) {
+  .flex {
+    gap: 1px;
+  }
 }
 </style>
