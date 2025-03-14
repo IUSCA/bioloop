@@ -35,7 +35,7 @@ docker compose pull && docker compose up -d --force-recreate --remove-orphans --
 # Create the client for the download service
 APP_download="${APP_DOMAIN%%.*}_download"
 response=$(curl --silent --request POST \
-  --url http://172.20.0.7:5001/create_client \
+  --url http://172.20.0.7:5050/create_client \
   --header 'Content-Type: application/x-www-form-urlencoded' \
   --data client_name=$APP_download \
   --data scope=download_file\ upload_file \
