@@ -93,6 +93,18 @@ module.exports = {
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
-    }
+    },
+    {
+      name: "emailProcessor",
+      script: "python",
+      args: "-u -m workers.scripts.emailProcessor",
+      watch: false,
+      interpreter: "",
+      log_date_format: "YYYY-MM-DD HH:mm Z",
+      error_file: "../logs/workers/emailProcessor.err",
+      out_file: "../logs/workers/emailProcessor.log",
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
+    },
   ]
 }
