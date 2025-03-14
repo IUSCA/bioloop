@@ -121,6 +121,8 @@ services:
     depends_on:
       - queue
       - mongo
+    volumes:
+      - /opt/sca/data/:/opt/sca/data/
     networks:
       network:
         ipv4_address: 172.20.0.13
@@ -170,8 +172,6 @@ services:
       context: ../rhythm_api
     expose:
       - 5001
-    ports:
-      - 5001:5001
     env_file:
       - rhythm.env
     volumes:
@@ -202,9 +202,9 @@ services:
     build:
       context: ../signet
     expose:
-      - 5001
+      - 5050
     environment:
-      - PORT=5001
+      - PORT=5050
       - AUTHLIB_INSECURE_TRANSPORT=1
       - POSTGRES_DB=${SIGNET_DB}
       - POSTGRES_USER=${SIGNET_USER}

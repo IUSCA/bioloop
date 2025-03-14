@@ -29,5 +29,11 @@ RUN chown -R nonroot:nonroot /opt/sca
 # Switch to the non-privileged user
 USER nonroot
 
+# Install Node.js and npm
+RUN apt-get update && apt-get install -y nodejs npm
+
+# Install pm2 globally
+RUN npm install -g pm2
+
 # Default command to run
-CMD ["workers/scripts/start_worker.sh"]
+CMD ["pm2-runtime", "start", "ecosystem.config.js"]
