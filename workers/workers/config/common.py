@@ -194,18 +194,6 @@ config = {
     # Possible values:
     # - 'on_premise' (default): For local or on-premise deployment
     # - 'gcp': For Google Cloud Platform deployment
-    'environment': 'on_premise',
-    'gcp': {
-        'buckets': {
-            'archival': 'gcp-archival-bucket',
-            'registration': 'gcp-registration-bucket',
-            'staging': 'gcp-staging-bucket',
-        },
-    },
-    'ingestion_points': {
-        'origin': {
-
-        }
-    }
+    'environment': 'gcp',
 }
 

@@ -4,7 +4,9 @@ from workers import hpfs
 
 
 class OnPremiseMetricsCollector(MetricsCollector):
-    def get_registration_metrics(self) -> List[Dict]:
+    def get_registration_metrics(self) -> list[dict]:
+        print("Getting registration metrics on On Premise")
+
         metrics = []
 
         disk_usages = hpfs.get_disk_usages()
@@ -13,7 +15,7 @@ class OnPremiseMetricsCollector(MetricsCollector):
             [
                 {
                     'measurement': d['Filesystem'],
-                    'subject': self.hostname(),
+                    'subject': self.hostname,
                     'usage': d['usage'],
                     'limit': d['quota'],
                     'tags': []
@@ -28,7 +30,7 @@ class OnPremiseMetricsCollector(MetricsCollector):
             [
                 {
                     'measurement': d['Filesystem'],
-                    'subject': self.hostname(),
+                    'subject': self.hostname,
                     'usage': d['usage'],
                     'limit': d['limit'],
                     'tags': []

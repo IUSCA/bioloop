@@ -30,7 +30,7 @@ module.exports = {
     {
       name: "metrics",
       script: "python",
-      args: "-u -m workers.scripts.metrics",
+      args: "-u -m workers.scripts.metrics.metrics",
       watch: false,
       interpreter: "",
       log_date_format: "YYYY-MM-DD HH:mm Z",

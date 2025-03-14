@@ -5,13 +5,9 @@ from .metrics_collector import MetricsCollector
 from workers.config import config
 
 
-PROJECT_ID = config['gcp']['project_id']
-ZONE = config['gcp']['zone']
-INSTANCE_NAME = config['gcp']['instance_name']
-
-
 class GCPMetricsCollector(MetricsCollector):
-    def get_registration_metrics(self) -> List[Dict]:
+    def get_registration_metrics(self) -> list[dict]:
+        print("Getting registration metrics for GCP")
         metrics = []
 
         registration_usage = get_registration_usage()
@@ -21,8 +17,8 @@ class GCPMetricsCollector(MetricsCollector):
         metrics.extend(
             [
                 {
-                    'measurement': 'Registration',
-                    'subject': self.hostname(),
+                    'measurement': 'registration',
+                    'subject': self.hostname,
                     'usage': registration_usage,
                     'tags': []
                 }
@@ -32,7 +28,7 @@ class GCPMetricsCollector(MetricsCollector):
             [
                 {
                     'measurement': 'archived',
-                    'subject': self.hostname(),
+                    'subject': self.hostname,
                     'usage': archived_usage,
                     'tags': []
                 }
@@ -42,7 +38,7 @@ class GCPMetricsCollector(MetricsCollector):
             [
                 {
                     'measurement': 'staged',
-                    'subject': self.hostname(),
+                    'subject': self.hostname,
                     'usage': staged_usage,
                     'tags': []
                 }
