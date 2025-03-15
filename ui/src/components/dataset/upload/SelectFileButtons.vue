@@ -16,6 +16,9 @@
       <div
         class="va-file-upload va-file-upload--dropzone w-full folder-upload--container"
         style="background-color: rgba(51, 114, 240, 0.08)"
+        @dragover.prevent="onDragOver"
+        @dragleave.prevent="onDragLeave"
+        @drop.prevent="onDrop"
       >
         <div class="va-file-upload__field">
           <div class="va-file-upload__field__text">
@@ -29,13 +32,13 @@
               webkitdirectory
               multiple
               :disabled="props.disabled"
-              @change="(e) => { onDirectorySelection(e); }"
+              @change="e => onDirectorySelection(e.target.files)"
             />
             <va-button
               :disabled="props.disabled"
               @click="() => { folderUploadInput.click(); }"
             >
-              Select Directory
+              {{ isDragging ? 'Drop Directory Here' : 'Select Directory' }}
             </va-button>
           </div>
         </div>
@@ -54,44 +57,155 @@ const props = defineProps({
 
 const emit = defineEmits(["files-added", "directory-added"]);
 
-const onDirectorySelection = (e) => {
-  if (e.target.files.length === 0) {
+const isDragging = ref(false);
+const folderUploadInput = ref(null);
+
+const isWindows = (path) => path.includes('\\');
+const isUnix = (path) => path.includes('/') && !path.includes('\\');
+
+/**
+ * Extracts the directory path from a file's customRelativePath or webkitRelativePath
+ * @param {File} file - The file object
+ * @returns {string} The directory path of the file
+ *
+ * @description
+ * - customRelativePath: Used when files are selected via drag-and-drop.
+ *   This property is manually set in the readDirectory function for each file.
+ * - webkitRelativePath: Used when files are selected using the browser's file selection dialog box
+ *   (webkitdirectory attribute).
+ *   This property is automatically set by the browser for files selected this way.
+ * - If neither property is available, an empty string is used as a fallback.
+ */
+const getFilePath = (file) => {
+  const path = file.customRelativePath || file.webkitRelativePath || "";
+  return isUnix(path)
+    ? path.slice(0, path.lastIndexOf("/"))
+    : path.slice(0, path.lastIndexOf("\\")).replace(/\\/g, "/");
+};
+
+/**
+ * Recursively retrieves all files from the given items (files or directories)
+ * @param {FileList|DataTransferItemList} items - The items to process
+ * @returns {Promise<File[]>} A promise that resolves to an array of File objects
+ */
+const getAllFilesFromItems = async (items) => {
+  const files = [];
+  const queue = Array.from(items);
+
+  while (queue.length > 0) {
+    const item = queue.shift();
+    if (item.kind === 'file') {
+      const entry = item.webkitGetAsEntry();
+      if (entry.isFile) {
+        const file = await getFileFromEntry(entry);
+        files.push(file);
+      } else if (entry.isDirectory) {
+        const directoryFiles = await readDirectory(entry);
+        files.push(...directoryFiles);
+      }
+    } else if (item instanceof File) {
+      files.push(item);
+    }
+  }
+
+  return files;
+};
+
+/**
+ * Converts a FileSystemFileEntry to a File object
+ * @param {FileSystemFileEntry} entry - The file entry to convert
+ * @returns {Promise<File>} A promise that resolves to a File object
+ */
+const getFileFromEntry = (entry) => {
+  return new Promise((resolve) => {
+    entry.file(resolve);
+  });
+};
+
+/**
+ * Recursively reads a directory and returns all files within it
+ * @param {FileSystemDirectoryEntry} dirEntry - The directory entry to read
+ * @returns {Promise<File[]>} A promise that resolves to an array of File objects
+ */
+const readDirectory = async (dirEntry) => {
+  const files = [];
+  const dirReader = dirEntry.createReader();
+  let entries = await readEntries(dirReader);
+
+  while (entries.length > 0) {
+    for (let entry of entries) {
+      if (entry.isFile) {
+        const file = await getFileFromEntry(entry);
+        // Create a new File object with the desired path
+        const newFile = new File([file], file.name, {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+        // Add a custom property to store the relative path
+        newFile.customRelativePath = entry.fullPath.slice(1); // Remove leading slash
+        files.push(newFile);
+      } else if (entry.isDirectory) {
+        files.push(...await readDirectory(entry));
+      }
+    }
+    entries = await readEntries(dirReader);
+  }
+
+  return files;
+};
+
+/**
+ * Reads entries from a directory reader
+ * @param {FileSystemDirectoryReader} dirReader - The directory reader
+ * @returns {Promise<FileSystemEntry[]>} A promise that resolves to an array of directory entries
+ */
+const readEntries = (dirReader) => {
+  return new Promise((resolve) => {
+    dirReader.readEntries(resolve);
+  });
+};
+
+const onDragOver = (event) => {
+  isDragging.value = true;
+  event.dataTransfer.dropEffect = 'copy';
+};
+
+const onDragLeave = () => {
+  isDragging.value = false;
+};
+
+const onDrop = async (event) => {
+  isDragging.value = false;
+  event.preventDefault();
+  const items = event.dataTransfer.items;
+  if (items) {
+    await onDirectorySelection(items);
+  }
+};
+
+/**
+ * Processes selected directory items and emits the directory-added event
+ * @param {FileList|DataTransferItemList} items - The selected items
+ */
+const onDirectorySelection = async (items) => {
+  const files = await getAllFilesFromItems(items);
+  if (files.length === 0) {
     return;
   }
 
-  const isWindows = (path) =>
-    path.indexOf("/") === -1 && path.indexOf("\\") > 0;
-  const isUnix = (path) => path.indexOf("//") === -1 && path.indexOf("/") > 0;
-
-  const getFilePath = (file) => {
-    return isUnix(file.webkitRelativePath)
-      ? file.webkitRelativePath.slice(
-          0,
-          file.webkitRelativePath.lastIndexOf("/"),
-        )
-      : file.webkitRelativePath
-          .slice(0, file.webkitRelativePath.lastIndexOf("\\"))
-          .replace(/\\/g, "/");
-  };
-
-  // The webkitRelativePath property of any of the selected files can be used
-  // to determine if the client is running on Windows or Unix.
-  const filePath = e.target.files[0]?.webkitRelativePath || "";
-
+  const filePath = files[0]?.customRelativePath || files[0]?.webkitRelativePath || "";
   const directoryName = isWindows(filePath)
     ? filePath.slice(0, filePath.indexOf("\\"))
     : filePath.slice(0, filePath.indexOf("/"));
 
   emit("directory-added", {
     directoryName: directoryName,
-    files: Array.from(e.target.files).map((file) => {
+    files: files.map((file) => {
       file.path = getFilePath(file);
       return file;
     }),
   });
 };
-
-const folderUploadInput = ref(null);
 </script>
 
 <style scoped>
