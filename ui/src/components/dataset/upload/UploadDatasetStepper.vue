@@ -260,6 +260,7 @@ const isNextButtonDisabled = computed(() => {
     submissionSuccess.value ||
     [
       Constants.UPLOAD_STATES.PROCESSING,
+      Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS,
       Constants.UPLOAD_STATES.UPLOADING,
       Constants.UPLOAD_STATES.UPLOADED,
     ].includes(submissionStatus.value) ||
@@ -354,7 +355,9 @@ const datasetNameValidationRules = [
 
 const loading = ref(false);
 const validatingForm = ref(false);
-const rawDataList = ref([]);
+const evaluatingChecksums = ref(false);
+const totalChunks = ref(0);
+const processedChunks = ref(0);const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const datasetUploadLog = ref(null);
 const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED);
@@ -409,6 +412,12 @@ const uploadFormData = computed(() => {
     }),
   };
 });
+
+const checksumProgress = computed(() => {
+  if (totalChunks.value === 0) return 0;
+  return Math.round((processedChunks.value / totalChunks.value) * 100);
+});
+
 
 const resetFormErrors = () => {
   formErrors.value = {
@@ -980,7 +989,12 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
+  console.log("Evaluating checksums...");
+  // evaluatingChecksums.value = true;
+  submissionStatus.value = Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS;
   await evaluateChecksums(filesNotUploaded.value);
+  // evaluatingChecksums.value = false;
+  submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
 
   const logData = datasetUploadLog.value?.id
     ? {

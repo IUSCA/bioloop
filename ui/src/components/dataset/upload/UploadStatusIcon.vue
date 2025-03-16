@@ -1,25 +1,54 @@
 <template>
-  <i-mdi-upload-circle
-    v-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADING"
-    style="color: var(--va-primary)"
-  />
+  <div
+      v-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADING"
+      class="flex items-center space-x-2"
+  >
+    <i-mdi-upload-circle
+      style="color: var(--va-primary)"
+    />
+    <va-chip size="small">Uploading</va-chip>
+  </div>
 
-  <va-icon
+
+  <div
     v-else-if="props.submissionStatus === constants.UPLOAD_STATES.PROCESSING"
-    name="loop"
-    spin="clockwise"
-    color="primary"
-  />
+    class="flex items-center space-x-2">
+    <va-icon
+      name="loop"
+      spin="clockwise"
+      color="primary"
+    />
+    <va-chip size="small">Processing</va-chip>
+  </div>
 
-  <i-mdi-warning
-    v-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOAD_FAILED"
-    style="color: var(--va-warning)"
-  />
+  <div
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.COMPUTING_CHECKSUMS"
+    class="flex items-center space-x-2">
+      <i-mdi-progress-helper
+        style="color: var(--va-primary)"
+        class="animate-spin"
+      />
+      <va-chip size="small">Computing Checksums</va-chip>
+    </div>
 
-  <i-mdi-check-circle
-    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADED"
-    style="color: var(--va-success)"
-  />
+
+  <div
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOAD_FAILED"
+    class="flex items-center space-x-2">
+      <i-mdi-warning
+        style="color: var(--va-warning)"
+      />
+      <va-chip size="small">Upload Failed</va-chip>
+  </div>
+
+      <div v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADED"
+          class="flex items-center space-x-2">
+
+      <i-mdi-check-circle
+        style="color: var(--va-success)"
+      />
+        <va-chip size="small">Uploaded</va-chip>
+    </div>
 </template>
 
 <script setup>
@@ -33,4 +62,9 @@ const props = defineProps({
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.animate-spin {
+  animation: spin 2s linear infinite;
+}
+
+</style>

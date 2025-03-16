@@ -116,6 +116,7 @@ const exports = {
     UNINITIATED: "Uninitiated",
     PROCESSING: "Processing",
     PROCESSING_FAILED: "Processing Failed",
+    COMPUTING_CHECKSUMS: "Computing Checksums",
     UPLOADING: "Uploading",
     UPLOAD_FAILED: "Upload Failed",
     UPLOADED: "Uploaded",
