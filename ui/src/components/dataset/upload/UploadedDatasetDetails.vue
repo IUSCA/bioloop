@@ -53,8 +53,22 @@
           <td>Status</td>
           <td>
             <UploadStatusIcon :submission-status="props.submissionStatus" />
+            <va-progress-circle
+              v-if="props.checksumComputationPercentage > 0"
+              :model-value="checksumComputationPercentage"
+              size="small"
+            >
+              {{ checksumComputationPercentage }}%
+            </va-progress-circle>
           </td>
         </tr>
+
+<!--        <tr v-if="props.checksumComputationPercentage > 0">-->
+<!--          <td>Computing Checksums</td>-->
+<!--          <td>-->
+<!--            {{ props.checksumComputationPercentage }}%-->
+<!--          </td>-->
+<!--        </tr>-->
       </tbody>
     </table>
   </div>
@@ -121,7 +135,21 @@ const props = defineProps({
     type: String,
     default: "warning",
   },
+  checksumComputationPercentage: {
+    type: Number,
+    default: 0,
+  }
 });
+
+const checksumComputationPercentage = computed(
+    {
+      get() {
+        return props.checksumComputationPercentage;
+      },
+      set(value) {
+      },
+    }
+)
 
 const emit = defineEmits(["update:datasetNameInput"]);
 

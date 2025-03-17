@@ -123,6 +123,7 @@
                     :status-chip-color="statusChipColor"
                     :submission-alert-color="submissionAlertColor"
                     :is-submission-alert-visible="isSubmissionAlertVisible"
+                    :checksum-computation-percentage="checksumProgress"
                   /> </va-card-content
               ></va-card>
             </div>
@@ -353,11 +354,13 @@ const datasetNameValidationRules = [
   validateNotExists,
 ];
 
+
 const loading = ref(false);
 const validatingForm = ref(false);
 const evaluatingChecksums = ref(false);
 const totalChunks = ref(0);
-const processedChunks = ref(0);const rawDataList = ref([]);
+const processedChunks = ref(0);
+const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const datasetUploadLog = ref(null);
 const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED);
@@ -577,6 +580,8 @@ const evaluateFileChecksums = (file) => {
 
         buffer.append(result); // Append to array buffer
         chunkIndex += 1;
+        processedChunks.value += 1;
+
         if (chunkIndex < chunks) {
           loadNext(chunkIndex);
         } else {
@@ -603,6 +608,9 @@ const evaluateFileChecksums = (file) => {
 const evaluateChecksums = (filesToUpload) => {
   return new Promise((resolve, reject) => {
     const filePromises = [];
+    totalChunks.value = 0;
+    processedChunks.value = 0;
+
     for (let i = 0; i < filesToUpload.length; i++) {
       let fileDetails = filesToUpload[i];
       if (!fileDetails.checksumsEvaluated) {
@@ -611,6 +619,7 @@ const evaluateChecksums = (filesToUpload) => {
         // A single chunk is uploaded for an empty file
         fileDetails.numChunks =
           file.size > 0 ? Math.ceil(file.size / CHUNK_SIZE) : 1;
+        totalChunks.value += fileDetails.numChunks;
         if (selectingDirectory.value) {
           selectedDirectoryChunkCount.value += fileDetails.numChunks;
         }
