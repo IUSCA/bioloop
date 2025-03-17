@@ -61,12 +61,25 @@ echo "OAUTH_UPLOAD_CLIENT_ID=$client_id" >> api.env
 sed -i '/^OAUTH_UPLOAD_CLIENT_SECRET/d' api.env
 echo "OAUTH_UPLOAD_CLIENT_SECRET=$client_secret" >> api.env
 
-# Setup the appropriate token for communication with the workers and rhythm_api
+# Setup the appropriate seed data for mongo 
+if [ $(docker compose exec mongo mongo --eval "db.getCollectionNames()" | grep -c "workflow_meta") -gt 0 ] && [ $(docker compose exec mongo mongo --eval "db.getCollectionNames()" | grep -c "celery_taskmeta") -gt 0 ]; then
+  echo "Mongo already has data.  Not importing seed data..."
+else
+
+  # only do this if the database is empty
+  docker compose exec mongo mongoimport --uri 'mongodb://root:example@localhost:27017/?authSource=admin' --jsonArray --db celery --collection celery_taskmeta --file /opt/sca/app/mongodump/celery_taskmeta.json
+  docker compose exec mongo mongoimport --uri 'mongodb://root:example@localhost:27017/?authSource=admin' --jsonArray --db celery --collection workflow_meta --file /opt/sca/app/mongodump/workflow_meta.json
+  
+fi
+
+# Setup the auth token for the workflow service
 sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
 echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
+
+
+# Setup connection to the api from the workers container
 sed -i '/^APP_API_TOKEN/d' workers.env
 echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
-
 
 
 # stop the services so that the new environment vars can be loaded
@@ -74,8 +87,6 @@ docker compose down
 
 # Start the services
 docker compose up -d
-
-echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)"
 
 # Deploy the prisma migrations and seed the database
 docker compose exec api npx prisma migrate deploy

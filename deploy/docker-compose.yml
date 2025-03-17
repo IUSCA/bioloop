@@ -15,8 +15,6 @@ services:
     ports:
       - 80:80
       - 443:443
-    expose:
-      - 8000
     depends_on:
       - api
     networks:
@@ -129,21 +127,6 @@ services:
       network:
         ipv4_address: 172.20.0.13
 
-  manage_pending_dataset_uploads:
-    image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:latest
-    environment:
-      - WORKER_TYPE=manage_pending_dataset_uploads
-    env_file:
-      - workers.env
-    depends_on:
-      - queue
-      - mongo
-    volumes:
-      - /opt/sca/data/:/opt/sca/data/
-    networks:
-      network:
-        ipv4_address: 172.20.0.15
-
   # metrics:
   #   image: git.sca.iu.edu:5050/${PROJECT_NAME}/workers:latest
   #   environment:
@@ -179,16 +162,15 @@ services:
   mongo:
     # https://hub.docker.com/_/mongo
     image: mongo:8
-    ports:
-      # helpful for using a GUI client like compass for troubleshooting
-      - 127.0.0.1:27017:27017
+    expose:
+      - 27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
       - mongo_data:/data/db
       # for importing database files
-      - mongo_dump:/opt/sca/app/mongodump
+      - ../rhythm/mongo/:/opt/sca/app/mongodump
     networks:
       network:
         ipv4_address: 172.20.0.11
