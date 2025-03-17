@@ -69,7 +69,7 @@ services:
     environment:
       - WORKER_TYPE=celery_worker
     env_file:
-      - workers.env
+      - ./workers/.env.example
     depends_on:
       - queue
       - mongo
@@ -78,23 +78,6 @@ services:
     networks:
       network:
         ipv4_address: 172.20.0.13
-
-  manage_pending_dataset_uploads:
-    build:
-      context: ./workers
-    environment:
-      - WORKER_TYPE=manage_pending_dataset_uploads
-    env_file:
-      - workers.env
-    depends_on:
-      - queue
-      - mongo
-    volumes:
-      - ./workers/:/opt/sca/app/
-      - /tmp/:/opt/sca/data/
-    networks:
-      network:
-        ipv4_address: 172.20.0.15
 
 #  This is only for rhythm_api
   queue:
@@ -116,7 +99,7 @@ services:
 
   mongo:
     # https://hub.docker.com/_/mongo
-    image: mongo:8
+    image: mongo:5
     ports:
       # helpful for using a GUI client like compass for troubleshooting
       - 127.0.0.1:27017:27017
@@ -126,7 +109,7 @@ services:
     volumes:
       - ./db/db_mongo:/data/db
       # for importing database files
-      - ./db/mongodump:/opt/sca/app/mongodump
+      - ./rhythm_api/mongo:/opt/sca/app/mongodump
     networks:
       network:
         ipv4_address: 172.20.0.11
@@ -158,9 +141,9 @@ services:
     expose:
       - 3080
     env_file:
-      - secure_download.env
+      - ./secure_download/.env.example
     volumes:
-      - /opt/sca/data:/opt/sca/data
+      - /tmp:/opt/sca/data
     networks:
       network:
         ipv4_address: 172.20.0.9
@@ -168,7 +151,7 @@ services:
   signet:
     restart: unless-stopped
     build:
-      context: ../signet
+      context: ./signet
     expose:
       - 5050
     environment:
@@ -180,9 +163,9 @@ services:
       - POSTGRES_HOST=signet_db
       - POSTGRES_PORT=5432
     env_file:
-      - signet.env
+      - ./signet/.env.example
     volumes:
-      - ../signet:/opt/sca
+      - ./signet:/opt/sca
     depends_on:
       - postgres
     networks:

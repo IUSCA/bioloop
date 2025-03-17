@@ -62,8 +62,8 @@ sed -i '/^OAUTH_UPLOAD_CLIENT_SECRET/d' api.env
 echo "OAUTH_UPLOAD_CLIENT_SECRET=$client_secret" >> api.env
 
 # Setup the appropriate seed data for mongo 
-if [ $(docker compose exec mongo mongo --eval "db.getCollectionNames()" | grep -c "workflow_meta") -gt 0 ] && [ $(docker compose exec mongo mongo --eval "db.getCollectionNames()" | grep -c "celery_taskmeta") -gt 0 ]; then
-  echo "Mongo already has data.  Not importing seed data..."
+if [ $(docker compose exec mongo mongo -u root -p example --authenticationDatabase admin celery --quiet --eval "db.getCollectionNames()" | grep -o -E "celery_taskmeta|workflow_meta" | wc -l) -eq 2 ]; then
+  echo "Mongo already has data. Not importing seed data..."
 else
 
   # only do this if the database is empty
@@ -71,6 +71,7 @@ else
   docker compose exec mongo mongoimport --uri 'mongodb://root:example@localhost:27017/?authSource=admin' --jsonArray --db celery --collection workflow_meta --file /opt/sca/app/mongodump/workflow_meta.json
   
 fi
+
 
 # Setup the auth token for the workflow service
 sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env

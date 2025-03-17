@@ -161,7 +161,7 @@ services:
 
   mongo:
     # https://hub.docker.com/_/mongo
-    image: mongo:8
+    image: mongo:5
     expose:
       - 27017
     environment:
