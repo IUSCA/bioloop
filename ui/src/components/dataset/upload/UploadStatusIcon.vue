@@ -4,6 +4,7 @@
       class="flex items-center space-x-2"
   >
     <i-mdi-upload-circle
+      v-if="props.showIcon"
       style="color: var(--va-primary)"
     />
     <va-chip size="small">Uploading</va-chip>
@@ -14,6 +15,7 @@
     v-else-if="props.submissionStatus === constants.UPLOAD_STATES.PROCESSING"
     class="flex items-center space-x-2">
     <va-icon
+      v-if="props.showIcon"
       name="loop"
       spin="clockwise"
       color="primary"
@@ -25,6 +27,7 @@
     v-else-if="props.submissionStatus === constants.UPLOAD_STATES.COMPUTING_CHECKSUMS"
     class="flex items-center space-x-2">
       <i-mdi-progress-helper
+        v-if="props.showIcon"
         style="color: var(--va-primary)"
         class="animate-spin"
       />
@@ -36,18 +39,19 @@
     v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOAD_FAILED"
     class="flex items-center space-x-2">
       <i-mdi-warning
+        v-if="props.showIcon"
         style="color: var(--va-warning)"
       />
-      <va-chip size="small">Upload Failed</va-chip>
+      <va-chip size="small" color="warning">Upload Failed</va-chip>
   </div>
 
-      <div v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADED"
-          class="flex items-center space-x-2">
-
+  <div v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADED"
+      class="flex items-center space-x-2">
       <i-mdi-check-circle
+        v-if="props.showIcon"
         style="color: var(--va-success)"
       />
-        <va-chip size="small">Uploaded</va-chip>
+        <va-chip size="small" color="success">Uploaded</va-chip>
     </div>
 </template>
 
@@ -59,6 +63,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  showIcon: {
+    type: Boolean,
+    default: true,
+  }
 });
 </script>
 

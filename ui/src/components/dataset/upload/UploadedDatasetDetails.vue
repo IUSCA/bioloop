@@ -51,15 +51,20 @@
 
         <tr>
           <td>Status</td>
-          <td>
-            <UploadStatusIcon :submission-status="props.submissionStatus" />
+          <td class="flex items-center gap-2">
             <va-progress-circle
-              v-if="props.checksumComputationPercentage > 0"
+              v-if="
+                props.submissionStatus === constants.UPLOAD_STATES.COMPUTING_CHECKSUMS &&
+                props.checksumComputationPercentage > 0
+              "
               :model-value="checksumComputationPercentage"
               size="small"
             >
               {{ checksumComputationPercentage }}%
             </va-progress-circle>
+            <UploadStatusIcon :submission-status="props.submissionStatus"
+                              :show-icon="props.submissionStatus !== constants.UPLOAD_STATES.COMPUTING_CHECKSUMS"
+            />
           </td>
         </tr>
 
@@ -75,6 +80,8 @@
 </template>
 
 <script setup>
+import constants from "@/constants";
+
 const props = defineProps({
   // `dataset`: Dataset to be uploaded.
   dataset: {

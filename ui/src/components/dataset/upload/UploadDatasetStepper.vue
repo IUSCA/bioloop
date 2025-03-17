@@ -901,12 +901,12 @@ const onSubmit = async () => {
       .then(async () => {
         submissionSuccess.value = true;
         submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
-
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
           resolve();
         } else {
           submissionStatus.value = Constants.UPLOAD_STATES.UPLOAD_FAILED;
+          statusChipColor.value = "warning";
           submissionAlert.value = "Some files could not be uploaded.";
           reject();
         }
@@ -914,6 +914,7 @@ const onSubmit = async () => {
       .catch((err) => {
         console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING_FAILED;
+        statusChipColor.value = "warning"
         submissionAlert.value =
           "There was an error. Please try submitting again.";
         reject();
