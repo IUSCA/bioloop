@@ -8,6 +8,11 @@ cd rhythm_api/keys/
 ./genkeys.sh
 cd ../../
 
+# Copy the mongo folder to the appropriate location
+cd rhythm_api/
+cp -r mongo/ /opt/sca/mongo/
+cd ../
+
 # Download the signet repository if it doesn't exist
 if [ ! -d "signet" ]; then git clone https://github.com/IUSCA/signet.git; fi
 

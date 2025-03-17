@@ -170,7 +170,7 @@ services:
     volumes:
       - mongo_data:/data/db
       # for importing database files
-      - ../rhythm/mongo/:/opt/sca/app/mongodump
+      - /opt/sca/mongo:/opt/sca/app/mongodump
     networks:
       network:
         ipv4_address: 172.20.0.11
