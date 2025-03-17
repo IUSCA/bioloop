@@ -161,11 +161,10 @@ services:
   queue:
     # https://hub.docker.com/_/rabbitmq/
     # includes web gui ?
-    image: rabbitmq:3-management
+    image: rabbitmq:4
     # image: rabbitmq:3
-    ports:
-      - 127.0.0.1:5672:5672
-      - 127.0.0.1:15672:15672
+    expose:
+      - 5672
     volumes:
       - queue_data:/var/lib/rabbitmq/
       # - ./db/queue/log/:/var/log/rabbitmq/
@@ -179,7 +178,7 @@ services:
 
   mongo:
     # https://hub.docker.com/_/mongo
-    image: mongo:5
+    image: mongo:8
     ports:
       # helpful for using a GUI client like compass for troubleshooting
       - 127.0.0.1:27017:27017

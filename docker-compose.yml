@@ -6,7 +6,6 @@ services:
       - ui/.env.example
     volumes:
       - ./ui/:/opt/sca/app
-      - ui_modules:/opt/sca/app/node_modules
     ports:
       - 127.0.0.1:443:443
     working_dir: /opt/sca/app
@@ -15,6 +14,9 @@ services:
       - -c
       - |
         npm install && exec /opt/sca/app/node_modules/.bin/vite --host
+    networks:
+      network:
+        ipv4_address: 172.20.0.3
 
   api:
     image: node:19
@@ -24,7 +26,6 @@ services:
       - api/.env.example
     volumes:
       - ./api/:/opt/sca/app
-      - api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
     ports:
@@ -41,6 +42,9 @@ services:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
      - postgres
+    networks:
+      network:
+        ipv4_address: 172.20.0.4
 
   postgres:
     image: postgres:14.5
@@ -55,22 +59,47 @@ services:
       - 127.0.0.1:5432:5432
     expose:
       - 5432
+    networks:
+      network:
+        ipv4_address: 172.20.0.5
 
-  workers:
+  celery_worker:
     build:
       context: ./workers
+    environment:
+      - WORKER_TYPE=celery_worker
+    env_file:
+      - workers.env
     depends_on:
       - queue
       - mongo
+    volumes:
+      - ./workers:/opt/sca/app
+    networks:
+      network:
+        ipv4_address: 172.20.0.13
 
-
+  manage_pending_dataset_uploads:
+    build:
+      context: ./workers
+    environment:
+      - WORKER_TYPE=manage_pending_dataset_uploads
+    env_file:
+      - workers.env
+    depends_on:
+      - queue
+      - mongo
+    volumes:
+      - ./workers/:/opt/sca/app/
+      - /tmp/:/opt/sca/data/
+    networks:
+      network:
+        ipv4_address: 172.20.0.15
 
 #  This is only for rhythm_api
   queue:
     # https://hub.docker.com/_/rabbitmq/
-    # includes web gui ?
-    image: rabbitmq:3-management
-    # image: rabbitmq:3
+    image: rabbitmq:4-management
     ports:
       - 127.0.0.1:5672:5672
       - 127.0.0.1:15672:15672
@@ -81,11 +110,13 @@ services:
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
       - RABBITMQ_DEFAULT_VHOST=myvhost
-
+    networks:
+      network:
+        ipv4_address: 172.20.0.12
 
   mongo:
     # https://hub.docker.com/_/mongo
-    image: mongo:5
+    image: mongo:8
     ports:
       # helpful for using a GUI client like compass for troubleshooting
       - 127.0.0.1:27017:27017
@@ -96,7 +127,9 @@ services:
       - ./db/db_mongo:/data/db
       # for importing database files
       - ./db/mongodump:/opt/sca/app/mongodump
-
+    networks:
+      network:
+        ipv4_address: 172.20.0.11
 
   rhythm:
     restart: unless-stopped
@@ -113,10 +146,68 @@ services:
     depends_on:
       - queue
       - mongo
+    networks:
+      network:
+        ipv4_address: 172.20.0.10
 
-volumes:
-  ui_modules:
-    external: false
+  # This is only for secure_download
+  secure_download:
+    build:
+      context: ./secure_download
+    restart: unless-stopped
+    expose:
+      - 3080
+    env_file:
+      - secure_download.env
+    volumes:
+      - /opt/sca/data:/opt/sca/data
+    networks:
+      network:
+        ipv4_address: 172.20.0.9
 
-  api_modules:
-    external: false
+  signet:
+    restart: unless-stopped
+    build:
+      context: ../signet
+    expose:
+      - 5050
+    environment:
+      - PORT=5050
+      - AUTHLIB_INSECURE_TRANSPORT=1
+      - POSTGRES_DB=signet
+      - POSTGRES_USER=signet
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_HOST=signet_db
+      - POSTGRES_PORT=5432
+    env_file:
+      - signet.env
+    volumes:
+      - ../signet:/opt/sca
+    depends_on:
+      - postgres
+    networks:
+      network:
+        ipv4_address: 172.20.0.7
+
+  signet_db:
+    image: postgres:14.5
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=signet
+      - POSTGRES_USER=signet
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_SCHEMA=signet
+      - POSTGRES_PORT=5432
+    volumes:
+      - ./db/db_signet:/var/lib/postgresql/data
+    expose:
+      - 5432
+    networks:
+      network:
+        ipv4_address: 172.20.0.8
+
+networks:
+  network:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
