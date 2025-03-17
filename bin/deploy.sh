@@ -10,7 +10,7 @@ cd ../../
 
 # Copy the mongo folder to the appropriate location
 cd rhythm_api/
-cp -r mongo/ /opt/sca/mongo/
+cp -r mongo/* /opt/sca/mongo/
 cd ../
 
 # Download the signet repository if it doesn't exist
