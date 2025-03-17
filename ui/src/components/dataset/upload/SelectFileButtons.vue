@@ -23,7 +23,7 @@
         <div class="va-file-upload__field">
           <div class="va-file-upload__field__text">
             <input
-              label="Choose Folder"
+              label="Choose Directory"
               ref="folderUploadInput"
               class="folder-upload--input"
               id="folder-upload--input"
