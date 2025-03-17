@@ -42,9 +42,11 @@ services:
       - sh
       - -c
       - |
-        npm install \
-        && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+        npm cache clean --force
+        npm install
+        npx prisma generate client 
+        exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+
 
 
     extra_hosts:

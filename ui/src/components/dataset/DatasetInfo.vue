@@ -1,12 +1,12 @@
 <template>
-  <div class="va-table-responsive">
+  <div class="va-table-responsive" data-testid="dataset-info">
     <table class="va-table">
       <tbody>
-        <tr>
+        <tr data-testid="dataset-id">
           <td>ID</td>
           <td>{{ props.dataset.id }}</td>
         </tr>
-        <tr>
+        <tr data-testid="dataset-start-date">
           <td>Start Date</td>
           <td>
             <span class="spacing-wider">
@@ -14,7 +14,7 @@
             </span>
           </td>
         </tr>
-        <tr>
+        <tr data-testid="dataset-last-updated">
           <td>Last Updated</td>
           <td>
             <span class="spacing-wider">
@@ -25,13 +25,13 @@
             </span>
           </td>
         </tr>
-        <tr>
+        <tr data-testid="dataset-origin-path">
           <td>Source Path</td>
           <td>
             <span>{{ props.dataset.origin_path }}</span>
           </td>
         </tr>
-        <tr>
+        <tr data-testid="dataset-size">
           <td>Size</td>
           <td>
             <span v-if="props.dataset.du_size">
@@ -39,7 +39,7 @@
             </span>
           </td>
         </tr>
-        <tr>
+        <tr data-testid="dataset-files">
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
@@ -50,15 +50,16 @@
               hasRole: auth.hasRole,
             })
           "
+          data-testid="dataset-genome-files"
         >
           <td>Genome Files</td>
           <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
-        <tr>
+        <tr data-testid="dataset-directories">
           <td>Directories</td>
           <td>{{ props.dataset.num_directories }}</td>
         </tr>
-        <tr>
+        <tr data-testid="dataset-description">
           <td>Description</td>
           <td>
             <div class="max-h-[11.5rem] overflow-y-scroll">
