@@ -1,4 +1,9 @@
 <template>
+<!-- todo -->
+  <!--  alignment-->
+  <!--Drag-n-drop-->
+  <!-- - Don’t enable file drags in ‘select directory’ option-->
+
   <div class="flex flex-col sm:flex-row">
     <div class="w-full">
       <va-file-upload
@@ -94,16 +99,20 @@ const getAllFilesFromItems = async (items) => {
 
   while (queue.length > 0) {
     const item = queue.shift();
+    // todo - comment if / else scenarios
     if (item.kind === 'file') {
       const entry = item.webkitGetAsEntry();
-      if (entry.isFile) {
-        const file = await getFileFromEntry(entry);
-        files.push(file);
-      } else if (entry.isDirectory) {
-        const directoryFiles = await readDirectory(entry);
-        files.push(...directoryFiles);
+      if (entry) {
+        if (entry.isFile) {
+          const file = await getFileFromEntry(entry);
+          files.push(file);
+        } else if (entry.isDirectory) {
+          const directoryFiles = await readDirectory(entry);
+          files.push(...directoryFiles);
+        }
       }
     } else if (item instanceof File) {
+      item.path = item.webkitRelativePath || item.name;
       files.push(item);
     }
   }
@@ -116,9 +125,12 @@ const getAllFilesFromItems = async (items) => {
  * @param {FileSystemFileEntry} entry - The file entry to convert
  * @returns {Promise<File>} A promise that resolves to a File object
  */
-const getFileFromEntry = (entry) => {
+const getFileFromEntry = async (entry) => {
   return new Promise((resolve) => {
-    entry.file(resolve);
+    entry.file(file => {
+      file.path = entry.fullPath.slice(1); // Remove leading slash
+      resolve(file);
+    });
   });
 };
 
@@ -127,7 +139,7 @@ const getFileFromEntry = (entry) => {
  * @param {FileSystemDirectoryEntry} dirEntry - The directory entry to read
  * @returns {Promise<File[]>} A promise that resolves to an array of File objects
  */
-const readDirectory = async (dirEntry) => {
+const readDirectory = async (dirEntry, path = '') => {
   const files = [];
   const dirReader = dirEntry.createReader();
   let entries = await readEntries(dirReader);
@@ -136,16 +148,10 @@ const readDirectory = async (dirEntry) => {
     for (let entry of entries) {
       if (entry.isFile) {
         const file = await getFileFromEntry(entry);
-        // Create a new File object with the desired path
-        const newFile = new File([file], file.name, {
-          type: file.type,
-          lastModified: file.lastModified,
-        });
-        // Add a custom property to store the relative path
-        newFile.customRelativePath = entry.fullPath.slice(1); // Remove leading slash
-        files.push(newFile);
+        file.path = path + '/' + entry.name;
+        files.push(file);
       } else if (entry.isDirectory) {
-        files.push(...await readDirectory(entry));
+        files.push(...await readDirectory(entry, path + '/' + entry.name));
       }
     }
     entries = await readEntries(dirReader);
@@ -193,7 +199,7 @@ const onDirectorySelection = async (items) => {
     return;
   }
 
-  const filePath = files[0]?.customRelativePath || files[0]?.webkitRelativePath || "";
+  const filePath = files[0]?.path || "";
   const directoryName = isWindows(filePath)
     ? filePath.slice(0, filePath.indexOf("\\"))
     : filePath.slice(0, filePath.indexOf("/"));

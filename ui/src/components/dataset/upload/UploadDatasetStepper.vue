@@ -30,43 +30,43 @@
         </va-button>
       </template>
 
+<!--      <template #step-content-0>-->
+<!--        <div class="flex flex-col gap-10">-->
+<!--          <va-checkbox-->
+<!--            v-model="isAssignedSourceRawData"-->
+<!--            @update:modelValue="-->
+<!--              (val) => {-->
+<!--                if (!val) {-->
+<!--                  rawDataSelected = [];-->
+<!--                }-->
+<!--              }-->
+<!--            "-->
+<!--            color="primary"-->
+<!--            label="Assign source Raw Data"-->
+<!--          />-->
+
+<!--          <va-form-field-->
+<!--            v-if="isAssignedSourceRawData"-->
+<!--            v-model="rawDataSelected"-->
+<!--            v-slot="{ value: v }"-->
+<!--          >-->
+<!--            <DatasetSelect-->
+<!--              :selected-results="v.ref"-->
+<!--              @select="addDataset"-->
+<!--              @remove="removeDataset"-->
+<!--              select-mode="single"-->
+<!--              :dataset-type="config.dataset.types.RAW_DATA.key"-->
+<!--              :show-error="!stepIsPristine"-->
+<!--              :error="formErrors[STEP_KEYS.RAW_DATA]"-->
+<!--              placeholder="Search Raw Data"-->
+<!--              selected-label="Selected source Raw Data"-->
+<!--              :messages="['Select a Source Raw Data']"-->
+<!--            ></DatasetSelect>-->
+<!--          </va-form-field>-->
+<!--        </div>-->
+<!--      </template>-->
+
       <template #step-content-0>
-        <div class="flex flex-col gap-10">
-          <va-checkbox
-            v-model="isAssignedSourceRawData"
-            @update:modelValue="
-              (val) => {
-                if (!val) {
-                  rawDataSelected = [];
-                }
-              }
-            "
-            color="primary"
-            label="Assign source Raw Data"
-          />
-
-          <va-form-field
-            v-if="isAssignedSourceRawData"
-            v-model="rawDataSelected"
-            v-slot="{ value: v }"
-          >
-            <DatasetSelect
-              :selected-results="v.ref"
-              @select="addDataset"
-              @remove="removeDataset"
-              select-mode="single"
-              :dataset-type="config.dataset.types.RAW_DATA.key"
-              :show-error="!stepIsPristine"
-              :error="formErrors[STEP_KEYS.RAW_DATA]"
-              placeholder="Search Raw Data"
-              selected-label="Selected source Raw Data"
-              :messages="['Select a Source Raw Data']"
-            ></DatasetSelect>
-          </va-form-field>
-        </div>
-      </template>
-
-      <template #step-content-1>
         <div class="flex flex-col">
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
