@@ -51,8 +51,8 @@ response=$(curl --silent --request POST \
 client_id=$(echo $response | jq -r '.client_id')
 client_secret=$(echo $response | jq -r '.client_secret')
 
-# echo "Client ID: $client_id"
-# echo "Client Secret: $client_secret"
+echo "Client ID: $client_id"
+echo "Client Secret: $client_secret"
 
 sed -i '/^OAUTH_DOWNLOAD_CLIENT_ID/d' api.env
 echo "OAUTH_DOWNLOAD_CLIENT_ID=$client_id" >> api.env
