@@ -26,18 +26,12 @@ services:
       - api/.env.example
     volumes:
       - ./api/:/opt/sca/app
+      - api_keys:/opt/sca/app/keys
     expose:
       - 3030
-    ports:
-      - 127.0.0.1:3030:3030
     working_dir: /opt/sca/app
     entrypoint:
-      - sh
-      - -c
-      - |
-        npm install \
-        && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+      - ./bin/startup.sh
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
@@ -185,6 +179,10 @@ services:
     networks:
       network:
         ipv4_address: 172.20.0.8
+
+volumes:
+  api_keys:
+    external: false
 
 networks:
   network:

@@ -50,15 +50,10 @@ services:
       - tests.env
       - db.env
       - api.env
+    volumes:
+      - api_keys:/opt/sca/app/keys
     entrypoint:
-      - sh
-      - -c
-      - |
-        cd keys \
-        && ./genkeys.sh \
-        && cd .. \
-        && npx prisma generate \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+      - ./bin/startup.sh
     expose:
       - 3030
     depends_on:
@@ -141,4 +136,6 @@ volumes:
   mongo_data:
     external: false
   mongo_dump:
+    external: false
+  api_keys:
     external: false
