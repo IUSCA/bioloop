@@ -17,7 +17,7 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false && poetry install --no-dev
 
 # Copy the rest of the application code
-COPY . .
+COPY . /opt/sca/app
 
 # Set the entrypoint
 ENTRYPOINT ["bin/entrypoint.sh"]
