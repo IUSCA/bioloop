@@ -3,23 +3,11 @@
     v-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADING"
     class="flex items-center space-x-2"
   >
-<!--    <i-mdi-upload-circle-->
-<!--      v-if="props.showIcon"-->
-<!--      style="color: var(&#45;&#45;va-primary)"-->
-<!--    />-->
     <Icon
       v-if="props.showIcon"
       icon="mdi:arrow-up-bold"
-      class="animate-bounce va-text-primary"
+      class="animate-bounce va-text-primary text-2xl"
     />
-
-<!--    <va-icon-->
-<!--      v-if="props.showIcon"-->
-<!--      name="mdi-arrow-up-bold"-->
-<!--      color="primary"-->
-<!--      spin="clockwise"-->
-<!--      class="text-2xl"-->
-<!--    />-->
     <va-chip size="small">Uploading</va-chip>
   </div>
 
@@ -29,6 +17,7 @@
   >
     <va-icon
       v-if="props.showIcon"
+      class="text-2xl"
       name="loop"
       spin="clockwise"
       color="primary"
@@ -45,7 +34,7 @@
     <i-mdi-progress-helper
       v-if="props.showIcon"
       style="color: var(--va-primary)"
-      class="animate-spin"
+      class="animate-spin text-2xl"
     />
     <va-chip size="small">Computing Checksums</va-chip>
   </div>
@@ -58,6 +47,7 @@
     class="flex items-center space-x-2"
   >
     <i-mdi-alert-circle-outline
+      class="text-2xl"
       v-if="props.showIcon"
       style="color: var(--va-warning)"
     />
@@ -69,6 +59,7 @@
     class="flex items-center space-x-2"
   >
     <i-mdi-alert-circle-outline
+      class="text-2xl"
       v-if="props.showIcon"
       style="color: var(--va-danger)"
     />
@@ -80,6 +71,7 @@
     class="flex items-center space-x-2"
   >
     <i-mdi-check-circle
+      class="text-2xl"
       v-if="props.showIcon"
       style="color: var(--va-success)"
     />
