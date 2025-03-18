@@ -110,4 +110,10 @@ const folderUploadInput = ref(null);
 .folder-upload--container {
   cursor: default;
 }
+
+
+.va-file-upload :deep(.va-file-upload__field__text) {
+  padding: 0;
+}
+
 </style>
