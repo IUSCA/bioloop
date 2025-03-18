@@ -16,4 +16,4 @@ fi
 
 
 # Execute the main command as the non-privileged user
-exec su -s /bin/bash scauser -c "$*"
+exec "$@"
