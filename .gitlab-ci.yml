@@ -72,6 +72,7 @@ test-e2e:
     - echo "starting containers..."
     - docker compose down 
     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
+    - docker compose logs -t
     # Setup the appropriate token for communication with the workers and rhythm_api
     - echo "Setting up tokens..."
     - sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
