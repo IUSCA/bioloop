@@ -119,6 +119,7 @@ services:
     volumes:
       - /opt/sca/data/:/opt/sca/data/
       # - ./init-scripts:/docker-entrypoint-initdb.d
+    user: "${UID}:${GID}"
     networks:
       network:
         ipv4_address: 172.20.0.13
@@ -199,6 +200,7 @@ services:
       - secure_download.env
     volumes:
       - /opt/sca/data/:/opt/sca/data
+    user: "${UID}:${GID}"
     networks:
       network:
         ipv4_address: 172.20.0.9
