@@ -63,14 +63,7 @@ services:
   api:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:latest
     entrypoint:
-      - sh
-      - -c
-      - |
-        cd keys \
-        && ./genkeys.sh \
-        && cd .. \
-        && npx prisma generate \
-        && npm run start
+      - ../api/bin/start.sh
     env_file:
       - api.env
       - db.env
