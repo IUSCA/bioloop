@@ -557,7 +557,10 @@ onMounted(() => {
     });
 });
 
-const evaluateFileChecksums = (file) => {
+const evaluateFileChecksums = (file, index) => {
+  // if (file.name === "1GB_file.dat" && index === 40) {
+  //   throw new Error("Cannot evaluate checksum for tweaks.sh");
+  // }
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
 
@@ -626,7 +629,7 @@ const evaluateChecksums = (filesToUpload) => {
 
         filePromises.push(
           new Promise((resolve, reject) => {
-            evaluateFileChecksums(file)
+            evaluateFileChecksums(file, i)
               .then(({ fileChecksum, chunkChecksums }) => {
                 fileDetails.fileChecksum = fileChecksum;
                 fileDetails.chunkChecksums = chunkChecksums;
@@ -912,11 +915,10 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        console.error(err);
-        submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING_FAILED;
-        statusChipColor.value = "warning"
-        submissionAlert.value =
-          "There was an error. Please try submitting again.";
+        console.error(err?.error || err);
+        submissionStatus.value = err.status || Constants.UPLOAD_STATES.PROCESSING_FAILED;
+        statusChipColor.value = err.chipColor || "warning";
+        submissionAlert.value = err.errorMessage || "There was an error. Please try submitting again.";
         reject();
       });
   });
@@ -1002,7 +1004,19 @@ const preUpload = async () => {
   console.log("Evaluating checksums...");
   // evaluatingChecksums.value = true;
   submissionStatus.value = Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS;
-  await evaluateChecksums(filesNotUploaded.value);
+  try {
+    await evaluateChecksums(filesNotUploaded.value);
+  } catch (error) {
+    submissionStatus.value = Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS_FAILED
+    statusChipColor.value = "warning";
+    submissionAlert.value = "Checksum computation failed";
+    throw {
+        error: error,
+        status: Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS_FAILED,
+        chipColor: "warning",
+        errorMessage: "Checksum computation failed",
+      };
+  }
   // evaluatingChecksums.value = false;
   submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
 

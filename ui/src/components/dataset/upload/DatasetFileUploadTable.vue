@@ -48,6 +48,12 @@
         >
           <va-icon name="error_outline" color="danger" />
         </va-popover>
+<!--        <va-popover-->
+<!--          v-if="value === config.upload.status.COMPUTING_CHECKSUMS_FAILED"-->
+<!--          message="Failed"-->
+<!--        >-->
+<!--          <va-icon name="error_outline" color="danger" />-->
+<!--        </va-popover>-->
       </span>
     </template>
 

@@ -70,6 +70,8 @@
       "UPLOADING": "UPLOADING",
       "UPLOAD_FAILED": "UPLOAD_FAILED",
       "UPLOADED": "UPLOADED",
+      "COMPUTING_CHECKSUMS": "Computing Checksums",
+      "COMPUTING_CHECKSUMS_FAILED": "Computing Checksums Failed",
       "PROCESSING": "PROCESSING",
       "PROCESSING_FAILED": "PROCESSING_FAILED",
       "COMPLETE": "COMPLETE",

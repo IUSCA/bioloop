@@ -32,17 +32,16 @@
         class="animate-spin"
       />
       <va-chip size="small">Computing Checksums</va-chip>
-    </div>
-
+  </div>
 
   <div
-    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOAD_FAILED"
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.COMPUTING_CHECKSUMS_FAILED"
     class="flex items-center space-x-2">
-      <i-mdi-warning
+      <i-mdi-alert-circle-outline
         v-if="props.showIcon"
         style="color: var(--va-warning)"
       />
-      <va-chip size="small" color="warning">Upload Failed</va-chip>
+      <va-chip size="small" color="warning">Checksum Computation Failed</va-chip>
   </div>
 
   <div v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADED"
@@ -51,7 +50,7 @@
         v-if="props.showIcon"
         style="color: var(--va-success)"
       />
-        <va-chip size="small" color="success">Uploaded</va-chip>
+      <va-chip size="small" color="success">Uploaded</va-chip>
     </div>
 </template>
 
