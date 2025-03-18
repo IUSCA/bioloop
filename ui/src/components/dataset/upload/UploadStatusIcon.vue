@@ -3,10 +3,23 @@
     v-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADING"
     class="flex items-center space-x-2"
   >
-    <i-mdi-upload-circle
+<!--    <i-mdi-upload-circle-->
+<!--      v-if="props.showIcon"-->
+<!--      style="color: var(&#45;&#45;va-primary)"-->
+<!--    />-->
+    <Icon
       v-if="props.showIcon"
-      style="color: var(--va-primary)"
+      icon="mdi:arrow-up-bold"
+      class="animate-bounce va-text-primary"
     />
+
+<!--    <va-icon-->
+<!--      v-if="props.showIcon"-->
+<!--      name="mdi-arrow-up-bold"-->
+<!--      color="primary"-->
+<!--      spin="clockwise"-->
+<!--      class="text-2xl"-->
+<!--    />-->
     <va-chip size="small">Uploading</va-chip>
   </div>
 
