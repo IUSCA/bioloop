@@ -117,7 +117,7 @@ const exports = {
     PROCESSING: "Processing",
     PROCESSING_FAILED: "Processing Failed",
     COMPUTING_CHECKSUMS: "Computing Checksums",
-    COMPUTING_CHECKSUMS_FAILED: "Computing Checksums Failed",
+    CHECKSUM_COMPUTATION_FAILED: "Computing Checksums Failed",
     UPLOADING: "Uploading",
     UPLOAD_FAILED: "Upload Failed",
     UPLOADED: "Uploaded",

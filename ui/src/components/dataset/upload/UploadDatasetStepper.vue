@@ -1007,12 +1007,12 @@ const preUpload = async () => {
   try {
     await evaluateChecksums(filesNotUploaded.value);
   } catch (error) {
-    submissionStatus.value = Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS_FAILED
+    submissionStatus.value = Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED
     statusChipColor.value = "warning";
     submissionAlert.value = "Checksum computation failed";
     throw {
         error: error,
-        status: Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS_FAILED,
+        status: Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED,
         chipColor: "warning",
         errorMessage: "Checksum computation failed",
       };

@@ -35,13 +35,23 @@
   </div>
 
   <div
-    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.COMPUTING_CHECKSUMS_FAILED"
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED"
     class="flex items-center space-x-2">
       <i-mdi-alert-circle-outline
         v-if="props.showIcon"
         style="color: var(--va-warning)"
       />
       <va-chip size="small" color="warning">Checksum Computation Failed</va-chip>
+  </div>
+
+  <div
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOAD_FAILED"
+    class="flex items-center space-x-2">
+      <i-mdi-alert-circle-outline
+        v-if="props.showIcon"
+        style="color: var(--va-danger)"
+      />
+      <va-chip size="small" color="danger">Upload Failed</va-chip>
   </div>
 
   <div v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADED"

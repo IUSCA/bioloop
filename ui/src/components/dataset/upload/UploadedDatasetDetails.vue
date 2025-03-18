@@ -1,13 +1,13 @@
 <template>
   <!-- Alert to be shown when an upload finishes successfully or encounters an error -->
-  <va-alert
-    v-if="props.isSubmissionAlertVisible"
-    dense
-    :icon="submissionAlertIcon"
-    :color="props.submissionAlertColor"
-  >
-    {{ props.submissionAlert }}
-  </va-alert>
+<!--  <va-alert-->
+<!--    v-if="props.isSubmissionAlertVisible"-->
+<!--    dense-->
+<!--    :icon="submissionAlertIcon"-->
+<!--    :color="props.submissionAlertColor"-->
+<!--  >-->
+<!--    {{ props.submissionAlert }}-->
+<!--  </va-alert>-->
 
   <!-- Details of the dataset being uploaded -->
   <div class="va-table-responsive">
