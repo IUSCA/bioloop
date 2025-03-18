@@ -8,6 +8,7 @@ load_dotenv()  # take environment variables from .env.
 YEAR = datetime.datetime.now().year
 APP_API_TOKEN = os.environ['APP_API_TOKEN']
 APP_API_BASE_URL = os.environ['APP_API_BASE_URL']
+DATA_PRODUCT_UPLOAD_PATH = os.environ['DATA_PRODUCT_UPLOAD_PATH']
 
 QUEUE_URL = os.environ['QUEUE_URL']
 QUEUE_USER = os.environ['QUEUE_USER']
@@ -48,7 +49,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/path/to/data_product/upload',
+            'upload': DATA_PRODUCT_UPLOAD_PATH,
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
