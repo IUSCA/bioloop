@@ -22,8 +22,6 @@ RUN poetry config virtualenvs.create false && poetry install --no-dev
 # Copy the rest of the application code
 COPY . .
 
-# Change ownership of the working directory to the non-privileged user
-RUN chown -R scauser:scauser /opt/sca
 
 
 # Set the entrypoint
