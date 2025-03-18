@@ -93,7 +93,7 @@ config = {
         'FAILURE': 'FAILURE',
         'SUCCESS': 'SUCCESS'
     },
-    'service_user': 'bioloopuser',
+    'service_user': 'svc_tasks',
     'stage': {
         'purge': {
             'days_to_live': 20,
