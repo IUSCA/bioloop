@@ -123,6 +123,7 @@ services:
       - mongo
     volumes:
       - /opt/sca/data/:/opt/sca/data/
+      # - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
       network:
         ipv4_address: 172.20.0.13

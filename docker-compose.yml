@@ -49,14 +49,11 @@ services:
   postgres:
     image: postgres:14.5
     env_file:
-      - db/postgres/.env.example
+      - ./db/postgres/.env.example
     volumes:
       - ./db/db_postgres:/var/lib/postgresql/data
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
-      - ./db/postgres/aux_scripts:/opt/sca/scripts
       - ./db/backups:/opt/sca/backups
-    ports:
-      - 127.0.0.1:5432:5432
     expose:
       - 5432
     networks:
@@ -120,8 +117,8 @@ services:
       context: ./rhythm_api
     expose:
       - 5001
-    ports:
-      - 5001:5001
+    env_file:
+      - ./rhythm_api/.env.example
     environment:
       - PORT=5001
     volumes:
