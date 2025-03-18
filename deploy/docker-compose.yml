@@ -119,7 +119,7 @@ services:
     volumes:
       - /opt/sca/data/:/opt/sca/data/
       # - ./init-scripts:/docker-entrypoint-initdb.d
-    user: "${UID}:${GID}"
+    user: "${USER_ID}:${GROUP_ID}"
     networks:
       network:
         ipv4_address: 172.20.0.13
