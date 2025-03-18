@@ -2,7 +2,7 @@
 FROM python:3.10-slim
 
 # Create a non-privileged user
-RUN useradd -m nonroot
+RUN useradd -m -u 1000 -g 1000 scauser
 
 # Set the working directory
 RUN mkdir -p /opt/sca
@@ -24,10 +24,10 @@ RUN poetry config virtualenvs.create false && poetry install --no-dev
 COPY . .
 
 # Change ownership of the working directory to the non-privileged user
-RUN chown -R nonroot:nonroot /opt/sca
+RUN chown -R scauser:scauser /opt/sca
 
 # Switch to the non-privileged user
-USER nonroot
+USER scauser
 
 # Default command to run
 CMD ["workers/scripts/start_worker.sh"]

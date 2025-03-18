@@ -7,7 +7,7 @@ services:
       - /opt/sca/nginx/certbot/conf:/etc/letsencrypt
       - /opt/sca/nginx/certbot/www:/var/www/certbot
       - ../nginx/conf/nginx.conf:/etc/nginx/nginx.conf
-      - /opt/sca/data:/opt/sca/data
+      - upload_volume:/opt/sca/data
       # Script to autoreload Nginx when certs are renewed
       - ../nginx/bin/99-autoreload.sh:/docker-entrypoint.d/99-autoreload.sh  
     env_file:
