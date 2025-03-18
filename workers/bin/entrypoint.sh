@@ -16,7 +16,7 @@ if [ "$(id -u scauser)" != "$TARGET_UID" ]; then
 fi
 
 # Ensure ownership of the working directory
-chown -R scauser:scauser /opt/sca
+chown -R TARGET_UID:TARGET_GID /opt/sca
 
 # Execute the main command as the non-privileged user
 exec gosu scauser "$@"
