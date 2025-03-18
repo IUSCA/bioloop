@@ -28,29 +28,6 @@
       </va-progress-circle>
     </template>
 
-    <!-- <template #cell(uploadStatus)="{ value }">
-      <span class="flex justify-center">
-        <va-popover
-          v-if="value === config.upload.status.UPLOADED"
-          message="Succeeded"
-        >
-          <va-icon name="check_circle_outline" color="success" />
-        </va-popover>
-        <va-popover
-          v-if="value === config.upload.status.UPLOADING"
-          message="Uploading"
-        >
-          <va-icon name="pending" color="info" />
-        </va-popover>
-        <va-popover
-          v-if="value === config.upload.status.UPLOAD_FAILED"
-          message="Failed"
-        >
-          <va-icon name="error_outline" color="danger" />
-        </va-popover>
-      </span>
-    </template> -->
-
     <template #cell(actions)="{ rowIndex }">
       <div class="flex gap-1">
         <va-button

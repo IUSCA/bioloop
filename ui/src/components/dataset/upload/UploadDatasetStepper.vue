@@ -354,10 +354,8 @@ const datasetNameValidationRules = [
   validateNotExists,
 ];
 
-
 const loading = ref(false);
 const validatingForm = ref(false);
-const evaluatingChecksums = ref(false);
 const totalChunks = ref(0);
 const processedChunks = ref(0);
 const rawDataList = ref([]);
@@ -558,9 +556,6 @@ onMounted(() => {
 });
 
 const evaluateFileChecksums = (file, index) => {
-  // if (file.name === "1GB_file.dat" && index === 40) {
-    // throw new Error("Cannot evaluate checksum for tweaks.sh");
-  // }
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
 
@@ -1001,8 +996,6 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  console.log("Evaluating checksums...");
-  // evaluatingChecksums.value = true;
   submissionStatus.value = Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS;
   try {
     await evaluateChecksums(filesNotUploaded.value);
@@ -1017,7 +1010,6 @@ const preUpload = async () => {
         errorMessage: "Checksum computation failed",
       };
   }
-  // evaluatingChecksums.value = false;
   submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
 
   const logData = datasetUploadLog.value?.id

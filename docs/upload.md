@@ -77,17 +77,17 @@ As an example, to upload file `my file.json`, the Bearer token that is used to c
 
 The status of the upload, as well the status of each file in the upload goes through the following values:
 
-| Status              | Description                                                                                                                                                           |
-|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| COMPUTING_CHECKSUMS | Checksums are being computed for the uploaded file                                                                                                                    |
-| COMPUTING_CHECKSUMS | Checksums are being computed for the uploaded file                                                                                                                    |
-| UPLOADING           | Upload initiated through the browser                                                                                                                                  |
-| UPLOAD_FAILED       | Upload could not be completed (network errors)                                                                                                                        |
-| UPLOADED            | All files successfully uploaded                                                                                                                                       |
-| PROCESSING          | Upload currently being processed                                                                                                                                      |
-| PROCESSING_FAILED   | Encountered errors while processing a file in this upload                                                                                                             |
-| COMPLETE            | All files in the upload processed successfully                                                                                                                        |
-| FAILED              | Upload was failing processing (i.e. `status == PROCESSING_FAILED`) for more than 72 hours, and was therefore marked as `FAILED` and its filesystem resources deleted. |
+| Status                      | Description                                                                                                                                                           |
+|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| COMPUTING_CHECKSUMS         | Checksums are being computed for the file(s) to be uploaded                                                                                                           |
+| CHECKSUM_COMPUTATION_FAILED | Checksums computation failed for the file(s) to be uploaded                                                                                                           |
+| UPLOADING                   | Upload initiated through the browser                                                                                                                                  |
+| UPLOAD_FAILED               | Upload could not be completed (network errors)                                                                                                                        |
+| UPLOADED                    | All files successfully uploaded                                                                                                                                       |
+| PROCESSING                  | Upload currently being processed                                                                                                                                      |
+| PROCESSING_FAILED           | Encountered errors while processing a file in this upload                                                                                                             |
+| COMPLETE                    | All files in the upload processed successfully                                                                                                                        |
+| FAILED                      | Upload was failing processing (i.e. `status == PROCESSING_FAILED`) for more than 72 hours, and was therefore marked as `FAILED` and its filesystem resources deleted. |
 
 ## 5. Processing
 Uploaded file chunks are merged into the corresponding file by the worker `process_dataset_upload`. After the file has been recreated from its chunks, the MD5 checksum of the recreated file is matched with the expected MD5 checksum of the file that was persisted to the database before the upload (this is the second stage of checksum validation).
