@@ -117,7 +117,7 @@ services:
       - queue
       - mongo
     volumes:
-      - /opt/sca/data/:/opt/sca/data/
+      - upload_volume:/opt/sca/data/
       # - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
       network:
@@ -198,7 +198,7 @@ services:
     env_file:
       - secure_download.env
     volumes:
-      - /opt/sca/data:/opt/sca/data
+      - upload_volume:/opt/sca/data
     networks:
       network:
         ipv4_address: 172.20.0.9
@@ -260,6 +260,8 @@ volumes:
   signet_data:
     external: false
   api_keys:
+    external: false
+  upload_volume:
     external: false
   # postgres_backups:
   #   external: false
