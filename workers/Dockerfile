@@ -2,6 +2,7 @@
 FROM python:3.10-slim
 
 # Create a non-privileged user
+RUN groupadd -g 1000 scauser
 RUN useradd -m -u 1000 -g 1000 scauser
 
 # Set the working directory

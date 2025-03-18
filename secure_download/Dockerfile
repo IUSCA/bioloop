@@ -1,5 +1,6 @@
 FROM node:19
 
+RUN groupadd -g 1000 scauser
 RUN useradd -m -u 1000 -g 1000 scauser
 
 WORKDIR /opt/sca/app
