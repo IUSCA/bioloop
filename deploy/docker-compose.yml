@@ -63,7 +63,7 @@ services:
   api:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:latest
     entrypoint:
-      - ../api/bin/start.sh
+      - ./bin/start.sh
     env_file:
       - api.env
       - db.env
