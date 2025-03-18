@@ -44,7 +44,7 @@
               }
             "
           >
-            Select Folder
+            Select Directory
           </va-button>
         </div>
       </div>
