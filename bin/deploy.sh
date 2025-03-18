@@ -93,10 +93,6 @@ echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js sv
 # stop the services so that the new environment vars can be loaded
 docker compose down
 
-# Maybe this needs to run while the system is up????
-docker compose exec celery_worker export APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)
-
-
 
 # Start the services
 docker compose up -d
