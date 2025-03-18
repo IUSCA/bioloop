@@ -111,9 +111,7 @@ const folderUploadInput = ref(null);
   cursor: default;
 }
 
-
 .va-file-upload :deep(.va-file-upload__field__text) {
   padding: 0;
 }
-
 </style>

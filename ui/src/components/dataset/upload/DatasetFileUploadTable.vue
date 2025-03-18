@@ -43,7 +43,6 @@
 </template>
 
 <script setup>
-
 const props = defineProps({
   files: {
     type: Array,

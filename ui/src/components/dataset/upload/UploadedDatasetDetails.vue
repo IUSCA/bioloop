@@ -44,7 +44,8 @@
           <td class="flex items-center gap-2">
             <va-progress-circle
               v-if="
-                props.submissionStatus === constants.UPLOAD_STATES.COMPUTING_CHECKSUMS &&
+                props.submissionStatus ===
+                  constants.UPLOAD_STATES.COMPUTING_CHECKSUMS &&
                 props.checksumComputationPercentage > 0
               "
               :model-value="checksumComputationPercentage"
@@ -52,8 +53,12 @@
             >
               {{ checksumComputationPercentage }}%
             </va-progress-circle>
-            <UploadStatusIcon :submission-status="props.submissionStatus"
-                              :show-icon="props.submissionStatus !== constants.UPLOAD_STATES.COMPUTING_CHECKSUMS"
+            <UploadStatusIcon
+              :submission-status="props.submissionStatus"
+              :show-icon="
+                props.submissionStatus !==
+                constants.UPLOAD_STATES.COMPUTING_CHECKSUMS
+              "
             />
           </td>
         </tr>
@@ -128,18 +133,15 @@ const props = defineProps({
   checksumComputationPercentage: {
     type: Number,
     default: 0,
-  }
+  },
 });
 
-const checksumComputationPercentage = computed(
-    {
-      get() {
-        return props.checksumComputationPercentage;
-      },
-      set(value) {
-      },
-    }
-)
+const checksumComputationPercentage = computed({
+  get() {
+    return props.checksumComputationPercentage;
+  },
+  set(value) {},
+});
 
 const emit = defineEmits(["update:datasetNameInput"]);
 

@@ -419,7 +419,6 @@ const checksumProgress = computed(() => {
   return Math.round((processedChunks.value / totalChunks.value) * 100);
 });
 
-
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.RAW_DATA]: null,
@@ -911,9 +910,12 @@ const onSubmit = async () => {
       })
       .catch((err) => {
         console.error(err?.error || err);
-        submissionStatus.value = err.status || Constants.UPLOAD_STATES.PROCESSING_FAILED;
+        submissionStatus.value =
+          err.status || Constants.UPLOAD_STATES.PROCESSING_FAILED;
         statusChipColor.value = err.chipColor || "warning";
-        submissionAlert.value = err.errorMessage || "There was an error. Please try submitting again.";
+        submissionAlert.value =
+          err.errorMessage ||
+          "There was an error. Please try submitting again.";
         reject();
       });
   });
@@ -1000,15 +1002,16 @@ const preUpload = async () => {
   try {
     await evaluateChecksums(filesNotUploaded.value);
   } catch (error) {
-    submissionStatus.value = Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED
+    submissionStatus.value =
+      Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED;
     statusChipColor.value = "warning";
     submissionAlert.value = "Checksum computation failed";
     throw {
-        error: error,
-        status: Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED,
-        chipColor: "warning",
-        errorMessage: "Checksum computation failed",
-      };
+      error: error,
+      status: Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED,
+      chipColor: "warning",
+      errorMessage: "Checksum computation failed",
+    };
   }
   submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
 
