@@ -14,8 +14,6 @@ if [ "$(id -u scauser)" != "$TARGET_UID" ]; then
     usermod -u "$TARGET_UID" scauser
 fi
 
-# Ensure ownership of the working directory
-chown -R scauser:scauser /opt/sca
 
 # Execute the main command as the non-privileged user
-exec gosu scauser "$@"
+exec su -s /bin/bash scauser -c "$*"
