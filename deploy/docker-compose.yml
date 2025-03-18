@@ -64,6 +64,8 @@ services:
     image: git.sca.iu.edu:5050/${PROJECT_NAME}/api:latest
     entrypoint:
       - ./bin/startup.sh
+    volumes:
+      - api_keys:/opt/sca/app/keys
     env_file:
       - api.env
       - db.env
@@ -256,6 +258,8 @@ volumes:
   queue_data:
     external: false
   signet_data:
+    external: false
+  api_keys:
     external: false
   # postgres_backups:
   #   external: false
