@@ -2,8 +2,7 @@
 FROM python:3.10-slim
 
 # Set the working directory
-RUN mkdir -p /opt/sca
-WORKDIR /opt/sca
+WORKDIR /opt/sca/app
 
 # Set environment variables
 ENV POETRY_VERSION=1.8.2
