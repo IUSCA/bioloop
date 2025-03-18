@@ -554,7 +554,7 @@ onMounted(() => {
     });
 });
 
-const evaluateFileChecksums = (file, index) => {
+const evaluateFileChecksums = (file) => {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
 
@@ -623,7 +623,7 @@ const evaluateChecksums = (filesToUpload) => {
 
         filePromises.push(
           new Promise((resolve, reject) => {
-            evaluateFileChecksums(file, i)
+            evaluateFileChecksums(file)
               .then(({ fileChecksum, chunkChecksums }) => {
                 fileDetails.fileChecksum = fileChecksum;
                 fileDetails.chunkChecksums = chunkChecksums;
