@@ -28,7 +28,7 @@
       </va-progress-circle>
     </template>
 
-    <template #cell(uploadStatus)="{ value }">
+    <!-- <template #cell(uploadStatus)="{ value }">
       <span class="flex justify-center">
         <va-popover
           v-if="value === config.upload.status.UPLOADED"
@@ -48,14 +48,8 @@
         >
           <va-icon name="error_outline" color="danger" />
         </va-popover>
-<!--        <va-popover-->
-<!--          v-if="value === config.upload.status.CHECKSUM_COMPUTATION_FAILED"-->
-<!--          message="Failed"-->
-<!--        >-->
-<!--          <va-icon name="error_outline" color="danger" />-->
-<!--        </va-popover>-->
       </span>
-    </template>
+    </template> -->
 
     <template #cell(actions)="{ rowIndex }">
       <div class="flex gap-1">
@@ -72,7 +66,6 @@
 </template>
 
 <script setup>
-import config from "@/config";
 
 const props = defineProps({
   files: {
@@ -118,17 +111,6 @@ const columns = [
     key: "formattedSize",
     label: "Size",
     width: "15%",
-    thAlign: "center",
-    tdAlign: "center",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-  },
-  {
-    key: "uploadStatus",
-    label: "Status",
-    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:

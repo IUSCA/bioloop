@@ -180,16 +180,16 @@
 <script setup>
 import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 import config from "@/config";
+import Constants from "@/constants";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import datasetUploadService from "@/services/upload/dataset";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-import { jwtDecode } from "jwt-decode";
-import Constants from "@/constants";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
@@ -559,7 +559,7 @@ onMounted(() => {
 
 const evaluateFileChecksums = (file, index) => {
   // if (file.name === "1GB_file.dat" && index === 40) {
-  //   throw new Error("Cannot evaluate checksum for tweaks.sh");
+    // throw new Error("Cannot evaluate checksum for tweaks.sh");
   // }
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
