@@ -81,6 +81,9 @@ router.post(
     const { email } = id_data;
     console.log('email', email);
 
+    if (!email) {
+      return res.status(500).json({ message: 'Failed to get email from auth provider' });
+    }
     const user = await authService.getLoginUser('email', email);
     console.log(JSON.stringify(user, null, 2));
     req.auth_user = user;
