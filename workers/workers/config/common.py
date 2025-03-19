@@ -43,8 +43,8 @@ config = {
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
             'bundle': {
-                'generate': '/path/for/raw_data/bundle/generation',
-                'stage': '/path/for/raw_data/bundle/staging',
+                'generate': '/opt/sca/data/raw_data/bundle',
+                'stage': '/opt/sca/data/raw_data/bundle',
             },
             'qc': '/path/to/qc'
         },
@@ -53,12 +53,12 @@ config = {
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
-                'generate': '/path/for/data_products/bundle/generation',
-                'stage': '/path/for/data_products/bundle/staging',
+                'generate': '/opt/sca/data/data_products/bundle',
+                'stage': '/opt/sca/data/data_products/bundle',
             },
         },
-        'download_dir': '/path/to/download_dir',
-        'root': '/path/to/root'
+        'download_dir': '/opt/sca/data/downloads',
+        'root': '/opt/sca/data'
     },
     'registration': {
         'RAW_DATA': {
@@ -133,14 +133,6 @@ config = {
                 {
                     'name': 'archive',
                     'task': 'archive_dataset'
-                },
-                {
-                    'name': 'stage',
-                    'task': 'stage_dataset'
-                },
-                {
-                    'name': 'validate',
-                    'task': 'validate_dataset'
                 },
                 {
                     'name': 'setup_download',

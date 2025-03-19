@@ -3,6 +3,10 @@ from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm.progress import Progress
+from workers.dataset import compute_staging_path
+from workers.dataset import compute_bundle_path, get_bundle_staged_path
+
+
 
 import workers.api as api
 import workers.cmd as cmd
@@ -70,6 +74,8 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
     source = Path(dataset['origin_path']).resolve()
     du_size = cmd.total_size(source)
     num_files, num_directories, size, num_genome_files, metadata = generate_metadata(celery_task, source)
+    staging_dir, alias = compute_staging_path(dataset)
+
 
     update_data = {
         'du_size': du_size,
@@ -78,7 +84,11 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         'num_directories': num_directories,
         'metadata': {
             'num_genome_files': num_genome_files,
-        }
+            'stage_alias': alias
+        },
+        'is_staged': True,
+        'staged_path': str(source),
+
 
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)

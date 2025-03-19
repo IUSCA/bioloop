@@ -64,14 +64,14 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     sda_dir = wf_utils.get_archive_dir(dataset['type'])
     sda_bundle_path = f'{sda_dir}/{bundle.name}'
 
-    wf_utils.upload_file_to_sda(local_file_path=bundle,
-                                sda_file_path=sda_bundle_path,
-                                celery_task=celery_task)
+    # wf_utils.upload_file_to_sda(local_file_path=bundle,
+    #                             sda_file_path=sda_bundle_path,
+    #                             celery_task=celery_task)
 
-    if delete_local_file:
-        # file successfully uploaded to SDA, delete the local copy
-        print("deleting local bundle")
-        bundle.unlink()
+    # if delete_local_file:
+    #     # file successfully uploaded to SDA, delete the local copy
+    #     print("deleting local bundle")
+    #     bundle.unlink()
 
     return sda_bundle_path, bundle_attrs
 
