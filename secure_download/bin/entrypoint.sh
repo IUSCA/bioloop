@@ -7,6 +7,7 @@ TARGET_GID=${GROUP_ID:-1001}
 groupadd -g $TARGET_GID scauser
 useradd -m -u $TARGET_UID -g $TARGET_GID scauser
 
+chown -R scauser:scauser /opt/sca/app
 
 # Execute the main command as the non-privileged user
 exec su -s /bin/bash scauser -c "$*"
