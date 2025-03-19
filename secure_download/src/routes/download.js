@@ -38,8 +38,8 @@ router.get(
 
       // make browser download response instead of attempting to render it
       res.set('content-type', 'application/octet-stream; charset=utf-8');
-      const filename = token_file_path.split('/').pop();
-      res.set('Content-Disposition', `attachment; filename="${filename}"`);
+      // const filename = token_file_path.split('/').pop();
+      // res.set('Content-Disposition', `attachment; filename="${filename}"`);
 
       // makes nginx not cache the response file
       // otherwise the response cuts off at 1GB as the max buffer size is reached

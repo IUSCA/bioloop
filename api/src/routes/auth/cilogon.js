@@ -75,10 +75,13 @@ router.post(
     // acr:
     // 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
     // email: 'deduggi@iu.edu' }
+    console.log(JSON.stringify(_res.data, null, 2));
     const id_data = utils.decodeJWT(_res.data.id_token);
     const { email } = id_data;
+    console.log('email', email);
 
     const user = await authService.getLoginUser('email', email);
+    console.log(JSON.stringify(user, null, 2));
     req.auth_user = user;
     req.auth_method = 'CILogon';
     next();
