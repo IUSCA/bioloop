@@ -61,8 +61,8 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'md5': bundle_checksum,
     }
 
-    sda_dir = wf_utils.get_archive_dir(dataset['type'])
-    sda_bundle_path = f'{sda_dir}/{bundle.name}'
+    # sda_dir = wf_utils.get_archive_dir(dataset['type'])
+    sda_bundle_path = f'sda_dir/{bundle.name}'
 
     # wf_utils.upload_file_to_sda(local_file_path=bundle,
     #                             sda_file_path=sda_bundle_path,
