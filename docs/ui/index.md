@@ -24,7 +24,7 @@ In the developement environment, the API calls from the UI are proxied by the vi
 - [Vuestic](https://vuestic.dev/)
 - [vueuse](https://github.com/antfu/vueuse)
 - [vue-router](https://github.com/vuejs/router)
-- [file based routing](https://github.com/hannoeru/vite-plugin-pages)
+- [file based routing](https://github.com/posva/unplugin-vue-router)
 - [auto import](https://github.com/antfu/unplugin-auto-import)
 - [auto component import](https://github.com/antfu/unplugin-vue-components)
 - eslint
