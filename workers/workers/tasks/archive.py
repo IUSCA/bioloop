@@ -5,6 +5,7 @@ from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 import json
 
+from workers.dataset import get_bundle_name
 import workers.api as api
 import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
@@ -46,7 +47,8 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
+    # bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
+    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{get_bundle_name(dataset)}')
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
