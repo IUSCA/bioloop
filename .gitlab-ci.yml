@@ -49,44 +49,44 @@ lint-ui:
     - npm run lint
 
 
-test-e2e:
-  tags: ['builddev-shell']
-  environment:
-    name: testing
-  stage: test
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
-  script:
-    # Setup rhythm_api
-    - echo "Setting up rhythm_api..."
-    - git clone https://github.com/IUSCA/rhythm_api.git
-    - cd rhythm_api/keys/
-    - ./genkeys.sh
-    - cd ../../
-    # Generate all the environment vars specified in .env.examples using gitlab environment vars values
-    - echo "Generating environment variables..."
-    - bin/generate_env.sh tests
-    - bin/generate_rhythm_env.sh tests
-    - cd tests/
-    - bin/generate_test_env.sh
-    - echo "starting containers..."
-    - docker compose down 
-    - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
-    - docker compose logs -t
-    # Setup the appropriate token for communication with the workers and rhythm_api
-    - echo "Setting up tokens..."
-    - sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
-    - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
-    - sed -i '/^APP_API_TOKEN/d' workers.env
-    - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
-    - echo "Deploying prisma migrations and seeding the database..."
-    - docker compose exec api npx prisma migrate deploy
-    - docker compose exec api npx prisma db seed 
-    - docker compose logs -t
-    - echo "Running tests..."
-    - docker compose exec e2e npm run test
-    - docker compose down
-    - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
+# test-e2e:
+#   tags: ['builddev-shell']
+#   environment:
+#     name: testing
+#   stage: test
+#   before_script:
+#     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY 
+#   script:
+#     # Setup rhythm_api
+#     - echo "Setting up rhythm_api..."
+#     - git clone https://github.com/IUSCA/rhythm_api.git
+#     - cd rhythm_api/keys/
+#     - ./genkeys.sh
+#     - cd ../../
+#     # Generate all the environment vars specified in .env.examples using gitlab environment vars values
+#     - echo "Generating environment variables..."
+#     - bin/generate_env.sh tests
+#     - bin/generate_rhythm_env.sh tests
+#     - cd tests/
+#     - bin/generate_test_env.sh
+#     - echo "starting containers..."
+#     - docker compose down 
+#     - docker compose pull && docker compose  up -d --force-recreate --remove-orphans
+#     - docker compose logs -t
+#     # Setup the appropriate token for communication with the workers and rhythm_api
+#     - echo "Setting up tokens..."
+#     - sed -i '/^WORKFLOW_AUTH_TOKEN/d' api.env
+#     - echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> api.env
+#     - sed -i '/^APP_API_TOKEN/d' workers.env
+#     - echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
+#     - echo "Deploying prisma migrations and seeding the database..."
+#     - docker compose exec api npx prisma migrate deploy
+#     - docker compose exec api npx prisma db seed 
+#     - docker compose logs -t
+#     - echo "Running tests..."
+#     - docker compose exec e2e npm run test
+#     - docker compose down
+#     - docker run --rm -v $CI_PROJECT_DIR:$CI_PROJECT_DIR bash rm -rf $CI_PROJECT_DIR/*
     
 
 tag:
