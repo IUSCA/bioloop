@@ -1,10 +1,10 @@
 <template>
   <div class="flex flex-col gap-4">
     <!-- Storage -->
-    <div>
+    <!-- <div>
       <span class="text-xl font-bold block mb-1">RESOURCE USAGE</span>
       <Storage></Storage>
-    </div>
+    </div> -->
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <!-- Raw Data Stats -->
