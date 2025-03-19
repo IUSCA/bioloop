@@ -49,7 +49,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': DATA_PRODUCT_UPLOAD_PATH,
+            'upload': '/opt/sca/data/data_products',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
