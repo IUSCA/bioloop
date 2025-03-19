@@ -4,7 +4,7 @@ from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm.progress import Progress
 from workers.dataset import compute_staging_path
-from workers.dataset import compute_bundle_path, get_bundle_staged_path
+
 
 
 
