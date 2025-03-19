@@ -1,7 +1,7 @@
+import config from "@/config";
 import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
-import config from "@/config";
 
 function formatBytes(bytes, decimals = 2) {
   bytes = parseInt(bytes);
@@ -259,7 +259,7 @@ function isFeatureEnabled({ featureKey, hasRole = () => false } = {}) {
   }
 
   const featureEnabled = config.enabledFeatures[featureKey];
-  if (featureEnabled === undefined) {
+  if (featureEnabled == null) {
     // feature's enabled status is not present in the config
     return true;
   } else if (typeof featureEnabled === "boolean") {
@@ -290,12 +290,13 @@ export {
   groupBy,
   groupByAndAggregate,
   initials,
+  isFeatureEnabled,
   isLiveToken,
   lxor,
   mapValues,
   maybePluralize,
   setIntersection,
   union,
-  validateEmail,
-  isFeatureEnabled,
+  validateEmail
 };
+

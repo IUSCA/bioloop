@@ -10,6 +10,13 @@ const config = require('config');
 const app = require('./app');
 const logger = require('./services/logger');
 
+// log a warning when auto sign up is enabled
+if (config.get('auth.auto_sign_up.enabled')) {
+  logger.warn(`⚠️ Auto sign up (default role: "${config.get('auth.auto_sign_up.default_role')}") is enabled. \
+If this is not intended, please disable it in the configuration. \
+This feature can be exploited to create multiple user accounts without rate limiting.‼️\n`);
+}
+
 const port = config.get('express.port');
 const host = config.get('express.host');
 const server = app.listen(port, () => {

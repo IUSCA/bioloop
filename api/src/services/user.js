@@ -55,17 +55,21 @@ async function setPassword({ user_id, password, _prisma }) {
   `;
 }
 
-async function findActiveUserBy(key, value) {
+async function findUserBy(key, value, { is_deleted = null } = {}) {
   // do not throw error if no results are found, instead return null
   // findFirst return null if no results are found
   const user = await prisma.user.findFirst({
     where: {
-      is_deleted: false,
+      ...(is_deleted !== null && { is_deleted }),
       [key]: value,
     },
     include: INCLUDE_ROLES_LOGIN,
   });
-  return user ? transformUser(user) : user;
+  return user ? transformUser(user) : null;
+}
+
+function findActiveUserBy(key, value) {
+  return findUserBy(key, value, { is_deleted: false });
 }
 
 async function updateLastLogin({ id, method }) {
@@ -258,4 +262,5 @@ module.exports = {
   findRoles,
   canUpdateUser,
   INCLUDE_ROLES_LOGIN,
+  findUserBy,
 };

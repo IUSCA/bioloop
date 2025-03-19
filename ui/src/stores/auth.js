@@ -1,6 +1,7 @@
 import config from "@/config";
 import authService from "@/services/auth";
 import uploadTokenService from "@/services/upload/token";
+import * as utils from "@/services/utils";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
@@ -80,6 +81,21 @@ export const useAuthStore = defineStore("auth", () => {
       })
       .catch((error) => {
         console.error("CI Login failed", error);
+        status.value = error;
+        onLogout();
+        return Promise.reject();
+      });
+  }
+
+  function microsoftLogin({ code, state, code_verifier }) {
+    return authService
+      .microsoftVerify({ code, state, code_verifier })
+      .then((res) => {
+        if (res.data) onLogin(res.data);
+        return res.data;
+      })
+      .catch((error) => {
+        console.error("Microsoft Login failed", error);
         status.value = error;
         onLogout();
         return Promise.reject();
@@ -196,6 +212,10 @@ export const useAuthStore = defineStore("auth", () => {
     });
   };
 
+  const isFeatureEnabled = (featureKey) => {
+    return utils.isFeatureEnabled({ featureKey, hasRole });
+  };
+
   return {
     user,
     loggedIn,
@@ -212,9 +232,11 @@ export const useAuthStore = defineStore("auth", () => {
     getTheme,
     googleLogin,
     ciLogin,
+    microsoftLogin,
     env,
     setEnv,
     refreshUploadToken,
+    isFeatureEnabled,
   };
 });
 

@@ -6,8 +6,8 @@ const axios = require('axios');
 
 const { validate } = require('../../middleware/validators');
 const asyncHandler = require('../../middleware/asyncHandler');
+const { loginHandler } = require('../../middleware/auth');
 
-const userService = require('../../services/user');
 const authService = require('../../services/auth');
 const utils = require('../../utils');
 
@@ -77,14 +77,11 @@ router.post(
     const id_data = utils.decodeJWT(_res.data.id_token);
     const { email } = id_data;
 
-    const user = await userService.findActiveUserBy('email', email);
-    if (user) {
-      const resObj = await authService.onLogin({ user, method: 'Google' });
-      return res.json(resObj);
-    }
-    // User was authenticated with google but they are not a portal user
-    // Send an empty success message
-    return res.status(204).send();
+    const user = await authService.getLoginUser('email', email);
+    req.auth_user = user;
+    req.auth_method = 'google';
+    next();
   }),
+  loginHandler,
 );
 module.exports = router;

@@ -5,8 +5,8 @@ const config = require('config');
 
 const { validate } = require('../../middleware/validators');
 const asyncHandler = require('../../middleware/asyncHandler');
+const { loginHandler } = require('../../middleware/auth');
 
-const userService = require('../../services/user');
 const authService = require('../../services/auth');
 
 const router = express.Router();
@@ -38,15 +38,11 @@ router.post(
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
     const login = async (cas_id) => {
-      const user = await userService.findActiveUserBy('cas_id', cas_id);
+      const user = await authService.getLoginUser('cas_id', cas_id);
 
-      if (user) {
-        const resObj = await authService.onLogin({ user });
-        return res.json(resObj);
-      }
-      // User was authenticated with CAS but they are not a portal user
-      // Send an empty success message
-      return res.status(204).send();
+      req.auth_user = user;
+      req.auth_method = 'IUCAS';
+      next();
     };
 
     if (config.mode === 'ci') {
@@ -63,6 +59,7 @@ router.post(
       });
     }
   }),
+  loginHandler,
 );
 
 module.exports = router;

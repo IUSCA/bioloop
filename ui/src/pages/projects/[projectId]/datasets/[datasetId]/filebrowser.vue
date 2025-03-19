@@ -1,12 +1,7 @@
 <template>
   <FileBrowser
     :dataset-id="props.datasetId"
-    :show-download="
-      isFeatureEnabled({
-        featureKey: 'downloads',
-        hasRole: auth.hasRole,
-      }) && dataset.is_staged
-    "
+    :show-download="auth.isFeatureEnabled('downloads') && dataset.is_staged"
   />
 </template>
 
@@ -17,7 +12,6 @@ import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
-import { isFeatureEnabled } from "@/services/utils";
 
 const auth = useAuthStore();
 

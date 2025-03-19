@@ -44,12 +44,7 @@
       </va-navbar-item>
       <va-navbar-item
         class="flex items-center"
-        v-if="
-          isFeatureEnabled({
-            featureKey: 'notifications',
-            hasRole: auth.hasRole,
-          })
-        "
+        v-if="auth.isFeatureEnabled('notifications')"
       >
         <NotificationDropdown />
       </va-navbar-item>
@@ -61,7 +56,6 @@
 </template>
 
 <script setup>
-import { isFeatureEnabled } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();

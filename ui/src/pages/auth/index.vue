@@ -83,6 +83,31 @@
             </div>
           </va-button>
         </div>
+
+        <!-- Microsoft -->
+        <div
+          class="flex justify-between px-8 mb-3"
+          v-if="config.auth_enabled.microsoft"
+        >
+          <va-button
+            class="flex-auto py-1"
+            preset="secondary"
+            border-color="secondary"
+            @click="
+              $router.push({ path: '/auth/microsoft', query: $route.query })
+            "
+          >
+            <div class="flex justify-center items-center gap-3 w-full">
+              <img
+                class="w-6 h-6"
+                src="@/assets/microsoft-icon.svg"
+                loading="lazy"
+                alt="microsoft logo"
+              />
+              <span class="dark:text-slate-100"> Login with Microsoft </span>
+            </div>
+          </va-button>
+        </div>
       </va-card-content>
     </va-card>
   </div>

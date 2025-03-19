@@ -1,0 +1,1 @@
+https://grafana.com/grafana/dashboards/16265-postgresql-exporter/

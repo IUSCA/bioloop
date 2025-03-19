@@ -15,7 +15,9 @@ function notFound(req, res, next) {
 // catch prisma record not found errors and send 404
 function prismaNotFoundHandler(e, req, res, next) {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    if (e?.meta?.cause?.includes('not found') || e?.code === 'P2025') {
+    // P2025 -"An operation failed because it depends on one or more records that were required but not found. {cause}"
+    // P2015 - "A related record could not be found. {details}"
+    if (e?.meta?.cause?.includes('not found') || e?.code === 'P2025' || e?.code === 'P2015') {
       logger.error(e);
       return next(createError.NotFound());
     }
@@ -26,9 +28,21 @@ function prismaNotFoundHandler(e, req, res, next) {
 // catch prisma constraint failed errors and send 40
 function prismaConstraintFailedHandler(e, req, res, next) {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    // P2002 - Unique constraint failed
     if (e?.code === 'P2002') {
       logger.error(e);
-      return next(createError.BadRequest('Unique constraint failed'));
+      return next(createError.Conflict('Unique constraint failed'));
+    }
+    // P2003 - Foreign key constraint failed
+    // P2014 - The change you are trying to make would violate the required relation
+    if (e?.code === 'P2003' || e?.code === 'P2014') {
+      logger.error(e);
+      return next(createError.Conflict('Request could not be processed due to a constraint violation'));
+    }
+    // P2011 - Null constraint violation
+    if (e?.code === 'P2011') {
+      logger.error(e);
+      return next(createError.BadRequest('Null constraint violation'));
     }
   }
   return next(e);

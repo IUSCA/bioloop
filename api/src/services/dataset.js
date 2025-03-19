@@ -480,6 +480,48 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+/**
+ * Creates a new dataset if one with the same name and type does not already exist.
+ *
+ * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
+ *
+ * Using prisma.dataset.create alone would create the dataset if it doesn't exist, but would throw an error if it does.
+ * This approach would also increment the sequence ID even if the dataset is not created,
+ * leading to large gaps in the sequence when this function is called multiple times for existing datasets.
+ *
+ * The expected behavior is maintained even under concurrent transactions (default isolation level is read committed):
+ * txA: findFirst -> no dataset
+ * txB: findFirst -> no dataset
+ * txA: create -> dataset created
+ * txB: create -> unique constraint violation
+ *
+ * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
+ */
+function createDataset(data) {
+  return prisma.$transaction(async (tx) => {
+    // find if a dataset with the same name and type already exists
+    const existingDataset = await tx.dataset.findFirst({
+      where: {
+        name: data.name,
+        type: data.type,
+        is_deleted: false,
+      },
+      select: {
+        id: true,
+      },
+    });
+    if (existingDataset) {
+      return;
+    }
+    // if it doesn't exist, create it
+    return tx.dataset.create({
+      data,
+    });
+  });
+}
+
+const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+
 module.exports = {
   soft_delete,
   get_dataset,
@@ -489,4 +531,6 @@ module.exports = {
   files_ls,
   search_files,
   add_files,
+  createDataset,
+  get_bundle_name,
 };
