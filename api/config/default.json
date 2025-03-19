@@ -46,7 +46,7 @@
       "client_secret": ""
     },
     "auto_sign_up": {
-      "enabled": true,
+      "enabled": false,
       "default_role": "operator"
     }
   },
