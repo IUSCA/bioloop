@@ -26,7 +26,6 @@ services:
       - api/.env.example
     volumes:
       - ./api/:/opt/sca/app
-      - api_keys:/opt/sca/app/keys
     expose:
       - 3030
     working_dir: /opt/sca/app
@@ -180,9 +179,6 @@ services:
       network:
         ipv4_address: 172.20.0.8
 
-volumes:
-  api_keys:
-    external: false
 
 networks:
   network:
