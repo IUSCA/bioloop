@@ -38,6 +38,9 @@ router.post(
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
     const login = async (cas_id) => {
+      if (!cas_id) {
+        return next(new Error('Invalid CAS ID'));
+      }
       const user = await authService.getLoginUser('cas_id', cas_id);
 
       req.auth_user = user;

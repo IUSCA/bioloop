@@ -122,6 +122,9 @@ router.post(
     // }
 
     const email = msft_user.mail || msft_user.userPrincipalName;
+    if (!email) {
+      return res.status(500).json({ message: 'Failed to get email from auth provider' });
+    }
     const user = await authService.getLoginUser('email', email, {
       name: msft_user.displayName,
     });
