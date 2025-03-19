@@ -111,6 +111,14 @@ const folderUploadInput = ref(null);
   cursor: default;
 }
 
+/*
+ Vuestic's `<va-file-upload />` component inserts a `div` with
+ class `va-file-upload__field__text` in the DOM, whose default
+ padding shifts the 'Select Files' button to the bottom on screen
+ sizes below `md`. Setting the padding to `0` for all screen sizes
+ resolves this issue on screen sizes `md` and below, without
+ affecting the button's layout on larger screen sizes.
+ */
 .va-file-upload :deep(.va-file-upload__field__text) {
   padding: 0;
 }
