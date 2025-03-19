@@ -1,15 +1,13 @@
 import config from "@/config";
 import { isLiveToken, setIntersection } from "@/services/utils";
-import { setupLayouts } from "virtual:generated-layouts";
-import generatedRoutes from "virtual:generated-pages";
 import { createRouter, createWebHistory } from "vue-router";
+import { routes } from 'vue-router/auto-routes'
+import { setupLayouts } from "virtual:generated-layouts";
 
-// https://github.com/JohnCampionJr/vite-plugin-vue-layouts
-const routes = setupLayouts(generatedRoutes);
-// console.log("routes", routes);
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
+  // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
+  routes: setupLayouts(routes),
 });
 
 const token = ref(useLocalStorage("token", ""));
