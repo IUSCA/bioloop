@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const express = require('express');
 const { query, body } = require('express-validator');
 const config = require('config');
