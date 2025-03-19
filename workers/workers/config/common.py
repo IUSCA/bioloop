@@ -71,7 +71,7 @@ config = {
         },
         'recency_threshold_seconds': 60,
         'minimum_dataset_size': ONE_GIGABYTE,
-        'wait_between_stability_checks_seconds': FIVE_MINUTES,
+        'wait_between_stability_checks_seconds': 10,
         'poll_interval_seconds': 10,
         'full_scan_every_n_scans': 90  # every 90th scan will be a full scan / full scan every 15 minutes
     },
