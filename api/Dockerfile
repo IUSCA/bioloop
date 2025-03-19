@@ -15,5 +15,7 @@ COPY . /opt/sca/app
 
 EXPOSE 3030
 
+# TODO install pm2 and run for cluster mode
+
 
 CMD ["npm", "run", "start"]

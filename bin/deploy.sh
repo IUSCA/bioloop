@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Download the rhythm_api repository if it doesn't exist
 if [ ! -d "rhythm_api" ]; then git clone https://github.com/IUSCA/rhythm_api.git; fi
 
@@ -87,12 +89,20 @@ echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scri
 
 # Setup connection to the api from the workers container
 sed -i '/^APP_API_TOKEN/d' workers.env
+echo `date +%s` 
 echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers.env
 
+echo `date +%s`
+
+# Wait for 20 seconds
+sleep 20
+
+# echo `date +%s`
 
 # stop the services so that the new environment vars can be loaded
 docker compose down
 
+# echo `date +%s`
 
 # Start the services
 docker compose up -d
