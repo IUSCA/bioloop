@@ -57,7 +57,7 @@ const exports = {
   auth_enabled: {
     iucas: false,
     google: true,
-    cilogon: true,
+    cilogon: false,
     microsoft: true,
   },
   dashboard: {
