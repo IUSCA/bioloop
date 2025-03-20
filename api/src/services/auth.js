@@ -105,7 +105,9 @@ const find_or_create_test_user = async ({ role }) => {
 };
 
 function get_upload_token(file_path) {
-  const hyphen_delimited_file_path = file_path.split(' ').join('-'); // replace whitespaces with hyphens
+  // [^\w.-]+ matches one or more characters that are not word 
+  // characters (letters, digits, or underscore), dots, or hyphens
+  const hyphen_delimited_file_path = file_path.replace(/[^\w.-]+/g, '-');
   const scope = `${config.get('oauth.upload.scope_prefix')}${hyphen_delimited_file_path}`;
   return oAuth2SecureTransferClient.clientCredentials({
     scope: [scope],
