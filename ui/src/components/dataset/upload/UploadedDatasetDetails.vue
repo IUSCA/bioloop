@@ -1,14 +1,4 @@
 <template>
-  <!-- Alert to be shown when an upload finishes successfully or encounters an error -->
-  <va-alert
-    v-if="props.isSubmissionAlertVisible"
-    dense
-    :icon="submissionAlertIcon"
-    :color="props.submissionAlertColor"
-  >
-    {{ props.submissionAlert }}
-  </va-alert>
-
   <!-- Details of the dataset being uploaded -->
   <div class="va-table-responsive">
     <table class="va-table">
@@ -51,8 +41,25 @@
 
         <tr>
           <td>Status</td>
-          <td>
-            <UploadStatusIcon :submission-status="props.submissionStatus" />
+          <td class="flex items-center gap-2">
+            <va-progress-circle
+              v-if="
+                props.submissionStatus ===
+                  constants.UPLOAD_STATES.COMPUTING_CHECKSUMS &&
+                props.checksumComputationPercentage > 0
+              "
+              :model-value="checksumComputationPercentage"
+              size="small"
+            >
+              {{ checksumComputationPercentage }}%
+            </va-progress-circle>
+            <UploadStatusIcon
+              :submission-status="props.submissionStatus"
+              :show-icon="
+                props.submissionStatus !==
+                constants.UPLOAD_STATES.COMPUTING_CHECKSUMS
+              "
+            />
           </td>
         </tr>
       </tbody>
@@ -61,6 +68,8 @@
 </template>
 
 <script setup>
+import constants from "@/constants";
+
 const props = defineProps({
   // `dataset`: Dataset to be uploaded.
   dataset: {
@@ -121,6 +130,17 @@ const props = defineProps({
     type: String,
     default: "warning",
   },
+  checksumComputationPercentage: {
+    type: Number,
+    default: 0,
+  },
+});
+
+const checksumComputationPercentage = computed({
+  get() {
+    return props.checksumComputationPercentage;
+  },
+  set(value) {},
 });
 
 const emit = defineEmits(["update:datasetNameInput"]);

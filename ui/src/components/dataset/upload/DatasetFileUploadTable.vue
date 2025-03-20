@@ -28,29 +28,6 @@
       </va-progress-circle>
     </template>
 
-    <template #cell(uploadStatus)="{ value }">
-      <span class="flex justify-center">
-        <va-popover
-          v-if="value === config.upload.status.UPLOADED"
-          message="Succeeded"
-        >
-          <va-icon name="check_circle_outline" color="success" />
-        </va-popover>
-        <va-popover
-          v-if="value === config.upload.status.UPLOADING"
-          message="Uploading"
-        >
-          <va-icon name="pending" color="info" />
-        </va-popover>
-        <va-popover
-          v-if="value === config.upload.status.UPLOAD_FAILED"
-          message="Failed"
-        >
-          <va-icon name="error_outline" color="danger" />
-        </va-popover>
-      </span>
-    </template>
-
     <template #cell(actions)="{ rowIndex }">
       <div class="flex gap-1">
         <va-button
@@ -66,8 +43,6 @@
 </template>
 
 <script setup>
-import config from "@/config";
-
 const props = defineProps({
   files: {
     type: Array,
@@ -112,17 +87,6 @@ const columns = [
     key: "formattedSize",
     label: "Size",
     width: "15%",
-    thAlign: "center",
-    tdAlign: "center",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-  },
-  {
-    key: "uploadStatus",
-    label: "Status",
-    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
