@@ -140,7 +140,7 @@ const checksumComputationPercentage = computed({
   get() {
     return props.checksumComputationPercentage;
   },
-  set(value) {},
+  set() {},
 });
 
 const emit = defineEmits(["update:datasetNameInput"]);
@@ -155,9 +155,6 @@ const datasetNameInput = computed({
 });
 
 const sourceRawData = computed(() => props.sourceRawData[0]);
-const submissionAlertIcon = computed(() => {
-  return props.submissionAlertColor === "success" ? "check_circle" : "warning";
-});
 </script>
 
 <style scoped>
