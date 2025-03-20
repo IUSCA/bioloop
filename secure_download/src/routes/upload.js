@@ -72,8 +72,8 @@ router.post(
     // characters (letters, digits, or underscore), dots, or hyphens
     const hyphen_delimited_file_name = name.replace(/[^\w.-]+/g, '-');
     logger.info(`Hyphen-delimited file name: ${hyphen_delimited_file_name}`);
-    const expected_scope = `${UPLOAD_SCOPE}:${hyphen_delimited_file_name}`;
     
+    const expected_scope = `${UPLOAD_SCOPE}:${hyphen_delimited_file_name}`;
     logger.info(`Expected scope: ${expected_scope}`);
 
     if (request_scope !== expected_scope) {
