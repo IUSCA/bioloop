@@ -205,6 +205,7 @@ const getStatusChipColor = (value) => {
       color = "primary";
       break;
     case config.upload.status.UPLOAD_FAILED:
+    case config.upload.status.CHECKSUM_COMPUTATION_FAILED:
       color = "warning";
       break;
     case config.upload.status.COMPLETE:
