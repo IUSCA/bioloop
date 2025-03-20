@@ -82,7 +82,7 @@ const exports = {
     },
     ingestion: false,
     downloads: true,
-    uploads: { enabledForRoles: ["admin"] },
+    uploads: { enabledForRoles: ["admin", "operator"] },
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
