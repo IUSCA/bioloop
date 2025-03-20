@@ -244,11 +244,18 @@ router.get(
       userId: req.user.id,
     });
 
-    if (
-      req.user.roles.includes('user')
-        && !hasProjectAssociation
-    ) {
-      return next(createError(403)); // Forbidden
+
+    // User has 'user' role only, and not 'operator' or 'admin' roles
+    const isUserRoleOnly = req.user.roles.length === 1 && req.user.roles[0] === 'user'
+
+    // assoc, user -> true
+    // no assoc, user -> false
+    // assoc, not user -> true
+    // no assoc, not user -> true
+    if (isUserRoleOnly) {
+      if (!hasProjectAssociation) {
+        return next(createError(403)); // Forbidden
+      }
     }
 
     const sortBy = req.query.sortBy || {};
