@@ -31,7 +31,7 @@
           </va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item> -->
-      <va-divider />
+      <!-- <va-divider /> -->
     </div>
 
     <!-- other sidebar items   -->
