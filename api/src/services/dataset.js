@@ -497,8 +497,8 @@ async function add_files({ dataset_id, data }) {
  * txA: create -> dataset created
  * txB: create -> unique constraint violation
  *
- * @param {Object} options - The options for creating the dataset.
- * @param {Object} options.data - The data for creating the dataset.
+ * @param {Object} options - Object that contains the payload for dataset creation, along with other options.
+ * @param {Object} options.data - The payload for creating the dataset.
  * @param {Object} [options.include={}] - Relations that are to be retrieved along with the created dataset.
  * @returns {Promise<Object|undefined>} Promise which resolves with the created dataset object or undefined if a dataset with the same name and type already exists.
  */
@@ -511,9 +511,6 @@ function createDataset({data, include={}} = {}) {
         type: data.type,
         is_deleted: false,
       },
-      // select: {
-      //   id: true,
-      // },
       ...(Object.keys(include).length > 0? { include } : {}),
     });
     if (existingDataset) {
