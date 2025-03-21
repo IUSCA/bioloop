@@ -10,7 +10,7 @@ const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
-  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_WORKFLOWS,
 } = require('../constants');
 
 const prisma = new PrismaClient();
@@ -481,7 +481,9 @@ async function add_files({ dataset_id, data }) {
 }
 
 /**
- * Creates a new dataset if one with the same name and type does not already exist.
+ * Creates a new dataset if one with the same name and type does not already exist. Returns the created
+ * dataset, optionally along with any records associated to the dataset that have been requested to be
+ * retrieved.
  *
  * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
  *
@@ -495,9 +497,12 @@ async function add_files({ dataset_id, data }) {
  * txA: create -> dataset created
  * txB: create -> unique constraint violation
  *
- * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
+ * @param {Object} options - The options for creating the dataset.
+ * @param {Object} options.data - The data for creating the dataset.
+ * @param {Object} [options.include={}] - Relations that are to be retrieved along with the created dataset.
+ * @returns {Promise<Object|undefined>} Promise which resolves with the created dataset object or undefined if a dataset with the same name and type already exists.
  */
-function createDataset(data) {
+function createDataset({data, include={}} = {}) {
   return prisma.$transaction(async (tx) => {
     // find if a dataset with the same name and type already exists
     const existingDataset = await tx.dataset.findFirst({
@@ -509,6 +514,7 @@ function createDataset(data) {
       select: {
         id: true,
       },
+      ...(Object.keys(include).length > 0? { include } : {}),
     });
     if (existingDataset) {
       return;
@@ -516,6 +522,7 @@ function createDataset(data) {
     // if it doesn't exist, create it
     return tx.dataset.create({
       data,
+      ...(Object.keys(include).length > 0? { include } : {}),
     });
   });
 }

@@ -394,7 +394,7 @@ router.post(
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    const dataset = await datasetService.createDataset(data);
+    const dataset = await datasetService.createDataset({ data, include: CONSTANTS.INCLUDE_WORKFLOWS });
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -508,7 +508,7 @@ router.post(
       });
 
     // create in separate transactions to avoid deadlocks
-    const results = await Promise.allSettled(data.map((d) => datasetService.createDataset(d)));
+    const results = await Promise.allSettled(data.map((d) => datasetService.createDataset({ data: d })));
 
     // separate results into created and failed
     const created = [];
