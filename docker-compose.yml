@@ -15,6 +15,8 @@ services:
       - -c
       - |
         npm install && exec /opt/sca/app/node_modules/.bin/vite --host
+    networks:
+      - app_network
 
   api:
     image: node:19
@@ -35,21 +37,22 @@ services:
     ports:
       - 127.0.0.1:3030:3030
     working_dir: /opt/sca/app
-    # entrypoint: ["tail", "-f", "/dev/null"]
+    entrypoint: ["tail", "-f", "/dev/null"]
     # command: sh -c "sleep infinity"
-    entrypoint:
-      - sh
-      - -c
-      - |
-        npm install \
-        && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
-
-
+#    entrypoint:
+#      - sh
+#      - -c
+#      - |
+#        npm install \
+#        && npx prisma generate client \
+#        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
      - postgres
+    networks:
+      - app_network
+
 
   postgres:
     image: postgres:14.5
@@ -69,6 +72,8 @@ services:
       - 127.0.0.1:5432:5432
     expose:
       - 5432
+    networks:
+      - app_network
 
   nginx:
     image: nginx:1.25
@@ -122,7 +127,33 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
 
-      
+
+  metrics:
+    build:
+      context: ./workers
+      dockerfile: Dockerfile-metrics
+#    image: python:3.10
+    volumes:
+      - ./workers:/opt/sca
+      - ./logs:/opt/sca/logs
+#      - ./workers/scripts/metrics:/opt/sca/app
+    working_dir: /opt/sca/workers/
+    environment:
+      - PYTHONPATH=/opt/sca
+#    command: python -u metrics.py
+#    entrypoint: ["tail", "-f", "/dev/null"]
+#    entrypoint: ["/opt/sca/workers/run_metrics.sh"]
+#    command:
+#      - sh
+#      - -c
+#      - |
+#        which python
+#    command: python -c "import time; print('Container started'); time.sleep(3600)"
+    command: tail -f /dev/null
+    depends_on:
+      - api
+    networks:
+      - app_network
 
 volumes:
   ui_modules:
@@ -133,3 +164,7 @@ volumes:
 
   grafana_data:
   prometheus_data:
+
+networks:
+  app_network:
+    driver: bridge

@@ -1,0 +1,39 @@
+FROM python:3.10
+
+# Install Poetry
+ENV POETRY_VERSION=1.7.1
+RUN pip install "poetry==$POETRY_VERSION"
+
+# Set working directory
+WORKDIR /opt/sca/workers
+
+# Copy poetry files
+COPY pyproject.toml poetry.lock* ./
+
+# Configure Poetry to create virtual environments inside the project
+RUN poetry config virtualenvs.in-project true
+
+# Install dependencies in a virtual environment
+RUN poetry install --no-interaction --no-ansi
+
+# Copy the rest of the application
+COPY . .
+
+# Set the Python path to include the virtual environment
+ENV PYTHONPATH=/opt/sca/workers/.venv/lib/python3.10/site-packages:$PYTHONPATH
+
+## Verify the environment
+#RUN python --version
+#RUN poetry show
+#RUN echo $PYTHONPATH
+
+# Verify the environment
+RUN poetry run python --version
+RUN poetry show
+RUN echo $PYTHONPATH
+
+# Diagnostic script
+COPY diagnose.py .
+
+# Run scripts, and then keep the container running
+CMD poetry run python diagnose.py && poetry run python -u -m workers.scripts.metrics.metrics && tail -f /dev/null
