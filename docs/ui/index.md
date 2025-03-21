@@ -124,7 +124,9 @@ CSS: `bioloop/ui/node_modules/vuestic-ui/dist/styles/css-variables.css`
 
 ## Configuration
 
-Layered and Hierarchical config system:
+Configuration values are used to fine-tune the application's behavior. These values are likely to change between different environments or instances of the application.
+
+We have a layered and hierarchical config system:
 - Config for multiple environment is managed through Env variables specified in `.env` files.
 - Based on the [mode](https://vitejs.dev/guide/env-and-mode.html#modes), these environment variables are automatically imported into the code by vite.
 - The values from the environment variables is merged with other static config centrally in [config.js](src/config.js). All environment variables are backed by sensible default values.
@@ -139,6 +141,23 @@ To introduce new configuration to this project, determine if it is environment-s
 ```
 
 Add the name and value of the environment variable to the `.env` file. This file is not tracked by the version control system. To keep track of the environment variables required to initialize the project in a new machine, another file called `.env.example` is maintained. This file contains all the variables defined in `.env` without the values.
+
+
+## Constants
+
+Constants are values that remain unchanged across different environments. These can be values like the types of datasets recognized by the system, various dataset states, upload states, texts for alert messages, etc. These are stored in `constants.js`.
+
+
+---
+
+> ### Configuration vs Constants
+>
+> 1. Mutability - Configuration values may change between environments or during runtime, while constants remain fixed.
+> 2. Source: Configuration often comes from environment variables, while constants are hardcoded in the application.
+> 3. Purpose: Configuration is used to adjust application behavior, while constants define fixed aspects of the application.
+
+---
+
 
 ## Authentication
 
