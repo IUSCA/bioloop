@@ -10,7 +10,7 @@ const userService = require('./user');
 const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
-  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_WORKFLOWS,
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
 
 const prisma = new PrismaClient();
@@ -511,9 +511,9 @@ function createDataset({data, include={}} = {}) {
         type: data.type,
         is_deleted: false,
       },
-      select: {
-        id: true,
-      },
+      // select: {
+      //   id: true,
+      // },
       ...(Object.keys(include).length > 0? { include } : {}),
     });
     if (existingDataset) {
