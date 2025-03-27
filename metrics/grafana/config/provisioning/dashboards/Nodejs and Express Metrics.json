@@ -432,7 +432,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(increase(http_request_duration_seconds_count{instance=~\"$instance\"}[$__range]))",
+          "expr": "round(sum(increase(http_request_duration_seconds_count{instance=~\"$instance\"}[$__range])))",
           "instant": false,
           "legendFormat": "requests",
           "refId": "A"
@@ -694,12 +694,81 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Number of worker processes in cluster mode",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 0,
+        "y": 3
+      },
+      "id": 110,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "up{instance=~\"$instance\"}",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Instances",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 5
       },
       "id": 99,
       "panels": [],
@@ -771,7 +840,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 4
+        "y": 6
       },
       "id": 101,
       "options": {
@@ -829,7 +898,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 4
+        "y": 6
       },
       "id": 100,
       "options": {
@@ -940,7 +1009,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 4
+        "y": 6
       },
       "id": 73,
       "options": {
@@ -1041,7 +1110,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 10
+        "y": 12
       },
       "id": 91,
       "options": {
@@ -1147,7 +1216,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 10
+        "y": 12
       },
       "id": 92,
       "options": {
@@ -1252,7 +1321,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 10
+        "y": 12
       },
       "id": 89,
       "options": {
@@ -1362,7 +1431,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 17
+        "y": 19
       },
       "id": 103,
       "options": {
@@ -1465,7 +1534,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 17
+        "y": 19
       },
       "id": 108,
       "options": {
@@ -1592,7 +1661,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 25
       },
       "id": 87,
       "panels": [],
@@ -1674,7 +1743,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 26
       },
       "id": 42,
       "options": {
@@ -1773,7 +1842,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 26
       },
       "id": 82,
       "options": {
@@ -1883,7 +1952,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 31
       },
       "id": 21,
       "options": {
@@ -2002,7 +2071,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 31
       },
       "id": 66,
       "options": {
@@ -2068,7 +2137,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 36
       },
       "id": 40,
       "panels": [
@@ -2137,7 +2206,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 35
+            "y": 33
           },
           "id": 43,
           "options": {
@@ -2235,7 +2304,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 35
+            "y": 33
           },
           "id": 38,
           "options": {
@@ -2334,7 +2403,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 40
+            "y": 38
           },
           "id": 46,
           "options": {
@@ -2432,7 +2501,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 38
           },
           "id": 45,
           "options": {
@@ -2529,7 +2598,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 45
+            "y": 43
           },
           "id": 34,
           "options": {
@@ -2653,7 +2722,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 45
+            "y": 43
           },
           "id": 36,
           "options": {
@@ -2712,10 +2781,10 @@
         "current": {
           "selected": true,
           "text": [
-            "host.docker.internal:3030"
+            "host.docker.internal:9999"
           ],
           "value": [
-            "host.docker.internal:3030"
+            "host.docker.internal:9999"
           ]
         },
         "datasource": {
@@ -2911,7 +2980,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {
@@ -2931,6 +3000,6 @@
   "timezone": "",
   "title": "Node.js and Express Metrics",
   "uid": "3J_78b6Az",
-  "version": 66,
+  "version": 2,
   "weekStart": ""
 }

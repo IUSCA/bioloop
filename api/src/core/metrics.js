@@ -1,4 +1,5 @@
 const promBundle = require('express-prom-bundle');
+const config = require('config');
 
 const CLIENT_CLOSED_REQUEST_CODE = 499;
 
@@ -27,6 +28,7 @@ function normalizeStatusCode(res) {
 }
 
 const metricsMiddleware = promBundle({
+  autoregister: !config.get('cluster.enabled'),
   includeMethod: true,
   includePath: true,
   formatStatusCode: normalizeStatusCode,
