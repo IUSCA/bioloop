@@ -16,6 +16,7 @@ const {
   axiosErrorHandler,
   prismaConstraintFailedHandler,
 } = require('./middleware/error');
+const { metricsMiddleware } = require('./core/metrics');
 
 // Register application
 const app = express();
@@ -52,6 +53,9 @@ if (!['production', 'test'].includes(config.get('mode'))) {
     console.error('Unable to load "./swagger_output.json"', e);
   }
 }
+
+// prometheus metrics
+app.use(metricsMiddleware);
 
 // mount router
 app.use('/', indexRouter);

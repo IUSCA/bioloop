@@ -13,11 +13,11 @@ router.use('/env', require('./env'));
 // From this point on, all routes require authentication.
 router.use(authenticate);
 
-router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/workflows', require('./workflows') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/datasets', require('./datasets'));
+router.use('/resource-metrics', require('./metrics'));
+router.use('/users', require('./users'));
+router.use('/workflows', require('./workflows'));
+router.use('/projects', require('./projects'));
 router.use('/statistics', require('./statistics'));
 router.use('/notifications', require('./notifications'));
 router.use('/fs', require('./fs'));
