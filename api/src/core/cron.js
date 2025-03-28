@@ -1,13 +1,15 @@
-function registerCronJobs() {
-  // eslint-disable-next-line global-require, no-unused-vars
-  const cron = require('node-cron');
+/* eslint-disable no-unused-vars */
+/* eslint-disable global-require */
+const cron = require('node-cron');
+const { createTaskLogger } = require('./logger');
 
+function registerCronJobs() {
   // Example: Schedule a task to run every minute
   // cron.schedule('* * * * *', () => {
-  //   console.log('Running a task every minute');
+  //   const task = require('../cron/exampleTask.cron');
+  //   const taskLogger = createTaskLogger('exampleTask');
+  //   task.run(taskLogger);
   // });
 }
 
-module.exports = {
-  registerCronJobs,
-};
+module.exports = registerCronJobs;

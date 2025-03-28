@@ -6,7 +6,7 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const createError = require('http-errors');
-const logger = require('../core/logger');
+const { logger } = require('../core/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');

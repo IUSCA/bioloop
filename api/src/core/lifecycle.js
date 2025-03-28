@@ -1,8 +1,8 @@
 const fs = require('node:fs');
 const config = require('config');
-const logger = require('./logger');
+const { logger } = require('./logger');
 const swagger = require('../scripts/swagger');
-const { registerCronJobs } = require('./cron');
+const registerCronJobs = require('./cron');
 
 // run only in master process before forking workers
 async function beforeApplicationFork() {

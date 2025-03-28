@@ -8,7 +8,7 @@ require('dotenv-safe').config();
 require('./db');
 const config = require('config');
 const app = require('./app');
-const logger = require('./core/logger');
+const { logger } = require('./core/logger');
 const {
   onApplicationBootstrap,
   beforeApplicationShutdown,
@@ -27,7 +27,7 @@ async function main() {
 
   const shutdown = async () => {
     await safeAwait(beforeApplicationShutdown());
-    logger.warn('server: closing');
+    logger.debug('server: closing');
     server.close(async (err) => {
       if (err) {
         logger.error('server: closed with ERROR', err);
@@ -40,12 +40,12 @@ async function main() {
   };
 
   process.on('SIGINT', () => {
-    logger.warn('process received SIGINT');
+    logger.debug('process received SIGINT');
     shutdown();
   });
 
   process.on('SIGTERM', () => {
-    logger.warn('process received SIGTERM');
+    logger.debug('process received SIGTERM');
     shutdown();
   });
 }

@@ -8,7 +8,7 @@ const config = require('config');
 const { OAuth2Client } = require('@badgateway/oauth2-client');
 const { PrismaClient } = require('@prisma/client');
 
-const logger = require('../core/logger');
+const { logger } = require('../core/logger');
 const userService = require('./user');
 
 const prisma = new PrismaClient();
