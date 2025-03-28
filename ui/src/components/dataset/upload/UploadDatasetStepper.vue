@@ -34,8 +34,8 @@
       <template v-for="(s, i) in steps" :key="s.key" #[`step-content-${i}`]>
         <component
             :is="getStepComponent(s.key)"
-            v-bind="getStepProps(step.key)"
-            v-on="getStepEvents(step.key)"
+            v-bind="getStepProps(s.key)"
+            v-on="getStepEvents(s.key)"
         />
       </template>
 
@@ -204,6 +204,7 @@
 import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 import UploadedDatasetType from "@/components/dataset/upload/UploadedDatasetType.vue";
 import DatasetSelect from "@/components/dataset/DatasetSelect.vue";
+import UploadStep from "@/components/dataset/DatasetSelect.vue";
 import config from "@/config";
 import Constants from "@/constants";
 import datasetService from "@/services/dataset";
@@ -244,7 +245,7 @@ const DatasetTypeStep = defineComponent({ /* ... */ });
 const SourceRawDataStep = defineComponent({ /* ... */ });
 const UploadStep = defineComponent({ /* ... */ });
 
-// Function to return the appropriate component for each step
+// Returns the appropriate component for each step
 const getStepComponent = (stepKey) => {
   switch (stepKey) {
     case FIELDS.DATASET_TYPE:
@@ -341,10 +342,11 @@ const steps = computed(() => {
         // { label: "Select Files", icon: "material-symbols:folder" },
       ]
       if (selectedDatasetType?.value && selectedDatasetType?.value?.value !== config.dataset.types.RAW_DATA.key) {
+        // If selected dataset type is not RAW_DATA, add `Source Raw Data` step to allow Raw Data selection
         _steps.splice(1, 0, {key: FIELDS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna"})
       }
 
-      console.log('_steps', _steps)
+      // console.log('_steps', _steps)
 
       return _steps;
     }

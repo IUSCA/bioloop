@@ -30,7 +30,13 @@ const datasetType = computed({
   }
 });
 
-const onDatasetTypeChange = (newType) => {
-  emit('update:selectedDatasetType', newType);
-};
+// const onDatasetTypeChange = (newType) => {
+//   emit('update:selectedDatasetType', newType);
+// };
+onMounted(() => {
+  console.log('mounted');
+  // datasetType.value = props.selectedDatasetType;
+  console.log("props.selectedDatasetType: ", props.selectedDatasetType);
+  console.log("props.datasetTypeOptions: ", props.datasetTypeOptions)
+})
 </script>
