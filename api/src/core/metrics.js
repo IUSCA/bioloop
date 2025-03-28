@@ -1,4 +1,5 @@
 const promBundle = require('express-prom-bundle');
+const client = require('prom-client');
 const config = require('config');
 
 const CLIENT_CLOSED_REQUEST_CODE = 499;
@@ -41,7 +42,31 @@ const metricsMiddleware = promBundle({
   },
 });
 
+/**
+ * Counter metric to track the total number of failed authentication attempts.
+ *
+ * This metric is labeled with the following:
+ * - `auth_method`: The authentication method used (e.g., 'password', 'oauth').
+ * - `reason`: The reason for the failure (e.g., 'invalid_credentials', 'account_locked').
+ * - `client_id`: The identifier for the client making the request (e.g., 'web', 'cli').
+ *
+ * Example usage:
+ *
+ * ```javascript
+ * authFailures.inc({
+ *   auth_method: 'password',
+ *   reason: 'invalid_credentials',
+ *   client_id: 'web',
+ * });
+ * ```
+ */
+const authFailures = new client.Counter({
+  name: 'auth_failures_total',
+  help: 'Total number of failed authentication attempts',
+  labelNames: ['auth_method', 'reason', 'client_id'],
+});
+
 module.exports = {
-  normalizeStatusCode,
   metricsMiddleware,
+  authFailures,
 };

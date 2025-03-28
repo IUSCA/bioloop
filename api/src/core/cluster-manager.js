@@ -4,8 +4,40 @@ const os = require('node:os');
 const process = require('node:process');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 
+/**
+ * Manages a cluster of worker processes with configurable options for scaling,
+ * restart limits, and graceful shutdown.
+ *
+ * @param {Object} options - Configuration options for the cluster manager.
+ * @param {Function} [options.master=null] - Optional callback to execute in the master process.
+ * @param {Function} options.worker - Callback to execute in each worker process.
+ * @param {number} [options.count=2] - Desired number of worker processes (default is 2).
+ * @param {number} [options.max_restarts=3] - Maximum number of worker restarts allowed within the interval.
+ * @param {number} [options.max_restarts_interval=10000] - Time interval (in milliseconds) for the restart limit.
+ * @param {number} [options.grace=5000] - Grace period (in milliseconds) for workers to shut down gracefully.
+ * @param {string[]} [options.signals=['SIGINT', 'SIGTERM']] - List of signals to listen for to trigger shutdown.
+ *
+ * @returns {void}
+ *
+ * @example
+ * manage_cluster({
+ *   master: () => console.log('Master process running'),
+ *   worker: () => setInterval(() => console.log('Worker process running'), 1000),
+ *   count: 4,
+ *   max_restarts: 5,
+ *   max_restarts_interval: 15000,
+ *   grace: 3000,
+ *   signals: ['SIGINT', 'SIGTERM', 'SIGHUP'],
+ * });
+ */
 function manage_cluster({
-  master, worker, count, max_restarts, max_restarts_interval, grace, signals,
+  master = null,
+  worker,
+  count = 2,
+  max_restarts = 3,
+  max_restarts_interval = 10000,
+  grace = 5000,
+  signals = ['SIGINT', 'SIGTERM'],
 }) {
   const numCPUs = Math.min(count, os.availableParallelism());
 
