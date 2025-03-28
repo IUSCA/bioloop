@@ -8,7 +8,7 @@ require('dotenv-safe').config();
 require('./db');
 const config = require('config');
 const app = require('./app');
-const logger = require('./services/logger');
+const logger = require('./core/logger');
 const {
   onApplicationBootstrap,
   beforeApplicationShutdown,

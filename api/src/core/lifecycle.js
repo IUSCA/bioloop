@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const config = require('config');
-const logger = require('../services/logger');
+const logger = require('./logger');
 const swagger = require('../scripts/swagger');
 
 // run only in master process before forking workers

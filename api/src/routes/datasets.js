@@ -17,7 +17,7 @@ const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
-const logger = require('../services/logger');
+const logger = require('../core/logger');
 
 const isPermittedTo = accessControl('datasets');
 
