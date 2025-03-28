@@ -11,6 +11,7 @@ const { RateLimiterMemory } = require('rate-limiter-flexible');
  * @param {Object} options - Configuration options for the cluster manager.
  * @param {Function} [options.master=null] - Optional callback to execute in the master process.
  * @param {Function} options.worker - Callback to execute in each worker process.
+ * @param {Function} [options.beforeApplicationFork=null] - Optional callback to execute before forking workers.
  * @param {number} [options.count=2] - Desired number of worker processes (default is 2).
  * @param {number} [options.max_restarts=3] - Maximum number of worker restarts allowed within the interval.
  * @param {number} [options.max_restarts_interval=10000] - Time interval (in milliseconds) for the restart limit.
@@ -30,9 +31,10 @@ const { RateLimiterMemory } = require('rate-limiter-flexible');
  *   signals: ['SIGINT', 'SIGTERM', 'SIGHUP'],
  * });
  */
-function manage_cluster({
+async function manage_cluster({
   master = null,
   worker,
+  beforeApplicationFork = null,
   count = 2,
   max_restarts = 3,
   max_restarts_interval = 10000,
@@ -43,6 +45,11 @@ function manage_cluster({
 
   if (cluster.isPrimary) {
     console.log(`Primary ${process.pid} is running`);
+
+    // Execute the optional callback before forking workers
+    if (beforeApplicationFork) {
+      await beforeApplicationFork();
+    }
 
     let activeWorkers = numCPUs;
     let exiting = false;

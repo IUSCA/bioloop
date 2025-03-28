@@ -1,5 +1,6 @@
 const swaggerAutogen = require('swagger-autogen')();
 const config = require('config');
+const path = require('node:path');
 
 const doc = {
   info: {
@@ -25,7 +26,16 @@ const doc = {
   ],
 };
 
-const outputFile = '../../swagger_output.json';
-const endpointsFiles = ['../routes/index.js'];
+const outputFile = path.join(global.__basedir, 'swagger_output.json'); // '../../swagger_output.json';
+const endpointsFiles = [path.join(global.__basedir, 'src', 'routes', 'index.js')]; // ['../routes/index.js'];
 
-swaggerAutogen(outputFile, endpointsFiles, doc);
+// Generate swagger.json file
+function generate() {
+  return swaggerAutogen(outputFile, endpointsFiles, doc);
+}
+
+if (require.main === module) {
+  generate();
+}
+
+module.exports = { generate, outputFile };

@@ -10,6 +10,7 @@ const express = require('express');
 const promBundle = require('express-prom-bundle');
 const promClient = require('prom-client');
 const manage_cluster = require('./core/cluster-manager');
+const { beforeApplicationFork } = require('./core/lifecycle');
 
 function master() {
   const metricsApp = express();
@@ -43,6 +44,7 @@ function worker() {
 manage_cluster({
   master,
   worker,
+  beforeApplicationFork,
   count: config.get('cluster.max_workers'),
   max_restarts: config.get('cluster.max_restarts'),
   max_restarts_interval: config.get('cluster.max_restarts_interval'),
