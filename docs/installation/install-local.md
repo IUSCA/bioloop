@@ -1,3 +1,8 @@
+---
+title: Local
+order: 2
+---
+
 # Local Installation Guide
 
 This guide provides step-by-step instructions for setting up and running the Bioloop application on your local machine. 
