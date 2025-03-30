@@ -20,7 +20,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 14565,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 4,
   "links": [],
   "panels": [
     {
@@ -111,7 +111,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "The [Apdex score](https://en.wikipedia.org/wiki/Apdex) is the number of satisfied requests plus half of the tolerating requests plus none of the frustrated requests, divided by all the requests",
+      "description": "The <a href=\"https://en.wikipedia.org/wiki/Apdex\" target=\"_blank\" rel=\"noopener noreferrer\">Apdex score</a> is the number of satisfied requests plus half of the tolerating requests plus none of the frustrated requests, divided by all the requests\n\nThe Apdex formula is equivalent to a weighted average, where a satisfied user is given a score of 1, a tolerating user is given a score of 0.5, and a frustrated user is given a score of 0.\n",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -988,6 +988,8 @@
           },
           "links": [],
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1001,7 +1003,7 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -1266,6 +1268,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Measured using mean latency for successful requests",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1345,14 +1348,14 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "topk(5, \n\n        avg by (path)(rate(http_request_duration_seconds_sum{instance=~\"$instance\", status_code=~\"[23]xx\"}[${interval}])) \n        / \n        avg by (path)(rate(http_request_duration_seconds_count{instance=~\"$instance\", status_code=~\"[23]xx\"}[${interval}]))\n)",
+          "expr": "topk(5, \nsum(increase(http_request_duration_seconds_sum{instance=~\"$instance\",status_code=~\"[23]xx\"}[$__range]))\n        by (path)\n/ \nsum(increase(http_request_duration_seconds_count{instance=~\"$instance\",status_code=~\"[23]xx\"}[$__range]))\n        by (path)\n)",
           "instant": true,
           "interval": "",
           "legendFormat": "{{path}}",
           "refId": "A"
         }
       ],
-      "title": "Top 5 Success Latency",
+      "title": "Top 5 Slowest Endpoints",
       "transformations": [
         {
           "id": "reduce",
@@ -1428,7 +1431,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 12,
         "x": 0,
         "y": 19
@@ -1494,7 +1497,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "avg(rate(http_request_duration_seconds_sum{instance=~\"$instance\"}[${interval}])) / avg(rate(http_request_duration_seconds_count{instance=~\"$instance\"}[${interval}]))",
+          "expr": "sum(increase(http_request_duration_seconds_sum{instance=~\"$instance\"}[$__range])) \n/ \nsum(increase(http_request_duration_seconds_count{instance=~\"$instance\"}[$__range]))",
           "instant": false,
           "legendFormat": "mean",
           "range": true,
@@ -1509,6 +1512,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Latency for all methods and path for success responses",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1531,7 +1535,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 12,
         "x": 12,
         "y": 19
@@ -1543,7 +1547,7 @@
         "minVizHeight": 16,
         "minVizWidth": 8,
         "namePlacement": "auto",
-        "orientation": "horizontal",
+        "orientation": "vertical",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1563,9 +1567,9 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.003\"}[$__range])\n)",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.03\"}[$__range])\n)",
           "instant": false,
-          "legendFormat": "0-0.003",
+          "legendFormat": "0-30ms",
           "range": true,
           "refId": "A"
         },
@@ -1575,10 +1579,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.03\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.003\"}[$__range])\n)",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.1\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.03\"}[$__range])\n)",
           "hide": false,
           "instant": false,
-          "legendFormat": "0.003-0.03",
+          "legendFormat": "30-100ms",
           "range": true,
           "refId": "B"
         },
@@ -1588,10 +1592,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.1\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.03\"}[$__range])\n)",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.3\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.1\"}[$__range])\n)",
           "hide": false,
           "instant": false,
-          "legendFormat": "0.03-0.1",
+          "legendFormat": "100-300ms",
           "range": true,
           "refId": "C"
         },
@@ -1601,10 +1605,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.3\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.1\"}[$__range])\n)",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"1\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.3\"}[$__range])\n)",
           "hide": false,
           "instant": false,
-          "legendFormat": "0.1-0.3",
+          "legendFormat": "300ms-1s",
           "range": true,
           "refId": "D"
         },
@@ -1614,10 +1618,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"1.5\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"0.3\"}[$__range])\n)",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"3\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"1\"}[$__range])\n)",
           "hide": false,
           "instant": false,
-          "legendFormat": "0.3-1.5",
+          "legendFormat": "1s-3s",
           "range": true,
           "refId": "E"
         },
@@ -1627,10 +1631,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"10\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"1.5\"}[$__range])\n)",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"10\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"3\"}[$__range])\n)",
           "hide": false,
           "instant": false,
-          "legendFormat": "1.5-10",
+          "legendFormat": "3s-10s",
           "range": true,
           "refId": "F"
         },
@@ -1640,12 +1644,25 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"+Inf\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=\"2xx\",le=\"10\"}[$__range])\n)",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"30\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"10\"}[$__range])\n)",
           "hide": false,
           "instant": false,
-          "legendFormat": "10-Inf",
+          "legendFormat": "10s-30s",
           "range": true,
           "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"+Inf\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"30\"}[$__range])\n)",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "30s+",
+          "range": true,
+          "refId": "H"
         }
       ],
       "title": "Success Latency Buckets",
@@ -1661,7 +1678,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 26
       },
       "id": 87,
       "panels": [],
@@ -1743,7 +1760,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 27
       },
       "id": 42,
       "options": {
@@ -1842,7 +1859,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 27
       },
       "id": 82,
       "options": {
@@ -1952,7 +1969,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 32
       },
       "id": 21,
       "options": {
@@ -2071,7 +2088,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 32
       },
       "id": 66,
       "options": {
@@ -2137,7 +2154,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 37
       },
       "id": 40,
       "panels": [
@@ -2189,8 +2206,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2287,8 +2303,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2386,8 +2401,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2484,8 +2498,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2581,8 +2594,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2705,8 +2717,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2765,6 +2776,180 @@
         }
       ],
       "title": "Node.js Garbage Collection",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 111,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 13,
+            "x": 0,
+            "y": 39
+          },
+          "id": 113,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 16,
+            "minVizWidth": 8,
+            "namePlacement": "auto",
+            "orientation": "vertical",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.03\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "instant": false,
+              "legendFormat": "0-30ms",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.1\",path=~\"$path\",method=~\"$method\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.03\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "30-100ms",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.3\",path=~\"$path\",method=~\"$method\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.1\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "100-300ms",
+              "range": true,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"1\",path=~\"$path\",method=~\"$method\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"0.3\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "300ms-1s",
+              "range": true,
+              "refId": "D"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"3\",path=~\"$path\",method=~\"$method\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"1\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "1s-3s",
+              "range": true,
+              "refId": "E"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"10\",path=~\"$path\",method=~\"$method\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"3\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "3s-10s",
+              "range": true,
+              "refId": "F"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"30\",path=~\"$path\",method=~\"$method\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"10\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "10s-30s",
+              "range": true,
+              "refId": "G"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "sum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"+Inf\",path=~\"$path\",method=~\"$method\"}[$__range])\n)\n-\nsum (\n    increase(http_request_duration_seconds_bucket{instance=~\"$instance\",status_code=~\"[23]xx\",le=\"30\",path=~\"$path\",method=~\"$method\"}[$__range])\n)",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "30s+",
+              "range": true,
+              "refId": "H"
+            }
+          ],
+          "title": "$method $path Latency Buckets",
+          "type": "bargauge"
+        }
+      ],
+      "title": "Latency Buckets",
       "type": "row"
     }
   ],
@@ -2976,11 +3161,81 @@
         "refresh": 2,
         "skipUrlSync": false,
         "type": "interval"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": false,
+          "text": "/datasets/",
+          "value": "/datasets/"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "definition": "label_values(http_request_duration_seconds_bucket,path)",
+        "description": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "",
+        "multi": false,
+        "name": "path",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(http_request_duration_seconds_bucket,path)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 5,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": [
+            "GET"
+          ],
+          "value": [
+            "GET"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "definition": "label_values(http_request_duration_seconds_bucket,method)",
+        "description": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "",
+        "multi": true,
+        "name": "method",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(http_request_duration_seconds_bucket,method)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
@@ -2999,7 +3254,7 @@
   },
   "timezone": "",
   "title": "Node.js and Express Metrics",
-  "uid": "3J_78b6Az",
-  "version": 2,
+  "uid": "3J_78b6Bz",
+  "version": 11,
   "weekStart": ""
 }

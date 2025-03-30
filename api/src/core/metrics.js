@@ -28,6 +28,17 @@ function normalizeStatusCode(res) {
   return CLIENT_CLOSED_REQUEST_CODE;
 }
 
+/**
+ * Reasing for histogram buckets:
+ * 0 - 0.03  (0-30ms, mostly empty but captures edge cases)
+ * 0.03 - 0.1  (30-100ms, high-resolution for fast requests)
+ * 0.1 - 0.3   (100-300ms, common API latencies)
+ * 0.3 - 1.0   (300ms-1s, still in acceptable range)
+ * 1.0 - 3.0   (1s-3s, noticeable slowdowns)
+ * 3.0 - 10.0  (3s-10s, major slow responses)
+ * 10.0 - 30.0 (10s-30s, very slow but still relevant)
+ * 30.0 - Inf  (Requests that are extremely slow)
+ */
 const metricsMiddleware = promBundle({
   autoregister: !config.get('cluster.enabled'),
   includeMethod: true,
@@ -40,6 +51,7 @@ const metricsMiddleware = promBundle({
     collectDefaultMetrics: {
     },
   },
+  buckets: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0],
 });
 
 /**
