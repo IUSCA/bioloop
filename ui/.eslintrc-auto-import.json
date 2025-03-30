@@ -299,6 +299,11 @@
     "injectLocal": true,
     "provideLocal": true,
     "useQueryPersistence": true,
-    "useClipboardItems": true
+    "useClipboardItems": true,
+    "createRef": true,
+    "onElementRemoval": true,
+    "useCountdown": true,
+    "usePreferredReducedTransparency": true,
+    "useSSRWidth": true
   }
 }

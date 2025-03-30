@@ -1,3 +1,8 @@
+---
+title: Docker
+order: 1
+---
+
 # Installation Guide
 
 This guide will help you set up Bioloop using Docker for local development or production deployment.

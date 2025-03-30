@@ -18,7 +18,7 @@ hero:
 features:
   - title: Installation
     details: Get Started with Bioloop
-    link: /install-docker
+    link: /installation/install-docker
   - title: UI
     details: Explore the features of our UI.
     link: /ui/

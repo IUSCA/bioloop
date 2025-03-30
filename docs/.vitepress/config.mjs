@@ -1,10 +1,13 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from 'vitepress';
+import { withSidebar } from 'vitepress-sidebar';
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+const vitePressOptions =  defineConfig({
   title: "Bioloop",
   base: "/bioloop/docs/",
   description: "Bioloop Documentation",
+  head: [['link', { rel: 'icon', href: '/bioloop/docs/favicon.ico' }]],
+  lastUpdated: true, // Enable last updated timestamp
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -39,7 +42,15 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'github', link: 'https://github.com/IUSCA/bioloop' }
-    ]
+    ],
+
+    search: {
+      provider: 'local'
+    },
+
+    editLink: {
+      pattern: 'https://github.com/IUSCA/bioloop/edit/main/docs/:path'
+    }
   },
   ignoreDeadLinks: [
     // ignore exact url "/playground"
@@ -54,3 +65,20 @@ export default defineConfig({
     }
   ]
 })
+
+
+const vitePressSidebarOptions = {
+  // VitePress Sidebar's options here...
+  documentRootPath: '/docs',
+  collapsed: true,
+  capitalizeFirst: true,
+  includeFolderIndexFile: false,
+  useTitleFromFileHeading: true,
+  useTitleFromFrontmatter: true,
+  useFolderTitleFromIndexFile: true,
+  frontmatterOrderDefaultValue: 100,
+  sortMenusByFrontmatterOrder: true
+};
+
+export default defineConfig(withSidebar(vitePressOptions, vitePressSidebarOptions));
+// export default vitePressOptions;
