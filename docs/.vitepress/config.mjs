@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress';
 import { withSidebar } from 'vitepress-sidebar';
 
 // https://vitepress.dev/reference/site-config
-const vitePressOptions =  defineConfig({
+const vitePressOptions =  {
   title: "Bioloop",
   base: "/bioloop/docs/",
   description: "Bioloop Documentation",
@@ -64,7 +64,7 @@ const vitePressOptions =  defineConfig({
       return url.toLowerCase().includes('ignore')
     }
   ]
-})
+};
 
 
 const vitePressSidebarOptions = {
