@@ -47,3 +47,45 @@ class GCPMetricsCollector(MetricsCollector):
 
     def get_staged_usage(self):
         return self.calculate_usage(self.get_staged_paths)
+
+    def get_registration_metrics(self) -> list[dict]:
+        print("Getting registration metrics on for Off-Premise")
+
+        metrics = []
+
+        registration_usage = self.get_registration_usage()
+        archived_usage = self.get_archived_usage()
+        staged_usage = self.get_staged_usage()
+
+        metrics.extend(
+            [
+                {
+                    'measurement': 'Registered',
+                    'subject': self.hostname,
+                    'usage': registration_usage,
+                    'tags': []
+                }
+            ]
+        )
+        metrics.extend(
+            [
+                {
+                    'measurement': 'Staged',
+                    'subject': self.hostname,
+                    'usage': staged_usage,
+                    'tags': []
+                }
+            ]
+        )
+        metrics.extend(
+            [
+                {
+                    'measurement': 'Archived',
+                    'subject': self.hostname,
+                    'usage': archived_usage,
+                    'tags': []
+                }
+            ]
+        )
+
+        return metrics
