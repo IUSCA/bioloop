@@ -322,7 +322,7 @@ function normalize_name(name) {
   // replace consecutive hyphens with one -
 
   return (name || '')
-    .replaceAll(/[\W_]/g, '-')
+    .replaceAll(/[\W]/g, '-')
     .replaceAll(/-+/g, '-');
 }
 

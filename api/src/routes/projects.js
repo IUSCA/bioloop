@@ -244,9 +244,12 @@ router.get(
       userId: req.user.id,
     });
 
+    // has assoc, has only user role              -> allowed
+    // has assoc, has operator / admin role       -> allowed
+    // no assoc,  has only user role              -> not allowed
+    // no assoc,  has operator / admin role       -> allowed
     if (
-      req.user.roles.includes('user')
-        && !hasProjectAssociation
+      !(req.user.roles.includes('operator') || req.user.roles.includes('admin')) && !hasProjectAssociation
     ) {
       return next(createError(403)); // Forbidden
     }

@@ -24,7 +24,11 @@ const app = express();
 app.disable('x-powered-by');
 
 // request logger - https://github.com/expressjs/morgan
-app.use(requestLogger('dev'));
+if (config.get('mode') === 'production') {
+  app.use(requestLogger('combined', { skip: (req, res) => res.statusCode < 400 }));
+} else {
+  app.use(requestLogger('dev'));
+}
 
 // request parsing middleware
 app.use(express.json({ limit: '50mb' }));

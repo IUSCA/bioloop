@@ -123,6 +123,7 @@
                     :status-chip-color="statusChipColor"
                     :submission-alert-color="submissionAlertColor"
                     :is-submission-alert-visible="isSubmissionAlertVisible"
+                    :checksum-computation-percentage="checksumProgress"
                   /> </va-card-content
               ></va-card>
             </div>
@@ -179,16 +180,16 @@
 <script setup>
 import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 import config from "@/config";
+import Constants from "@/constants";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import datasetUploadService from "@/services/upload/dataset";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-import { jwtDecode } from "jwt-decode";
-import Constants from "@/constants";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
@@ -260,6 +261,7 @@ const isNextButtonDisabled = computed(() => {
     submissionSuccess.value ||
     [
       Constants.UPLOAD_STATES.PROCESSING,
+      Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS,
       Constants.UPLOAD_STATES.UPLOADING,
       Constants.UPLOAD_STATES.UPLOADED,
     ].includes(submissionStatus.value) ||
@@ -354,6 +356,8 @@ const datasetNameValidationRules = [
 
 const loading = ref(false);
 const validatingForm = ref(false);
+const totalChunks = ref(0);
+const processedChunks = ref(0);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
 const datasetUploadLog = ref(null);
@@ -408,6 +412,11 @@ const uploadFormData = computed(() => {
       source_dataset_id: rawDataSelected.value[0].id,
     }),
   };
+});
+
+const checksumProgress = computed(() => {
+  if (totalChunks.value === 0) return 0;
+  return Math.round((processedChunks.value / totalChunks.value) * 100);
 });
 
 const resetFormErrors = () => {
@@ -568,6 +577,8 @@ const evaluateFileChecksums = (file) => {
 
         buffer.append(result); // Append to array buffer
         chunkIndex += 1;
+        processedChunks.value += 1;
+
         if (chunkIndex < chunks) {
           loadNext(chunkIndex);
         } else {
@@ -594,6 +605,9 @@ const evaluateFileChecksums = (file) => {
 const evaluateChecksums = (filesToUpload) => {
   return new Promise((resolve, reject) => {
     const filePromises = [];
+    totalChunks.value = 0;
+    processedChunks.value = 0;
+
     for (let i = 0; i < filesToUpload.length; i++) {
       let fileDetails = filesToUpload[i];
       if (!fileDetails.checksumsEvaluated) {
@@ -602,6 +616,7 @@ const evaluateChecksums = (filesToUpload) => {
         // A single chunk is uploaded for an empty file
         fileDetails.numChunks =
           file.size > 0 ? Math.ceil(file.size / CHUNK_SIZE) : 1;
+        totalChunks.value += fileDetails.numChunks;
         if (selectingDirectory.value) {
           selectedDirectoryChunkCount.value += fileDetails.numChunks;
         }
@@ -883,20 +898,23 @@ const onSubmit = async () => {
       .then(async () => {
         submissionSuccess.value = true;
         submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
-
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
           resolve();
         } else {
           submissionStatus.value = Constants.UPLOAD_STATES.UPLOAD_FAILED;
+          statusChipColor.value = "warning";
           submissionAlert.value = "Some files could not be uploaded.";
           reject();
         }
       })
       .catch((err) => {
-        console.error(err);
-        submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING_FAILED;
+        console.error(err?.error || err);
+        submissionStatus.value =
+          err.status || Constants.UPLOAD_STATES.PROCESSING_FAILED;
+        statusChipColor.value = err.chipColor || "warning";
         submissionAlert.value =
+          err.errorMessage ||
           "There was an error. Please try submitting again.";
         reject();
       });
@@ -980,7 +998,22 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  await evaluateChecksums(filesNotUploaded.value);
+  submissionStatus.value = Constants.UPLOAD_STATES.COMPUTING_CHECKSUMS;
+  try {
+    await evaluateChecksums(filesNotUploaded.value);
+  } catch (error) {
+    submissionStatus.value =
+      Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED;
+    statusChipColor.value = "warning";
+    submissionAlert.value = "Checksum computation failed";
+    throw {
+      error: error,
+      status: Constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED,
+      chipColor: "warning",
+      errorMessage: "Checksum computation failed",
+    };
+  }
+  submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
 
   const logData = datasetUploadLog.value?.id
     ? {
