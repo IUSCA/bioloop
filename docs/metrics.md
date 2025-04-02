@@ -74,7 +74,7 @@ Grafana is integrated into the same Docker network as Prometheus, ensuring seaml
    - Navigate to the pre-configured dashboards for Node.js and Postgres metrics.
 
 3. **Add New Metrics**:
-   - For Node.js: See [Instrumentation](instrumentation.md) to add custom metrics.
+   - For Node.js: See [Instrumentation](api/05-performance/instrumentation) to add custom metrics.
    - For Postgres: Update the `queries.yml` file in `metrics/postgres_exporter/`.
 
 4. **Restart Services**:
