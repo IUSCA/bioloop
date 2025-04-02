@@ -1,0 +1,1 @@
+import{_ as a,c as e,o as t}from"./chunks/framework.C9SxlbOG.js";const l=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"api/02-data/cache.md","filePath":"api/02-data/cache.md","lastUpdated":null}'),c={name:"api/02-data/cache.md"};function r(o,s,n,d,p,i){return t(),e("div")}const m=a(c,[["render",r]]);export{l as __pageData,m as default};
