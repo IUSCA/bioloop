@@ -4,6 +4,7 @@
   },
   "mode": "NODE_ENV",
   "workflow_server": {
+    "base_url": "WORKFLOW_SERVER_BASE_URL",
     "auth_token": "WORKFLOW_AUTH_TOKEN"
   },
   "oauth": {
