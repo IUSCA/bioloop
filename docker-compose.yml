@@ -1,90 +1,157 @@
 name: bioloop
 services:
+
   ui:
-    image: node:19
+    build:
+      context: ./ui
+    env_file:
+      - ui/.env.example
     volumes:
       - ./ui/:/opt/sca/app
-      - ui_modules:/opt/sca/app/node_modules
     ports:
       - 127.0.0.1:443:443
-    working_dir: /opt/sca/app
-    # command: sh -c "npm install && exec /opt/sca/app/node_modules/.bin/vite --host"
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
-    entrypoint:
-      - sh
-      - -c
-      - |
-        npm install && exec /opt/sca/app/node_modules/.bin/vite --host
+    command: npm run dev
 
   api:
-    image: node:19
-    # user: ${APP_UID}:${APP_GID}
-    # build:
-      # context: ./api
-      # args:
-        # APP_UID: ${APP_UID} # read from .env file
-        # APP_GID: ${APP_GID} # read from .env file
-    # environment:
-    #   - APP_UID=APP_UID
-    #   - APP_GID=APP_GID
+    build:
+      context: ./api
+    env_file:
+      - tests/.env.example
+      - db/postgres/.env.example
+      - api/.env.example
+      - api/.env
     volumes:
       - ./api/:/opt/sca/app
-      - api_modules:/opt/sca/app/node_modules
     expose:
       - 3030
-    ports:
-      - 127.0.0.1:3030:3030
-    working_dir: /opt/sca/app
-    # entrypoint: ["tail", "-f", "/dev/null"]
-    # command: sh -c "sleep infinity"
-    entrypoint:
-      - sh
-      - -c
-      - |
-        npm install \
-        && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
-
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
+    command: npm run dev
     depends_on:
      - postgres
 
   postgres:
     image: postgres:14.5
-    # restart: unless-stopped
-    environment:
-      - POSTGRES_USER=appuser
-      - POSTGRES_PASSWORD=example
-      - POSTGRES_DB=app
+    env_file:
+      - db/postgres/.env.example
     volumes:
-      - ./db/db_postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
-      - ./db/postgres/aux_scripts:/opt/sca/scripts
-      - ./db/backups:/opt/sca/backups
-      - ./db/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf   # Mount the config file
+      - ./db/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf 
+    expose:
+      - 5432
     command: -c 'config_file=/etc/postgresql/postgresql.conf'
+
+# Workers
+  celery_worker:
+    # user: ${USER_ID}:${GROUP_ID}
+    build:
+      context: ./workers
+    environment:
+      - WORKER_TYPE=celery_worker
+    env_file:
+      - workers/.env.example
+      - workers/.env
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    depends_on:
+      - queue
+      - mongo
+
+
+  # Rhythm_api containers
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    image: rabbitmq:4-management
+    expose:
+      - 5672
     ports:
-      - 127.0.0.1:5432:5432
+      - 127.0.0.1:15672:15672
+    volumes:
+      - queue_volume:/var/lib/rabbitmq/
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+      - RABBITMQ_DEFAULT_VHOST=myvhost
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    expose:
+      - 27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo_db:/data/db
+      # for importing database files
+      - ./rhythm_api/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+  rhythm:
+    restart: unless-stopped
+    build:
+      context: ./rhythm_api
+    expose:
+      - 5001
+    env_file:
+      - rhythm_api/.env.example
+    environment:
+      - PORT=5001
+    volumes:
+      - ./rhythm_api:/opt/sca
+    depends_on:
+      - queue
+      - mongo
+
+# Secure_download containers
+  secure_download:
+    # user: ${USER_ID}:${GROUP_ID}
+    build:
+      context: ./secure_download
+    restart: unless-stopped
+    expose:
+      - 3080
+    env_file:
+      - secure_download/.env.example
+    volumes:
+      - landing_volume:/opt/sca/data
+
+# Signet containers
+  signet:
+    restart: unless-stopped
+    build:
+      context: ./signet
+    expose:
+      - 5050
+    environment:
+      - PORT=5050
+      - AUTHLIB_INSECURE_TRANSPORT=1
+      - POSTGRES_DB=signet
+      - POSTGRES_USER=signet
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_HOST=signet_db
+      - POSTGRES_PORT=5432
+    env_file:
+      - signet/.env.example
+    depends_on:
+      - postgres
+
+  signet_db:
+    image: postgres:14.5
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=signet
+      - POSTGRES_USER=signet
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_SCHEMA=signet
+      - POSTGRES_PORT=5432
+    volumes:
+      - signet_db:/var/lib/postgresql/data
     expose:
       - 5432
 
-  nginx:
-    image: nginx:1.25
-    ports:
-        - 80:80
-        - 443:443
-    volumes:
-        - ./nginx/src:/usr/share/nginx/html     # Mount for Nginx static files
-        - ./nginx/conf:/etc/nginx/conf.d        # Mount for Nginx configuration files
-        - ./data:/opt/sca/data:ro               # Mount for data directory
-        - ./ui/dist:/opt/sca/ui:ro              # Mount for UI static files
-        - ./nginx/logs:/var/log/nginx           # Mount for Nginx logs
-        - ./ui/.cert:/etc/nginx/certs:ro       # Mount for SSL certificates
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
 
+
+# Metrics containers
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter
     environment:
@@ -125,11 +192,17 @@ services:
       
 
 volumes:
-  ui_modules:
+  postgres_data:
     external: false
-
-  api_modules:
-    external: false
-
   grafana_data:
+    external: false
   prometheus_data:
+    external: false
+  mongo_db:
+    external: false
+  queue_volume:
+    external: false
+  signet_db:
+    external: false
+  landing_volume:
+    external: false
