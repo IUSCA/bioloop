@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as a}from"./chunks/framework.C9SxlbOG.js";const _=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"api/01-core/queue.md","filePath":"api/01-core/queue.md","lastUpdated":null}'),r={name:"api/01-core/queue.md"};function o(c,s,n,p,i,u){return a(),t("div")}const l=e(r,[["render",o]]);export{_ as __pageData,l as default};
