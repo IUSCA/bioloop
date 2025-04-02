@@ -1,6 +1,8 @@
 {
+  "name": "docs",
   "devDependencies": {
-    "vitepress": "~1.6.3"
+    "vitepress": "~1.6.3",
+    "vitepress-sidebar": "^1.31.1"
   },
   "scripts": {
     "docs:dev": "vitepress dev docs",
@@ -9,6 +11,6 @@
     "cloc": "git ls-files -z | grep -z -v -E '(^|/)(package-lock\\.json|poetry\\.lock|docs/\\.vitepress/dist/|metrics/grafana/config/provisioning/dashboards/)' | xargs -0 npx cloc"
   },
   "dependencies": {
-    "vitepress-sidebar": "^1.31.1"
+    
   }
 }
