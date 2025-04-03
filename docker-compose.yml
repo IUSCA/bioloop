@@ -45,6 +45,8 @@ services:
       - ./db/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf 
     expose:
       - 5432
+    ports:
+      - 127.0.0.1:5432:5432
     command: -c 'config_file=/etc/postgresql/postgresql.conf'
 
 # Workers
@@ -85,6 +87,8 @@ services:
     image: mongo:5
     expose:
       - 27017
+    ports:
+      - localhost:27017:27017
     env_file:
       - db/mongo/.env.example
     volumes:
