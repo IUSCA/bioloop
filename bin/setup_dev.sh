@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-export USER_ID=$(id -u)
-export GROUP_ID=$(id -g)
-
 # Download the rhythm_api repository if it doesn't exist
 if [ ! -d "rhythm_api" ]; then git clone https://github.com/IUSCA/rhythm_api.git; fi
 
@@ -47,13 +44,6 @@ if [ ! -f "workers/.env" ]; then touch workers/.env; fi
 docker compose down 
 docker compose pull && docker compose up -d --force-recreate --remove-orphans --build
 
-# Check if node_modules exists and is empty
-if [ -d "api/node_modules" ] && [ "$(ls -A api/node_modules)" ]; then
-  echo "api/node_modules already exists and is not empty. Skipping npm install."
-else
-  echo "api/node_modules not found or empty. Running npm install..."
-  docker compose exec api npm install
-fi
 
 # Check if node_modules exists and is empty
 if [ -d "ui/node_modules" ] && [ "$(ls -A ui/node_modules)" ]; then
@@ -102,7 +92,7 @@ echo "WORKFLOW_AUTH_TOKEN=$(docker compose exec rhythm python -m rhythm_api.scri
 # Setup connection to the api from the workers container
 echo "Setting up connection to the api from the workers container..."
 sed -i '/^APP_API_TOKEN/d' workers/.env
-echo `date +%s` 
+
 echo "APP_API_TOKEN=$(docker compose exec api node src/scripts/issue_token.js svc_tasks)" >> workers/.env
 
 # stop the services so that the new environment vars can be loaded

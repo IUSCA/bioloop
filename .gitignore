@@ -27,7 +27,7 @@ api/.env
 api/config/auth*
 
 db/*.wt
-db/*
+
 dbdump
 
 cypress

@@ -2,19 +2,19 @@ name: bioloop
 services:
 
   ui:
-    build:
-      context: ./ui
+    image: node:19
     env_file:
       - ui/.env.example
     volumes:
       - ./ui/:/opt/sca/app
+    working_dir: /opt/sca/app
     ports:
       - 127.0.0.1:443:443
+    entrypoint: ["bin/entrypoint.sh"]
     command: npm run dev
 
   api:
-    build:
-      context: ./api
+    image: node:19
     env_file:
       - tests/.env.example
       - db/postgres/.env.example
@@ -22,8 +22,11 @@ services:
       - api/.env
     volumes:
       - ./api/:/opt/sca/app
+    working_dir: /opt/sca/app
+
     expose:
       - 3030
+    entrypoint: ["bin/entrypoint.sh"]
     command: npm run dev
     depends_on:
      - postgres
@@ -48,6 +51,8 @@ services:
     environment:
       - WORKER_TYPE=celery_worker
     env_file:
+      - db/mongo/.env.example
+      - db/queue/.env.example
       - workers/.env.example
       - workers/.env
     volumes:
@@ -68,23 +73,20 @@ services:
       - 127.0.0.1:15672:15672
     volumes:
       - queue_volume:/var/lib/rabbitmq/
-    environment:
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
-      - RABBITMQ_DEFAULT_VHOST=myvhost
+    env_file:
+      - db/queue/.env.example
 
   mongo:
     # https://hub.docker.com/_/mongo
     image: mongo:5
     expose:
       - 27017
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+    env_file:
+      - db/mongo/.env.example
     volumes:
       - mongo_db:/data/db
       # for importing database files
-      - ./rhythm_api/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   rhythm:
     restart: unless-stopped
@@ -93,7 +95,9 @@ services:
     expose:
       - 5001
     env_file:
-      - rhythm_api/.env.example
+      - db/mongo/.env.example
+      - db/queue/.env.example
+      - db/rhythm/.env.example
     environment:
       - PORT=5001
     volumes:
@@ -133,7 +137,7 @@ services:
     env_file:
       - signet/.env.example
     depends_on:
-      - postgres
+      - signet_db
 
   signet_db:
     image: postgres:14.5

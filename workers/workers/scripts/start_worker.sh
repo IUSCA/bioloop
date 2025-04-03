@@ -1,9 +1,12 @@
 #!/bin/bash
 
+set -e
+
+
 
 if [ $WORKER_TYPE == "celery_worker" ]; then
   echo "Starting Celery Worker"
-  python -m celery \
+  exec python -m celery \
     -A workers.celery_app worker \
     --loglevel INFO \
     -O fair \
