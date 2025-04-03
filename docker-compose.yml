@@ -31,7 +31,7 @@ services:
      - postgres
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 5s
+      interval: 30s
       timeout: 10s
       retries: 5
 
