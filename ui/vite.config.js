@@ -120,6 +120,11 @@ export default defineConfig(({ command, mode }) => {
             });
           },
         },
+        "/upload": {
+          target: env.VITE_UPLOAD_API_URL,
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
     // to disable minification - https://vitejs.dev/config/build-options.html#build-minify

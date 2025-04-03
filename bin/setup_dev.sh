@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+export APP_UID=1001
+export APP_GID=1001
+
 # Download the rhythm_api repository if it doesn't exist
 if [ ! -d "rhythm_api" ]; then git clone https://github.com/IUSCA/rhythm_api.git; fi
 
@@ -44,14 +47,6 @@ if [ ! -f "workers/.env" ]; then touch workers/.env; fi
 docker compose down 
 docker compose pull && docker compose up -d --force-recreate --remove-orphans --build
 
-
-# Check if node_modules exists and is empty
-if [ -d "ui/node_modules" ] && [ "$(ls -A ui/node_modules)" ]; then
-  echo "ui/node_modules already exists and is not empty. Skipping npm install."
-else
-  echo "ui/node_modules not found or empty. Running npm install..."
-  docker compose exec ui npm install
-fi
 
 echo "Setting up the database..."
 docker compose exec api npx prisma db seed

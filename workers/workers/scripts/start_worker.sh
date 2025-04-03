@@ -3,7 +3,6 @@
 set -e
 
 
-
 if [ $WORKER_TYPE == "celery_worker" ]; then
   echo "Starting Celery Worker"
   exec python -m celery \

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check if keys exists
-if [ -f keys/auth.pub ] && [ -f keys/auth.key ]; then
+if [ -f "keys/auth.pub" ] && [ -f "keys/auth.key" ]; then
   echo "Keys already exist. Skipping key generation." 
 else
   echo "Keys not found. Generating keys..."

@@ -23,13 +23,17 @@ services:
     volumes:
       - ./api/:/opt/sca/app
     working_dir: /opt/sca/app
-
     expose:
       - 3030
     entrypoint: ["bin/entrypoint.sh"]
     command: npm run dev
     depends_on:
      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
 
   postgres:
     image: postgres:14.5
@@ -108,16 +112,18 @@ services:
 
 # Secure_download containers
   secure_download:
-    # user: ${USER_ID}:${GROUP_ID}
-    build:
-      context: ./secure_download
+    image: node:19
     restart: unless-stopped
     expose:
-      - 3080
+      - 3060
     env_file:
       - secure_download/.env.example
     volumes:
       - landing_volume:/opt/sca/data
+      - ./secure_download/:/opt/sca/app
+    working_dir: /opt/sca/app
+    entrypoint: ["bin/entrypoint.sh"]
+    command: npm run dev
 
 # Signet containers
   signet:
@@ -176,6 +182,8 @@ services:
       - prometheus_data:/prometheus  # Mount the volume for Prometheus data
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      
+
     # ports:
       # - "9090:9090"
 
@@ -185,13 +193,16 @@ services:
       - grafana_data:/var/lib/grafana                   # Mount for Grafana data (dashboards, plugins)
       - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
       - ./api/keys/auth.pub:/etc/grafana/auth.pub
-    depends_on:
-      - prometheus
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      prometheus:
+        condition: service_started
+      api:
+        condition: service_healthy
 
       
 
