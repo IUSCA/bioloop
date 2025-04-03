@@ -1,4 +1,4 @@
-# Secure Download Documentation
+# Secure Download
 ## Table of Contents
 
   - Introduction

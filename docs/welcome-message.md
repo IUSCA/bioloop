@@ -1,3 +1,7 @@
+---
+title: Welcome Message
+---
+
 **Subject:** Your Research Data is Now Available
 
 Dear \[Researcher’s Name\],

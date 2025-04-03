@@ -1,3 +1,7 @@
+---
+title: Project Template
+---
+
 # Create a repository
 
 Fork this repo IUSCA/<app_name> (only the org owners can do this, ask Charles.)
