@@ -16,6 +16,8 @@ const {
   axiosErrorHandler,
   prismaConstraintFailedHandler,
 } = require('./middleware/error');
+const { metricsMiddleware } = require('./core/metrics');
+const swagger = require('./scripts/swagger');
 
 // Register application
 const app = express();
@@ -46,12 +48,15 @@ app.use(compression());
 if (!['production', 'test'].includes(config.get('mode'))) {
   // mount swagger ui
   try {
-    const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));
+    const swaggerFile = JSON.parse(fs.readFileSync(swagger.outputFile, 'utf8'));
     app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
   } catch (e) {
-    console.error('Unable to load "./swagger_output.json"', e);
+    // console.error('Unable to load "./swagger_output.json"', e);
   }
 }
+
+// prometheus metrics
+app.use(metricsMiddleware);
 
 // mount router
 app.use('/', indexRouter);

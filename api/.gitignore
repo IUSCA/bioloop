@@ -35,7 +35,7 @@ swagger_output.json
 # generated reports
 reports
 
-test.js
+src/test*.js
 src/test.js
 coverage
 

@@ -5,8 +5,20 @@
     "port": 3030,
     "host": "localhost"
   },
+  "metrics": {
+    "cluster": {
+      "port": 9999
+    }
+  },
+  "cluster": {
+    "enabled": true,
+    "max_workers": 2,
+    "max_restarts": 3,
+    "max_restarts_interval": 10000,
+    "grace": 5000
+  },
   "logger": {
-    "level": "debug"
+    "level": "info"
   },
   "workflow_server": {
     "base_url": "http://127.0.0.1:5001",

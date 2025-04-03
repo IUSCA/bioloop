@@ -4,7 +4,7 @@ const { Prisma } = require('@prisma/client');
 const axios = require('axios');
 const _ = require('lodash/fp');
 const { log_axios_error } = require('../utils');
-const logger = require('../services/logger');
+const { logger } = require('../core/logger');
 
 // catch 404 and forward to error handler
 function notFound(req, res, next) {
