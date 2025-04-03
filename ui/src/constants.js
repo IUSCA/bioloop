@@ -104,6 +104,12 @@ const exports = {
         test_id: "sidebar-profile",
       },
       {
+        icon: "mdi-key",
+        title: "Login",
+        path: "/Login",
+        test_id: "sidebar-login",
+      },
+      {
         icon: "mdi-logout-variant",
         title: "Logout",
         path: "/auth/logout",
@@ -116,8 +122,6 @@ const exports = {
     UNINITIATED: "Uninitiated",
     PROCESSING: "Processing",
     PROCESSING_FAILED: "Processing Failed",
-    COMPUTING_CHECKSUMS: "Computing Checksums",
-    CHECKSUM_COMPUTATION_FAILED: "Computing Checksums Failed",
     UPLOADING: "Uploading",
     UPLOAD_FAILED: "Upload Failed",
     UPLOADED: "Uploaded",
