@@ -1,13 +1,20 @@
 import config from "@/config";
 import { isLiveToken, setIntersection } from "@/services/utils";
-import { createRouter, createWebHistory } from "vue-router";
-import { routes } from 'vue-router/auto-routes'
 import { setupLayouts } from "virtual:generated-layouts";
+// import generatedRoutes from "virtual:generated-pages";
+import { createRouter, createWebHistory } from "vue-router";
+import { routes, handleHotUpdate } from "vue-router/auto-routes";
+
+// console.log("generatedRoutes", generatedRoutes);
+console.log("routes", routes);
+const _setupLayouts = setupLayouts(routes);
+// console.log("_setupLayouts", _setupLayouts);
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
-  routes: setupLayouts(routes),
+  routes: _setupLayouts,
+  // routes,
 });
 
 const token = ref(useLocalStorage("token", ""));
@@ -85,5 +92,10 @@ router.afterEach((to, _from) => {
       : config.appTitle;
   });
 });
+
+// This will update routes at runtime without reloading the page
+if (import.meta.hot) {
+  handleHotUpdate(router);
+}
 
 export default router;
