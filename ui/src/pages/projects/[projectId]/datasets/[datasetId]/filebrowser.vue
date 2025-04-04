@@ -1,6 +1,6 @@
 <template>
   <FileBrowser
-    :dataset-id="props.datasetId"
+    :dataset-id="route.params.datasetId"
     :show-download="auth.isFeatureEnabled('downloads') && dataset.is_staged"
   />
 </template>
@@ -12,21 +12,23 @@ import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
+import { useRoute } from "vue-router";
 
+const route = useRoute();
 const auth = useAuthStore();
 
 const nav = useNavStore();
 
-const props = defineProps({ projectId: String, datasetId: String });
+// const props = defineProps({ projectId: String });
 
 const dataset = ref({});
 
 Promise.all([
   projectService.getById({
-    id: props.projectId,
+    id: route.params.projectId,
     forSelf: !auth.canOperate,
   }),
-  DatasetService.getById({ id: props.datasetId }),
+  DatasetService.getById({ id: route.params.datasetId }),
 ])
   .then((results) => {
     const project = results[0].data;
