@@ -5,8 +5,8 @@ Run by cron, collects disk usage information and sends to the API
 import socket
 
 from workers import api
-from workers import hpfs
 from workers.config import config
+from workers.services import hpfs
 
 
 def main():

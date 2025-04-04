@@ -1,18 +1,10 @@
-import json
 import logging
-from pathlib import Path
-from sca_rhythm import Workflow
-from pymongo import MongoClient, DESCENDING
+
 import fire
 
-from workers.config.celeryconfig import result_backend
-from workers.celery_app import app as celery_app
-import workers.sda as sda
 import workers.api as api
-import workers.cmd as cmd
-import workers.workflow_utils as wf_utils
-import workers.utils as utils
 from workers.config import config
+from workers.services.storage import storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,7 +17,6 @@ class BundleSyncManager:
     def __init__(self, dry_run, app_id):
         self.dry_run = dry_run
         self.app_id = app_id
-
 
     def populate_bundles(self):
         archived_datasets = api.get_all_datasets(archived=True, bundle=True)
@@ -62,11 +53,10 @@ class BundleSyncManager:
         processed_datasets_ids = [dataset['id'] for dataset in processed_datasets]
         logger.info(f'processed datasets: {processed_datasets_ids}')
 
-
     def populate_bundle_metadata(self, dataset: dict) -> bool:
         logger.info(f'populating dataset {dataset["id"]}')
 
-        bundle_md5 = sda.get_hash(dataset['archive_path'])
+        bundle_md5 = storage.get_hash(dataset['archive_path'])
         bundle_metadata = {
             'name': f'{dataset["name"]}.tar',
             'size': dataset['bundle_size'],

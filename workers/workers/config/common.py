@@ -165,5 +165,6 @@ config = {
     },
     'inspect': {
         'file_metadata_batch_size': 25000
-    }
+    },
+    'storage_backend': 'fs'
 }
