@@ -291,7 +291,7 @@
             <div>
               <workflow
                 :workflow="workflow"
-                @update="fetch_dataset(true)"
+                @update="fetch_dataset(true, 'workflow')"
               ></workflow>
             </div>
           </collapsible>
@@ -315,7 +315,7 @@
     :key="dataset"
     :data="dataset"
     ref="editModal"
-    @update="fetch_dataset(true)"
+    @update="fetch_dataset(true, 'editdatasetModal')"
   />
 </template>
 
@@ -361,12 +361,21 @@ const polling_interval = computed(() => {
   return active_wf.value ? config.dataset_polling_interval : null;
 });
 
-function fetch_dataset(show_loading = false) {
+function fetch_dataset(show_loading = false, caller = null) {
+  console.log("DatasetService - props.datasetId", props.datasetId);
+  console.log("caller", caller);
   console.log("fetch_dataset");
   console.log("fetch_dataset", props.datasetId);
   console.log("fetch_dataset typeof props.datasetId", typeof props.datasetId);
 
+  if (props.datasetId === undefined) {
+    console.error("No dataset ID provided");
+    console.log("fetch_dataset will return");
+    return;
+  }
+
   loading.value = show_loading;
+  console.log("DatasetService - props.datasetId", props.datasetId);
   DatasetService.getById({
     id: props.datasetId,
     bundle: true,
@@ -409,13 +418,12 @@ watch(
     // console.log("watching datasetId");
     console.log("watching datasetId", props.datasetId);
 
-    if (props.datasetId === undefined) {
-      console.error("No dataset ID provided");
-      return;
-    } else {
-      console.log("props.datasetId is not undefined");
-      fetch_dataset(true);
-    }
+    // if (props.datasetId === undefined) {
+    //   console.error("No dataset ID provided");
+    // } else {
+    //   console.log("props.datasetId is not undefined");
+    fetch_dataset(true, "watch");
+    // }
   },
   { immediate: true },
 );
@@ -426,7 +434,9 @@ watch(
  * and to 10s otherwise now it can be controlled by resume and pause whenever
  * active_wf changes
  */
-const poll = useIntervalFn(fetch_dataset, polling_interval);
+const poll = useIntervalFn(() => {
+  fetch_dataset(true, "poll");
+}, polling_interval);
 
 watch(active_wf, (newVal, _) => {
   if (newVal) {
@@ -456,7 +466,7 @@ function stage_dataset() {
   loading.value = true;
   DatasetService.stage_dataset(dataset.value.id)
     .then(() => {
-      fetch_dataset(true);
+      fetch_dataset(true, "stage");
     })
     .finally(() => {
       loading.value = false;
@@ -498,6 +508,10 @@ const downloadModal = ref(null);
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
+
+onMounted(() => {
+  console.log("moounted: props.datasetId", props.datasetId);
+});
 </script>
 
 <route lang="yaml">

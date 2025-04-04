@@ -18,13 +18,13 @@ const route = useRoute();
 
 console.log("route.params", route.params);
 
-const props = defineProps({ datasetId: String });
+// const props = defineProps({ datasetId: String });
 
-// onMounted(() => {
-//   console.log("props.datasetId", props.datasetId);
-// });
+onMounted(() => {
+  console.log("index.vue: props.datasetId", route.params.datasetId);
+});
 
-DatasetService.getById({ id: props.datasetId }).then((res) => {
+DatasetService.getById({ id: route.params.datasetId }).then((res) => {
   const dataset = res.data;
   nav.setNavItems([
     {
