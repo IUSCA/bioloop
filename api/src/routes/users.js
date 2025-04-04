@@ -15,7 +15,7 @@ const router = express.Router();
 
 router.get(
   '/:username',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const user = await userService.findActiveUserBy('username', req.params.username);
@@ -78,7 +78,7 @@ router.post(
 
 router.patch(
   '/:username',
-  isPermittedTo('update', { checkOwnerShip: true }),
+  isPermittedTo('update', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
 
@@ -124,7 +124,7 @@ router.patch(
 
 router.delete(
   '/:username',
-  isPermittedTo('delete', { checkOwnerShip: true }),
+  isPermittedTo('delete', { checkOwnership: true }),
   validate([
     // Validate and transform hard_delete into a boolean with a default value
     // of false
