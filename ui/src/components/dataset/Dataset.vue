@@ -362,6 +362,10 @@ const polling_interval = computed(() => {
 });
 
 function fetch_dataset(show_loading = false) {
+  console.log("fetch_dataset");
+  console.log("fetch_dataset", props.datasetId);
+  console.log("fetch_dataset typeof props.datasetId", typeof props.datasetId);
+
   loading.value = show_loading;
   DatasetService.getById({
     id: props.datasetId,
@@ -402,7 +406,16 @@ function fetch_dataset(show_loading = false) {
 watch(
   [() => props.datasetId],
   () => {
-    fetch_dataset(true);
+    // console.log("watching datasetId");
+    console.log("watching datasetId", props.datasetId);
+
+    if (props.datasetId === undefined) {
+      console.error("No dataset ID provided");
+      return;
+    } else {
+      console.log("props.datasetId is not undefined");
+      fetch_dataset(true);
+    }
   },
   { immediate: true },
 );

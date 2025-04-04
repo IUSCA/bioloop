@@ -38,6 +38,8 @@ class DatasetService {
     include_projects = false,
     initiator = false,
   }) {
+    // console.log("Getting dataset by ID", id);
+    // console.log("/datasets/${id}", `/datasets/${id}`);
     return api.get(`/datasets/${id}`, {
       params: {
         files,
