@@ -9,13 +9,12 @@ from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
 
 import workers.api as api
-import workers.utils as utils
-from workers.config import config
 import workers.config.celeryconfig as celeryconfig
+import workers.utils as utils
 import workers.workflow_utils as wf_utils
+from workers import exceptions as exc
 from workers.dataset import compute_staging_path
 from workers.dataset import get_bundle_staged_path
-from workers import exceptions as exc
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -60,14 +59,14 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
 
 def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     """
-    gets the tar from SDA and extracts it
+    gets the tar from Archive and extracts it
 
     input: dataset['name'], dataset['archive_path'] should exist
     returns: stage_path
     """
     staging_dir, alias = compute_staging_path(dataset)
 
-    sda_bundle_path = dataset['archive_path']
+    archive_bundle_path = dataset['archive_path']
     alias_dir = staging_dir.parent
     alias_dir.mkdir(parents=True, exist_ok=True)
 
@@ -75,9 +74,9 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     bundle_md5 = bundle["md5"]
     bundle_download_path = Path(get_bundle_staged_path(dataset=dataset))
 
-    wf_utils.download_file_from_sda(sda_file_path=sda_bundle_path,
-                                    local_file_path=bundle_download_path,
-                                    celery_task=celery_task)
+    wf_utils.download_file_from_archive(archive_file_path=archive_bundle_path,
+                                        local_file_path=bundle_download_path,
+                                        celery_task=celery_task)
 
     evaluated_checksum = utils.checksum(bundle_download_path)
     if evaluated_checksum != bundle_md5:

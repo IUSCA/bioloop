@@ -6,8 +6,8 @@ from sca_rhythm.progress import Progress
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-from workers import illumina
 from workers.config import config
+from workers.services import illumina
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
