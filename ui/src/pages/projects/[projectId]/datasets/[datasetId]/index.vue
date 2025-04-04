@@ -1,5 +1,5 @@
 <template>
-  <Dataset :dataset-id="props.datasetId" append-file-browser-url />
+  <Dataset :dataset-id="route.params.datasetId" append-file-browser-url />
 </template>
 
 <script setup>
@@ -13,15 +13,16 @@ import { useUIStore } from "@/stores/ui";
 const auth = useAuthStore();
 const nav = useNavStore();
 const ui = useUIStore();
+const route = useRoute();
 
-const props = defineProps({ projectId: String, datasetId: String });
+const props = defineProps({ projectId: String });
 
 Promise.all([
   projectService.getById({
     id: props.projectId,
     forSelf: !auth.canOperate,
   }),
-  DatasetService.getById({ id: props.datasetId }),
+  DatasetService.getById({ id: route.params.datasetId }),
 ]).then((results) => {
   const project = results[0].data;
   const dataset = results[1].data;

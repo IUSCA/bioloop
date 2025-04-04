@@ -167,10 +167,12 @@ import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { useProjectFormStore } from "@/stores/projects/projectForm";
 import { useUIStore } from "@/stores/ui";
+import { useRoute } from "vue-router";
 
-const props = defineProps({ projectId: String });
+// const props = defineProps({ projectId: String });
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 const projectFormStore = useProjectFormStore();
 const nav = useNavStore();
@@ -178,7 +180,7 @@ const ui = useUIStore();
 
 const project = ref({});
 const projectId = computed(() => {
-  return project.value?.id || toRef(() => props.projectId).value;
+  return project.value?.id || toRef(() => route.params.projectId).value;
 });
 const data_loading = ref(false);
 const triggerDatasetsRetrieval = ref(false);
