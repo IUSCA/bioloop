@@ -1,54 +1,58 @@
 <template>
   <div class="login-container">
     <div class="login-box">
-      <h2>Sign In</h2>
+      <h2 class="text-center mb-4">Sign In</h2>
 
       <!-- Email Input -->
-      <div class="input-group">
-        <label for="email">Email Address</label>
-        <input
-          type="email"
-          id="email"
+      <div class="field-wrapper">
+        <label class="form-label">EMAIL ADDRESS</label>
+        <va-input
           v-model="email"
           placeholder="Enter your email"
+          class="mb-3"
+          type="email"
         />
       </div>
 
       <!-- Password Input -->
-      <div class="input-group">
-        <label for="password">Password</label>
-        <input
-          type="password"
-          id="password"
+      <div class="field-wrapper">
+        <label class="form-label">PASSWORD</label>
+        <va-input
           v-model="password"
           placeholder="Enter your password"
+          class="mb-3"
+          type="password"
         />
       </div>
 
       <!-- Remember Me & Forgot Password -->
-      <div class="options">
-        <label class="remember-me">
-          <input type="checkbox" v-model="rememberMe" />
-          <span class="checkbox-custom"></span>
-          Remember me
-        </label>
+      <div class="options mb-3">
+        <va-checkbox
+          v-model="rememberMe"
+          class="remember-me"
+          label="Remember me"
+        />
         <router-link to="/forgot-password" class="forgot-password">
           Forgot password?
         </router-link>
       </div>
 
       <!-- Sign In Button -->
-      <button class="login-btn" @click="handleLogin">Sign In</button>
+      <va-button class="w-full login-btn" color="success" @click="handleLogin">
+        Sign In
+      </va-button>
 
-      <!-- Signup Link (Navigates to Signup.vue) -->
-      <p class="register-link">
-        Not a member? <router-link to="/signup">Signup</router-link>
+      <!-- Signup Link -->
+      <p class="register-link mt-3">
+        Not a member?
+        <router-link to="/signup">Signup</router-link>
       </p>
     </div>
   </div>
 </template>
 
 <script setup>
+import toast from "@/services/toast"; // from your project
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
@@ -58,19 +62,32 @@ const rememberMe = ref(false);
 const router = useRouter();
 
 const handleLogin = () => {
+  if (!email.value && !password.value) {
+    toast.error("Email and Password are required");
+    return;
+  }
+
+  if (!email.value) {
+    toast.error("Email is required");
+    return;
+  }
+
+  if (!password.value) {
+    toast.error("Password is required");
+    return;
+  }
+
   console.log("Logging in with:", {
     email: email.value,
     password: password.value,
     rememberMe: rememberMe.value,
   });
 
-  // Future: Implement authentication logic here
-  alert("Login functionality to be implemented!");
+  toast.success("Login functionality to be implemented!");
 };
 </script>
 
 <style scoped>
-/* Center the login box */
 .login-container {
   display: flex;
   justify-content: center;
@@ -79,69 +96,35 @@ const handleLogin = () => {
   background: #f9f9f9;
 }
 
-/* Login box */
 .login-box {
   background: white;
-  padding: 30px;
-  border-radius: 10px;
+  padding: 40px;
+  border-radius: 12px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  width: 350px;
+  width: 420px;
   text-align: center;
 }
 
-/* Input fields */
-.input-group {
-  margin-bottom: 15px;
+.field-wrapper {
+  margin-bottom: 16px;
   text-align: left;
 }
 
-.input-group label {
+.form-label {
   display: block;
   font-weight: bold;
-  margin-bottom: 5px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  color: #2c3e50;
 }
 
-.input-group input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-/* Remember me & forgot password */
 .options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
 }
 
-/* Custom checkbox */
-.remember-me {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-.remember-me input {
-  display: none;
-}
-
-.checkbox-custom {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  background: #e0e0e0;
-  display: inline-block;
-  margin-right: 8px;
-  transition: background 0.3s ease-in-out;
-}
-
-.remember-me input:checked + .checkbox-custom {
-  background: #4caf50; /* ✅ Green highlight when checked */
-}
-
-/* Forgot password */
 .forgot-password {
   color: #007bff;
   text-decoration: none;
@@ -152,25 +135,7 @@ const handleLogin = () => {
   text-decoration: underline;
 }
 
-/* Sign-in button */
-.login-btn {
-  width: 100%;
-  background-color: #4caf50; /* ✅ Green Sign-In button */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.login-btn:hover {
-  background-color: #45a049;
-}
-
-/* Register link */
 .register-link {
-  margin-top: 10px;
   font-size: 0.9rem;
 }
 
@@ -181,5 +146,9 @@ const handleLogin = () => {
 
 .register-link a:hover {
   text-decoration: underline;
+}
+
+.login-btn:hover {
+  filter: brightness(0.95);
 }
 </style>

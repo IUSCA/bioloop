@@ -1,163 +1,168 @@
 <template>
   <div class="signup-container">
     <div class="signup-box">
-      <h2>Sign Up</h2>
+      <h2 class="text-center mb-4">Sign Up</h2>
 
-      <!-- First Name (Required) -->
-      <div class="input-group">
-        <label for="firstName"
-          >First Name <span class="required">*</span></label
-        >
-        <input
-          type="text"
-          id="firstName"
-          v-model="firstName"
-          placeholder="Enter your first name"
-        />
-        <p v-if="errors.firstName" class="error-message">
-          {{ errors.firstName }}
-        </p>
+      <!-- First Name -->
+      <div class="field-wrapper">
+        <label class="form-label">FIRST NAME *</label>
+        <va-input v-model="firstName" placeholder="Enter your first name" />
       </div>
 
-      <!-- Middle Name (Optional) -->
-      <div class="input-group">
-        <label for="middleName">Middle Name</label>
-        <input
-          type="text"
-          id="middleName"
+      <!-- Middle Name -->
+      <div class="field-wrapper">
+        <label class="form-label">MIDDLE NAME</label>
+        <va-input
           v-model="middleName"
           placeholder="Enter your middle name (optional)"
         />
       </div>
 
-      <!-- Last Name (Required) -->
-      <div class="input-group">
-        <label for="lastName">Last Name <span class="required">*</span></label>
-        <input
-          type="text"
-          id="lastName"
-          v-model="lastName"
-          placeholder="Enter your last name"
-        />
-        <p v-if="errors.lastName" class="error-message">
-          {{ errors.lastName }}
-        </p>
+      <!-- Last Name -->
+      <div class="field-wrapper">
+        <label class="form-label">LAST NAME *</label>
+        <va-input v-model="lastName" placeholder="Enter your last name" />
       </div>
 
-      <!-- Email Address (Required) -->
-      <div class="input-group">
-        <label for="email">Email Address <span class="required">*</span></label>
-        <input
-          type="email"
-          id="email"
+      <!-- Email -->
+      <div class="field-wrapper">
+        <label class="form-label">EMAIL ADDRESS *</label>
+        <va-input
           v-model="email"
           placeholder="Enter your email"
+          type="email"
+          :error="emailTouched && !!errors.email"
+          :error-messages="emailTouched ? errors.email : ''"
+          @update:modelValue="onEmailUpdate"
         />
-        <p v-if="errors.email" class="error-message">{{ errors.email }}</p>
       </div>
 
-      <!-- Phone Number (Required, US Format) -->
-      <div class="input-group">
-        <label for="phone">Phone Number <span class="required">*</span></label>
-        <div class="phone-input">
+      <!-- Phone -->
+      <div class="field-wrapper">
+        <label class="form-label">PHONE NUMBER</label>
+        <div class="phone-wrapper">
           <span class="country-code">+1</span>
-          <input
-            type="text"
-            id="phone"
+          <va-input
             v-model="phone"
             placeholder="(XXX) XXX-XXXX"
             maxlength="14"
-            @input="formatPhone"
+            class="flex-1"
+            @update:modelValue="onPhoneUpdate"
+            :error="phoneTouched && !!errors.phone"
+            :error-messages="phoneTouched ? errors.phone : ''"
           />
         </div>
-        <p v-if="errors.phone" class="error-message">{{ errors.phone }}</p>
       </div>
 
       <!-- Next Step Button -->
-      <button class="next-btn" @click="validateAndProceed">Next Step</button>
+      <va-button
+        class="w-full next-btn mt-4"
+        color="success"
+        @click="validateAndProceed"
+      >
+        Next Step
+      </va-button>
     </div>
   </div>
 </template>
 
 <script setup>
+import toast from "@/services/toast";
+import { useDebounceFn } from "@vueuse/core";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 
-// User Input Fields
 const firstName = ref("");
 const middleName = ref("");
 const lastName = ref("");
 const email = ref("");
 const phone = ref("");
 
-// Validation Errors
 const errors = ref({
-  firstName: "",
-  lastName: "",
   email: "",
   phone: "",
 });
 
-// Function to validate email format
-const isValidEmail = (email) => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
+const emailTouched = ref(false);
+const phoneTouched = ref(false);
 
-// Function to format phone number as (XXX) XXX-XXXX
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPhone = (phone) => /^\(\d{3}\) \d{3}-\d{4}$/.test(phone);
+
 const formatPhone = () => {
-  let rawNumber = phone.value.replace(/\D/g, ""); // Remove all non-numeric characters
-  if (rawNumber.length > 10) rawNumber = rawNumber.substring(0, 10); // Max 10 digits (excluding country code)
-  phone.value = rawNumber.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3");
+  let raw = phone.value.replace(/\D/g, "");
+  if (raw.length > 10) raw = raw.slice(0, 10);
+  phone.value = raw.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3");
 };
 
-// Function to validate required fields
+const onEmailUpdate = useDebounceFn((value) => {
+  emailTouched.value = true;
+  errors.value.email = isValidEmail(value)
+    ? ""
+    : "Please enter a valid email address.";
+}, 500);
+
+const onPhoneUpdate = useDebounceFn((value) => {
+  phoneTouched.value = true;
+  formatPhone();
+  if (value.trim()) {
+    errors.value.phone = isValidPhone(phone.value)
+      ? ""
+      : "Phone number must be in (XXX) XXX-XXXX format.";
+  } else {
+    errors.value.phone = "";
+  }
+}, 500);
+
 const validateAndProceed = () => {
+  errors.value = {
+    email: "",
+    phone: "",
+  };
+
   let valid = true;
 
-  // Reset errors
-  errors.value = { firstName: "", lastName: "", email: "", phone: "" };
-
-  // First Name Validation
   if (!firstName.value.trim()) {
-    errors.value.firstName = "First name is required.";
+    toast.error(
+      "First Name is required. To proceed to the next step, please enter the information.",
+    );
     valid = false;
   }
 
-  // Last Name Validation
   if (!lastName.value.trim()) {
-    errors.value.lastName = "Last name is required.";
+    toast.error(
+      "Last Name is required. To proceed to the next step, please enter the information.",
+    );
     valid = false;
   }
 
-  // Email Validation
   if (!email.value.trim()) {
     errors.value.email = "Email is required.";
+    toast.error(
+      "Email Address is required. To proceed to the next step, please enter the information.",
+    );
     valid = false;
   } else if (!isValidEmail(email.value)) {
     errors.value.email = "Please enter a valid email address.";
+    toast.error(
+      "Email Address is invalid. Please enter a valid email to continue.",
+    );
     valid = false;
   }
 
-  // Phone Validation
-  if (!phone.value.trim()) {
-    errors.value.phone = "Phone number is required.";
-    valid = false;
-  } else if (!/^\(\d{3}\) \d{3}-\d{4}$/.test(phone.value)) {
+  if (phone.value.trim() && !isValidPhone(phone.value)) {
     errors.value.phone = "Phone number must be in (XXX) XXX-XXXX format.";
-    valid = false;
   }
 
-  // Proceed if valid
   if (valid) {
-    router.push("/signupStep2"); // Navigate to next step (username & password)
+    router.push("/signupStep2");
   }
 };
 </script>
 
 <style scoped>
-/* Centering the sign-up form */
 .signup-container {
   display: flex;
   justify-content: center;
@@ -166,80 +171,38 @@ const validateAndProceed = () => {
   background: #f9f9f9;
 }
 
-/* Sign-up box */
 .signup-box {
   background: white;
-  padding: 30px;
-  border-radius: 10px;
+  padding: 40px;
+  border-radius: 12px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  width: 400px;
-  text-align: center;
+  width: 420px;
 }
 
-/* Input Fields */
-.input-group {
-  margin-bottom: 15px;
+.field-wrapper {
+  margin-bottom: 16px;
   text-align: left;
 }
 
-.input-group label {
+.form-label {
   display: block;
   font-weight: bold;
-  margin-bottom: 5px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  color: #2c3e50;
+  margin-bottom: 6px;
 }
 
-.input-group input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-/* Required field asterisk */
-.required {
-  color: red;
-  font-weight: bold;
-}
-
-/* Phone Number Input with Country Code */
-.phone-input {
+.phone-wrapper {
   display: flex;
   align-items: center;
 }
 
 .country-code {
-  background: #4caf50; /* Green background */
+  background: #4caf50;
   color: white;
   padding: 10px;
   border-radius: 5px 0 0 5px;
   font-weight: bold;
-}
-
-.phone-input input {
-  flex: 1;
-  border-radius: 0 5px 5px 0;
-}
-
-/* Error Messages */
-.error-message {
-  color: red;
-  font-size: 0.85rem;
-  margin-top: 5px;
-}
-
-/* Next Step Button */
-.next-btn {
-  width: 100%;
-  background-color: #4caf50; /* Green button */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.next-btn:hover {
-  background-color: #45a049;
 }
 </style>
