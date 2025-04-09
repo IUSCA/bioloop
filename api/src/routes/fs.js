@@ -84,9 +84,9 @@ router.get(
   query('search_space').optional().escape().notEmpty(),
   asyncHandler(async (req, res, next) => {
     let filesData = [{
-      name: path.basename("test2"),
+      name: path.basename("test4"),
       isDir: true,
-      path: "/path/to/test2",
+      path: "/path/to/test3",
       size: 0, // placeholder for actual size calculation
     }]
     filesData = _.compact(filesData);

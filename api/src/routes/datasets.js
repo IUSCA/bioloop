@@ -349,7 +349,7 @@ router.post(
 
     // gather non-null data to create a new dataset
     const data = _.flow([
-      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size']),
+      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'project_id']),
       _.omitBy(_.isNil),
     ])(req.body);
 
@@ -384,6 +384,10 @@ router.post(
     }
 
     if (req.body.project_id) {
+      console.log('data.project_id', data.project_id)
+      delete data.project_id; // including project_id in the `data` passed to create_dataset will throw
+      console.log('data.project_id', data.project_id)
+
       data.projects = {
         create: [{
           project_id: req.body.project_id,
