@@ -104,12 +104,6 @@ const exports = {
         test_id: "sidebar-profile",
       },
       {
-        icon: "mdi-key",
-        title: "Login",
-        path: "/Login",
-        test_id: "sidebar-login",
-      },
-      {
         icon: "mdi-logout-variant",
         title: "Logout",
         path: "/auth/logout",
