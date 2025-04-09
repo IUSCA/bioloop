@@ -116,13 +116,17 @@
           <div class="space-y-4">
             <ProjectSelect
               @select="setProject"
+              :disabled="!isAssignedProject"
             ></ProjectSelect>
 
             <ProjectList
                 v-if="Object.values(projectSelected).length > 0"
-                :projects="Object.values(projectSelected)"
+                :projects="[Object.values(projectSelected)[0]]"
                 show-remove
-                @remove="resetSelectedProject">
+                @remove="(project) => {
+                  console.log('Removing project in template:', project);
+                  resetSelectedProject(project)
+                }">
             </ProjectList>
       </div>
       </div>
@@ -131,7 +135,7 @@
       </div>
     </template>
 
-    <template #step-content-2>
+    <template #step-content-1>
       <div class="flex flex-col gap-10">
         <va-checkbox
           v-model="isAssignedSourceRawData"
@@ -298,7 +302,7 @@ const isPreviousButtonDisabled = computed(() => {
 // this time, errors are only shown on steps 0 (STEP_KEYS.DIRECTORY) and 1
 // (STEP_KEYS.RAW_DATA)
 const stepPristineStates = ref([
-  { [STEP_KEYS.DIRECTORY]: true },
+  // { [STEP_KEYS.DIRECTORY]: true },
     { [STEP_KEYS.PROJECT]: true },
   { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.INFO]: true },
@@ -309,7 +313,7 @@ const stepIsPristine = computed(() => {
 });
 
 const formErrors = ref({
-  [STEP_KEYS.DIRECTORY]: null,
+  // [STEP_KEYS.DIRECTORY]: null,
   [STEP_KEYS.PROJECT]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
@@ -334,7 +338,7 @@ const setProject  = project => {
   // console.log('projectSelected', projectSelected.value)
   // console.log('projectId', project.id)
   // resetSelectedProject(project)
-  projectSelected.value = { [project.id]: project }
+  projectSelected.value = {[project.id]: project};
 
   // console.log('projectSelected after remove', projectSelected.value)
   // projectSelected.value[project.id] = project
@@ -343,12 +347,13 @@ const setProject  = project => {
 
 const resetSelectedProject = (project) => {
   // console.log('remove project', project)
-  // console.log('projectSelected before remove', projectSelected.value)
+  console.log('projectSelected before remove', projectSelected.value)
   // console.log("typeof projectSelected.value", typeof projectSelected.value)
   // console.log("project.id", project.id)
   // console.log("projectSelected.value[project.id]", projectSelected.value[project.id])
-  delete projectSelected.value[project.id];
-  // console.log('projectSelected after remove', projectSelected.value)
+  // delete projectSelected.value[project.id];
+  projectSelected.value = {};
+  console.log('projectSelected after remove', projectSelected.value)
 }
 
 const isFileSearchAutocompleteOpen = ref(false);
@@ -394,11 +399,10 @@ const setFormErrors = async () => {
     if (!isAssignedProject.value) {
       formErrors.value[STEP_KEYS.PROJECT] = null;
       return;
-    }
-    if (Object.values(projectSelected.value).length === 0) {
+    } else if (Object.values(projectSelected.value).length === 0) {
         formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR;
         return;
-      }
+    }
   } else if (step.value === 1) {
     if (!isAssignedSourceRawData.value) {
       formErrors.value[STEP_KEYS.RAW_DATA] = null;
@@ -555,7 +559,7 @@ const preIngestion = () => {
     type: config.dataset.types.DATA_PRODUCT.key,
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
-    project_id: Object.values(projectSelected.value)[0].id
+    project_id: Object.values(projectSelected.value)[0]?.id
   });
 };
 
@@ -623,8 +627,19 @@ const onNextClick = (nextStep) => {
   }
 };
 
+watch(projectSelected, async (newVal, oldVal) => {
+  console.log("prjectSelected changed")
+  console.log("projectSelected keys arr", Object.keys(projectSelected.value));
+})
+
+onMounted(() => {
+  console.log("moiunted")
+  console.log("projectSelected", projectSelected);
+})
+
 // Form errors are set when this component mounts, or when a form field's value
 // changes, or when the current step changes.
+// TODO - after adding a project, if the Delete Project button is clicked, the Next button does not turn inactive
 watch(
   [
     step,
@@ -638,22 +653,32 @@ watch(
     isAssignedProject,
   ],
   async (newVals, oldVals) => {
+    console.log("watch triggered");
+    console.log("projectSelected", newVals[1]);
+    console.log("isAssignedProject", newVals[8]);
+
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    if (stepKey === STEP_KEYS.RAW_DATA || stepKey === STEP_KEYS.PROJECT) {
+    if (stepKey === STEP_KEYS.RAW_DATA) {
       // `7` corresponds to `isAssignedSourceRawData` in this Watcher
-      if (stepKey === STEP_KEYS.RAW_DATA) {
-        stepPristineStates.value[step.value][stepKey] = !oldVals[7] && newVals[7];
-      } else if (stepKey === STEP_KEYS.PROJECT) {
+      // `8` corresponds to `isAssignedProject` in this Watcher
+      // const index = STEP_KEYS.RAW_DATA === stepKey ? 7 : (STEP_KEYS.PROJECT === stepKey && 8);
+      stepPristineStates.value[step.value][stepKey] = !oldVals[7] && newVals[7];
+
+      // if (stepKey === STEP_KEYS.RAW_DATA) {
+      // } else if (stepKey === STEP_KEYS.PROJECT) {
         // `8` corresponds to `isAssignedProject` in this Watcher
-        stepPristineStates.value[step.value][stepKey] = !oldVals[8] && newVals[8];
-      }
+
+    } else if (stepKey === STEP_KEYS.PROJECT) {
+      // If either the `Assign Project` checkbox's value changes, or if a selected project changes, set `Project` step to pristine
+      // `1` corresponds to `projectSelected` in this Watcher
+      // `7` corresponds to `isAssignedProject` in this Watcher (which corresponds to the `Assign Project` checkbox)
+      stepPristineStates.value[step.value][stepKey] = (!oldVals[1] && newVals[1]) || (!oldVals[8] && newVals[8]);
+    }
 
       // const index = STEP_KEYS.RAW_DATA === stepKey ? 7 : (STEP_KEYS.PROJECT === stepKey && 8);
       // stepPristineStates.value[step.value][stepKey] = !oldVals[7] && newVals[7];
-    } else {
-      stepPristineStates.value[step.value][stepKey] = false;
-    }
+
 
     await setFormErrors();
   },
