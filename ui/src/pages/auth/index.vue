@@ -11,9 +11,13 @@
           <AppTitle />
         </div>
 
-        <div class="mt-2 mb-4">
+        <div class="mt-2 mb-6">
           <va-divider />
         </div>
+
+        <p class="w-full text-center text-2xl font-semibold mb-6">
+          Login / Sign up with
+        </p>
 
         <!-- IU CAS -->
         <div class="flex justify-center px-8 mb-3">
@@ -31,7 +35,7 @@
                 alt="IU logo"
               />
               <span class="dark:text-slate-100" data-testid="login-button">
-                Login with Indiana University
+                Indiana University
               </span>
             </div>
           </va-button>
@@ -55,7 +59,7 @@
                 loading="lazy"
                 alt="google logo"
               />
-              <span class="dark:text-slate-100"> Login with Google </span>
+              <span class="dark:text-slate-100"> Google </span>
             </div>
           </va-button>
         </div>
@@ -78,7 +82,7 @@
                 loading="lazy"
                 alt="CILogon logo"
               />
-              <span class="dark:text-slate-100"> Login with CILogon </span>
+              <span class="dark:text-slate-100"> CILogon </span>
             </div>
           </va-button>
         </div>
@@ -103,7 +107,7 @@
                 loading="lazy"
                 alt="microsoft logo"
               />
-              <span class="dark:text-slate-100"> Login with Microsoft </span>
+              <span class="dark:text-slate-100"> Microsoft </span>
             </div>
           </va-button>
         </div>
