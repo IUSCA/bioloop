@@ -65,6 +65,8 @@
               }
             "
             @close="
+              console.log('close');
+              console.log('selectedFile', selectedFile);
               () => {
                 if (!selectedFile) {
                   fileListSearchText = '';
@@ -74,7 +76,7 @@
                 if (asyncValidatingDatasetName) {
                   asyncValidatingDatasetName = false;
                 }
-              }
+              };
             "
             v-model:selected="selectedFile"
             @update:selected="fileList = []"
@@ -449,6 +451,7 @@ watchDebounced(
 );
 
 const setRetrievedFiles = (files) => {
+  console.log("Retrieved files:", files);
   fileList.value = files;
 };
 
@@ -583,6 +586,11 @@ onMounted(() => {
     .finally(() => {
       loadingResources.value = false;
     });
+});
+
+watch((selectedFile) => {
+  console.log("watch selectedFile");
+  console.log("selectedFile:", selectedFile.value);
 });
 </script>
 
