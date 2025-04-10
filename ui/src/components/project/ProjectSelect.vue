@@ -43,12 +43,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  forSelf: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const searchText = ref("");
 const projects = ref([]);
 
-projectService.getAll({ forSelf: false }).then((res) => {
+projectService.getAll({forSelf: props.forSelf}).then((res) => {
   projects.value = (res.data.projects || []).filter(
     (p) => !props.excludeIds.includes(p.id),
   );
