@@ -151,6 +151,8 @@ const filter_query = computed(() => {
   return {
     ...uploads_batching_query.value,
     ...(!!search_query.value && { ...search_query.value }),
+    username: auth.user?.username,
+    forSelf: !auth.canOperate,
   };
 });
 

@@ -20,6 +20,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    datasetUploads: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     projects: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -76,7 +82,14 @@ const grantsObject = {
       'read:own': ['*'],
     },
     workflow: {
-      'create:any': ['stage'], // can only create a stage workflow
+      // user role can only create these four workflows
+      'create:any': ['integrated', 'stage', 'process_dataset_upload', 'cancel_dataset_upload'],
+    },
+    datasetUploads: {
+      'create:any': ['*'],
+      'read:own': ['*'],
+      'update:own': ['*'],
+      'delete:own': ['*'],
     },
     statistics: {
       'create:any': ['*'],
@@ -92,6 +105,9 @@ const grantsObject = {
       'update:own': ['*'],
       'delete:own': ['*']
     },
+    fs: {
+      'read:any': ['*'],
+    }
   },
 
   // operator role permissions
@@ -107,6 +123,12 @@ const grantsObject = {
       'update:any': ['*'],
     },
     datasets: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    datasetUploads: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

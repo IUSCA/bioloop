@@ -928,3 +928,4 @@ router.get(
 );
 
 module.exports = router;
+module.exports.dataset_access_check = dataset_access_check
