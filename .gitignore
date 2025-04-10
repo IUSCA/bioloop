@@ -68,4 +68,5 @@ todo.md
 .pm2
 
 rhythm_api/
-signet/
+rhythm/rhythm_api
+signet/signet

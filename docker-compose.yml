@@ -22,13 +22,22 @@ services:
       - api/.env
     volumes:
       - ./api/:/opt/sca/app
+      # Mounting workers folder so we can create api token in .env config on api startup if needed
+      - ./workers/:/opt/sca/workers 
     working_dir: /opt/sca/app
     expose:
       - 3030
     entrypoint: ["bin/entrypoint.sh"]
-    command: npm run dev
+    # Doing a script to run setup of connections to and from api
+    command: bin/dev_command.sh
     depends_on:
-     - postgres
+      signet:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      rhythm:
+        condition: service_healthy
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
       interval: 30s
@@ -51,7 +60,6 @@ services:
 
 # Workers
   celery_worker:
-    # user: ${USER_ID}:${GROUP_ID}
     build:
       context: ./workers
     environment:
@@ -65,8 +73,12 @@ services:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     depends_on:
-      - queue
-      - mongo
+      api:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      queue:
+        condition: service_started
 
 
   # Rhythm_api containers
@@ -88,7 +100,7 @@ services:
     expose:
       - 27017
     ports:
-      - localhost:27017:27017
+      - 127.0.0.1:27017:27017
     env_file:
       - db/mongo/.env.example
     volumes:
@@ -98,21 +110,25 @@ services:
 
   rhythm:
     restart: unless-stopped
-    build:
-      context: ./rhythm_api
+    image: git.sca.iu.edu:5050/iusca/rhythm_api/rhythm:latest
     expose:
       - 5001
     env_file:
       - db/mongo/.env.example
       - db/queue/.env.example
       - db/rhythm/.env.example
-    environment:
-      - PORT=5001
+    entrypoint: ["/opt/bin/entrypoint.sh"]
     volumes:
-      - ./rhythm_api:/opt/sca
+      - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh
+      - ./api:/app/api
     depends_on:
       - queue
       - mongo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 # Secure_download containers
   secure_download:
@@ -128,12 +144,16 @@ services:
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: npm run dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 # Signet containers
   signet:
     restart: unless-stopped
-    build:
-      context: ./signet
+    image: git.sca.iu.edu:5050/iusca/signet/signet:latest
     expose:
       - 5050
     environment:
@@ -144,10 +164,15 @@ services:
       - POSTGRES_PASSWORD=example
       - POSTGRES_HOST=signet_db
       - POSTGRES_PORT=5432
-    env_file:
-      - signet/.env.example
+    # env_file:
+    #   # - signet/.env.example
     depends_on:
       - signet_db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   signet_db:
     image: postgres:14.5
