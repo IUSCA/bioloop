@@ -293,6 +293,7 @@ router.get(
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
     query('include_upload_log').toBoolean().default(false),
+    query('include_import_log').toBoolean().optional().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -311,6 +312,7 @@ router.get(
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
       include_upload_log: req.query.include_upload_log,
+      include_import_log: req.query.include_import_log,
     });
 
     res.json(dataset);
@@ -380,6 +382,12 @@ router.post(
           },
         ],
       };
+    }
+
+    data.import_log = {
+      create: {
+        creator_id: req.user.id,
+      }
     }
 
     // add a state
