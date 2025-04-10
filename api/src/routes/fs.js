@@ -83,7 +83,7 @@ router.get(
   query('dirs_only').optional().default(false),
   query('search_space').optional().escape().notEmpty(),
   asyncHandler(async (req, res, next) => {
-    const name = "file2"
+    const name = "file15"
     res.json([{
       name: name,
       isDir: true,

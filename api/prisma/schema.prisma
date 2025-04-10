@@ -88,6 +88,8 @@ model import_log {
   creator      user     @relation(fields: [creator_id], references: [id], onDelete: Cascade)
   dataset_id   Int      @unique
   dataset      dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  instrument    instrument? @relation(fields: [instrument_id], references: [id], onDelete: Cascade)
+  instrument_id Int?
 }
 
 
@@ -392,6 +394,16 @@ model about {
   created_at         DateTime @default(now()) @db.Timestamp(6)
   last_updated_by    user?     @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
   last_updated_by_id Int?
+}
+
+model instrument {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  host        String       @unique
+  description String?
+  created_at  DateTime     @default(now()) @db.Timestamp(6)
+  updated_at  DateTime     @default(now()) @db.Timestamp(6)
+  import_log  import_log[]
 }
 
 enum access_type {
