@@ -90,6 +90,18 @@
     </template>
 
     <template #step-content-1>
+      <va-select
+        class="w-full"
+        v-model="selectedInstrument"
+        label="Select source instrument"
+        placeholder="Select source instrument"
+        :options="instruments"
+        :text-by="'name'"
+        :track-by="'id'"
+      />
+    </template>
+
+    <template #step-content-2>
       <div class="flex flex-col gap-10">
         <va-checkbox
           v-model="isAssignedSourceRawData"
@@ -129,12 +141,13 @@
       </div>
     </template>
 
-    <template #step-content-2>
+    <template #step-content-3>
       <IngestionInfo
         :ingestion-dir="selectedFile"
         :source-raw-data="rawDataSelected[0]"
         :ingestion-space="searchSpace.label"
         :dataset-id="datasetId"
+        :instrument="selectedInstrument"
       />
     </template>
 
@@ -170,6 +183,7 @@
 
 <script setup>
 import config from "@/config";
+import instrumentService from "@/services/instrument";
 import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
@@ -178,6 +192,7 @@ import pm from "picomatch";
 
 const STEP_KEYS = {
   DIRECTORY: "directory",
+  INSTRUMENT: "instrument",
   RAW_DATA: "rawData",
   INFO: "info",
 };
@@ -190,6 +205,7 @@ const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
   "You have requested a source Raw Data to be assigned. Please select one.";
+const INSTRUMENT_REQUIRED_ERROR = "You must select a source instrument.";
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -201,6 +217,11 @@ const steps = [
     label: "Select Directory",
     icon: "material-symbols:folder",
   },
+  {
+    key: STEP_KEYS.INSTRUMENT,
+    label: "Select Source Instrument",
+    icon: "material-symbols:microscope",
+  },
   { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
   {
     key: STEP_KEYS.INFO,
@@ -209,6 +230,8 @@ const steps = [
   },
 ];
 
+const selectedInstrument = ref(null);
+const instruments = ref([]);
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
 const rawDataSelected = ref([]);
@@ -251,6 +274,7 @@ const isPreviousButtonDisabled = computed(() => {
 // (STEP_KEYS.RAW_DATA)
 const stepPristineStates = ref([
   { [STEP_KEYS.DIRECTORY]: true },
+  { [STEP_KEYS.INSTRUMENT]: true },
   { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.INFO]: true },
 ]);
@@ -261,6 +285,7 @@ const stepIsPristine = computed(() => {
 
 const formErrors = ref({
   [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.INSTRUMENT]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
 });
@@ -268,6 +293,8 @@ const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.DIRECTORY];
   } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.INSTRUMENT];
+  } else if (step.value === 2) {
     return !!formErrors.value[STEP_KEYS.RAW_DATA];
   } else {
     return false;
@@ -281,6 +308,7 @@ const selectedFile = ref(null);
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.DIRECTORY]: null,
+    [STEP_KEYS.INSTRUMENT]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.INFO]: null,
   };
@@ -312,6 +340,11 @@ const setFormErrors = async () => {
       }
     }
   } else if (step.value === 1) {
+    if (!selectedInstrument.value) {
+      formErrors.value[STEP_KEYS.INSTRUMENT] = INSTRUMENT_REQUIRED_ERROR;
+      return;
+    }
+  } else if (step.value === 2) {
     if (!isAssignedSourceRawData.value) {
       formErrors.value[STEP_KEYS.RAW_DATA] = null;
       return;
@@ -466,6 +499,7 @@ const preIngestion = () => {
     type: config.dataset.types.DATA_PRODUCT.key,
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
+    instrument_id: selectedInstrument.value.id,
   });
 };
 
@@ -543,12 +577,15 @@ watch(
     isFileSearchAutocompleteOpen,
     searchSpace,
     isAssignedSourceRawData,
+    selectedInstrument,
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
     if (stepKey === STEP_KEYS.RAW_DATA) {
       stepPristineStates.value[step.value][stepKey] = !oldVals[5] && newVals[5];
+    } else if (stepKey === STEP_KEYS.INSTRUMENT) {
+      stepPristineStates.value[step.value][stepKey] = !oldVals[6] && newVals[6];
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
     }
@@ -575,6 +612,14 @@ onMounted(() => {
     .getAll({ type: "RAW_DATA" })
     .then((res) => {
       rawDataList.value = res.data.datasets;
+      return Promise.resolve();
+    })
+    .then(() => {
+      return instrumentService.getAll();
+    })
+    .then((res) => {
+      console.log("instruments:", res.data);
+      instruments.value = res.data;
     })
     .catch((err) => {
       toast.error("Failed to load resources");

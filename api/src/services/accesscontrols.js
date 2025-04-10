@@ -20,6 +20,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    instruments: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     projects: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -78,6 +84,9 @@ const grantsObject = {
     workflow: {
       'create:any': ['stage'], // can only create a stage workflow
     },
+    instruments: {
+      'read:any': ['*'],
+    },
     statistics: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -97,6 +106,12 @@ const grantsObject = {
       'update:any': ['*'],
     },
     datasets: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    instruments: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
