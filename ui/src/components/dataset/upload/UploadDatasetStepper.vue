@@ -32,26 +32,44 @@
 
       <template #step-content-0>
         <!-- <div class="flex flex-col"> -->
+        <div class="flex flex-col gap-10">
+          <va-checkbox
+              v-model="isAssignedProject"
+              @update:modelValue="
+            (val) => {
+              if (!val) {
+                projectSelected = {};
+              }
+            }
+          "
+              color="primary"
+              label="Assign Project"
+          />
+
           <va-form-field
-            v-model="projectSelected"
-            v-slot="{ value: v }"
+              v-model="projectSelected"
+              v-slot="{ value: v }"
           >
-          <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
-            <div class="space-y-4">
-              <ProjectSelect
-                @select="setProject"
-              ></ProjectSelect>
+            <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
+              <div class="space-y-4">
+                <ProjectSelect
+                    @select="setProject"
+                    :disabled="!isAssignedProject"
+                ></ProjectSelect>
 
-          <ProjectList v-if="Object.values(projectSelected).length > 0"
-            :projects="Object.values(projectSelected)"
-            show-remove
-            @remove="resetSelectedProject">
-          </ProjectList>
+                <ProjectList
+                    v-if="Object.values(projectSelected).length > 0"
+                    :projects="[Object.values(projectSelected)[0]]"
+                    show-remove
+                    @remove="(project) => {
+                  console.log('Removing project in template:', project);
+                  resetSelectedProject()
+                }">
+                </ProjectList>
+              </div>
+            </div>
+          </va-form-field>
         </div>
-        </div>
-
-        </va-form-field>
-        <!-- </div> -->
       </template>
 
 
@@ -278,6 +296,7 @@ const stepHasErrors = computed(() => {
 });
 
 const isAssignedSourceRawData = ref(true);
+const isAssignedProject = ref(true);
 const submissionSuccess = ref(false);
 
 const isPreviousButtonDisabled = computed(() => {
@@ -406,7 +425,7 @@ const resetSelectedProject = (project) => {
   // console.log("typeof projectSelected.value", typeof projectSelected.value)
   // console.log("project.id", project.id)
   // console.log("projectSelected.value[project.id]", projectSelected.value[project.id])
-  delete projectSelected.value[project.id];
+  projectSelected.value = {};
   // console.log('projectSelected after remove', projectSelected.value)
 }
 
@@ -552,16 +571,19 @@ const setFormErrors = async () => {
 
   console.log("step.value", step.value)
 
+  console.log("!isAssignedSourceRawData", !isAssignedSourceRawData)
+  console.log("formErrors", formErrors.value)
+  console.log("rawDataSelected", rawDataSelected.value)
+
   if (step.value === 0) {
-    if (Object.values(projectSelected.value).length === 0) {
+    if (!isAssignedProject.value) {
+      formErrors.value[STEP_KEYS.PROJECT] = null;
+      return;
+    } else if (Object.values(projectSelected.value).length === 0) {
       formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR;
       return;
     }
   }
-
-  console.log("!isAssignedSourceRawData", !isAssignedSourceRawData)
-  console.log("formErrors", formErrors.value)
-  console.log("rawDataSelected", rawDataSelected.value)
 
   if (step.value === 1) {
     if (!isAssignedSourceRawData.value) {
@@ -1168,15 +1190,17 @@ watch(
     selectingFiles,
     selectingDirectory,
     isAssignedSourceRawData,
+    isAssignedProject,
     filesToUpload,
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    // if (stepKey === STEP_KEYS.PROJECT) {
-    //   stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0];
-    // } else
-    if (stepKey === STEP_KEYS.PROJECT || stepKey === STEP_KEYS.RAW_DATA) {
+    if (stepKey === STEP_KEYS.PROJECT) {
+      // `1` corresponds to `projectSelected` in this Watcher
+      // `8` corresponds to `isAssignedProject` in this Watcher (which corresponds to the `Assign Project` checkbox)
+      stepPristineStates.value[step.value][stepKey] = (!oldVals[1] && newVals[1]) || (!oldVals[8] && newVals[8]);
+    } else if (stepKey === STEP_KEYS.RAW_DATA) {
       stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0];
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
