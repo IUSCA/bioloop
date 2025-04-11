@@ -11,9 +11,18 @@
       <va-divider />
     </div>
 
+    <!--   isPermittedForOperatorFeature() - return permitted operator items -->
     <!-- operator sidebar items -->
-    <div v-if="auth.canOperate && operator_items.length > 0">
-      <SidebarItems :items="operator_items" :isActive="isActive" />
+    <div
+      v-if="
+        getPermittedOperatorFeature({ sharedWithRole: 'user' }) &&
+        operator_items.length > 0
+      "
+    >
+      <SidebarItems
+        :items="getPermittedOperatorFeature()"
+        :isActive="isActive"
+      />
       <va-divider />
     </div>
 
@@ -54,6 +63,8 @@ const props = defineProps({ isSidebarCollapsed: Boolean });
 const user_items = constants.sidebar.user_items;
 const operator_items = constants.sidebar.operator_items;
 const admin_items = constants.sidebar.admin_items;
+// const operator_and_
+// user_items = constants.sidebar.
 const bottom_items = constants.sidebar.bottom_items;
 
 const auth = useAuthStore();
@@ -61,6 +72,55 @@ const route = useRoute();
 const router = useRouter();
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
+
+// console.log(
+//   "oonstants.sidebat_operator_items",
+//   constants.sidebar.operator_items,
+// );
+
+onMounted(() => {
+  console.log("filtered");
+  console.log("in onMounted");
+  console.log(
+    constants.sidebar.operator_items.find((e) => {
+      // console.log("e", e);
+      return (e.enabled_for_roles || []).length > 0;
+    }),
+  );
+});
+
+// const allOperatorItems = computed(() => {
+//   constants.sidebar.operator_items.find((e) => {
+//     // console.log("e", e);
+//     return e.enabled_for_roles?.length === 0;
+//   });
+// });
+
+const operatorItemsSharedByRoles = ref(
+  constants.sidebar.operator_items.filter((e) => {
+    // console.log("e", e);
+    return e.enabled_for_roles?.length > 0;
+  }),
+);
+
+const operatorItems = computed(() => {
+  // const roleSpecificFeatures =
+  //   operatorItemsSharedByRoles.value?.length > 0 &&
+  //   operator_items.value.filter((e) => {
+  //     return e.enabled_for_roles?.includes(auth.role);
+  //   });
+
+  return operatorItemsSharedByRoles.value?.length === 0
+    ? operator_items
+    : [
+        operator_items.filter(
+          (item) =>
+            item.feature_key === constants.sidebar.operator_items.feature_key,
+        ),
+      ];
+});
+
+// console.log("operatorItemsSharedByRoles", operatorItemsSharedByRoles.value);
 
 function isActive(path) {
   /**
@@ -85,6 +145,57 @@ function isActive(path) {
   }
   return route.path.startsWith(path);
 }
+
+const getPermittedOperatorFeature = ({ sharedWithRole = "" } = {}) => {
+  if (auth.hasRole("operator") || auth.hasRole("admin")) {
+    return operator_items;
+  } else if (auth.hasRole("user")) {
+    const currentUserRole = auth.user.roles[0];
+    return operator_items
+      .filter((item) => {
+        return item.enabled_for_roles?.includes(currentUserRole);
+      })
+      .filter((item) => !!item);
+  }
+
+  // check which items are shared with all orther roles
+
+  // take current role as arg
+  // OR get roles of with which to share items - array arg
+  //  - return items which are shared with all roles
+
+  // -for admin div, return Projects
+  // - for operator div, return
+
+  // let res = operator_items
+  //   .map((item) => {
+  //     if ((item.enabled_for_roles || []).length === 0) {
+  //       return item;
+  //     }
+  //
+  //     // console.log("item", item);
+  //     const itemPermittedByRole = item.enabled_for_roles?.some((role) => {
+  //       return auth.hasRole(role);
+  //     });
+  //     return itemPermittedByRole ? item : null;
+  //   })
+  //   .filter((item) => item !== null);
+
+  // console.log("res", res);
+
+  // return res;
+
+  // const datasetCreationFeature = constants.sidebar.operator_items.find(
+  //   (item) => item.feature_key === constants.features.CREATE_DATASET,
+  // );
+  // if (datasetCreationFeature) {
+  //   // Current user either has the Operator/Admin role or the User role
+  //   return auth.canOperate || !(auth.canOperate || auth.canAdmin);
+  // } else {
+  //   // Current user does not have the User role
+  //   return auth.canOperate;
+  // }
+};
 
 router.beforeEach(() => {
   sidebarDatasetType.value = null;
