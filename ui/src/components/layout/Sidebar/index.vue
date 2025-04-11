@@ -34,7 +34,9 @@
     <!-- admin sidebar items   -->
     <div v-if="auth.canAdmin">
       <SidebarItems
-        :items="getFeaturesForRole({ role: 'admin' })"
+        :items="
+          getFeaturesForRole({ role: 'admin', sharedWithRole: 'operator' })
+        "
         :isActive="isActive"
       />
       <va-sidebar-item href="/grafana/dashboards" target="_blank">
@@ -154,7 +156,6 @@ function isActive(path) {
   return route.path.startsWith(path);
 }
 
-// todo - operator items are messed up in UI
 const getFeaturesForRole = ({ role = "", sharedWithRole = "" } = {}) => {
   let roleItems = [];
   // const userRole = auth.user.roles[0];
@@ -180,10 +181,12 @@ const getFeaturesForRole = ({ role = "", sharedWithRole = "" } = {}) => {
   roleItems = roleItems
     .filter((item) => {
       return (item.enabled_for_roles || []).length > 0
-        ? (item.enabled_for_roles || []).includes(sharedWithRole)
+        ? item.enabled_for_roles.includes(sharedWithRole)
         : true;
     })
-    .filter((item) => !!item);
+    .filter((item) => {
+      return !!item;
+    });
 
   return roleItems;
 
