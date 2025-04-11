@@ -128,8 +128,14 @@ router.post(
     const user = await authService.getLoginUser('email', email, {
       name: msft_user.displayName,
     });
-    req.auth_user = user;
-    req.auth_method = 'microsoft';
+    req.auth = {
+      user,
+      method: 'MICROSOFT',
+      identity: {
+        email,
+        name: msft_user.displayName,
+      },
+    };
     next();
   }),
   loginHandler,

@@ -56,6 +56,7 @@ import { useColors } from "vuestic-ui";
 const { colors } = useColors();
 
 import config from "@/config";
+import constants from "@/constants";
 
 const route = useRoute();
 const router = useRouter();
@@ -66,6 +67,10 @@ const notAuthorized = ref(false);
 const authFailure = ref(false);
 const validation_loading = ref(false);
 
+// verify - function takes in parameters from query string
+// calls verify API
+// and returns a promise which yields the status of the verification
+// possible status values are defined in constants.auth.verify.response.status
 const props = defineProps(["getUrl", "verify", "paramNames"]);
 
 const params = props.paramNames.reduce((acc, curr) => {
@@ -91,14 +96,18 @@ if (paramsExist) {
         code_verifier: codeVerfier.value,
         ...params,
       })
-      .then((user) => {
-        if (user) {
+      .then((status) => {
+        if (status === constants.auth.verify.response.status.SUCCESS) {
           // read redirectPath value from local storage and reset it
           const _redirectPath = redirectPath.value;
           redirectPath.value = "";
           router.push({
             path: _redirectPath || "/",
           });
+        } else if (
+          status === constants.auth.verify.response.status.SIGNUP_REQUIRED
+        ) {
+          router.push("/auth/signup");
         } else {
           // User was authenticated with CAS but they are not a portal user
           console.log(

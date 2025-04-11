@@ -48,6 +48,17 @@
     "auto_sign_up": {
       "enabled": false,
       "default_role": "user"
+    },
+    "signup": {
+      "enabled": true,
+      "default_role": "user",
+      "dev_default_role": "admin",
+      "jwt": {
+        "scope": "signup",
+        "ttl_milliseconds": 600000
+      },
+      "auto_generate_username_if_not_unique": true,
+      "max_username_suffix": 999
     }
   },
   "oauth": {
@@ -186,5 +197,12 @@
       "enabled_for_roles": ["admin"]
     },
     "downloads": true
-  }
+  },
+  "institution_types": [
+    "Commercial",
+    "External Academic",
+    "Internal Academic",
+    "Non-profit",
+    "Other"
+  ]
 }

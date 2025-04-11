@@ -82,8 +82,13 @@ router.post(
       return res.status(500).json({ message: 'Failed to get email from auth provider' });
     }
     const user = await authService.getLoginUser('email', email);
-    req.auth_user = user;
-    req.auth_method = 'CILogon';
+    req.auth = {
+      user,
+      method: 'CILogon',
+      identity: {
+        email,
+      },
+    };
     next();
   }),
   loginHandler,

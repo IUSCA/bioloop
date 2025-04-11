@@ -49,9 +49,11 @@
     "morgan": "^1.10.0",
     "multer": "1.4.5-lts.1",
     "picomatch": "^4.0.2",
+    "regex-username": "^2.0.0",
     "spark-md5": "^3.0.2",
     "swagger-autogen": "^2.23.5",
     "swagger-ui-express": "^5.0.0",
+    "the-big-username-blacklist": "^1.5.2",
     "uuid": "^9.0.1",
     "winston": "^3.10.0"
   },

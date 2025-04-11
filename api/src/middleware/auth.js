@@ -1,9 +1,12 @@
 const createError = require('http-errors');
 const _ = require('lodash/fp');
+const config = require('config');
 
 const authService = require('../services/auth');
 const { setIntersection } = require('../utils');
 const ac = require('../services/accesscontrols');
+const nonceService = require('../services/nonce');
+
 const asyncHandler = require('./asyncHandler');
 
 function authenticate(req, res, next) {
@@ -121,9 +124,9 @@ function getPermission({
 }
 
 const loginHandler = asyncHandler(async (req, res, next) => {
-  const user = req.auth_user;
+  const user = req.auth?.user;
   if (user) {
-    const resObj = await authService.onLogin({ user, method: req.auth_method });
+    const resObj = await authService.onLogin({ user, method: req.auth?.method });
 
     if (user.roles.includes('admin')) {
       // set cookie
@@ -141,11 +144,29 @@ const loginHandler = asyncHandler(async (req, res, next) => {
       });
     }
 
+    resObj.status = 'success';
     return res.json(resObj);
   }
   // User was authenticated but they are not a portal user
-  // Send an empty success message
-  return res.status(204).send();
+  if (config.get('auth.signup.enabled')) {
+    const email = req.auth?.identity?.email;
+    if (!email) {
+      return next(createError.InternalServerError(
+        'User authenticated but no email found in identity returned by the provider',
+      ));
+    }
+    const nonce = await nonceService.createNonce();
+    const signup_token = authService.issueSignupToken({ email, nonce });
+    return res.status(202).json({
+      status: 'signup_required',
+      email,
+      signup_token,
+    });
+  }
+  res.status(401).json({
+    status: 'not_a_user',
+    message: 'User authenticated but not a portal user',
+  });
 });
 
 module.exports = {

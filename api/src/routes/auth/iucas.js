@@ -43,8 +43,14 @@ router.post(
       }
       const user = await authService.getLoginUser('cas_id', cas_id);
 
-      req.auth_user = user;
-      req.auth_method = 'IUCAS';
+      req.auth = {
+        user,
+        method: 'IUCAS',
+        identity: {
+          email: `${cas_id}@iu.edu`,
+          cas_id,
+        },
+      };
       next();
     };
 
