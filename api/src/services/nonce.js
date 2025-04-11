@@ -25,7 +25,38 @@ async function useNonce(nonce) {
   return deleted.count > 0;
 }
 
+/**
+ * Deletes expired nonces from the database based on the specified expiration criteria.
+ *
+ * A nonce is considered expired if:
+ * - `expires_at` is set and is less than the current time.
+ * - OR `expires_at` is null and `created_at` is older than the specified expiration time.
+ *
+ * @async
+ * @function deleteExpiredNonces
+ * @param {number} expirationSeconds - The number of seconds to determine the expiration cutoff for nonces.
+ * @returns {Promise<number>} The count of nonces that were deleted.
+ */
+async function deleteExpiredNonces(expirationSeconds) {
+  const cutoffDate = new Date(Date.now() - expirationSeconds * 1000);
+  const deleted = await prisma.nonce.deleteMany({
+    where: {
+      OR: [
+        { expires_at: { lte: new Date() } },
+        {
+          AND: [
+            { created_at: { lte: cutoffDate } },
+            { expires_at: null },
+          ],
+        },
+      ],
+    },
+  });
+  return deleted.count;
+}
+
 module.exports = {
   createNonce,
   useNonce,
+  deleteExpiredNonces,
 };

@@ -219,6 +219,10 @@ function issueSignupToken({ email, nonce }) {
   return jsonwt.sign(claim, key, signOpt);
 }
 
+function issueToken(claim) {
+  return jsonwt.sign(claim, key, signOpt);
+}
+
 module.exports = {
   onLogin,
   issueJWT,
@@ -231,4 +235,5 @@ module.exports = {
   issueGrafanaToken,
   getLoginUser,
   issueSignupToken,
+  issueToken,
 };

@@ -49,12 +49,12 @@ router.post(
     body('full_name').trim().isLength({ min: 1, max: 100 }),
     body('institution_name').trim().isLength({ min: 1, max: 100 }),
     body('institution_type').isIn(config.get('institution_types')),
-    body('has_agreed_to_terms').isBoolean(),
+    body('has_agreed_to_terms').isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Auth']
 
-    const signupFailedErr = createError.Unauthorized('Signup failed.');
+    const signupFailedErr = createError.Unauthorized('Signup failed');
     const { _token } = req; // set in validateSingupToken
 
     const {
@@ -122,6 +122,7 @@ router.post(
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
         // send generic error for constraint violations, and other errors
         // to avoid account enumeration
+        console.error(err);
         return next(createError.BadRequest('Invalid signup request'));
       }
       return next(err);

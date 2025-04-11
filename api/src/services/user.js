@@ -284,7 +284,7 @@ function validateUsernameOrThrow(username) {
   // and only single hyphens, and cannot begin or end with a hyphen.
   if (!usernameRegex.test(username)) {
     throw new Error('Invalid username format: must be alphanumeric, \
-      may only contain single hyphens and cannot begin or end with a hyphen.');
+      may only contain single hyphen and cannot begin or end with a hyphen.');
   }
   // disallow reserved words (privilege, programming terms, section names, financial terms and actions)
   if (!usernameBlacklist.validate(username)) {
