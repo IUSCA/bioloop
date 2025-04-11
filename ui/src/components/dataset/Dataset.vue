@@ -260,7 +260,15 @@
       />
 
       <!-- Associated Projects -->
-      <AssociatedProjects :datasetId="datasetId" />
+      <AssociatedProjects
+        :projects="propjects"
+        :datasetId="datasetId"
+      @update-queryParams=(updatedQueryParams) => {
+        console.log('updatedQueryParams', updatedQueryParams)
+         queryPrams = updatedQueryParams
+      }
+"
+      />
 
       <!-- Audit logs -->
       <div v-if="dataset?.audit_logs?.length">
@@ -340,6 +348,8 @@ const delete_archive_modal = ref({
   input: "",
 });
 
+const queryPrams = ref({});
+
 const active_wf = computed(() => {
   return (dataset.value?.workflows || [])
     .map(workflowService.is_workflow_done)
@@ -395,6 +405,33 @@ function fetch_dataset(show_loading = false) {
       loading.value = false;
     });
 }
+
+watch((queryparams) => {
+  DatasetService.getProjects({ id: IntdatasetID, params: queryparams }).then(
+    (res) => {
+      console.log(res.data.projects);
+      projects.value = res.data.projects.map((project) => {
+        const matchingDataset = project.datasets.find(
+          (d) => d.dataset.id === IntdatasetID,
+        );
+        const assigned_at = matchingDataset
+          ? matchingDataset.assigned_at
+          : null;
+        const assigner =
+          matchingDataset && matchingDataset.assignor
+            ? matchingDataset.assignor.name
+            : "No Data";
+
+        return {
+          ...project,
+          assigned_at,
+          assigner,
+        };
+      });
+      totalItems.value = res.data.metadata.count;
+    },
+  );
+});
 
 // initial data fetch
 watch(

@@ -126,7 +126,12 @@ import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { useDebounceFn } from "@vueuse/core";
 const collapsed = ref(true);
-const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
+// const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean
+// });
+const props = define({
+  projects: Array,
+  appendFileBrowserUrl: Boolean,
+});
 const projects = ref([]);
 const data_loading = ref(false);
 const totalItems = ref(0);
@@ -174,7 +179,7 @@ function resetSortParams() {
 }
 
 const row_items = computed(() => {
-  return projects.value.map((project) => {
+  return props.projects.value.map((project) => {
     // eslint-disable-next-line no-unused-vars
     const { users, contacts, datasets, ...rest } = project;
     const _users = (users || []).map((obj) => ({
@@ -220,7 +225,9 @@ const columns = [
 function fetch_projects() {
   data_loading.value = true;
 
-  const skip = (params.value.currentPage - 1) * params.value.itemsPerPage;
+  const skip = computed(
+    () => params.value.currentPage - 1 * params.value.itemsPerPage,
+  );
 
   const queryparams = {
     search: params.value.search,
@@ -232,40 +239,29 @@ function fetch_projects() {
 
   const IntdatasetID = parseInt(props.datasetId, 10);
 
-  DatasetService.getProjects({ id: IntdatasetID, params: queryparams })
-    .then((res) => {
-      console.log(res.data.projects);
-      projects.value = res.data.projects.map((project) => {
-        const matchingDataset = project.datasets.find(
-          (d) => d.dataset.id === IntdatasetID,
-        );
-        const assigned_at = matchingDataset
-          ? matchingDataset.assigned_at
-          : null;
-        const assigner =
-          matchingDataset && matchingDataset.assignor
-            ? matchingDataset.assignor.name
-            : "No Data";
-
-        return {
-          ...project,
-          assigned_at,
-          assigner,
-        };
-      });
-      totalItems.value = res.data.metadata.count;
-    })
-    .catch((error) => {
-      console.error(
-        "Error fetching projects:",
-        error.response || error.message,
-      );
-      toast.error("Error fetching projects");
-    })
-    .finally(() => {
-      data_loading.value = false;
-    });
+  // .catch((error) => {
+  //   console.error(
+  //     "Error fetching projects:",
+  //     error.response || error.message,
+  //   );
+  //   toast.error("Error fetching projects");
+  // })
+  // .finally(() => {
+  //   data_loading.value = false;
+  // });
 }
+
+watch((params) => {
+  let updatedQueryPrams = {
+    search: params.value.search,
+    take: params.value.itemsPerPage,
+    skip: skip,
+    sortBy: params.value.sortBy,
+    sort_order: params.value.sortingOrder,
+  };
+
+  emit("update:queryParams", updatedQueryPrams);
+});
 
 fetch_projects();
 
