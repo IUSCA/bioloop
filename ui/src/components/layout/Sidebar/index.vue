@@ -6,8 +6,11 @@
     minimizedWidth="0"
   >
     <!-- user sidebar items -->
-    <div v-if="user_items.length > 0">
-      <SidebarItems :items="user_items" :isActive="isActive" />
+    <div v-if="getFeaturesForRole({ role: 'user' }).length > 0">
+      <SidebarItems
+        :items="getFeaturesForRole({ role: 'user' })"
+        :isActive="isActive"
+      />
       <va-divider />
     </div>
 
@@ -15,12 +18,14 @@
     <!-- operator sidebar items -->
     <div
       v-if="
-        getPermittedOperatorFeature({ sharedWithRole: 'user' }) &&
-        operator_items.length > 0
+        getFeaturesForRole({ role: 'operator', sharedWithRole: 'user' })
+          .length > 0
       "
     >
       <SidebarItems
-        :items="getPermittedOperatorFeature()"
+        :items="
+          getFeaturesForRole({ role: 'operator', sharedWithRole: 'user' })
+        "
         :isActive="isActive"
       />
       <va-divider />
@@ -28,7 +33,10 @@
 
     <!-- admin sidebar items   -->
     <div v-if="auth.canAdmin">
-      <SidebarItems :items="admin_items" :isActive="isActive" />
+      <SidebarItems
+        :items="getFeaturesForRole({ role: 'admin' })"
+        :isActive="isActive"
+      />
       <va-sidebar-item href="/grafana/dashboards" target="_blank">
         <va-sidebar-item-content>
           <Icon icon="mdi:chart-line" class="text-2xl" />
@@ -146,17 +154,49 @@ function isActive(path) {
   return route.path.startsWith(path);
 }
 
-const getPermittedOperatorFeature = ({ sharedWithRole = "" } = {}) => {
-  if (auth.hasRole("operator") || auth.hasRole("admin")) {
-    return operator_items;
-  } else if (auth.hasRole("user")) {
-    const currentUserRole = auth.user.roles[0];
-    return operator_items
-      .filter((item) => {
-        return item.enabled_for_roles?.includes(currentUserRole);
-      })
-      .filter((item) => !!item);
+// todo - operator items are messed up in UI
+const getFeaturesForRole = ({ role = "", sharedWithRole = "" } = {}) => {
+  let roleItems = [];
+  // const userRole = auth.user.roles[0];
+
+  switch (role) {
+    case "admin":
+      roleItems = admin_items;
+      break;
+    case "operator":
+      roleItems = operator_items;
+      break;
+    case "user":
+      roleItems = user_items;
+      break;
+    default:
+      roleItems = user_items;
   }
+
+  if (!sharedWithRole) {
+    return roleItems;
+  }
+
+  roleItems = roleItems
+    .filter((item) => {
+      return (item.enabled_for_roles || []).length > 0
+        ? (item.enabled_for_roles || []).includes(sharedWithRole)
+        : true;
+    })
+    .filter((item) => !!item);
+
+  return roleItems;
+
+  // if (auth.hasRole("operator") || auth.hasRole("admin")) {
+  //   return operator_items;
+  // } else if (auth.hasRole("user")) {
+  //   const currentUserRole = auth.user.roles[0];
+  //   return operator_items
+  //     .filter((item) => {
+  //       return item.enabled_for_roles?.includes(currentUserRole);
+  //     })
+  //     .filter((item) => !!item);
+  // }
 
   // check which items are shared with all orther roles
 
