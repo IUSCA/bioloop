@@ -93,13 +93,13 @@
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import config from "@/config";
-import datasetUploadService from "@/services/upload/dataset";
-import { useNavStore } from "@/stores/nav";
-import _ from "lodash";
-import toast from "@/services/toast";
 import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
+import datasetUploadService from "@/services/upload/dataset";
 import { isFeatureEnabled } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { useNavStore } from "@/stores/nav";
+import _ from "lodash";
 
 const nav = useNavStore();
 const router = useRouter();
@@ -151,6 +151,8 @@ const filter_query = computed(() => {
   return {
     ...uploads_batching_query.value,
     ...(!!search_query.value && { ...search_query.value }),
+    username: auth.user?.username,
+    forSelf: !auth.canOperate,
   };
 });
 
@@ -245,6 +247,8 @@ const getUploadLogs = async () => {
 };
 
 onMounted(() => {
+  console.log("mounted DatasetUploadsPage");
+
   getUploadLogs();
 });
 
@@ -263,5 +267,5 @@ watch(filter_query, (newQuery, oldQuery) => {
 <route lang="yaml">
 meta:
   title: Dataset Uploads
-  requiresRoles: ["operator", "admin"]
+  requiresRoles: ["operator", "admin", "user"]
 </route>

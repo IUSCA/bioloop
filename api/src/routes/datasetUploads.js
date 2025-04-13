@@ -11,12 +11,13 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const datasetService = require('../services/dataset');
+const {dataset_access_check} = require('./datasets');
 const workflowService = require('../services/workflow');
 const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
-const isPermittedTo = accessControl('datasets');
+const isPermittedTo = accessControl('datasetUploads');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -35,14 +36,66 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
 };
 
 router.get(
-  '/',
+    '/all',
+    validate([
+      query('status').isIn(Object.values(config.upload.status)).optional(),
+      query('dataset_name').notEmpty().escape().optional(),
+      query('limit').isInt({min: 1}).toInt().optional(),
+      query('offset').isInt({min: 0}).toInt().optional(),
+    ]),
+    isPermittedTo('read'),
+    asyncHandler(async (req, res) => {
+      // #swagger.tags = ['uploads']
+      // #swagger.summary = 'Retrieve past uploads'
+
+      const {
+        status, dataset_name, offset, limit,
+      } = req.query;
+
+      const query_obj = {
+        where: _.omitBy(_.isUndefined)({
+          upload_log: {
+            status,
+            // user_id: req.params.id,
+          },
+          dataset: {
+            name: {contains: dataset_name},
+          },
+        }),
+      };
+      const filter_query = {
+        skip: offset,
+        take: limit,
+        ...query_obj,
+        orderBy: {
+          upload_log: {
+            initiated_at: 'desc',
+          },
+        },
+        include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+      };
+
+      const [dataset_upload_logs, count] = await prisma.$transaction([
+        prisma.dataset_upload_log.findMany({
+          ...filter_query,
+        }),
+        prisma.dataset_upload_log.count({...query_obj}),
+      ]);
+
+      res.json({metadata: {count}, uploads: dataset_upload_logs});
+    }),
+)
+
+router.get(
+    '/:username/all',
   validate([
     query('status').isIn(Object.values(config.upload.status)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
+    param('username').escape().notEmpty()
   ]),
-  isPermittedTo('read'),
+  isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Retrieve past uploads'
@@ -51,10 +104,16 @@ router.get(
       status, dataset_name, offset, limit,
     } = req.query;
 
+    // const hadUploadAssociation
+
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
         upload_log: {
           status,
+          // user_id: req.params.id,
+          user: {
+            username: req.params.username,
+          },
         },
         dataset: {
           name: { contains: dataset_name },
@@ -96,7 +155,7 @@ const getUploadedDataProductPath = (datasetId) => path.join(
 // - Used by UI
 router.post(
   '/',
-  isPermittedTo('create'),
+    isPermittedTo('create'),
   validate([
     body('type').escape().notEmpty().isIn(config.dataset_types),
     body('name').escape().notEmpty().isLength({ min: 3 }),
@@ -171,9 +230,11 @@ router.post(
 // - Update the upload logs created for an uploaded entity or its files
 // - Used by UI, workers
 router.patch(
-  '/:dataset_id',
-  isPermittedTo('update'),
+    '/:username/:dataset_id',
+  isPermittedTo('update', { checkOwnerShip: true }),
   validate([
+    param('username').escape().notEmpty(),
+    param('dataset_id').isInt().toInt(),
     param('dataset_id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
     body('files').isArray().optional(),
@@ -189,7 +250,14 @@ router.patch(
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
-        where: { dataset_id: req.params.dataset_id },
+        where: {
+          dataset_id: req.params.dataset_id,
+          upload_log: {
+            user: {
+              username: req.params.username,
+            }
+          }
+        },
       });
       await tx.upload_log.update({
         where: { id: ds_upload_log.upload_log_id },
@@ -217,11 +285,13 @@ router.patch(
 // - Initiate the processing of uploaded files
 // - Used by workers
 router.post(
-  '/:dataset_id/process',
+    '/:username/:dataset_id/process',
   validate([
     param('dataset_id').isInt().toInt(),
+    param('username').escape().notEmpty(),
   ]),
-  isPermittedTo('update'),
+    isPermittedTo('update', {checkOwnerShip: true}),
+    dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
@@ -231,6 +301,13 @@ router.post(
     const uploadedDataset = await prisma.dataset.findUnique({
       where: {
         id: req.params.dataset_id,
+        dataset_upload_log: {
+          upload_log: {
+            user: {
+              username: req.params.username,
+            },
+          },
+        }
       },
       include: {
         workflows: true,
@@ -270,10 +347,12 @@ router.post(
 );
 
 router.post(
-  '/:dataset_id/cancel',
-  isPermittedTo('delete'),
+    '/:username/:dataset_id/cancel',
+    isPermittedTo('update', {checkOwnerShip: true}),
+    dataset_access_check,
   validate([
     param('dataset_id').isInt().toInt(),
+    param('username').escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
@@ -284,6 +363,13 @@ router.post(
     const uploadedDataset = await prisma.dataset.findUniqueOrThrow({
       where: {
         id: req.params.dataset_id,
+        dataset_upload_log: {
+          upload_log: {
+            user: {
+              username: req.params.username,
+            },
+          },
+        }
       },
       include: {
         workflows: true,
@@ -317,9 +403,10 @@ router.post(
 );
 
 router.delete(
-  '/:dataset_id',
-  isPermittedTo('delete'),
+    '/:username/:dataset_id',
+  isPermittedTo('delete', { checkOwnerShip: true }), 
   validate([
+    param('username').escape().notEmpty(),
     param('dataset_id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -330,6 +417,11 @@ router.delete(
       const uploadedDatasetUploadLog = await tx.dataset_upload_log.findUniqueOrThrow({
         where: {
           dataset_id: req.params.dataset_id,
+          upload_log: {
+            user: {
+              username: req.user.username,
+            },
+          }
         },
       });
       // cascade-delete on `upload_log` will delete associated
