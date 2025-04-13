@@ -7,6 +7,25 @@ const exports = {
         path: "/projects",
         test_id: "sidebar-projects",
       },
+      {
+        icon: "mdi-folder-plus-outline",
+        title: "Create Dataset",
+        test_id: "sidebar-create-dataset",
+        children: [
+          {
+            feature_key: "ingestion",
+            icon: "mdi-file-cog-outline",
+            title: "Ingest",
+            path: "/datasets/ingest",
+          },
+          {
+            feature_key: "uploads",
+            icon: "mdi:folder-upload",
+            title: "Upload",
+            path: "/datasetUpload",
+          },
+        ],
+      },
     ],
     operator_items: [
       {
@@ -41,25 +60,6 @@ const exports = {
         title: "Data Products",
         path: "/dataproducts",
         test_id: "sidebar-data-products",
-      },
-      {
-        icon: "mdi-folder-plus-outline",
-        title: "Create Dataset",
-        test_id: "sidebar-create-dataset",
-        children: [
-          {
-            feature_key: "ingestion",
-            icon: "mdi-file-cog-outline",
-            title: "Ingest",
-            path: "/datasets/ingest",
-          },
-          {
-            feature_key: "uploads",
-            icon: "mdi:folder-upload",
-            title: "Upload",
-            path: "/datasetUpload",
-          },
-        ],
       },
       {
         icon: "mdi-table-account",

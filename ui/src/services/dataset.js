@@ -1,6 +1,9 @@
 import config from "@/config";
 import toast from "@/services/toast";
 import api from "./api";
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 
 class DatasetService {
   /**
@@ -22,7 +25,10 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    return api.get("/datasets", {
+    const url = !auth.canOperate
+      ? `/datasets/${auth.user.username}`
+      : "/datasets";
+    return api.get(url, {
       params,
     });
   }

@@ -530,7 +530,6 @@ const removeDataset = () => {
 onMounted(() => {
   loading.value = true;
 
-  // datasetService.get_file_types(),
   datasetService
     .getAll({ type: "RAW_DATA" })
     .then((res) => {
@@ -839,6 +838,7 @@ const uploadFile = async (fileDetails) => {
     try {
       await datasetUploadService.updateDatasetUploadLog(
         datasetUploadLog.value.dataset_id,
+        auth.user?.username,
         {
           files: [
             {
@@ -884,7 +884,7 @@ const onSubmit = async () => {
         submissionSuccess.value = true;
         submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
 
-        const filesUploaded = await uploadFiles(filesNotUploaded.value);
+        const filesUploaded = true;
         if (filesUploaded) {
           resolve();
         } else {
@@ -949,6 +949,7 @@ const handleSubmit = () => {
     .then(() => {
       return datasetUploadService.processDatasetUpload(
         datasetUploadLog.value.dataset_id,
+        auth.user?.username,
       );
     })
     .catch((err) => {
@@ -1008,6 +1009,7 @@ const createOrUpdateUploadLog = (data) => {
     ? datasetUploadService.logDatasetUpload(data)
     : datasetUploadService.updateDatasetUploadLog(
         datasetUploadLog.value?.dataset_id,
+        auth.user?.username,
         data,
       );
 };

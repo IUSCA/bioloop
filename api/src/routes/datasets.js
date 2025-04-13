@@ -109,6 +109,68 @@ const assoc_body_schema = {
   },
 };
 
+const buildUserRoleQueryObject = ({
+                                    type, name, match_name_exact, username
+                                  }) => {
+  const query_obj = _.omitBy(_.isUndefined)({
+    type,
+    name: name ? {
+      ...(match_name_exact ? {equals: name} : {contains: name}),
+      mode: 'insensitive', // case-insensitive search
+    } : undefined,
+    // Filter by projects assigned to this user
+    projects: {
+      some: {
+        project: {
+          users: {
+            some: {
+              user: {
+                username: username,
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return query_obj;
+};
+
+router.get(
+    '/:username/',
+    isPermittedTo('read', {checkOwnership: true}),
+    asyncHandler(async (req, res, next) => {
+      // #swagger.tags = ['datasets']
+
+      const query_obj = buildUserRoleQueryObject({...req.query, username: req.params.username});
+
+      const filterQuery = {
+        where: query_obj,
+      };
+      const orderBy = {
+        [req.query.sort_by]: req.query.sort_order,
+      };
+      const datasetRetrievalQuery = {
+        skip: req.query.offset,
+        take: req.query.limit,
+        ...filterQuery,
+        orderBy,
+      };
+
+      const [datasets, count] = await prisma.$transaction([
+        prisma.dataset.findMany({...datasetRetrievalQuery}),
+        prisma.dataset.count({...filterQuery}),
+      ]);
+
+      res.json({
+        metadata: {count},
+        datasets,
+      });
+    }),
+);
+
+
 const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
@@ -258,6 +320,7 @@ router.get(
     });
   }),
 );
+
 
 const dataset_access_check = asyncHandler(async (req, res, next) => {
   // assumes req.params.id is the dataset id user is requesting
@@ -928,3 +991,4 @@ router.get(
 );
 
 module.exports = router;
+module.exports.dataset_access_check = dataset_access_check

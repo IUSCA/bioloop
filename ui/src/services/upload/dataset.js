@@ -2,12 +2,17 @@ import api from "../api";
 
 class DatasetUploadService {
   getDatasetUploadLogs({
+    forSelf = true,
     status = null,
     dataset_name = null,
     limit = null,
     offset = null,
+    username = null,
   } = {}) {
-    return api.get(`/datasetUploads`, {
+    const path = forSelf
+      ? `/datasetUploads/${username}/all`
+      : `/datasetUploads/all`;
+    return api.get(path, {
       params: {
         status,
         dataset_name,
@@ -21,16 +26,16 @@ class DatasetUploadService {
     return api.post(`/datasetUploads`, data);
   }
 
-  updateDatasetUploadLog(dataset_id, data) {
-    return api.patch(`/datasetUploads/${dataset_id}`, data);
+  updateDatasetUploadLog(dataset_id, username, data) {
+    return api.patch(`/datasetUploads/${username}/${dataset_id}`, data);
   }
 
-  processDatasetUpload(dataset_id) {
-    return api.post(`/datasetUploads/${dataset_id}/process`);
+  processDatasetUpload(dataset_id, username) {
+    return api.post(`/datasetUploads/${username}/${dataset_id}/process`);
   }
 
-  cancelDatasetUpload(dataset_id) {
-    return api.post(`/datasetUploads/${dataset_id}/cancel`);
+  cancelDatasetUpload(dataset_id, username) {
+    return api.post(`/datasetUploads/${username}/${dataset_id}/cancel`);
   }
 }
 

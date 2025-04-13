@@ -22,9 +22,9 @@
 </template>
 
 <script setup>
-import { useNavStore } from "@/stores/nav";
 import { isFeatureEnabled } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { useNavStore } from "@/stores/nav";
 
 const nav = useNavStore();
 const auth = useAuthStore();
@@ -43,5 +43,5 @@ nav.setNavItems([
 <route lang="yaml">
 meta:
   title: Data Product Uploads
-  requiresRoles: ["operator", "admin"]
+  requiresRoles: ["operator", "admin", "user"]
 </route>
