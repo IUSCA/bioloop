@@ -110,9 +110,10 @@ const assoc_body_schema = {
 };
 
 const buildUserRoleQueryObject = ({
-                                    type, name, match_name_exact, username
+                                    deleted, type, name, match_name_exact, username
                                   }) => {
   const query_obj = _.omitBy(_.isUndefined)({
+    is_deleted: deleted,
     type,
     name: name ? {
       ...(match_name_exact ? {equals: name} : {contains: name}),
@@ -139,7 +140,16 @@ const buildUserRoleQueryObject = ({
 
 router.get(
     '/:username/',
-    isPermittedTo('read', {checkOwnership: true}),
+    isPermittedTo('read', {checkOwnerShip: true}),
+    query('deleted').toBoolean().default(false),
+    query('type').isIn(config.dataset_types).optional(),
+    query('name').notEmpty().optional(),
+    query('limit').isInt({min: 1}).toInt().optional(), // optional because watch script needs all datasets at once
+    query('offset').isInt({min: 0}).toInt().optional(),
+    query('sort_by').default('updated_at'),
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('match_name_exact').default(false).toBoolean(),
+
     asyncHandler(async (req, res, next) => {
       // #swagger.tags = ['datasets']
 

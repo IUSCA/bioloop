@@ -166,6 +166,7 @@
               <ProjectSelect
                   @select="setProject"
                   :disabled="!isAssignedProject"
+                  :for-self="!auth.canOperate"
               ></ProjectSelect>
 
               <ProjectList
@@ -233,6 +234,9 @@ import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
 import { watchDebounced } from "@vueuse/core";
 import pm from "picomatch";
+import {useAuthStore} from "@/stores/auth";
+
+const auth = useAuthStore();
 
 const STEP_KEYS = {
   DIRECTORY: "directory",

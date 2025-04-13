@@ -122,6 +122,7 @@
                 <ProjectSelect
                     @select="setProject"
                     :disabled="!isAssignedProject"
+                    :for-self="!auth.canOperate"
                 ></ProjectSelect>
 
                 <ProjectList
