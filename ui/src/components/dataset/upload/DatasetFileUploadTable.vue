@@ -50,18 +50,6 @@
         </va-popover>
       </span>
     </template>
-
-    <template #cell(actions)="{ rowIndex }">
-      <div class="flex gap-1">
-        <va-button
-          preset="plain"
-          icon="delete"
-          color="danger"
-          @click="removeFile(rowIndex)"
-          :disabled="props.submitAttempted"
-        />
-      </div>
-    </template>
   </va-data-table>
 </template>
 
@@ -73,24 +61,9 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  sourceRawData: {
-    type: Object,
-  },
-  submitAttempted: {
-    type: Boolean,
-    required: true,
-  },
-  selectingFiles: {
-    type: Boolean,
-    required: true,
-  },
-  selectingDirectory: {
-    type: Boolean,
-    required: true,
-  },
 });
 
-const emit = defineEmits(["files-added", "directory-added", "file-removed"]);
+const emit = defineEmits(["file-removed"]);
 
 const noFilesSelected = computed(() => {
   return props.files.length === 0;
@@ -138,17 +111,8 @@ const columns = [
     thStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
-  {
-    key: "actions",
-    width: "15%",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-  },
 ];
 
-const removeFile = (index) => {
-  emit("file-removed", index);
-};
 </script>
 
 <style scoped>

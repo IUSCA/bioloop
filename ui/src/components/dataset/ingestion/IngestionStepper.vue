@@ -38,48 +38,51 @@
     <template #step-content-0>
       <div class="flex">
         <va-select
-          class="mr-2"
-          v-model="searchSpace"
-          @update:modelValue="resetSearch"
-          :options="FILESYSTEM_SEARCH_SPACES"
-          :text-by="'label'"
-          :track-by="'key'"
-          label="Search space"
-          :disabled="
-            submitAttempted || searchingFiles || asyncValidatingDatasetName
-          "
+            class="mr-2"
+            v-model="searchSpace"
+            @update:modelValue="resetSearch"
+            :options="FILESYSTEM_SEARCH_SPACES"
+            :text-by="'label'"
+            :track-by="'key'"
+            label="Search space"
+            :disabled="
+                submitAttempted || searchingFiles || asyncValidatingDatasetName
+              "
         />
 
         <div class="flex flex-col w-full">
           <FileListAutoComplete
-            @files-retrieved="setRetrievedFiles"
-            :disabled="submitAttempted"
-            :base-path="searchSpaceBasePath"
-            :loading="searchingFiles"
-            :validating="asyncValidatingDatasetName"
-            @clear="resetSearch"
-            @open="
-              () => {
-                isFileSearchAutocompleteOpen = true;
-                selectedFile = null;
-              }
-            "
-            @close="
-              () => {
-                if (!selectedFile) {
-                  fileListSearchText = '';
-                }
-                fileList = [];
-                isFileSearchAutocompleteOpen = false;
-                if (asyncValidatingDatasetName) {
-                  asyncValidatingDatasetName = false;
-                }
-              }
-            "
-            v-model:selected="selectedFile"
-            @update:selected="fileList = []"
-            v-model:search-text="fileListSearchText"
-            :options="fileList"
+              @files-retrieved="() => {
+                  console.log('Files retrieved');
+                  setRetrievedFiles
+                  }"
+              :disabled="submitAttempted"
+              :base-path="searchSpaceBasePath"
+              :loading="searchingFiles"
+              :validating="asyncValidatingDatasetName"
+              @clear="resetSearch"
+              @open="
+                  () => {
+                    isFileSearchAutocompleteOpen = true;
+                    selectedFile = null;
+                  }
+                "
+              @close="
+                  () => {
+                    if (!selectedFile) {
+                      fileListSearchText = '';
+                    }
+                    fileList = [];
+                    isFileSearchAutocompleteOpen = false;
+                    if (asyncValidatingDatasetName) {
+                      asyncValidatingDatasetName = false;
+                    }
+                  }
+                "
+              v-model:selected="selectedFile"
+              @update:selected="fileList = []"
+              v-model:search-text="fileListSearchText"
+              :options="fileList"
           />
 
           <div class="text-xs va-text-danger" v-if="!stepIsPristine">
@@ -88,6 +91,7 @@
         </div>
       </div>
     </template>
+
 
     <template #step-content-1>
       <div class="flex flex-col gap-10">
@@ -130,9 +134,53 @@
     </template>
 
     <template #step-content-2>
+      <!-- <div class="flex flex-col"> -->
+      <div class="flex flex-col gap-10">
+        <va-checkbox
+            v-model="isAssignedProject"
+            @update:modelValue="
+            (val) => {
+              if (!val) {
+                projectSelected = {};
+              }
+            }
+          "
+            color="primary"
+            label="Assign Project"
+        />
+
+        <va-form-field
+            v-model="projectSelected"
+            v-slot="{ value: v }"
+        >
+          <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
+            <div class="space-y-4">
+              <ProjectSelect
+                  @select="setProject"
+                  :disabled="!isAssignedProject"
+              ></ProjectSelect>
+
+              <ProjectList
+                  v-if="Object.values(projectSelected).length > 0"
+                  :projects="[Object.values(projectSelected)[0]]"
+                  show-remove
+                  @remove="(project) => {
+                  console.log('Removing project in template:', project);
+                  resetSelectedProject()
+                }">
+              </ProjectList>
+            </div>
+          </div>
+
+        </va-form-field>
+      </div>
+    </template>
+
+    <template #step-content-3>
       <IngestionInfo
         :ingestion-dir="selectedFile"
         :source-raw-data="rawDataSelected[0]"
+        :project="projectSelected && Object.values(projectSelected)[0]"
         :ingestion-space="searchSpace.label"
         :dataset-id="datasetId"
       />
@@ -178,6 +226,7 @@ import pm from "picomatch";
 
 const STEP_KEYS = {
   DIRECTORY: "directory",
+  PROJECT: "project",
   RAW_DATA: "rawData",
   INFO: "info",
 };
@@ -190,6 +239,7 @@ const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
   "You have requested a source Raw Data to be assigned. Please select one.";
+const PROJECT_REQUIRED_ERROR = "Project must be selected.";
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -202,6 +252,7 @@ const steps = [
     icon: "material-symbols:folder",
   },
   { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
+  {key: STEP_KEYS.PROJECT, label: "Project", icon: "mdi:flask"},
   {
     key: STEP_KEYS.INFO,
     label: "Ingestion Details",
@@ -209,6 +260,7 @@ const steps = [
   },
 ];
 
+const isAssignedProject = ref(true);
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
 const rawDataSelected = ref([]);
@@ -225,6 +277,7 @@ const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
+const projectSelected = ref({});
 
 const isNextButtonDisabled = computed(() => {
   return (
@@ -246,13 +299,15 @@ const isPreviousButtonDisabled = computed(() => {
 });
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
-// not. Errors are only shown when a step's form fields are not pristine. At
-// this time, errors are only shown on steps 0 (STEP_KEYS.DIRECTORY) and 1
-// (STEP_KEYS.RAW_DATA)
+// not. Form validation errors are only shown when a step's form fields are not
+// pristine.
+// Errors are only shown on steps 0 (STEP_KEYS.DIRECTORY), 1 (STEP_KEYS.PROJECT)
+// and 2 (STEP_KEYS.RAW_DATA)
 const stepPristineStates = ref([
-  { [STEP_KEYS.DIRECTORY]: true },
-  { [STEP_KEYS.RAW_DATA]: true },
-  { [STEP_KEYS.INFO]: true },
+  {[STEP_KEYS.DIRECTORY]: true},
+  {[STEP_KEYS.PROJECT]: true},
+  {[STEP_KEYS.RAW_DATA]: true},
+  {[STEP_KEYS.INFO]: true},
 ]);
 
 const stepIsPristine = computed(() => {
@@ -261,18 +316,46 @@ const stepIsPristine = computed(() => {
 
 const formErrors = ref({
   [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.PROJECT]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
 });
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.DIRECTORY];
+    // return !!formErrors.value[STEP_KEYS.DIRECTORY];
   } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.PROJECT];
+    // return !!formErrors.value[STEP_KEYS.PROJECT];
+  } else if (step.value === 2) {
     return !!formErrors.value[STEP_KEYS.RAW_DATA];
   } else {
     return false;
   }
 });
+
+const setProject = project => {
+  // console.log('set project', project)
+  // console.log('projectSelected', projectSelected.value)
+  // console.log('projectId', project.id)
+  // resetSelectedProject(project)
+  projectSelected.value = {[project.id]: project};
+
+  // console.log('projectSelected after remove', projectSelected.value)
+  // projectSelected.value[project.id] = project
+  // console.log('projectSelected after set', projectSelected.value)
+}
+
+const resetSelectedProject = () => {
+  // console.log('remove project', project)
+  console.log('projectSelected before remove', projectSelected.value)
+  // console.log("typeof projectSelected.value", typeof projectSelected.value)
+  // console.log("project.id", project.id)
+  // console.log("projectSelected.value[project.id]", projectSelected.value[project.id])
+  // delete projectSelected.value[project.id];
+  projectSelected.value = {};
+  console.log('projectSelected after remove', projectSelected.value)
+}
 
 const isFileSearchAutocompleteOpen = ref(false);
 
@@ -281,6 +364,7 @@ const selectedFile = ref(null);
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.DIRECTORY]: null,
+    [STEP_KEYS.PROJECT]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.INFO]: null,
   };
@@ -288,8 +372,9 @@ const resetFormErrors = () => {
 
 const setFormErrors = async () => {
   resetFormErrors();
-  const { isNameValid: datasetNameIsValid, error } =
-    await validateDatasetName();
+
+  const {isNameValid: datasetNameIsValid, error} =
+      await validateDatasetName();
 
   if (step.value === 0) {
     if (!datasetNameIsValid) {
@@ -297,13 +382,13 @@ const setFormErrors = async () => {
     } else {
       const restricted_dataset_paths = getRestrictedIngestionPaths();
       const origin_path_is_restricted = selectedFile.value
-        ? restricted_dataset_paths.some((pattern) => {
+          ? restricted_dataset_paths.some((pattern) => {
             const _path = selectedFile.value.path;
             let isMatch = pm(pattern);
             const matches = isMatch(_path, pattern);
             return matches.isMatch;
           })
-        : false;
+          : false;
 
       if (origin_path_is_restricted) {
         formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
@@ -318,6 +403,13 @@ const setFormErrors = async () => {
     }
     if (rawDataSelected.value.length === 0) {
       formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
+      return;
+    }
+  } else if (step.value === 2) {
+    if (!isAssignedProject.value) {
+      formErrors.value[STEP_KEYS.PROJECT] = null;
+    } else if (Object.values(projectSelected.value).length === 0) {
+      formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR;
     }
   }
 };
@@ -355,16 +447,16 @@ const asyncValidateDatasetName = (value) => {
 const validateDatasetName = async () => {
   const datasetName = selectedFile.value?.name;
   if (datasetNameIsNull(datasetName)) {
-    return { isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR };
+    return {isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR};
   } else if (!datasetNameHasMinimumChars(datasetName)) {
-    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
+    return {isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR};
   }
 
   return asyncValidateDatasetName(datasetName).then((res) => {
     return {
       isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
       error:
-        res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
+          res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
     };
   });
 };
@@ -439,13 +531,13 @@ watch([isFileSearchAutocompleteOpen, fileListSearchText], () => {
 // Begin search once FileListAutoComplete is opened, or typed into, but
 // after a delay.
 watchDebounced(
-  [isFileSearchAutocompleteOpen, fileListSearchText],
-  () => {
-    if (isFileSearchAutocompleteOpen.value) {
-      searchFiles();
-    }
-  },
-  { debounce: 1000, maxWait: 3000 },
+    [isFileSearchAutocompleteOpen, fileListSearchText],
+    () => {
+      if (isFileSearchAutocompleteOpen.value) {
+        searchFiles();
+      }
+    },
+    {debounce: 1000, maxWait: 3000},
 );
 
 const setRetrievedFiles = (files) => {
@@ -466,6 +558,7 @@ const preIngestion = () => {
     type: config.dataset.types.DATA_PRODUCT.key,
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
+    project_id: (Object.entries(projectSelected.value) || []).length > 0 ? Object.values(projectSelected.value)[0]?.id : null,
   });
 };
 
@@ -491,6 +584,7 @@ const onSubmit = async () => {
     await setFormErrors();
     return Promise.reject();
   }
+
   submitAttempted.value = true;
 
   return new Promise((resolve, reject) => {
@@ -533,22 +627,37 @@ const onNextClick = (nextStep) => {
   }
 };
 
-// Form errors are set when this component mounts, or when a form field's value
-// changes, or when the current step changes.
 watch(
   [
+    step,
+    projectSelected,
     rawDataSelected,
     selectedFile,
     fileListSearchText,
     isFileSearchAutocompleteOpen,
     searchSpace,
     isAssignedSourceRawData,
+    isAssignedProject,
   ],
   async (newVals, oldVals) => {
-    // mark step's form fields as not pristine, for fields' errors to be shown
+    // Whether a step is pristine or not is re-evaluated when the reactive variables provided to this Watcher are updated.
+    // Finally, any errors in that step are also re-evaluated when this Watcher is triggered.
+
+
+    // console.log("watch triggered");
+    // console.log("projectSelected", newVals[1]);
+    // console.log("isAssignedProject", newVals[8]);
+
+    // mark the current step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
     if (stepKey === STEP_KEYS.RAW_DATA) {
-      stepPristineStates.value[step.value][stepKey] = !oldVals[5] && newVals[5];
+      // `7` corresponds to `isAssignedSourceRawData` in this Watcher
+      stepPristineStates.value[step.value][stepKey] = !oldVals[7] && newVals[7];
+    } else if (stepKey === STEP_KEYS.PROJECT) {
+      // If either the `Assign Project` checkbox's value changes, or if a selected project changes, set `Project` step to pristine
+      // `1` corresponds to `projectSelected` in this Watcher
+      // `8` corresponds to `isAssignedProject` in this Watcher
+      stepPristineStates.value[step.value][stepKey] = (!oldVals[1] && newVals[1]) || (!oldVals[8] && newVals[8]);
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
     }
@@ -560,7 +669,7 @@ watch(
 // separate watcher for when step changes, since we don't want to mark the form
 // fields as not pristine upon step changes
 watch(step, async () => {
-  if (step.value !== 2) {
+  if (step.value !== 3) { // step 3 is the `Ingestion Details` step
     await setFormErrors();
   }
 });

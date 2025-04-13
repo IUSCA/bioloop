@@ -400,6 +400,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('project_id').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -411,7 +412,7 @@ router.post(
 
     // gather non-null data to create a new dataset
     const data = _.flow([
-      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size']),
+      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'project_id']),
       _.omitBy(_.isNil),
     ])(req.body);
 
@@ -442,6 +443,19 @@ router.post(
             id: req.body.workflow_id,
           },
         ],
+      };
+    }
+
+    if (req.body.project_id) {
+      console.log('data.project_id', data.project_id)
+      delete data.project_id; // including project_id in the `data` passed to create_dataset will throw
+      console.log('data.project_id', data.project_id)
+
+      data.projects = {
+        create: [{
+          project_id: req.body.project_id,
+          assignor_id: req.user.id,
+        }],
       };
     }
 

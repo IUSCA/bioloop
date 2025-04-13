@@ -13,7 +13,7 @@
   <div class="va-table-responsive">
     <table class="va-table">
       <tbody>
-        <tr v-if="props.selectingFiles || props.selectingDirectory">
+      <tr>
           <td>Data Product</td>
           <td>
             <div v-if="props.dataset">
@@ -25,17 +25,15 @@
               </router-link>
             </div>
 
+            <!--              :dataset-name="props.datasetName"-->
             <UploadedDatasetName
               v-else
-              v-model:dataset-name-input="datasetNameInput"
-              :dataset-name="props.datasetName"
+              v-model:populated-dataset-name="datasetNameInput"
               :input-disabled="props.inputDisabled"
               :dataset-name-error="props.uploadedDataProductError"
               :dataset-name-error-messages="
                 props.uploadedDataProductErrorMessages
               "
-              :selecting-files="props.selectingFiles"
-              :selecting-directory="props.selectingDirectory"
             />
           </td>
         </tr>
@@ -49,7 +47,16 @@
           </td>
         </tr>
 
-        <tr>
+      <tr v-if="props.project">
+        <td>Project</td>
+        <td class="source-raw-data-name">
+          <router-link :to="`/projects/${props.project.id}`" target="_blank">
+            {{ props.project.name }}
+          </router-link>
+        </td>
+      </tr>
+
+      <tr>
           <td>Status</td>
           <td>
             <UploadStatusIcon :submission-status="props.submissionStatus" />
@@ -66,29 +73,16 @@ const props = defineProps({
   dataset: {
     type: Object,
   },
-  // `datasetName`: Pre-selected name for a dataset that is to be uploaded.
-  // Used when a directory is being uploaded.
-  datasetName: {
+  populatedDatasetName: {
     type: String,
     default: "",
   },
-  // `datasetNameInput`: User-entered name for a dataset that is to be
-  // uploaded. Used when individual files are being uploaded.
-  datasetNameInput: {
-    type: String,
-    required: true,
+  project: {
+    type: Object,
   },
   inputDisabled: {
     type: Boolean,
     default: false,
-  },
-  selectingFiles: {
-    type: Boolean,
-    required: true,
-  },
-  selectingDirectory: {
-    type: Boolean,
-    required: true,
   },
   uploadedDataProductErrorMessages: {
     type: String,
@@ -123,14 +117,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:datasetNameInput"]);
+const emit = defineEmits(["update:populatedDatasetName"]);
 
 const datasetNameInput = computed({
   get() {
-    return props.datasetNameInput;
+    return props.populatedDatasetName;
   },
   set(value) {
-    emit("update:datasetNameInput", value);
+    emit("update:populatedDatasetName", value);
   },
 });
 

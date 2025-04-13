@@ -10,11 +10,17 @@ module.exports = {
     "@vue/eslint-config-prettier",
     "plugin:vuejs-accessibility/recommended",
     "plugin:comment-length/recommended",
+    '@vue/eslint-config-prettier',
+    'plugin:prettier/recommended',
+  ],
+  plugins: [
+    'prettier',
   ],
   parserOptions: {
     ecmaVersion: "latest",
   },
   rules: {
+    'prettier/prettier': 'warning',
     "vue/multi-word-component-names": "off",
     "no-unused-vars": [
       "error", // or "warn"

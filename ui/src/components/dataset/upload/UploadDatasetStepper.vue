@@ -31,6 +31,38 @@
       </template>
 
       <template #step-content-0>
+        <div class="flex flex-col">
+          <SelectFileButtons
+              :disabled="submitAttempted || loading || validatingForm"
+              @files-added="
+              (files) => {
+                console.log('Files added:', files);
+                clearSelectedDirectoryToUpload();
+                setFiles(files);
+                isSubmissionAlertVisible = false;
+                setUploadedFileType(FILE_TYPE.FILE);
+              }
+            "
+              @directory-added="
+              (directoryDetails) => {
+                clearSelectedFilesToUpload();
+                setDirectory(directoryDetails);
+                isSubmissionAlertVisible = false;
+                setUploadedFileType(FILE_TYPE.DIRECTORY);
+              }
+            "
+          />
+
+          <va-divider/>
+
+          <SelectedFilesTable
+              @file-removed="removeFile"
+              :files="displayedFilesToUpload"
+          />
+        </div>
+      </template>
+
+      <template #step-content-1>
         <div class="flex flex-col gap-10">
           <va-checkbox
             v-model="isAssignedSourceRawData"
@@ -66,81 +98,90 @@
         </div>
       </template>
 
-      <template #step-content-1>
-        <div class="flex flex-col">
-          <SelectFileButtons
-            :disabled="submitAttempted || loading || validatingForm"
-            @files-added="
-              (files) => {
-                clearSelectedDirectoryToUpload();
-                setFiles(files);
-                isSubmissionAlertVisible = false;
-                setUploadedFileType(FILE_TYPE.FILE);
+      <template #step-content-2>
+        <div class="flex flex-col gap-10">
+          <va-checkbox
+              v-model="isAssignedProject"
+              @update:modelValue="
+              (val) => {
+                if (!val) {
+                  projectSelected = {};
+                }
               }
             "
-            @directory-added="
-              (directoryDetails) => {
-                clearSelectedFilesToUpload();
-                datasetToUploadInputName = '';
-                setDirectory(directoryDetails);
-                isSubmissionAlertVisible = false;
-                setUploadedFileType(FILE_TYPE.DIRECTORY);
-              }
-            "
+              color="primary"
+              label="Assign Project"
           />
 
-          <va-divider />
+          <va-form-field
+              v-model="projectSelected"
+              v-slot="{ value: v }"
+          >
+            <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
+              <div class="space-y-4">
+                <ProjectSelect
+                    @select="setProject"
+                    :disabled="!isAssignedProject"
+                ></ProjectSelect>
 
-          <div
+                <ProjectList
+                    v-if="Object.values(projectSelected).length > 0"
+                    :projects="[Object.values(projectSelected)[0]]"
+                    show-remove
+                    @remove="(project) => {
+                  // console.log('Removing project in template:', project);
+                  resetSelectedProject()
+                }">
+                </ProjectList>
+              </div>
+            </div>
+          </va-form-field>
+        </div>
+      </template>
+
+      <template #step-content-3>
+        <div
             class="flex flex-row"
             v-if="selectingFiles || selectingDirectory"
-          >
-            <div class="flex-1">
-              <va-card class="upload-details">
-                <va-card-title>
-                  <div class="flex flex-nowrap items-center w-full">
-                    <span class="text-lg">Details</span>
-                  </div>
-                </va-card-title>
-                <va-card-content>
-                  <UploadedDatasetDetails
+        >
+          <div class="flex-1">
+            <va-card class="upload-details">
+              <va-card-title>
+                <div class="flex flex-nowrap items-center w-full">
+                  <span class="text-lg">Details</span>
+                </div>
+              </va-card-title>
+              <va-card-content>
+                <UploadedDatasetDetails
                     v-if="selectingFiles || selectingDirectory"
                     :dataset="datasetUploadLog?.dataset"
-                    :dataset-name="selectedDirectoryName"
-                    v-model:dataset-name-input="datasetToUploadInputName"
+                    v-model:populated-dataset-name="populatedDatasetName"
                     :input-disabled="submitAttempted"
-                    :selecting-files="selectingFiles"
-                    :selecting-directory="selectingDirectory"
                     :uploaded-data-product-error-messages="
-                      formErrors[STEP_KEYS.UPLOAD]
+                      formErrors[STEP_KEYS.INFO]
                     "
                     :uploaded-data-product-error="
-                      !!formErrors[STEP_KEYS.UPLOAD]
+                      !!formErrors[STEP_KEYS.INFO]
                     "
+                    :project="projectSelected && Object.values(projectSelected)[0]"
                     :source-raw-data="rawDataSelected"
                     :submission-status="submissionStatus"
                     :submission-alert="submissionAlert"
                     :status-chip-color="statusChipColor"
                     :submission-alert-color="submissionAlertColor"
                     :is-submission-alert-visible="isSubmissionAlertVisible"
-                  /> </va-card-content
-              ></va-card>
-            </div>
+                />
+              </va-card-content
+              >
+            </va-card>
+          </div>
 
-            <va-divider vertical />
+          <va-divider vertical/>
 
-            <div class="flex-1">
-              <DatasetFileUploadTable
-                :source-raw-data="
-                  rawDataSelected.length > 0 ? rawDataSelected[0] : null
-                "
-                @file-removed="removeFile"
-                :submit-attempted="submitAttempted"
+          <div class="flex-1">
+            <DatasetFileUploadTable
                 :files="displayedFilesToUpload"
-                :selecting-files="selectingFiles"
-                :selecting-directory="selectingDirectory"
-              />
-            </div>
+            />
           </div>
         </div>
       </template>
@@ -179,24 +220,28 @@
 <script setup>
 import SelectFileButtons from "@/components/dataset/upload/SelectFileButtons.vue";
 import config from "@/config";
+import Constants from "@/constants";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import datasetUploadService from "@/services/upload/dataset";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
-import { jwtDecode } from "jwt-decode";
-import Constants from "@/constants";
+import SelectedFilesTable from "@/components/dataset/upload/SelectedFilesTable.vue";
+import {VaDivider} from "vuestic-ui";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
 // const token = ref(useLocalStorage("token", ""));
 
 const STEP_KEYS = {
+  PROJECT: "project",
   RAW_DATA: "rawData",
   UPLOAD: "upload",
+  INFO: "info"
 };
 
 const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
@@ -214,13 +259,14 @@ const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
 const steps = [
-  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
   {
     key: STEP_KEYS.UPLOAD,
-    label: "Upload",
+    label: "Select Files",
     icon: "material-symbols:folder",
   },
-  // { label: "Select Files", icon: "material-symbols:folder" },
+  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
+  {key: STEP_KEYS.PROJECT, label: "Project", icon: "mdi:flask"},
+  {key: STEP_KEYS.INFO, label: "Upload Details", icon: "mdi:dna"},
 ];
 
 const UPLOAD_FILE_REQUIRED_ERROR = "A file must be selected for upload.";
@@ -228,21 +274,29 @@ const DATASET_NAME_MAX_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
   "You have requested a source Raw Data to be assigned. Please select one.";
+const PROJECT_REQUIRED_ERROR = "Project must be selected.";
 
 const formErrors = ref({
+  [STEP_KEYS.PROJECT]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.UPLOAD]: null,
+  [STEP_KEYS.INFO]: null
 });
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.RAW_DATA];
-  } else if (step.value === 1) {
     return !!formErrors.value[STEP_KEYS.UPLOAD];
+  } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+  } else if (step.value === 2) {
+    return !!formErrors.value[STEP_KEYS.PROJECT];
+  } else if (step.value === 3) {
+    return !!formErrors.value[STEP_KEYS.INFO];
   }
 });
 
 const isAssignedSourceRawData = ref(true);
+const isAssignedProject = ref(true);
 const submissionSuccess = ref(false);
 
 const isPreviousButtonDisabled = computed(() => {
@@ -284,20 +338,22 @@ const isStepperButtonDisabled = (stepIndex) => {
 // their respective input fields. For step 3, pristine state is maintained by
 // this component.
 const stepPristineStates = ref([
+  { [STEP_KEYS.PROJECT]: true },
   { [STEP_KEYS.RAW_DATA]: true },
   { [STEP_KEYS.UPLOAD]: true },
+  {[STEP_KEYS.INFO]: true}
 ]);
 
 const stepIsPristine = computed(() => {
   return !!Object.values(stepPristineStates.value[step.value])[0];
 });
 
-const removeFile = (index) => {
+const removeFile = (fileIndex) => {
   if (selectingDirectory.value) {
     selectingDirectory.value = false;
     clearSelectedDirectoryToUpload();
   } else if (selectingFiles.value) {
-    filesToUpload.value.splice(index, 1);
+    filesToUpload.value.splice(fileIndex, 1);
     if (filesToUpload.value.length === 0) {
       selectingFiles.value = false;
     }
@@ -352,10 +408,34 @@ const datasetNameValidationRules = [
   validateNotExists,
 ];
 
+const setProject  = project => {
+  // console.log('set project', project)
+  // console.log('projectSelected', projectSelected.value)
+  // console.log('projectId', project.id)
+  // resetSelectedProject(project)
+  projectSelected.value = { [project.id]: project }
+
+  // console.log('projectSelected after remove', projectSelected.value)
+  // projectSelected.value[project.id] = project
+  // console.log('projectSelected after set', projectSelected.value)
+}
+
+const resetSelectedProject = (project) => {
+  // console.log('remove project', project)
+  // console.log('projectSelected before remove', projectSelected.value)
+  // console.log("typeof projectSelected.value", typeof projectSelected.value)
+  // console.log("project.id", project.id)
+  // console.log("projectSelected.value[project.id]", projectSelected.value[project.id])
+  projectSelected.value = {};
+  // console.log('projectSelected after remove', projectSelected.value)
+}
+
+
 const loading = ref(false);
 const validatingForm = ref(false);
 const rawDataList = ref([]);
 const rawDataSelected = ref([]);
+const projectSelected = ref({});
 const datasetUploadLog = ref(null);
 const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED);
 const statusChipColor = ref("");
@@ -373,12 +453,29 @@ const isUploadIncomplete = computed(() => {
 const filesToUpload = ref([]);
 const displayedFilesToUpload = ref([]);
 
-const datasetToUploadInputName = ref("");
 const selectedDirectory = ref(null);
-const selectedDirectoryName = ref("");
 const selectedDirectoryChunkCount = ref(0);
 const totalUploadedChunkCount = ref(0);
 const uploadingFilesState = ref({});
+
+const selectingFiles = ref(false);
+const selectingDirectory = ref(false);
+
+const populatedDatasetName = ref("")
+
+watch(selectingFiles, () => {
+  if (selectingFiles.value) {
+    populatedDatasetName.value = ""
+  }
+})
+
+watch(selectingDirectory, () => {
+  if (selectingDirectory.value) {
+    populatedDatasetName.value = selectedDirectory.value.name
+  }
+})
+
+
 
 const step = ref(0);
 const uploadCancelled = ref(false);
@@ -396,13 +493,8 @@ const isLastStep = computed(() => {
 });
 
 const uploadFormData = computed(() => {
-  const datasetName = selectingFiles.value
-    ? datasetToUploadInputName.value
-    : selectingDirectory.value
-      ? selectedDirectory.value?.name
-      : "";
   return {
-    name: datasetName,
+    name: populatedDatasetName.value,
     type: "DATA_PRODUCT",
     ...(rawDataSelected.value.length > 0 && {
       source_dataset_id: rawDataSelected.value[0].id,
@@ -412,28 +504,24 @@ const uploadFormData = computed(() => {
 
 const resetFormErrors = () => {
   formErrors.value = {
+    [STEP_KEYS.PROJECT]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.UPLOAD]: null,
+    [STEP_KEYS.INFO]: null,
   };
 };
 
 const validateDatasetName = async () => {
-  const datasetName = selectingFiles.value
-    ? datasetToUploadInputName.value
-    : selectingDirectory.value
-      ? selectedDirectory.value?.name
-      : "";
-
-  if (datasetNameIsNull(datasetName)) {
+  if (datasetNameIsNull(populatedDatasetName.value)) {
     return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
-  } else if (!datasetNameHasMinimumChars(datasetName)) {
+  } else if (!datasetNameHasMinimumChars(populatedDatasetName.value)) {
     return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
-  } else if (stringHasSpaces(datasetName)) {
+  } else if (stringHasSpaces(populatedDatasetName.value)) {
     return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
   }
 
   validatingForm.value = true;
-  return datasetNameValidationRules[3](datasetName)
+  return datasetNameValidationRules[3](populatedDatasetName.value)
     .then((res) => {
       return {
         isNameValid: res !== DATASET_EXISTS_ERROR,
@@ -458,15 +546,13 @@ const clearSelectedDirectoryToUpload = ({
   // clear directory being removed
   selectedDirectory.value = null;
   // clear directory name
-  selectedDirectoryName.value = "";
+  // selectedDirectoryName.value = "";
 };
 
 const clearSelectedFilesToUpload = () => {
-  filesToUpload.value = [];
+  displayedFilesToUpload.value = [];
 };
 
-const selectingFiles = ref(false);
-const selectingDirectory = ref(false);
 
 const FILE_TYPE = {
   FILE: "file",
@@ -484,33 +570,55 @@ const setUploadedFileType = (fileType) => {
 };
 
 const setFormErrors = async () => {
+  // console.log("setFormErrors called");
   resetFormErrors();
+  // console.log("setFormErrors after resetFormErrors");
+
+  // console.log("step.value", step.value)
+
+  // console.log("!isAssignedSourceRawData", !isAssignedSourceRawData)
+  // console.log("formErrors", formErrors.value)
+  // console.log("rawDataSelected", rawDataSelected.value)
+
   if (step.value === 0) {
+    if (
+        // (selectingFiles.value || selectingDirectory.value) &&
+        displayedFilesToUpload.value.length === 0
+    ) {
+      formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
+      return;
+    }
+  }
+
+  if (step.value === 1) {
+    // console.log("isAssignedSourceRawData", isAssignedSourceRawData.value)
+    // console.log("rowDataSelected", rawDataSelected.value)
     if (!isAssignedSourceRawData.value) {
       formErrors.value[STEP_KEYS.RAW_DATA] = null;
       return;
     }
     if (rawDataSelected.value.length === 0) {
       formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
-      return;
+      return
     }
   }
 
-  if (step.value === 1) {
-    if (
-      (selectingFiles.value || selectingDirectory.value) &&
-      filesToUpload.value.length === 0
-    ) {
-      formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
-      return;
+  if (step.value === 2) {
+    if (!isAssignedProject.value) {
+      formErrors.value[STEP_KEYS.PROJECT] = null;
+      return
+    } else if (Object.values(projectSelected.value).length === 0) {
+      formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR;
+      return
     }
+  }
 
-    const { isNameValid: datasetNameIsValid, error } =
-      await validateDatasetName();
+  if (step.value === 3) {
+    const {isNameValid: datasetNameIsValid, error} = await validateDatasetName();
     if (datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.UPLOAD] = null;
+      formErrors.value[STEP_KEYS.INFO] = null;
     } else {
-      formErrors.value[STEP_KEYS.UPLOAD] = error;
+      formErrors.value[STEP_KEYS.INFO] = error;
     }
   }
 };
@@ -997,11 +1105,16 @@ const preUpload = async () => {
             path: e.path,
           };
         }),
+        project_id: (Object.entries(projectSelected.value) || []).length > 0 ? Object.keys(projectSelected.value)[0] : null,
       };
 
   const res = await createOrUpdateUploadLog(logData);
   datasetUploadLog.value = res.data;
 };
+
+// watch(projectSelected, (newVal, oldVal) => {
+//   console.log("projectSelected changed", projectSelected.value);
+// })
 
 // Log (or update) upload status
 const createOrUpdateUploadLog = (data) => {
@@ -1028,6 +1141,7 @@ const uploadFiles = async (files) => {
 
 // two files can't have same path/name
 const setFiles = (files) => {
+  // console.log("setFiles", files);
   _.range(0, files.length).forEach((i) => {
     const file = files.item(i);
     filesToUpload.value.push({
@@ -1039,7 +1153,9 @@ const setFiles = (files) => {
     });
   });
   displayedFilesToUpload.value = filesToUpload.value;
+  console.log("displayedFileasToUploaf", displayedFilesToUpload.value);
 };
+
 
 // two files can't have the same name and path
 const setDirectory = (directoryDetails) => {
@@ -1064,7 +1180,7 @@ const setDirectory = (directoryDetails) => {
     progress: 0,
     uploadStatus: config.upload.status.PROCESSING_FAILED,
   };
-  selectedDirectoryName.value = selectedDirectory.value.name;
+  // selectedDirectoryName.value = selectedDirectory.value.name;
 
   displayedFilesToUpload.value = [selectedDirectory.value];
 };
@@ -1083,18 +1199,24 @@ onMounted(() => {
 
 watch(
   [
+    step,
+    projectSelected,
+    isAssignedProject,
     rawDataSelected,
-    datasetToUploadInputName,
-    selectedDirectoryName,
     selectingFiles,
     selectingDirectory,
     isAssignedSourceRawData,
     filesToUpload,
+    populatedDatasetName
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    if (stepKey === STEP_KEYS.RAW_DATA) {
+    if (stepKey === STEP_KEYS.PROJECT) {
+      // `1` corresponds to `projectSelected` in this Watcher
+      // `2` corresponds to `isAssignedProject` in this Watcher
+      stepPristineStates.value[step.value][stepKey] = (!oldVals[1] && newVals[1]) || (!oldVals[2] && newVals[2]);
+    } else if (stepKey === STEP_KEYS.RAW_DATA) {
       stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0];
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
@@ -1131,6 +1253,11 @@ onBeforeUnmount(async () => {
     );
   }
 });
+
+watch((filesToUpload) => {
+  debugger
+  console.log("filesToUpload", filesToUpload);
+})
 </script>
 
 <style lang="scss">

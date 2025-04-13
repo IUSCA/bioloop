@@ -5,6 +5,7 @@
     filter-by="name"
     placeholder="Search projects by name"
     data-test-id="project-search-autocomplete"
+    :disabled="props.disabled"
   >
     <template #filtered="{ item }">
       <div class="flex">
@@ -37,6 +38,10 @@ const props = defineProps({
   excludeIds: {
     type: Array,
     default: () => [],
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
   },
   forSelf: {
     type: Boolean,

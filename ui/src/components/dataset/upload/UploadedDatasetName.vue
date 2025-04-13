@@ -1,8 +1,5 @@
 <template>
-  <CopyText v-if="props.selectingDirectory" :text="props.datasetName" />
-
   <va-input
-    v-else-if="props.selectingFiles"
     v-model="datasetNameInput"
     :placeholder="'Dataset name'"
     class="w-full"
@@ -17,23 +14,19 @@
 
 <script setup>
 const props = defineProps({
-  datasetName: {
-    type: String,
-    default: "",
-  },
-  datasetNameInput: {
+  // datasetName: {
+  //   type: String,
+  //   default: "",
+  // },
+  // datasetNameInput: {
+  //   type: String,
+  //   default: "",
+  // },
+  populatedDatasetName: {
     type: String,
     default: "",
   },
   inputDisabled: {
-    type: Boolean,
-    default: false,
-  },
-  selectingFiles: {
-    type: Boolean,
-    default: false,
-  },
-  selectingDirectory: {
     type: Boolean,
     default: false,
   },
@@ -47,14 +40,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:datasetNameInput", "update:datasetName"]);
+const emit = defineEmits(["update:populatedDatasetName"]);
 
 const datasetNameInput = computed({
   get() {
-    return props.datasetNameInput;
+    return props.populatedDatasetName;
   },
   set(value) {
-    emit("update:datasetNameInput", value);
+    emit("update:populatedDatasetName", value);
   },
 });
 </script>
