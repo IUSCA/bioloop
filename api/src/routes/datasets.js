@@ -170,7 +170,6 @@ router.get(
     }),
 );
 
-
 const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
@@ -321,7 +320,6 @@ router.get(
   }),
 );
 
-
 const dataset_access_check = asyncHandler(async (req, res, next) => {
   // assumes req.params.id is the dataset id user is requesting
   // access check
@@ -356,6 +354,7 @@ router.get(
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
     query('include_upload_log').toBoolean().default(false),
+    query('include_import_log').toBoolean().optional().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -374,6 +373,7 @@ router.get(
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
       include_upload_log: req.query.include_upload_log,
+      include_import_log: req.query.include_import_log,
     });
 
     res.json(dataset);
@@ -457,6 +457,12 @@ router.post(
           assignor_id: req.user.id,
         }],
       };
+    }
+
+    data.import_log = {
+      create: {
+        creator_id: req.user.id,
+      }
     }
 
     // add a state

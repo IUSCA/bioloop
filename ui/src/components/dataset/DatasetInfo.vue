@@ -6,6 +6,12 @@
           <td>ID</td>
           <td>{{ props.dataset.id }}</td>
         </tr>
+        <tr v-if="datasetCreator">
+          <td>Created By</td>
+          <td>
+            {{ datasetCreatorDisplayed }}
+          </td>
+        </tr>
         <tr>
           <td>Start Date</td>
           <td>
@@ -79,6 +85,14 @@ import { useAuthStore } from "@/stores/auth";
 const props = defineProps({ dataset: Object });
 
 const auth = useAuthStore();
+
+const datasetCreator = props.dataset?.upload_log
+  ? props.dataset?.upload_log?.user
+  : props.dataset?.import_log?.creator || null;
+
+const datasetCreatorDisplayed = datasetCreator
+  ? `${datasetCreator.username} (${datasetCreator.name})`
+  : null;
 </script>
 
 <style lang="scss" scoped>

@@ -36,6 +36,7 @@ model dataset {
   stage_requests     stage_request_log[]
   bundle             bundle?
   dataset_upload_log dataset_upload_log?
+  import_log import_log?
 
   @@unique([name, type, is_deleted])
 }
@@ -78,6 +79,17 @@ model dataset_file_hierarchy {
   @@id([parent_id, child_id])
   @@index([child_id])
 }
+
+model import_log {
+  id           Int      @id @default(autoincrement())
+  initiated_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  creator_id   Int
+  creator      user     @relation(fields: [creator_id], references: [id], onDelete: Cascade)
+  dataset_id   Int      @unique
+  dataset      dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+}
+
 
 model upload_log {
   id             Int                 @id @default(autoincrement())
@@ -191,6 +203,7 @@ model user {
   acknowledged_notifications notification[]
   uploads                    upload_log[]
   user_notifications         user_notification[]
+  import_log import_log[]
 }
 
 model user_password {

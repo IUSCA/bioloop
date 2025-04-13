@@ -43,6 +43,8 @@ class DatasetService {
     bundle = false,
     include_projects = false,
     initiator = false,
+    include_import_log = false,
+    include_upload_log = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -54,6 +56,8 @@ class DatasetService {
         bundle,
         include_projects,
         initiator,
+        include_import_log,
+        include_upload_log,
       },
     });
   }
