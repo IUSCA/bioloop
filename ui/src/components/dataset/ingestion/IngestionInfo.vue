@@ -18,7 +18,15 @@
               </td>
             </tr>
             <tr>
-              <td>Ingestion Source Directory</td>
+              <td>Source Instrument</td>
+              <td>
+                <CopyText
+                  :text="`${props.instrument.name} (${props.instrument.host})`"
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Source Directory</td>
               <td><CopyText :text="props.ingestionDir.path" /></td>
             </tr>
             <tr v-if="props.ingestionSpace">
@@ -77,6 +85,10 @@ const props = defineProps({
   },
   datasetId: {
     type: [String, Number],
+  },
+  // todo - get instrument from dataset
+  instrument: {
+    type: Object,
   },
 });
 </script>

@@ -90,6 +90,18 @@
     </template>
 
     <template #step-content-1>
+      <va-select
+        class="w-full"
+        v-model="selectedInstrument"
+        label="Select source instrument"
+        placeholder="Select source instrument"
+        :options="instruments"
+        :text-by="'name'"
+        :track-by="'id'"
+      />
+    </template>
+
+    <template #step-content-2>
       <div class="flex flex-col gap-10">
         <va-checkbox
           v-model="isAssignedSourceRawData"
@@ -129,7 +141,7 @@
       </div>
     </template>
 
-    <template #step-content-2>
+    <template #step-content-3>
       <!-- <div class="flex flex-col"> -->
       <div class="flex flex-col gap-10">
         <va-checkbox
@@ -172,13 +184,14 @@
       </div>
     </template>
 
-    <template #step-content-3>
+    <template #step-content-4>
       <IngestionInfo
         :ingestion-dir="selectedFile"
         :source-raw-data="rawDataSelected[0]"
         :project="projectSelected && Object.values(projectSelected)[0]"
         :ingestion-space="searchSpace.label"
         :dataset-id="datasetId"
+        :instrument="selectedInstrument"
       />
     </template>
 
@@ -214,6 +227,7 @@
 
 <script setup>
 import config from "@/config";
+import instrumentService from "@/services/instrument";
 import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
@@ -223,6 +237,7 @@ import pm from "picomatch";
 const STEP_KEYS = {
   DIRECTORY: "directory",
   PROJECT: "project",
+  INSTRUMENT: "instrument",
   RAW_DATA: "rawData",
   INFO: "info",
 };
@@ -236,6 +251,7 @@ const INGESTION_NOT_ALLOWED_ERROR =
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
   "You have requested a source Raw Data to be assigned. Please select one.";
 const PROJECT_REQUIRED_ERROR = "Project must be selected.";
+const INSTRUMENT_REQUIRED_ERROR = "You must select a source instrument.";
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -247,6 +263,11 @@ const steps = [
     label: "Select Directory",
     icon: "material-symbols:folder",
   },
+  {
+    key: STEP_KEYS.INSTRUMENT,
+    label: "Select Source Instrument",
+    icon: "material-symbols:microscope",
+  },
   { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
   {key: STEP_KEYS.PROJECT, label: "Project", icon: "mdi:flask"},
   {
@@ -257,6 +278,8 @@ const steps = [
 ];
 
 const isAssignedProject = ref(true);
+const selectedInstrument = ref(null);
+const instruments = ref([]);
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
 const rawDataSelected = ref([]);
@@ -300,6 +323,7 @@ const isPreviousButtonDisabled = computed(() => {
 // (STEP_KEYS.RAW_DATA)
 const stepPristineStates = ref([
   {[STEP_KEYS.DIRECTORY]: true},
+  { [STEP_KEYS.INSTRUMENT]: true },
   {[STEP_KEYS.PROJECT]: true},
   {[STEP_KEYS.RAW_DATA]: true},
   {[STEP_KEYS.INFO]: true},
@@ -311,6 +335,7 @@ const stepIsPristine = computed(() => {
 
 const formErrors = ref({
   [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.INSTRUMENT]: null,
   [STEP_KEYS.PROJECT]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
@@ -319,9 +344,11 @@ const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.DIRECTORY];
   } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.PROJECT];
+    return !!formErrors.value[STEP_KEYS.INSTRUMENT];
   } else if (step.value === 2) {
     return !!formErrors.value[STEP_KEYS.RAW_DATA];
+  } else if (step.value === 3) {
+    return !!formErrors.value[STEP_KEYS.PROJECT];
   } else {
     return false;
   }
@@ -342,6 +369,7 @@ const selectedFile = ref(null);
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.DIRECTORY]: null,
+    [STEP_KEYS.INSTRUMENT]: null,
     [STEP_KEYS.PROJECT]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.INFO]: null,
@@ -374,6 +402,11 @@ const setFormErrors = async () => {
       }
     }
   } else if (step.value === 1) {
+    if (!selectedInstrument.value) {
+      formErrors.value[STEP_KEYS.INSTRUMENT] = INSTRUMENT_REQUIRED_ERROR;
+      return;
+    }
+  } else if (step.value === 2) {
     if (!isAssignedSourceRawData.value) {
       formErrors.value[STEP_KEYS.RAW_DATA] = null;
       return;
@@ -382,7 +415,7 @@ const setFormErrors = async () => {
       formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
       return;
     }
-  } else if (step.value === 2) {
+  } else if (step.value === 3) {
     if (!isAssignedProject.value) {
       formErrors.value[STEP_KEYS.PROJECT] = null;
     } else if (Object.values(projectSelected.value).length === 0) {
@@ -536,6 +569,7 @@ const preIngestion = () => {
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
     project_id: (Object.entries(projectSelected.value) || []).length > 0 ? Object.values(projectSelected.value)[0]?.id : null,
+    instrument_id: selectedInstrument.value.id,
   });
 };
 
@@ -616,14 +650,17 @@ watch(
     fileListSearchText,
     isFileSearchAutocompleteOpen,
     searchSpace,
+    selectedInstrument,
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
     if (stepKey === STEP_KEYS.RAW_DATA) {
-      stepPristineStates.value[step.value][stepKey] = (!oldVals[1] && newVals[1]) || (!oldVals[2] && newVals[2]);
+      stepPristineStates.value[step.value][stepKey] = (!oldVals[1] && newVals[1]) | (!oldVals[2] && newVals[2]);
     } else if (stepKey === STEP_KEYS.PROJECT) {
       stepPristineStates.value[step.value][stepKey] = (!oldVals[3] && newVals[3]) || (!oldVals[4] && newVals[4]);
+    } else if (stepKey === STEP_KEYS.INSTRUMENT) {
+      stepPristineStates.value[step.value][stepKey] = !oldVals[9] && newVals[9];
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
     }
@@ -650,6 +687,14 @@ onMounted(() => {
     .getAll({ type: "RAW_DATA" })
     .then((res) => {
       rawDataList.value = res.data.datasets;
+      return Promise.resolve();
+    })
+    .then(() => {
+      return instrumentService.getAll();
+    })
+    .then((res) => {
+      console.log("instruments:", res.data);
+      instruments.value = res.data;
     })
     .catch((err) => {
       toast.error("Failed to load resources");

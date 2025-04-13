@@ -26,6 +26,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    instruments: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     projects: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -95,6 +101,9 @@ const grantsObject = {
       'update:own': ['*'],
       'delete:own': ['*'],
     },
+    instruments: {
+      'read:any': ['*'],
+    },
     statistics: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -129,6 +138,12 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     datasetUploads: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    instruments: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
