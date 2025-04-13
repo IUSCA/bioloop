@@ -4,6 +4,7 @@ from pathlib import Path
 
 from sca_rhythm import Workflow
 
+from workers.api import DatasetAlreadyExistsError
 import workers.api as api
 import workers.workflow_utils as wf_utils
 from workers.celery_app import app as celery_app

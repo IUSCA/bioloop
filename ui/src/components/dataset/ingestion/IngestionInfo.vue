@@ -43,6 +43,14 @@
                 }}</a>
               </td>
             </tr>
+            <tr v-if="props.project">
+              <td>Project</td>
+              <td>
+                <a :href="`/projects/${props.project.id}`">{{
+                    props.project.name
+                  }}</a>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -62,6 +70,9 @@ const props = defineProps({
     required: true,
   },
   sourceRawData: {
+    type: Object,
+  },
+  project: {
     type: Object,
   },
   datasetId: {
