@@ -10,6 +10,8 @@ const exports = {
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
+  microsoftReturn:
+    import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
     uploadToken: 5,
@@ -55,6 +57,7 @@ const exports = {
   auth_enabled: {
     google: true,
     cilogon: true,
+    microsoft: true,
   },
   dashboard: {
     active_tasks: {

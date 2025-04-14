@@ -67,5 +67,3 @@ db/backups/*.psql
 todo.md
 
 .pm2
-
-metrics/grafana/

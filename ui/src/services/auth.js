@@ -1,5 +1,5 @@
-import api from "./api";
 import config from "@/config";
+import api from "./api";
 
 class AuthService {
   casVerify(casTicket) {
@@ -51,6 +51,22 @@ class AuthService {
     return api.post("/auth/cilogon/verify", {
       redirect_uri: config.cilogonReturn,
       code,
+    });
+  }
+
+  getMicrosoftUrl() {
+    return api.get("/auth/microsoft/url", {
+      params: {
+        redirect_uri: config.microsoftReturn,
+      },
+    });
+  }
+
+  microsoftVerify({ code, code_verifier }) {
+    return api.post("/auth/microsoft/verify", {
+      redirect_uri: config.microsoftReturn,
+      code,
+      code_verifier,
     });
   }
 }

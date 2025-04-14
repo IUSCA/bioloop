@@ -1,0 +1,13 @@
+pg_table_size:
+  query: |
+    SELECT
+      schemaname || '.' || relname AS table_full_name,
+      pg_total_relation_size(relid) AS size_bytes
+    FROM pg_catalog.pg_statio_user_tables
+  metrics:
+    - table_full_name:
+        usage: "LABEL"
+        description: "Full table name"
+    - size_bytes:
+        usage: "GAUGE"
+        description: "Total table size in bytes"

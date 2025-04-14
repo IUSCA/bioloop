@@ -61,6 +61,7 @@ const route = useRoute();
 const router = useRouter();
 const redirectPath = ref(useLocalStorage("auth.redirect", ""));
 const storedState = ref(useLocalStorage("auth.state", ""));
+const codeVerfier = ref(useLocalStorage("auth.code_verifier", ""));
 const notAuthorized = ref(false);
 const authFailure = ref(false);
 const validation_loading = ref(false);
@@ -78,14 +79,18 @@ if (paramsExist) {
   // console.log({ params, storedState: storedState.value });
 
   // csrf protection
-  // bypass csrf protection check when params does not include the state parameter - this auth has no state
-  // read stored state from local storage and reset it
+  // bypass csrf protection check when params does not include the state
+  // parameter - this auth has no state read stored state from local storage and
+  // reset it
   const _storedState = storedState.value;
   storedState.value = null;
   if (params.state === _storedState || !params.state) {
     validation_loading.value = true;
     props
-      .verify(params)
+      .verify({
+        code_verifier: codeVerfier.value,
+        ...params,
+      })
       .then((user) => {
         if (user) {
           // read redirectPath value from local storage and reset it
@@ -123,6 +128,7 @@ if (paramsExist) {
     .then((res) => {
       const url = res.data?.url;
       storedState.value = res.data?.state;
+      codeVerfier.value = res.data?.code_verifier;
       // console.log({ url, storedState: storedState.value });
       if (url) {
         window.location.replace(url);

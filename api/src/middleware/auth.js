@@ -4,6 +4,7 @@ const _ = require('lodash/fp');
 const authService = require('../services/auth');
 const { setIntersection } = require('../utils');
 const ac = require('../services/accesscontrols');
+const asyncHandler = require('./asyncHandler');
 
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -119,8 +120,37 @@ function getPermission({
   }
 }
 
+const loginHandler = asyncHandler(async (req, res, next) => {
+  const user = req.auth_user;
+  if (user) {
+    const resObj = await authService.onLogin({ user, method: req.auth_method });
+
+    if (user.roles.includes('admin')) {
+      // set cookie
+      res.cookie('grafana_token', authService.issueGrafanaToken(user), {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Strict',
+      });
+    } else {
+      // if user is not an admin, clear the cookie
+      res.clearCookie('grafana_token', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Strict',
+      });
+    }
+
+    return res.json(resObj);
+  }
+  // User was authenticated but they are not a portal user
+  // Send an empty success message
+  return res.status(204).send();
+});
+
 module.exports = {
   authenticate,
   accessControl,
   getPermission,
+  loginHandler,
 };

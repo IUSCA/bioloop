@@ -36,6 +36,14 @@
       "scope": "openid+email",
       "client_id": "",
       "client_secret": ""
+    },
+    "microsoft": {
+      "enabled": true,
+      "authorization_endpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+      "token_endpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      "scope": "https://graph.microsoft.com/User.Read",
+      "client_id": "",
+      "client_secret": ""
     }
   },
   "oauth": {
