@@ -110,13 +110,13 @@ const assoc_body_schema = {
 };
 
 const buildUserRoleQueryObject = ({
-                                    deleted, type, name, match_name_exact, username
-                                  }) => {
+  deleted, type, name, match_name_exact, username,
+}) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     type,
     name: name ? {
-      ...(match_name_exact ? {equals: name} : {contains: name}),
+      ...(match_name_exact ? { equals: name } : { contains: name }),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
     // Filter by projects assigned to this user
@@ -126,58 +126,58 @@ const buildUserRoleQueryObject = ({
           users: {
             some: {
               user: {
-                username: username,
-              }
-            }
-          }
-        }
-      }
-    }
+                username,
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   return query_obj;
 };
 
 router.get(
-    '/:username/',
-    isPermittedTo('read', {checkOwnerShip: true}),
-    query('deleted').toBoolean().default(false),
-    query('type').isIn(config.dataset_types).optional(),
-    query('name').notEmpty().optional(),
-    query('limit').isInt({min: 1}).toInt().optional(), // optional because watch script needs all datasets at once
-    query('offset').isInt({min: 0}).toInt().optional(),
-    query('sort_by').default('updated_at'),
-    query('sort_order').default('desc').isIn(['asc', 'desc']),
-    query('match_name_exact').default(false).toBoolean(),
+  '/:username/',
+  isPermittedTo('read', { checkOwnerShip: true }),
+  query('deleted').toBoolean().default(false),
+  query('type').isIn(config.dataset_types).optional(),
+  query('name').notEmpty().optional(),
+  query('limit').isInt({ min: 1 }).toInt().optional(), // optional because watch script needs all datasets at once
+  query('offset').isInt({ min: 0 }).toInt().optional(),
+  query('sort_by').default('updated_at'),
+  query('sort_order').default('desc').isIn(['asc', 'desc']),
+  query('match_name_exact').default(false).toBoolean(),
 
-    asyncHandler(async (req, res, next) => {
-      // #swagger.tags = ['datasets']
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
 
-      const query_obj = buildUserRoleQueryObject({...req.query, username: req.params.username});
+    const query_obj = buildUserRoleQueryObject({ ...req.query, username: req.params.username });
 
-      const filterQuery = {
-        where: query_obj,
-      };
-      const orderBy = {
-        [req.query.sort_by]: req.query.sort_order,
-      };
-      const datasetRetrievalQuery = {
-        skip: req.query.offset,
-        take: req.query.limit,
-        ...filterQuery,
-        orderBy,
-      };
+    const filterQuery = {
+      where: query_obj,
+    };
+    const orderBy = {
+      [req.query.sort_by]: req.query.sort_order,
+    };
+    const datasetRetrievalQuery = {
+      skip: req.query.offset,
+      take: req.query.limit,
+      ...filterQuery,
+      orderBy,
+    };
 
-      const [datasets, count] = await prisma.$transaction([
-        prisma.dataset.findMany({...datasetRetrievalQuery}),
-        prisma.dataset.count({...filterQuery}),
-      ]);
+    const [datasets, count] = await prisma.$transaction([
+      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
+      prisma.dataset.count({ ...filterQuery }),
+    ]);
 
-      res.json({
-        metadata: {count},
-        datasets,
-      });
-    }),
+    res.json({
+      metadata: { count },
+      datasets,
+    });
+  }),
 );
 
 const buildQueryObject = ({
@@ -457,9 +457,9 @@ router.post(
     }
 
     if (req.body.project_id) {
-      console.log('data.project_id', data.project_id)
+      console.log('data.project_id', data.project_id);
       delete data.project_id; // including project_id in the `data` passed to create_dataset will throw
-      console.log('data.project_id', data.project_id)
+      console.log('data.project_id', data.project_id);
 
       data.projects = {
         create: [{
@@ -472,8 +472,8 @@ router.post(
     data.import_log = {
       create: {
         creator_id: req.user.id,
-      }
-    }
+      },
+    };
 
     // add a state
     data.states = {
@@ -1021,4 +1021,4 @@ router.get(
 );
 
 module.exports = router;
-module.exports.dataset_access_check = dataset_access_check
+module.exports.dataset_access_check = dataset_access_check;
