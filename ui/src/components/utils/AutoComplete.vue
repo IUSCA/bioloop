@@ -72,17 +72,23 @@
           </span>
         </li>
 
-        <li v-else class="py-2 px-3" :data-testid="`${props.dataTestId}--load-more-results-li`">
-          <button
-            class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded w-full text-left"
-            @click="loadMore"
+        <div v-else>
+          <li
+            v-if="props.paginated"
+            class="py-2 px-3"
+            :data-testid="`${props.dataTestId}--load-more-results-li`"
           >
-            <span class="flex gap-2 items-center justify-center va-text-secondary">
-              <i-mdi:chevron-down class="flex-none text-xl" />
-              <span class="flex-none">Load More</span>
-            </span>
-          </button>
-        </li>
+            <button
+              class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded w-full text-left"
+              @click="loadMore"
+            >
+              <span class="flex gap-2 items-center justify-center va-text-secondary">
+                <i-mdi:chevron-down class="flex-none text-xl" />
+                <span class="flex-none">Load More</span>
+              </span>
+            </button>
+          </li>
+        </div>
       </ul>
     </OnClickOutside>
   </div>
@@ -95,6 +101,10 @@ const props = defineProps({
   searchText: {
     type: String,
     default: '',
+  },
+  paginated: {
+    type: Boolean,
+    default: false,
   },
   populatedResult: {
     type: Object,

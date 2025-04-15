@@ -30,125 +30,114 @@
         </va-button>
       </template>
 
+      <!--      <template #step-content-0>-->
+      <!--        <div class="flex flex-col">-->
+      <!--          <SelectFileButtons-->
+      <!--            :disabled="submitAttempted || loading || validatingForm"-->
+      <!--            @files-added="-->
+      <!--              (files) => {-->
+      <!--                console.log('Files added:', files)-->
+      <!--                clearSelectedDirectoryToUpload()-->
+      <!--                setFiles(files)-->
+      <!--                isSubmissionAlertVisible = false-->
+      <!--                setUploadedFileType(FILE_TYPE.FILE)-->
+      <!--              }-->
+      <!--            "-->
+      <!--            @directory-added="-->
+      <!--              (directoryDetails) => {-->
+      <!--                clearSelectedFilesToUpload()-->
+      <!--                setDirectory(directoryDetails)-->
+      <!--                isSubmissionAlertVisible = false-->
+      <!--                setUploadedFileType(FILE_TYPE.DIRECTORY)-->
+      <!--              }-->
+      <!--            "-->
+      <!--          />-->
+
+      <!--          <va-divider />-->
+
+      <!--          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />-->
+      <!--        </div>-->
+      <!--      </template>-->
+
       <template #step-content-0>
-        <!--        @clear="clearSelectedRawData"-->
-        <DatasetSelectAutoComplete
-          v-model:populated-result="selectedRawData"
-          :dataset-type="config.dataset.types.RAW_DATA.key"
-          placeholder="Select a dataset"
-        >
-        </DatasetSelectAutoComplete>
-        <!--        <div class="flex flex-col">-->
-        <!--          <SelectFileButtons-->
-        <!--            :disabled="submitAttempted || loading || validatingForm"-->
-        <!--            @files-added="-->
-        <!--              (files) => {-->
-        <!--                console.log('Files added:', files)-->
-        <!--                clearSelectedDirectoryToUpload()-->
-        <!--                setFiles(files)-->
-        <!--                isSubmissionAlertVisible = false-->
-        <!--                setUploadedFileType(FILE_TYPE.FILE)-->
-        <!--              }-->
-        <!--            "-->
-        <!--            @directory-added="-->
-        <!--              (directoryDetails) => {-->
-        <!--                clearSelectedFilesToUpload()-->
-        <!--                setDirectory(directoryDetails)-->
-        <!--                isSubmissionAlertVisible = false-->
-        <!--                setUploadedFileType(FILE_TYPE.DIRECTORY)-->
-        <!--              }-->
-        <!--            "-->
-        <!--          />-->
+        <div class="flex w-full pb-6">
+          <div class="w-48 flex-shrink-0 mr-4">
+            <va-checkbox
+              v-model="isAssignedSourceRawData"
+              @update:modelValue="
+                (val) => {
+                  if (!val) {
+                    rawDataSelected = []
+                  }
+                }
+              "
+              color="primary"
+              label="Assign source Raw Data"
+              class="w-full"
+            />
+          </div>
 
-        <!--          <va-divider />-->
+          <div class="flex-grow">
+            <DatasetSelectAutoComplete
+              v-model:populated-result="selectedRawData"
+              :disabled="!isAssignedSourceRawData"
+              placeholder="Search Raw Data"
+              @clear="clearSelectedRawData"
+              class="w-full"
+            >
+            </DatasetSelectAutoComplete>
+          </div>
+        </div>
 
-        <!--          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />-->
-        <!--        </div>-->
-      </template>
+        <div class="flex w-full pb-6">
+          <div class="w-48 flex-shrink-0 mr-4">
+            <va-checkbox
+              v-model="isAssignedProject"
+              @update:modelValue="
+                (val) => {
+                  if (!val) {
+                    projectSelected = {}
+                  }
+                }
+              "
+              color="primary"
+              label="Assign Project"
+              class="w-full"
+            />
+          </div>
 
-      <template #step-content-1>
-        <!--        <DatasetSelectAutoComplete-->
-        <!--          v-model:populated-result="selectedRawData"-->
-        <!--          placeholder="Select a dataset"-->
-        <!--          @clear="clearSelectedRawData"-->
-        <!--        >-->
-        <!--        </DatasetSelectAutoComplete>-->
+          <div class="flex-grow">
+            <va-form-field v-model="projectSelected" v-slot="{ value: v }" class="w-full">
+              <ProjectSelect
+                @select="setProject"
+                :disabled="!isAssignedProject"
+                :for-self="!auth.canOperate"
+                class="w-full pb-4"
+              ></ProjectSelect>
+
+              <ProjectList
+                v-if="Object.values(projectSelected).length > 0"
+                :projects="[Object.values(projectSelected)[0]]"
+                show-remove
+                @remove="
+                  (project) => {
+                    resetSelectedProject()
+                  }
+                "
+                class="w-full"
+              >
+              </ProjectList>
+            </va-form-field>
+          </div>
+        </div>
 
         <div class="flex flex-col gap-10">
-          <va-checkbox
-            v-model="isAssignedSourceRawData"
-            @update:modelValue="
-              (val) => {
-                if (!val) {
-                  rawDataSelected = []
-                }
-              }
-            "
-            color="primary"
-            label="Assign source Raw Data"
-          />
-
-          <va-form-field
-            v-if="isAssignedSourceRawData"
-            v-model="rawDataSelected"
-            v-slot="{ value: v }"
-          >
-            <DatasetSelect
-              :selected-results="v.ref"
-              @select="addDataset"
-              @remove="removeDataset"
-              select-mode="single"
-              :dataset-type="config.dataset.types.RAW_DATA.key"
-              :show-error="!stepIsPristine"
-              :error="formErrors[STEP_KEYS.RAW_DATA]"
-              placeholder="Search Raw Data"
-              selected-label="Selected source Raw Data"
-              :messages="['Select a Source Raw Data']"
-            ></DatasetSelect>
-          </va-form-field>
+          <!-- Source Raw Data selector -->
         </div>
       </template>
 
       <template #step-content-2>
-        <div class="flex flex-col gap-10">
-          <va-checkbox
-            v-model="isAssignedProject"
-            @update:modelValue="
-              (val) => {
-                if (!val) {
-                  projectSelected = {}
-                }
-              }
-            "
-            color="primary"
-            label="Assign Project"
-          />
-
-          <va-form-field v-model="projectSelected" v-slot="{ value: v }">
-            <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
-              <div class="space-y-4">
-                <ProjectSelect
-                  @select="setProject"
-                  :disabled="!isAssignedProject"
-                  :for-self="!auth.canOperate"
-                ></ProjectSelect>
-
-                <ProjectList
-                  v-if="Object.values(projectSelected).length > 0"
-                  :projects="[Object.values(projectSelected)[0]]"
-                  show-remove
-                  @remove="
-                    (project) => {
-                      // console.log('Removing project in template:', project);
-                      resetSelectedProject()
-                    }
-                  "
-                >
-                </ProjectList>
-              </div>
-            </div>
-          </va-form-field>
-        </div>
+        <div class="flex flex-col gap-10"></div>
       </template>
 
       <template #step-content-3>
@@ -264,9 +253,9 @@ const steps = [
     label: 'Select Files',
     icon: 'material-symbols:folder',
   },
-  { key: STEP_KEYS.RAW_DATA, label: 'Source Raw Data', icon: 'mdi:dna' },
-  { key: STEP_KEYS.PROJECT, label: 'Project', icon: 'mdi:flask' },
-  { key: STEP_KEYS.INFO, label: 'Upload Details', icon: 'mdi:dna' },
+  { key: STEP_KEYS.INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
+  // { key: STEP_KEYS.RAW_DATA, label: 'Source Raw Data', icon: 'mdi:dna' },
+  // { key: STEP_KEYS.PROJECT, label: 'Project', icon: 'mdi:flask' },
 ]
 
 const UPLOAD_FILE_REQUIRED_ERROR = 'A file must be selected for upload.'

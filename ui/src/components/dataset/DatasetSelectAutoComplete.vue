@@ -3,6 +3,7 @@
     v-model:search-text="searchTerm"
     v-model:populated-result="populatedResult"
     :async="true"
+    :paginated="true"
     :data="datasets"
     :display-by="'name'"
     @clear="onClear"
@@ -11,6 +12,7 @@
     :loading="loading"
     @select="onSelect"
     @open="onOpen"
+    :disabled="props.disabled"
   />
 </template>
 
@@ -28,6 +30,10 @@ const props = defineProps({
   },
   datasetType: {
     type: String,
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
   },
   error: {
     type: String,
