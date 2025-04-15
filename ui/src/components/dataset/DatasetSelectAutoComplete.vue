@@ -1,7 +1,8 @@
 <template>
+  <!--  v-model:populated-result="populatedResult"-->
+
   <AutoComplete
     v-model:search-text="searchTerm"
-    v-model:populated-result="populatedResult"
     :async="true"
     :paginated="true"
     :data="datasets"
@@ -12,6 +13,7 @@
     :loading="loading"
     @select="onSelect"
     @open="onOpen"
+    @close="onClose"
     :disabled="props.disabled"
   />
 </template>
@@ -25,9 +27,10 @@ const NAME_TRIM_THRESHOLD = 35
 const PAGE_SIZE = 10
 
 const props = defineProps({
-  populatedResult: {
-    type: Object,
+  selected: {
+    type: [String, Object],
   },
+  searchTerm: { type: String, default: '' },
   datasetType: {
     type: String,
   },
@@ -44,7 +47,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['select', 'clear', 'update:populatedResult'])
+const emit = defineEmits(['clear', 'open', 'close', 'update:selected', 'update:searchTerm'])
 
 const loading = ref(false)
 const datasets = ref([])
@@ -56,9 +59,13 @@ const skip = computed(() => {
 // const selectedResult = ref(null)
 const searchTerm = computed({
   get: () => {
-    return props.populatedResult ? props.populatedResult['name'] : ''
+    // return props.populatedResult ? props.populatedResult['name'] : ''
+    return props.searchTerm
   },
-  set: () => {},
+  set: (val) => {
+    emit('update:searchTerm', val)
+    // emit('update:populatedResult', null)
+  },
 })
 
 // const searchTerm = ref('')
@@ -80,14 +87,14 @@ const populatedResult = computed({
   },
 })
 
-watch(
-  () => props.populatedResult,
-  (newVal, oldVal) => {
-    console.log('selectAutoComplete watch on populatedResult change')
-    console.log('newVal:', newVal)
-    console.log('oldVal:', oldVal)
-  }
-)
+// watch(
+//   () => props.populatedResult,
+//   (newVal, oldVal) => {
+//     console.log('selectAutoComplete watch on populatedResult change')
+//     console.log('newVal:', newVal)
+//     console.log('oldVal:', oldVal)
+//   }
+// )
 
 const activeCountText = computed(() => {
   const activeCount = Object.values(checkboxes.value).filter((val) => !!val).length
@@ -95,9 +102,10 @@ const activeCountText = computed(() => {
 })
 
 const onSelect = (item) => {
+  emit('update:searchTerm', item.name)
   // selectedResult.value = item
   // emit('select', item)
-  emit('update:populatedResult', item)
+  emit('update:selected', item)
 }
 
 const loadNextPage = () => {
@@ -199,21 +207,30 @@ const performSearch = (searchIndex) => {
 }
 
 const onOpen = () => {
-  if (props.populatedResult) {
-    datasets.value = [props.populatedResult]
-  }
+  // if (props.populatedResult) {
+  //   datasets.value = [props.populatedResult]
+  // }
+  //
+  // // selectedResult.value = null
+  // emit('update:populatedResult', null)
+  emit('open')
+}
 
-  // selectedResult.value = null
-  emit('update:populatedResult', null)
+const onClose = () => {
+  emit('close')
 }
 
 const onClear = () => {
   console.log('onClear invoked')
-  // emit('clear')
-  emit('update:populatedResult', null)
+  emit('clear')
+  // emit('update:populatedResult', null)
 }
 
-watch([searchTerm, filterQuery], () => {
+watch([searchTerm, filterQuery], (newVal, oldVal) => {
+  console.log('searchTerm or filterQuery changed')
+  console.log('searchTerm new Val:', newVal[0])
+  console.log('searchTerm new Val:', oldVal[0])
+
   searchIndex.value += 1
   searches.value.push(searchIndex.value)
 
@@ -223,14 +240,14 @@ watch([searchTerm, filterQuery], () => {
   debouncedSearch.value(searchIndex.value)
 })
 
-watch(
-  () => props.populatedResult,
-  (newVal, oldVal) => {
-    console.log('populatedResult changed')
-    console.log(`oldVal:`, oldVal)
-    console.log(`newVal:`, newVal)
-  }
-)
+// watch(
+//   () => props.populatedResult,
+//   (newVal, oldVal) => {
+//     console.log('populatedResult changed')
+//     console.log(`oldVal:`, oldVal)
+//     console.log(`newVal:`, newVal)
+//   }
+// )
 
 // watch(datasets, () => {
 //   console.log('datasets changed')

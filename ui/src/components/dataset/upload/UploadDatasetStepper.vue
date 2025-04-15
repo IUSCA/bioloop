@@ -92,23 +92,8 @@
           <div class="w-48 flex-shrink-0 mr-4">
             <va-checkbox
               v-model="isAssignedSourceRawData"
-              :disabled="isUploadingRawData"
-              @update:modelValue="
-                (val) => {
-                  console.log('isAssignedSourceRawData changed ', val)
-                  if (!val) {
-                    console.log('Clearing raw data selection')
-                    // rawDataSelected = []
-                    selectedRawData = null
-                  } else {
-                    console.log('else')
-                    selectedDatasetType = datasetTypeOptions.find(
-                      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
-                    )
-                    isUploadingRawData = false
-                  }
-                }
-              "
+              :disabled="willUploadRawData"
+              @update:modelValue="resetRawDataSearch"
               color="primary"
               label="Assign source Raw Data"
               class="w-full"
@@ -117,10 +102,13 @@
 
           <div class="flex-grow">
             <DatasetSelectAutoComplete
-              v-model:populated-result="selectedRawData"
-              :disabled="!isAssignedSourceRawData"
+              :disabled="submitAttempted || !isAssignedSourceRawData"
+              v-model:selected="selectedRawData"
+              v-model:search-term="datasetSearchText"
               placeholder="Search Raw Data"
-              @clear="clearSelectedRawData"
+              @clear="resetRawDataSearch"
+              @open="onRawDataSearchOpen"
+              @close="onRawDataSearchClose"
               class="w-full"
             >
             </DatasetSelectAutoComplete>
@@ -262,6 +250,7 @@ const uploadToken = ref(useLocalStorage('uploadToken', ''))
 // const token = ref(useLocalStorage("token", ""));
 
 const STEP_KEYS = {
+  GENERAL_INFO: 'generalInfo',
   PROJECT: 'project',
   RAW_DATA: 'rawData',
   UPLOAD: 'upload',
@@ -319,6 +308,7 @@ const stepHasErrors = computed(() => {
 
 const isAssignedSourceRawData = ref(true)
 const selectedRawData = ref(null)
+const datasetSearchText = ref('')
 // watch(selectedRawData, (newVal, oldVal) => {
 //   console.log('UploadStepper:')
 //   console.log('selected raw data:')
@@ -329,28 +319,62 @@ const selectedRawData = ref(null)
 const isAssignedProject = ref(true)
 const submissionSuccess = ref(false)
 
-const datasetTypeOptions = [
+const datasetTypes = [
   { label: config.dataset.types.RAW_DATA.label, value: config.dataset.types.RAW_DATA.key },
   { label: config.dataset.types.DATA_PRODUCT.label, value: config.dataset.types.DATA_PRODUCT.key },
 ]
 
+const datasetTypeOptions = ref(datasetTypes)
+
 // const uploadingDatasetType = ref(config.dataset.types.DATA_PRODUCT.key)
 const selectedDatasetType = ref(
-  datasetTypeOptions.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key)
+  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key)
 )
 
-const isUploadingRawData = ref(false)
+const willUploadRawData = ref(false)
 
-watch(selectedDatasetType, (newVal) => {
-  if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
-    isAssignedSourceRawData.value = false
-    // rawDataSelected.value = []
-    selectedRawData.value = null
-    isUploadingRawData.value = true
+const resetRawDataSearch = (val) => {
+  selectedRawData.value = null
+  datasetSearchText.value = ''
+  console.log('isAssignedSourceRawData changed ', val)
+  if (!val) {
+    datasetTypeOptions.value = datasetTypes
+    console.log('Clearing raw data selection')
+    // rawDataSelected = []
   } else {
-    isUploadingRawData.value = false
+    console.log('else')
+    datasetTypeOptions.value = datasetTypes.filter(
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
+    )
+    selectedDatasetType.value = datasetTypeOptions.value.find(
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
+    )
+    willUploadRawData.value = false
   }
-})
+  // todo - reset form errors
+  // formErrors.value[STEP_KEYS.GENERAL_INFO] = null
+}
+
+const onRawDataSearchOpen = () => {
+  selectedRawData.value = null
+}
+
+const onRawDataSearchClose = () => {
+  if (!selectedRawData.value) {
+    datasetSearchText.value = ''
+  }
+}
+
+// watch(selectedDatasetType, (newVal) => {
+//   if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
+//     isAssignedSourceRawData.value = false
+//     // rawDataSelected.value = []
+//     selectedRawData.value = null
+//     willUploadRawData.value = true
+//   } else {
+//     willUploadRawData.value = false
+//   }
+// })
 
 const isPreviousButtonDisabled = computed(() => {
   return step.value === 0 || submitAttempted.value || loading.value || validatingForm.value
@@ -478,7 +502,7 @@ const resetSelectedProject = (project) => {
   // console.log('projectSelected after remove', projectSelected.value)
 }
 
-const searchTerm = ref('')
+// const searchTerm = ref('')
 const loading = ref(false)
 const validatingForm = ref(false)
 const rawDataList = ref([])
@@ -1208,6 +1232,7 @@ const beforeUnload = (e) => {
 
 const clearSelectedRawData = () => {
   selectedRawData.value = null
+  datasetSearchText.value = ''
   // searchTerm.value = ''
 }
 

@@ -1,11 +1,6 @@
 <template>
   <!--  <va-inner-loading :loading="loading" class="h-full">-->
-  <va-stepper
-    v-model="step"
-    :steps="steps"
-    controlsHidden
-    class="h-full ingestion-stepper"
-  >
+  <va-stepper v-model="step" :steps="steps" controlsHidden class="h-full ingestion-stepper">
     <!-- Step icons and labels -->
     <template
       v-for="(s, i) in steps"
@@ -45,14 +40,12 @@
           :text-by="'label'"
           :track-by="'key'"
           label="Search space"
-          :disabled="
-            submitAttempted || searchingFiles || asyncValidatingDatasetName
-          "
+          :disabled="submitAttempted || searchingFiles || asyncValidatingDatasetName"
         />
 
         <div class="flex flex-col w-full">
+          <!--          @files-retrieved="setRetrievedFiles"-->
           <FileListAutoComplete
-            @files-retrieved="setRetrievedFiles"
             :disabled="submitAttempted"
             :base-path="searchSpaceBasePath"
             :loading="searchingFiles"
@@ -60,19 +53,19 @@
             @clear="resetSearch"
             @open="
               () => {
-                isFileSearchAutocompleteOpen = true;
-                selectedFile = null;
+                isFileSearchAutocompleteOpen = true
+                selectedFile = null
               }
             "
             @close="
               () => {
                 if (!selectedFile) {
-                  fileListSearchText = '';
+                  fileListSearchText = ''
                 }
-                fileList = [];
-                isFileSearchAutocompleteOpen = false;
+                fileList = []
+                isFileSearchAutocompleteOpen = false
                 if (asyncValidatingDatasetName) {
-                  asyncValidatingDatasetName = false;
+                  asyncValidatingDatasetName = false
                 }
               }
             "
@@ -108,7 +101,7 @@
           @update:modelValue="
             (val) => {
               if (!val) {
-                rawDataSelected = [];
+                rawDataSelected = []
               }
             }
           "
@@ -145,42 +138,41 @@
       <!-- <div class="flex flex-col"> -->
       <div class="flex flex-col gap-10">
         <va-checkbox
-            v-model="isAssignedProject"
-            @update:modelValue="
+          v-model="isAssignedProject"
+          @update:modelValue="
             (val) => {
               if (!val) {
-                projectSelected = {};
+                projectSelected = {}
               }
             }
           "
-            color="primary"
-            label="Assign Project"
+          color="primary"
+          label="Assign Project"
         />
 
-        <va-form-field
-            v-model="projectSelected"
-            v-slot="{ value: v }"
-        >
+        <va-form-field v-model="projectSelected" v-slot="{ value: v }">
           <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
             <div class="space-y-4">
               <ProjectSelect
-                  @select="setProject"
-                  :disabled="!isAssignedProject"
-                  :for-self="!auth.canOperate"
+                @select="setProject"
+                :disabled="!isAssignedProject"
+                :for-self="!auth.canOperate"
               ></ProjectSelect>
 
               <ProjectList
-                  v-if="Object.values(projectSelected).length > 0"
-                  :projects="[Object.values(projectSelected)[0]]"
-                  show-remove
-                  @remove="(project) => {
-                  console.log('Removing project in template:', project);
-                  resetSelectedProject()
-                }">
+                v-if="Object.values(projectSelected).length > 0"
+                :projects="[Object.values(projectSelected)[0]]"
+                show-remove
+                @remove="
+                  (project) => {
+                    console.log('Removing project in template:', project)
+                    resetSelectedProject()
+                  }
+                "
+              >
               </ProjectList>
             </div>
           </div>
-
         </va-form-field>
       </div>
     </template>
@@ -204,8 +196,8 @@
           preset="primary"
           @click="
             () => {
-              isSubmissionAlertVisible = false;
-              prevStep();
+              isSubmissionAlertVisible = false
+              prevStep()
             }
           "
           :disabled="isPreviousButtonDisabled"
@@ -218,7 +210,7 @@
           :color="isLastStep ? 'success' : 'primary'"
           :disabled="isNextButtonDisabled"
         >
-          {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
+          {{ isLastStep ? (submitAttempted ? 'Retry' : 'Ingest') : 'Next' }}
         </va-button>
       </div>
     </template>
@@ -227,80 +219,77 @@
 </template>
 
 <script setup>
-import config from "@/config";
-import instrumentService from "@/services/instrument";
-import datasetService from "@/services/dataset";
-import fileSystemService from "@/services/fs";
-import toast from "@/services/toast";
-import { watchDebounced } from "@vueuse/core";
-import pm from "picomatch";
-import {useAuthStore} from "@/stores/auth";
+import config from '@/config'
+import instrumentService from '@/services/instrument'
+import datasetService from '@/services/dataset'
+import fileSystemService from '@/services/fs'
+import toast from '@/services/toast'
+import { watchDebounced } from '@vueuse/core'
+import pm from 'picomatch'
+import { useAuthStore } from '@/stores/auth'
 
-const auth = useAuthStore();
+const auth = useAuthStore()
 
 const STEP_KEYS = {
-  DIRECTORY: "directory",
-  PROJECT: "project",
-  INSTRUMENT: "instrument",
-  RAW_DATA: "rawData",
-  INFO: "info",
-};
-const DATASET_NAME_MAX_LENGTH_ERROR =
-  "Dataset name must have 3 or more characters.";
-const DATASET_NAME_EXISTS_ERROR =
-  "A Data Product with this name already exists.";
-const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
-const INGESTION_NOT_ALLOWED_ERROR =
-  "Selected file cannot be ingested as a dataset";
+  DIRECTORY: 'directory',
+  PROJECT: 'project',
+  INSTRUMENT: 'instrument',
+  RAW_DATA: 'rawData',
+  INFO: 'info',
+}
+const DATASET_NAME_MAX_LENGTH_ERROR = 'Dataset name must have 3 or more characters.'
+const DATASET_NAME_EXISTS_ERROR = 'A Data Product with this name already exists.'
+const INGESTION_FILE_REQUIRED_ERROR = 'A file must be selected for ingestion.'
+const INGESTION_NOT_ALLOWED_ERROR = 'Selected file cannot be ingested as a dataset'
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
-  "You have requested a source Raw Data to be assigned. Please select one.";
-const PROJECT_REQUIRED_ERROR = "Project must be selected.";
-const INSTRUMENT_REQUIRED_ERROR = "You must select a source instrument.";
+  'You have requested a source Raw Data to be assigned. Please select one.'
+const PROJECT_REQUIRED_ERROR = 'Project must be selected.'
+const INSTRUMENT_REQUIRED_ERROR = 'You must select a source instrument.'
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
-  (space) => space[Object.keys(space)[0]],
-);
+  (space) => space[Object.keys(space)[0]]
+)
 
 const steps = [
   {
     key: STEP_KEYS.DIRECTORY,
-    label: "Select Directory",
-    icon: "material-symbols:folder",
+    label: 'Select Directory',
+    icon: 'material-symbols:folder',
   },
   {
     key: STEP_KEYS.INSTRUMENT,
-    label: "Select Source Instrument",
-    icon: "material-symbols:microscope",
+    label: 'Select Source Instrument',
+    icon: 'material-symbols:microscope',
   },
-  { key: STEP_KEYS.RAW_DATA, label: "Source Raw Data", icon: "mdi:dna" },
-  {key: STEP_KEYS.PROJECT, label: "Project", icon: "mdi:flask"},
+  { key: STEP_KEYS.RAW_DATA, label: 'Source Raw Data', icon: 'mdi:dna' },
+  { key: STEP_KEYS.PROJECT, label: 'Project', icon: 'mdi:flask' },
   {
     key: STEP_KEYS.INFO,
-    label: "Ingestion Details",
-    icon: "material-symbols:info-outline",
+    label: 'Ingestion Details',
+    icon: 'material-symbols:info-outline',
   },
-];
+]
 
-const isAssignedProject = ref(true);
-const selectedInstrument = ref(null);
-const instruments = ref([]);
-const isAssignedSourceRawData = ref(true);
-const submissionSuccess = ref(false);
-const rawDataSelected = ref([]);
-const fileListSearchText = ref("");
-const fileList = ref([]);
-const datasetId = ref();
-const loadingResources = ref(false); // determines if the initial resources needed for the stepper are being fetched
-const searchingFiles = ref(false);
-const asyncValidatingDatasetName = ref(false);
-const isSubmissionAlertVisible = ref(false);
-const submitAttempted = ref(false);
-const rawDataList = ref([]);
-const step = ref(0);
+const isAssignedProject = ref(true)
+const selectedInstrument = ref(null)
+const instruments = ref([])
+const isAssignedSourceRawData = ref(true)
+const submissionSuccess = ref(false)
+const rawDataSelected = ref([])
+const fileListSearchText = ref('')
+const fileList = ref([])
+const datasetId = ref()
+const loadingResources = ref(false) // determines if the initial resources needed for the stepper are being fetched
+const searchingFiles = ref(false)
+const asyncValidatingDatasetName = ref(false)
+const isSubmissionAlertVisible = ref(false)
+const submitAttempted = ref(false)
+const rawDataList = ref([])
+const step = ref(0)
 const isLastStep = computed(() => {
-  return step.value === steps.length - 1;
-});
-const projectSelected = ref({});
+  return step.value === steps.length - 1
+})
+const projectSelected = ref({})
 
 const isNextButtonDisabled = computed(() => {
   return (
@@ -309,8 +298,8 @@ const isNextButtonDisabled = computed(() => {
     loadingResources.value ||
     searchingFiles.value ||
     asyncValidatingDatasetName.value
-  );
-});
+  )
+})
 const isPreviousButtonDisabled = computed(() => {
   return (
     step.value === 0 ||
@@ -318,24 +307,24 @@ const isPreviousButtonDisabled = computed(() => {
     searchingFiles.value ||
     loadingResources.value ||
     asyncValidatingDatasetName.value
-  );
-});
+  )
+})
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine. At
 // this time, errors are only shown on steps 0 (STEP_KEYS.DIRECTORY) and 1
 // (STEP_KEYS.RAW_DATA)
 const stepPristineStates = ref([
-  {[STEP_KEYS.DIRECTORY]: true},
+  { [STEP_KEYS.DIRECTORY]: true },
   { [STEP_KEYS.INSTRUMENT]: true },
-  {[STEP_KEYS.PROJECT]: true},
-  {[STEP_KEYS.RAW_DATA]: true},
-  {[STEP_KEYS.INFO]: true},
-]);
+  { [STEP_KEYS.PROJECT]: true },
+  { [STEP_KEYS.RAW_DATA]: true },
+  { [STEP_KEYS.INFO]: true },
+])
 
 const stepIsPristine = computed(() => {
-  return !!Object.values(stepPristineStates.value[step.value])[0];
-});
+  return !!Object.values(stepPristineStates.value[step.value])[0]
+})
 
 const formErrors = ref({
   [STEP_KEYS.DIRECTORY]: null,
@@ -343,32 +332,32 @@ const formErrors = ref({
   [STEP_KEYS.PROJECT]: null,
   [STEP_KEYS.RAW_DATA]: null,
   [STEP_KEYS.INFO]: null,
-});
+})
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.DIRECTORY];
+    return !!formErrors.value[STEP_KEYS.DIRECTORY]
   } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.INSTRUMENT];
+    return !!formErrors.value[STEP_KEYS.INSTRUMENT]
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.RAW_DATA];
+    return !!formErrors.value[STEP_KEYS.RAW_DATA]
   } else if (step.value === 3) {
-    return !!formErrors.value[STEP_KEYS.PROJECT];
+    return !!formErrors.value[STEP_KEYS.PROJECT]
   } else {
-    return false;
+    return false
   }
-});
+})
 
-const setProject  = project => {
-  projectSelected.value = {[project.id]: project};
+const setProject = (project) => {
+  projectSelected.value = { [project.id]: project }
 }
 
 const resetSelectedProject = () => {
-  projectSelected.value = {};
+  projectSelected.value = {}
 }
 
-const isFileSearchAutocompleteOpen = ref(false);
+const isFileSearchAutocompleteOpen = ref(false)
 
-const selectedFile = ref(null);
+const selectedFile = ref(null)
 
 const resetFormErrors = () => {
   formErrors.value = {
@@ -377,56 +366,55 @@ const resetFormErrors = () => {
     [STEP_KEYS.PROJECT]: null,
     [STEP_KEYS.RAW_DATA]: null,
     [STEP_KEYS.INFO]: null,
-  };
-};
+  }
+}
 
 const setFormErrors = async () => {
-  resetFormErrors();
-  const { isNameValid: datasetNameIsValid, error } =
-    await validateDatasetName();
+  resetFormErrors()
+  const { isNameValid: datasetNameIsValid, error } = await validateDatasetName()
 
   if (step.value === 0) {
     if (!datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.DIRECTORY] = error;
+      formErrors.value[STEP_KEYS.DIRECTORY] = error
     } else {
-      const restricted_dataset_paths = getRestrictedIngestionPaths();
+      const restricted_dataset_paths = getRestrictedIngestionPaths()
       const origin_path_is_restricted = selectedFile.value
         ? restricted_dataset_paths.some((pattern) => {
-            const _path = selectedFile.value.path;
-            let isMatch = pm(pattern);
-            const matches = isMatch(_path, pattern);
-            return matches.isMatch;
+            const _path = selectedFile.value.path
+            let isMatch = pm(pattern)
+            const matches = isMatch(_path, pattern)
+            return matches.isMatch
           })
-        : false;
+        : false
 
       if (origin_path_is_restricted) {
-        formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
+        formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR
       } else {
-        formErrors.value[STEP_KEYS.DIRECTORY] = null;
+        formErrors.value[STEP_KEYS.DIRECTORY] = null
       }
     }
   } else if (step.value === 1) {
     if (!selectedInstrument.value) {
-      formErrors.value[STEP_KEYS.INSTRUMENT] = INSTRUMENT_REQUIRED_ERROR;
-      return;
+      formErrors.value[STEP_KEYS.INSTRUMENT] = INSTRUMENT_REQUIRED_ERROR
+      return
     }
   } else if (step.value === 2) {
     if (!isAssignedSourceRawData.value) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = null;
-      return;
+      formErrors.value[STEP_KEYS.RAW_DATA] = null
+      return
     }
     if (rawDataSelected.value.length === 0) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR;
-      return;
+      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR
+      return
     }
   } else if (step.value === 3) {
     if (!isAssignedProject.value) {
-      formErrors.value[STEP_KEYS.PROJECT] = null;
+      formErrors.value[STEP_KEYS.PROJECT] = null
     } else if (Object.values(projectSelected.value).length === 0) {
-      formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR;
+      formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR
     }
   }
-};
+}
 
 // determines if the dataset (Data Product) named `value` already exists
 const asyncValidateDatasetName = (value) => {
@@ -436,79 +424,75 @@ const asyncValidateDatasetName = (value) => {
     // nonetheless when `value` is ''. Hence the explicit check for whether
     // `value` is falsy.
     if (!value) {
-      resolve(true);
+      resolve(true)
     } else {
-      asyncValidatingDatasetName.value = true;
+      asyncValidatingDatasetName.value = true
       datasetService
-        .getAll({ type: "DATA_PRODUCT", name: value })
+        .getAll({ type: 'DATA_PRODUCT', name: value })
         .then((res) => {
           // Vuestic expects this Promise to resolve with an error message, for
           // it to show the error message.
-          resolve(
-            res.data.datasets.length !== 0 ? DATASET_NAME_EXISTS_ERROR : true,
-          );
+          resolve(res.data.datasets.length !== 0 ? DATASET_NAME_EXISTS_ERROR : true)
         })
         .catch((err) => {
-          console.error(err);
+          console.error(err)
         })
         .finally(() => {
-          asyncValidatingDatasetName.value = false;
-        });
+          asyncValidatingDatasetName.value = false
+        })
     }
-  });
-};
+  })
+}
 
 const validateDatasetName = async () => {
-  const datasetName = selectedFile.value?.name;
+  const datasetName = selectedFile.value?.name
   if (datasetNameIsNull(datasetName)) {
-    return { isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR };
+    return { isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR }
   } else if (!datasetNameHasMinimumChars(datasetName)) {
-    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
+    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR }
   }
 
   return asyncValidateDatasetName(datasetName).then((res) => {
     return {
       isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
-      error:
-        res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
-    };
-  });
-};
+      error: res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
+    }
+  })
+}
 
 const datasetNameHasMinimumChars = (name) => {
-  return name?.length >= 3;
-};
+  return name?.length >= 3
+}
 
 const datasetNameIsNull = (name) => {
-  return !name;
-};
+  return !name
+}
 
 const searchSpace = ref(
-  FILESYSTEM_SEARCH_SPACES instanceof Array &&
-    FILESYSTEM_SEARCH_SPACES.length > 0
+  FILESYSTEM_SEARCH_SPACES instanceof Array && FILESYSTEM_SEARCH_SPACES.length > 0
     ? FILESYSTEM_SEARCH_SPACES[0]
-    : "",
-);
+    : ''
+)
 
-const searchSpaceBasePath = computed(() => searchSpace.value.base_path);
+const searchSpaceBasePath = computed(() => searchSpace.value.base_path)
 
 const _searchText = computed(() => {
   return (
-    (searchSpace.value.base_path.endsWith("/")
+    (searchSpace.value.base_path.endsWith('/')
       ? searchSpace.value.base_path
-      : searchSpace.value.base_path + "/") + fileListSearchText.value
-  );
-});
+      : searchSpace.value.base_path + '/') + fileListSearchText.value
+  )
+})
 
 const resetSearch = () => {
-  selectedFile.value = null;
-  fileListSearchText.value = "";
-  setRetrievedFiles([]);
-  formErrors.value[STEP_KEYS.DIRECTORY] = null;
+  selectedFile.value = null
+  fileListSearchText.value = ''
+  setRetrievedFiles([])
+  formErrors.value[STEP_KEYS.DIRECTORY] = null
   if (asyncValidatingDatasetName.value) {
-    asyncValidatingDatasetName.value = false;
+    asyncValidatingDatasetName.value = false
   }
-};
+}
 
 const searchFiles = async () => {
   fileSystemService
@@ -518,29 +502,29 @@ const searchFiles = async () => {
       search_space: searchSpace.value.key,
     })
     .then((response) => {
-      setRetrievedFiles(response.data);
+      setRetrievedFiles(response.data)
     })
     .catch((err) => {
-      console.error(err);
+      console.error(err)
       if (err.response.status === 403 || err.response.status === 404) {
-        setRetrievedFiles([]);
+        setRetrievedFiles([])
       } else {
-        toast.error("Error fetching files");
+        toast.error('Error fetching files')
       }
     })
     .finally(() => {
-      searchingFiles.value = false;
-    });
-};
+      searchingFiles.value = false
+    })
+}
 
 // Set loading to true when FileListAutoComplete is either opened or typed into.
 // The actual search begins after a delay, but a loading indicator should be
 // shown before the search begins.
 watch([isFileSearchAutocompleteOpen, fileListSearchText], () => {
   if (isFileSearchAutocompleteOpen.value) {
-    searchingFiles.value = true;
+    searchingFiles.value = true
   }
-});
+})
 
 // Begin search once FileListAutoComplete is opened, or typed into, but
 // after a delay.
@@ -548,23 +532,23 @@ watchDebounced(
   [isFileSearchAutocompleteOpen, fileListSearchText],
   () => {
     if (isFileSearchAutocompleteOpen.value) {
-      searchFiles();
+      searchFiles()
     }
   },
-  { debounce: 1000, maxWait: 3000 },
-);
+  { debounce: 1000, maxWait: 3000 }
+)
 
 const setRetrievedFiles = (files) => {
-  fileList.value = files;
-};
+  fileList.value = files
+}
 
 const addDataset = (selectedDatasets) => {
-  rawDataSelected.value = selectedDatasets;
-};
+  rawDataSelected.value = selectedDatasets
+}
 
 const removeDataset = () => {
-  rawDataSelected.value = [];
-};
+  rawDataSelected.value = []
+}
 
 const preIngestion = () => {
   return datasetService.create_dataset({
@@ -572,74 +556,75 @@ const preIngestion = () => {
     type: config.dataset.types.DATA_PRODUCT.key,
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
-    project_id: (Object.entries(projectSelected.value) || []).length > 0 ? Object.values(projectSelected.value)[0]?.id : null,
+    project_id:
+      (Object.entries(projectSelected.value) || []).length > 0
+        ? Object.values(projectSelected.value)[0]?.id
+        : null,
     instrument_id: selectedInstrument.value.id,
-  });
-};
+  })
+}
 
 const initiateIngestion = async () => {
   return datasetService
     .initiate_workflow_on_dataset({
       dataset_id: datasetId.value,
-      workflow: "integrated",
+      workflow: 'integrated',
     })
     .then(() => {
-      toast.success("Initiated dataset ingestion");
-      submissionSuccess.value = true;
+      toast.success('Initiated dataset ingestion')
+      submissionSuccess.value = true
     })
     .catch((err) => {
-      toast.error("Failed to initiate ingestion");
-      console.error(err);
-      submissionSuccess.value = false;
-    });
-};
+      toast.error('Failed to initiate ingestion')
+      console.error(err)
+      submissionSuccess.value = false
+    })
+}
 
 const onSubmit = async () => {
   if (!selectedFile.value) {
-    await setFormErrors();
-    return Promise.reject();
+    await setFormErrors()
+    return Promise.reject()
   }
-  submitAttempted.value = true;
+  submitAttempted.value = true
 
   return new Promise((resolve, reject) => {
     preIngestion()
       .then(async (res) => {
-        datasetId.value = res.data.id;
-        return datasetId.value;
+        datasetId.value = res.data.id
+        return datasetId.value
       })
       .catch((err) => {
         // handle 409 error when dataset already exists
         if (err.response.status === 409) {
-          toast.error("A Data Product with this name already exists.");
+          toast.error('A Data Product with this name already exists.')
           // TODO
-          return Promise.reject();
+          return Promise.reject()
         }
-        return Promise.reject(err);
+        return Promise.reject(err)
       })
       .then(() => {
-        return initiateIngestion();
+        return initiateIngestion()
       })
       .catch((err) => {
-        toast.error("Failed to initiate ingestion");
-        console.error(err);
-        reject(err);
-      });
-  });
-};
+        toast.error('Failed to initiate ingestion')
+        console.error(err)
+        reject(err)
+      })
+  })
+}
 
 const getRestrictedIngestionPaths = () => {
-  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(
-    ",",
-  );
-};
+  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(',')
+}
 
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
-    onSubmit();
+    onSubmit()
   } else {
-    nextStep();
+    nextStep()
   }
-};
+}
 
 // Form errors are set when this component mounts, or when a form field's value
 // changes, or when the current step changes.
@@ -658,56 +643,59 @@ watch(
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
-    const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
+    const stepKey = Object.keys(stepPristineStates.value[step.value])[0]
     if (stepKey === STEP_KEYS.RAW_DATA) {
-      stepPristineStates.value[step.value][stepKey] = (!oldVals[1] && newVals[1]) | (!oldVals[2] && newVals[2]);
+      stepPristineStates.value[step.value][stepKey] =
+        (!oldVals[1] && newVals[1]) | (!oldVals[2] && newVals[2])
     } else if (stepKey === STEP_KEYS.PROJECT) {
-      stepPristineStates.value[step.value][stepKey] = (!oldVals[3] && newVals[3]) || (!oldVals[4] && newVals[4]);
+      stepPristineStates.value[step.value][stepKey] =
+        (!oldVals[3] && newVals[3]) || (!oldVals[4] && newVals[4])
     } else if (stepKey === STEP_KEYS.INSTRUMENT) {
-      stepPristineStates.value[step.value][stepKey] = !oldVals[9] && newVals[9];
+      stepPristineStates.value[step.value][stepKey] = !oldVals[9] && newVals[9]
     } else {
-      stepPristineStates.value[step.value][stepKey] = false;
+      stepPristineStates.value[step.value][stepKey] = false
     }
 
-    await setFormErrors();
-  },
-);
+    await setFormErrors()
+  }
+)
 
 // separate watcher for when step changes, since we don't want to mark the form
 // fields as not pristine upon step changes
 watch(step, async () => {
-  if (step.value !== 3) { // step 3 is the `Ingestion Details` step
-    await setFormErrors();
+  if (step.value !== 3) {
+    // step 3 is the `Ingestion Details` step
+    await setFormErrors()
   }
-});
+})
 
 onMounted(async () => {
-  await setFormErrors();
-});
+  await setFormErrors()
+})
 
 onMounted(() => {
-  loadingResources.value = true;
+  loadingResources.value = true
   datasetService
-    .getAll({ type: "RAW_DATA" })
+    .getAll({ type: 'RAW_DATA' })
     .then((res) => {
-      rawDataList.value = res.data.datasets;
-      return Promise.resolve();
+      rawDataList.value = res.data.datasets
+      return Promise.resolve()
     })
     .then(() => {
-      return instrumentService.getAll();
+      return instrumentService.getAll()
     })
     .then((res) => {
-      console.log("instruments:", res.data);
-      instruments.value = res.data;
+      console.log('instruments:', res.data)
+      instruments.value = res.data
     })
     .catch((err) => {
-      toast.error("Failed to load resources");
-      console.error(err);
+      toast.error('Failed to load resources')
+      console.error(err)
     })
     .finally(() => {
-      loadingResources.value = false;
-    });
-});
+      loadingResources.value = false
+    })
+})
 </script>
 
 <style lang="scss">
