@@ -58,6 +58,9 @@ const searchTerm = computed({
   },
   set: () => {},
 })
+
+// const searchTerm = ref('')
+
 const debouncedSearch = ref(null)
 const searchIndex = ref(0)
 const searches = ref([])
@@ -196,6 +199,8 @@ const onOpen = () => {
   if (props.populatedResult) {
     datasets.value = [props.populatedResult]
   }
+
+  selectedResult.value = null
   emit('update:populatedResult', null)
 }
 
