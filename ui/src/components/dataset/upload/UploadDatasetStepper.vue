@@ -30,36 +30,36 @@
         </va-button>
       </template>
 
-      <!--      <template #step-content-0>-->
-      <!--        <div class="flex flex-col">-->
-      <!--          <SelectFileButtons-->
-      <!--            :disabled="submitAttempted || loading || validatingForm"-->
-      <!--            @files-added="-->
-      <!--              (files) => {-->
-      <!--                console.log('Files added:', files)-->
-      <!--                clearSelectedDirectoryToUpload()-->
-      <!--                setFiles(files)-->
-      <!--                isSubmissionAlertVisible = false-->
-      <!--                setUploadedFileType(FILE_TYPE.FILE)-->
-      <!--              }-->
-      <!--            "-->
-      <!--            @directory-added="-->
-      <!--              (directoryDetails) => {-->
-      <!--                clearSelectedFilesToUpload()-->
-      <!--                setDirectory(directoryDetails)-->
-      <!--                isSubmissionAlertVisible = false-->
-      <!--                setUploadedFileType(FILE_TYPE.DIRECTORY)-->
-      <!--              }-->
-      <!--            "-->
-      <!--          />-->
-
-      <!--          <va-divider />-->
-
-      <!--          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />-->
-      <!--        </div>-->
-      <!--      </template>-->
-
       <template #step-content-0>
+        <div class="flex flex-col">
+          <SelectFileButtons
+            :disabled="submitAttempted || loading || validatingForm"
+            @files-added="
+              (files) => {
+                console.log('Files added:', files)
+                clearSelectedDirectoryToUpload()
+                setFiles(files)
+                isSubmissionAlertVisible = false
+                setUploadedFileType(FILE_TYPE.FILE)
+              }
+            "
+            @directory-added="
+              (directoryDetails) => {
+                clearSelectedFilesToUpload()
+                setDirectory(directoryDetails)
+                isSubmissionAlertVisible = false
+                setUploadedFileType(FILE_TYPE.DIRECTORY)
+              }
+            "
+          />
+
+          <va-divider />
+
+          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />
+        </div>
+      </template>
+
+      <template #step-content-1>
         <div class="flex w-full pb-6">
           <!--          <div class="w-48 flex-shrink-0 mr-4">-->
           <!--            <va-checkbox-->
@@ -159,10 +159,6 @@
       </template>
 
       <template #step-content-2>
-        <div class="flex flex-col gap-10"></div>
-      </template>
-
-      <template #step-content-3>
         <div class="flex flex-row" v-if="selectingFiles || selectingDirectory">
           <div class="flex-1">
             <va-card class="upload-details">
@@ -276,7 +272,9 @@ const steps = [
     label: 'Select Files',
     icon: 'material-symbols:folder',
   },
-  { key: STEP_KEYS.INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
+  { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
+  { key: STEP_KEYS.INFO, label: 'Upload', icon: 'icon: "lightbulb"' },
+
   // { key: STEP_KEYS.RAW_DATA, label: 'Source Raw Data', icon: 'mdi:dna' },
   // { key: STEP_KEYS.PROJECT, label: 'Project', icon: 'mdi:flask' },
 ]
@@ -380,19 +378,20 @@ const isPreviousButtonDisabled = computed(() => {
   return step.value === 0 || submitAttempted.value || loading.value || validatingForm.value
 })
 
-const isNextButtonDisabled = computed(() => {
-  return (
-    stepHasErrors.value ||
-    submissionSuccess.value ||
-    [
-      Constants.UPLOAD_STATES.PROCESSING,
-      Constants.UPLOAD_STATES.UPLOADING,
-      Constants.UPLOAD_STATES.UPLOADED,
-    ].includes(submissionStatus.value) ||
-    loading.value ||
-    validatingForm.value
-  )
-})
+const isNextButtonDisabled = ref(false)
+// const isNextButtonDisabled = computed(() => {
+//   return (
+//     stepHasErrors.value ||
+//     submissionSuccess.value ||
+//     [
+//       Constants.UPLOAD_STATES.PROCESSING,
+//       Constants.UPLOAD_STATES.UPLOADING,
+//       Constants.UPLOAD_STATES.UPLOADED,
+//     ].includes(submissionStatus.value) ||
+//     loading.value ||
+//     validatingForm.value
+//   )
+// })
 
 const isStepperButtonDisabled = (stepIndex) => {
   return (
@@ -454,7 +453,7 @@ const validateNotExists = (value) => {
       resolve(true)
     } else {
       datasetService
-        .getAll({ type: 'DATA_PRODUCT', name: value, match_name_exact: true })
+        .check_if_exists({ type: selectedDatasetType.value['value'], name: value })
         .then((res) => {
           resolve(res.data.datasets.length > 0 ? DATASET_EXISTS_ERROR : true)
         })
@@ -663,17 +662,17 @@ const setFormErrors = async () => {
     }
   }
 
-  if (step.value === 2) {
-    if (!isAssignedProject.value) {
-      formErrors.value[STEP_KEYS.PROJECT] = null
-      return
-    } else if (Object.values(projectSelected.value).length === 0) {
-      formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR
-      return
-    }
-  }
+  // if (step.value === 2) {
+  //   if (!isAssignedProject.value) {
+  //     formErrors.value[STEP_KEYS.PROJECT] = null
+  //     return
+  //   } else if (Object.values(projectSelected.value).length === 0) {
+  //     formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR
+  //     return
+  //   }
+  // }
 
-  if (step.value === 3) {
+  if (step.value === 2) {
     const { isNameValid: datasetNameIsValid, error } = await validateDatasetName()
     if (datasetNameIsValid) {
       formErrors.value[STEP_KEYS.INFO] = null

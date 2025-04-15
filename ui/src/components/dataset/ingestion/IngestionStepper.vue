@@ -428,7 +428,7 @@ const asyncValidateDatasetName = (value) => {
     } else {
       asyncValidatingDatasetName.value = true
       datasetService
-        .getAll({ type: 'DATA_PRODUCT', name: value })
+        .check_if_exists({ type: 'DATA_PRODUCT', name: value })
         .then((res) => {
           // Vuestic expects this Promise to resolve with an error message, for
           // it to show the error message.

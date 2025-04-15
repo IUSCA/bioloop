@@ -1020,5 +1020,25 @@ router.get(
   }),
 );
 
+router.get(
+    '/:datasetType/:name/exists',
+    validate([
+      param('datasetType').escape().notEmpty(),
+      param('name').escape().notEmpty(),
+    ]),
+    isPermittedTo('read'),
+    asyncHandler(async (req, res, next) => {
+      // #swagger.tags = ['datasets']
+      // #swagger.summary = 'Determine if a dataset with a given name exists'
+          const matchingDatasets = await prisma.dataset.findMany({
+            where: {
+              name: req.params.name,
+              type: req.params.datasetType,
+            }
+          })
+          res.json({exists: matchingDatasets.length > 0});
+      }
+    ))
+
 module.exports = router;
 module.exports.dataset_access_check = dataset_access_check;
