@@ -46,7 +46,7 @@
           v-if="search_results.length"
           :data-testid="`${props.dataTestId}--search-results-count-li`"
         >
-          Showing {{ search_results.length }} of {{ data.length }} results
+          Showing {{ search_results.length }} of {{ resultCount }} results
         </li>
         <li
           v-for="(item, idx) in search_results"
@@ -73,7 +73,7 @@
           </span>
         </li>
 
-        <div v-else>
+        <div v-else-if="search_results.length < props.paginatedTotalResultsCount">
           <li
             v-if="props.paginated"
             class="py-2 px-3"
@@ -106,6 +106,10 @@ const props = defineProps({
   paginated: {
     type: Boolean,
     default: false,
+  },
+  paginatedTotalResultsCount: {
+    type: Number,
+    default: 0,
   },
   // populatedResult: {
   //   type: Object,
@@ -175,6 +179,14 @@ const text = computed({
   set: (value) => {
     emit('update:searchText', value)
   },
+})
+
+const resultCount = computed(() => {
+  if (props.paginated && props.paginatedTotalResultsCount > 0) {
+    return props.paginatedTotalResultsCount
+  } else {
+    return search_results.value.length
+  }
 })
 
 const visible = ref(false)

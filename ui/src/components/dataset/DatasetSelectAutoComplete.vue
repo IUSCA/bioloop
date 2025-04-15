@@ -5,6 +5,7 @@
     v-model:search-text="searchTerm"
     :async="true"
     :paginated="true"
+    :paginated-total-results-count="totalResultsCount"
     :data="datasets"
     :display-by="'name'"
     @clear="onClear"
@@ -51,7 +52,7 @@ const emit = defineEmits(['clear', 'open', 'close', 'update:selected', 'update:s
 
 const loading = ref(false)
 const datasets = ref([])
-const totalResultCount = ref(0)
+const totalResultsCount = ref(0)
 const page = ref(1)
 const skip = computed(() => {
   return PAGE_SIZE * (page.value - 1)
@@ -178,7 +179,7 @@ const searchDatasets = ({
         datasets.value = appendToCurrentResults
           ? datasets.value.concat(res.data.datasets)
           : res.data.datasets
-        totalResultCount.value = res.data.metadata.count
+        totalResultsCount.value = res.data.metadata.count
         resolveSearch(res.queryIndex)
       })
       .catch((e) => {
