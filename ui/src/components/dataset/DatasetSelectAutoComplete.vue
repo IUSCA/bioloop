@@ -208,7 +208,9 @@ const onOpen = () => {
 }
 
 const onClear = () => {
-  emit('clear')
+  console.log('onClear invoked')
+  // emit('clear')
+  emit('update:populatedResult', null)
 }
 
 watch([searchTerm, filterQuery], () => {
@@ -220,6 +222,15 @@ watch([searchTerm, filterQuery], () => {
   debouncedSearch.value = _.debounce(performSearch, 300)
   debouncedSearch.value(searchIndex.value)
 })
+
+watch(
+  () => props.populatedResult,
+  (newVal, oldVal) => {
+    console.log('populatedResult changed')
+    console.log(`oldVal:`, oldVal)
+    console.log(`newVal:`, newVal)
+  }
+)
 
 // watch(datasets, () => {
 //   console.log('datasets changed')

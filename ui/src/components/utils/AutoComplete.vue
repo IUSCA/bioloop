@@ -7,6 +7,7 @@
           :data-testid="props.dataTestId || 'autocomplete'"
           outline
           clearable
+          @clear="onClear"
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
@@ -216,6 +217,10 @@ function handleSelect(item) {
   text.value = ''
   closeResults()
   emit('select', item)
+}
+
+function onClear() {
+  emit('clear')
 }
 
 function loadMore() {
