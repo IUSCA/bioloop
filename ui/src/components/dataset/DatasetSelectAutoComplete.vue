@@ -53,14 +53,10 @@ const page = ref(1)
 const skip = computed(() => {
   return PAGE_SIZE * (page.value - 1)
 })
-const selectedResult = ref(null)
+// const selectedResult = ref(null)
 const searchTerm = computed({
   get: () => {
-    return props.populatedResult
-      ? props.populatedResult['name']
-      : selectedResult.value
-        ? selectedResult.value['name']
-        : ''
+    return props.populatedResult ? props.populatedResult['name'] : ''
   },
   set: () => {},
 })
@@ -77,7 +73,7 @@ const checkboxes = ref({
 })
 const populatedResult = computed({
   get: () => {
-    return selectedResult.value || props.populatedResult
+    return props.populatedResult
   },
   set: (val) => {
     emit('update:populatedResult', val)
@@ -99,8 +95,9 @@ const activeCountText = computed(() => {
 })
 
 const onSelect = (item) => {
-  selectedResult.value = item
-  emit('select', item)
+  // selectedResult.value = item
+  // emit('select', item)
+  emit('update:populatedResult', item)
 }
 
 const loadNextPage = () => {
@@ -206,7 +203,7 @@ const onOpen = () => {
     datasets.value = [props.populatedResult]
   }
 
-  selectedResult.value = null
+  // selectedResult.value = null
   emit('update:populatedResult', null)
 }
 

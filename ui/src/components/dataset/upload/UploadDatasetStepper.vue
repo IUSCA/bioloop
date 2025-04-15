@@ -61,13 +61,51 @@
 
       <template #step-content-0>
         <div class="flex w-full pb-6">
+          <!--          <div class="w-48 flex-shrink-0 mr-4">-->
+          <!--            <va-checkbox-->
+          <!--              v-model="uploadingDatasetType"-->
+          <!--              @update:modelValue="-->
+          <!--                (val) => {-->
+          <!--                  if (!val) {-->
+          <!--                    selectedDatasetType = null-->
+          <!--                  }-->
+          <!--                }-->
+          <!--              "-->
+          <!--              color="primary"-->
+          <!--              label="Dataset Type"-->
+          <!--              class="w-full"-->
+          <!--            />-->
+          <!--          </div>-->
+
+          <va-select
+            v-model="selectedDatasetType"
+            :text-by="'label'"
+            :track-by="'value'"
+            :options="datasetTypeOptions"
+            label="Dataset Type"
+            placeholder="Select dataset type"
+            class="w-full"
+          />
+        </div>
+
+        <div class="flex w-full pb-6">
           <div class="w-48 flex-shrink-0 mr-4">
             <va-checkbox
               v-model="isAssignedSourceRawData"
+              :disabled="isUploadingRawData"
               @update:modelValue="
                 (val) => {
+                  console.log('isAssignedSourceRawData changed ', val)
                   if (!val) {
-                    rawDataSelected = []
+                    console.log('Clearing raw data selection')
+                    // rawDataSelected = []
+                    selectedRawData = null
+                  } else {
+                    console.log('else')
+                    selectedDatasetType = datasetTypeOptions.find(
+                      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
+                    )
+                    isUploadingRawData = false
                   }
                 }
               "
@@ -130,10 +168,6 @@
             </va-form-field>
           </div>
         </div>
-
-        <div class="flex flex-col gap-10">
-          <!-- Source Raw Data selector -->
-        </div>
       </template>
 
       <template #step-content-2>
@@ -158,7 +192,7 @@
                   :uploaded-data-product-error-messages="formErrors[STEP_KEYS.INFO]"
                   :uploaded-data-product-error="!!formErrors[STEP_KEYS.INFO]"
                   :project="projectSelected && Object.values(projectSelected)[0]"
-                  :source-raw-data="rawDataSelected"
+                  :source-raw-data="selectedRawData"
                   :submission-status="submissionStatus"
                   :submission-alert="submissionAlert"
                   :status-chip-color="statusChipColor"
@@ -285,15 +319,38 @@ const stepHasErrors = computed(() => {
 
 const isAssignedSourceRawData = ref(true)
 const selectedRawData = ref(null)
-watch(selectedRawData, (newVal, oldVal) => {
-  console.log('UploadStepper:')
-  console.log('selected raw data:')
-  console.log(newVal)
-  console.log(oldVal)
-})
+// watch(selectedRawData, (newVal, oldVal) => {
+//   console.log('UploadStepper:')
+//   console.log('selected raw data:')
+//   console.log(newVal)
+//   console.log(oldVal)
+// })
 
 const isAssignedProject = ref(true)
 const submissionSuccess = ref(false)
+
+const datasetTypeOptions = [
+  { label: config.dataset.types.RAW_DATA.label, value: config.dataset.types.RAW_DATA.key },
+  { label: config.dataset.types.DATA_PRODUCT.label, value: config.dataset.types.DATA_PRODUCT.key },
+]
+
+// const uploadingDatasetType = ref(config.dataset.types.DATA_PRODUCT.key)
+const selectedDatasetType = ref(
+  datasetTypeOptions.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key)
+)
+
+const isUploadingRawData = ref(false)
+
+watch(selectedDatasetType, (newVal) => {
+  if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
+    isAssignedSourceRawData.value = false
+    // rawDataSelected.value = []
+    selectedRawData.value = null
+    isUploadingRawData.value = true
+  } else {
+    isUploadingRawData.value = false
+  }
+})
 
 const isPreviousButtonDisabled = computed(() => {
   return step.value === 0 || submitAttempted.value || loading.value || validatingForm.value
@@ -425,7 +482,7 @@ const searchTerm = ref('')
 const loading = ref(false)
 const validatingForm = ref(false)
 const rawDataList = ref([])
-const rawDataSelected = ref([])
+// const rawDataSelected = ref([])
 const projectSelected = ref({})
 const datasetUploadLog = ref(null)
 const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED)
@@ -478,8 +535,8 @@ const uploadFormData = computed(() => {
   return {
     name: populatedDatasetName.value,
     type: 'DATA_PRODUCT',
-    ...(rawDataSelected.value.length > 0 && {
-      source_dataset_id: rawDataSelected.value[0].id,
+    ...(selectedRawData.value && {
+      source_dataset_id: selectedRawData.value.id,
     }),
   }
 })
@@ -576,7 +633,7 @@ const setFormErrors = async () => {
       formErrors.value[STEP_KEYS.RAW_DATA] = null
       return
     }
-    if (rawDataSelected.value.length === 0) {
+    if (!selectedRawData.value) {
       formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR
       return
     }
@@ -606,13 +663,14 @@ const noFilesSelected = computed(() => {
   return filesToUpload.value?.length === 0
 })
 
-const addDataset = (selectedDatasets) => {
-  rawDataSelected.value = selectedDatasets
-}
-
-const removeDataset = () => {
-  rawDataSelected.value = []
-}
+// const addDataset = (selectedDatasets) => {
+//   rawDataSelected.value = selectedDatasets
+//   selected
+// }
+//
+// const removeDataset = () => {
+//   rawDataSelected.value = []
+// }
 
 onMounted(() => {
   loading.value = true
@@ -1163,7 +1221,7 @@ watch(
     step,
     projectSelected,
     isAssignedProject,
-    rawDataSelected,
+    selectedRawData,
     selectingFiles,
     selectingDirectory,
     isAssignedSourceRawData,
@@ -1179,7 +1237,7 @@ watch(
       stepPristineStates.value[step.value][stepKey] =
         (!oldVals[1] && newVals[1]) || (!oldVals[2] && newVals[2])
     } else if (stepKey === STEP_KEYS.RAW_DATA) {
-      stepPristineStates.value[step.value][stepKey] = !oldVals[0] && newVals[0]
+      stepPristineStates.value[step.value][stepKey] = !oldVals[3] && newVals[3]
     } else {
       stepPristineStates.value[step.value][stepKey] = false
     }
