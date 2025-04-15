@@ -365,16 +365,16 @@ const onRawDataSearchClose = () => {
   }
 }
 
-// watch(selectedDatasetType, (newVal) => {
-//   if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
-//     isAssignedSourceRawData.value = false
-//     // rawDataSelected.value = []
-//     selectedRawData.value = null
-//     willUploadRawData.value = true
-//   } else {
-//     willUploadRawData.value = false
-//   }
-// })
+watch(selectedDatasetType, (newVal) => {
+  if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
+    isAssignedSourceRawData.value = false
+    // rawDataSelected.value = []
+    selectedRawData.value = null
+    willUploadRawData.value = true
+  } else {
+    willUploadRawData.value = false
+  }
+})
 
 const isPreviousButtonDisabled = computed(() => {
   return step.value === 0 || submitAttempted.value || loading.value || validatingForm.value
