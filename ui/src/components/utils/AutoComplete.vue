@@ -107,13 +107,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  populatedResult: {
-    type: Object,
-  },
-  populatedResultDisplayBy: {
-    type: [Function, String],
-    default: (item) => item.name || 'name',
-  },
+  // populatedResult: {
+  //   type: Object,
+  // },
+  // populatedResultDisplayBy: {
+  //   type: [Function, String],
+  //   default: (item) => item.name || 'name',
+  // },
   label: {
     type: String,
     default: '',
@@ -162,7 +162,7 @@ const props = defineProps({
 const emit = defineEmits([
   'clear',
   'update:searchText',
-  'update:populatedResult',
+  // 'update:populatedResult',
   'open',
   'close',
   'loadMore',
@@ -170,11 +170,7 @@ const emit = defineEmits([
 
 const text = computed({
   get: () => {
-    return props.populatedResult
-      ? typeof props.populatedResultDisplayBy === 'string'
-        ? props.populatedResult[props.populatedResultDisplayBy]
-        : props.populatedResultDisplayBy(props.populatedResult)
-      : props.searchText
+    return props.searchText
   },
   set: (value) => {
     emit('update:searchText', value)
@@ -210,7 +206,7 @@ function closeResults() {
 function openResults() {
   visible.value = true
   emit('open')
-  emit('update:populatedResult', null)
+  // emit('update:populatedResult', null)
 }
 
 function handleSelect(item) {
@@ -252,13 +248,13 @@ function loadMore() {
 //   console.log('Data:', props.data)
 // })
 
-watch(
-  () => props.populatedResult,
-  (newPopulatedResult) => {
-    emit('update:populatedResult', newPopulatedResult)
-  },
-  { deep: true }
-)
+// watch(
+//   () => props.populatedResult,
+//   (newPopulatedResult) => {
+//     emit('update:populatedResult', newPopulatedResult)
+//   },
+//   { deep: true }
+// )
 </script>
 
 <style lang="scss">
