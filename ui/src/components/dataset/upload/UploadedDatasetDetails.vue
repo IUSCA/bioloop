@@ -35,7 +35,7 @@
 
         <tr v-if="props.sourceRawData">
           <td>Source Raw Data</td>
-          <td class="source-raw-data-name">
+          <td class="metadata">
             <router-link :to="`/datasets/${props.sourceRawData?.id}`" target="_blank">
               {{ props.sourceRawData?.name }}
             </router-link>
@@ -44,10 +44,17 @@
 
         <tr v-if="props.project">
           <td>Project</td>
-          <td class="source-raw-data-name">
+          <td class="metadata">
             <router-link :to="`/projects/${props.project.id}`" target="_blank">
               {{ props.project.name }}
             </router-link>
+          </td>
+        </tr>
+
+        <tr v-if="props.sourceInstrument">
+          <td>Source Instrument</td>
+          <td class="metadata">
+            {{ props.sourceInstrument.name }}
           </td>
         </tr>
 
@@ -78,6 +85,9 @@ const props = defineProps({
   inputDisabled: {
     type: Boolean,
     default: false,
+  },
+  sourceInstrument: {
+    type: Object,
   },
   uploadedDataProductErrorMessages: {
     type: String,
@@ -129,7 +139,7 @@ const submissionAlertIcon = computed(() => {
 </script>
 
 <style scoped>
-.source-raw-data-name {
+.metadata {
   white-space: pre-wrap;
   word-wrap: break-word;
   word-break: break-word;

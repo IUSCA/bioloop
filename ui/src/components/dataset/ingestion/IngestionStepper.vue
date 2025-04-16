@@ -236,11 +236,11 @@
     <template #step-content-2>
       <IngestionInfo
         :ingestion-dir="selectedFile"
-        :source-raw-data="rawDataSelected[0]"
-        :project="projectSelected && Object.values(projectSelected)[0]"
+        :source-raw-data="selectedRawData"
+        :project="projectSelected"
+        :source-instrument="selectedSourceInstrument"
         :ingestion-space="searchSpace.label"
         :dataset-id="datasetId"
-        :instrument="selectedSourceInstrument"
       />
     </template>
 
@@ -332,11 +332,9 @@ const datasetTypes = [
 const datasetTypeOptions = ref(datasetTypes)
 const willIngestRawData = ref(false)
 const isAssignedProject = ref(true)
-const selectedInstrument = ref(null)
 const instruments = ref([])
 const isAssignedSourceRawData = ref(true)
 const submissionSuccess = ref(false)
-const rawDataSelected = ref([])
 const fileListSearchText = ref('')
 const fileList = ref([])
 const datasetId = ref()
@@ -374,7 +372,7 @@ const step = ref(0)
 const isLastStep = computed(() => {
   return step.value === steps.length - 1
 })
-const projectSelected = ref({})
+const projectSelected = ref(null)
 
 const isNextButtonDisabled = computed(() => {
   return (
@@ -412,7 +410,6 @@ const resetRawDataSearch = (val) => {
   if (!val) {
     datasetTypeOptions.value = datasetTypes
     console.log('Clearing raw data selection')
-    // rawDataSelected = []
   } else {
     console.log('else')
     datasetTypeOptions.value = datasetTypes.filter(
@@ -497,14 +494,6 @@ const stepHasErrors = computed(() => {
   }
 })
 
-const setProject = (project) => {
-  projectSelected.value = { [project.id]: project }
-}
-
-const resetSelectedProject = () => {
-  projectSelected.value = {}
-}
-
 const isFileSearchAutocompleteOpen = ref(false)
 
 const selectedFile = ref(null)
@@ -544,17 +533,13 @@ const setFormErrors = async () => {
   }
 
   if (step.value === 1) {
-    if (step.value === 1) {
-      // console.log("isAssignedSourceRawData", isAssignedSourceRawData.value)
-      // console.log("rowDataSelected", rawDataSelected.value)
-      if (
-        (isAssignedSourceRawData.value && !selectedRawData.value) ||
-        (isAssignedProject.value && !projectSelected.value) ||
-        (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
-      ) {
-        formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
-        return
-      }
+    if (
+      (isAssignedSourceRawData.value && !selectedRawData.value) ||
+      (isAssignedProject.value && !projectSelected.value) ||
+      (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
+    ) {
+      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
+      return
     }
   }
 }
@@ -697,10 +682,7 @@ const preIngestion = () => {
     type: config.dataset.types.DATA_PRODUCT.key,
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
-    project_id:
-      (Object.entries(projectSelected.value) || []).length > 0
-        ? Object.values(projectSelected.value)[0]?.id
-        : null,
+    project_id: projectSelected.value ? projectSelected.value.id : null,
     instrument_id: selectedSourceInstrument.value.id,
   })
 }

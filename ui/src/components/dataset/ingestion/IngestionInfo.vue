@@ -8,21 +8,10 @@
             <tr>
               <td>Dataset Name</td>
               <td>
-                <a
-                  :href="`/datasets/${props.datasetId}`"
-                  v-if="props.datasetId"
-                >
+                <a :href="`/datasets/${props.datasetId}`" v-if="props.datasetId">
                   {{ props.ingestionDir.name }}</a
                 >
                 <span v-else>{{ props.ingestionDir.name }}</span>
-              </td>
-            </tr>
-            <tr>
-              <td>Source Instrument</td>
-              <td>
-                <CopyText
-                  :text="`${props.instrument.name} (${props.instrument.host})`"
-                />
               </td>
             </tr>
             <tr>
@@ -43,20 +32,29 @@
                 }}</va-chip>
               </td>
             </tr>
+
             <tr v-if="props.sourceRawData">
               <td>Source Raw Data</td>
-              <td>
-                <a :href="`/datasets/${props.sourceRawData.id}`">{{
-                  props.sourceRawData.name
-                }}</a>
+              <td class="metadata">
+                <router-link :to="`/datasets/${props.sourceRawData?.id}`" target="_blank">
+                  {{ props.sourceRawData?.name }}
+                </router-link>
               </td>
             </tr>
+
             <tr v-if="props.project">
               <td>Project</td>
-              <td>
-                <a :href="`/projects/${props.project.id}`">{{
-                    props.project.name
-                  }}</a>
+              <td class="metadata">
+                <router-link :to="`/projects/${props.project.id}`" target="_blank">
+                  {{ props.project.name }}
+                </router-link>
+              </td>
+            </tr>
+
+            <tr v-if="props.sourceInstrument">
+              <td>Source Instrument</td>
+              <td class="metadata">
+                {{ props.sourceInstrument.name }}
               </td>
             </tr>
           </tbody>
@@ -67,7 +65,7 @@
 </template>
 
 <script setup>
-import config from "@/config";
+import config from '@/config'
 
 const props = defineProps({
   ingestionSpace: {
@@ -76,6 +74,9 @@ const props = defineProps({
   ingestionDir: {
     type: Object,
     required: true,
+  },
+  sourceInstrument: {
+    type: Object,
   },
   sourceRawData: {
     type: Object,
@@ -90,7 +91,13 @@ const props = defineProps({
   instrument: {
     type: Object,
   },
-});
+})
 </script>
 
-<style scoped></style>
+<style scoped>
+.metadata {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+</style>

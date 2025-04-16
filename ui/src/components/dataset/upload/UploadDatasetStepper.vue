@@ -254,6 +254,7 @@
                   :uploaded-data-product-error-messages="formErrors[STEP_KEYS.INFO]"
                   :uploaded-data-product-error="!!formErrors[STEP_KEYS.INFO] && !stepIsPristine"
                   :project="projectSelected"
+                  :source-instrument="selectedSourceInstrument"
                   :source-raw-data="selectedRawData"
                   :submission-status="submissionStatus"
                   :submission-alert="submissionAlert"
