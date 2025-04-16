@@ -17,12 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class Register:
-    def __init__(self, dataset_type, default_wf_name='integrated'):
+    def __init__(self, dataset_type, default_wf_name='integrated', **kwargs):
         self.dataset_type = dataset_type
         self.reg_config = config['registration'][self.dataset_type]
         self.reject_patterns: set[str] = set(self.reg_config['rejects'])
         self.default_wf_name = default_wf_name
         self.batch_size: int = 100
+        self.metadata = kwargs
 
     def is_a_reject(self, name) -> bool:
         return any([fnmatch.fnmatchcase(name, pat) for pat in self.reject_patterns])
@@ -73,11 +74,16 @@ class Register:
     def register_batch(self, candidates: list[Path]) -> None:
         # fault tolerance: similar to register_candidate, the problem is when failure happens after the dataset creation
         # - we can track datasets without workflows on the UI and trigger a workflow manually
-        data = [{
-            'name': candidate.name,
-            'type': self.dataset_type,
-            'origin_path': str(candidate.resolve()),
-        } for candidate in candidates]
+        data = []
+        for candidate in candidates:
+            dataset_payload = {
+                'name': candidate.name,
+                'type': self.dataset_type,
+                'origin_path': str(candidate.resolve()),
+            }
+            if self.metadata:
+                dataset_payload['metadata'] = self.metadata
+            data.append(dataset_payload)
 
         try:
             # failure point but has built in retry ability
