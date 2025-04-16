@@ -6,6 +6,7 @@
     placeholder="Search projects by name"
     data-test-id="project-search-autocomplete"
     :disabled="props.disabled"
+    :label="props.label"
   >
     <template #filtered="{ item }">
       <div class="flex">
@@ -31,7 +32,7 @@
 </template>
 
 <script setup>
-import projectService from "@/services/projects";
+import projectService from '@/services/projects'
 // import { formatBytes } from "@/services/utils";
 
 const props = defineProps({
@@ -47,14 +48,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+  label: {
+    type: String,
+    default: '',
+  },
+})
 
-const searchText = ref("");
-const projects = ref([]);
+const searchText = ref('')
+const projects = ref([])
 
 projectService.getAll({ forSelf: props.forSelf }).then((res) => {
-  projects.value = (res.data.projects || []).filter(
-    (p) => !props.excludeIds.includes(p.id),
-  );
-});
+  projects.value = (res.data.projects || []).filter((p) => !props.excludeIds.includes(p.id))
+})
 </script>

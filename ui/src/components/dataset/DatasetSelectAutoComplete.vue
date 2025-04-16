@@ -16,6 +16,7 @@
     @open="onOpen"
     @close="onClose"
     :disabled="props.disabled"
+    :label="props.label"
   />
 </template>
 
@@ -38,6 +39,9 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false,
+  },
+  label: {
+    type: String,
   },
   error: {
     type: String,

@@ -108,6 +108,7 @@
               @open="onRawDataSearchOpen"
               @close="onRawDataSearchClose"
               class="flex-grow"
+              :label="'Dataset'"
             >
             </DatasetSelectAutoComplete>
             <va-popover>
@@ -148,7 +149,8 @@
                 @select="setProject"
                 :disabled="!isAssignedProject"
                 :for-self="!auth.canOperate"
-                class="w-full pb-4"
+                class="w-full"
+                :label="'Project'"
               ></ProjectSelect>
 
               <ProjectList
@@ -176,6 +178,46 @@
               >
               <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
             </va-popover>
+          </div>
+        </div>
+
+        <div class="flex w-full pb-6">
+          <div class="w-60 flex flex-shrink-0 mr-4">
+            <div class="flex items-center">
+              <va-checkbox
+                v-model="isAssignedProject"
+                @update:modelValue="
+                  (val) => {
+                    if (!val) {
+                      projectSelected = {}
+                    }
+                  }
+                "
+                color="primary"
+                label="Assign source Instrument"
+                class="flex-grow"
+              />
+            </div>
+          </div>
+
+          <div class="flex-grow flex items-center">
+            <va-select
+              v-model="selectedSourceInstrument"
+              :text-by="'label'"
+              :track-by="'value'"
+              :options="sourceInstrumentOptions"
+              label="Source Instrument"
+              placeholder="Select Source Instrument"
+              class="flex-grow"
+            />
+            <div class="flex items-center ml-2">
+              <va-popover>
+                <template #body>
+                  <div class="w-72">Source instrument where this data was collected from.</div>
+                </template>
+                <Icon icon="mdi:information" class="text-xl text-gray-500" />
+              </va-popover>
+            </div>
           </div>
         </div>
       </template>
@@ -524,6 +566,8 @@ const loading = ref(false)
 const validatingForm = ref(false)
 const rawDataList = ref([])
 // const rawDataSelected = ref([])
+const selectedSourceInstrument = ref(null)
+const sourceInstrumentOptions = ref([])
 const projectSelected = ref({})
 const datasetUploadLog = ref(null)
 const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED)
