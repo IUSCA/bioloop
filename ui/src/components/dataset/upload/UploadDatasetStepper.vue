@@ -30,36 +30,36 @@
         </va-button>
       </template>
 
-      <!--      <template #step-content-0>-->
-      <!--        <div class="flex flex-col">-->
-      <!--          <SelectFileButtons-->
-      <!--            :disabled="submitAttempted || loading || validatingForm"-->
-      <!--            @files-added="-->
-      <!--              (files) => {-->
-      <!--                console.log('Files added:', files)-->
-      <!--                clearSelectedDirectoryToUpload()-->
-      <!--                setFiles(files)-->
-      <!--                isSubmissionAlertVisible = false-->
-      <!--                setUploadedFileType(FILE_TYPE.FILE)-->
-      <!--              }-->
-      <!--            "-->
-      <!--            @directory-added="-->
-      <!--              (directoryDetails) => {-->
-      <!--                clearSelectedFilesToUpload()-->
-      <!--                setDirectory(directoryDetails)-->
-      <!--                isSubmissionAlertVisible = false-->
-      <!--                setUploadedFileType(FILE_TYPE.DIRECTORY)-->
-      <!--              }-->
-      <!--            "-->
-      <!--          />-->
-
-      <!--          <va-divider />-->
-
-      <!--          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />-->
-      <!--        </div>-->
-      <!--      </template>-->
-
       <template #step-content-0>
+        <div class="flex flex-col">
+          <SelectFileButtons
+            :disabled="submitAttempted || loading || validatingForm"
+            @files-added="
+              (files) => {
+                console.log('Files added:', files)
+                clearSelectedDirectoryToUpload()
+                setFiles(files)
+                isSubmissionAlertVisible = false
+                setUploadedFileType(FILE_TYPE.FILE)
+              }
+            "
+            @directory-added="
+              (directoryDetails) => {
+                clearSelectedFilesToUpload()
+                setDirectory(directoryDetails)
+                isSubmissionAlertVisible = false
+                setUploadedFileType(FILE_TYPE.DIRECTORY)
+              }
+            "
+          />
+
+          <va-divider />
+
+          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />
+        </div>
+      </template>
+
+      <template #step-content-1>
         <div class="flex w-full pb-6 items-center">
           <va-select
             v-model="selectedDatasetType"
@@ -347,11 +347,11 @@ const CHUNK_SIZE = 2 * 1024 * 1024 // Size of each chunk, set to 2 Mb
 const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
 
 const steps = [
-  // {
-  //   key: STEP_KEYS.UPLOAD,
-  //   label: 'Select Files',
-  //   icon: 'material-symbols:folder',
-  // },
+  {
+    key: STEP_KEYS.UPLOAD,
+    label: 'Select Files',
+    icon: 'material-symbols:folder',
+  },
   { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
   { key: STEP_KEYS.INFO, label: 'Upload', icon: 'icon: "lightbulb"' },
 
