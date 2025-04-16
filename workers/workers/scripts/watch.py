@@ -64,6 +64,8 @@ class Register:
             'type': self.dataset_type,
             'origin_path': str(candidate.resolve()),
         }
+        if self.metadata:
+            dataset_payload['metadata'] = self.metadata
         try:
             created_dataset = api.create_dataset(dataset_payload)
             self.run_workflows(created_dataset)
