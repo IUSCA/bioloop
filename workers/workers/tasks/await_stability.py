@@ -5,7 +5,6 @@ from pathlib import Path
 
 from celery import Celery
 from celery.utils.log import get_task_logger
-from glom import glom
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
@@ -59,20 +58,16 @@ def await_stability(celery_task, dataset_id, wait_seconds: int = None, recency_t
     # recency_threshold is the time to wait before considering the dataset stable
     # precedence order:
     # 1. recency_threshold parameter
-    # 2. dataset metadata
-    # 3. config file
+    # 2. config file
     threshold = (recency_threshold or
-                 glom(dataset, 'metadata.recency_threshold_seconds', default=None) or
                  config['registration'][dataset_type]['recency_threshold_seconds'])
     logger.info(f'{dataset["name"]} - threshold: {threshold} seconds')
 
     # wait_seconds is the time to wait between stability checks
     # precedence order:
     # 1. wait_seconds parameter
-    # 2. dataset metadata
-    # 3. config file
+    # 2. config file
     _wait_seconds = (wait_seconds or
-                     glom(dataset, 'metadata.wait_between_stability_checks_seconds', default=None) or
                      config['registration']['wait_between_stability_checks_seconds'])
     logger.info(f'{dataset["name"]} - wait_seconds: {_wait_seconds} seconds')
 
