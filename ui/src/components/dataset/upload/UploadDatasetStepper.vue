@@ -30,53 +30,37 @@
         </va-button>
       </template>
 
+      <!--      <template #step-content-0>-->
+      <!--        <div class="flex flex-col">-->
+      <!--          <SelectFileButtons-->
+      <!--            :disabled="submitAttempted || loading || validatingForm"-->
+      <!--            @files-added="-->
+      <!--              (files) => {-->
+      <!--                console.log('Files added:', files)-->
+      <!--                clearSelectedDirectoryToUpload()-->
+      <!--                setFiles(files)-->
+      <!--                isSubmissionAlertVisible = false-->
+      <!--                setUploadedFileType(FILE_TYPE.FILE)-->
+      <!--              }-->
+      <!--            "-->
+      <!--            @directory-added="-->
+      <!--              (directoryDetails) => {-->
+      <!--                clearSelectedFilesToUpload()-->
+      <!--                setDirectory(directoryDetails)-->
+      <!--                isSubmissionAlertVisible = false-->
+      <!--                setUploadedFileType(FILE_TYPE.DIRECTORY)-->
+      <!--              }-->
+      <!--            "-->
+      <!--          />-->
+
+      <!--          <va-divider />-->
+
+      <!--          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />-->
+      <!--        </div>-->
+      <!--      </template>-->
+
       <template #step-content-0>
-        <div class="flex flex-col">
-          <SelectFileButtons
-            :disabled="submitAttempted || loading || validatingForm"
-            @files-added="
-              (files) => {
-                console.log('Files added:', files)
-                clearSelectedDirectoryToUpload()
-                setFiles(files)
-                isSubmissionAlertVisible = false
-                setUploadedFileType(FILE_TYPE.FILE)
-              }
-            "
-            @directory-added="
-              (directoryDetails) => {
-                clearSelectedFilesToUpload()
-                setDirectory(directoryDetails)
-                isSubmissionAlertVisible = false
-                setUploadedFileType(FILE_TYPE.DIRECTORY)
-              }
-            "
-          />
-
-          <va-divider />
-
-          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />
-        </div>
-      </template>
-
-      <template #step-content-1>
-        <div class="flex w-full pb-6">
-          <!--          <div class="w-48 flex-shrink-0 mr-4">-->
-          <!--            <va-checkbox-->
-          <!--              v-model="uploadingDatasetType"-->
-          <!--              @update:modelValue="-->
-          <!--                (val) => {-->
-          <!--                  if (!val) {-->
-          <!--                    selectedDatasetType = null-->
-          <!--                  }-->
-          <!--                }-->
-          <!--              "-->
-          <!--              color="primary"-->
-          <!--              label="Dataset Type"-->
-          <!--              class="w-full"-->
-          <!--            />-->
-          <!--          </div>-->
-
+        <div class="flex w-full pb-6 items-center">
           <va-select
             v-model="selectedDatasetType"
             :text-by="'label'"
@@ -84,23 +68,37 @@
             :options="datasetTypeOptions"
             label="Dataset Type"
             placeholder="Select dataset type"
-            class="w-full"
+            class="flex-grow"
           />
+          <div class="flex items-center ml-2">
+            <va-popover>
+              <template #body>
+                <div class="w-96">
+                  Raw Data: Original, unprocessed data collected from instruments.
+                  <br />
+                  Dara Product: Processed data derived from Raw Data
+                </div>
+              </template>
+              <Icon icon="mdi:information" class="text-xl text-gray-500" />
+            </va-popover>
+          </div>
         </div>
 
         <div class="flex w-full pb-6">
-          <div class="w-48 flex-shrink-0 mr-4">
-            <va-checkbox
-              v-model="isAssignedSourceRawData"
-              :disabled="willUploadRawData"
-              @update:modelValue="resetRawDataSearch"
-              color="primary"
-              label="Assign source Raw Data"
-              class="w-full"
-            />
+          <div class="w-60 flex flex-shrink-0 mr-4">
+            <div class="flex items-center">
+              <va-checkbox
+                v-model="isAssignedSourceRawData"
+                :disabled="willUploadRawData"
+                @update:modelValue="resetRawDataSearch"
+                color="primary"
+                label="Assign source Raw Data"
+                class="flex-grow"
+              />
+            </div>
           </div>
 
-          <div class="flex-grow">
+          <div class="flex-grow flex items-center">
             <DatasetSelectAutoComplete
               :disabled="submitAttempted || !isAssignedSourceRawData"
               v-model:selected="selectedRawData"
@@ -109,31 +107,43 @@
               @clear="resetRawDataSearch"
               @open="onRawDataSearchOpen"
               @close="onRawDataSearchClose"
-              class="w-full"
+              class="flex-grow"
             >
             </DatasetSelectAutoComplete>
+            <va-popover>
+              <template #body>
+                <div class="w-96">
+                  Associating a Data Product with a source Raw Data establishes a clear lineage
+                  between the original data and its processed form. This linkage helps to trace the
+                  origins of processed data
+                </div>
+              </template>
+              <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+            </va-popover>
           </div>
         </div>
 
         <div class="flex w-full pb-6">
-          <div class="w-48 flex-shrink-0 mr-4">
-            <va-checkbox
-              v-model="isAssignedProject"
-              @update:modelValue="
-                (val) => {
-                  if (!val) {
-                    projectSelected = {}
+          <div class="w-60 flex flex-shrink-0 mr-4">
+            <div class="flex items-center">
+              <va-checkbox
+                v-model="isAssignedProject"
+                @update:modelValue="
+                  (val) => {
+                    if (!val) {
+                      projectSelected = {}
+                    }
                   }
-                }
-              "
-              color="primary"
-              label="Assign Project"
-              class="w-full"
-            />
+                "
+                color="primary"
+                label="Assign Project"
+                class="flex-grow"
+              />
+            </div>
           </div>
 
-          <div class="flex-grow">
-            <va-form-field v-model="projectSelected" v-slot="{ value: v }" class="w-full">
+          <div class="flex-grow flex items-center">
+            <va-form-field v-model="projectSelected" v-slot="{ value: v }" class="flex-grow">
               <ProjectSelect
                 @select="setProject"
                 :disabled="!isAssignedProject"
@@ -154,6 +164,18 @@
               >
               </ProjectList>
             </va-form-field>
+            <va-popover>
+              <template #body>
+                <div class="w-96">
+                  Assigning a dataset to a project establishes a connection between your data and a
+                  specific research initiatives. This association helps organize and categorize
+                  datasets within the context of your research projects, facilitating easier data
+                  management, access control, and collaboration among team members working on the
+                  same project.
+                </div></template
+              >
+              <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+            </va-popover>
           </div>
         </div>
       </template>
@@ -238,8 +260,9 @@ import { useAuthStore } from '@/stores/auth'
 import { jwtDecode } from 'jwt-decode'
 import _ from 'lodash'
 import SparkMD5 from 'spark-md5'
-import { VaDivider } from 'vuestic-ui'
+import { VaDivider, VaPopover } from 'vuestic-ui'
 import DatasetSelectAutoComplete from '@/components/dataset/DatasetSelectAutoComplete.vue'
+import { Icon } from '@iconify/vue'
 
 const auth = useAuthStore()
 const uploadToken = ref(useLocalStorage('uploadToken', ''))
@@ -267,11 +290,11 @@ const CHUNK_SIZE = 2 * 1024 * 1024 // Size of each chunk, set to 2 Mb
 const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
 
 const steps = [
-  {
-    key: STEP_KEYS.UPLOAD,
-    label: 'Select Files',
-    icon: 'material-symbols:folder',
-  },
+  // {
+  //   key: STEP_KEYS.UPLOAD,
+  //   label: 'Select Files',
+  //   icon: 'material-symbols:folder',
+  // },
   { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
   { key: STEP_KEYS.INFO, label: 'Upload', icon: 'icon: "lightbulb"' },
 
