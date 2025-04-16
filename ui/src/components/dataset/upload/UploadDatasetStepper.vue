@@ -145,7 +145,7 @@
 
           <div class="flex-grow flex items-center">
             <ProjectAsyncAutoComplete
-              :disabled="submitAttempted || !isAssignedSourceRawData"
+              :disabled="submitAttempted || !isAssignedProject"
               v-model:selected="projectSelected"
               v-model:search-term="projectSearchText"
               placeholder="Search Projects"
@@ -352,8 +352,8 @@ const steps = [
     label: 'Select Files',
     icon: 'material-symbols:folder',
   },
-  { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
-  { key: STEP_KEYS.INFO, label: 'Upload', icon: 'icon: "lightbulb"' },
+  { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'material-symbols:info' },
+  { key: STEP_KEYS.INFO, label: 'Upload', icon: 'material-symbols:play-circle' },
 
   // { key: STEP_KEYS.RAW_DATA, label: 'Source Raw Data', icon: 'mdi:dna' },
   // { key: STEP_KEYS.PROJECT, label: 'Project', icon: 'mdi:flask' },
@@ -384,13 +384,6 @@ const isAssignedSourceRawData = ref(true)
 const selectedRawData = ref(null)
 const datasetSearchText = ref('')
 const projectSearchText = ref('')
-// watch(selectedRawData, (newVal, oldVal) => {
-//   console.log('UploadStepper:')
-//   console.log('selected raw data:')
-//   console.log(newVal)
-//   console.log(oldVal)
-// })
-
 const isAssignedProject = ref(true)
 const submissionSuccess = ref(false)
 

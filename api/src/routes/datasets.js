@@ -24,6 +24,7 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+
 // stats - UI
 router.get(
   '/stats',
@@ -323,6 +324,8 @@ router.get(
       prisma.dataset.count({ ...filterQuery }),
     ]);
 
+    console.log('Retrieved datasets:', datasets);
+
     res.json({
       metadata: { count },
       datasets,
@@ -350,7 +353,7 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
   next();
 });
 
-// get by id - worker + UI
+
 router.get(
   '/:id',
   validate([
@@ -389,6 +392,8 @@ router.get(
     res.json(dataset);
   }),
 );
+
+
 
 function normalize_name(name) {
   // replace all character other than a-z, 0-9, _ and - with -

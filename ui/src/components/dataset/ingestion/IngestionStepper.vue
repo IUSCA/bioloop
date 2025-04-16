@@ -15,11 +15,7 @@
         }"
         @click="setStep(i)"
         :disabled="
-          submitAttempted ||
-          step < i ||
-          searchingFiles ||
-          loadingResources ||
-          asyncValidatingDatasetName
+          submitAttempted || step < i || searchingFiles || loadingResources || validatingForm
         "
         preset="secondary"
       >
@@ -40,7 +36,7 @@
           :text-by="'label'"
           :track-by="'key'"
           label="Search space"
-          :disabled="submitAttempted || searchingFiles || asyncValidatingDatasetName"
+          :disabled="submitAttempted || searchingFiles || validatingForm"
         />
 
         <div class="flex flex-col w-full">
@@ -49,7 +45,7 @@
             :disabled="submitAttempted"
             :base-path="searchSpaceBasePath"
             :loading="searchingFiles"
-            :validating="asyncValidatingDatasetName"
+            :validating="validatingForm"
             @clear="resetSearch"
             @open="
               () => {
@@ -64,8 +60,8 @@
                 }
                 fileList = []
                 isFileSearchAutocompleteOpen = false
-                if (asyncValidatingDatasetName) {
-                  asyncValidatingDatasetName = false
+                if (validatingForm) {
+                  validatingForm = false
                 }
               }
             "
@@ -83,108 +79,168 @@
     </template>
 
     <template #step-content-1>
-      <va-select
-        class="w-full"
-        v-model="selectedInstrument"
-        label="Select source instrument"
-        placeholder="Select source instrument"
-        :options="instruments"
-        :text-by="'name'"
-        :track-by="'id'"
-      />
-    </template>
-
-    <template #step-content-2>
-      <div class="flex flex-col gap-10">
-        <va-checkbox
-          v-model="isAssignedSourceRawData"
-          @update:modelValue="
-            (val) => {
-              if (!val) {
-                rawDataSelected = []
-              }
-            }
-          "
-          color="primary"
-          label="Assign source Raw Data"
+      <div class="flex w-full pb-6 items-center">
+        <va-select
+          v-model="selectedDatasetType"
+          :text-by="'label'"
+          :track-by="'value'"
+          :options="datasetTypeOptions"
+          label="Dataset Type"
+          placeholder="Select dataset type"
+          class="flex-grow"
         />
+        <div class="flex items-center ml-2">
+          <va-popover>
+            <template #body>
+              <div class="w-96">
+                Raw Data: Original, unprocessed data collected from instruments.
+                <br />
+                Dara Product: Processed data derived from Raw Data
+              </div>
+            </template>
+            <Icon icon="mdi:information" class="text-xl text-gray-500" />
+          </va-popover>
+        </div>
+      </div>
 
-        <va-form-field
-          v-if="isAssignedSourceRawData"
-          v-model="rawDataSelected"
-          v-slot="{ value: v }"
-        >
-          <DatasetSelect
-            :selected-results="v.ref"
-            @select="addDataset"
-            @remove="removeDataset"
-            select-mode="single"
-            :dataset-type="config.dataset.types.RAW_DATA.key"
-            :show-error="!stepIsPristine"
-            :error="formErrors[STEP_KEYS.RAW_DATA]"
+      <div class="flex w-full pb-6">
+        <div class="w-60 flex flex-shrink-0 mr-4">
+          <div class="flex items-center">
+            <va-checkbox
+              v-model="isAssignedSourceRawData"
+              :disabled="willIngestRawData"
+              @update:modelValue="resetRawDataSearch"
+              color="primary"
+              label="Assign source Raw Data"
+              class="flex-grow"
+            />
+          </div>
+        </div>
+
+        <div class="flex-grow flex items-center">
+          <DatasetSelectAutoComplete
+            :disabled="submitAttempted || !isAssignedSourceRawData"
+            v-model:selected="selectedRawData"
+            v-model:search-term="datasetSearchText"
             placeholder="Search Raw Data"
-            selected-label="Selected source Raw Data"
-            :messages="['Select a Source Raw Data']"
-          ></DatasetSelect>
-        </va-form-field>
+            @clear="resetRawDataSearch"
+            @open="onRawDataSearchOpen"
+            @close="onRawDataSearchClose"
+            class="flex-grow"
+            :label="'Dataset'"
+          >
+          </DatasetSelectAutoComplete>
+          <va-popover>
+            <template #body>
+              <div class="w-96">
+                Associating a Data Product with a source Raw Data establishes a clear lineage
+                between the original data and its processed form. This linkage helps to trace the
+                origins of processed data
+              </div>
+            </template>
+            <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+          </va-popover>
+        </div>
+      </div>
 
-        <div class="text-xs va-text-danger" v-if="!stepIsPristine">
-          {{ formErrors[STEP_KEYS.DIRECTORY] }}
+      <div class="flex w-full pb-6">
+        <div class="w-60 flex flex-shrink-0 mr-4">
+          <div class="flex items-center">
+            <va-checkbox
+              v-model="isAssignedProject"
+              @update:modelValue="
+                (val) => {
+                  if (!val) {
+                    projectSelected = null
+                  }
+                }
+              "
+              color="primary"
+              label="Assign Project"
+              class="flex-grow"
+            />
+          </div>
+        </div>
+
+        <div class="flex-grow flex items-center">
+          <ProjectAsyncAutoComplete
+            :disabled="submitAttempted || !isAssignedProject"
+            v-model:selected="projectSelected"
+            v-model:search-term="projectSearchText"
+            placeholder="Search Projects"
+            @clear="resetProjectSearch"
+            @open="onProjectSearchOpen"
+            @close="onProjectSearchClose"
+            class="flex-grow"
+            :label="'Project'"
+          >
+          </ProjectAsyncAutoComplete>
+
+          <va-popover>
+            <template #body>
+              <div class="w-96">
+                Assigning a dataset to a project establishes a connection between your data and a
+                specific research initiatives. This association helps organize and categorize
+                datasets within the context of your research projects, facilitating easier data
+                management, access control, and collaboration among team members working on the same
+                project.
+              </div></template
+            >
+            <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+          </va-popover>
+        </div>
+      </div>
+
+      <div class="flex w-full pb-6">
+        <div class="w-60 flex flex-shrink-0 mr-4">
+          <div class="flex items-center">
+            <va-checkbox
+              v-model="isAssignedSourceInstrument"
+              @update:modelValue="
+                (val) => {
+                  if (!val) {
+                    selectedSourceInstrument = null
+                  }
+                }
+              "
+              color="primary"
+              label="Assign source Instrument"
+              class="flex-grow"
+            />
+          </div>
+        </div>
+
+        <div class="flex-grow flex items-center">
+          <va-select
+            v-model="selectedSourceInstrument"
+            :options="sourceInstrumentOptions"
+            :disabled="!isAssignedSourceInstrument"
+            label="Source Instrument"
+            placeholder="Select Source Instrument"
+            class="flex-grow"
+            :text-by="'name'"
+            :track-by="'id'"
+          />
+          <div class="flex items-center ml-2">
+            <va-popover>
+              <template #body>
+                <div class="w-72">Source instrument where this data was collected from.</div>
+              </template>
+              <Icon icon="mdi:information" class="text-xl text-gray-500" />
+            </va-popover>
+          </div>
         </div>
       </div>
     </template>
 
-    <template #step-content-3>
-      <!-- <div class="flex flex-col"> -->
-      <div class="flex flex-col gap-10">
-        <va-checkbox
-          v-model="isAssignedProject"
-          @update:modelValue="
-            (val) => {
-              if (!val) {
-                projectSelected = {}
-              }
-            }
-          "
-          color="primary"
-          label="Assign Project"
-        />
-
-        <va-form-field v-model="projectSelected" v-slot="{ value: v }">
-          <div class="sm:min-w-[600px] sm:max-h-[65vh] sm:min-h-[50vh]">
-            <div class="space-y-4">
-              <ProjectSelect
-                @select="setProject"
-                :disabled="!isAssignedProject"
-                :for-self="!auth.canOperate"
-              ></ProjectSelect>
-
-              <ProjectList
-                v-if="Object.values(projectSelected).length > 0"
-                :projects="[Object.values(projectSelected)[0]]"
-                show-remove
-                @remove="
-                  (project) => {
-                    console.log('Removing project in template:', project)
-                    resetSelectedProject()
-                  }
-                "
-              >
-              </ProjectList>
-            </div>
-          </div>
-        </va-form-field>
-      </div>
-    </template>
-
-    <template #step-content-4>
+    <template #step-content-2>
       <IngestionInfo
         :ingestion-dir="selectedFile"
         :source-raw-data="rawDataSelected[0]"
         :project="projectSelected && Object.values(projectSelected)[0]"
         :ingestion-space="searchSpace.label"
         :dataset-id="datasetId"
-        :instrument="selectedInstrument"
+        :instrument="selectedSourceInstrument"
       />
     </template>
 
@@ -227,16 +283,24 @@ import toast from '@/services/toast'
 import { watchDebounced } from '@vueuse/core'
 import pm from 'picomatch'
 import { useAuthStore } from '@/stores/auth'
+import DatasetSelectAutoComplete from '@/components/dataset/DatasetSelectAutoComplete.vue'
+import { VaPopover } from 'vuestic-ui'
+import { Icon } from '@iconify/vue'
+import Constants from '@/constants'
 
 const auth = useAuthStore()
 
 const STEP_KEYS = {
   DIRECTORY: 'directory',
-  PROJECT: 'project',
-  INSTRUMENT: 'instrument',
-  RAW_DATA: 'rawData',
+  GENERAL_INFO: 'generalInfo',
   INFO: 'info',
 }
+
+const MISSING_METADATA_ERROR = 'One or more fields have error'
+const DATASET_EXISTS_ERROR = 'A Data Product with this name already exists.'
+const DATASET_NAME_REQUIRED_ERROR = 'Dataset name cannot be empty'
+const HAS_SPACES_ERROR = 'cannot contain spaces'
+const FORM_VALIDATION_ERROR = 'An unknown error occurred'
 const DATASET_NAME_MAX_LENGTH_ERROR = 'Dataset name must have 3 or more characters.'
 const DATASET_NAME_EXISTS_ERROR = 'A Data Product with this name already exists.'
 const INGESTION_FILE_REQUIRED_ERROR = 'A file must be selected for ingestion.'
@@ -256,20 +320,17 @@ const steps = [
     label: 'Select Directory',
     icon: 'material-symbols:folder',
   },
-  {
-    key: STEP_KEYS.INSTRUMENT,
-    label: 'Select Source Instrument',
-    icon: 'material-symbols:microscope',
-  },
-  { key: STEP_KEYS.RAW_DATA, label: 'Source Raw Data', icon: 'mdi:dna' },
-  { key: STEP_KEYS.PROJECT, label: 'Project', icon: 'mdi:flask' },
-  {
-    key: STEP_KEYS.INFO,
-    label: 'Ingestion Details',
-    icon: 'material-symbols:info-outline',
-  },
+  { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'material-symbols:info' },
+  { key: STEP_KEYS.INFO, label: 'Ingestion Details', icon: 'material-symbols:play-circle' },
 ]
 
+const datasetTypes = [
+  { label: config.dataset.types.RAW_DATA.label, value: config.dataset.types.RAW_DATA.key },
+  { label: config.dataset.types.DATA_PRODUCT.label, value: config.dataset.types.DATA_PRODUCT.key },
+]
+
+const datasetTypeOptions = ref(datasetTypes)
+const willIngestRawData = ref(false)
 const isAssignedProject = ref(true)
 const selectedInstrument = ref(null)
 const instruments = ref([])
@@ -281,10 +342,34 @@ const fileList = ref([])
 const datasetId = ref()
 const loadingResources = ref(false) // determines if the initial resources needed for the stepper are being fetched
 const searchingFiles = ref(false)
-const asyncValidatingDatasetName = ref(false)
+const validatingForm = ref(false)
 const isSubmissionAlertVisible = ref(false)
 const submitAttempted = ref(false)
 const rawDataList = ref([])
+const isAssignedSourceInstrument = ref(true)
+const selectedRawData = ref(null)
+const datasetSearchText = ref('')
+const projectSearchText = ref('')
+const willUploadRawData = ref(false)
+const selectedSourceInstrument = ref(null)
+const sourceInstrumentOptions = ref([])
+
+const searchSpace = ref(
+  FILESYSTEM_SEARCH_SPACES instanceof Array && FILESYSTEM_SEARCH_SPACES.length > 0
+    ? FILESYSTEM_SEARCH_SPACES[0]
+    : ''
+)
+
+const searchSpaceBasePath = computed(() => searchSpace.value.base_path)
+
+const _searchText = computed(() => {
+  return (
+    (searchSpace.value.base_path.endsWith('/')
+      ? searchSpace.value.base_path
+      : searchSpace.value.base_path + '/') + fileListSearchText.value
+  )
+})
+
 const step = ref(0)
 const isLastStep = computed(() => {
   return step.value === steps.length - 1
@@ -297,18 +382,90 @@ const isNextButtonDisabled = computed(() => {
     submissionSuccess.value ||
     loadingResources.value ||
     searchingFiles.value ||
-    asyncValidatingDatasetName.value
+    validatingForm.value
   )
 })
+
 const isPreviousButtonDisabled = computed(() => {
   return (
     step.value === 0 ||
     submissionSuccess.value ||
     searchingFiles.value ||
     loadingResources.value ||
-    asyncValidatingDatasetName.value
+    validatingForm.value
   )
 })
+
+const selectedDatasetType = ref(
+  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key)
+)
+
+const resetProjectSearch = (val) => {
+  projectSelected.value = null
+  projectSearchText.value = ''
+}
+
+const resetRawDataSearch = (val) => {
+  selectedRawData.value = null
+  datasetSearchText.value = ''
+  console.log('isAssignedSourceRawData changed ', val)
+  if (!val) {
+    datasetTypeOptions.value = datasetTypes
+    console.log('Clearing raw data selection')
+    // rawDataSelected = []
+  } else {
+    console.log('else')
+    datasetTypeOptions.value = datasetTypes.filter(
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
+    )
+    selectedDatasetType.value = datasetTypeOptions.value.find(
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
+    )
+    willUploadRawData.value = false
+  }
+  // todo - reset form errors
+  // formErrors.value[STEP_KEYS.GENERAL_INFO] = null
+}
+
+const onRawDataSearchOpen = () => {
+  selectedRawData.value = null
+}
+
+const onRawDataSearchClose = () => {
+  if (!selectedRawData.value) {
+    datasetSearchText.value = ''
+  }
+}
+
+const onProjectSearchOpen = () => {
+  projectSelected.value = null
+}
+
+const onProjectSearchClose = () => {
+  if (!projectSelected.value) {
+    projectSearchText.value = ''
+  }
+}
+
+watch(selectedDatasetType, (newVal) => {
+  if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
+    isAssignedSourceRawData.value = false
+    selectedRawData.value = null
+    willUploadRawData.value = true
+  } else {
+    willUploadRawData.value = false
+  }
+})
+
+const isStepperButtonDisabled = (stepIndex) => {
+  return (
+    submitAttempted.value ||
+    submissionSuccess.value ||
+    step.value < stepIndex ||
+    loadingResources.value ||
+    validatingForm.value
+  )
+}
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine. At
@@ -316,9 +473,7 @@ const isPreviousButtonDisabled = computed(() => {
 // (STEP_KEYS.RAW_DATA)
 const stepPristineStates = ref([
   { [STEP_KEYS.DIRECTORY]: true },
-  { [STEP_KEYS.INSTRUMENT]: true },
-  { [STEP_KEYS.PROJECT]: true },
-  { [STEP_KEYS.RAW_DATA]: true },
+  { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.INFO]: true },
 ])
 
@@ -328,22 +483,17 @@ const stepIsPristine = computed(() => {
 
 const formErrors = ref({
   [STEP_KEYS.DIRECTORY]: null,
-  [STEP_KEYS.INSTRUMENT]: null,
-  [STEP_KEYS.PROJECT]: null,
-  [STEP_KEYS.RAW_DATA]: null,
+  [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.INFO]: null,
 })
+
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.DIRECTORY]
   } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.INSTRUMENT]
+    return !!formErrors.value[STEP_KEYS.GENERAL_INFO]
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.RAW_DATA]
-  } else if (step.value === 3) {
-    return !!formErrors.value[STEP_KEYS.PROJECT]
-  } else {
-    return false
+    return !!formErrors.value[STEP_KEYS.INFO]
   }
 })
 
@@ -362,9 +512,7 @@ const selectedFile = ref(null)
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.DIRECTORY]: null,
-    [STEP_KEYS.INSTRUMENT]: null,
-    [STEP_KEYS.PROJECT]: null,
-    [STEP_KEYS.RAW_DATA]: null,
+    [STEP_KEYS.GENERAL_INFO]: null,
     [STEP_KEYS.INFO]: null,
   }
 }
@@ -393,32 +541,27 @@ const setFormErrors = async () => {
         formErrors.value[STEP_KEYS.DIRECTORY] = null
       }
     }
-  } else if (step.value === 1) {
-    if (!selectedInstrument.value) {
-      formErrors.value[STEP_KEYS.INSTRUMENT] = INSTRUMENT_REQUIRED_ERROR
-      return
-    }
-  } else if (step.value === 2) {
-    if (!isAssignedSourceRawData.value) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = null
-      return
-    }
-    if (rawDataSelected.value.length === 0) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR
-      return
-    }
-  } else if (step.value === 3) {
-    if (!isAssignedProject.value) {
-      formErrors.value[STEP_KEYS.PROJECT] = null
-    } else if (Object.values(projectSelected.value).length === 0) {
-      formErrors.value[STEP_KEYS.PROJECT] = PROJECT_REQUIRED_ERROR
+  }
+
+  if (step.value === 1) {
+    if (step.value === 1) {
+      // console.log("isAssignedSourceRawData", isAssignedSourceRawData.value)
+      // console.log("rowDataSelected", rawDataSelected.value)
+      if (
+        (isAssignedSourceRawData.value && !selectedRawData.value) ||
+        (isAssignedProject.value && !projectSelected.value) ||
+        (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
+      ) {
+        formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
+        return
+      }
     }
   }
 }
 
 // determines if the dataset (Data Product) named `value` already exists
-const asyncValidateDatasetName = (value) => {
-  return new Promise((resolve) => {
+const validateIfExists = (value) => {
+  return new Promise((resolve, reject) => {
     // Vuestic claims that it should not run async validation if synchronous
     // validation fails, but it seems to be triggering async validation
     // nonetheless when `value` is ''. Hence the explicit check for whether
@@ -426,19 +569,17 @@ const asyncValidateDatasetName = (value) => {
     if (!value) {
       resolve(true)
     } else {
-      asyncValidatingDatasetName.value = true
       datasetService
-        .check_if_exists({ type: 'DATA_PRODUCT', name: value })
+        .check_if_exists({ type: selectedDatasetType.value['value'], name: value })
         .then((res) => {
-          // Vuestic expects this Promise to resolve with an error message, for
-          // it to show the error message.
-          resolve(res.data.datasets.length !== 0 ? DATASET_NAME_EXISTS_ERROR : true)
+          console.log('res', res)
+          console.log('Dataset exists?', res.data.exists)
+          resolve(res.data.exists)
         })
-        .catch((err) => {
-          console.error(err)
-        })
-        .finally(() => {
-          asyncValidatingDatasetName.value = false
+        .catch((e) => {
+          console.error('Error checking dataset existence')
+          console.error(e)
+          reject()
         })
     }
   })
@@ -452,7 +593,7 @@ const validateDatasetName = async () => {
     return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR }
   }
 
-  return asyncValidateDatasetName(datasetName).then((res) => {
+  return validateIfExists(datasetName).then((res) => {
     return {
       isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
       error: res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
@@ -468,20 +609,28 @@ const datasetNameIsNull = (name) => {
   return !name
 }
 
-const searchSpace = ref(
-  FILESYSTEM_SEARCH_SPACES instanceof Array && FILESYSTEM_SEARCH_SPACES.length > 0
-    ? FILESYSTEM_SEARCH_SPACES[0]
-    : ''
-)
+onMounted(() => {
+  loadingResources.value = true
 
-const searchSpaceBasePath = computed(() => searchSpace.value.base_path)
-
-const _searchText = computed(() => {
-  return (
-    (searchSpace.value.base_path.endsWith('/')
-      ? searchSpace.value.base_path
-      : searchSpace.value.base_path + '/') + fileListSearchText.value
-  )
+  datasetService
+    .getAll({ type: 'RAW_DATA' })
+    .then((res) => {
+      rawDataList.value = res.data.datasets
+    })
+    .then(() => {
+      return instrumentService.getAll()
+    })
+    .then((res) => {
+      console.log('instruments:', res.data)
+      sourceInstrumentOptions.value = res.data
+    })
+    .catch((err) => {
+      toast.error('Failed to load resources')
+      console.error(err)
+    })
+    .finally(() => {
+      loadingResources.value = false
+    })
 })
 
 const resetSearch = () => {
@@ -489,8 +638,8 @@ const resetSearch = () => {
   fileListSearchText.value = ''
   setRetrievedFiles([])
   formErrors.value[STEP_KEYS.DIRECTORY] = null
-  if (asyncValidatingDatasetName.value) {
-    asyncValidatingDatasetName.value = false
+  if (validatingForm.value) {
+    validatingForm.value = false
   }
 }
 
@@ -542,14 +691,6 @@ const setRetrievedFiles = (files) => {
   fileList.value = files
 }
 
-const addDataset = (selectedDatasets) => {
-  rawDataSelected.value = selectedDatasets
-}
-
-const removeDataset = () => {
-  rawDataSelected.value = []
-}
-
 const preIngestion = () => {
   return datasetService.create_dataset({
     name: selectedFile.value.name,
@@ -560,7 +701,7 @@ const preIngestion = () => {
       (Object.entries(projectSelected.value) || []).length > 0
         ? Object.values(projectSelected.value)[0]?.id
         : null,
-    instrument_id: selectedInstrument.value.id,
+    instrument_id: selectedSourceInstrument.value.id,
   })
 }
 
@@ -631,31 +772,21 @@ const onNextClick = (nextStep) => {
 watch(
   [
     step,
-    isAssignedSourceRawData,
-    rawDataSelected,
-    isAssignedProject,
     projectSelected,
+    isAssignedProject,
+    selectedRawData,
+    isAssignedSourceRawData,
+    selectedSourceInstrument,
+    isAssignedSourceInstrument,
     selectedFile,
     fileListSearchText,
     isFileSearchAutocompleteOpen,
     searchSpace,
-    selectedInstrument,
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0]
-    if (stepKey === STEP_KEYS.RAW_DATA) {
-      stepPristineStates.value[step.value][stepKey] =
-        (!oldVals[1] && newVals[1]) | (!oldVals[2] && newVals[2])
-    } else if (stepKey === STEP_KEYS.PROJECT) {
-      stepPristineStates.value[step.value][stepKey] =
-        (!oldVals[3] && newVals[3]) || (!oldVals[4] && newVals[4])
-    } else if (stepKey === STEP_KEYS.INSTRUMENT) {
-      stepPristineStates.value[step.value][stepKey] = !oldVals[9] && newVals[9]
-    } else {
-      stepPristineStates.value[step.value][stepKey] = false
-    }
-
+    stepPristineStates.value[step.value][stepKey] = false
     await setFormErrors()
   }
 )
@@ -663,7 +794,7 @@ watch(
 // separate watcher for when step changes, since we don't want to mark the form
 // fields as not pristine upon step changes
 watch(step, async () => {
-  if (step.value !== 3) {
+  if (step.value !== 2) {
     // step 3 is the `Ingestion Details` step
     await setFormErrors()
   }
@@ -679,14 +810,13 @@ onMounted(() => {
     .getAll({ type: 'RAW_DATA' })
     .then((res) => {
       rawDataList.value = res.data.datasets
-      return Promise.resolve()
     })
     .then(() => {
       return instrumentService.getAll()
     })
     .then((res) => {
       console.log('instruments:', res.data)
-      instruments.value = res.data
+      sourceInstrumentOptions.value = res.data
     })
     .catch((err) => {
       toast.error('Failed to load resources')
