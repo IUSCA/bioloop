@@ -174,7 +174,7 @@
                   v-model:populated-dataset-name="populatedDatasetName"
                   :input-disabled="submitAttempted"
                   :uploaded-data-product-error-messages="formErrors[STEP_KEYS.INFO]"
-                  :uploaded-data-product-error="!!formErrors[STEP_KEYS.INFO]"
+                  :uploaded-data-product-error="!!formErrors[STEP_KEYS.INFO] && !stepIsPristine"
                   :project="projectSelected && Object.values(projectSelected)[0]"
                   :source-raw-data="selectedRawData"
                   :submission-status="submissionStatus"
@@ -247,8 +247,8 @@ const uploadToken = ref(useLocalStorage('uploadToken', ''))
 
 const STEP_KEYS = {
   GENERAL_INFO: 'generalInfo',
-  PROJECT: 'project',
-  RAW_DATA: 'rawData',
+  // PROJECT: 'project',
+  // RAW_DATA: 'rawData',
   UPLOAD: 'upload',
   INFO: 'info',
 }
@@ -281,13 +281,10 @@ const steps = [
 
 const UPLOAD_FILE_REQUIRED_ERROR = 'A file must be selected for upload.'
 const DATASET_NAME_MAX_LENGTH_ERROR = 'Dataset name must have 3 or more characters.'
-const SOURCE_RAW_DATA_REQUIRED_ERROR =
-  'You have requested a source Raw Data to be assigned. Please select one.'
-const PROJECT_REQUIRED_ERROR = 'Project must be selected.'
+const MISSING_METADATA_ERROR = 'One or more fields have error'
 
 const formErrors = ref({
-  [STEP_KEYS.PROJECT]: null,
-  [STEP_KEYS.RAW_DATA]: null,
+  [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.UPLOAD]: null,
   [STEP_KEYS.INFO]: null,
 })
@@ -296,10 +293,8 @@ const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.UPLOAD]
   } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.RAW_DATA]
+    return !!formErrors.value[STEP_KEYS.GENERAL_INFO]
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.PROJECT]
-  } else if (step.value === 3) {
     return !!formErrors.value[STEP_KEYS.INFO]
   }
 })
@@ -378,20 +373,20 @@ const isPreviousButtonDisabled = computed(() => {
   return step.value === 0 || submitAttempted.value || loading.value || validatingForm.value
 })
 
-const isNextButtonDisabled = ref(false)
-// const isNextButtonDisabled = computed(() => {
-//   return (
-//     stepHasErrors.value ||
-//     submissionSuccess.value ||
-//     [
-//       Constants.UPLOAD_STATES.PROCESSING,
-//       Constants.UPLOAD_STATES.UPLOADING,
-//       Constants.UPLOAD_STATES.UPLOADED,
-//     ].includes(submissionStatus.value) ||
-//     loading.value ||
-//     validatingForm.value
-//   )
-// })
+// const isNextButtonDisabled = ref(false)
+const isNextButtonDisabled = computed(() => {
+  return (
+    stepHasErrors.value ||
+    submissionSuccess.value ||
+    [
+      Constants.UPLOAD_STATES.PROCESSING,
+      Constants.UPLOAD_STATES.UPLOADING,
+      Constants.UPLOAD_STATES.UPLOADED,
+    ].includes(submissionStatus.value) ||
+    loading.value ||
+    validatingForm.value
+  )
+})
 
 const isStepperButtonDisabled = (stepIndex) => {
   return (
@@ -405,12 +400,8 @@ const isStepperButtonDisabled = (stepIndex) => {
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine.
-// For steps 0 to 2, <va-form-field> components track the pristine state of
-// their respective input fields. For step 3, pristine state is maintained by
-// this component.
 const stepPristineStates = ref([
-  { [STEP_KEYS.PROJECT]: true },
-  { [STEP_KEYS.RAW_DATA]: true },
+  { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.UPLOAD]: true },
   { [STEP_KEYS.INFO]: true },
 ])
@@ -443,7 +434,7 @@ const datasetNameIsNull = (name) => {
   return !name
 }
 
-const validateNotExists = (value) => {
+const validateIfExists = (value) => {
   return new Promise((resolve, reject) => {
     // Vuestic claims that it should not run async validation if synchronous
     // validation fails, but it seems to be triggering async validation
@@ -455,9 +446,13 @@ const validateNotExists = (value) => {
       datasetService
         .check_if_exists({ type: selectedDatasetType.value['value'], name: value })
         .then((res) => {
-          resolve(res.data.datasets.length > 0 ? DATASET_EXISTS_ERROR : true)
+          console.log('res', res)
+          console.log('Dataset exists?', res.data.exists)
+          resolve(res.data.exists)
         })
-        .catch(() => {
+        .catch((e) => {
+          console.error('Error checking dataset existence')
+          console.error(e)
           reject()
         })
     }
@@ -476,7 +471,7 @@ const datasetNameValidationRules = [
   (v) => {
     return stringHasSpaces(v) ? hasSpacesErrorStr('Dataset name') : true
   },
-  validateNotExists,
+  validateIfExists,
 ]
 
 const setProject = (project) => {
@@ -566,8 +561,7 @@ const uploadFormData = computed(() => {
 
 const resetFormErrors = () => {
   formErrors.value = {
-    [STEP_KEYS.PROJECT]: null,
-    [STEP_KEYS.RAW_DATA]: null,
+    [STEP_KEYS.GENERAL_INFO]: null,
     [STEP_KEYS.UPLOAD]: null,
     [STEP_KEYS.INFO]: null,
   }
@@ -585,9 +579,17 @@ const validateDatasetName = async () => {
   validatingForm.value = true
   return datasetNameValidationRules[3](populatedDatasetName.value)
     .then((res) => {
+      console.log(`datasetNameValidationRules[3] then`)
+      console.log('res', res)
+
+      console.log('return val', {
+        isNameValid: !res,
+        error: res && DATASET_EXISTS_ERROR,
+      })
+
       return {
-        isNameValid: res !== DATASET_EXISTS_ERROR,
-        error: DATASET_EXISTS_ERROR,
+        isNameValid: !res,
+        error: res && DATASET_EXISTS_ERROR,
       }
     })
     .catch(() => {
@@ -629,13 +631,16 @@ const setUploadedFileType = (fileType) => {
 }
 
 const setFormErrors = async () => {
-  // console.log("setFormErrors called");
+  console.log('setFormErrors called')
   resetFormErrors()
   // console.log("setFormErrors after resetFormErrors");
 
-  // console.log("step.value", step.value)
+  console.log('step.value', step.value)
+  console.log('isAssignedSourceRawData', isAssignedSourceRawData.value)
+  console.log('selectedRawData', selectedRawData.value)
+  console.log('isAssignedProject', isAssignedProject.value)
+  console.log('projectSelected', projectSelected.value)
 
-  // console.log("!isAssignedSourceRawData", !isAssignedSourceRawData)
   // console.log("formErrors", formErrors.value)
   // console.log("rawDataSelected", rawDataSelected.value)
 
@@ -652,12 +657,11 @@ const setFormErrors = async () => {
   if (step.value === 1) {
     // console.log("isAssignedSourceRawData", isAssignedSourceRawData.value)
     // console.log("rowDataSelected", rawDataSelected.value)
-    if (!isAssignedSourceRawData.value) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = null
-      return
-    }
-    if (!selectedRawData.value) {
-      formErrors.value[STEP_KEYS.RAW_DATA] = SOURCE_RAW_DATA_REQUIRED_ERROR
+    if (
+      (isAssignedSourceRawData.value && !selectedRawData.value) ||
+      (isAssignedProject.value && Object.entries(projectSelected.value).length === 0)
+    ) {
+      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
       return
     }
   }
@@ -1229,11 +1233,11 @@ const beforeUnload = (e) => {
   }
 }
 
-const clearSelectedRawData = () => {
-  selectedRawData.value = null
-  datasetSearchText.value = ''
-  // searchTerm.value = ''
-}
+// const clearSelectedRawData = () => {
+//   selectedRawData.value = null
+//   datasetSearchText.value = ''
+//   // searchTerm.value = ''
+// }
 
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
@@ -1243,25 +1247,22 @@ onMounted(() => {
 watch(
   [
     step,
+    populatedDatasetName,
     projectSelected,
     isAssignedProject,
     selectedRawData,
+    isAssignedSourceRawData,
     selectingFiles,
     selectingDirectory,
-    isAssignedSourceRawData,
     filesToUpload,
-    populatedDatasetName,
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0]
-    if (stepKey === STEP_KEYS.PROJECT) {
+    if (stepKey === STEP_KEYS.INFO) {
       // `1` corresponds to `projectSelected` in this Watcher
       // `2` corresponds to `isAssignedProject` in this Watcher
-      stepPristineStates.value[step.value][stepKey] =
-        (!oldVals[1] && newVals[1]) || (!oldVals[2] && newVals[2])
-    } else if (stepKey === STEP_KEYS.RAW_DATA) {
-      stepPristineStates.value[step.value][stepKey] = !oldVals[3] && newVals[3]
+      stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1]
     } else {
       stepPristineStates.value[step.value][stepKey] = false
     }
