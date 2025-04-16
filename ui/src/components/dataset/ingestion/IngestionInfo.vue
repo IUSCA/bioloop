@@ -9,14 +9,14 @@
               <td>Dataset Name</td>
               <td>
                 <a :href="`/datasets/${props.datasetId}`" v-if="props.datasetId">
-                  {{ props.ingestionDir.name }}</a
+                  {{ props.ingestionDir?.name }}</a
                 >
-                <span v-else>{{ props.ingestionDir.name }}</span>
+                <span v-else>{{ props.ingestionDir?.name }}</span>
               </td>
             </tr>
             <tr>
               <td>Source Directory</td>
-              <td><CopyText :text="props.ingestionDir.path" /></td>
+              <td><CopyText :text="props.ingestionDir?.path" /></td>
             </tr>
             <tr v-if="props.ingestionSpace">
               <td>Ingestion Source Space</td>
