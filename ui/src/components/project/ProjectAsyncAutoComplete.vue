@@ -6,11 +6,11 @@
     :async="true"
     :paginated="true"
     :paginated-total-results-count="totalResultsCount"
-    :data="datasets"
+    :data="projects"
     :display-by="'name'"
     @clear="onClear"
     @load-more="loadNextPage"
-    placeholder="Search Datasets by name"
+    placeholder="Search Projects by name"
     :loading="loading"
     @select="onSelect"
     @open="onOpen"
@@ -21,9 +21,10 @@
 </template>
 
 <script setup>
-import datasetService from '@/services/dataset'
+import projectService from '@/services/projects'
 import toast from '@/services/toast'
 import _ from 'lodash'
+import { useAuthStore } from '@/stores/auth'
 
 const NAME_TRIM_THRESHOLD = 35
 const PAGE_SIZE = 10
@@ -33,9 +34,6 @@ const props = defineProps({
     type: [String, Object],
   },
   searchTerm: { type: String, default: '' },
-  datasetType: {
-    type: String,
-  },
   disabled: {
     type: Boolean,
     default: false,
@@ -43,37 +41,28 @@ const props = defineProps({
   label: {
     type: String,
   },
-  error: {
-    type: String,
-  },
-  errorMessages: {
-    type: Array,
-    default: () => [],
-  },
 })
 
 const emit = defineEmits(['clear', 'open', 'close', 'update:selected', 'update:searchTerm'])
 
+const auth = useAuthStore()
+
 const loading = ref(false)
-const datasets = ref([])
+const projects = ref([])
 const totalResultsCount = ref(0)
 const page = ref(1)
 const skip = computed(() => {
   return PAGE_SIZE * (page.value - 1)
 })
-// const selectedResult = ref(null)
+
 const searchTerm = computed({
   get: () => {
-    // return props.populatedResult ? props.populatedResult['name'] : ''
     return props.searchTerm
   },
   set: (val) => {
     emit('update:searchTerm', val)
-    // emit('update:populatedResult', null)
   },
 })
-
-// const searchTerm = ref('')
 
 const debouncedSearch = ref(null)
 const searchIndex = ref(0)
@@ -95,27 +84,12 @@ const loadNextPage = () => {
   // console.log('loadNextPage')
   // console.log('searchTerm:', searchTerm.value)
   page.value += 1 // increase page value for offset recalculation
-  return searchDatasets({ appendToCurrentResults: true })
+  return searchProjects({ appendToCurrentResults: true })
 }
 
 // todo - move to utils
 const trimName = (val) =>
   val.length > NAME_TRIM_THRESHOLD ? val.substring(0, NAME_TRIM_THRESHOLD) + '...' : val
-
-const filterQuery = computed(() => {
-  let query
-  if (props.datasetType) {
-    query = {
-      type: props.datasetType,
-    }
-  } else {
-    query = {
-      type: undefined,
-    }
-  }
-
-  return { ...query, deleted: props.fetchInactive }
-})
 
 const batchingQuery = computed(() => {
   return {
@@ -126,19 +100,18 @@ const batchingQuery = computed(() => {
 
 const fetchQuery = computed(() => {
   return {
-    ...(searchTerm.value && { name: searchTerm.value }),
-    ...filterQuery.value,
+    ...(searchTerm.value && { search: searchTerm.value }),
     ...batchingQuery.value,
   }
 })
 
-const queryDatasets = ({ queryIndex = null, query = null } = {}) => {
-  return datasetService.getAll(query).then((res) => {
+const queryProjects = ({ queryIndex = null, query = null } = {}) => {
+  return projectService.getAll({ ...query, forSelf: props.forSelf }).then((res) => {
     return { data: res.data, ...(queryIndex && { queryIndex }) }
   })
 }
 
-const searchDatasets = ({
+const searchProjects = ({
   searchIndex = null,
   appendToCurrentResults = false,
   logQuery = false,
@@ -146,6 +119,9 @@ const searchDatasets = ({
   // Ensure that the same query is not being run a second time (which
   // is possible due to debounced searches). If it is, the search
   // can be resolved immediately.
+  console.log('latestQuery:', latestQuery.value)
+  console.log('fetchQuery:', fetchQuery.value)
+
   if (_.isEqual(latestQuery.value, fetchQuery.value)) {
     resolveSearch(searchIndex)
   } else {
@@ -153,15 +129,17 @@ const searchDatasets = ({
       latestQuery.value = fetchQuery.value
     }
 
-    return queryDatasets({
+    console.log('will search projects:', fetchQuery.value)
+    return queryProjects({
       ...(searchIndex && { queryIndex: searchIndex }),
       query: fetchQuery.value,
     })
       .then((res) => {
-        datasets.value = appendToCurrentResults
-          ? datasets.value.concat(res.data.datasets)
-          : res.data.datasets
-        totalResultsCount.value = res.data.metadata.count
+        console.log('search results:', res.data.projects)
+        projects.value = appendToCurrentResults
+          ? projects.value.concat(res.data.projects)
+          : res.data.projects
+        totalResultsCount.value = res.data?.metadata?.count || 0
         resolveSearch(res.queryIndex)
       })
       .catch((e) => {
@@ -182,7 +160,7 @@ const performSearch = (searchIndex) => {
   // reset page value
   page.value = 1
   // load search results
-  searchDatasets({
+  searchProjects({
     searchIndex,
     appendToCurrentResults: false,
     logQuery: true,
@@ -209,7 +187,7 @@ const onClear = () => {
   // emit('update:populatedResult', null)
 }
 
-watch([searchTerm, filterQuery], (newVal, oldVal) => {
+watch([searchTerm], (newVal, oldVal) => {
   console.log('searchTerm or filterQuery changed')
   console.log('searchTerm new Val:', newVal[0])
   console.log('searchTerm new Val:', oldVal[0])
@@ -239,7 +217,8 @@ watch([searchTerm, filterQuery], (newVal, oldVal) => {
 
 onMounted(() => {
   loading.value = true
-  searchDatasets()
+  console.log('onMounted invoked')
+  searchProjects()
 })
 
 onBeforeUnmount(() => {

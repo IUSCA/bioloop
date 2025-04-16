@@ -30,36 +30,36 @@
         </va-button>
       </template>
 
+      <!--      <template #step-content-0>-->
+      <!--        <div class="flex flex-col">-->
+      <!--          <SelectFileButtons-->
+      <!--            :disabled="submitAttempted || loading || validatingForm"-->
+      <!--            @files-added="-->
+      <!--              (files) => {-->
+      <!--                console.log('Files added:', files)-->
+      <!--                clearSelectedDirectoryToUpload()-->
+      <!--                setFiles(files)-->
+      <!--                isSubmissionAlertVisible = false-->
+      <!--                setUploadedFileType(FILE_TYPE.FILE)-->
+      <!--              }-->
+      <!--            "-->
+      <!--            @directory-added="-->
+      <!--              (directoryDetails) => {-->
+      <!--                clearSelectedFilesToUpload()-->
+      <!--                setDirectory(directoryDetails)-->
+      <!--                isSubmissionAlertVisible = false-->
+      <!--                setUploadedFileType(FILE_TYPE.DIRECTORY)-->
+      <!--              }-->
+      <!--            "-->
+      <!--          />-->
+
+      <!--          <va-divider />-->
+
+      <!--          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />-->
+      <!--        </div>-->
+      <!--      </template>-->
+
       <template #step-content-0>
-        <div class="flex flex-col">
-          <SelectFileButtons
-            :disabled="submitAttempted || loading || validatingForm"
-            @files-added="
-              (files) => {
-                console.log('Files added:', files)
-                clearSelectedDirectoryToUpload()
-                setFiles(files)
-                isSubmissionAlertVisible = false
-                setUploadedFileType(FILE_TYPE.FILE)
-              }
-            "
-            @directory-added="
-              (directoryDetails) => {
-                clearSelectedFilesToUpload()
-                setDirectory(directoryDetails)
-                isSubmissionAlertVisible = false
-                setUploadedFileType(FILE_TYPE.DIRECTORY)
-              }
-            "
-          />
-
-          <va-divider />
-
-          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />
-        </div>
-      </template>
-
-      <template #step-content-1>
         <div class="flex w-full pb-6 items-center">
           <va-select
             v-model="selectedDatasetType"
@@ -132,7 +132,7 @@
                 @update:modelValue="
                   (val) => {
                     if (!val) {
-                      projectSelected = {}
+                      projectSelected = null
                     }
                   }
                 "
@@ -144,28 +144,41 @@
           </div>
 
           <div class="flex-grow flex items-center">
-            <va-form-field v-model="projectSelected" v-slot="{ value: v }" class="flex-grow">
-              <ProjectSelect
-                @select="setProject"
-                :disabled="!isAssignedProject"
-                :for-self="!auth.canOperate"
-                class="w-full"
-                :label="'Project'"
-              ></ProjectSelect>
+            <ProjectAsyncAutoComplete
+              :disabled="submitAttempted || !isAssignedSourceRawData"
+              v-model:selected="projectSelected"
+              v-model:search-term="projectSearchText"
+              placeholder="Search Projects"
+              @clear="resetProjectSearch"
+              @open="onProjectSearchOpen"
+              @close="onProjectSearchClose"
+              class="flex-grow"
+              :label="'Project'"
+            >
+            </ProjectAsyncAutoComplete>
 
-              <ProjectList
-                v-if="Object.values(projectSelected).length > 0"
-                :projects="[Object.values(projectSelected)[0]]"
-                show-remove
-                @remove="
-                  (project) => {
-                    resetSelectedProject()
-                  }
-                "
-                class="w-full"
-              >
-              </ProjectList>
-            </va-form-field>
+            <!--            <va-form-field v-model="projectSelected" v-slot="{ value: v }" class="flex-grow">-->
+            <!--              <div class="flex flex-col w-full gap-y-5">-->
+            <!--                <ProjectSelect-->
+            <!--                  @select="setProject"-->
+            <!--                  :disabled="!isAssignedProject"-->
+            <!--                  :for-self="!auth.canOperate"-->
+            <!--                  :label="'Project'"-->
+            <!--                ></ProjectSelect>-->
+
+            <!--                <ProjectList-->
+            <!--                  v-if="Object.values(projectSelected).length > 0"-->
+            <!--                  :projects="[Object.values(projectSelected)[0]]"-->
+            <!--                  show-remove-->
+            <!--                  @remove="-->
+            <!--                    (project) => {-->
+            <!--                      resetSelectedProject()-->
+            <!--                    }-->
+            <!--                  "-->
+            <!--                >-->
+            <!--                </ProjectList>-->
+            <!--              </div>-->
+            <!--            </va-form-field>-->
             <va-popover>
               <template #body>
                 <div class="w-96">
@@ -240,7 +253,7 @@
                   :input-disabled="submitAttempted"
                   :uploaded-data-product-error-messages="formErrors[STEP_KEYS.INFO]"
                   :uploaded-data-product-error="!!formErrors[STEP_KEYS.INFO] && !stepIsPristine"
-                  :project="projectSelected && Object.values(projectSelected)[0]"
+                  :project="projectSelected"
                   :source-raw-data="selectedRawData"
                   :submission-status="submissionStatus"
                   :submission-alert="submissionAlert"
@@ -334,11 +347,11 @@ const CHUNK_SIZE = 2 * 1024 * 1024 // Size of each chunk, set to 2 Mb
 const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
 
 const steps = [
-  {
-    key: STEP_KEYS.UPLOAD,
-    label: 'Select Files',
-    icon: 'material-symbols:folder',
-  },
+  // {
+  //   key: STEP_KEYS.UPLOAD,
+  //   label: 'Select Files',
+  //   icon: 'material-symbols:folder',
+  // },
   { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
   { key: STEP_KEYS.INFO, label: 'Upload', icon: 'icon: "lightbulb"' },
 
@@ -370,6 +383,7 @@ const isAssignedSourceInstrument = ref(true)
 const isAssignedSourceRawData = ref(true)
 const selectedRawData = ref(null)
 const datasetSearchText = ref('')
+const projectSearchText = ref('')
 // watch(selectedRawData, (newVal, oldVal) => {
 //   console.log('UploadStepper:')
 //   console.log('selected raw data:')
@@ -393,6 +407,11 @@ const selectedDatasetType = ref(
 )
 
 const willUploadRawData = ref(false)
+
+const resetProjectSearch = (val) => {
+  projectSelected.value = null
+  projectSearchText.value = ''
+}
 
 const resetRawDataSearch = (val) => {
   selectedRawData.value = null
@@ -423,6 +442,16 @@ const onRawDataSearchOpen = () => {
 const onRawDataSearchClose = () => {
   if (!selectedRawData.value) {
     datasetSearchText.value = ''
+  }
+}
+
+const onProjectSearchOpen = () => {
+  projectSelected.value = null
+}
+
+const onProjectSearchClose = () => {
+  if (!projectSelected.value) {
+    projectSearchText.value = ''
   }
 }
 
@@ -542,27 +571,27 @@ const datasetNameValidationRules = [
   validateIfExists,
 ]
 
-const setProject = (project) => {
-  // console.log('set project', project)
-  // console.log('projectSelected', projectSelected.value)
-  // console.log('projectId', project.id)
-  // resetSelectedProject(project)
-  projectSelected.value = { [project.id]: project }
+// const setProject = (project) => {
+//   // console.log('set project', project)
+//   // console.log('projectSelected', projectSelected.value)
+//   // console.log('projectId', project.id)
+//   // resetSelectedProject(project)
+//   projectSelected.value = { [project.id]: project }
+//
+//   // console.log('projectSelected after remove', projectSelected.value)
+//   // projectSelected.value[project.id] = project
+//   // console.log('projectSelected after set', projectSelected.value)
+// }
 
-  // console.log('projectSelected after remove', projectSelected.value)
-  // projectSelected.value[project.id] = project
-  // console.log('projectSelected after set', projectSelected.value)
-}
-
-const resetSelectedProject = (project) => {
-  // console.log('remove project', project)
-  // console.log('projectSelected before remove', projectSelected.value)
-  // console.log("typeof projectSelected.value", typeof projectSelected.value)
-  // console.log("project.id", project.id)
-  // console.log("projectSelected.value[project.id]", projectSelected.value[project.id])
-  projectSelected.value = {}
-  // console.log('projectSelected after remove', projectSelected.value)
-}
+// const resetSelectedProject = (project) => {
+//   // console.log('remove project', project)
+//   // console.log('projectSelected before remove', projectSelected.value)
+//   // console.log("typeof projectSelected.value", typeof projectSelected.value)
+//   // console.log("project.id", project.id)
+//   // console.log("projectSelected.value[project.id]", projectSelected.value[project.id])
+//   projectSelected.value = {}
+//   // console.log('projectSelected after remove', projectSelected.value)
+// }
 
 // const searchTerm = ref('')
 const loading = ref(false)
@@ -571,7 +600,7 @@ const rawDataList = ref([])
 // const rawDataSelected = ref([])
 const selectedSourceInstrument = ref(null)
 const sourceInstrumentOptions = ref([])
-const projectSelected = ref({})
+const projectSelected = ref(null)
 const datasetUploadLog = ref(null)
 const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED)
 const statusChipColor = ref('')
@@ -709,7 +738,7 @@ const setFormErrors = async () => {
   console.log('isAssignedSourceRawData', isAssignedSourceRawData.value)
   console.log('selectedRawData', selectedRawData.value)
   console.log('isAssignedProject', isAssignedProject.value)
-  console.log('projectSelected', projectSelected.value)
+  // console.log('projectSelected', projectSelected.value)
 
   // console.log("formErrors", formErrors.value)
   // console.log("rawDataSelected", rawDataSelected.value)
@@ -729,7 +758,7 @@ const setFormErrors = async () => {
     // console.log("rowDataSelected", rawDataSelected.value)
     if (
       (isAssignedSourceRawData.value && !selectedRawData.value) ||
-      (isAssignedProject.value && Object.entries(projectSelected.value).length === 0) ||
+      (isAssignedProject.value && !projectSelected.value) ||
       (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
@@ -1222,10 +1251,7 @@ const preUpload = async () => {
             path: e.path,
           }
         }),
-        project_id:
-          (Object.entries(projectSelected.value) || []).length > 0
-            ? Object.keys(projectSelected.value)[0]
-            : null,
+        project_id: projectSelected.value ? projectSelected.value.id : null,
       }
 
   const res = await createOrUpdateUploadLog(logData)

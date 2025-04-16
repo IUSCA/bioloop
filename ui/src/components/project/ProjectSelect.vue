@@ -57,7 +57,7 @@ const props = defineProps({
 const searchText = ref('')
 const projects = ref([])
 
-projectService.getAll({ forSelf: props.forSelf }).then((res) => {
+projectService.getAll({ forSelf: !auth.canOperate }).then((res) => {
   projects.value = (res.data.projects || []).filter((p) => !props.excludeIds.includes(p.id))
 })
 </script>
