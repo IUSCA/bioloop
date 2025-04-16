@@ -30,36 +30,36 @@
         </va-button>
       </template>
 
-      <!--      <template #step-content-0>-->
-      <!--        <div class="flex flex-col">-->
-      <!--          <SelectFileButtons-->
-      <!--            :disabled="submitAttempted || loading || validatingForm"-->
-      <!--            @files-added="-->
-      <!--              (files) => {-->
-      <!--                console.log('Files added:', files)-->
-      <!--                clearSelectedDirectoryToUpload()-->
-      <!--                setFiles(files)-->
-      <!--                isSubmissionAlertVisible = false-->
-      <!--                setUploadedFileType(FILE_TYPE.FILE)-->
-      <!--              }-->
-      <!--            "-->
-      <!--            @directory-added="-->
-      <!--              (directoryDetails) => {-->
-      <!--                clearSelectedFilesToUpload()-->
-      <!--                setDirectory(directoryDetails)-->
-      <!--                isSubmissionAlertVisible = false-->
-      <!--                setUploadedFileType(FILE_TYPE.DIRECTORY)-->
-      <!--              }-->
-      <!--            "-->
-      <!--          />-->
-
-      <!--          <va-divider />-->
-
-      <!--          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />-->
-      <!--        </div>-->
-      <!--      </template>-->
-
       <template #step-content-0>
+        <div class="flex flex-col">
+          <SelectFileButtons
+            :disabled="submitAttempted || loading || validatingForm"
+            @files-added="
+              (files) => {
+                console.log('Files added:', files)
+                clearSelectedDirectoryToUpload()
+                setFiles(files)
+                isSubmissionAlertVisible = false
+                setUploadedFileType(FILE_TYPE.FILE)
+              }
+            "
+            @directory-added="
+              (directoryDetails) => {
+                clearSelectedFilesToUpload()
+                setDirectory(directoryDetails)
+                isSubmissionAlertVisible = false
+                setUploadedFileType(FILE_TYPE.DIRECTORY)
+              }
+            "
+          />
+
+          <va-divider />
+
+          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />
+        </div>
+      </template>
+
+      <template #step-content-1>
         <div class="flex w-full pb-6 items-center">
           <va-select
             v-model="selectedDatasetType"
@@ -185,11 +185,11 @@
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="isAssignedProject"
+                v-model="isAssignedSourceInstrument"
                 @update:modelValue="
                   (val) => {
                     if (!val) {
-                      projectSelected = {}
+                      selectedSourceInstrument = null
                     }
                   }
                 "
@@ -203,12 +203,13 @@
           <div class="flex-grow flex items-center">
             <va-select
               v-model="selectedSourceInstrument"
-              :text-by="'label'"
-              :track-by="'value'"
               :options="sourceInstrumentOptions"
+              :disabled="!isAssignedSourceInstrument"
               label="Source Instrument"
               placeholder="Select Source Instrument"
               class="flex-grow"
+              :text-by="'name'"
+              :track-by="'id'"
             />
             <div class="flex items-center ml-2">
               <va-popover>
@@ -305,6 +306,7 @@ import SparkMD5 from 'spark-md5'
 import { VaDivider, VaPopover } from 'vuestic-ui'
 import DatasetSelectAutoComplete from '@/components/dataset/DatasetSelectAutoComplete.vue'
 import { Icon } from '@iconify/vue'
+import instrumentService from '@/services/instrument'
 
 const auth = useAuthStore()
 const uploadToken = ref(useLocalStorage('uploadToken', ''))
@@ -332,11 +334,11 @@ const CHUNK_SIZE = 2 * 1024 * 1024 // Size of each chunk, set to 2 Mb
 const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
 
 const steps = [
-  // {
-  //   key: STEP_KEYS.UPLOAD,
-  //   label: 'Select Files',
-  //   icon: 'material-symbols:folder',
-  // },
+  {
+    key: STEP_KEYS.UPLOAD,
+    label: 'Select Files',
+    icon: 'material-symbols:folder',
+  },
   { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'icon: "lightbulb"' },
   { key: STEP_KEYS.INFO, label: 'Upload', icon: 'icon: "lightbulb"' },
 
@@ -364,6 +366,7 @@ const stepHasErrors = computed(() => {
   }
 })
 
+const isAssignedSourceInstrument = ref(true)
 const isAssignedSourceRawData = ref(true)
 const selectedRawData = ref(null)
 const datasetSearchText = ref('')
@@ -726,7 +729,8 @@ const setFormErrors = async () => {
     // console.log("rowDataSelected", rawDataSelected.value)
     if (
       (isAssignedSourceRawData.value && !selectedRawData.value) ||
-      (isAssignedProject.value && Object.entries(projectSelected.value).length === 0)
+      (isAssignedProject.value && Object.entries(projectSelected.value).length === 0) ||
+      (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
       return
@@ -773,6 +777,13 @@ onMounted(() => {
     .getAll({ type: 'RAW_DATA' })
     .then((res) => {
       rawDataList.value = res.data.datasets
+    })
+    .then(() => {
+      return instrumentService.getAll()
+    })
+    .then((res) => {
+      console.log('instruments:', res.data)
+      sourceInstrumentOptions.value = res.data
     })
     .catch((err) => {
       toast.error('Failed to load resources')
@@ -1319,16 +1330,17 @@ watch(
     isAssignedProject,
     selectedRawData,
     isAssignedSourceRawData,
+    selectedSourceInstrument,
+    isAssignedSourceInstrument,
     selectingFiles,
     selectingDirectory,
     filesToUpload,
   ],
   async (newVals, oldVals) => {
-    // mark step's form fields as not pristine, for fields' errors to be shown
+    // Mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0]
     if (stepKey === STEP_KEYS.INFO) {
-      // `1` corresponds to `projectSelected` in this Watcher
-      // `2` corresponds to `isAssignedProject` in this Watcher
+      // `1` corresponds to `populatedDatasetName`
       stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1]
     } else {
       stepPristineStates.value[step.value][stepKey] = false
