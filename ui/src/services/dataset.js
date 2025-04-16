@@ -44,7 +44,7 @@ class DatasetService {
     include_import_log = false,
     include_upload_log = false,
   }) {
-    return api.get(`/datasets/${id}`, {
+    return api.get(`/test/${id}`, {
       params: {
         files,
         workflows,
