@@ -1143,7 +1143,7 @@ const onSubmit = async () => {
         submissionSuccess.value = true
         submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING
 
-        const filesUploaded = true
+        const filesUploaded = await uploadFiles(filesNotUploaded.value)
         if (filesUploaded) {
           resolve()
         } else {
