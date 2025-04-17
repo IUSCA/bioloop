@@ -67,8 +67,21 @@
             </slot>
           </button>
         </li>
+
         <li
-          v-if="search_results.length == 0"
+          v-if="!text"
+          class="py-2 px-3"
+          :data-testid="`${props.dataTestId}--start-typing-li`"
+        >
+          <span
+            class="flex gap-2 items-center justify-center va-text-secondary"
+          >
+            <i-mdi:magnify-remove-outline class="flex-none text-xl" />
+            <span class="flex-none">Start typing to search</span>
+          </span>
+        </li>
+        <li
+          v-else-if="search_results.length == 0"
           class="py-2 px-3"
           :data-testid="`${props.dataTestId}--no-search-results-li`"
         >
