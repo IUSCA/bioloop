@@ -41,30 +41,47 @@ def dir_last_modified_time(dataset_path: Path) -> float:
     )
 
 
-def update_progress(celery_task, mod_time, delta):
+def update_progress(celery_task, mod_time, time_remaining_sec):
     d1 = datetime.datetime.utcfromtimestamp(mod_time)
     prog_obj = {
         'name': d1.isoformat(),
-        'time_remaining_sec': config['registration']['recency_threshold_seconds'] - delta,
+        'time_remaining_sec': time_remaining_sec,
     }
     celery_task.update_progress(prog_obj)
 
 
-def await_stability(celery_task, dataset_id, wait_seconds: int = None, **kwargs):
+def await_stability(celery_task, dataset_id, wait_seconds: int = None, recency_threshold=None, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     origin_path = Path(dataset['origin_path'])
+    dataset_type = dataset['type']
+
+    # recency_threshold is the time to wait before considering the dataset stable
+    # precedence order:
+    # 1. recency_threshold parameter
+    # 2. config file
+    threshold = (recency_threshold or
+                 config['registration'][dataset_type]['recency_threshold_seconds'])
+    logger.info(f'{dataset["name"]} - threshold: {threshold} seconds')
+
+    # wait_seconds is the time to wait between stability checks
+    # precedence order:
+    # 1. wait_seconds parameter
+    # 2. config file
+    _wait_seconds = (wait_seconds or
+                     config['registration']['wait_between_stability_checks_seconds'])
+    logger.info(f'{dataset["name"]} - wait_seconds: {_wait_seconds} seconds')
 
     while origin_path.exists():
         mod_time = dir_last_modified_time(origin_path)
         delta = time.time() - mod_time
 
         logger.info(f'{dataset["name"]} dataset is last modified {int(delta)}s ago')
-        update_progress(celery_task, mod_time, delta)
+        update_progress(celery_task, mod_time, threshold - delta)
 
-        if delta > config['registration']['recency_threshold_seconds']:
+        if delta > threshold:
             break
 
-        time.sleep(wait_seconds or config['registration']['wait_between_stability_checks_seconds'])
+        time.sleep(_wait_seconds)
 
     api.add_state_to_dataset(dataset_id=dataset_id, state='READY')
     return dataset_id,
