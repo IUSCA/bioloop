@@ -218,7 +218,10 @@ const getUploadLogs = async () => {
           initiated_at: e.create_log.created_at,
           user: e.create_log.creator,
           uploaded_dataset,
-          source_dataset: uploaded_dataset.source_datasets[0].source_dataset,
+          source_dataset:
+            uploaded_dataset.source_datasets.length > 0
+              ? uploaded_dataset.source_datasets[0].source_dataset
+              : null,
         };
       });
       total_results.value = res.data.metadata.count;
