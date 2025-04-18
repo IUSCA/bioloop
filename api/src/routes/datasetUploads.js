@@ -54,13 +54,12 @@ router.get(
 
       const query_obj = {
         where: _.omitBy(_.isUndefined)({
-          upload_log: {
-            status,
-            // user_id: req.params.id,
-          },
-          dataset: {
-            name: {contains: dataset_name},
-          },
+          status,
+          create_log: {
+            dataset: {
+              name: {contains: dataset_name},
+            },
+          }
         }),
       };
       const filter_query = {
@@ -68,7 +67,7 @@ router.get(
         take: limit,
         ...query_obj,
         orderBy: {
-          upload_log: {
+          create_log: {
             initiated_at: 'desc',
           },
         },
@@ -103,9 +102,7 @@ router.get(
     const {
       status, dataset_name, offset, limit,
     } = req.query;
-
-    // const hadUploadAssociation
-
+    
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
         upload_log: {
