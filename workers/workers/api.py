@@ -281,12 +281,6 @@ def update_dataset_upload_log(uploaded_dataset_id: int, log_data: dict):
         r.raise_for_status()
 
 
-# def delete_dataset_upload_log(uploaded_dataset_id: int):
-#     with APIServerSession() as s:
-#         r = s.delete(f'datasetUploads/{uploaded_dataset_id}')
-#         r.raise_for_status()
-
-
 def create_notification(payload: dict):
     with APIServerSession() as s:
         r = s.post('notifications', json=payload)

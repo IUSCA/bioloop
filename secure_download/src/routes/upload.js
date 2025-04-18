@@ -34,14 +34,12 @@ const uploadFileStorage = multer.diskStorage({
       req.body.uploaded_entity_id,
       req.body.file_upload_log_id,
     );
-    logger.info(`Chunk storage directory: ${chunkStorage}`);
     await fsPromises.mkdir(chunkStorage, {
       recursive: true,
     });
     cb(null, chunkStorage);
   },
   filename: (req, file, cb) => {
-    logger.info(`Persisting file to filesystem: ${getFileChunkName(req.body.checksum, req.body.index)}`);
     cb(null, getFileChunkName(req.body.checksum, req.body.index));
   },
 });

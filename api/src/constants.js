@@ -77,7 +77,7 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
       name: true,
       path: true,
     },
-  }
+  },
 };
 
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
