@@ -216,15 +216,13 @@ router.post(
           include: {
             create_log: {
               select: {
-                dataset: {
-                  select: {
-                    id: true,
-                  },
-                },
+                dataset_id: true,
               },
             }
           }
         });
+
+        console.log('Created dataset upload log:', created_dataset_upload_log);
 
         const uploadedDatasetId = created_dataset_upload_log.create_log.dataset_id;
         await tx.dataset.update({
