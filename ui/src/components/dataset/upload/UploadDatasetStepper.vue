@@ -839,8 +839,8 @@ const uploadFile = async (fileDetails) => {
   fileDetails.uploadStatus = config.upload.status.UPLOADING;
   const checksum = fileDetails.fileChecksum;
 
-  // const uploaded = await uploadFileChunks(fileDetails);
-  const uploaded = true; // Placeholder for actual upload logic
+  const uploaded = await uploadFileChunks(fileDetails);
+  // const uploaded = true; // Placeholder for actual upload logic
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
