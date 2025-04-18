@@ -780,7 +780,10 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("index", i);
     chunkData.append("size", file.size);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append("uploaded_entity_id", datasetUploadLog.value.dataset.id);
+    chunkData.append(
+      "uploaded_entity_id",
+      datasetUploadLog.value.create_log.dataset.id,
+    );
     chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
     chunkData.append("file", fileData);

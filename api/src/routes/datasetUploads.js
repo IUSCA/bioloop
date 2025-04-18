@@ -218,9 +218,12 @@ router.post(
           },
           include: {
             create_log: {
-              select: {
-                dataset_id: true,
+              include: {
+                dataset: true
               },
+              // select: {
+              //   dataset_id: true,
+              // },
             }
           }
         });
