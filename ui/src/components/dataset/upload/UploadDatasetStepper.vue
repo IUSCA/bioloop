@@ -853,7 +853,7 @@ const uploadFile = async (fileDetails) => {
   if (uploaded) {
     try {
       await datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value.dataset_id,
+        datasetUploadLog.value.create_log.dataset.id,
         {
           files: [
             {
@@ -1039,7 +1039,7 @@ const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
     ? datasetUploadService.logDatasetUpload(data)
     : datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value?.dataset_id,
+        datasetUploadLog.value?.create_log.dataset.id,
         data,
       );
 };
@@ -1157,7 +1157,7 @@ onBeforeUnmount(async () => {
 
   if (isUploadIncomplete.value) {
     await datasetUploadService.cancelDatasetUpload(
-      datasetUploadLog.value.dataset_id,
+      datasetUploadLog.value.create_log.dataset.id,
     );
   }
 });

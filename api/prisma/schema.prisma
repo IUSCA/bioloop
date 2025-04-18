@@ -97,9 +97,7 @@ model dataset_upload_log {
   status        upload_status
   files         file_upload_log[]
   create_log    dataset_create_log @relation(fields: [create_log_id], references: [id], onDelete: Cascade)
-  create_log_id Int
-
-  @@unique([create_log_id])
+  create_log_id Int @unique
 }
 
 model file_upload_log {

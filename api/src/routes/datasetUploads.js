@@ -161,8 +161,11 @@ router.post(
       // body('project_id').optional()
     ]),
     asyncHandler(async (req, res, next) => {
+
       // #swagger.tags = ['uploads']
       // #swagger.summary = 'Create a record for a dataset upload'
+
+      console.log("req.user.id", req.user.id)
 
       const {
         name, source_dataset_id, files_metadata, type,
@@ -254,6 +257,8 @@ router.patch(
       body('files').isArray().optional(),
     ]),
     asyncHandler(async (req, res, next) => {
+      console.log("req.user.id", req.user.id)
+
       // #swagger.tags = ['uploads']
       // #swagger.summary = 'Update past upload'
 
@@ -263,11 +268,22 @@ router.patch(
       });
 
       const dataset_upload_log = await prisma.$transaction(async (tx) => {
+        const uploaded_dataset = await tx.dataset.findUniqueOrThrow({
+          where: {id: req.params.dataset_id},
+          include: {
+            create_log: {
+              include: {
+                upload: true,
+              }
+            }
+          }
+        })
+
         let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
-          where: {create_log: {dataset_id: req.params.dataset_id}},
+          where: {id: uploaded_dataset.create_log.upload.id},
         });
-        await tx.upload_log.update({
-          where: {id: ds_upload_log.upload_log_id},
+        await tx.dataset_upload_log.update({
+          where: {id: ds_upload_log.id},
           data: update_query,
         });
         // eslint-disable-next-line no-restricted-syntax
