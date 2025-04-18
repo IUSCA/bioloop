@@ -707,7 +707,7 @@ const uploadChunk = async (chunkData) => {
 };
 
 const getFileUploadLog = ({ name, path }) => {
-  return datasetUploadLog.value.upload_log.files.find((fileUploadLog) => {
+  return datasetUploadLog.value.files.find((fileUploadLog) => {
     return selectingDirectory.value
       ? fileUploadLog.name === name && fileUploadLog.path === path
       : fileUploadLog.name === name;
@@ -780,7 +780,10 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("index", i);
     chunkData.append("size", file.size);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append("uploaded_entity_id", datasetUploadLog.value.dataset.id);
+    chunkData.append(
+      "uploaded_entity_id",
+      datasetUploadLog.value.create_log.dataset.id,
+    );
     chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
     chunkData.append("file", fileData);
@@ -837,11 +840,12 @@ const uploadFile = async (fileDetails) => {
   const checksum = fileDetails.fileChecksum;
 
   const uploaded = await uploadFileChunks(fileDetails);
+  // const uploaded = true; // Placeholder for actual upload logic
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
-  const fileUploadLogId = datasetUploadLog.value.upload_log.files.find(
+  const fileUploadLogId = datasetUploadLog.value.files.find(
     (e) => e.md5 === checksum,
   )?.id;
 
@@ -853,7 +857,7 @@ const uploadFile = async (fileDetails) => {
   if (uploaded) {
     try {
       await datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value.dataset_id,
+        datasetUploadLog.value.create_log.dataset.id,
         {
           files: [
             {
@@ -898,6 +902,7 @@ const onSubmit = async () => {
       .then(async () => {
         submissionSuccess.value = true;
         submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
+        // const filesUploaded = true;
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
           resolve();
@@ -937,9 +942,8 @@ const postSubmit = () => {
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {
-      id: datasetUploadLog.value.upload_log.files.find(
-        (f) => f.md5 === file.fileChecksum,
-      ).id,
+      id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
+        .id,
       data: {
         status: config.upload.status.UPLOAD_FAILED,
       },
@@ -966,7 +970,7 @@ const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
       return datasetUploadService.processDatasetUpload(
-        datasetUploadLog.value.dataset_id,
+        datasetUploadLog.value.create_log.dataset.id,
       );
     })
     .catch((err) => {
@@ -1040,7 +1044,7 @@ const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
     ? datasetUploadService.logDatasetUpload(data)
     : datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value?.dataset_id,
+        datasetUploadLog.value?.create_log.dataset.id,
         data,
       );
 };
@@ -1158,7 +1162,7 @@ onBeforeUnmount(async () => {
 
   if (isUploadIncomplete.value) {
     await datasetUploadService.cancelDatasetUpload(
-      datasetUploadLog.value.dataset_id,
+      datasetUploadLog.value.create_log.dataset.id,
     );
   }
 });

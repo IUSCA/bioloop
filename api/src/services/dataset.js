@@ -134,9 +134,9 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      dataset_upload_log: include_upload_log ? {
+      create_log: include_upload_log ? {
         include: {
-          upload_log: {
+          upload: {
             select: {
               id: true,
               files: true,

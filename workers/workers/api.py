@@ -196,6 +196,12 @@ def update_dataset(dataset_id, update_data):
         return r.json()
 
 
+def delete_dataset(dataset_id: int):
+    with APIServerSession() as s:
+        r = s.delete(f'datasets/{dataset_id}')
+        r.raise_for_status()
+
+
 def add_files_to_dataset(dataset_id, files: list[dict]):
     with APIServerSession() as s:
         req_body = [int_to_str(f, 'size') for f in files]
@@ -272,12 +278,6 @@ def get_dataset_upload_logs():
 def update_dataset_upload_log(uploaded_dataset_id: int, log_data: dict):
     with APIServerSession() as s:
         r = s.patch(f'datasetUploads/{uploaded_dataset_id}', json=log_data)
-        r.raise_for_status()
-
-
-def delete_dataset_upload_log(uploaded_dataset_id: int):
-    with APIServerSession() as s:
-        r = s.delete(f'datasetUploads/{uploaded_dataset_id}')
         r.raise_for_status()
 
 
