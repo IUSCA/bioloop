@@ -216,16 +216,14 @@ router.post(
               })),
             }
           },
-          include: {
+          select: {
+            id: true,
             create_log: {
-              include: {
-                dataset: true
-              },
-              // select: {
-              //   dataset_id: true,
-              // },
+              select: {
+                dataset_id: true,
+              }
             }
-          }
+          },
         });
 
         console.log('Created dataset upload log:', created_dataset_upload_log);

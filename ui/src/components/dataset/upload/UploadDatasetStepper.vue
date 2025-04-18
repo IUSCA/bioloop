@@ -840,11 +840,12 @@ const uploadFile = async (fileDetails) => {
   const checksum = fileDetails.fileChecksum;
 
   const uploaded = await uploadFileChunks(fileDetails);
+  // const uploaded = true; // Placeholder for actual upload logic
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
-  const fileUploadLogId = datasetUploadLog.value.upload_log.files.find(
+  const fileUploadLogId = datasetUploadLog.value.files.find(
     (e) => e.md5 === checksum,
   )?.id;
 
@@ -901,6 +902,7 @@ const onSubmit = async () => {
       .then(async () => {
         submissionSuccess.value = true;
         submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
+        // const filesUploaded = true;
         const filesUploaded = await uploadFiles(filesNotUploaded.value);
         if (filesUploaded) {
           resolve();
