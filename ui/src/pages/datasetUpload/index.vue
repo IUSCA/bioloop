@@ -39,7 +39,7 @@
     </div>
 
     <!-- table -->
-    <va-data-table :items="uploads" :columns="columns">
+    <va-data-table :items="pastUploads" :columns="columns">
       <template #cell(status)="{ value }">
         <va-chip size="small" :color="getStatusChipColor(value)">
           {{ value }}
@@ -47,6 +47,7 @@
       </template>
 
       <template #cell(uploaded_dataset)="{ rowData }">
+        <!--        {{ rowData.uploaded_dataset.id }}-->
         <router-link
           :to="`/datasets/${rowData.uploaded_dataset.id}`"
           class="va-link"
@@ -79,7 +80,7 @@
       v-model:page="currentPageIndex"
       v-model:page_size="pageSize"
       :total_results="total_results"
-      :curr_items="uploads.length"
+      :curr_items="pastUploads.length"
       :page_size_options="PAGE_SIZE_OPTIONS"
     />
   </div>
@@ -107,22 +108,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const filterInput = ref("");
 const pastUploads = ref([]);
-const uploads = computed(() => {
-  return pastUploads.value.map((upload) => {
-    const uploaded_dataset = upload.create_log.dataset;
-    const source_dataset =
-      uploaded_dataset.source_datasets.length > 0
-        ? uploaded_dataset.source_datasets[0].source_dataset
-        : null;
-    return {
-      ...upload,
-      status: upload?.status,
-      user: upload.upload_log?.creator,
-      source_dataset,
-      uploaded_dataset,
-    };
-  });
-});
 
 const currentPageIndex = ref(1);
 const pageSize = ref(20);
@@ -224,9 +209,16 @@ const getUploadLogs = async () => {
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {
+        let uploaded_dataset = e.create_log.dataset;
+
+        console.log("Uploaded dataset:", uploaded_dataset);
+
         return {
           ...e,
           initiated_at: e.create_log.created_at,
+          user: e.create_log.creator,
+          uploaded_dataset,
+          source_dataset: uploaded_dataset.source_datasets[0].source_dataset,
         };
       });
       total_results.value = res.data.metadata.count;
@@ -238,7 +230,9 @@ const getUploadLogs = async () => {
 };
 
 onMounted(() => {
-  getUploadLogs();
+  getUploadLogs().then(() => {
+    console.log("Fetched past uploads:", pastUploads.value);
+  });
 });
 
 watch(filterInput, () => {
