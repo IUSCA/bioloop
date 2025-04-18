@@ -72,6 +72,10 @@ const grantsObject = {
     projects: {
       'read:own': ['*', '!users'], // cannot read associated users to the project
     },
+    datasets: {
+      'create:any': ['*'],
+      'read:own': ['*', '!projects'], // cannot read projects that this dataset is assigned to
+    },
     project_dataset_files: {
       'read:own': ['*'],
     },

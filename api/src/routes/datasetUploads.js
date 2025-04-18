@@ -17,7 +17,7 @@ const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
-const isPermittedTo = accessControl('datasetUploads');
+const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -36,7 +36,7 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
 };
 
 router.get(
-    '/all',
+    '/',
     validate([
       query('status').isIn(Object.values(config.upload.status)).optional(),
       query('dataset_name').notEmpty().escape().optional(),
@@ -68,7 +68,7 @@ router.get(
         ...query_obj,
         orderBy: {
           create_log: {
-            initiated_at: 'desc',
+            created_at: 'desc',
           },
         },
         include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
@@ -185,14 +185,14 @@ router.post(
                     }),
                     name,
                     type,
-                    ...(project_id && {
-                      projects: {
-                        create: [{
-                          project_id: project_id,
-                          assignor_id: req.user.id,
-                        }],
-                      },
-                    }),
+                    // ...(project_id && {
+                    //   projects: {
+                    //     create: [{
+                    //       project_id: project_id,
+                    //       assignor_id: req.user.id,
+                    //     }],
+                    //   },
+                    // }),
                   },
                 },
                 creator: {
