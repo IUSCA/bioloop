@@ -35,7 +35,7 @@ model dataset {
   accesses           data_access_log[]
   stage_requests     stage_request_log[]
   bundle             bundle?
-  dataset_upload_log dataset_upload_log?
+  create_log dataset_create_log?
 
   @@unique([name, type, is_deleted])
 }
@@ -79,36 +79,38 @@ model dataset_file_hierarchy {
   @@index([child_id])
 }
 
-model upload_log {
-  id             Int                 @id @default(autoincrement())
-  status         upload_status
-  files          file_upload_log[]
-  initiated_at   DateTime            @default(now()) @db.Timestamp(6)
-  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  user_id        Int?
-  user           user?                @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  dataset_upload dataset_upload_log?
+model dataset_create_log {
+  id            Int                 @id @default(autoincrement())
+  created_at    DateTime            @default(now()) @db.Timestamp(6)
+  updated_at    DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  dataset_id    Int                 @unique
+  dataset       dataset             @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  creator       user?               @relation(fields: [creator_id], references: [id], onDelete: SetNull)
+  creator_id    Int?
+  instrument    instrument?         @relation(fields: [instrument_id], references: [id], onDelete: SetNull)
+  instrument_id Int?
+  upload        dataset_upload_log?
 }
 
 model dataset_upload_log {
-  id            Int        @id @default(autoincrement())
-  dataset_id    Int        @unique
-  dataset       dataset    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  upload_log_id Int
-  upload_log    upload_log @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
+  id            Int                @id @default(autoincrement())
+  status        upload_status
+  files         file_upload_log[]
+  create_log    dataset_create_log @relation(fields: [create_log_id], references: [id], onDelete: Cascade)
+  create_log_id Int
 
-  @@unique([upload_log_id])
+  @@unique([create_log_id])
 }
 
 model file_upload_log {
-  id            Int           @id @default(autoincrement())
-  name          String
-  md5           String
-  num_chunks    Int
-  status        upload_status
-  path          String?
-  upload_log    upload_log?   @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
-  upload_log_id Int?
+  id                    Int                 @id @default(autoincrement())
+  name                  String
+  md5                   String
+  num_chunks            Int
+  status                upload_status
+  path                  String?
+  dataset_upload_log    dataset_upload_log? @relation(fields: [dataset_upload_log_id], references: [id], onDelete: Cascade)
+  dataset_upload_log_id Int?
 }
 
 model dataset_audit {
@@ -152,7 +154,7 @@ model data_access_log {
   dataset_id   Int?
   dataset      dataset?      @relation(fields: [dataset_id], references: [id])
   user_id      Int?
-  user         user?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user user? @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model stage_request_log {
@@ -161,7 +163,7 @@ model stage_request_log {
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id])
   user_id    Int?
-  user       user?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user user? @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model user {
@@ -189,8 +191,8 @@ model user {
   project_contacts_assigned  project_contact[]
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
-  uploads                    upload_log[]
   user_notifications         user_notification[]
+  created_datasets dataset_create_log[]
 }
 
 model user_password {
@@ -377,8 +379,18 @@ model about {
   id                 Int      @id @default(autoincrement())
   html               String
   created_at         DateTime @default(now()) @db.Timestamp(6)
-  last_updated_by    user?     @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
+  last_updated_by user? @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
   last_updated_by_id Int?
+}
+
+model instrument {
+  id               Int                 @id @default(autoincrement())
+  name             String              @unique
+  host             String              @unique
+  description      String?
+  created_at       DateTime            @default(now()) @db.Timestamp(6)
+  updated_at       DateTime            @default(now()) @db.Timestamp(6)
+  sourced_datasets dataset_create_log[]
 }
 
 enum access_type {

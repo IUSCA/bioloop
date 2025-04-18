@@ -26,6 +26,6 @@ def purge_uploaded_resources(celery_task, dataset_id, **kwargs):
         print(f"No uploaded resources found for dataset {dataset_id} at: {dataset_path}")
 
     print(f"Will delete dataset {dataset_id}'s upload records")
-    api.delete_dataset_upload_log(uploaded_dataset_id=dataset_id)
+    api.delete_dataset(dataset_id=dataset_id)
 
     return dataset_id,

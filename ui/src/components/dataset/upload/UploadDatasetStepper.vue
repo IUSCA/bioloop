@@ -707,7 +707,7 @@ const uploadChunk = async (chunkData) => {
 };
 
 const getFileUploadLog = ({ name, path }) => {
-  return datasetUploadLog.value.upload_log.files.find((fileUploadLog) => {
+  return datasetUploadLog.value.files.find((fileUploadLog) => {
     return selectingDirectory.value
       ? fileUploadLog.name === name && fileUploadLog.path === path
       : fileUploadLog.name === name;
@@ -937,9 +937,8 @@ const postSubmit = () => {
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {
-      id: datasetUploadLog.value.upload_log.files.find(
-        (f) => f.md5 === file.fileChecksum,
-      ).id,
+      id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
+        .id,
       data: {
         status: config.upload.status.UPLOAD_FAILED,
       },

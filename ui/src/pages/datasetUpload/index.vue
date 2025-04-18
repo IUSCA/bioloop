@@ -50,8 +50,8 @@
         <router-link
           :to="`/datasets/${rowData.uploaded_dataset.id}`"
           class="va-link"
-          >{{ rowData.uploaded_dataset.name }}</router-link
-        >
+          >{{ rowData.uploaded_dataset.name }}
+        </router-link>
       </template>
 
       <template #cell(source_dataset)="{ rowData }">
@@ -109,15 +109,15 @@ const filterInput = ref("");
 const pastUploads = ref([]);
 const uploads = computed(() => {
   return pastUploads.value.map((upload) => {
-    const uploaded_dataset = upload.dataset;
+    const uploaded_dataset = upload.create_log.dataset;
     const source_dataset =
       uploaded_dataset.source_datasets.length > 0
         ? uploaded_dataset.source_datasets[0].source_dataset
         : null;
     return {
       ...upload,
-      status: upload.upload_log?.status,
-      user: upload.upload_log?.user,
+      status: upload?.status,
+      user: upload.upload_log?.creator,
       source_dataset,
       uploaded_dataset,
     };
@@ -195,8 +195,6 @@ const columns = [
 ];
 
 const getStatusChipColor = (value) => {
-  console.log("received value for Upload Status", value);
-
   let color;
   switch (value) {
     case config.upload.status.UPLOADING:
@@ -228,7 +226,7 @@ const getUploadLogs = async () => {
       pastUploads.value = res.data.uploads.map((e) => {
         return {
           ...e,
-          initiated_at: e.upload_log.initiated_at,
+          initiated_at: e.create_log.created_at,
         };
       });
       total_results.value = res.data.metadata.count;
@@ -258,5 +256,5 @@ watch(filter_query, (newQuery, oldQuery) => {
 <route lang="yaml">
 meta:
   title: Dataset Uploads
-  requiresRoles: ["operator", "admin"]
+requiresRoles: ["operator", "admin"]
 </route>

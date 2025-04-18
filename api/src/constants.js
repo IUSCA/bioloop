@@ -52,33 +52,32 @@ const INCLUDE_AUDIT_LOGS = {
 };
 
 const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
-  dataset: {
+  create_log: {
     select: {
       id: true,
-      name: true,
-      source_datasets: {
-        select: {
-          source_dataset: true,
-        },
-      },
-    },
-  },
-  upload_log: {
-    select: {
-      id: true,
-      user: true,
-      status: true,
-      initiated_at: true,
-      files: {
+      creator: true,
+      created_at: true,
+      dataset: {
         select: {
           id: true,
-          md5: true,
           name: true,
-          path: true,
+          source_datasets: {
+            select: {
+              source_dataset: true,
+            },
+          },
         },
       },
     },
   },
+  files: {
+    select: {
+      id: true,
+      md5: true,
+      name: true,
+      path: true,
+    },
+  }
 };
 
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
