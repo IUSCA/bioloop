@@ -401,34 +401,4 @@ router.post(
   }),
 );
 
-// Called by worker Cancel Dataset Upload
-// router.delete(
-//   '/:dataset_id',
-//   isPermittedTo('delete'),
-//   validate([
-//     param('dataset_id').isInt().toInt(),
-//   ]),
-//   asyncHandler(async (req, res, next) => {
-//     // #swagger.tags = ['uploads']
-//     // #swagger.summary = 'Delete records of a dataset upload'
-//
-//     await prisma.$transaction(async (tx) => {
-//       const uploadedDatasetUploadLog = await tx.dataset_upload_log.findUniqueOrThrow({
-//         where: {
-//           create_log: {
-//             dataset_id: req.params.dataset_id,
-//           },
-//         },
-//       });
-//       await tx.dataset.delete({
-//         where: {
-//           id: req.params.dataset_id,
-//         },
-//       });
-//     });
-//
-//     res.sendStatus(200);
-//   }),
-// );
-
 module.exports = router;

@@ -47,7 +47,6 @@
       </template>
 
       <template #cell(uploaded_dataset)="{ rowData }">
-        <!--        {{ rowData.uploaded_dataset.id }}-->
         <router-link
           :to="`/datasets/${rowData.uploaded_dataset.id}`"
           class="va-link"
@@ -210,9 +209,6 @@ const getUploadLogs = async () => {
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {
         let uploaded_dataset = e.create_log.dataset;
-
-        console.log("Uploaded dataset:", uploaded_dataset);
-
         return {
           ...e,
           initiated_at: e.create_log.created_at,
@@ -233,9 +229,7 @@ const getUploadLogs = async () => {
 };
 
 onMounted(() => {
-  getUploadLogs().then(() => {
-    console.log("Fetched past uploads:", pastUploads.value);
-  });
+  getUploadLogs();
 });
 
 watch(filterInput, () => {
