@@ -18,13 +18,13 @@ hero:
 features:
   - title: Installation
     details: Get Started with Bioloop
-    link: /install-docker
+    link: /installation/install-docker
   - title: UI
     details: Explore the features of our UI.
-    link: /ui/
+    link: /ui/overview
   - title: API
     details: The backend.
-    link: /api/
+    link: /api/introduction
 ---
 
 

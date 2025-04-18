@@ -528,6 +528,8 @@ function createDataset(data) {
   });
 }
 
+const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+
 module.exports = {
   soft_delete,
   get_dataset,
@@ -538,4 +540,5 @@ module.exports = {
   search_files,
   add_files,
   createDataset,
+  get_bundle_name,
 };

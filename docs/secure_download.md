@@ -1,4 +1,4 @@
-# Secure Download Documentation
+# Secure Download
 ## Table of Contents
 
   - Introduction
@@ -35,7 +35,7 @@ Staging Process:
 
 - **Rhythm Workflow**: The request triggers a rhythm workflow "Stage" on the colo node where the celery tasks are registered. "stage_dataset", "validate_dataset", "setup_dataset_download" are the celery tasks involved in this workflow. 
 
-- **Path Randomization**: During dataset staging, the path of the staged dataset files/bundle are obfuscated through the means of two random universally unique identifiers (UUIDs) called `stage_alias` and `bundle_alias`. This UUIDs are generated to limit access to datasets through path enumeration.
+- **Path Randomization**: During dataset staging, the path of the staged dataset files/bundle are obfuscated through the means of a random universally unique identifier (UUID) called `stage_alias`. This UUID is generated to limit access to datasets through path enumeration.
   - The `stage_dataset` celery task downloads the dataset bundle from SDA, and extracts the dataset files and the bundle to their corresponding randomized paths.
     - The dataset's staging path follows the pattern: `<stage_directory>/<dataset_stage_alias>/<dataset_name>`.
     - The bundle's staging path follows the pattern: `<bundle_stage_directory>/<dataset_bundle_name>`.
@@ -48,7 +48,7 @@ Example:
 
 - **Symlink Creation**: Two symlinks are created to facilitate downloads. 
   - `<download_path>/<dataset_stage_alias>`. This points to `<stage_directory>/<dataset_stage_alias>/<dataset_name>`. This will be path given to the users who want to download the dataset files from the Slate Scratch directly.
-  - `<download_path>/<dataset_bundle_alias>`. This points to `<bundle_stage_directory>/<dataset_bundle_alias>/<dataset_name>`. This will be path given to the users who want to download the dataset as a bundle from the Slate Scratch directly.
+  - `<download_path>/<dataset_bundle_name>`. This points to `<bundle_stage_directory>/<dataset_name>`. This will be path given to the users who want to download the dataset as a bundle from the Slate Scratch directly.
 
 The file download nginx server is configured to serve files from the `<download_path>` directory.
 

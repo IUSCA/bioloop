@@ -1,3 +1,7 @@
+---
+title: Auth Explained
+---
+
 # Auth Explained
 
 ## Objectives for Auth module

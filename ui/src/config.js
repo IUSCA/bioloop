@@ -113,6 +113,8 @@ const exports = {
     scope_prefix: "upload_file:",
     types: { DATASET: "DATASET" },
     status: {
+      COMPUTING_CHECKSUMS: "COMPUTING_CHECKSUMS",
+      CHECKSUM_COMPUTATION_FAILED: "CHECKSUM_COMPUTATION_FAILED",
       UPLOADING: "UPLOADING",
       UPLOAD_FAILED: "UPLOAD_FAILED",
       UPLOADED: "UPLOADED",

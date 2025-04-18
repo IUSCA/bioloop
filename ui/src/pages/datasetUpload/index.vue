@@ -2,12 +2,7 @@
   <va-alert
     color="warning"
     icon="warning"
-    v-if="
-      !isFeatureEnabled({
-        featureKey: 'uploads',
-        hasRole: auth.hasRole,
-      })
-    "
+    v-if="!auth.isFeatureEnabled('uploads')"
   >
     This feature is currently disabled
   </va-alert>
@@ -96,7 +91,6 @@ import config from "@/config";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import datasetUploadService from "@/services/upload/dataset";
-import { isFeatureEnabled } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
@@ -213,6 +207,7 @@ const getStatusChipColor = (value) => {
       color = "primary";
       break;
     case config.upload.status.UPLOAD_FAILED:
+    case config.upload.status.CHECKSUM_COMPUTATION_FAILED:
       color = "warning";
       break;
     case config.upload.status.COMPLETE:
@@ -247,8 +242,6 @@ const getUploadLogs = async () => {
 };
 
 onMounted(() => {
-  console.log("mounted DatasetUploadsPage");
-
   getUploadLogs();
 });
 

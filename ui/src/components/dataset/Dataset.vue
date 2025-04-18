@@ -138,11 +138,7 @@
 
                   <va-button
                     :disabled="
-                      !dataset.is_staged ||
-                      !isFeatureEnabled({
-                        featureKey: 'downloads',
-                        hasRole: auth.hasRole,
-                      })
+                      !dataset.is_staged || !auth.isFeatureEnabled('downloads')
                     "
                     class="flex-initial"
                     color="primary"
@@ -202,12 +198,7 @@
                   </div>
                   <div
                     class="flex items-center gap-1"
-                    v-if="
-                      isFeatureEnabled({
-                        featureKey: 'genomeBrowser',
-                        hasRole: auth.hasRole,
-                      })
-                    "
+                    v-if="auth.isFeatureEnabled('genomeBrowser')"
                   >
                     <i-mdi-file-multiple class="text-xl" />
                     <span> {{ dataset.metadata?.num_genome_files }} </span>
@@ -332,7 +323,7 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
-import { formatBytes, isFeatureEnabled } from "@/services/utils";
+import { formatBytes } from "@/services/utils";
 import workflowService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 

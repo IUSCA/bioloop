@@ -138,6 +138,10 @@ class DatasetService {
   check_if_exists({ name, type } = {}) {
     return api.get(`/datasets/${type}/${name}/exists`)
   }
+
+  get_bundle_name(dataset) {
+    return `${dataset.name}.${dataset.type}.tar`;
+  }
 }
 
 export default new DatasetService()

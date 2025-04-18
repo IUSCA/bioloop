@@ -9,6 +9,7 @@ const path = require('node:path');
 const createError = require('http-errors');
 
 const config = require('config');
+// eslint-disable-next-line lodash-fp/use-fp
 const _ = require('lodash');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');

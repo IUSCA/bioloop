@@ -89,6 +89,17 @@ function isActive(path) {
 router.beforeEach(() => {
   sidebarDatasetType.value = null;
 });
+
+function scrollActiveItemIntoView() {
+  document.querySelector(".custom-sidebar-item--active")?.scrollIntoView({
+    behavior: "auto",
+    block: "center",
+  });
+}
+
+onMounted(() => {
+  scrollActiveItemIntoView();
+});
 </script>
 
 <style>

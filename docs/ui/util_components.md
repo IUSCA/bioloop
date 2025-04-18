@@ -592,7 +592,7 @@ markup per cell.
 For showing a field's value inside customized markup
 - set `{ slotted: true }` in the field's config that is being provided via the `searchResultColumns` or `selectedResultColumns` props
 - embed the cell's value inside `<template #templateName>` (
-example - `<template #address>`).
+  example - `<template #address>`).
   - The name of a column's template is the same as the `key` of the column's config that was provided via the `searchResultColumns` or `selectedResultColumns` props.
 
 The value of the column inside the `<template>` can be accessed via `slotProps["value"]`, which is an object that contains the formatted as well as the raw value for the slotted field.
@@ -763,8 +763,8 @@ const selectedColumnsConfig = [searchColumnsConfig[0]];
 ### Notes
 
 1. Some props that can be either a string or a function. In such cases, if the prop is a function, it will be called with
-the target argument, and return the result. If it is a string, the value of the property matching the path specified by
-the string is looked up in the target argument, and returned.
+   the target argument, and return the result. If it is a string, the value of the property matching the path specified by
+   the string is looked up in the target argument, and returned.
 
 ### Props
 
@@ -782,7 +782,7 @@ the string is looked up in the target argument, and returned.
   value a certain way. Moreover, `{ slotted: true }` can be added to the column's config to embed the column's value in
   custom markup. See the `Formatting and Slots` section above for details.
 - `selectedResultColumns`: Array - The display config for the `<va-data-table>` of selected results. Extends
-  the `columns` prop provided to `<va-data-table>`. A `formatFn` function can be provided in a column's config 
+  the `columns` prop provided to `<va-data-table>`. A `formatFn` function can be provided in a column's config
   to format the column's value a certain way. Moreover, `{ slotted: true }` can be added to the column's config
   to embed the column's value in custom markup. See the `Formatting and Slots` section above for details.
 - `searchResultCount`: Number - Total number results retrieved from the current search (not to be confused with the
@@ -869,7 +869,7 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 
 ## EnvAlert
 
-Shows an `<va-alert/>` which displays the mode that the app is running in (`test`, `CI`, etc.). 
+Shows an `<va-alert/>` which displays the mode that the app is running in (`test`, `CI`, etc.).
 
 The environments that this alert should be enabled for can be set in `./ui/config.js`, under property `alertForEnvironments`.
 

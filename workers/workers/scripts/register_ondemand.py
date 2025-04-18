@@ -32,7 +32,7 @@ class Registration:
         try:
             created_dataset = api.create_dataset(dataset_payload)
             wf.start(created_dataset['id'])
-        except DatasetAlreadyExistsError:
+        except api.DatasetAlreadyExistsError:
             print(f'{dataset_name} already exists')
             return
 

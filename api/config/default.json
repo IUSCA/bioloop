@@ -44,6 +44,10 @@
       "scope": "https://graph.microsoft.com/User.Read",
       "client_id": "",
       "client_secret": ""
+    },
+    "auto_sign_up": {
+      "enabled": false,
+      "default_role": "user"
     }
   },
   "oauth": {

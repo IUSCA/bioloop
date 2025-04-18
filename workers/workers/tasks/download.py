@@ -11,7 +11,7 @@ import workers.api as api
 import workers.config.celeryconfig as celeryconfig
 from workers.config import config
 from workers.exceptions import ValidationFailed
-from workers.dataset import get_bundle_staged_path
+from workers.dataset import get_bundle_staged_path, get_bundle_name
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -50,15 +50,13 @@ def setup_download(celery_task, dataset_id, **kwargs):
 
     bundle_path = Path(get_bundle_staged_path(dataset=dataset))
 
-    bundle_alias = dataset['metadata']['bundle_alias']
-
     if not staged_path.exists():
         # TODO: more robust validation?
         raise ValidationFailed(f'Staged path does not exist {staged_path}')
 
     download_dir = Path(config['paths']['download_dir']).resolve()
     download_path = download_dir / alias
-    bundle_download_path = download_dir / bundle_alias
+    bundle_download_path = download_dir / get_bundle_name(dataset) 
 
     # remove if exists and create a symlink in download dir pointing to the staged path
     rm(download_path)

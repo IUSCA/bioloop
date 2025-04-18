@@ -81,14 +81,13 @@ def directories_are_equal(dir1: Path, dir2: Path) -> bool:
 
 def is_data_product_registered(new_name: str) -> bool:
     """
-    Data Product is considered registered if it has reached the state 'ARCHIVED'.
+    Data Product is considered registered if it has been assigned an `archive_path`.
     """
     print(f"Checking if dataset {new_name} is registered...")
 
     while True:
         matching_data_products: List[Dict] = api.get_all_datasets(dataset_type='DATA_PRODUCT',
-                                                                  name=new_name,
-                                                                  include_states=True)
+                                                                  name=new_name)
         print(f"matching data products length: {len(matching_data_products)}")
         
         if len(matching_data_products) == 0:
@@ -96,18 +95,19 @@ def is_data_product_registered(new_name: str) -> bool:
             return False
 
         matching_data_product: Dict = matching_data_products[0]
-        matching_data_product_states: List[str] = [e['state'] for e in matching_data_product['states']]
 
-        print(f"States that have been reached by dataset {new_name}: {matching_data_product_states}")
-
-        if 'ARCHIVED' in matching_data_product_states:
-            print(f"Found registered data product: {new_name}, with state 'ARCHIVED'")
+        if matching_data_product['archive_path'] is not None:
+            # Data Product is considered fully-registered if it has an `archive_path`
+            print(f"Found registered data product: {new_name}, with archive_path {matching_data_product['archive_path']}")
             return True
 
+
         if matching_data_product:
+            # Data Product is considered partially-registered if it has no `archive_path` yet.
+            # Wait for archive_path to be assigned in this case.
             print(
-                f"Data product {new_name} currently has states {matching_data_product_states}. Checking again in"
-                f" {CHECK_INTERVAL} seconds, until state 'ARCHIVED' is reached.")
+                f"Data product {new_name} currently has archive_path {matching_data_product['archive_path']}."
+                f" Checking again in {CHECK_INTERVAL} seconds, until archive_path has been assigned.")
         time.sleep(CHECK_INTERVAL)
 
 
@@ -172,18 +172,15 @@ def process_and_register_subdirectories(dir_path: str,
                 shutil.copytree(item, new_path)
                 print(f"Copied and renamed: {item.name} -> {new_name}")
 
-                if not is_data_product_registered(new_name):
-                    print(f"{new_path} does not exist. This subdirectory is currently not registered: {new_name}")
-                    try:
-                        print(f"Registering: {new_name}")
-                        register_data_product(new_name, new_path)
-                    except Exception as e:
-                        print(f"Error occurred during registration of {new_name}: {e}")
-                        traceback.print_exc()
-                        shutil.rmtree(path=new_path, ignore_errors=True)
-                        print(f"Deleted renamed directory due to registration failure: {new_path}")
-                else:
-                    print(f"Already registered: {new_name}")
+                print(f"{new_path} does not exist. This subdirectory is currently not registered: {new_name}")
+                try:
+                    print(f"Registering: {new_name}")
+                    register_data_product(new_name, new_path)
+                except Exception as e:
+                    print(f"Error occurred during registration of {new_name}: {e}")
+                    traceback.print_exc()
+                    shutil.rmtree(path=new_path, ignore_errors=True)
+                    print(f"Deleted renamed directory due to registration failure: {new_path}")
             else:
                 print(f"Dry run: Would have copied and renamed {item.name} to {new_name}")
                 print(f"Dry run: Would have registered: {new_name}")

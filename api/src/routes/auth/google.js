@@ -8,7 +8,7 @@ const { validate } = require('../../middleware/validators');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { loginHandler } = require('../../middleware/auth');
 
-const userService = require('../../services/user');
+const authService = require('../../services/auth');
 const utils = require('../../utils');
 
 const router = express.Router();
@@ -77,7 +77,10 @@ router.post(
     const id_data = utils.decodeJWT(_res.data.id_token);
     const { email } = id_data;
 
-    const user = await userService.findActiveUserBy('email', email);
+    if (!email) {
+      return res.status(500).json({ message: 'Failed to get email from auth provider' });
+    }
+    const user = await authService.getLoginUser('email', email);
     req.auth_user = user;
     req.auth_method = 'google';
     next();

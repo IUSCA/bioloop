@@ -7,12 +7,13 @@
           :data-testid="props.dataTestId || 'autocomplete'"
           outline
           clearable
-          @clear="onClear"
+          @clear="emit('clear')"
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
           class="w-full autocomplete-input"
           @click="openResults"
+          @clear="onClear"
           :disabled="props.disabled"
           :label="props.label"
         >
@@ -31,7 +32,12 @@
           :data-testid="`${props.dataTestId}--search-results-li__loading`"
         >
           <div class="flex">
-            <va-icon class="mx-auto" name="loop" spin="clockwise" color="primary" />
+            <va-icon
+              class="mx-auto"
+              name="loop"
+              spin="clockwise"
+              color="primary"
+            />
           </div>
         </li>
       </ul>
@@ -62,8 +68,21 @@
             </slot>
           </button>
         </li>
+
         <li
-          v-if="search_results.length == 0"
+          v-if="!text"
+          class="py-2 px-3"
+          :data-testid="`${props.dataTestId}--start-typing-li`"
+        >
+          <span
+            class="flex gap-2 items-center justify-center va-text-secondary"
+          >
+            <i-mdi:magnify-remove-outline class="flex-none text-xl" />
+            <span class="flex-none">Start typing to search</span>
+          </span>
+        </li>
+        <li
+          v-else-if="search_results.length == 0"
           class="py-2 px-3"
           :data-testid="`${props.dataTestId}--no-search-results-li`"
         >
@@ -73,7 +92,9 @@
           </span>
         </li>
 
-        <div v-else-if="search_results.length < props.paginatedTotalResultsCount">
+        <div
+          v-else-if="search_results.length < props.paginatedTotalResultsCount"
+        >
           <li
             v-if="props.paginated"
             class="py-2 px-3"
@@ -83,7 +104,9 @@
               class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded w-full text-left"
               @click="loadMore"
             >
-              <span class="flex gap-2 items-center justify-center va-text-secondary">
+              <span
+                class="flex gap-2 items-center justify-center va-text-secondary"
+              >
                 <i-mdi:chevron-down class="flex-none text-xl" />
                 <span class="flex-none">Load More</span>
               </span>
@@ -96,12 +119,16 @@
 </template>
 
 <script setup>
-import { OnClickOutside } from '@vueuse/components'
+import { OnClickOutside } from "@vueuse/components";
+
+// when clicked outside, hide the results ul
+// when clicked on input show the results ul
+// when clicked on a search result, clear text and hide the results ul
 
 const props = defineProps({
   searchText: {
     type: String,
-    default: '',
+    default: "",
   },
   paginated: {
     type: Boolean,
@@ -111,20 +138,13 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
-  // populatedResult: {
-  //   type: Object,
-  // },
-  // populatedResultDisplayBy: {
-  //   type: [Function, String],
-  //   default: (item) => item.name || 'name',
-  // },
   label: {
     type: String,
-    default: '',
+    default: "",
   },
   placeholder: {
     type: String,
-    default: 'Type here',
+    default: "Type here",
   },
   data: {
     type: Array,
@@ -132,7 +152,7 @@ const props = defineProps({
   },
   filterBy: {
     type: String,
-    default: 'value',
+    default: "value",
   },
   filterFn: {
     type: Function,
@@ -140,7 +160,7 @@ const props = defineProps({
   },
   displayBy: {
     type: String,
-    default: 'name',
+    default: "name",
   },
   async: {
     type: Boolean,
@@ -161,112 +181,76 @@ const props = defineProps({
   dataTestId: {
     type: String,
   },
-})
+});
 
 const emit = defineEmits([
-  'clear',
-  'update:searchText',
-  // 'update:populatedResult',
-  'open',
-  'close',
-  'loadMore',
-])
+  "clear",
+  "update:searchText",
+  "open",
+  "close",
+  "select",
+  "loadMore",
+]);
 
 const text = computed({
   get: () => {
-    return props.searchText
+    return props.searchText;
   },
   set: (value) => {
-    emit('update:searchText', value)
+    emit("update:searchText", value);
   },
-})
+});
 
 const resultCount = computed(() => {
   if (props.paginated && props.paginatedTotalResultsCount > 0) {
-    return props.paginatedTotalResultsCount
+    return props.paginatedTotalResultsCount;
   } else {
-    return search_results.value.length
+    return search_results.value.length;
   }
-})
+});
 
-const visible = ref(false)
-
-// when clicked outside, hide the results ul
-// when clicked on input show the results ul
-// when clicked on a search result, clear text and hide the results ul
+const visible = ref(false);
 
 const search_results = computed(() => {
-  console.log('Autocomplete component search results computed')
-  const data = props.data
-  if (text.value === '' || props.async) {
-    return data
+  const data = props.data;
+  if (text.value === "" || props.async) {
+    return data;
   }
 
   const filterFn =
     props.filterFn instanceof Function
       ? props.filterFn(text.value)
-      : (item) => (item[props.filterBy] || '').toLowerCase().includes(text.value.toLowerCase())
+      : (item) =>
+          (item[props.filterBy] || "")
+            .toLowerCase()
+            .includes(text.value.toLowerCase());
 
-  return (data || []).filter(filterFn)
-})
+  return (data || []).filter(filterFn);
+});
 
 function closeResults() {
-  visible.value = false
-  emit('close')
+  visible.value = false;
+  emit("close");
 }
 
 function openResults() {
-  visible.value = true
-  emit('open')
-  // emit('update:populatedResult', null)
+  visible.value = true;
+  emit("open");
 }
 
 function handleSelect(item) {
-  text.value = ''
-  closeResults()
-  emit('select', item)
+  emit("update:searchText", "");
+  closeResults();
+  emit("select", item);
 }
 
 function onClear() {
-  emit('clear')
+  emit("clear");
 }
 
 function loadMore() {
-  emit('load-more')
+  emit("load-more");
 }
-
-// watch(
-//   () => search_results,
-//   (newData, oldData) => {
-//     console.log('Autocomplete component search results changed')
-//     console.log('New search results:', newData)
-//     console.log('Old search results:', oldData)
-//   }
-// )
-
-// watch(
-//   () => props.data,
-//   (newData, oldData) => {
-//     console.log('Autocomplete component data changed')
-//     console.log('New data:', newData)
-//     console.log('Old data:', oldData)
-//   },
-//   { deep: true }
-// )
-//
-// onMounted(() => {
-//   console.log('Autocomplete component mounted')
-//   console.log('Populated result:', props.populatedResult)
-//   console.log('Data:', props.data)
-// })
-
-// watch(
-//   () => props.populatedResult,
-//   (newPopulatedResult) => {
-//     emit('update:populatedResult', newPopulatedResult)
-//   },
-//   { deep: true }
-// )
 </script>
 
 <style lang="scss">

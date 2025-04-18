@@ -105,7 +105,9 @@ const find_or_create_test_user = async ({ role }) => {
 };
 
 function get_upload_token(file_path) {
-  const hyphen_delimited_file_path = file_path.split(' ').join('-'); // replace whitespaces with hyphens
+  // [^\w.-]+ matches one or more characters that are not word
+  // characters (letters, digits, or underscore), dots, or hyphens
+  const hyphen_delimited_file_path = file_path.replace(/[^\w.-]+/g, '-');
   const scope = `${config.get('oauth.upload.scope_prefix')}${hyphen_delimited_file_path}`;
   return oAuth2SecureTransferClient.clientCredentials({
     scope: [scope],
@@ -152,6 +154,60 @@ function issueGrafanaToken(user) {
   });
 }
 
+async function inferUserData(attribute_key, value, user_data) {
+  const data = {};
+  // attribute_key can be email or cas_id
+  if (attribute_key === 'cas_id') {
+    const cas_id = value;
+    data.cas_id = cas_id;
+    data.email = user_data.email || `${cas_id}@iu.edu`;
+    data.username = cas_id;
+    data.name = user_data.name || cas_id;
+  } else {
+    const email = value;
+    data.email = email;
+    // extract username from email
+    // eslint-disable-next-line prefer-destructuring
+    data.username = email.split('@')[0];
+    data.name = user_data.name || data.username;
+  }
+  // check if username is already used
+  const username_res = await userService.findUserBy('username', data.username);
+  if (username_res) {
+    data.username = `${data.username}${Math.floor(Math.random() * 1000)}`;
+    logger.warn(`Username conflict, new username: ${data.username}`);
+  }
+  return data;
+}
+
+async function getLoginUser(attribute_key, value, user_data = {}) {
+  // find user by attribute_key and value
+  // if a user is found:
+  //    if the found user is active, return the user
+  //    if the found user is not active, return null
+  // if no user is found
+  //    if auto_signup is enabled
+  //      create a new user with the given data
+  //      if there are conflicts with inferred username, append a random string
+  //      return the new user
+  // if auto_signup is not enabled, return null
+
+  const user = await userService.findUserBy(attribute_key, value);
+  if (user) {
+    if (user.is_deleted) {
+      return null;
+    }
+    return user;
+  }
+  if (config.get('auth.auto_sign_up.enabled')) {
+    const data = await inferUserData(attribute_key, value, user_data);
+    data.roles = [config.get('auth.auto_sign_up.default_role')];
+    const new_user = await userService.createUser(data);
+    return new_user;
+  }
+  return null;
+}
+
 module.exports = {
   onLogin,
   issueJWT,
@@ -162,4 +218,5 @@ module.exports = {
   get_upload_token,
   getJWKS,
   issueGrafanaToken,
+  getLoginUser,
 };

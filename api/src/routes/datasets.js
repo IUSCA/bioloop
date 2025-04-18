@@ -24,7 +24,6 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-
 // stats - UI
 router.get(
   '/stats',
@@ -353,7 +352,7 @@ const dataset_access_check = asyncHandler(async (req, res, next) => {
   next();
 });
 
-
+// get by id - worker + UI
 router.get(
   '/:id',
   validate([
@@ -400,7 +399,7 @@ function normalize_name(name) {
   // replace consecutive hyphens with one -
 
   return (name || '')
-    .replaceAll(/[\W_]/g, '-')
+    .replaceAll(/[\W]/g, '-')
     .replaceAll(/-+/g, '-');
 }
 
@@ -427,7 +426,7 @@ router.post(
 
     // gather non-null data to create a new dataset
     const data = _.flow([
-      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'project_id']),
+      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata', 'project_id']),
       _.omitBy(_.isNil),
     ])(req.body);
 
@@ -532,7 +531,8 @@ router.post(
                                 "properties": {
                                     "name": "string",
                                     "type": "string",
-                                    "origin_path": "string"
+                                    "origin_path": "string",
+                                    "metadata": "object",
                                 },
                                 "required": ["name", "type", "origin_path"]
                             },
@@ -589,7 +589,10 @@ router.post(
 
     const data = req.body.datasets
       .map((d) => {
-        const _d = _.pick(['name', 'type', 'origin_path'])(d);
+        const _d = _.flow([
+          _.pick(['name', 'type', 'origin_path', 'metadata']),
+          _.omitBy(_.isNil),
+        ])(d);
 
         // normalize name
         _d.name = normalize_name(_d.name);
@@ -977,7 +980,7 @@ router.get(
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${dataset.metadata.bundle_alias}`;
+        : `${datasetService.get_bundle_name(dataset)}`;
       const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
