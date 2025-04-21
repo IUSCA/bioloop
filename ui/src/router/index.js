@@ -8,7 +8,7 @@ import { routes, handleHotUpdate } from "vue-router/auto-routes";
 // console.log("generatedRoutes", generatedRoutes);
 // console.log("routes", routes);
 const _setupLayouts = setupLayouts(routes);
-// console.log("_setupLayouts", _setupLayouts);
+console.log("_setupLayouts", _setupLayouts);
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -63,15 +63,18 @@ function auth_guard(to, _from) {
       // route requires auth and user is not logged in
       // redirect to auth page with requested route path as query parameter
       return {
-        name: "auth",
+        name: "/auth/",
         query: {
           redirect_to: to.path,
         },
       };
     }
   } else {
+    console.log("route does not require auth");
+    console.log("to.path", to.path);
+    console.log("to.name", to.name);
     // route does not require auth
-    if (isLoggedIn && to.name === "auth") {
+    if (isLoggedIn && to.name === "/auth/") {
       // if logged in and navigating to auth, redirect to dashboard
       return "/";
     }
