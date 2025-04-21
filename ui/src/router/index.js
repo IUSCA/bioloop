@@ -6,9 +6,9 @@ import { createRouter, createWebHistory } from "vue-router";
 import { routes, handleHotUpdate } from "vue-router/auto-routes";
 
 // console.log("generatedRoutes", generatedRoutes);
-console.log("routes", routes);
+// console.log("routes", routes);
 const _setupLayouts = setupLayouts(routes);
-console.log("_setupLayouts", _setupLayouts);
+// console.log("_setupLayouts", _setupLayouts);
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

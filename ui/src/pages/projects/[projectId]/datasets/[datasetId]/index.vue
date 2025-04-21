@@ -1,8 +1,5 @@
 <template>
-  <FileBrowser
-    :dataset-id="route.params.datasetId"
-    :show-download="auth.isFeatureEnabled('downloads') && dataset.is_staged"
-  />
+  <Dataset :dataset-id="route.params.datasetId" append-file-browser-url />
 </template>
 
 <script setup>
@@ -29,40 +26,41 @@ Promise.all([
     forSelf: !auth.canOperate,
   }),
   DatasetService.getById({ id: route.params.datasetId }),
-])
-  .then((results) => {
-    const project = results[0].data;
-    dataset.value = results[1].data;
-    nav.setNavItems([
-      {
-        label: "Projects",
-        to: `/projects`,
-      },
-      {
-        label: project.name,
-        to: `/projects/${project.slug}`,
-      },
-      {
-        label: config.dataset.types[dataset.value.type]?.label,
-      },
-      {
-        label: dataset.value.name,
-        to: `/projects/${project.slug}/datasets/${dataset.value.id}`,
-      },
-      {
-        label: "File Browser",
-      },
-    ]);
-    useTitle(project.name);
-  })
-  .catch((err) => {
-    console.error(err);
-    if (err?.response?.status == 404) toast.error("Could not find the dataset");
-    else toast.error("Could not fetch datatset");
-  });
+]).then((results) => {
+  const project = results[0].data;
+  dataset.value = results[1].data;
+  nav.setNavItems([
+    {
+      label: "Projects",
+      to: `/projects`,
+    },
+    {
+      label: project.name,
+      to: `/projects/${project.slug}`,
+    },
+    {
+      label: config.dataset.types[dataset.value.type]?.label,
+    },
+    {
+      label: dataset.name,
+    },
+  ]);
+  useTitle(project.name);
+});
+// .catch((err) => {
+//   console.error(err);
+//   if (err?.response?.status == 404) toast.error("Could not find the dataset");
+//   else toast.error("Could not fetch datatset");
+// });
+
+onMounted(() => {
+  console.log("Mounted project file browser");
+  console.log("route.params.datasetId", route.params.datasetId);
+  console.log("route.params.projectId", route.params.projectId);
+});
 </script>
 
 <route lang="yaml">
 meta:
-title: File Browser
+title: Project's Datasets
 </route>
