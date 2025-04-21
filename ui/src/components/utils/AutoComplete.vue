@@ -7,12 +7,12 @@
           :data-testid="props.dataTestId || 'autocomplete'"
           outline
           clearable
-          @clear="emit('clear')"
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
           class="w-full autocomplete-input"
           @click="openResults"
+          @clear="onClear"
           :disabled="props.disabled"
           :label="props.label"
         >
@@ -51,7 +51,7 @@
           v-if="search_results.length"
           :data-testid="`${props.dataTestId}--search-results-count-li`"
         >
-          Showing {{ search_results.length }} of {{ data.length }} results
+          Showing {{ search_results.length }} of {{ resultCount }} results
         </li>
         <li
           v-for="(item, idx) in search_results"
@@ -67,8 +67,21 @@
             </slot>
           </button>
         </li>
+
         <li
-          v-if="search_results.length == 0"
+          v-if="!text"
+          class="py-2 px-3"
+          :data-testid="`${props.dataTestId}--start-typing-li`"
+        >
+          <span
+            class="flex gap-2 items-center justify-center va-text-secondary"
+          >
+            <i-mdi:magnify-remove-outline class="flex-none text-xl" />
+            <span class="flex-none">Start typing to search</span>
+          </span>
+        </li>
+        <li
+          v-else-if="search_results.length == 0"
           class="py-2 px-3"
           :data-testid="`${props.dataTestId}--no-search-results-li`"
         >
@@ -79,6 +92,28 @@
             <span class="flex-none">None matched</span>
           </span>
         </li>
+
+        <div
+          v-else-if="search_results.length < props.paginatedTotalResultsCount"
+        >
+          <li
+            v-if="props.paginated"
+            class="py-2 px-3"
+            :data-testid="`${props.dataTestId}--load-more-results-li`"
+          >
+            <button
+              class="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded w-full text-left"
+              @click="loadMore"
+            >
+              <span
+                class="flex gap-2 items-center justify-center va-text-secondary"
+              >
+                <i-mdi:chevron-down class="flex-none text-xl" />
+                <span class="flex-none">Load More</span>
+              </span>
+            </button>
+          </li>
+        </div>
       </ul>
     </OnClickOutside>
   </div>
@@ -87,10 +122,22 @@
 <script setup>
 import { OnClickOutside } from "@vueuse/components";
 
+// when clicked outside, hide the results ul
+// when clicked on input show the results ul
+// when clicked on a search result, clear text and hide the results ul
+
 const props = defineProps({
   searchText: {
     type: String,
     default: "",
+  },
+  paginated: {
+    type: Boolean,
+    default: false,
+  },
+  paginatedTotalResultsCount: {
+    type: Number,
+    default: 0,
   },
   label: {
     type: String,
@@ -138,28 +185,38 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  "select",
   "clear",
   "update:searchText",
   "open",
   "close",
+  "select",
+  "loadMore",
 ]);
 
 const text = computed({
-  get: () => props.searchText,
+  get: () => {
+    return props.searchText;
+  },
   set: (value) => {
     emit("update:searchText", value);
   },
 });
 
+const resultCount = computed(() => {
+  if (props.paginated && props.paginatedTotalResultsCount > 0) {
+    return props.paginatedTotalResultsCount;
+  } else {
+    return search_results.value.length;
+  }
+});
+
 const visible = ref(false);
 
-// when clicked outside, hide the results ul
-// when clicked on input show the results ul
-// when clicked on a search result, clear text and hide the results ul
-
 const search_results = computed(() => {
-  if (text.value === "" || props.async) return props.data;
+  const data = props.data;
+  if (text.value === "" || props.async) {
+    return data;
+  }
 
   const filterFn =
     props.filterFn instanceof Function
@@ -169,7 +226,7 @@ const search_results = computed(() => {
             .toLowerCase()
             .includes(text.value.toLowerCase());
 
-  return (props.data || []).filter(filterFn);
+  return (data || []).filter(filterFn);
 });
 
 function closeResults() {
@@ -183,9 +240,17 @@ function openResults() {
 }
 
 function handleSelect(item) {
-  text.value = "";
+  emit("update:searchText", "");
   closeResults();
   emit("select", item);
+}
+
+function onClear() {
+  emit("clear");
+}
+
+function loadMore() {
+  emit("load-more");
 }
 </script>
 
