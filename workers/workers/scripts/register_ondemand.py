@@ -25,7 +25,6 @@ class Registration:
             'type': self.dataset_type,
             'workflow_id': wf.workflow['_id'],
             'origin_path': dataset_path,
-            'description': f'Registered by {config.get("APP_NAME")}',
         }
 
         # HTTP POST
