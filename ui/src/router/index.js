@@ -1,13 +1,9 @@
 import config from "@/config";
 import { isLiveToken, setIntersection } from "@/services/utils";
 import { setupLayouts } from "virtual:generated-layouts";
-// import generatedRoutes from "virtual:generated-pages";
 import { createRouter, createWebHistory } from "vue-router";
-import { routes, handleHotUpdate } from "vue-router/auto-routes";
+import { routes } from "vue-router/auto-routes";
 
-// console.log("generatedRoutes", generatedRoutes);
-// console.log("routes", routes);
-// const generatedRoutes = setupLayouts(routes);
 /**
  * Vue Router does not propagate the `props: true` option from parent routes to child routes,
  * and each "leaf route" (i.e. a route without children) is responsible for defining its own
@@ -34,19 +30,17 @@ function applyPropsToLeafRoutes(routes) {
 
 const generatedRoutes = setupLayouts(applyPropsToLeafRoutes(routes));
 
-console.log("generatedRoutes", generatedRoutes);
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
   routes: generatedRoutes,
-  // routes,
 });
 
 const token = ref(useLocalStorage("token", ""));
 const user = ref(useLocalStorage("user", {}));
 
 function auth_guard(to, _from) {
+  // console.log("to", to.path);
+  // console.log("from", _from.path);
   // routeRequiresAuth is false only when requiresAuth is explicitly set to a
   // falsy value
   const routeRequiresAuth = !(
@@ -94,7 +88,6 @@ function auth_guard(to, _from) {
       };
     }
   } else {
-    console.log("route does not require auth");
     // route does not require auth
     if (isLoggedIn && to.name === "/auth/") {
       // if logged in and navigating to auth, redirect to dashboard

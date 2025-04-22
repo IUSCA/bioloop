@@ -5,7 +5,6 @@ import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { defineConfig, loadEnv } from "vite";
-// import Pages from "vite-plugin-pages";
 import VueRouter from "unplugin-vue-router/vite";
 import Layouts from "vite-plugin-vue-layouts";
 // import basicSsl from "@vitejs/plugin-basic-ssl";
@@ -22,7 +21,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       // https://github.com/posva/unplugin-vue-router
-      // ⚠️ Vue must be placed after VueRouter()
+      // ⚠️ `Vue` must be placed after VueRouter()
       VueRouter({
         // https://github.com/posva/unplugin-vue-router#configuration
         dts: "./typed-router.d.ts",
@@ -32,9 +31,6 @@ export default defineConfig(({ command, mode }) => {
       vue({
         reactivityTransform: true,
       }),
-
-      // https://github.com/hannoeru/vite-plugin-pages
-      // Pages(),
 
       // https://github.com/antfu/unplugin-auto-import
       AutoImport({
