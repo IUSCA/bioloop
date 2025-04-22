@@ -118,9 +118,4 @@ router.afterEach((to, _from) => {
   });
 });
 
-// This will update routes at runtime without reloading the page
-if (import.meta.hot) {
-  handleHotUpdate(router);
-}
-
 export default router;
