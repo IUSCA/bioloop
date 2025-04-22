@@ -43,16 +43,4 @@ module.exports = {
       },
     ],
   },
-  // overrides: [
-  //   {
-  //     files: ["*.vue"], // Apply this override only to Vue files
-  //     processor: "vue/.vue",
-  //   },
-  //   {
-  //     files: ["*.vue"], // Disable multiline html formatting rules if necessary
-  //     rules: {
-  //       "vue/multiline-html-element-content-newline": "off",
-  //     },
-  //   },
-  // ],
 };
