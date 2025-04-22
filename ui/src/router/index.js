@@ -21,8 +21,6 @@ const token = ref(useLocalStorage("token", ""));
 const user = ref(useLocalStorage("user", {}));
 
 function auth_guard(to, _from) {
-  // console.log("to", to.path);
-  // console.log("from", _from.path);
   // routeRequiresAuth is false only when requiresAuth is explicitly set to a
   // falsy value
   const routeRequiresAuth = !(
@@ -71,8 +69,6 @@ function auth_guard(to, _from) {
     }
   } else {
     console.log("route does not require auth");
-    console.log("to.path", to.path);
-    console.log("to.name", to.name);
     // route does not require auth
     if (isLoggedIn && to.name === "/auth/") {
       // if logged in and navigating to auth, redirect to dashboard

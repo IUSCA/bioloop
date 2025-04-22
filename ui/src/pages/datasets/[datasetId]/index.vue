@@ -8,11 +8,11 @@ import DatasetService from "@/services/dataset";
 import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
 import { storeToRefs } from "pinia";
+import { useRoute } from "vue-router";
 
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 const ui = useUIStore();
-import { useRoute } from "vue-router";
 
 const route = useRoute();
 
@@ -42,5 +42,5 @@ DatasetService.getById({ id: route.params.datasetId }).then((res) => {
 
 <route lang="yaml">
 meta:
-  title: Dataset Details
+title: Dataset Details
 </route>
