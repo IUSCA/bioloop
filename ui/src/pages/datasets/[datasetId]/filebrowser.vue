@@ -1,6 +1,6 @@
 <template>
   <FileBrowser
-    :dataset-id="route.params.datasetId"
+    :dataset-id="props.datasetId"
     :show-download="auth.isFeatureEnabled('downloads') && dataset.is_staged"
   />
 </template>
@@ -17,15 +17,14 @@ import { storeToRefs } from "pinia";
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 
-const route = useRoute();
 const ui = useUIStore();
 const auth = useAuthStore();
 
-// const props = defineProps({ datasetId: String });
+const props = defineProps({ datasetId: String });
 
 const dataset = ref({});
 
-DatasetService.getById({ id: route.params.datasetId, workflows: false })
+DatasetService.getById({ id: props.datasetId, workflows: false })
   .then((res) => {
     dataset.value = res.data;
     nav.setNavItems([

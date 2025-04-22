@@ -1,5 +1,5 @@
 <template>
-  <Dataset :dataset-id="route.params.datasetId" />
+  <Dataset :dataset-id="props.datasetId" />
 </template>
 
 <script setup>
@@ -8,27 +8,14 @@ import DatasetService from "@/services/dataset";
 import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
 import { storeToRefs } from "pinia";
-import { useRoute } from "vue-router";
 
 const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 const ui = useUIStore();
 
-// export const routeMeta = {
-//   props: true, // Pass route params as props
-// };
-
-const route = useRoute();
-
-console.log("route.params", route.params);
-
 const props = defineProps({ datasetId: String });
 
-onMounted(() => {
-  console.log("index.vue: props.datasetId", props.datasetId);
-});
-
-DatasetService.getById({ id: route.params.datasetId }).then((res) => {
+DatasetService.getById({ id: props.datasetId }).then((res) => {
   const dataset = res.data;
   nav.setNavItems([
     {
