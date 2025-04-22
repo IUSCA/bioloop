@@ -20,9 +20,6 @@ export default defineConfig(({ command, mode }) => {
   // eslint-disable-next-line no-undef
   const env = loadEnv(mode, process.cwd());
   return {
-    ssr: {
-      noExternal: mode === "development" ? ["vue-router"] : [],
-    },
     plugins: [
       // https://github.com/posva/unplugin-vue-router
       // ⚠️ Vue must be placed after VueRouter()
