@@ -35,5 +35,24 @@ module.exports = {
         tabSize: 2,
       },
     ],
+    // Ignore parsing errors for custom tags like <route>
+    "vue/no-parsing-error": [
+      "error",
+      {
+        "invalid-first-character-of-tag-name": false,
+      },
+    ],
   },
+  // overrides: [
+  //   {
+  //     files: ["*.vue"], // Apply this override only to Vue files
+  //     processor: "vue/.vue",
+  //   },
+  //   {
+  //     files: ["*.vue"], // Disable multiline html formatting rules if necessary
+  //     rules: {
+  //       "vue/multiline-html-element-content-newline": "off",
+  //     },
+  //   },
+  // ],
 };
