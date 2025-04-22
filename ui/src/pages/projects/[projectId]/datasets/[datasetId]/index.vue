@@ -47,5 +47,5 @@ Promise.all([
 
 <route lang="yaml">
 meta:
-title: Project's Datasets
+  title: Project's Datasets
 </route>

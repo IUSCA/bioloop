@@ -494,6 +494,6 @@ function openModalToDownloadDataset() {
 
 <route lang="yaml">
 meta:
-title: Dataset
-requiresRoles: ["operator", "admin"]
+  title: Dataset
+  requiresRoles: ["operator", "admin"]
 </route>
