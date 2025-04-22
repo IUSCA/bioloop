@@ -14,14 +14,18 @@ const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 const ui = useUIStore();
 
+// export const routeMeta = {
+//   props: true, // Pass route params as props
+// };
+
 const route = useRoute();
 
 console.log("route.params", route.params);
 
-// const props = defineProps({ datasetId: String });
+const props = defineProps({ datasetId: String });
 
 onMounted(() => {
-  console.log("index.vue: props.datasetId", route.params.datasetId);
+  console.log("index.vue: props.datasetId", props.datasetId);
 });
 
 DatasetService.getById({ id: route.params.datasetId }).then((res) => {

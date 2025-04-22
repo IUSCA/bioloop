@@ -7,13 +7,39 @@ import { routes, handleHotUpdate } from "vue-router/auto-routes";
 
 // console.log("generatedRoutes", generatedRoutes);
 // console.log("routes", routes);
-const _setupLayouts = setupLayouts(routes);
-console.log("_setupLayouts", _setupLayouts);
+// const generatedRoutes = setupLayouts(routes);
+/**
+ * Vue Router does not propagate the `props: true` option from parent routes to child routes,
+ * and each "leaf route" (i.e. a route without children) is responsible for defining its own
+ * `props` configuration. Without explicitly applying `props: true` to each leaf route, dynamic
+ * route parameters (e.g., `datasetId` in route `/datasets/:datasetId`) will not be passed
+ * automatically as props to the associated Vue component.
+ *
+ * This function ensures that `props: true` is applied to all leaf routes, thus ensuring that
+ * route params are properly injected into components as props across the entire routing structure,
+ * including deeply nested or dynamically generated routes.
+ */
+function applyPropsToLeafRoutes(routes) {
+  return routes.map((route) => {
+    if (route.children && route.children.length > 0) {
+      // Recursively handle child routes
+      route.children = applyPropsToLeafRoutes(route.children);
+    } else {
+      // Apply `props: true` to leaf route
+      route.props = true;
+    }
+    return route;
+  });
+}
+
+const generatedRoutes = setupLayouts(applyPropsToLeafRoutes(routes));
+
+console.log("generatedRoutes", generatedRoutes);
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   // https://github.com/JohnCampionJr/vite-plugin-vue-layouts
-  routes: _setupLayouts,
+  routes: generatedRoutes,
   // routes,
 });
 
