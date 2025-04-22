@@ -101,8 +101,6 @@ DatasetService.getStats({ type: "DATA_PRODUCT" })
     console.error(err);
     toast.error("Unable to fetch data products stats");
   });
-
-// definePage()
 </script>
 
 <route lang="yaml">

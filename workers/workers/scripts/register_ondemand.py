@@ -37,7 +37,6 @@ class Registration:
             return
 
 
-
 if __name__ == '__main__':
     # argument parser
     parser = argparse.ArgumentParser(

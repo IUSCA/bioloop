@@ -53,5 +53,5 @@ DatasetService.getById({ id: route.params.datasetId, workflows: false })
 
 <route lang="yaml">
 meta:
-  title: File Browser
+title: File Browser
 </route>

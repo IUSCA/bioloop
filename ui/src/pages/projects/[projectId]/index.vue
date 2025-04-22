@@ -300,5 +300,5 @@ function openMergeModal() {
 
 <route lang="yaml">
 meta:
-  title: Project Details
+title: Project Details
 </route>

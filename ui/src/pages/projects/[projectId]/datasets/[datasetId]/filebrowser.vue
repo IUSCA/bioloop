@@ -64,5 +64,5 @@ Promise.all([
 
 <route lang="yaml">
 meta:
-  title: File Browser
+title: File Browser
 </route>
