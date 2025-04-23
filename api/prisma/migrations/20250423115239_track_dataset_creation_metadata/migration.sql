@@ -33,6 +33,9 @@ DROP INDEX "dataset_upload_log_dataset_id_key";
 DROP INDEX "dataset_upload_log_upload_log_id_key";
 
 -- AlterTable
+ALTER TABLE "dataset" ADD COLUMN     "instrumentId" INTEGER;
+
+-- AlterTable
 ALTER TABLE "dataset_audit" ADD COLUMN     "create_method" "DATASET_CREATE_METHOD",
 ADD COLUMN     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
@@ -72,6 +75,9 @@ CREATE UNIQUE INDEX "dataset_audit_dataset_id_create_method_key" ON "dataset_aud
 
 -- CreateIndex
 CREATE UNIQUE INDEX "dataset_upload_log_audit_log_id_key" ON "dataset_upload_log"("audit_log_id");
+
+-- AddForeignKey
+ALTER TABLE "dataset" ADD CONSTRAINT "dataset_instrumentId_fkey" FOREIGN KEY ("instrumentId") REFERENCES "instrument"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "dataset_upload_log" ADD CONSTRAINT "dataset_upload_log_audit_log_id_fkey" FOREIGN KEY ("audit_log_id") REFERENCES "dataset_audit"("id") ON DELETE CASCADE ON UPDATE CASCADE;

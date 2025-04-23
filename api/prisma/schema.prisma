@@ -36,6 +36,8 @@ model dataset {
   stage_requests   stage_request_log[]
   bundle           bundle?
   // create_log       dataset_create_log?
+  instrument       instrument?         @relation(fields: [instrumentId], references: [id])
+  instrumentId     Int?
 
   @@unique([name, type, is_deleted])
 }
@@ -387,13 +389,13 @@ model about {
 }
 
 model instrument {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  host        String   @unique
-  description String?
-  created_at  DateTime @default(now()) @db.Timestamp(6)
-  updated_at  DateTime @default(now()) @db.Timestamp(6)
-  // sourced_datasets dataset_create_log[]
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  host             String    @unique
+  description      String?
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @default(now()) @db.Timestamp(6)
+  sourced_datasets dataset[]
 }
 
 enum access_type {
