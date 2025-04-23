@@ -41,10 +41,10 @@ class DatasetService {
     bundle = false,
     include_projects = false,
     initiator = false,
-    include_import_log = false,
+    // include_import_log = false,
     include_upload_log = false,
   }) {
-    return api.get(`/test/${id}`, {
+    return api.get(`/datasets/${id}`, {
       params: {
         files,
         workflows,
@@ -54,7 +54,7 @@ class DatasetService {
         bundle,
         include_projects,
         initiator,
-        include_import_log,
+        // include_import_log,
         include_upload_log,
       },
     })

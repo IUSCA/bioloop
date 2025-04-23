@@ -5,8 +5,6 @@
     filter-by="name"
     placeholder="Search projects by name"
     data-test-id="project-search-autocomplete"
-    :disabled="props.disabled"
-    :label="props.label"
   >
     <template #filtered="{ item }">
       <div class="flex">
@@ -40,24 +38,12 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
-  forSelf: {
-    type: Boolean,
-    default: false,
-  },
-  label: {
-    type: String,
-    default: '',
-  },
 })
 
 const searchText = ref('')
 const projects = ref([])
 
-projectService.getAll({ forSelf: !auth.canOperate }).then((res) => {
+projectService.getAll({ forSelf: false }).then((res) => {
   projects.value = (res.data.projects || []).filter((p) => !props.excludeIds.includes(p.id))
 })
 </script>

@@ -127,12 +127,12 @@ def dataset_setter(dataset: dict):
 
 
 def get_all_datasets(
-    dataset_type=None,
-    name=None,
-    days_since_last_staged=None,
-    deleted=False,
-    archived=None,
-    bundle=False):
+        dataset_type=None,
+        name=None,
+        days_since_last_staged=None,
+        deleted=False,
+        archived=None,
+        bundle=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -160,7 +160,7 @@ def get_dataset(dataset_id: str,
             'workflows': workflows,
             'include_upload_log': include_upload_log
         }
-        r = s.get(f'test/{dataset_id}', params=payload)
+        r = s.get(f'datasets/{dataset_id}', params=payload)
 
         r.raise_for_status()
         return dataset_getter(r.json())

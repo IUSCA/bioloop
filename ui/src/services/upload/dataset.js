@@ -26,16 +26,16 @@ class DatasetUploadService {
     return api.post(`/datasetUploads`, data);
   }
 
-  updateDatasetUploadLog(dataset_id, username, data) {
-    return api.patch(`/datasetUploads/${username}/${dataset_id}`, data);
+  updateDatasetUploadLog(dataset_id, data) {
+    return api.patch(`/datasetUploads/${dataset_id}`, data);
   }
 
-  processDatasetUpload(dataset_id, username) {
-    return api.post(`/datasetUploads/${username}/${dataset_id}/process`);
+  processDatasetUpload(dataset_id) {
+    return api.post(`/datasetUploads/${dataset_id}/process`);
   }
 
-  cancelDatasetUpload(dataset_id, username) {
-    return api.post(`/datasetUploads/${username}/${dataset_id}/cancel`);
+  cancelDatasetUpload(dataset_id) {
+    return api.post(`/datasetUploads/${dataset_id}/cancel`);
   }
 }
 

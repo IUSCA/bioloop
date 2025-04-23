@@ -366,7 +366,7 @@ router.get(
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
     query('include_upload_log').toBoolean().default(false),
-    query('include_import_log').toBoolean().optional().default(false),
+    // query('include_import_log').toBoolean().optional().default(false),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -385,14 +385,12 @@ router.get(
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
       include_upload_log: req.query.include_upload_log,
-      include_import_log: req.query.include_import_log,
+      // include_import_log: req.query.include_import_log,
     });
 
     res.json(dataset);
   }),
 );
-
-
 
 function normalize_name(name) {
   // replace all character other than a-z, 0-9, _ and - with -
@@ -472,12 +470,6 @@ router.post(
         }],
       };
     }
-
-    data.import_log = {
-      create: {
-        creator_id: req.user.id,
-      },
-    };
 
     // add a state
     data.states = {
@@ -1029,24 +1021,24 @@ router.get(
 );
 
 router.get(
-    '/:datasetType/:name/exists',
-    validate([
-      param('datasetType').escape().notEmpty(),
-      param('name').escape().notEmpty(),
-    ]),
-    isPermittedTo('read'),
-    asyncHandler(async (req, res, next) => {
-      // #swagger.tags = ['datasets']
-      // #swagger.summary = 'Determine if a dataset with a given name exists'
-          const matchingDatasets = await prisma.dataset.findMany({
-            where: {
-              name: req.params.name,
-              type: req.params.datasetType,
-            }
-          })
-          res.json({exists: matchingDatasets.length > 0});
-      }
-    ))
+  '/:datasetType/:name/exists',
+  validate([
+    param('datasetType').escape().notEmpty(),
+    param('name').escape().notEmpty(),
+  ]),
+  accessControl('dataset_name')('read'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Determine if a dataset with a given name exists'
+    const matchingDatasets = await prisma.dataset.findMany({
+      where: {
+        name: req.params.name,
+        type: req.params.datasetType,
+      },
+    });
+    res.json({ exists: matchingDatasets.length > 0 });
+  }),
+);
 
 module.exports = router;
 module.exports.dataset_access_check = dataset_access_check;

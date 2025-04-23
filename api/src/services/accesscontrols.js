@@ -20,6 +20,9 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    dataset_name: {
+      'read:any': ['*'],
+    },
     datasetUploads: {
       'create:any': ['*'],
       'read:any': ['*'],
@@ -69,9 +72,6 @@ const grantsObject = {
     },
     upload: {
       'create:any': ['*'],
-      'read:any': ['*'],
-      'update:any': ['*'],
-      'delete:any': ['*'],
     },
   },
 
@@ -85,8 +85,10 @@ const grantsObject = {
       'read:own': ['*', '!users'], // cannot read associated users to the project
     },
     datasets: {
-      'create:own': ['*'],
-      'read:own': ['*', '!projects'], // cannot read projects that this dataset is assigned to
+      'create:any': ['*'],
+    },
+    dataset_name: {
+      'read:any': ['*'],
     },
     project_dataset_files: {
       'read:own': ['*'],
@@ -110,13 +112,10 @@ const grantsObject = {
     },
     upload: {
       'create:any': ['*'],
-      'read:own': ['*'],
-      'update:own': ['*'],
-      'delete:own': ['*']
     },
     fs: {
       'read:any': ['*'],
-    }
+    },
   },
 
   // operator role permissions
@@ -136,6 +135,9 @@ const grantsObject = {
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
+    },
+    dataset_name: {
+      'read:any': ['*'],
     },
     datasetUploads: {
       'create:any': ['*'],

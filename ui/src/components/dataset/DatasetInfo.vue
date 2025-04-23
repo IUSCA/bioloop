@@ -71,21 +71,19 @@
 </template>
 
 <script setup>
-import * as datetime from "@/services/datetime";
-import { formatBytes } from "@/services/utils";
-import { useAuthStore } from "@/stores/auth";
+import * as datetime from '@/services/datetime'
+import { formatBytes } from '@/services/utils'
+import { useAuthStore } from '@/stores/auth'
 
-const props = defineProps({ dataset: Object });
+const props = defineProps({ dataset: Object })
 
-const auth = useAuthStore();
+const auth = useAuthStore()
 
-const datasetCreator = props.dataset?.upload_log
-  ? props.dataset?.upload_log?.user
-  : props.dataset?.import_log?.creator || null;
+const datasetCreator = props.dataset?.upload_log?.user
 
 const datasetCreatorDisplayed = datasetCreator
   ? `${datasetCreator.username} (${datasetCreator.name})`
-  : null;
+  : null
 </script>
 
 <style lang="scss" scoped>

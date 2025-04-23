@@ -11,11 +11,7 @@
               <!-- <span class="text-xl">Info</span> -->
               <div class="flex flex-nowrap items-center w-full">
                 <span class="flex-auto text-lg"> Info </span>
-                <AddEditButton
-                  class="flex-none"
-                  edit
-                  @click="openModalToEditDataset"
-                />
+                <AddEditButton class="flex-none" edit @click="openModalToEditDataset" />
               </div>
             </va-card-title>
             <va-card-content>
@@ -29,7 +25,8 @@
                   class="flex-none"
                   :color="isDark ? '#9171f8' : '#A020F0'"
                 >
-                  <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
+                  <i-mdi-folder-open class="pr-2 text-xl" />
+                  Browse Files
                 </va-button>
 
                 <!-- edit description -->
@@ -46,10 +43,7 @@
         </div>
 
         <!-- Status Cards -->
-        <div
-          class="flex flex-col gap-3 justify-start"
-          v-if="!dataset.is_deleted"
-        >
+        <div class="flex flex-col gap-3 justify-start" v-if="!dataset.is_deleted">
           <!-- Archived -->
           <div class="flex-none" v-if="dataset.archive_path">
             <va-card>
@@ -137,16 +131,15 @@
                   </va-button>
 
                   <va-button
-                    :disabled="
-                      !dataset.is_staged || !auth.isFeatureEnabled('downloads')
-                    "
+                    :disabled="!dataset.is_staged || !auth.isFeatureEnabled('downloads')"
                     class="flex-initial"
                     color="primary"
                     border-color="primary"
                     preset="secondary"
                     @click="openModalToDownloadDataset"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" /> Download
+                    <i-mdi-download class="pr-2 text-2xl" />
+                    Download
                   </va-button>
                 </div>
               </va-card-content>
@@ -163,11 +156,7 @@
           />
 
           <!-- delete archive modal -->
-          <va-modal
-            :model-value="delete_archive_modal.visible"
-            blur
-            hide-default-actions
-          >
+          <va-modal :model-value="delete_archive_modal.visible" blur hide-default-actions>
             <template #header>
               <div class="flex justify-end">
                 <va-button
@@ -186,7 +175,9 @@
               <va-divider class="my-2" />
 
               <div class="flex flex-col items-center gap-2">
-                <div><i-mdi-zip-box-outline class="text-3xl" /></div>
+                <div>
+                  <i-mdi-zip-box-outline class="text-3xl" />
+                </div>
                 <span class="text-xl tracking-wide">
                   {{ config.dataset.types[dataset.type]?.label }} /
                   {{ dataset.name }}
@@ -209,14 +200,8 @@
               <va-divider class="my-4" />
 
               <div>
-                <va-alert
-                  color="#fdeae7"
-                  text-color="#940909"
-                  class="text-center"
-                >
-                  <span>
-                    Unexpected bad things will happen if you don't read this!
-                  </span>
+                <va-alert color="#fdeae7" text-color="#940909" class="text-center">
+                  <span> Unexpected bad things will happen if you don't read this! </span>
                 </va-alert>
 
                 <ul class="va-unordered va-text-secondary mt-3">
@@ -236,10 +221,7 @@
 
               <div class="flex flex-col">
                 <p>To confirm, type "{{ dataset.name }}" in the box below</p>
-                <va-input
-                  v-model="delete_archive_modal.input"
-                  class="my-2 w-full"
-                />
+                <va-input v-model="delete_archive_modal.input" class="my-2 w-full" />
                 <va-button
                   color="danger"
                   :disabled="delete_archive_modal.input !== dataset.name"
@@ -289,21 +271,13 @@
             </template>
 
             <div>
-              <workflow
-                :workflow="workflow"
-                @update="fetch_dataset(true)"
-              ></workflow>
+              <workflow :workflow="workflow" @update="fetch_dataset(true)"></workflow>
             </div>
           </collapsible>
         </div>
-        <div
-          v-else
-          class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow"
-        >
+        <div v-else class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow">
           <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
-          <span class="text-lg">
-            There are no workflows associated with this datatset.
-          </span>
+          <span class="text-lg"> There are no workflows associated with this datatset. </span>
         </div>
       </div>
     </div>
@@ -311,71 +285,64 @@
     <DatasetDownloadModal ref="downloadModal" :dataset="dataset" />
   </va-inner-loading>
 
-  <EditDatasetModal
-    :key="dataset"
-    :data="dataset"
-    ref="editModal"
-    @update="fetch_dataset(true)"
-  />
+  <EditDatasetModal :key="dataset" :data="dataset" ref="editModal" @update="fetch_dataset(true)" />
 </template>
 
 <script setup>
-import config from "@/config";
-import DatasetService from "@/services/dataset";
-import toast from "@/services/toast";
-import { formatBytes } from "@/services/utils";
-import workflowService from "@/services/workflow";
-import { useAuthStore } from "@/stores/auth";
+import config from '@/config'
+import DatasetService from '@/services/dataset'
+import toast from '@/services/toast'
+import { formatBytes } from '@/services/utils'
+import workflowService from '@/services/workflow'
+import { useAuthStore } from '@/stores/auth'
 
-const router = useRouter();
-const route = useRoute();
-const isDark = useDark();
-const auth = useAuthStore();
+const router = useRouter()
+const route = useRoute()
+const isDark = useDark()
+const auth = useAuthStore()
 
-const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean });
+const props = defineProps({ datasetId: String, appendFileBrowserUrl: Boolean })
 
-const dataset = ref({});
-const loading = ref(false);
-const stage_modal = ref(false);
+const dataset = ref({})
+const loading = ref(false)
+const stage_modal = ref(false)
 const delete_archive_modal = ref({
   visible: false,
-  input: "",
-});
+  input: '',
+})
 
 const active_wf = computed(() => {
-  return (dataset.value?.workflows || [])
-    .map(workflowService.is_workflow_done)
-    .some((x) => !x);
-});
+  return (dataset.value?.workflows || []).map(workflowService.is_workflow_done).some((x) => !x)
+})
 
 const is_stage_pending = computed(() => {
-  return workflowService.is_step_pending("stage", dataset.value?.workflows);
-});
+  return workflowService.is_step_pending('stage', dataset.value?.workflows)
+})
 
 const is_delete_pending = computed(() => {
-  return workflowService.is_step_pending("delete", dataset.value?.workflows);
-});
+  return workflowService.is_step_pending('delete', dataset.value?.workflows)
+})
 
 // const active_wf = ref(false);
 const polling_interval = computed(() => {
-  return active_wf.value ? config.dataset_polling_interval : null;
-});
+  return active_wf.value ? config.dataset_polling_interval : null
+})
 
 function fetch_dataset(show_loading = false) {
-  loading.value = show_loading;
+  loading.value = show_loading
   DatasetService.getById({
     id: props.datasetId,
     bundle: true,
     initiator: true,
     include_import_log: true,
-    include_upload_logs: true,
+    // include_upload_logs: true,
   })
     .then((res) => {
-      const _dataset = res.data;
-      const _workflows = _dataset?.workflows || [];
+      const _dataset = res.data
+      const _workflows = _dataset?.workflows || []
 
       // sort workflows
-      _workflows.sort(workflow_compare_fn);
+      _workflows.sort(workflow_compare_fn)
       // add collapse_model to open running workflows
       // keep workflows open that were open
       _dataset.workflows = _workflows.map((w, i) => {
@@ -385,29 +352,28 @@ function fetch_dataset(show_loading = false) {
             !workflowService.is_workflow_done(w) ||
             (dataset.value?.workflows || [])[i]?.collapse_model ||
             false,
-        };
-      });
-      dataset.value = _dataset;
+        }
+      })
+      dataset.value = _dataset
     })
     .catch((err) => {
-      console.error(err);
-      if (err?.response?.status == 404)
-        toast.error("Could not find the dataset");
-      else toast.error("Could not fetch datatset");
+      console.error(err)
+      if (err?.response?.status == 404) toast.error('Could not find the dataset')
+      else toast.error('Could not fetch datatset')
     })
     .finally(() => {
-      loading.value = false;
-    });
+      loading.value = false
+    })
 }
 
 // initial data fetch
 watch(
   [() => props.datasetId],
   () => {
-    fetch_dataset(true);
+    fetch_dataset(true)
   },
-  { immediate: true },
-);
+  { immediate: true }
+)
 
 /**
  * providing the interval directly will kick of the polling immediately
@@ -415,82 +381,83 @@ watch(
  * and to 10s otherwise now it can be controlled by resume and pause whenever
  * active_wf changes
  */
-const poll = useIntervalFn(fetch_dataset, polling_interval);
+const poll = useIntervalFn(fetch_dataset, polling_interval)
 
 watch(active_wf, (newVal, _) => {
   if (newVal) {
-    poll.resume();
+    poll.resume()
   } else {
-    poll.pause();
+    poll.pause()
   }
-});
+})
 
 function workflow_compare_fn(a, b) {
   /* compareFn: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort
    * sort by status and created_at
    * not done status has higher precedence
    */
-  const is_a_done = workflowService.is_workflow_done(a);
-  const is_b_done = workflowService.is_workflow_done(b);
-  const order_by_done = is_a_done - is_b_done;
+  const is_a_done = workflowService.is_workflow_done(a)
+  const is_b_done = workflowService.is_workflow_done(b)
+  const order_by_done = is_a_done - is_b_done
 
   if (!order_by_done) {
-    return new Date(b.created_at) - new Date(a.created_at);
+    return new Date(b.created_at) - new Date(a.created_at)
   }
-  return order_by_done;
+  return order_by_done
 }
 
 function stage_dataset() {
-  stage_modal.value = false;
-  loading.value = true;
+  stage_modal.value = false
+  loading.value = true
   DatasetService.stage_dataset(dataset.value.id)
     .then(() => {
-      fetch_dataset(true);
+      fetch_dataset(true)
     })
     .finally(() => {
-      loading.value = false;
-    });
+      loading.value = false
+    })
 }
 
 function delete_archive() {
-  delete_archive_modal.value.visible = false;
-  loading.value = true;
+  delete_archive_modal.value.visible = false
+  loading.value = true
   DatasetService.delete_dataset({ id: dataset.value.id })
     .then(() => {
-      toast.success("A workflow has started to delete the dataset");
-      fetch_dataset(true);
+      toast.success('A workflow has started to delete the dataset')
+      fetch_dataset(true)
     })
     .catch((err) => {
-      console.error("unable to delete the dataset", err);
-      toast.error("Unable to delete the dataset");
+      console.error('unable to delete the dataset', err)
+      toast.error('Unable to delete the dataset')
     })
     .finally(() => {
-      loading.value = false;
-    });
+      loading.value = false
+    })
 }
 
-const editModal = ref(null);
+const editModal = ref(null)
 
 function openModalToEditDataset() {
-  editModal.value.show();
+  editModal.value.show()
 }
 
 function navigateToFileBrowser() {
   if (props.appendFileBrowserUrl) {
-    router.push(route.path + "/filebrowser");
+    router.push(route.path + '/filebrowser')
   } else {
-    router.push(`/datasets/${props.datasetId}/filebrowser`);
+    router.push(`/datasets/${props.datasetId}/filebrowser`)
   }
 }
 
-const downloadModal = ref(null);
+const downloadModal = ref(null)
+
 function openModalToDownloadDataset() {
-  downloadModal.value.show();
+  downloadModal.value.show()
 }
 </script>
 
 <route lang="yaml">
 meta:
-  title: Dataset
-  requiresRoles: ["operator", "admin"]
+title: Dataset
+requiresRoles: ['operator', 'admin']
 </route>

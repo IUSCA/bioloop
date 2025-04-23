@@ -36,63 +36,63 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
 };
 
 router.get(
-    '/all',
-    validate([
-      query('status').isIn(Object.values(config.upload.status)).optional(),
-      query('dataset_name').notEmpty().escape().optional(),
-      query('limit').isInt({min: 1}).toInt().optional(),
-      query('offset').isInt({min: 0}).toInt().optional(),
-    ]),
-    isPermittedTo('read'),
-    asyncHandler(async (req, res) => {
-      // #swagger.tags = ['uploads']
-      // #swagger.summary = 'Retrieve past uploads'
-
-      const {
-        status, dataset_name, offset, limit,
-      } = req.query;
-
-      const query_obj = {
-        where: _.omitBy(_.isUndefined)({
-          status,
-          audit_log: {
-            dataset: {
-              name: { contains: dataset_name },
-            },
-          },
-        }),
-      };
-      const filter_query = {
-        skip: offset,
-        take: limit,
-        ...query_obj,
-        orderBy: {
-          audit_log: {
-            timestamp: 'desc',
-          },
-        },
-        include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
-      };
-
-      const [dataset_upload_logs, count] = await prisma.$transaction([
-        prisma.dataset_upload_log.findMany({
-          ...filter_query,
-        }),
-        prisma.dataset_upload_log.count({...query_obj}),
-      ]);
-
-      res.json({metadata: {count}, uploads: dataset_upload_logs});
-    }),
-)
-
-router.get(
-    '/:username/all',
+  '/all',
   validate([
     query('status').isIn(Object.values(config.upload.status)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
-    param('username').escape().notEmpty()
+  ]),
+  isPermittedTo('read'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Retrieve past uploads'
+
+    const {
+      status, dataset_name, offset, limit,
+    } = req.query;
+
+    const query_obj = {
+      where: _.omitBy(_.isUndefined)({
+        status,
+        audit_log: {
+          dataset: {
+            name: { contains: dataset_name },
+          },
+        },
+      }),
+    };
+    const filter_query = {
+      skip: offset,
+      take: limit,
+      ...query_obj,
+      orderBy: {
+        audit_log: {
+          timestamp: 'desc',
+        },
+      },
+      include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+    };
+
+    const [dataset_upload_logs, count] = await prisma.$transaction([
+      prisma.dataset_upload_log.findMany({
+        ...filter_query,
+      }),
+      prisma.dataset_upload_log.count({ ...query_obj }),
+    ]);
+
+    res.json({ metadata: { count }, uploads: dataset_upload_logs });
+  }),
+);
+
+router.get(
+  '/:username/all',
+  validate([
+    query('status').isIn(Object.values(config.upload.status)).optional(),
+    query('dataset_name').notEmpty().escape().optional(),
+    query('limit').isInt({ min: 1 }).toInt().optional(),
+    query('offset').isInt({ min: 0 }).toInt().optional(),
+    param('username').escape().notEmpty(),
   ]),
   isPermittedTo('read', { checkOwnerShip: true }),
   asyncHandler(async (req, res, next) => {
@@ -245,7 +245,7 @@ router.post(
 // - Update the upload logs created for an uploaded entity or its files
 // - Used by UI, workers
 router.patch(
-  '/:username/:dataset_id',
+  '/:dataset_id',
   isPermittedTo('update', { checkOwnerShip: true }),
   validate([
     param('username').escape().notEmpty(),
@@ -271,6 +271,11 @@ router.patch(
           },
         },
       });
+
+      if (dataset_upload_audit_log.user_id !== req.user.id) {
+        return next(createError.Forbidden());
+        // throw new Error('Unauthorized to update this upload');
+      }
 
       let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
         where: { audit_log_id: dataset_upload_audit_log.id },
@@ -301,18 +306,31 @@ router.patch(
 // - Initiate the processing of uploaded files
 // - Used by workers
 router.post(
-    '/:username/:dataset_id/process',
+  '/:dataset_id/process',
   validate([
     param('dataset_id').isInt().toInt(),
     param('username').escape().notEmpty(),
   ]),
-    isPermittedTo('update', {checkOwnerShip: true}),
-    dataset_access_check,
+  isPermittedTo('update', { checkOwnerShip: true }),
+  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
 
     logger.info(`Received request to process upload for dataset ${req.params.dataset_id}`);
+
+    const dataset_upload_audit_log = await prisma.dataset_audit.findUniqueOrThrow({
+      where: {
+        dataset_id_create_method: {
+          dataset_id: req.params.dataset_id,
+          create_method: DATASET_CREATE_METHODS.UPLOAD,
+        },
+      },
+    });
+
+    if (dataset_upload_audit_log.user_id !== req.user.id) {
+      return next(createError.Forbidden());
+    }
 
     const uploadedDataset = await prisma.dataset.findUnique({
       where: {
@@ -363,9 +381,9 @@ router.post(
 );
 
 router.post(
-    '/:username/:dataset_id/cancel',
-    isPermittedTo('update', {checkOwnerShip: true}),
-    dataset_access_check,
+  '/:dataset_id/cancel',
+  isPermittedTo('update', { checkOwnerShip: true }),
+  dataset_access_check,
   validate([
     param('dataset_id').isInt().toInt(),
     param('username').escape().notEmpty(),
@@ -375,6 +393,19 @@ router.post(
     // #swagger.summary = 'Cancel a pending upload'
 
     logger.info(`Received request to cancel upload for dataset ${req.params.dataset_id}`);
+
+    const dataset_upload_audit_log = await prisma.dataset_audit.findUniqueOrThrow({
+      where: {
+        dataset_id_create_method: {
+          dataset_id: req.params.dataset_id,
+          create_method: DATASET_CREATE_METHODS.UPLOAD,
+        },
+      },
+    });
+
+    if (dataset_upload_audit_log.user_id !== req.user.id) {
+      return next(createError.Forbidden());
+    }
 
     const uploadedDataset = await prisma.dataset.findUniqueOrThrow({
       where: {
