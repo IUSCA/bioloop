@@ -39,7 +39,7 @@
     </div>
 
     <!-- table -->
-    <va-data-table :items="uploads" :columns="columns">
+    <va-data-table :items="pastUploads" :columns="columns">
       <template #cell(status)="{ value }">
         <va-chip size="small" :color="getStatusChipColor(value)">
           {{ value }}
@@ -50,8 +50,8 @@
         <router-link
           :to="`/datasets/${rowData.uploaded_dataset.id}`"
           class="va-link"
-          >{{ rowData.uploaded_dataset.name }}</router-link
-        >
+          >{{ rowData.uploaded_dataset.name }}
+        </router-link>
       </template>
 
       <template #cell(source_dataset)="{ rowData }">
@@ -79,7 +79,7 @@
       v-model:page="currentPageIndex"
       v-model:page_size="pageSize"
       :total_results="total_results"
-      :curr_items="uploads.length"
+      :curr_items="pastUploads.length"
       :page_size_options="PAGE_SIZE_OPTIONS"
     />
   </div>
@@ -107,22 +107,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const filterInput = ref("");
 const pastUploads = ref([]);
-const uploads = computed(() => {
-  return pastUploads.value.map((upload) => {
-    const uploaded_dataset = upload.dataset;
-    const source_dataset =
-      uploaded_dataset.source_datasets.length > 0
-        ? uploaded_dataset.source_datasets[0].source_dataset
-        : null;
-    return {
-      ...upload,
-      status: upload.upload_log?.status,
-      user: upload.upload_log?.user,
-      source_dataset,
-      uploaded_dataset,
-    };
-  });
-});
 
 const currentPageIndex = ref(1);
 const pageSize = ref(20);
@@ -197,8 +181,6 @@ const columns = [
 ];
 
 const getStatusChipColor = (value) => {
-  console.log("received value for Upload Status", value);
-
   let color;
   switch (value) {
     case config.upload.status.UPLOADING:
@@ -228,9 +210,16 @@ const getUploadLogs = async () => {
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {
+        let uploaded_dataset = e.audit_log.dataset;
         return {
           ...e,
-          initiated_at: e.upload_log.initiated_at,
+          initiated_at: e.audit_log.timestamp,
+          user: e.audit_log.user,
+          uploaded_dataset,
+          source_dataset:
+            uploaded_dataset.source_datasets.length > 0
+              ? uploaded_dataset.source_datasets[0].source_dataset
+              : null,
         };
       });
       total_results.value = res.data.metadata.count;

@@ -547,10 +547,10 @@ const validateIfExists = (value) => {
           reject()
         })
     }
-  })
-}
+  });
+};
 
-const hasSpacesErrorStr = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`
+const hasSpacesErrorStr = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
 
 const datasetNameValidationRules = [
   (v) => {
@@ -845,9 +845,9 @@ const evaluateFileChecksums = (file) => {
           resolve({
             fileChecksum: buffer.end(),
             chunkChecksums,
-          })
+          });
         }
-      }
+      };
 
       fileReader.onerror = () => {
         console.error(`file reading failed for file ${file.name}`)
@@ -958,7 +958,7 @@ const uploadChunk = async (chunkData) => {
 }
 
 const getFileUploadLog = ({ name, path }) => {
-  return datasetUploadLog.value.upload_log.files.find((fileUploadLog) => {
+  return datasetUploadLog.value.files.find((fileUploadLog) => {
     return selectingDirectory.value
       ? fileUploadLog.name === name && fileUploadLog.path === path
       : fileUploadLog.name === name
@@ -1074,6 +1074,7 @@ const uploadFile = async (fileDetails) => {
   const checksum = fileDetails.fileChecksum
 
   const uploaded = await uploadFileChunks(fileDetails)
+  // const uploaded = true; // Placeholder for actual upload logic
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`)
   }
@@ -1081,6 +1082,9 @@ const uploadFile = async (fileDetails) => {
   const fileUploadLogId = datasetUploadLog.value.upload_log.files.find(
     (e) => e.md5 === checksum
   )?.id
+  const fileUploadLogId = datasetUploadLog.value.files.find(
+    (e) => e.md5 === checksum,
+  )?.id;
 
   fileDetails.uploadStatus = uploaded
     ? config.upload.status.UPLOADED
@@ -1090,7 +1094,7 @@ const uploadFile = async (fileDetails) => {
   if (uploaded) {
     try {
       await datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value.dataset_id,
+        datasetUploadLog.value.audit_log.dataset_id,
         auth.user?.username,
         {
           files: [
@@ -1170,7 +1174,8 @@ const postSubmit = () => {
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {
-      id: datasetUploadLog.value.upload_log.files.find((f) => f.md5 === file.fileChecksum).id,
+      id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
+        .id,
       data: {
         status: config.upload.status.UPLOAD_FAILED,
       },
@@ -1197,7 +1202,7 @@ const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
       return datasetUploadService.processDatasetUpload(
-        datasetUploadLog.value.dataset_id,
+        datasetUploadLog.value.audit_log.dataset.id,
         auth.user?.username
       )
     })
@@ -1261,7 +1266,7 @@ const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
     ? datasetUploadService.logDatasetUpload(data)
     : datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value?.dataset_id,
+        datasetUploadLog.value?.audit_log?.dataset_id,
         auth.user?.username,
         data
       )
@@ -1354,6 +1359,7 @@ watch(
     isAssignedSourceInstrument,
     selectingFiles,
     selectingDirectory,
+    isAssignedSourceRawData,
     filesToUpload,
   ],
   async (newVals, oldVals) => {
@@ -1396,7 +1402,7 @@ onBeforeUnmount(async () => {
   window.removeEventListener('beforeunload', beforeUnload)
 
   if (isUploadIncomplete.value) {
-    await datasetUploadService.cancelDatasetUpload(datasetUploadLog.value.dataset_id)
+    await datasetUploadService.cancelDatasetUpload(datasetUploadLog.value.audit_log.dataset_id)
   }
 })
 

@@ -11,9 +11,9 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const datasetService = require('../services/dataset');
-const {dataset_access_check} = require('./datasets');
+const { dataset_access_check } = require('./datasets');
 const workflowService = require('../services/workflow');
-const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS } = require('../constants');
+const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS, DATASET_CREATE_METHODS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
@@ -55,11 +55,11 @@ router.get(
       const query_obj = {
         where: _.omitBy(_.isUndefined)({
           status,
-          create_log: {
+          audit_log: {
             dataset: {
-              name: {contains: dataset_name},
+              name: { contains: dataset_name },
             },
-          }
+          },
         }),
       };
       const filter_query = {
@@ -67,8 +67,8 @@ router.get(
         take: limit,
         ...query_obj,
         orderBy: {
-          create_log: {
-            initiated_at: 'desc',
+          audit_log: {
+            timestamp: 'desc',
           },
         },
         include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
@@ -102,18 +102,17 @@ router.get(
     const {
       status, dataset_name, offset, limit,
     } = req.query;
-    
+
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
-        upload_log: {
-          status,
-          // user_id: req.params.id,
-          user: {
-            username: req.params.username,
-          },
+        status,
+        user: {
+          username: req.params.username,
         },
-        dataset: {
-          name: { contains: dataset_name },
+        audit_log: {
+          dataset: {
+            name: { contains: dataset_name },
+          },
         },
       }),
     };
@@ -122,8 +121,8 @@ router.get(
       take: limit,
       ...query_obj,
       orderBy: {
-        upload_log: {
-          initiated_at: 'desc',
+        audit_log: {
+          timestamp: 'desc',
         },
       },
       include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
@@ -152,13 +151,13 @@ const getUploadedDataProductPath = (datasetId) => path.join(
 // - Used by UI
 router.post(
   '/',
-    isPermittedTo('create'),
+  isPermittedTo('create'),
   validate([
     body('type').escape().notEmpty().isIn(config.dataset_types),
     body('name').escape().notEmpty().isLength({ min: 3 }),
     body('source_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
-    body('project_id').optional()
+    body('project_id').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
@@ -167,54 +166,64 @@ router.post(
     const {
       name, source_dataset_id, files_metadata, type, project_id,
     } = req.body;
-    
+
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {
-          dataset: {
+          audit_log: {
             create: {
-              ...(source_dataset_id && {
-                source_datasets: {
-                  create: [{
-                    source_id: source_dataset_id,
-                  }],
+              dataset: {
+                create: {
+                  ...(source_dataset_id && {
+                    source_datasets: {
+                      create: [{
+                        source_id: source_dataset_id,
+                      }],
+                    },
+                  }),
+                  name,
+                  type,
+                  ...(project_id && {
+                    projects: {
+                      create: [{
+                        project_id,
+                        assignor_id: req.user.id,
+                      }],
+                    },
+                  }),
                 },
-              }),
-              name,
-              type,
-              ...(project_id && {
-                projects: {
-                  create: [{
-                    project_id: project_id,
-                    assignor_id: req.user.id,
-                  }],
-                },
-              }),
-            },
-          },
-          upload_log: {
-            create: {
-              status: config.upload.status.UPLOADING,
+              },
+              create_method: DATASET_CREATE_METHODS.UPLOAD,
+              action: 'create',
               user: {
                 connect: {
                   id: req.user.id,
                 },
               },
-              files: {
-                create: files_metadata.map((file) => ({
-                  name: file.name,
-                  md5: file.checksum,
-                  num_chunks: file.num_chunks,
-                  path: file.path,
-                  status: config.upload.status.UPLOADING,
-                })),
-              },
+            },
+          },
+          status: config.upload.status.UPLOADING,
+          files: {
+            create: files_metadata.map((file) => ({
+              name: file.name,
+              md5: file.checksum,
+              num_chunks: file.num_chunks,
+              path: file.path,
+              status: config.upload.status.UPLOADING,
+            })),
+          },
+        },
+        select: {
+          id: true,
+          audit_log: {
+            select: {
+              dataset_id: true,
             },
           },
         },
       });
 
-      const uploadedDatasetId = created_dataset_upload_log.dataset_id;
+      const uploadedDatasetId = created_dataset_upload_log.audit_log.dataset_id;
       await tx.dataset.update({
         where: { id: uploadedDatasetId },
         data: {
@@ -236,11 +245,10 @@ router.post(
 // - Update the upload logs created for an uploaded entity or its files
 // - Used by UI, workers
 router.patch(
-    '/:username/:dataset_id',
+  '/:username/:dataset_id',
   isPermittedTo('update', { checkOwnerShip: true }),
   validate([
     param('username').escape().notEmpty(),
-    param('dataset_id').isInt().toInt(),
     param('dataset_id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
     body('files').isArray().optional(),
@@ -255,18 +263,20 @@ router.patch(
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
+      const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
         where: {
-          dataset_id: req.params.dataset_id,
-          upload_log: {
-            user: {
-              username: req.params.username,
-            }
-          }
+          dataset_id_create_method: {
+            dataset_id: req.params.dataset_id,
+            create_method: DATASET_CREATE_METHODS.UPLOAD,
+          },
         },
       });
-      await tx.upload_log.update({
-        where: { id: ds_upload_log.upload_log_id },
+
+      let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
+        where: { audit_log_id: dataset_upload_audit_log.id },
+      });
+      await tx.dataset_upload_log.update({
+        where: { id: ds_upload_log.id },
         data: update_query,
       });
       // eslint-disable-next-line no-restricted-syntax
@@ -308,16 +318,16 @@ router.post(
       where: {
         id: req.params.dataset_id,
         dataset_upload_log: {
-          upload_log: {
+          audit_log: {
             user: {
               username: req.params.username,
             },
           },
-        }
+        },
       },
       include: {
         workflows: true,
-        dataset_upload_log: true,
+        // dataset_upload_log: true,
       },
     });
 
@@ -345,7 +355,7 @@ router.post(
       res.json(processUploadWorkflow);
     } else {
       const error = 'Cannot process upload. A request to cancel this upload '
-          + `(workflow ${cancelUploadWorkflow.id}) is already in progress.`;
+            + `(workflow ${cancelUploadWorkflow.id}) is already in progress.`;
       logger.error(error);
       return next(createError.Conflict(error));
     }
@@ -369,17 +379,10 @@ router.post(
     const uploadedDataset = await prisma.dataset.findUniqueOrThrow({
       where: {
         id: req.params.dataset_id,
-        dataset_upload_log: {
-          upload_log: {
-            user: {
-              username: req.params.username,
-            },
-          },
-        }
       },
       include: {
         workflows: true,
-        dataset_upload_log: true,
+        // create_log: true,
       },
     });
 
@@ -401,50 +404,10 @@ router.post(
       res.json(cancelUploadWorkflow);
     } else {
       const error = 'Cannot cancel upload. A request to process this upload '
-          + `(workflow ${processUploadWorkflow.id}) is already in progress.`;
+            + `(workflow ${processUploadWorkflow.id}) is already in progress.`;
       logger.error(error);
       return next(createError.Conflict(error));
     }
-  }),
-);
-
-router.delete(
-    '/:username/:dataset_id',
-  isPermittedTo('delete', { checkOwnerShip: true }), 
-  validate([
-    param('username').escape().notEmpty(),
-    param('dataset_id').isInt().toInt(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['uploads']
-    // #swagger.summary = 'Delete records of a dataset upload'
-
-    await prisma.$transaction(async (tx) => {
-      const uploadedDatasetUploadLog = await tx.dataset_upload_log.findUniqueOrThrow({
-        where: {
-          dataset_id: req.params.dataset_id,
-          upload_log: {
-            user: {
-              username: req.user.username,
-            },
-          }
-        },
-      });
-      // cascade-delete on `upload_log` will delete associated
-      // `dataset_upload_log` record and `file_upload_log` records
-      await tx.upload_log.delete({
-        where: {
-          id: uploadedDatasetUploadLog.upload_log_id,
-        },
-      });
-      await tx.dataset.delete({
-        where: {
-          id: req.params.dataset_id,
-        },
-      });
-    });
-
-    res.sendStatus(200);
   }),
 );
 

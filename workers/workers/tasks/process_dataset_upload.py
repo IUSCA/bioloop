@@ -90,9 +90,8 @@ def merge_uploaded_file_chunks(file_upload_log_id: int,
 
 # Updates the upload status of a given dataset's upload and uploaded files to PROCESSING
 def update_upload_status_to_processing(dataset: dict):
-    dataset_upload_log = dataset['dataset_upload_log']
-    upload_log = dataset_upload_log['upload_log']
-    upload_log_files = upload_log['files']
+    dataset_upload_log = dataset['upload_log']['upload']
+    upload_log_files = dataset_upload_log['files']
 
     file_log_updates = []
     for file_log in upload_log_files:
@@ -120,10 +119,9 @@ def update_upload_status_to_processing(dataset: dict):
 
 def process_dataset_upload(dataset: dict) -> None:
     dataset_id = dataset['id']
-    dataset_upload_log = dataset['dataset_upload_log']
+    dataset_upload_log = dataset['audit_log']['upload']
     dataset_upload_log_id = dataset_upload_log['id']
-    upload_log = dataset_upload_log['upload_log']
-    upload_log_files = upload_log['files']
+    upload_log_files = dataset_upload_log['files']
 
     dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
     # print(f"Upload directory: {dataset_path}")
@@ -226,14 +224,14 @@ def process(celery_task, dataset_id, **kwargs):
         dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
     except Exception as e:
         raise exc.RetryableException(e)
-    dataset_upload_log = dataset['dataset_upload_log']
+    dataset_upload_log = dataset['upload_log']['upload']
     dataset_upload_log_id = dataset_upload_log['id']
-    upload_log = dataset_upload_log['upload_log']
 
-    if upload_log['status'] == config['upload']['status']['COMPLETE']:
+    if dataset_upload_log['status'] == config['upload']['status']['COMPLETE']:
         print(f"Dataset upload log {dataset_upload_log_id} has already been processed (current status: COMPLETE)")
     else:
-        print(f"Dataset upload log {dataset_upload_log_id} will be processed (current status: {upload_log['status']})")
+        print(
+            f"Dataset upload log {dataset_upload_log_id} will be processed (current status: {dataset_upload_log['status']})")
         try:
             update_upload_status_to_processing(dataset=dataset)
         except Exception as e:

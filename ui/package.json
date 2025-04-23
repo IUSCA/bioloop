@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
+    "lint:file": "eslint --fix --ignore-path .gitignore",
     "builddev": "node --max_old_space_size=16384 ./node_modules/vite/bin/vite.js build --watch",
     "serve": "vite preview --host --port 3210",
     "format": "prettier --write \"src/**/*.{js,vue,json,css,scss}\""
