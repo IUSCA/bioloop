@@ -60,7 +60,7 @@ def await_stability(celery_task, dataset_id, wait_seconds: int = None, recency_t
     # 1. recency_threshold parameter
     # 2. config file
     threshold = (recency_threshold or
-                 config['registration'][dataset_type]['recency_threshold_seconds'])
+                 config['registration']['recency_threshold_seconds'])
     logger.info(f'{dataset["name"]} - threshold: {threshold} seconds')
 
     # wait_seconds is the time to wait between stability checks
