@@ -24,7 +24,7 @@ class Registration:
             'name': dataset_name,
             'type': self.dataset_type,
             'workflow_id': wf.workflow['_id'],
-            'origin_path': dataset_path
+            'origin_path': dataset_path,
         }
 
         # HTTP POST
@@ -34,7 +34,6 @@ class Registration:
         except api.DatasetAlreadyExistsError:
             print(f'{dataset_name} already exists')
             return
-
 
 
 if __name__ == '__main__':
