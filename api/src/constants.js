@@ -52,11 +52,11 @@ const INCLUDE_AUDIT_LOGS = {
 };
 
 const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
-  create_log: {
+  audit_log: {
     select: {
       id: true,
-      creator: true,
-      created_at: true,
+      user: true,
+      timestamp: true,
       dataset: {
         select: {
           id: true,
@@ -80,6 +80,12 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
   },
 };
 
+const DATASET_CREATE_METHODS = {
+  UPLOAD: 'UPLOAD',
+  IMPORT: 'IMPORT',
+  SCAN: 'SCAN',
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 module.exports = {
@@ -87,6 +93,7 @@ module.exports = {
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
   INCLUDE_AUDIT_LOGS,
-  DONE_STATUSES,
   INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+  DONE_STATUSES,
+  DATASET_CREATE_METHODS,
 };

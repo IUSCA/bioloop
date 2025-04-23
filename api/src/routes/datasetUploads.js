@@ -13,7 +13,7 @@ const { accessControl } = require('../middleware/auth');
 const datasetService = require('../services/dataset');
 const { dataset_access_check } = require('./datasets');
 const workflowService = require('../services/workflow');
-const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS } = require('../constants');
+const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS, DATASET_CREATE_METHODS } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
@@ -55,7 +55,7 @@ router.get(
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
         status,
-        create_log: {
+        audit_log: {
           dataset: {
             name: { contains: dataset_name },
           },
@@ -67,8 +67,8 @@ router.get(
       take: limit,
       ...query_obj,
       orderBy: {
-        create_log: {
-          created_at: 'desc',
+        audit_log: {
+          timestamp: 'desc',
         },
       },
       include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
@@ -164,6 +164,8 @@ router.post(
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Create a record for a dataset upload'
 
+    console.log('req.user.id', req.user.id);
+
     const {
       name, source_dataset_id, files_metadata, type,
       // project_id,
@@ -172,7 +174,7 @@ router.post(
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {
-          create_log: {
+          audit_log: {
             create: {
               dataset: {
                 create: {
@@ -195,7 +197,9 @@ router.post(
                   // }),
                 },
               },
-              creator: {
+              create_method: DATASET_CREATE_METHODS.UPLOAD,
+              action: 'create',
+              user: {
                 connect: {
                   id: req.user.id,
                 },
@@ -215,7 +219,7 @@ router.post(
         },
         select: {
           id: true,
-          create_log: {
+          audit_log: {
             select: {
               dataset_id: true,
             },
@@ -223,7 +227,7 @@ router.post(
         },
       });
 
-      const uploadedDatasetId = created_dataset_upload_log.create_log.dataset_id;
+      const uploadedDatasetId = created_dataset_upload_log.audit_log.dataset_id;
       await tx.dataset.update({
         where: { id: uploadedDatasetId },
         data: {
@@ -262,19 +266,17 @@ router.patch(
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const uploaded_dataset = await tx.dataset.findUniqueOrThrow({
-        where: { id: req.params.dataset_id },
-        include: {
-          create_log: {
-            include: {
-              upload: true,
-            },
+      const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
+        where: {
+          dataset_id_create_method: {
+            dataset_id: req.params.dataset_id,
+            create_method: DATASET_CREATE_METHODS.UPLOAD,
           },
         },
       });
 
       let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
-        where: { id: uploaded_dataset.create_log.upload.id },
+        where: { audit_log_id: dataset_upload_audit_log.id },
       });
       await tx.dataset_upload_log.update({
         where: { id: ds_upload_log.id },
@@ -319,7 +321,7 @@ router.post(
       },
       include: {
         workflows: true,
-        create_log: true,
+        // create_log: true,
       },
     });
 
@@ -372,7 +374,7 @@ router.post(
       },
       include: {
         workflows: true,
-        create_log: true,
+        // create_log: true,
       },
     });
 

@@ -11,6 +11,7 @@ const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
+  DATASET_CREATE_METHODS,
 } = require('../constants');
 
 const prisma = new PrismaClient();
@@ -134,17 +135,23 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      create_log: include_upload_log ? {
-        include: {
-          upload: {
-            select: {
-              id: true,
-              files: true,
-              status: true,
+      upload_log: include_upload_log
+        ? {
+          where: {
+            create_method: DATASET_CREATE_METHODS.UPLOAD,
+          },
+          include: {
+            upload: {
+              select: {
+                id: true,
+                files: true,
+                status: true,
+              },
             },
           },
-        },
-      } : false,
+          take: 1, // only one audit_log record is created upon a dataset upload
+        }
+        : false,
     },
   });
   const dataset_workflows = dataset.workflows;

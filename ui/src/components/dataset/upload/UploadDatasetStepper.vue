@@ -103,9 +103,10 @@
                   </div>
                 </va-card-title>
                 <va-card-content>
+                  <!--                  here -->
                   <UploadedDatasetDetails
                     v-if="selectingFiles || selectingDirectory"
-                    :dataset="datasetUploadLog?.dataset"
+                    :dataset="datasetUploadLog?.audit_log?.dataset"
                     :dataset-name="selectedDirectoryName"
                     v-model:dataset-name-input="datasetToUploadInputName"
                     :input-disabled="submitAttempted"
@@ -124,8 +125,9 @@
                     :submission-alert-color="submissionAlertColor"
                     :is-submission-alert-visible="isSubmissionAlertVisible"
                     :checksum-computation-percentage="checksumProgress"
-                  /> </va-card-content
-              ></va-card>
+                  />
+                </va-card-content>
+              </va-card>
             </div>
 
             <va-divider vertical />
@@ -782,7 +784,7 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append(
       "uploaded_entity_id",
-      datasetUploadLog.value.create_log.dataset.id,
+      datasetUploadLog.value.audit_log.dataset.id,
     );
     chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
@@ -802,7 +804,8 @@ const uploadFileChunks = async (fileDetails) => {
       !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted;
 
     if (willUploadChunk) {
-      isChunkUploaded = await uploadChunk(chunkData);
+      // isChunkUploaded = await uploadChunk(chunkData);
+      const isChunkUploaded = true;
       postChunkUploadAttempt({
         fileUploadLogId: chunkData.get("file_upload_log_id"),
         chunkIndex: chunkData.get("index"),
@@ -857,7 +860,7 @@ const uploadFile = async (fileDetails) => {
   if (uploaded) {
     try {
       await datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value.create_log.dataset.id,
+        datasetUploadLog.value.audit_log.dataset.id,
         {
           files: [
             {
@@ -970,7 +973,7 @@ const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
       return datasetUploadService.processDatasetUpload(
-        datasetUploadLog.value.create_log.dataset.id,
+        datasetUploadLog.value.audit_log.dataset.id,
       );
     })
     .catch((err) => {
@@ -1044,7 +1047,7 @@ const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
     ? datasetUploadService.logDatasetUpload(data)
     : datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value?.create_log.dataset.id,
+        datasetUploadLog.value?.audit_log.dataset.id,
         data,
       );
 };
@@ -1162,7 +1165,7 @@ onBeforeUnmount(async () => {
 
   if (isUploadIncomplete.value) {
     await datasetUploadService.cancelDatasetUpload(
-      datasetUploadLog.value.create_log.dataset.id,
+      datasetUploadLog.value.audit_log.dataset.id,
     );
   }
 });
