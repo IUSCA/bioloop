@@ -7,7 +7,6 @@
           :data-testid="props.dataTestId || 'autocomplete'"
           outline
           clearable
-          @clear="emit('clear')"
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
@@ -17,8 +16,12 @@
           :disabled="props.disabled"
           :label="props.label"
         >
-          <template #prependInner><slot name="prependInner"></slot></template>
-          <template #appendInner><slot name="appendInner"></slot></template>
+          <template #prependInner>
+            <slot name="prependInner"></slot>
+          </template>
+          <template #appendInner>
+            <slot name="appendInner"></slot>
+          </template>
         </va-input>
       </va-form>
 
@@ -47,6 +50,7 @@
         class="absolute w-full bg-white dark:bg-gray-900 border border-solid border-slate-200 dark:border-slate-800 shadow-lg rounded rounded-t-none p-2 z-10 max-h-56 overflow-y-scroll overflow-x-hidden"
         :data-testid="`${props.dataTestId}--search-results-ul`"
       >
+        <!-- Search result count -->
         <li
           class="pb-2 text-sm border-solid border-b border-slate-200 dark:border-slate-800 text-right va-text-secondary"
           v-if="search_results.length"
@@ -54,6 +58,7 @@
         >
           Showing {{ search_results.length }} of {{ resultCount }} results
         </li>
+        <!-- Search results list -->
         <li
           v-for="(item, idx) in search_results"
           :key="idx"
@@ -68,25 +73,14 @@
             </slot>
           </button>
         </li>
-
         <li
-          v-if="!text"
+          v-if="search_results.length === 0"
           class="py-2 px-3"
-          :data-testid="`${props.dataTestId}--start-typing-li`"
+          :data-testid="`${props.dataTestId}--no-search-results-li`"
         >
           <span
             class="flex gap-2 items-center justify-center va-text-secondary"
           >
-            <i-mdi:magnify-remove-outline class="flex-none text-xl" />
-            <span class="flex-none">Start typing to search</span>
-          </span>
-        </li>
-        <li
-          v-else-if="search_results.length == 0"
-          class="py-2 px-3"
-          :data-testid="`${props.dataTestId}--no-search-results-li`"
-        >
-          <span class="flex gap-2 items-center justify-center va-text-secondary">
             <i-mdi:magnify-remove-outline class="flex-none text-xl" />
             <span class="flex-none">None matched</span>
           </span>
