@@ -409,6 +409,7 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('project_id').optional(),
+    body('instrument_id').optional().notEmpty().escape(),
     body('create_method').optional().notEmpty().escape(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -422,11 +423,13 @@ router.post(
     // gather non-null data to create a new dataset
     const data = _.flow([
       _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size',
-        'metadata', 'project_id']),
+        'metadata']),
       _.omitBy(_.isNil),
     ])(req.body);
 
-    const { ingestion_space, create_method } = req.body;
+    const {
+      ingestion_space, create_method, project_id, instrument_id,
+    } = req.body;
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
       const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
@@ -456,13 +459,20 @@ router.post(
       };
     }
 
-    if (req.body.project_id) {
-      delete data.project_id; // including project_id in the `data` passed to create_dataset will throw
+    if (project_id) {
       data.projects = {
         create: [{
-          project_id: req.body.project_id,
+          project_id,
           assignor_id: req.user.id,
         }],
+      };
+    }
+
+    if (instrument_id) {
+      data.instrument = {
+        connect: {
+          id: instrument_id,
+        },
       };
     }
 
