@@ -36,8 +36,8 @@ model dataset {
   stage_requests   stage_request_log[]
   bundle           bundle?
   // create_log       dataset_create_log?
-  instrument       instrument?         @relation(fields: [instrumentId], references: [id])
-  instrumentId     Int?
+  instrument       instrument?         @relation(fields: [instrument_id], references: [id])
+  instrument_id    Int?
 
   @@unique([name, type, is_deleted])
 }
