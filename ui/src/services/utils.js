@@ -297,6 +297,5 @@ export {
   maybePluralize,
   setIntersection,
   union,
-  validateEmail
+  validateEmail,
 };
-
