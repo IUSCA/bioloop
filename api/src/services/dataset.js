@@ -101,7 +101,7 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
-  include_upload_log = false,
+  // include_upload_log = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -136,23 +136,6 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      upload_log: include_upload_log
-        ? {
-          where: {
-            create_method: DATASET_CREATE_METHODS.UPLOAD,
-          },
-          include: {
-            upload: {
-              select: {
-                id: true,
-                files: true,
-                status: true,
-              },
-            },
-          },
-          take: 1, // only one audit_log record is created upon a dataset upload
-        }
-        : false,
     },
   });
   const dataset_workflows = dataset.workflows;

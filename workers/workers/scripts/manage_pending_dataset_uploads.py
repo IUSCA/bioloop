@@ -59,8 +59,8 @@ def main():
         will_resume_workflow = (
                 upload_status == config['upload']['status']['UPLOADED'] or
                 (
-                    upload_status == config['upload']['status']['PROCESSING_FAILED'] and
-                    difference > UPLOAD_RETRY_THRESHOLD_HOURS
+                        upload_status == config['upload']['status']['PROCESSING_FAILED'] and
+                        difference > UPLOAD_RETRY_THRESHOLD_HOURS
                 )
         )
         if will_resume_workflow:
@@ -73,15 +73,15 @@ def restart_process_dataset_upload_workflow(dataset_upload: dict) -> None:
     dataset_upload_log_id = dataset_upload['id']
     dataset_id = dataset_upload['dataset_id']
 
-    dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
+    dataset = api.get_dataset(dataset_id=dataset_id, workflows=True)
 
     logger.info(f"Checking for active workflows of type"
                 f" {PROCESS_DATASET_UPLOAD_WORKFLOW} running for dataset {dataset_id}")
     active_process_dataset_upload_wfs = [
         wf for wf in dataset['workflows'] if (
-                     wf['name'] == PROCESS_DATASET_UPLOAD_WORKFLOW and
-                     wf['status'] not in DONE_STATUSES
-                    )
+                wf['name'] == PROCESS_DATASET_UPLOAD_WORKFLOW and
+                wf['status'] not in DONE_STATUSES
+        )
     ]
 
     if len(active_process_dataset_upload_wfs) > 0:

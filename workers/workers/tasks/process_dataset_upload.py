@@ -221,10 +221,12 @@ def process(celery_task, dataset_id, **kwargs):
     print(f'Processing dataset {dataset_id}\'s upload')
 
     try:
-        dataset = api.get_dataset(dataset_id=dataset_id, include_upload_log=True, workflows=True)
+        dataset = api.get_dataset(dataset_id=dataset_id, workflows=True)
     except Exception as e:
         raise exc.RetryableException(e)
-    dataset_upload_log = dataset['upload_log']['upload']
+
+    dataset_upload_audit_log = [log for log in dataset['audit_logs'] if log['create_method'] == 'UPLOAD'][0]
+    dataset_upload_log = dataset_upload_audit_log['upload']
     dataset_upload_log_id = dataset_upload_log['id']
 
     if dataset_upload_log['status'] == config['upload']['status']['COMPLETE']:

@@ -74,16 +74,20 @@
 import * as datetime from '@/services/datetime'
 import { formatBytes } from '@/services/utils'
 import { useAuthStore } from '@/stores/auth'
+import Constants from '@/constants'
 
 const props = defineProps({ dataset: Object })
 
 const auth = useAuthStore()
 
-const datasetCreator = props.dataset?.upload_log?.user
+const datasetCreateLog = computed(() => {
+  return (props.dataset?.audit_logs || []).find((e) => !!e.create_method)
+})
 
-const datasetCreatorDisplayed = datasetCreator
-  ? `${datasetCreator.username} (${datasetCreator.name})`
-  : null
+const datasetCreatorDisplayed = computed(() => {
+  const datasetCreator = datasetCreateLog.value?.user
+  return datasetCreator ? `${datasetCreator.username} (${datasetCreator.name})` : null
+})
 </script>
 
 <style lang="scss" scoped>

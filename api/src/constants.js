@@ -44,6 +44,13 @@ const INCLUDE_AUDIT_LOGS = {
           },
         },
       },
+      upload: {
+        select: {
+          id: true,
+          files: true,
+          status: true,
+        },
+      },
     },
     orderBy: {
       timestamp: 'desc',
