@@ -1,39 +1,33 @@
 /* eslint-env node */
-require("@rushstack/eslint-patch/modern-module-resolution");
+require('@rushstack/eslint-patch/modern-module-resolution')
 
 module.exports = {
   root: true,
   extends: [
-    "./.eslintrc-auto-import.json",
-    "plugin:vue/vue3-essential",
-    "eslint:recommended", //https://github.com/eslint/eslint/blob/main/conf/eslint-recommended.js
-    "@vue/eslint-config-prettier",
-    "plugin:vuejs-accessibility/recommended",
-    "plugin:comment-length/recommended",
+    './.eslintrc-auto-import.json',
+    'plugin:vue/vue3-essential',
+    'eslint:recommended', //https://github.com/eslint/eslint/blob/main/conf/eslint-recommended.js
     '@vue/eslint-config-prettier',
-    'plugin:prettier/recommended',
-  ],
-  plugins: [
-    'prettier',
+    'plugin:vuejs-accessibility/recommended',
+    'plugin:comment-length/recommended',
   ],
   parserOptions: {
-    ecmaVersion: "latest",
+    ecmaVersion: 'latest',
   },
   rules: {
-    'prettier/prettier': 'warning',
-    "vue/multi-word-component-names": "off",
-    "no-unused-vars": [
-      "error", // or "warn"
+    'vue/multi-word-component-names': 'off',
+    'no-unused-vars': [
+      'error', // or "warn"
       {
-        argsIgnorePattern: "^_",
-        varsIgnorePattern: "^_",
-        caughtErrorsIgnorePattern: "^_",
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
       },
     ],
-    "comment-length/limit-multi-line-comments": [
-      "warn",
+    'comment-length/limit-multi-line-comments': [
+      'warn',
       {
-        mode: "overflow-only",
+        mode: 'overflow-only',
         maxLength: 120,
         logicalWrap: true,
         ignoreUrls: true,
@@ -42,11 +36,11 @@ module.exports = {
       },
     ],
     // Ignore parsing errors for custom tags like <route>
-    "vue/no-parsing-error": [
-      "error",
+    'vue/no-parsing-error': [
+      'error',
       {
-        "invalid-first-character-of-tag-name": false,
+        'invalid-first-character-of-tag-name': false,
       },
     ],
   },
-};
+}
