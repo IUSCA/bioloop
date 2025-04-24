@@ -63,8 +63,12 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
     select: {
       id: true,
       user: true,
-      status: true,
       timestamp: true,
+      upload: {
+        select: {
+          status: true,
+        },
+      },
       dataset: {
         select: {
           id: true,

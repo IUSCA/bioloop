@@ -246,9 +246,8 @@ router.post(
 // - Used by UI, workers
 router.patch(
   '/:dataset_id',
-  isPermittedTo('update', { checkOwnerShip: true }),
+  isPermittedTo('update'),
   validate([
-    param('username').escape().notEmpty(),
     param('dataset_id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
     body('files').isArray().optional(),
@@ -309,9 +308,8 @@ router.post(
   '/:dataset_id/process',
   validate([
     param('dataset_id').isInt().toInt(),
-    param('username').escape().notEmpty(),
   ]),
-  isPermittedTo('update', { checkOwnerShip: true }),
+  isPermittedTo('update'),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
@@ -382,11 +380,10 @@ router.post(
 
 router.post(
   '/:dataset_id/cancel',
-  isPermittedTo('update', { checkOwnerShip: true }),
+  isPermittedTo('update'),
   dataset_access_check,
   validate([
     param('dataset_id').isInt().toInt(),
-    param('username').escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']

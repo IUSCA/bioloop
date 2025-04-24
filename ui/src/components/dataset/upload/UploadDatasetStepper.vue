@@ -36,26 +36,29 @@
             :disabled="submitAttempted || loading || validatingForm"
             @files-added="
               (files) => {
-                console.log('Files added:', files)
-                clearSelectedDirectoryToUpload()
-                setFiles(files)
-                isSubmissionAlertVisible = false
-                setUploadedFileType(FILE_TYPE.FILE)
+                console.log('Files added:', files);
+                clearSelectedDirectoryToUpload();
+                setFiles(files);
+                isSubmissionAlertVisible = false;
+                setUploadedFileType(FILE_TYPE.FILE);
               }
             "
             @directory-added="
               (directoryDetails) => {
-                clearSelectedFilesToUpload()
-                setDirectory(directoryDetails)
-                isSubmissionAlertVisible = false
-                setUploadedFileType(FILE_TYPE.DIRECTORY)
+                clearSelectedFilesToUpload();
+                setDirectory(directoryDetails);
+                isSubmissionAlertVisible = false;
+                setUploadedFileType(FILE_TYPE.DIRECTORY);
               }
             "
           />
 
           <va-divider />
 
-          <SelectedFilesTable @file-removed="removeFile" :files="displayedFilesToUpload" />
+          <SelectedFilesTable
+            @file-removed="removeFile"
+            :files="displayedFilesToUpload"
+          />
         </div>
       </template>
 
@@ -74,7 +77,8 @@
             <va-popover>
               <template #body>
                 <div class="w-96">
-                  Raw Data: Original, unprocessed data collected from instruments.
+                  Raw Data: Original, unprocessed data collected from
+                  instruments.
                   <br />
                   Dara Product: Processed data derived from Raw Data
                 </div>
@@ -103,6 +107,7 @@
               :disabled="submitAttempted || !isAssignedSourceRawData"
               v-model:selected="selectedRawData"
               v-model:search-term="datasetSearchText"
+              :dataset-type="config.dataset.types.RAW_DATA.key"
               placeholder="Search Raw Data"
               @clear="resetRawDataSearch"
               @open="onRawDataSearchOpen"
@@ -114,9 +119,10 @@
             <va-popover>
               <template #body>
                 <div class="w-96">
-                  Associating a Data Product with a source Raw Data establishes a clear lineage
-                  between the original data and its processed form. This linkage helps to trace the
-                  origins of processed data
+                  Associating a Data Product with a source Raw Data establishes
+                  a clear lineage between the original data and its processed
+                  form. This linkage helps to trace the origins of processed
+                  data
                 </div>
               </template>
               <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
@@ -132,7 +138,7 @@
                 @update:modelValue="
                   (val) => {
                     if (!val) {
-                      projectSelected = null
+                      projectSelected = null;
                     }
                   }
                 "
@@ -182,13 +188,14 @@
             <va-popover>
               <template #body>
                 <div class="w-96">
-                  Assigning a dataset to a project establishes a connection between your data and a
-                  specific research initiatives. This association helps organize and categorize
-                  datasets within the context of your research projects, facilitating easier data
-                  management, access control, and collaboration among team members working on the
-                  same project.
-                </div></template
-              >
+                  Assigning a dataset to a project establishes a connection
+                  between your data and a specific research initiatives. This
+                  association helps organize and categorize datasets within the
+                  context of your research projects, facilitating easier data
+                  management, access control, and collaboration among team
+                  members working on the same project.
+                </div>
+              </template>
               <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
             </va-popover>
           </div>
@@ -202,7 +209,7 @@
                 @update:modelValue="
                   (val) => {
                     if (!val) {
-                      selectedSourceInstrument = null
+                      selectedSourceInstrument = null;
                     }
                   }
                 "
@@ -227,7 +234,9 @@
             <div class="flex items-center ml-2">
               <va-popover>
                 <template #body>
-                  <div class="w-72">Source instrument where this data was collected from.</div>
+                  <div class="w-72">
+                    Source instrument where this data was collected from.
+                  </div>
                 </template>
                 <Icon icon="mdi:information" class="text-xl text-gray-500" />
               </va-popover>
@@ -251,8 +260,12 @@
                   :dataset="datasetUploadLog?.dataset"
                   v-model:populated-dataset-name="populatedDatasetName"
                   :input-disabled="submitAttempted"
-                  :uploaded-data-product-error-messages="formErrors[STEP_KEYS.INFO]"
-                  :uploaded-data-product-error="!!formErrors[STEP_KEYS.INFO] && !stepIsPristine"
+                  :uploaded-data-product-error-messages="
+                    formErrors[STEP_KEYS.INFO]
+                  "
+                  :uploaded-data-product-error="
+                    !!formErrors[STEP_KEYS.INFO] && !stepIsPristine
+                  "
                   :project="projectSelected"
                   :source-instrument="selectedSourceInstrument"
                   :source-raw-data="selectedRawData"
@@ -282,8 +295,8 @@
             preset="primary"
             @click="
               () => {
-                isSubmissionAlertVisible = false
-                prevStep()
+                isSubmissionAlertVisible = false;
+                prevStep();
               }
             "
             :disabled="isPreviousButtonDisabled"
@@ -296,7 +309,7 @@
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="isNextButtonDisabled"
           >
-            {{ isLastStep ? 'Upload' : 'Next' }}
+            {{ isLastStep ? "Upload" : "Next" }}
           </va-button>
         </div>
       </template>
@@ -306,163 +319,184 @@
 </template>
 
 <script setup>
-import config from '@/config'
-import Constants from '@/constants'
-import datasetService from '@/services/dataset'
-import toast from '@/services/toast'
-import uploadService from '@/services/upload'
-import datasetUploadService from '@/services/upload/dataset'
-import { formatBytes } from '@/services/utils'
-import { useAuthStore } from '@/stores/auth'
-import { jwtDecode } from 'jwt-decode'
-import _ from 'lodash'
-import SparkMD5 from 'spark-md5'
-import { VaDivider, VaPopover } from 'vuestic-ui'
-import DatasetSelectAutoComplete from '@/components/dataset/DatasetSelectAutoComplete.vue'
-import { Icon } from '@iconify/vue'
-import instrumentService from '@/services/instrument'
+import config from "@/config";
+import Constants from "@/constants";
+import datasetService from "@/services/dataset";
+import toast from "@/services/toast";
+import uploadService from "@/services/upload";
+import datasetUploadService from "@/services/upload/dataset";
+import { formatBytes } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
+import { jwtDecode } from "jwt-decode";
+import _ from "lodash";
+import SparkMD5 from "spark-md5";
+import { VaDivider, VaPopover } from "vuestic-ui";
+import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
+import { Icon } from "@iconify/vue";
+import instrumentService from "@/services/instrument";
 
-const auth = useAuthStore()
-const uploadToken = ref(useLocalStorage('uploadToken', ''))
+const auth = useAuthStore();
+const uploadToken = ref(useLocalStorage("uploadToken", ""));
 // const token = ref(useLocalStorage("token", ""));
 
 const STEP_KEYS = {
-  GENERAL_INFO: 'generalInfo',
+  GENERAL_INFO: "generalInfo",
   // PROJECT: 'project',
   // RAW_DATA: 'rawData',
-  UPLOAD: 'upload',
-  INFO: 'info',
-}
+  UPLOAD: "upload",
+  INFO: "info",
+};
 
-const DATASET_EXISTS_ERROR = 'A Data Product with this name already exists.'
-const DATASET_NAME_REQUIRED_ERROR = 'Dataset name cannot be empty'
-const HAS_SPACES_ERROR = 'cannot contain spaces'
+const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
+const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
+const HAS_SPACES_ERROR = "cannot contain spaces";
 
-const FORM_VALIDATION_ERROR = 'An unknown error occurred'
+const FORM_VALIDATION_ERROR = "An unknown error occurred";
 
-const RETRY_COUNT_THRESHOLD = 5
-const CHUNK_SIZE = 2 * 1024 * 1024 // Size of each chunk, set to 2 Mb
+const RETRY_COUNT_THRESHOLD = 5;
+const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 // Blob.slice method is used to segment files.
 // At the same time, this method is used in different browsers in different
 // ways.
-const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice
+const blobSlice =
+  File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
 const steps = [
   {
     key: STEP_KEYS.UPLOAD,
-    label: 'Select Files',
-    icon: 'material-symbols:folder',
+    label: "Select Files",
+    icon: "material-symbols:folder",
   },
-  { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'material-symbols:info' },
-  { key: STEP_KEYS.INFO, label: 'Upload', icon: 'material-symbols:play-circle' },
+  {
+    key: STEP_KEYS.GENERAL_INFO,
+    label: "General Info",
+    icon: "material-symbols:info",
+  },
+  {
+    key: STEP_KEYS.INFO,
+    label: "Upload",
+    icon: "material-symbols:play-circle",
+  },
 
   // { key: STEP_KEYS.RAW_DATA, label: 'Source Raw Data', icon: 'mdi:dna' },
   // { key: STEP_KEYS.PROJECT, label: 'Project', icon: 'mdi:flask' },
-]
+];
 
-const UPLOAD_FILE_REQUIRED_ERROR = 'A file must be selected for upload.'
-const DATASET_NAME_MAX_LENGTH_ERROR = 'Dataset name must have 3 or more characters.'
-const MISSING_METADATA_ERROR = 'One or more fields have error'
+const UPLOAD_FILE_REQUIRED_ERROR = "A file must be selected for upload.";
+const DATASET_NAME_MAX_LENGTH_ERROR =
+  "Dataset name must have 3 or more characters.";
+const MISSING_METADATA_ERROR = "One or more fields have error";
 
 const formErrors = ref({
   [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.UPLOAD]: null,
   [STEP_KEYS.INFO]: null,
-})
+});
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.UPLOAD]
+    return !!formErrors.value[STEP_KEYS.UPLOAD];
   } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.GENERAL_INFO]
+    return !!formErrors.value[STEP_KEYS.GENERAL_INFO];
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.INFO]
+    return !!formErrors.value[STEP_KEYS.INFO];
   }
-})
+});
 
-const isAssignedSourceInstrument = ref(true)
-const isAssignedSourceRawData = ref(true)
-const selectedRawData = ref(null)
-const datasetSearchText = ref('')
-const projectSearchText = ref('')
-const isAssignedProject = ref(true)
-const submissionSuccess = ref(false)
+const isAssignedSourceInstrument = ref(true);
+const isAssignedSourceRawData = ref(true);
+const selectedRawData = ref(null);
+const datasetSearchText = ref("");
+const projectSearchText = ref("");
+const isAssignedProject = ref(true);
+const submissionSuccess = ref(false);
 
 const datasetTypes = [
-  { label: config.dataset.types.RAW_DATA.label, value: config.dataset.types.RAW_DATA.key },
-  { label: config.dataset.types.DATA_PRODUCT.label, value: config.dataset.types.DATA_PRODUCT.key },
-]
+  {
+    label: config.dataset.types.RAW_DATA.label,
+    value: config.dataset.types.RAW_DATA.key,
+  },
+  {
+    label: config.dataset.types.DATA_PRODUCT.label,
+    value: config.dataset.types.DATA_PRODUCT.key,
+  },
+];
 
-const datasetTypeOptions = ref(datasetTypes)
+const datasetTypeOptions = ref(datasetTypes);
 
 // const uploadingDatasetType = ref(config.dataset.types.DATA_PRODUCT.key)
 const selectedDatasetType = ref(
-  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key)
-)
+  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
+);
 
-const willUploadRawData = ref(false)
+const willUploadRawData = ref(false);
 
 const resetProjectSearch = (val) => {
-  projectSelected.value = null
-  projectSearchText.value = ''
-}
+  projectSelected.value = null;
+  projectSearchText.value = "";
+};
 
 const resetRawDataSearch = (val) => {
-  selectedRawData.value = null
-  datasetSearchText.value = ''
-  console.log('isAssignedSourceRawData changed ', val)
+  selectedRawData.value = null;
+  datasetSearchText.value = "";
+  console.log("isAssignedSourceRawData changed ", val);
   if (!val) {
-    datasetTypeOptions.value = datasetTypes
-    console.log('Clearing raw data selection')
+    datasetTypeOptions.value = datasetTypes;
+    console.log("Clearing raw data selection");
     // rawDataSelected = []
   } else {
-    console.log('else')
+    console.log("else");
     datasetTypeOptions.value = datasetTypes.filter(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
-    )
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
+    );
     selectedDatasetType.value = datasetTypeOptions.value.find(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
-    )
-    willUploadRawData.value = false
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
+    );
+    willUploadRawData.value = false;
   }
   // todo - reset form errors
   // formErrors.value[STEP_KEYS.GENERAL_INFO] = null
-}
+};
 
 const onRawDataSearchOpen = () => {
-  selectedRawData.value = null
-}
+  selectedRawData.value = null;
+};
 
 const onRawDataSearchClose = () => {
   if (!selectedRawData.value) {
-    datasetSearchText.value = ''
+    datasetSearchText.value = "";
   }
-}
+};
 
 const onProjectSearchOpen = () => {
-  projectSelected.value = null
-}
+  projectSelected.value = null;
+};
 
 const onProjectSearchClose = () => {
   if (!projectSelected.value) {
-    projectSearchText.value = ''
+    projectSearchText.value = "";
   }
-}
+};
 
 watch(selectedDatasetType, (newVal) => {
-  if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
-    isAssignedSourceRawData.value = false
+  if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
+    isAssignedSourceRawData.value = false;
     // rawDataSelected.value = []
-    selectedRawData.value = null
-    willUploadRawData.value = true
+    selectedRawData.value = null;
+    willUploadRawData.value = true;
   } else {
-    willUploadRawData.value = false
+    willUploadRawData.value = false;
   }
-})
+});
 
 const isPreviousButtonDisabled = computed(() => {
-  return step.value === 0 || submitAttempted.value || loading.value || validatingForm.value
-})
+  return (
+    step.value === 0 ||
+    submitAttempted.value ||
+    loading.value ||
+    validatingForm.value
+  );
+});
 
 // const isNextButtonDisabled = ref(false)
 const isNextButtonDisabled = computed(() => {
@@ -476,8 +510,8 @@ const isNextButtonDisabled = computed(() => {
     ].includes(submissionStatus.value) ||
     loading.value ||
     validatingForm.value
-  )
-})
+  );
+});
 
 const isStepperButtonDisabled = (stepIndex) => {
   return (
@@ -486,8 +520,8 @@ const isStepperButtonDisabled = (stepIndex) => {
     step.value < stepIndex ||
     loading.value ||
     validatingForm.value
-  )
-}
+  );
+};
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine.
@@ -495,35 +529,35 @@ const stepPristineStates = ref([
   { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.UPLOAD]: true },
   { [STEP_KEYS.INFO]: true },
-])
+]);
 
 const stepIsPristine = computed(() => {
-  return !!Object.values(stepPristineStates.value[step.value])[0]
-})
+  return !!Object.values(stepPristineStates.value[step.value])[0];
+});
 
 const removeFile = (fileIndex) => {
   if (selectingDirectory.value) {
-    selectingDirectory.value = false
-    clearSelectedDirectoryToUpload()
+    selectingDirectory.value = false;
+    clearSelectedDirectoryToUpload();
   } else if (selectingFiles.value) {
-    filesToUpload.value.splice(fileIndex, 1)
+    filesToUpload.value.splice(fileIndex, 1);
     if (filesToUpload.value.length === 0) {
-      selectingFiles.value = false
+      selectingFiles.value = false;
     }
   }
-}
+};
 
 const stringHasSpaces = (name) => {
-  return name?.indexOf(' ') > -1
-}
+  return name?.indexOf(" ") > -1;
+};
 
 const datasetNameHasMinimumChars = (name) => {
-  return name?.length >= 3
-}
+  return name?.length >= 3;
+};
 
 const datasetNameIsNull = (name) => {
-  return !name
-}
+  return !name;
+};
 
 const validateIfExists = (value) => {
   return new Promise((resolve, reject) => {
@@ -532,20 +566,23 @@ const validateIfExists = (value) => {
     // nonetheless when `value` is ''. Hence the explicit check for whether
     // `value` is falsy.
     if (!value) {
-      resolve(true)
+      resolve(true);
     } else {
       datasetService
-        .check_if_exists({ type: selectedDatasetType.value['value'], name: value })
+        .check_if_exists({
+          type: selectedDatasetType.value["value"],
+          name: value,
+        })
         .then((res) => {
-          console.log('res', res)
-          console.log('Dataset exists?', res.data.exists)
-          resolve(res.data.exists)
+          console.log("res", res);
+          console.log("Dataset exists?", res.data.exists);
+          resolve(res.data.exists);
         })
         .catch((e) => {
-          console.error('Error checking dataset existence')
-          console.error(e)
-          reject()
-        })
+          console.error("Error checking dataset existence");
+          console.error(e);
+          reject();
+        });
     }
   });
 };
@@ -554,16 +591,16 @@ const hasSpacesErrorStr = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
 
 const datasetNameValidationRules = [
   (v) => {
-    return datasetNameIsNull(v) ? DATASET_NAME_REQUIRED_ERROR : true
+    return datasetNameIsNull(v) ? DATASET_NAME_REQUIRED_ERROR : true;
   },
   (v) => {
-    return datasetNameHasMinimumChars(v) ? true : DATASET_NAME_MAX_LENGTH_ERROR
+    return datasetNameHasMinimumChars(v) ? true : DATASET_NAME_MAX_LENGTH_ERROR;
   },
   (v) => {
-    return stringHasSpaces(v) ? hasSpacesErrorStr('Dataset name') : true
+    return stringHasSpaces(v) ? hasSpacesErrorStr("Dataset name") : true;
   },
   validateIfExists,
-]
+];
 
 // const setProject = (project) => {
 //   // console.log('set project', project)
@@ -588,150 +625,158 @@ const datasetNameValidationRules = [
 // }
 
 // const searchTerm = ref('')
-const loading = ref(false)
-const validatingForm = ref(false)
-const rawDataList = ref([])
+const loading = ref(false);
+const validatingForm = ref(false);
 // const rawDataSelected = ref([])
-const selectedSourceInstrument = ref(null)
-const sourceInstrumentOptions = ref([])
-const projectSelected = ref(null)
-const datasetUploadLog = ref(null)
-const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED)
-const statusChipColor = ref('')
-const submissionAlert = ref('') // For handling network errors before upload begins
-const submissionAlertColor = ref('')
-const isSubmissionAlertVisible = ref(false)
-const submitAttempted = ref(false)
+const selectedSourceInstrument = ref(null);
+const sourceInstrumentOptions = ref([]);
+const projectSelected = ref(null);
+const datasetUploadLog = ref(null);
+const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED);
+const statusChipColor = ref("");
+const submissionAlert = ref(""); // For handling network errors before upload begins
+const submissionAlertColor = ref("");
+const isSubmissionAlertVisible = ref(false);
+const submitAttempted = ref(false);
 const isUploadIncomplete = computed(() => {
-  return submitAttempted.value && submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
-})
+  return (
+    submitAttempted.value &&
+    submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
+  );
+});
 
-const filesToUpload = ref([])
-const displayedFilesToUpload = ref([])
+const filesToUpload = ref([]);
+const displayedFilesToUpload = ref([]);
 
-const selectedDirectory = ref(null)
-const selectedDirectoryChunkCount = ref(0)
-const totalUploadedChunkCount = ref(0)
-const uploadingFilesState = ref({})
+const selectedDirectory = ref(null);
+const selectedDirectoryChunkCount = ref(0);
+const totalUploadedChunkCount = ref(0);
+const uploadingFilesState = ref({});
 
-const selectingFiles = ref(false)
-const selectingDirectory = ref(false)
+const selectingFiles = ref(false);
+const selectingDirectory = ref(false);
 
-const populatedDatasetName = ref('')
+const populatedDatasetName = ref("");
 
 watch(selectingFiles, () => {
   if (selectingFiles.value) {
-    populatedDatasetName.value = ''
+    populatedDatasetName.value = "";
   }
-})
+});
 
 watch(selectingDirectory, () => {
   if (selectingDirectory.value) {
-    populatedDatasetName.value = selectedDirectory.value.name
+    populatedDatasetName.value = selectedDirectory.value.name;
   }
-})
+});
 
-const step = ref(0)
-const uploadCancelled = ref(false)
+const step = ref(0);
+const uploadCancelled = ref(false);
 
 const filesNotUploaded = computed(() => {
-  return filesToUpload.value.filter((e) => e.uploadStatus !== config.upload.status.UPLOADED)
-})
-const someFilesPendingUpload = computed(() => filesNotUploaded.value.length > 0)
+  return filesToUpload.value.filter(
+    (e) => e.uploadStatus !== config.upload.status.UPLOADED,
+  );
+});
+const someFilesPendingUpload = computed(
+  () => filesNotUploaded.value.length > 0,
+);
 const isLastStep = computed(() => {
-  return step.value === steps.length - 1
-})
+  return step.value === steps.length - 1;
+});
 
 const uploadFormData = computed(() => {
   return {
     name: populatedDatasetName.value,
-    type: 'DATA_PRODUCT',
+    type: "DATA_PRODUCT",
     ...(selectedRawData.value && {
       source_dataset_id: selectedRawData.value.id,
     }),
-  }
-})
+  };
+});
 
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.GENERAL_INFO]: null,
     [STEP_KEYS.UPLOAD]: null,
     [STEP_KEYS.INFO]: null,
-  }
-}
+  };
+};
 
 const validateDatasetName = async () => {
   if (datasetNameIsNull(populatedDatasetName.value)) {
-    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR }
+    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
   } else if (!datasetNameHasMinimumChars(populatedDatasetName.value)) {
-    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR }
+    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
   } else if (stringHasSpaces(populatedDatasetName.value)) {
-    return { isNameValid: false, error: hasSpacesErrorStr('Dataset name') }
+    return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
   }
 
-  validatingForm.value = true
+  validatingForm.value = true;
   return datasetNameValidationRules[3](populatedDatasetName.value)
     .then((res) => {
-      console.log(`datasetNameValidationRules[3] then`)
-      console.log('res', res)
+      console.log(`datasetNameValidationRules[3] then`);
+      console.log("res", res);
 
-      console.log('return val', {
+      console.log("return val", {
         isNameValid: !res,
         error: res && DATASET_EXISTS_ERROR,
-      })
+      });
 
       return {
         isNameValid: !res,
         error: res && DATASET_EXISTS_ERROR,
-      }
+      };
     })
     .catch(() => {
-      return { isNameValid: false, error: FORM_VALIDATION_ERROR }
+      return { isNameValid: false, error: FORM_VALIDATION_ERROR };
     })
     .finally(() => {
-      validatingForm.value = false
-    })
-}
+      validatingForm.value = false;
+    });
+};
 
-const clearSelectedDirectoryToUpload = ({ clearDirectoryFiles = true } = {}) => {
+const clearSelectedDirectoryToUpload = ({
+  clearDirectoryFiles = true,
+} = {}) => {
   // clear files within the directory being removed
   if (clearDirectoryFiles) {
-    clearSelectedFilesToUpload()
+    clearSelectedFilesToUpload();
   }
   // clear directory being removed
-  selectedDirectory.value = null
+  selectedDirectory.value = null;
   // clear directory name
   // selectedDirectoryName.value = "";
-}
+};
 
 const clearSelectedFilesToUpload = () => {
-  displayedFilesToUpload.value = []
-}
+  displayedFilesToUpload.value = [];
+};
 
 const FILE_TYPE = {
-  FILE: 'file',
-  DIRECTORY: 'directory',
-}
+  FILE: "file",
+  DIRECTORY: "directory",
+};
 
 const setUploadedFileType = (fileType) => {
   if (fileType === FILE_TYPE.FILE) {
-    selectingFiles.value = true
-    selectingDirectory.value = false
+    selectingFiles.value = true;
+    selectingDirectory.value = false;
   } else if (fileType === FILE_TYPE.DIRECTORY) {
-    selectingDirectory.value = true
-    selectingFiles.value = false
+    selectingDirectory.value = true;
+    selectingFiles.value = false;
   }
-}
+};
 
 const setFormErrors = async () => {
-  console.log('setFormErrors called')
-  resetFormErrors()
+  console.log("setFormErrors called");
+  resetFormErrors();
   // console.log("setFormErrors after resetFormErrors");
 
-  console.log('step.value', step.value)
-  console.log('isAssignedSourceRawData', isAssignedSourceRawData.value)
-  console.log('selectedRawData', selectedRawData.value)
-  console.log('isAssignedProject', isAssignedProject.value)
+  console.log("step.value", step.value);
+  console.log("isAssignedSourceRawData", isAssignedSourceRawData.value);
+  console.log("selectedRawData", selectedRawData.value);
+  console.log("isAssignedProject", isAssignedProject.value);
   // console.log('projectSelected', projectSelected.value)
 
   // console.log("formErrors", formErrors.value)
@@ -742,8 +787,8 @@ const setFormErrors = async () => {
       // (selectingFiles.value || selectingDirectory.value) &&
       displayedFilesToUpload.value.length === 0
     ) {
-      formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR
-      return
+      formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
+      return;
     }
   }
 
@@ -755,8 +800,8 @@ const setFormErrors = async () => {
       (isAssignedProject.value && !projectSelected.value) ||
       (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
-      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
-      return
+      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR;
+      return;
     }
   }
 
@@ -771,18 +816,19 @@ const setFormErrors = async () => {
   // }
 
   if (step.value === 2) {
-    const { isNameValid: datasetNameIsValid, error } = await validateDatasetName()
+    const { isNameValid: datasetNameIsValid, error } =
+      await validateDatasetName();
     if (datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.INFO] = null
+      formErrors.value[STEP_KEYS.INFO] = null;
     } else {
-      formErrors.value[STEP_KEYS.INFO] = error
+      formErrors.value[STEP_KEYS.INFO] = error;
     }
   }
-}
+};
 
 const noFilesSelected = computed(() => {
-  return filesToUpload.value?.length === 0
-})
+  return filesToUpload.value?.length === 0;
+});
 
 // const addDataset = (selectedDatasets) => {
 //   rawDataSelected.value = selectedDatasets
@@ -794,53 +840,48 @@ const noFilesSelected = computed(() => {
 // }
 
 onMounted(() => {
-  loading.value = true
+  loading.value = true;
 
-  datasetService
-    .getAll({ type: 'RAW_DATA' })
+  instrumentService
+    .getAll()
     .then((res) => {
-      rawDataList.value = res.data.datasets
-    })
-    .then(() => {
-      return instrumentService.getAll()
-    })
-    .then((res) => {
-      console.log('instruments:', res.data)
-      sourceInstrumentOptions.value = res.data
+      console.log("instruments:", res.data);
+      sourceInstrumentOptions.value = res.data;
     })
     .catch((err) => {
-      toast.error('Failed to load resources')
-      console.error(err)
+      toast.error("Failed to load resources");
+      console.error(err);
     })
     .finally(() => {
-      loading.value = false
-    })
-})
+      loading.value = false;
+    });
+});
 
 const evaluateFileChecksums = (file) => {
   return new Promise((resolve, reject) => {
-    const fileReader = new FileReader()
+    const fileReader = new FileReader();
 
     function loadNext(currentChunkIndex) {
-      const start = currentChunkIndex * CHUNK_SIZE
-      const end = start + CHUNK_SIZE >= file.size ? file.size : start + CHUNK_SIZE
-      fileReader.readAsArrayBuffer(blobSlice.call(file, start, end))
+      const start = currentChunkIndex * CHUNK_SIZE;
+      const end =
+        start + CHUNK_SIZE >= file.size ? file.size : start + CHUNK_SIZE;
+      fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
     }
 
     try {
-      let chunkIndex = 0
-      const chunks = Math.ceil(file.size / CHUNK_SIZE)
-      const buffer = new SparkMD5.ArrayBuffer()
-      const chunkChecksums = []
+      let chunkIndex = 0;
+      const chunks = Math.ceil(file.size / CHUNK_SIZE);
+      const buffer = new SparkMD5.ArrayBuffer();
+      const chunkChecksums = [];
 
       fileReader.onload = (e) => {
-        const result = e.target.result
-        chunkChecksums.push(SparkMD5.ArrayBuffer.hash(result))
+        const result = e.target.result;
+        chunkChecksums.push(SparkMD5.ArrayBuffer.hash(result));
 
-        buffer.append(result) // Append to array buffer
-        chunkIndex += 1
+        buffer.append(result); // Append to array buffer
+        chunkIndex += 1;
         if (chunkIndex < chunks) {
-          loadNext(chunkIndex)
+          loadNext(chunkIndex);
         } else {
           resolve({
             fileChecksum: buffer.end(),
@@ -850,204 +891,219 @@ const evaluateFileChecksums = (file) => {
       };
 
       fileReader.onerror = () => {
-        console.error(`file reading failed for file ${file.name}`)
-        reject(fileReader.error)
-      }
+        console.error(`file reading failed for file ${file.name}`);
+        reject(fileReader.error);
+      };
 
-      loadNext(chunkIndex)
+      loadNext(chunkIndex);
     } catch (err) {
-      console.error(err)
-      reject(err)
+      console.error(err);
+      reject(err);
     }
-  })
-}
+  });
+};
 
 const evaluateChecksums = (filesToUpload) => {
   return new Promise((resolve, reject) => {
-    const filePromises = []
+    const filePromises = [];
     for (let i = 0; i < filesToUpload.length; i++) {
-      let fileDetails = filesToUpload[i]
+      let fileDetails = filesToUpload[i];
       if (!fileDetails.checksumsEvaluated) {
-        const file = fileDetails.file
+        const file = fileDetails.file;
         // Total number of chunks to be uploaded.
         // A single chunk is uploaded for an empty file
-        fileDetails.numChunks = file.size > 0 ? Math.ceil(file.size / CHUNK_SIZE) : 1
+        fileDetails.numChunks =
+          file.size > 0 ? Math.ceil(file.size / CHUNK_SIZE) : 1;
         if (selectingDirectory.value) {
-          selectedDirectoryChunkCount.value += fileDetails.numChunks
+          selectedDirectoryChunkCount.value += fileDetails.numChunks;
         }
 
         filePromises.push(
           new Promise((resolve, reject) => {
             evaluateFileChecksums(file)
               .then(({ fileChecksum, chunkChecksums }) => {
-                fileDetails.fileChecksum = fileChecksum
-                fileDetails.chunkChecksums = chunkChecksums
-                fileDetails.checksumsEvaluated = true
-                resolve()
+                fileDetails.fileChecksum = fileChecksum;
+                fileDetails.chunkChecksums = chunkChecksums;
+                fileDetails.checksumsEvaluated = true;
+                resolve();
               })
               .catch(() => {
-                fileDetails.checksumsEvaluated = false
-                console.error(`Failed to evaluate checksums of file ${file.name}`)
-                reject()
-              })
-          })
-        )
+                fileDetails.checksumsEvaluated = false;
+                console.error(
+                  `Failed to evaluate checksums of file ${file.name}`,
+                );
+                reject();
+              });
+          }),
+        );
       }
     }
 
     Promise.all(filePromises)
       .then(() => {
-        resolve()
+        resolve();
       })
       .catch(() => {
-        reject()
-      })
-  })
-}
+        reject();
+      });
+  });
+};
 
 const updateUploadToken = async (fileName) => {
-  const currentToken = uploadToken.value
-  const currentTokenDecoded = currentToken ? jwtDecode(currentToken) : null
+  const currentToken = uploadToken.value;
+  const currentTokenDecoded = currentToken ? jwtDecode(currentToken) : null;
   const lastUploadedFileName = currentTokenDecoded
     ? currentTokenDecoded.scope.slice(config.upload.scope_prefix.length)
-    : null
+    : null;
 
   await auth.refreshUploadToken({
     fileName,
     refreshToken: fileName !== lastUploadedFileName,
-  })
+  });
   // uploadService.setToken(token.value);
-  uploadService.setToken(uploadToken.value)
-}
+  uploadService.setToken(uploadToken.value);
+};
 
 // Uploads a chunk. Retries to upload chunk upto 5 times in case of network
 // errors.
 const uploadChunk = async (chunkData) => {
   const upload = async () => {
     if (uploadCancelled.value) {
-      return false
+      return false;
     }
 
-    let chunkUploaded = false
+    let chunkUploaded = false;
 
     try {
       // update upload token if needed
-      await updateUploadToken(chunkData.get('name'))
-      await uploadService.uploadFile(chunkData)
-      chunkUploaded = true
+      await updateUploadToken(chunkData.get("name"));
+      await uploadService.uploadFile(chunkData);
+      chunkUploaded = true;
     } catch (e) {
-      console.error(`Encountered error uploading chunk`, e)
+      console.error(`Encountered error uploading chunk`, e);
     }
-    return chunkUploaded
-  }
+    return chunkUploaded;
+  };
 
-  let retry_count = 0
-  let uploaded = false
+  let retry_count = 0;
+  let uploaded = false;
   while (!uploaded && !uploadCancelled.value) {
-    uploaded = await upload()
+    uploaded = await upload();
     if (!uploaded) {
-      retry_count += 1
+      retry_count += 1;
     }
     if (retry_count > RETRY_COUNT_THRESHOLD) {
-      console.error(`Exceeded retry threshold of ${RETRY_COUNT_THRESHOLD} times`)
-      break
+      console.error(
+        `Exceeded retry threshold of ${RETRY_COUNT_THRESHOLD} times`,
+      );
+      break;
     }
   }
 
-  return uploaded
-}
+  return uploaded;
+};
 
 const getFileUploadLog = ({ name, path }) => {
   return datasetUploadLog.value.files.find((fileUploadLog) => {
     return selectingDirectory.value
       ? fileUploadLog.name === name && fileUploadLog.path === path
-      : fileUploadLog.name === name
-  })
-}
+      : fileUploadLog.name === name;
+  });
+};
 
 const isFileUploadInProgress = ({ fileUploadLogId } = {}) => {
-  return !!uploadingFilesState.value[fileUploadLogId]
-}
+  return !!uploadingFilesState.value[fileUploadLogId];
+};
 
 const isFileChunkUploadInterrupted = ({ fileUploadLogId, chunkIndex } = {}) => {
   return (
     isFileUploadInProgress({ fileUploadLogId }) &&
-    !uploadingFilesState.value[fileUploadLogId]['fileUploadInProgress'] &&
-    uploadingFilesState.value[fileUploadLogId]['resumeFileUploadAtChunkIndex'] === chunkIndex
-  )
-}
+    !uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] &&
+    uploadingFilesState.value[fileUploadLogId][
+      "resumeFileUploadAtChunkIndex"
+    ] === chunkIndex
+  );
+};
 
-const postChunkUploadAttempt = ({ fileUploadLogId, chunkIndex, isChunkUploaded } = {}) => {
+const postChunkUploadAttempt = ({
+  fileUploadLogId,
+  chunkIndex,
+  isChunkUploaded,
+} = {}) => {
   if (isChunkUploaded) {
-    totalUploadedChunkCount.value += 1
-    uploadingFilesState.value[fileUploadLogId]['uploadedChunks'].push(chunkIndex)
-    uploadingFilesState.value[fileUploadLogId]['fileUploadInProgress'] = true
-    uploadingFilesState.value[fileUploadLogId]['resumeFileUploadAtChunkIndex'] = null
+    totalUploadedChunkCount.value += 1;
+    uploadingFilesState.value[fileUploadLogId]["uploadedChunks"].push(
+      chunkIndex,
+    );
+    uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] = true;
+    uploadingFilesState.value[fileUploadLogId]["resumeFileUploadAtChunkIndex"] =
+      null;
   } else {
-    uploadingFilesState.value[fileUploadLogId]['fileUploadInProgress'] = false
-    uploadingFilesState.value[fileUploadLogId]['resumeFileUploadAtChunkIndex'] = chunkIndex
+    uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] = false;
+    uploadingFilesState.value[fileUploadLogId]["resumeFileUploadAtChunkIndex"] =
+      chunkIndex;
   }
-}
+};
 
 const uploadFileChunks = async (fileDetails) => {
-  let file = fileDetails.file
+  let file = fileDetails.file;
   const fileUploadLog = getFileUploadLog({
     name: fileDetails.name,
     path: fileDetails.path,
-  })
+  });
 
   // initialize state to track upload state of each file chunk
   if (!uploadingFilesState.value[fileUploadLog.id]) {
-    uploadingFilesState.value[fileUploadLog.id] = {}
+    uploadingFilesState.value[fileUploadLog.id] = {};
   }
-  if (!uploadingFilesState.value[fileUploadLog.id]['uploadedChunks']) {
-    uploadingFilesState.value[fileUploadLog.id]['uploadedChunks'] = []
+  if (!uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"]) {
+    uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"] = [];
   }
 
-  const numberOfChunksToUpload = fileDetails.numChunks
+  const numberOfChunksToUpload = fileDetails.numChunks;
 
   for (let i = 0; i < numberOfChunksToUpload; i++) {
-    const start = i * CHUNK_SIZE
-    const end = Math.min(file.size, start + CHUNK_SIZE)
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(file.size, start + CHUNK_SIZE);
 
-    const fileData = blobSlice.call(file, start, end)
+    const fileData = blobSlice.call(file, start, end);
     // Building form data
-    const chunkData = new FormData()
+    const chunkData = new FormData();
     // If the request's body needs to be accessed before the request's file,
     // the body's fields should be set before the `file` field.
-    chunkData.append('checksum', fileDetails.fileChecksum)
-    chunkData.append('name', fileDetails.name)
-    chunkData.append('total', numberOfChunksToUpload)
-    chunkData.append('index', i)
-    chunkData.append('size', file.size)
-    chunkData.append('chunk_checksum', fileDetails.chunkChecksums[i])
-    chunkData.append('uploaded_entity_id', datasetUploadLog.value.dataset.id)
-    chunkData.append('file_upload_log_id', fileUploadLog?.id)
+    chunkData.append("checksum", fileDetails.fileChecksum);
+    chunkData.append("name", fileDetails.name);
+    chunkData.append("total", numberOfChunksToUpload);
+    chunkData.append("index", i);
+    chunkData.append("size", file.size);
+    chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
+    chunkData.append("uploaded_entity_id", datasetUploadLog.value.dataset.id);
+    chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
-    chunkData.append('file', fileData)
+    chunkData.append("file", fileData);
 
     const isFileUploadNotInitiated = isFileUploadInProgress({
-      fileUploadLogId: chunkData.get('file_upload_log_id'),
-    })
+      fileUploadLogId: chunkData.get("file_upload_log_id"),
+    });
     let isChunkUploadInterrupted = isFileChunkUploadInterrupted({
-      fileUploadLogId: chunkData.get('file_upload_log_id'),
-      chunkIndex: chunkData.get('index'),
-    })
-    let isChunkUploaded = uploadingFilesState.value[fileUploadLog.id]['uploadedChunks'].includes(
-      chunkData.get('index')
-    )
+      fileUploadLogId: chunkData.get("file_upload_log_id"),
+      chunkIndex: chunkData.get("index"),
+    });
+    let isChunkUploaded = uploadingFilesState.value[fileUploadLog.id][
+      "uploadedChunks"
+    ].includes(chunkData.get("index"));
     const willUploadChunk =
-      !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted
+      !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted;
 
     if (willUploadChunk) {
-      isChunkUploaded = await uploadChunk(chunkData)
+      isChunkUploaded = await uploadChunk(chunkData);
       postChunkUploadAttempt({
-        fileUploadLogId: chunkData.get('file_upload_log_id'),
-        chunkIndex: chunkData.get('index'),
+        fileUploadLogId: chunkData.get("file_upload_log_id"),
+        chunkIndex: chunkData.get("index"),
         isChunkUploaded,
-      })
+      });
       if (!isChunkUploaded) {
-        break
+        break;
       }
     }
 
@@ -1056,41 +1112,41 @@ const uploadFileChunks = async (fileDetails) => {
       // being uploaded
       if (selectingDirectory.value) {
         selectedDirectory.value.progress = Math.trunc(
-          (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) * 100
-        )
+          (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) *
+            100,
+        );
       } else {
-        fileDetails.progress = Math.trunc(((i + 1) / numberOfChunksToUpload) * 100)
+        fileDetails.progress = Math.trunc(
+          ((i + 1) / numberOfChunksToUpload) * 100,
+        );
       }
     }
   }
 
   return (
-    uploadingFilesState.value[fileUploadLog.id]['uploadedChunks'].length === numberOfChunksToUpload
-  )
-}
+    uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"].length ===
+    numberOfChunksToUpload
+  );
+};
 
 const uploadFile = async (fileDetails) => {
-  fileDetails.uploadStatus = config.upload.status.UPLOADING
-  const checksum = fileDetails.fileChecksum
+  fileDetails.uploadStatus = config.upload.status.UPLOADING;
+  const checksum = fileDetails.fileChecksum;
 
-  const uploaded = await uploadFileChunks(fileDetails)
+  const uploaded = await uploadFileChunks(fileDetails);
   // const uploaded = true; // Placeholder for actual upload logic
   if (!uploaded) {
-    console.error(`Upload of file ${fileDetails.name} failed`)
+    console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
-  const fileUploadLogId = datasetUploadLog.value.upload_log.files.find(
-    (e) => e.md5 === checksum
-  )?.id
   const fileUploadLogId = datasetUploadLog.value.files.find(
     (e) => e.md5 === checksum,
   )?.id;
-
   fileDetails.uploadStatus = uploaded
     ? config.upload.status.UPLOADED
-    : config.upload.status.UPLOAD_FAILED
+    : config.upload.status.UPLOAD_FAILED;
 
-  let updated = false
+  let updated = false;
   if (uploaded) {
     try {
       await datasetUploadService.updateDatasetUploadLog(
@@ -1103,74 +1159,77 @@ const uploadFile = async (fileDetails) => {
               data: { status: config.upload.status.UPLOADED },
             },
           ],
-        }
-      )
-      updated = true
+        },
+      );
+      updated = true;
     } catch (e) {
-      console.error(e)
+      console.error(e);
     }
   }
 
-  const successful = uploaded && updated
+  const successful = uploaded && updated;
   if (!successful) {
     if (selectingDirectory.value) {
-      delete selectedDirectory.value.progress
+      delete selectedDirectory.value.progress;
     } else if (selectingFiles.value) {
-      delete fileDetails.progress
+      delete fileDetails.progress;
     }
   }
 
-  return successful
-}
+  return successful;
+};
 
 const onSubmit = async () => {
   if (filesToUpload.value.length === 0) {
-    await setFormErrors()
-    return Promise.reject()
+    await setFormErrors();
+    return Promise.reject();
   }
 
-  submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING
-  statusChipColor.value = 'primary'
-  submissionAlert.value = null // reset any alerts from previous submissions
-  isSubmissionAlertVisible.value = false
-  submitAttempted.value = true
+  submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
+  statusChipColor.value = "primary";
+  submissionAlert.value = null; // reset any alerts from previous submissions
+  isSubmissionAlertVisible.value = false;
+  submitAttempted.value = true;
 
   return new Promise((resolve, reject) => {
     preUpload()
       .then(async () => {
-        submissionSuccess.value = true
-        submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING
+        submissionSuccess.value = true;
+        submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
 
-        const filesUploaded = await uploadFiles(filesNotUploaded.value)
+        // const filesUploaded = await uploadFiles(filesNotUploaded.value)
+        const filesUploaded = true;
         if (filesUploaded) {
-          resolve()
+          resolve();
         } else {
-          submissionStatus.value = Constants.UPLOAD_STATES.UPLOAD_FAILED
-          submissionAlert.value = 'Some files could not be uploaded.'
-          reject()
+          submissionStatus.value = Constants.UPLOAD_STATES.UPLOAD_FAILED;
+          submissionAlert.value = "Some files could not be uploaded.";
+          reject();
         }
       })
       .catch((err) => {
-        console.error(err)
-        submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING_FAILED
-        submissionAlert.value = 'There was an error. Please try submitting again.'
-        reject()
-      })
-  })
-}
+        console.error(err);
+        submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING_FAILED;
+        submissionAlert.value =
+          "There was an error. Please try submitting again.";
+        reject();
+      });
+  });
+};
 
 const setPostSubmissionSuccessState = () => {
   if (!someFilesPendingUpload.value) {
-    submissionStatus.value = Constants.UPLOAD_STATES.UPLOADED
-    statusChipColor.value = 'primary'
-    submissionAlertColor.value = 'success'
-    submissionAlert.value = 'All files have been uploaded successfully. You may close this window.'
-    isSubmissionAlertVisible.value = true
+    submissionStatus.value = Constants.UPLOAD_STATES.UPLOADED;
+    statusChipColor.value = "primary";
+    submissionAlertColor.value = "success";
+    submissionAlert.value =
+      "All files have been uploaded successfully. You may close this window.";
+    isSubmissionAlertVisible.value = true;
   }
-}
+};
 
 const postSubmit = () => {
-  setPostSubmissionSuccessState()
+  setPostSubmissionSuccessState();
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {
@@ -1179,8 +1238,8 @@ const postSubmit = () => {
       data: {
         status: config.upload.status.UPLOAD_FAILED,
       },
-    }
-  })
+    };
+  });
 
   if (datasetUploadLog.value) {
     createOrUpdateUploadLog({
@@ -1190,51 +1249,52 @@ const postSubmit = () => {
       files: failedFileUpdates,
     })
       .then((res) => {
-        datasetUploadLog.value = res.data
+        datasetUploadLog.value = res.data;
       })
       .catch((err) => {
-        console.error(err)
-      })
+        console.error(err);
+      });
   }
-}
+};
 
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
       return datasetUploadService.processDatasetUpload(
         datasetUploadLog.value.audit_log.dataset.id,
-        auth.user?.username
-      )
+        auth.user?.username,
+      );
     })
     .catch((err) => {
-      console.error(err)
-      submissionSuccess.value = false
-      statusChipColor.value = 'warning'
-      submissionAlertColor.value = 'warning'
-      isSubmissionAlertVisible.value = true
+      console.error(err);
+      submissionSuccess.value = false;
+      statusChipColor.value = "warning";
+      submissionAlertColor.value = "warning";
+      isSubmissionAlertVisible.value = true;
     })
     .finally(() => {
-      postSubmit()
-    })
-}
+      postSubmit();
+    });
+};
 
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
     if (noFilesSelected.value) {
-      isSubmissionAlertVisible.value = true
-      submissionAlert.value = 'At least one file must be selected to create a Data Product'
-      submissionAlertColor.value = 'warning'
+      isSubmissionAlertVisible.value = true;
+      submissionAlert.value =
+        "At least one file must be selected to create a Data Product";
+      submissionAlertColor.value = "warning";
     } else {
-      handleSubmit()
+      handleSubmit();
     }
   } else {
-    nextStep()
+    nextStep();
   }
-}
+};
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
-  await evaluateChecksums(filesNotUploaded.value)
+  await evaluateChecksums(filesNotUploaded.value);
 
   const logData = datasetUploadLog.value?.id
     ? {
@@ -1248,14 +1308,14 @@ const preUpload = async () => {
             checksum: e.fileChecksum,
             num_chunks: e.numChunks,
             path: e.path,
-          }
+          };
         }),
         project_id: projectSelected.value ? projectSelected.value.id : null,
-      }
+      };
 
-  const res = await createOrUpdateUploadLog(logData)
-  datasetUploadLog.value = res.data
-}
+  const res = await createOrUpdateUploadLog(logData);
+  datasetUploadLog.value = res.data;
+};
 
 // watch(projectSelected, (newVal, oldVal) => {
 //   console.log("projectSelected changed", projectSelected.value);
@@ -1268,45 +1328,45 @@ const createOrUpdateUploadLog = (data) => {
     : datasetUploadService.updateDatasetUploadLog(
         datasetUploadLog.value?.audit_log?.dataset_id,
         auth.user?.username,
-        data
-      )
-}
+        data,
+      );
+};
 
 const uploadFiles = async (files) => {
-  let uploaded = false
+  let uploaded = false;
   for (let f = 0; f < files.length; f++) {
-    let fileDetails = files[f]
-    uploaded = await uploadFile(fileDetails)
+    let fileDetails = files[f];
+    uploaded = await uploadFile(fileDetails);
     if (!uploaded) {
-      break
+      break;
     }
   }
-  return uploaded
-}
+  return uploaded;
+};
 
 // two files can't have same path/name
 const setFiles = (files) => {
   // console.log("setFiles", files);
   _.range(0, files.length).forEach((i) => {
-    const file = files.item(i)
+    const file = files.item(i);
     filesToUpload.value.push({
       type: FILE_TYPE.FILE,
       file: file,
       name: file.name,
       formattedSize: formatBytes(file.size),
       progress: 0,
-    })
-  })
-  displayedFilesToUpload.value = filesToUpload.value
-  console.log('displayedFileasToUploaf', displayedFilesToUpload.value)
-}
+    });
+  });
+  displayedFilesToUpload.value = filesToUpload.value;
+  console.log("displayedFileasToUploaf", displayedFilesToUpload.value);
+};
 
 // two files can't have the same name and path
 const setDirectory = (directoryDetails) => {
-  const directoryFiles = directoryDetails.files
-  let directorySize = 0
+  const directoryFiles = directoryDetails.files;
+  let directorySize = 0;
   _.range(0, directoryFiles.length).forEach((i) => {
-    const file = directoryFiles[i]
+    const file = directoryFiles[i];
     filesToUpload.value.push({
       type: FILE_TYPE.FILE,
       file: file,
@@ -1314,27 +1374,27 @@ const setDirectory = (directoryDetails) => {
       formattedSize: formatBytes(file.size),
       progress: 0,
       path: file.path,
-    })
-    directorySize += file.size
-  })
+    });
+    directorySize += file.size;
+  });
   selectedDirectory.value = {
     type: FILE_TYPE.DIRECTORY,
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: 0,
     uploadStatus: config.upload.status.PROCESSING_FAILED,
-  }
+  };
   // selectedDirectoryName.value = selectedDirectory.value.name;
 
-  displayedFilesToUpload.value = [selectedDirectory.value]
-}
+  displayedFilesToUpload.value = [selectedDirectory.value];
+};
 
 const beforeUnload = (e) => {
   if (isUploadIncomplete.value) {
     // show warning before user leaves page
-    e.returnValue = true
+    e.returnValue = true;
   }
-}
+};
 
 // const clearSelectedRawData = () => {
 //   selectedRawData.value = null
@@ -1344,8 +1404,8 @@ const beforeUnload = (e) => {
 
 onMounted(() => {
   // https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event
-  window.addEventListener('beforeunload', beforeUnload)
-})
+  window.addEventListener("beforeunload", beforeUnload);
+});
 
 watch(
   [
@@ -1364,17 +1424,17 @@ watch(
   ],
   async (newVals, oldVals) => {
     // Mark step's form fields as not pristine, for fields' errors to be shown
-    const stepKey = Object.keys(stepPristineStates.value[step.value])[0]
+    const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
     if (stepKey === STEP_KEYS.INFO) {
       // `1` corresponds to `populatedDatasetName`
-      stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1]
+      stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1];
     } else {
-      stepPristineStates.value[step.value][stepKey] = false
+      stepPristineStates.value[step.value][stepKey] = false;
     }
 
-    await setFormErrors()
-  }
-)
+    await setFormErrors();
+  },
+);
 
 // watch(selectedRawData, (newVal, oldVal) => {
 //   console.log('Upload stepper')
@@ -1382,34 +1442,37 @@ watch(
 // })
 
 onMounted(() => {
-  setFormErrors()
-})
+  setFormErrors();
+});
 
 // show alert before user moves to a different route
 onBeforeRouteLeave(() => {
-  return submitAttempted.value && submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
+  return submitAttempted.value &&
+    submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
     ? window.confirm(
-        'Leaving this page before all files have been processed/uploaded will' +
-          ' cancel the upload. Do you wish to continue?'
+        "Leaving this page before all files have been processed/uploaded will" +
+          " cancel the upload. Do you wish to continue?",
       )
-    : true
-})
+    : true;
+});
 
 onBeforeUnmount(async () => {
   // stop any pending uploads before this component unmounts
-  uploadCancelled.value = true
+  uploadCancelled.value = true;
 
-  window.removeEventListener('beforeunload', beforeUnload)
+  window.removeEventListener("beforeunload", beforeUnload);
 
   if (isUploadIncomplete.value) {
-    await datasetUploadService.cancelDatasetUpload(datasetUploadLog.value.audit_log.dataset_id)
+    await datasetUploadService.cancelDatasetUpload(
+      datasetUploadLog.value.audit_log.dataset_id,
+    );
   }
-})
+});
 
 watch((filesToUpload) => {
   // debugger
-  console.log('filesToUpload', filesToUpload)
-})
+  console.log("filesToUpload", filesToUpload);
+});
 </script>
 
 <style lang="scss">

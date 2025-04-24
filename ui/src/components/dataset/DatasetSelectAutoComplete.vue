@@ -21,18 +21,21 @@
 </template>
 
 <script setup>
-import datasetService from '@/services/dataset'
-import toast from '@/services/toast'
-import _ from 'lodash'
+import datasetService from "@/services/dataset";
+import toast from "@/services/toast";
+import _ from "lodash";
 
-const NAME_TRIM_THRESHOLD = 35
-const PAGE_SIZE = 10
+const NAME_TRIM_THRESHOLD = 35;
+const PAGE_SIZE = 10;
 
 const props = defineProps({
   selected: {
     type: [String, Object],
   },
-  searchTerm: { type: String, default: '' },
+  searchTerm: {
+    type: String,
+    default: "",
+  },
   datasetType: {
     type: String,
   },
@@ -50,93 +53,97 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-})
+});
 
-const emit = defineEmits(['clear', 'open', 'close', 'update:selected', 'update:searchTerm'])
+const emit = defineEmits([
+  "clear",
+  "open",
+  "close",
+  "update:selected",
+  "update:searchTerm",
+]);
 
-const loading = ref(false)
-const datasets = ref([])
-const totalResultsCount = ref(0)
-const page = ref(1)
+const loading = ref(false);
+const datasets = ref([]);
+const totalResultsCount = ref(0);
+const page = ref(1);
 const skip = computed(() => {
-  return PAGE_SIZE * (page.value - 1)
-})
+  return PAGE_SIZE * (page.value - 1);
+});
 // const selectedResult = ref(null)
 const searchTerm = computed({
   get: () => {
     // return props.populatedResult ? props.populatedResult['name'] : ''
-    return props.searchTerm
+    return props.searchTerm;
   },
   set: (val) => {
-    emit('update:searchTerm', val)
+    emit("update:searchTerm", val);
     // emit('update:populatedResult', null)
   },
-})
+});
 
 // const searchTerm = ref('')
 
-const debouncedSearch = ref(null)
-const searchIndex = ref(0)
-const searches = ref([])
-const latestQuery = ref(null)
-const checkboxes = ref({
-  rawData: false,
-  dataProduct: false,
-})
+const debouncedSearch = ref(null);
+const searchIndex = ref(0);
+const searches = ref([]);
+const latestQuery = ref(null);
 
 const onSelect = (item) => {
-  emit('update:searchTerm', item.name)
+  emit("update:searchTerm", item.name);
   // selectedResult.value = item
   // emit('select', item)
-  emit('update:selected', item)
-}
+  emit("update:selected", item);
+};
 
 const loadNextPage = () => {
   // console.log('loadNextPage')
   // console.log('searchTerm:', searchTerm.value)
-  page.value += 1 // increase page value for offset recalculation
-  return searchDatasets({ appendToCurrentResults: true })
-}
+  page.value += 1; // increase page value for offset recalculation
+  return searchDatasets({ appendToCurrentResults: true });
+};
 
 // todo - move to utils
 const trimName = (val) =>
-  val.length > NAME_TRIM_THRESHOLD ? val.substring(0, NAME_TRIM_THRESHOLD) + '...' : val
+  val.length > NAME_TRIM_THRESHOLD
+    ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
+    : val;
 
 const filterQuery = computed(() => {
-  let query
+  let query;
   if (props.datasetType) {
     query = {
       type: props.datasetType,
-    }
+    };
   } else {
     query = {
       type: undefined,
-    }
+    };
   }
 
-  return { ...query, deleted: props.fetchInactive }
-})
+  return { ...query, deleted: props.fetchInactive };
+});
 
 const batchingQuery = computed(() => {
   return {
     offset: skip.value,
     limit: PAGE_SIZE,
-  }
-})
+  };
+});
 
 const fetchQuery = computed(() => {
   return {
     ...(searchTerm.value && { name: searchTerm.value }),
     ...filterQuery.value,
     ...batchingQuery.value,
-  }
-})
+  };
+});
 
 const queryDatasets = ({ queryIndex = null, query = null } = {}) => {
   return datasetService.getAll(query).then((res) => {
-    return { data: res.data, ...(queryIndex && { queryIndex }) }
-  })
-}
+    return { data: res.data, ...(queryIndex && { queryIndex }) };
+  });
+};
 
 const searchDatasets = ({
   searchIndex = null,
@@ -147,10 +154,10 @@ const searchDatasets = ({
   // is possible due to debounced searches). If it is, the search
   // can be resolved immediately.
   if (_.isEqual(latestQuery.value, fetchQuery.value)) {
-    resolveSearch(searchIndex)
+    resolveSearch(searchIndex);
   } else {
     if (logQuery) {
-      latestQuery.value = fetchQuery.value
+      latestQuery.value = fetchQuery.value;
     }
 
     return queryDatasets({
@@ -160,34 +167,34 @@ const searchDatasets = ({
       .then((res) => {
         datasets.value = appendToCurrentResults
           ? datasets.value.concat(res.data.datasets)
-          : res.data.datasets
-        totalResultsCount.value = res.data.metadata.count
-        resolveSearch(res.queryIndex)
+          : res.data.datasets;
+        totalResultsCount.value = res.data.metadata.count;
+        resolveSearch(res.queryIndex);
       })
       .catch((e) => {
-        console.error(e)
-        toast.error('Failed to load datasets')
-      })
+        console.error(e);
+        toast.error("Failed to load datasets");
+      });
   }
-}
+};
 
 const resolveSearch = (searchIndex) => {
-  searches.value.splice(searches.value.indexOf(searchIndex), 1)
+  searches.value.splice(searches.value.indexOf(searchIndex), 1);
   if (searches.value.length === 0) {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const performSearch = (searchIndex) => {
   // reset page value
-  page.value = 1
+  page.value = 1;
   // load search results
   searchDatasets({
     searchIndex,
     appendToCurrentResults: false,
     logQuery: true,
-  })
-}
+  });
+};
 
 const onOpen = () => {
   // if (props.populatedResult) {
@@ -196,32 +203,32 @@ const onOpen = () => {
   //
   // // selectedResult.value = null
   // emit('update:populatedResult', null)
-  emit('open')
-}
+  emit("open");
+};
 
 const onClose = () => {
-  emit('close')
-}
+  emit("close");
+};
 
 const onClear = () => {
-  console.log('onClear invoked')
-  emit('clear')
+  console.log("onClear invoked");
+  emit("clear");
   // emit('update:populatedResult', null)
-}
+};
 
 watch([searchTerm, filterQuery], (newVal, oldVal) => {
-  console.log('searchTerm or filterQuery changed')
-  console.log('searchTerm new Val:', newVal[0])
-  console.log('searchTerm new Val:', oldVal[0])
+  console.log("searchTerm or filterQuery changed");
+  console.log("searchTerm new Val:", newVal[0]);
+  console.log("searchTerm new Val:", oldVal[0]);
 
-  searchIndex.value += 1
-  searches.value.push(searchIndex.value)
+  searchIndex.value += 1;
+  searches.value.push(searchIndex.value);
 
-  loading.value = true
+  loading.value = true;
 
-  debouncedSearch.value = _.debounce(performSearch, 300)
-  debouncedSearch.value(searchIndex.value)
-})
+  debouncedSearch.value = _.debounce(performSearch, 300);
+  debouncedSearch.value(searchIndex.value);
+});
 
 // watch(
 //   () => props.populatedResult,
@@ -238,15 +245,15 @@ watch([searchTerm, filterQuery], (newVal, oldVal) => {
 // })
 
 onMounted(() => {
-  loading.value = true
-  searchDatasets()
-})
+  loading.value = true;
+  searchDatasets();
+});
 
 onBeforeUnmount(() => {
   if (debouncedSearch.value) {
-    debouncedSearch.value.cancel()
+    debouncedSearch.value.cancel();
   }
-})
+});
 </script>
 
 <style scoped></style>

@@ -1,9 +1,9 @@
-import config from '@/config'
-import toast from '@/services/toast'
-import api from './api'
-import { useAuthStore } from '@/stores/auth'
+import config from "@/config";
+import toast from "@/services/toast";
+import api from "./api";
+import { useAuthStore } from "@/stores/auth";
 
-const auth = useAuthStore()
+const auth = useAuthStore();
 
 class DatasetService {
   /**
@@ -25,10 +25,12 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    const url = !auth.canOperate ? `/datasets/${auth.user.username}` : '/datasets'
+    const url = !auth.canOperate
+      ? `/datasets/${auth.user.username}`
+      : "/datasets";
     return api.get(url, {
       params,
-    })
+    });
   }
 
   getById({
@@ -53,24 +55,24 @@ class DatasetService {
         include_projects,
         initiator,
       },
-    })
+    });
   }
 
   stage_dataset(id) {
     return api
       .post(`/datasets/${id}/workflow/stage`)
       .then(() => {
-        toast.success('A workflow has started to stage the dataset')
+        toast.success("A workflow has started to stage the dataset");
       })
       .catch((err) => {
-        console.error('unable to stage the dataset', err)
-        toast.error('Unable to stage the dataset')
-        return Promise.reject(err)
-      })
+        console.error("unable to stage the dataset", err);
+        toast.error("Unable to stage the dataset");
+        return Promise.reject(err);
+      });
   }
 
   archive_dataset(id) {
-    return api.post(`/datasets/${id}/workflow/integrated`)
+    return api.post(`/datasets/${id}/workflow/integrated`);
   }
 
   delete_dataset({ id, soft_delete = true }) {
@@ -78,19 +80,19 @@ class DatasetService {
       params: {
         soft_delete,
       },
-    })
+    });
   }
 
   getStats({ type }) {
-    return api.get('/datasets/stats', {
+    return api.get("/datasets/stats", {
       params: {
         type,
       },
-    })
+    });
   }
 
   update({ id, updated_data }) {
-    return api.patch(`/datasets/${id}`, updated_data)
+    return api.patch(`/datasets/${id}`, updated_data);
   }
 
   list_files({ id, basepath }) {
@@ -99,16 +101,26 @@ class DatasetService {
         basepath,
         id: config.file_browser.cache_busting_id,
       },
-    })
+    });
   }
 
   get_file_download_data({ dataset_id, file_id }) {
     return api.get(`/datasets/download/${dataset_id}`, {
       params: { file_id },
-    })
+    });
   }
 
-  search_files({ id, name, location, skip, take, extension, filetype, minSize, maxSize }) {
+  search_files({
+    id,
+    name,
+    location,
+    skip,
+    take,
+    extension,
+    filetype,
+    minSize,
+    maxSize,
+  }) {
     return api.get(`/datasets/${id}/files/search`, {
       params: {
         name,
@@ -120,19 +132,19 @@ class DatasetService {
         min_file_size: minSize,
         max_file_size: maxSize,
       },
-    })
+    });
   }
 
   create_dataset(data) {
-    return api.post('/datasets', data)
+    return api.post("/datasets", data);
   }
 
   initiate_workflow_on_dataset({ dataset_id, workflow }) {
-    return api.post(`/datasets/${dataset_id}/workflow/${workflow}`)
+    return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
   }
 
   check_if_exists({ name, type } = {}) {
-    return api.get(`/datasets/${type}/${name}/exists`)
+    return api.get(`/datasets/${type}/${name}/exists`);
   }
 
   get_bundle_name(dataset) {
@@ -140,4 +152,4 @@ class DatasetService {
   }
 }
 
-export default new DatasetService()
+export default new DatasetService();
