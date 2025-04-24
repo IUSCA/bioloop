@@ -184,8 +184,8 @@
                 datasets within the context of your research projects, facilitating easier data
                 management, access control, and collaboration among team members working on the same
                 project.
-              </div></template
-            >
+              </div>
+            </template>
             <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
           </va-popover>
         </div>
@@ -684,6 +684,7 @@ const preIngestion = () => {
     ingestion_space: searchSpace.value.key,
     project_id: projectSelected.value ? projectSelected.value.id : null,
     instrument_id: selectedSourceInstrument.value.id,
+    create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
   })
 }
 

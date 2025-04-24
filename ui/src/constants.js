@@ -122,6 +122,11 @@ const exports = {
     UPLOAD_FAILED: "Upload Failed",
     UPLOADED: "Uploaded",
   },
+  DATASET_CREATE_METHODS: {
+    UPLOAD: "UPLOAD",
+    IMPORT: "IMPORT",
+    SCAN: "SCAN",
+  }
 };
 
 export default exports;
