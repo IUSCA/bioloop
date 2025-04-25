@@ -1,6 +1,11 @@
 <template>
   <!--  <va-inner-loading :loading="loading" class="h-full">-->
-  <va-stepper v-model="step" :steps="steps" controlsHidden class="h-full ingestion-stepper">
+  <va-stepper
+    v-model="step"
+    :steps="steps"
+    controlsHidden
+    class="h-full ingestion-stepper"
+  >
     <!-- Step icons and labels -->
     <template
       v-for="(s, i) in steps"
@@ -15,7 +20,11 @@
         }"
         @click="setStep(i)"
         :disabled="
-          submitAttempted || step < i || searchingFiles || loadingResources || validatingForm
+          submitAttempted ||
+          step < i ||
+          searchingFiles ||
+          loadingResources ||
+          validatingForm
         "
         preset="secondary"
       >
@@ -49,19 +58,19 @@
             @clear="resetSearch"
             @open="
               () => {
-                isFileSearchAutocompleteOpen = true
-                selectedFile = null
+                isFileSearchAutocompleteOpen = true;
+                selectedFile = null;
               }
             "
             @close="
               () => {
                 if (!selectedFile) {
-                  fileListSearchText = ''
+                  fileListSearchText = '';
                 }
-                fileList = []
-                isFileSearchAutocompleteOpen = false
+                fileList = [];
+                isFileSearchAutocompleteOpen = false;
                 if (validatingForm) {
-                  validatingForm = false
+                  validatingForm = false;
                 }
               }
             "
@@ -133,9 +142,9 @@
           <va-popover>
             <template #body>
               <div class="w-96">
-                Associating a Data Product with a source Raw Data establishes a clear lineage
-                between the original data and its processed form. This linkage helps to trace the
-                origins of processed data
+                Associating a Data Product with a source Raw Data establishes a
+                clear lineage between the original data and its processed form.
+                This linkage helps to trace the origins of processed data
               </div>
             </template>
             <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
@@ -151,7 +160,7 @@
               @update:modelValue="
                 (val) => {
                   if (!val) {
-                    projectSelected = null
+                    projectSelected = null;
                   }
                 }
               "
@@ -179,11 +188,12 @@
           <va-popover>
             <template #body>
               <div class="w-96">
-                Assigning a dataset to a project establishes a connection between your data and a
-                specific research initiatives. This association helps organize and categorize
-                datasets within the context of your research projects, facilitating easier data
-                management, access control, and collaboration among team members working on the same
-                project.
+                Assigning a dataset to a project establishes a connection
+                between your data and a specific research initiatives. This
+                association helps organize and categorize datasets within the
+                context of your research projects, facilitating easier data
+                management, access control, and collaboration among team members
+                working on the same project.
               </div>
             </template>
             <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
@@ -199,7 +209,7 @@
               @update:modelValue="
                 (val) => {
                   if (!val) {
-                    selectedSourceInstrument = null
+                    selectedSourceInstrument = null;
                   }
                 }
               "
@@ -224,7 +234,9 @@
           <div class="flex items-center ml-2">
             <va-popover>
               <template #body>
-                <div class="w-72">Source instrument where this data was collected from.</div>
+                <div class="w-72">
+                  Source instrument where this data was collected from.
+                </div>
               </template>
               <Icon icon="mdi:information" class="text-xl text-gray-500" />
             </va-popover>
@@ -252,8 +264,8 @@
           preset="primary"
           @click="
             () => {
-              isSubmissionAlertVisible = false
-              prevStep()
+              isSubmissionAlertVisible = false;
+              prevStep();
             }
           "
           :disabled="isPreviousButtonDisabled"
@@ -266,7 +278,7 @@
           :color="isLastStep ? 'success' : 'primary'"
           :disabled="isNextButtonDisabled"
         >
-          {{ isLastStep ? (submitAttempted ? 'Retry' : 'Ingest') : 'Next' }}
+          {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
         </va-button>
       </div>
     </template>
@@ -275,104 +287,122 @@
 </template>
 
 <script setup>
-import config from '@/config'
-import instrumentService from '@/services/instrument'
-import datasetService from '@/services/dataset'
-import fileSystemService from '@/services/fs'
-import toast from '@/services/toast'
-import { watchDebounced } from '@vueuse/core'
-import pm from 'picomatch'
-import { useAuthStore } from '@/stores/auth'
-import DatasetSelectAutoComplete from '@/components/dataset/DatasetSelectAutoComplete.vue'
-import { VaPopover } from 'vuestic-ui'
-import { Icon } from '@iconify/vue'
-import Constants from '@/constants'
+import config from "@/config";
+import instrumentService from "@/services/instrument";
+import datasetService from "@/services/dataset";
+import fileSystemService from "@/services/fs";
+import toast from "@/services/toast";
+import { watchDebounced } from "@vueuse/core";
+import pm from "picomatch";
+import { useAuthStore } from "@/stores/auth";
+import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
+import { VaPopover } from "vuestic-ui";
+import { Icon } from "@iconify/vue";
+import Constants from "@/constants";
 
-const auth = useAuthStore()
+const auth = useAuthStore();
 
 const STEP_KEYS = {
-  DIRECTORY: 'directory',
-  GENERAL_INFO: 'generalInfo',
-  INFO: 'info',
-}
+  DIRECTORY: "directory",
+  GENERAL_INFO: "generalInfo",
+  INFO: "info",
+};
 
-const MISSING_METADATA_ERROR = 'One or more fields have error'
-const DATASET_EXISTS_ERROR = 'A Data Product with this name already exists.'
-const DATASET_NAME_REQUIRED_ERROR = 'Dataset name cannot be empty'
-const HAS_SPACES_ERROR = 'cannot contain spaces'
-const FORM_VALIDATION_ERROR = 'An unknown error occurred'
-const DATASET_NAME_MAX_LENGTH_ERROR = 'Dataset name must have 3 or more characters.'
-const DATASET_NAME_EXISTS_ERROR = 'A Data Product with this name already exists.'
-const INGESTION_FILE_REQUIRED_ERROR = 'A file must be selected for ingestion.'
-const INGESTION_NOT_ALLOWED_ERROR = 'Selected file cannot be ingested as a dataset'
+const MISSING_METADATA_ERROR = "One or more fields have error";
+const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
+const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
+const HAS_SPACES_ERROR = "cannot contain spaces";
+const FORM_VALIDATION_ERROR = "An unknown error occurred";
+const DATASET_NAME_MAX_LENGTH_ERROR =
+  "Dataset name must have 3 or more characters.";
+const DATASET_NAME_EXISTS_ERROR =
+  "A Data Product with this name already exists.";
+const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
+const INGESTION_NOT_ALLOWED_ERROR =
+  "Selected file cannot be ingested as a dataset";
 const SOURCE_RAW_DATA_REQUIRED_ERROR =
-  'You have requested a source Raw Data to be assigned. Please select one.'
-const PROJECT_REQUIRED_ERROR = 'Project must be selected.'
-const INSTRUMENT_REQUIRED_ERROR = 'You must select a source instrument.'
+  "You have requested a source Raw Data to be assigned. Please select one.";
+const PROJECT_REQUIRED_ERROR = "Project must be selected.";
+const INSTRUMENT_REQUIRED_ERROR = "You must select a source instrument.";
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
-  (space) => space[Object.keys(space)[0]]
-)
+  (space) => space[Object.keys(space)[0]],
+);
 
 const steps = [
   {
     key: STEP_KEYS.DIRECTORY,
-    label: 'Select Directory',
-    icon: 'material-symbols:folder',
+    label: "Select Directory",
+    icon: "material-symbols:folder",
   },
-  { key: STEP_KEYS.GENERAL_INFO, label: 'General Info', icon: 'material-symbols:info' },
-  { key: STEP_KEYS.INFO, label: 'Ingestion Details', icon: 'material-symbols:play-circle' },
-]
+  {
+    key: STEP_KEYS.GENERAL_INFO,
+    label: "General Info",
+    icon: "material-symbols:info",
+  },
+  {
+    key: STEP_KEYS.INFO,
+    label: "Ingestion Details",
+    icon: "material-symbols:play-circle",
+  },
+];
 
 const datasetTypes = [
-  { label: config.dataset.types.RAW_DATA.label, value: config.dataset.types.RAW_DATA.key },
-  { label: config.dataset.types.DATA_PRODUCT.label, value: config.dataset.types.DATA_PRODUCT.key },
-]
+  {
+    label: config.dataset.types.RAW_DATA.label,
+    value: config.dataset.types.RAW_DATA.key,
+  },
+  {
+    label: config.dataset.types.DATA_PRODUCT.label,
+    value: config.dataset.types.DATA_PRODUCT.key,
+  },
+];
 
-const datasetTypeOptions = ref(datasetTypes)
-const willIngestRawData = ref(false)
-const isAssignedProject = ref(true)
-const instruments = ref([])
-const isAssignedSourceRawData = ref(true)
-const submissionSuccess = ref(false)
-const fileListSearchText = ref('')
-const fileList = ref([])
-const datasetId = ref()
-const loadingResources = ref(false) // determines if the initial resources needed for the stepper are being fetched
-const searchingFiles = ref(false)
-const validatingForm = ref(false)
-const isSubmissionAlertVisible = ref(false)
-const submitAttempted = ref(false)
-const rawDataList = ref([])
-const isAssignedSourceInstrument = ref(true)
-const selectedRawData = ref(null)
-const datasetSearchText = ref('')
-const projectSearchText = ref('')
-const willUploadRawData = ref(false)
-const selectedSourceInstrument = ref(null)
-const sourceInstrumentOptions = ref([])
+const datasetTypeOptions = ref(datasetTypes);
+const willIngestRawData = ref(false);
+const isAssignedProject = ref(true);
+const instruments = ref([]);
+const isAssignedSourceRawData = ref(true);
+const submissionSuccess = ref(false);
+const fileListSearchText = ref("");
+const fileList = ref([]);
+const datasetId = ref();
+const loadingResources = ref(false); // determines if the initial resources needed for the stepper are being fetched
+const searchingFiles = ref(false);
+const validatingForm = ref(false);
+const isSubmissionAlertVisible = ref(false);
+const submitAttempted = ref(false);
+const rawDataList = ref([]);
+const isAssignedSourceInstrument = ref(true);
+const selectedRawData = ref(null);
+const datasetSearchText = ref("");
+const projectSearchText = ref("");
+const willUploadRawData = ref(false);
+const selectedSourceInstrument = ref(null);
+const sourceInstrumentOptions = ref([]);
 
 const searchSpace = ref(
-  FILESYSTEM_SEARCH_SPACES instanceof Array && FILESYSTEM_SEARCH_SPACES.length > 0
+  FILESYSTEM_SEARCH_SPACES instanceof Array &&
+    FILESYSTEM_SEARCH_SPACES.length > 0
     ? FILESYSTEM_SEARCH_SPACES[0]
-    : ''
-)
+    : "",
+);
 
-const searchSpaceBasePath = computed(() => searchSpace.value.base_path)
+const searchSpaceBasePath = computed(() => searchSpace.value.base_path);
 
 const _searchText = computed(() => {
   return (
-    (searchSpace.value.base_path.endsWith('/')
+    (searchSpace.value.base_path.endsWith("/")
       ? searchSpace.value.base_path
-      : searchSpace.value.base_path + '/') + fileListSearchText.value
-  )
-})
+      : searchSpace.value.base_path + "/") + fileListSearchText.value
+  );
+});
 
-const step = ref(0)
+const step = ref(0);
 const isLastStep = computed(() => {
-  return step.value === steps.length - 1
-})
-const projectSelected = ref(null)
+  return step.value === steps.length - 1;
+});
+const projectSelected = ref(null);
 
 const isNextButtonDisabled = computed(() => {
   return (
@@ -381,8 +411,8 @@ const isNextButtonDisabled = computed(() => {
     loadingResources.value ||
     searchingFiles.value ||
     validatingForm.value
-  )
-})
+  );
+});
 
 const isPreviousButtonDisabled = computed(() => {
   return (
@@ -391,68 +421,68 @@ const isPreviousButtonDisabled = computed(() => {
     searchingFiles.value ||
     loadingResources.value ||
     validatingForm.value
-  )
-})
+  );
+});
 
 const selectedDatasetType = ref(
-  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key)
-)
+  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
+);
 
 const resetProjectSearch = (val) => {
-  projectSelected.value = null
-  projectSearchText.value = ''
-}
+  projectSelected.value = null;
+  projectSearchText.value = "";
+};
 
 const resetRawDataSearch = (val) => {
-  selectedRawData.value = null
-  datasetSearchText.value = ''
-  console.log('isAssignedSourceRawData changed ', val)
+  selectedRawData.value = null;
+  datasetSearchText.value = "";
+  console.log("isAssignedSourceRawData changed ", val);
   if (!val) {
-    datasetTypeOptions.value = datasetTypes
-    console.log('Clearing raw data selection')
+    datasetTypeOptions.value = datasetTypes;
+    console.log("Clearing raw data selection");
   } else {
-    console.log('else')
+    console.log("else");
     datasetTypeOptions.value = datasetTypes.filter(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
-    )
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
+    );
     selectedDatasetType.value = datasetTypeOptions.value.find(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key
-    )
-    willUploadRawData.value = false
+      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
+    );
+    willUploadRawData.value = false;
   }
   // todo - reset form errors
   // formErrors.value[STEP_KEYS.GENERAL_INFO] = null
-}
+};
 
 const onRawDataSearchOpen = () => {
-  selectedRawData.value = null
-}
+  selectedRawData.value = null;
+};
 
 const onRawDataSearchClose = () => {
   if (!selectedRawData.value) {
-    datasetSearchText.value = ''
+    datasetSearchText.value = "";
   }
-}
+};
 
 const onProjectSearchOpen = () => {
-  projectSelected.value = null
-}
+  projectSelected.value = null;
+};
 
 const onProjectSearchClose = () => {
   if (!projectSelected.value) {
-    projectSearchText.value = ''
+    projectSearchText.value = "";
   }
-}
+};
 
 watch(selectedDatasetType, (newVal) => {
-  if (newVal['value'] === config.dataset.types.RAW_DATA.key) {
-    isAssignedSourceRawData.value = false
-    selectedRawData.value = null
-    willUploadRawData.value = true
+  if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
+    isAssignedSourceRawData.value = false;
+    selectedRawData.value = null;
+    willUploadRawData.value = true;
   } else {
-    willUploadRawData.value = false
+    willUploadRawData.value = false;
   }
-})
+});
 
 const isStepperButtonDisabled = (stepIndex) => {
   return (
@@ -461,8 +491,8 @@ const isStepperButtonDisabled = (stepIndex) => {
     step.value < stepIndex ||
     loadingResources.value ||
     validatingForm.value
-  )
-}
+  );
+};
 
 // Tracks if a step's form fields are pristine (i.e. not touched by user) or
 // not. Errors are only shown when a step's form fields are not pristine. At
@@ -472,62 +502,63 @@ const stepPristineStates = ref([
   { [STEP_KEYS.DIRECTORY]: true },
   { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.INFO]: true },
-])
+]);
 
 const stepIsPristine = computed(() => {
-  return !!Object.values(stepPristineStates.value[step.value])[0]
-})
+  return !!Object.values(stepPristineStates.value[step.value])[0];
+});
 
 const formErrors = ref({
   [STEP_KEYS.DIRECTORY]: null,
   [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.INFO]: null,
-})
+});
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.DIRECTORY]
+    return !!formErrors.value[STEP_KEYS.DIRECTORY];
   } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.GENERAL_INFO]
+    return !!formErrors.value[STEP_KEYS.GENERAL_INFO];
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.INFO]
+    return !!formErrors.value[STEP_KEYS.INFO];
   }
-})
+});
 
-const isFileSearchAutocompleteOpen = ref(false)
+const isFileSearchAutocompleteOpen = ref(false);
 
-const selectedFile = ref(null)
+const selectedFile = ref(null);
 
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.DIRECTORY]: null,
     [STEP_KEYS.GENERAL_INFO]: null,
     [STEP_KEYS.INFO]: null,
-  }
-}
+  };
+};
 
 const setFormErrors = async () => {
-  resetFormErrors()
-  const { isNameValid: datasetNameIsValid, error } = await validateDatasetName()
+  resetFormErrors();
+  const { isNameValid: datasetNameIsValid, error } =
+    await validateDatasetName();
 
   if (step.value === 0) {
     if (!datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.DIRECTORY] = error
+      formErrors.value[STEP_KEYS.DIRECTORY] = error;
     } else {
-      const restricted_dataset_paths = getRestrictedIngestionPaths()
+      const restricted_dataset_paths = getRestrictedIngestionPaths();
       const origin_path_is_restricted = selectedFile.value
         ? restricted_dataset_paths.some((pattern) => {
-            const _path = selectedFile.value.path
-            let isMatch = pm(pattern)
-            const matches = isMatch(_path, pattern)
-            return matches.isMatch
+            const _path = selectedFile.value.path;
+            let isMatch = pm(pattern);
+            const matches = isMatch(_path, pattern);
+            return matches.isMatch;
           })
-        : false
+        : false;
 
       if (origin_path_is_restricted) {
-        formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR
+        formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
       } else {
-        formErrors.value[STEP_KEYS.DIRECTORY] = null
+        formErrors.value[STEP_KEYS.DIRECTORY] = null;
       }
     }
   }
@@ -538,11 +569,11 @@ const setFormErrors = async () => {
       (isAssignedProject.value && !projectSelected.value) ||
       (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
-      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR
-      return
+      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR;
+      return;
     }
   }
-}
+};
 
 // determines if the dataset (Data Product) named `value` already exists
 const validateIfExists = (value) => {
@@ -552,81 +583,85 @@ const validateIfExists = (value) => {
     // nonetheless when `value` is ''. Hence the explicit check for whether
     // `value` is falsy.
     if (!value) {
-      resolve(true)
+      resolve(true);
     } else {
       datasetService
-        .check_if_exists({ type: selectedDatasetType.value['value'], name: value })
+        .check_if_exists({
+          type: selectedDatasetType.value["value"],
+          name: value,
+        })
         .then((res) => {
-          console.log('res', res)
-          console.log('Dataset exists?', res.data.exists)
-          resolve(res.data.exists)
+          console.log("res", res);
+          console.log("Dataset exists?", res.data.exists);
+          resolve(res.data.exists);
         })
         .catch((e) => {
-          console.error('Error checking dataset existence')
-          console.error(e)
-          reject()
-        })
+          console.error("Error checking dataset existence");
+          console.error(e);
+          reject();
+        });
     }
-  })
-}
+  });
+};
 
 const validateDatasetName = async () => {
-  const datasetName = selectedFile.value?.name
+  const datasetName = selectedFile.value?.name;
   if (datasetNameIsNull(datasetName)) {
-    return { isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR }
+    return { isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR };
   } else if (!datasetNameHasMinimumChars(datasetName)) {
-    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR }
+    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
   }
 
   return validateIfExists(datasetName).then((res) => {
     return {
       isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
-      error: res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
-    }
-  })
-}
+      error:
+        res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
+    };
+  });
+};
 
 const datasetNameHasMinimumChars = (name) => {
-  return name?.length >= 3
-}
+  return name?.length >= 3;
+};
 
 const datasetNameIsNull = (name) => {
-  return !name
-}
+  return !name;
+};
 
 onMounted(() => {
-  loadingResources.value = true
+  loadingResources.value = true;
 
   datasetService
-    .getAll({ type: 'RAW_DATA' })
+    .getAll({ type: "RAW_DATA" })
     .then((res) => {
-      rawDataList.value = res.data.datasets
+      rawDataList.value = res.data.datasets;
     })
     .then(() => {
-      return instrumentService.getAll()
+      return instrumentService.getAll();
     })
     .then((res) => {
-      console.log('instruments:', res.data)
-      sourceInstrumentOptions.value = res.data
+      console.log("instruments:", res.data);
+      sourceInstrumentOptions.value = res.data;
     })
     .catch((err) => {
-      toast.error('Failed to load resources')
-      console.error(err)
+      toast.error("Failed to load resources");
+      console.error(err);
     })
     .finally(() => {
-      loadingResources.value = false
-    })
-})
+      loadingResources.value = false;
+    });
+});
 
 const resetSearch = () => {
-  selectedFile.value = null
-  fileListSearchText.value = ''
-  setRetrievedFiles([])
-  formErrors.value[STEP_KEYS.DIRECTORY] = null
+  selectedFile.value = null;
+  fileListSearchText.value = "";
+  setRetrievedFiles([]);
+  formErrors.value[STEP_KEYS.DIRECTORY] = null;
   if (validatingForm.value) {
-    validatingForm.value = false
+    validatingForm.value = false;
   }
-}
+};
 
 const searchFiles = async () => {
   fileSystemService
@@ -636,29 +671,29 @@ const searchFiles = async () => {
       search_space: searchSpace.value.key,
     })
     .then((response) => {
-      setRetrievedFiles(response.data)
+      setRetrievedFiles(response.data);
     })
     .catch((err) => {
-      console.error(err)
+      console.error(err);
       if (err.response.status === 403 || err.response.status === 404) {
-        setRetrievedFiles([])
+        setRetrievedFiles([]);
       } else {
-        toast.error('Error fetching files')
+        toast.error("Error fetching files");
       }
     })
     .finally(() => {
-      searchingFiles.value = false
-    })
-}
+      searchingFiles.value = false;
+    });
+};
 
 // Set loading to true when FileListAutoComplete is either opened or typed into.
 // The actual search begins after a delay, but a loading indicator should be
 // shown before the search begins.
 watch([isFileSearchAutocompleteOpen, fileListSearchText], () => {
   if (isFileSearchAutocompleteOpen.value) {
-    searchingFiles.value = true
+    searchingFiles.value = true;
   }
-})
+});
 
 // Begin search once FileListAutoComplete is opened, or typed into, but
 // after a delay.
@@ -666,15 +701,15 @@ watchDebounced(
   [isFileSearchAutocompleteOpen, fileListSearchText],
   () => {
     if (isFileSearchAutocompleteOpen.value) {
-      searchFiles()
+      searchFiles();
     }
   },
-  { debounce: 1000, maxWait: 3000 }
-)
+  { debounce: 1000, maxWait: 3000 },
+);
 
 const setRetrievedFiles = (files) => {
-  fileList.value = files
-}
+  fileList.value = files;
+};
 
 const preIngestion = () => {
   return datasetService.create_dataset({
@@ -683,72 +718,74 @@ const preIngestion = () => {
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
     project_id: projectSelected.value ? projectSelected.value.id : null,
-    instrument_id: selectedSourceInstrument.value.id,
+    src_instrument_id: selectedSourceInstrument.value.id,
     create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
-  })
-}
+  });
+};
 
 const initiateIngestion = async () => {
   return datasetService
     .initiate_workflow_on_dataset({
       dataset_id: datasetId.value,
-      workflow: 'integrated',
+      workflow: "integrated",
     })
     .then(() => {
-      toast.success('Initiated dataset ingestion')
-      submissionSuccess.value = true
+      toast.success("Initiated dataset ingestion");
+      submissionSuccess.value = true;
     })
     .catch((err) => {
-      toast.error('Failed to initiate ingestion')
-      console.error(err)
-      submissionSuccess.value = false
-    })
-}
+      toast.error("Failed to initiate ingestion");
+      console.error(err);
+      submissionSuccess.value = false;
+    });
+};
 
 const onSubmit = async () => {
   if (!selectedFile.value) {
-    await setFormErrors()
-    return Promise.reject()
+    await setFormErrors();
+    return Promise.reject();
   }
-  submitAttempted.value = true
+  submitAttempted.value = true;
 
   return new Promise((resolve, reject) => {
     preIngestion()
       .then(async (res) => {
-        datasetId.value = res.data.id
-        return datasetId.value
+        datasetId.value = res.data.id;
+        return datasetId.value;
       })
       .catch((err) => {
         // handle 409 error when dataset already exists
         if (err.response.status === 409) {
-          toast.error('A Data Product with this name already exists.')
+          toast.error("A Data Product with this name already exists.");
           // TODO
-          return Promise.reject()
+          return Promise.reject();
         }
-        return Promise.reject(err)
+        return Promise.reject(err);
       })
       .then(() => {
-        return initiateIngestion()
+        return initiateIngestion();
       })
       .catch((err) => {
-        toast.error('Failed to initiate ingestion')
-        console.error(err)
-        reject(err)
-      })
-  })
-}
+        toast.error("Failed to initiate ingestion");
+        console.error(err);
+        reject(err);
+      });
+  });
+};
 
 const getRestrictedIngestionPaths = () => {
-  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(',')
-}
+  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(
+    ",",
+  );
+};
 
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
-    onSubmit()
+    onSubmit();
   } else {
-    nextStep()
+    nextStep();
   }
-}
+};
 
 // Form errors are set when this component mounts, or when a form field's value
 // changes, or when the current step changes.
@@ -768,47 +805,47 @@ watch(
   ],
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
-    const stepKey = Object.keys(stepPristineStates.value[step.value])[0]
-    stepPristineStates.value[step.value][stepKey] = false
-    await setFormErrors()
-  }
-)
+    const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
+    stepPristineStates.value[step.value][stepKey] = false;
+    await setFormErrors();
+  },
+);
 
 // separate watcher for when step changes, since we don't want to mark the form
 // fields as not pristine upon step changes
 watch(step, async () => {
   if (step.value !== 2) {
     // step 3 is the `Ingestion Details` step
-    await setFormErrors()
+    await setFormErrors();
   }
-})
+});
 
 onMounted(async () => {
-  await setFormErrors()
-})
+  await setFormErrors();
+});
 
 onMounted(() => {
-  loadingResources.value = true
+  loadingResources.value = true;
   datasetService
-    .getAll({ type: 'RAW_DATA' })
+    .getAll({ type: "RAW_DATA" })
     .then((res) => {
-      rawDataList.value = res.data.datasets
+      rawDataList.value = res.data.datasets;
     })
     .then(() => {
-      return instrumentService.getAll()
+      return instrumentService.getAll();
     })
     .then((res) => {
-      console.log('instruments:', res.data)
-      sourceInstrumentOptions.value = res.data
+      console.log("instruments:", res.data);
+      sourceInstrumentOptions.value = res.data;
     })
     .catch((err) => {
-      toast.error('Failed to load resources')
-      console.error(err)
+      toast.error("Failed to load resources");
+      console.error(err);
     })
     .finally(() => {
-      loadingResources.value = false
-    })
-})
+      loadingResources.value = false;
+    });
+});
 </script>
 
 <style lang="scss">

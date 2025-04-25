@@ -692,7 +692,7 @@ const uploadFormData = computed(() => {
       source_dataset_id: selectedRawData.value.id,
     }),
     project_id: projectSelected.value ? projectSelected.value.id : null,
-    instrument_id: selectedSourceInstrument.value
+    src_instrument_id: selectedSourceInstrument.value
       ? selectedSourceInstrument.value.id
       : null,
     files_metadata: filesToUpload.value.map((e) => {

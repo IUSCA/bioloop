@@ -139,7 +139,7 @@ const buildUserRoleQueryObject = ({
 };
 
 router.get(
-  '/:username/',
+  '/:username/all',
   isPermittedTo('read', { checkOwnerShip: true }),
   query('deleted').toBoolean().default(false),
   query('type').isIn(config.dataset_types).optional(),
@@ -151,6 +151,7 @@ router.get(
   query('match_name_exact').default(false).toBoolean(),
 
   asyncHandler(async (req, res, next) => {
+    console.log('/ user role');
     // #swagger.tags = ['datasets']
 
     const query_obj = buildUserRoleQueryObject({ ...req.query, username: req.params.username });
@@ -177,6 +178,7 @@ router.get(
       metadata: { count },
       datasets,
     });
+    // res.json('/ user role');
   }),
 );
 
@@ -323,8 +325,6 @@ router.get(
       prisma.dataset.count({ ...filterQuery }),
     ]);
 
-    console.log('Retrieved datasets:', datasets);
-
     res.json({
       metadata: { count },
       datasets,
@@ -365,6 +365,7 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
+    query('include_source_instrument').toBoolean().optional(),
   ]),
   dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -382,6 +383,7 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
+      include_source_instrument: req.query.include_source_instrument || false,
     });
 
     res.json(dataset);
@@ -409,7 +411,7 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('project_id').optional(),
-    body('instrument_id').optional().notEmpty().escape(),
+    body('src_instrument_id').optional().notEmpty().escape(),
     body('create_method').optional().notEmpty().escape(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -428,7 +430,7 @@ router.post(
     ])(req.body);
 
     const {
-      ingestion_space, create_method, project_id, instrument_id,
+      ingestion_space, create_method, project_id, src_instrument_id,
     } = req.body;
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
@@ -468,10 +470,10 @@ router.post(
       };
     }
 
-    if (instrument_id) {
-      data.instrument = {
+    if (src_instrument_id) {
+      data.src_instrument = {
         connect: {
-          id: instrument_id,
+          id: src_instrument_id,
         },
       };
     }
@@ -1056,4 +1058,4 @@ router.get(
 );
 
 module.exports = router;
-module.exports.dataset_access_check = dataset_access_check;
+// module.exports.dataset_access_check = dataset_access_check;

@@ -6,12 +6,6 @@
           <td>ID</td>
           <td>{{ props.dataset.id }}</td>
         </tr>
-        <tr v-if="datasetCreator">
-          <td>Created By</td>
-          <td>
-            {{ datasetCreatorDisplayed }}
-          </td>
-        </tr>
         <tr>
           <td>Start Date</td>
           <td>
@@ -29,6 +23,12 @@
             <span>
               {{ datetime.fromNow(null) }}
             </span>
+          </td>
+        </tr>
+        <tr>
+          <td>Source Instrument</td>
+          <td>
+            {{ props.dataset.src_instrument?.name }}
           </td>
         </tr>
         <tr>
@@ -58,6 +58,12 @@
           <td>{{ props.dataset.num_directories }}</td>
         </tr>
         <tr>
+          <td>Created By</td>
+          <td>
+            {{ datasetCreatorDisplayed }}
+          </td>
+        </tr>
+        <tr>
           <td>Description</td>
           <td>
             <div class="max-h-[11.5rem] overflow-y-scroll">
@@ -71,23 +77,24 @@
 </template>
 
 <script setup>
-import * as datetime from '@/services/datetime'
-import { formatBytes } from '@/services/utils'
-import { useAuthStore } from '@/stores/auth'
-import Constants from '@/constants'
+import * as datetime from "@/services/datetime";
+import { formatBytes } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
-const props = defineProps({ dataset: Object })
+const props = defineProps({ dataset: Object });
 
-const auth = useAuthStore()
+const auth = useAuthStore();
 
 const datasetCreateLog = computed(() => {
-  return (props.dataset?.audit_logs || []).find((e) => !!e.create_method)
-})
+  return (props.dataset?.audit_logs || []).find((e) => !!e.create_method);
+});
 
 const datasetCreatorDisplayed = computed(() => {
-  const datasetCreator = datasetCreateLog.value?.user
-  return datasetCreator ? `${datasetCreator.username} (${datasetCreator.name})` : null
-})
+  const datasetCreator = datasetCreateLog.value?.user;
+  return datasetCreator
+    ? `${datasetCreator.username} (${datasetCreator.name})`
+    : null;
+});
 </script>
 
 <style lang="scss" scoped>

@@ -8,36 +8,36 @@ datasource db {
 }
 
 model dataset {
-  id               Int                 @id @default(autoincrement())
-  name             String
-  type             String
-  num_directories  Int?
-  num_files        Int?
-  du_size          BigInt?
-  size             BigInt?
-  bundle_size      BigInt?
-  description      String?
-  created_at       DateTime            @default(now()) @db.Timestamp(6)
-  updated_at       DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  origin_path      String?
-  archive_path     String?
-  staged_path      String?
-  is_deleted       Boolean             @default(false)
-  is_staged        Boolean             @default(false)
-  metadata         Json?
-  workflows        workflow[]
-  files            dataset_file[]
-  audit_logs       dataset_audit[]
-  states           dataset_state[]
-  derived_datasets dataset_hierarchy[] @relation("source_datasets")
-  source_datasets  dataset_hierarchy[] @relation("derived_datasets")
-  projects         project_dataset[]
-  accesses         data_access_log[]
-  stage_requests   stage_request_log[]
-  bundle           bundle?
+  id                Int                 @id @default(autoincrement())
+  name              String
+  type              String
+  num_directories   Int?
+  num_files         Int?
+  du_size           BigInt?
+  size              BigInt?
+  bundle_size       BigInt?
+  description       String?
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  updated_at        DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  origin_path       String?
+  archive_path      String?
+  staged_path       String?
+  is_deleted        Boolean             @default(false)
+  is_staged         Boolean             @default(false)
+  metadata          Json?
+  workflows         workflow[]
+  files             dataset_file[]
+  audit_logs        dataset_audit[]
+  states            dataset_state[]
+  derived_datasets  dataset_hierarchy[] @relation("source_datasets")
+  source_datasets   dataset_hierarchy[] @relation("derived_datasets")
+  projects          project_dataset[]
+  accesses          data_access_log[]
+  stage_requests    stage_request_log[]
+  bundle            bundle?
   // create_log       dataset_create_log?
-  instrument       instrument?         @relation(fields: [instrument_id], references: [id])
-  instrument_id    Int?
+  src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
+  src_instrument_id Int?
 
   @@unique([name, type, is_deleted])
 }

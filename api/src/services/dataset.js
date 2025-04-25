@@ -101,7 +101,7 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
-  // include_upload_log = false,
+  include_source_instrument = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -131,11 +131,17 @@ async function get_dataset({
       ...workflow_include,
       ...INCLUDE_AUDIT_LOGS,
       ...INCLUDE_STATES,
-      // ...include_import_log,
       bundle,
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
+      ...(include_source_instrument ? {
+        src_instrument: {
+          select: {
+            name: true,
+          },
+        },
+      } : undefined),
     },
   });
   const dataset_workflows = dataset.workflows;
