@@ -11,7 +11,6 @@ const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
-  DATASET_CREATE_METHODS,
 } = require('../constants');
 
 const prisma = new PrismaClient();

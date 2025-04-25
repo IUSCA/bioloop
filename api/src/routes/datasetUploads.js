@@ -55,7 +55,6 @@ const setUploader = async (req, res, next) => {
   });
 
   req.uploader = dataset_upload_audit_log.user;
-  console.log('datasetUploads: req.uploader:', req.uploader);
   next();
 };
 

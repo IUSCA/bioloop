@@ -151,7 +151,6 @@ router.get(
   query('match_name_exact').default(false).toBoolean(),
 
   asyncHandler(async (req, res, next) => {
-    console.log('/ user role');
     // #swagger.tags = ['datasets']
 
     const query_obj = buildUserRoleQueryObject({ ...req.query, username: req.params.username });
