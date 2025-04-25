@@ -47,21 +47,31 @@
       </template>
 
       <template #cell(uploaded_dataset)="{ rowData }">
+        <div v-if="!auth.canOperate">
+          {{ rowData.uploaded_dataset.name }}
+        </div>
         <router-link
+          v-else
           :to="`/datasets/${rowData.uploaded_dataset.id}`"
           class="va-link"
-          >{{ rowData.uploaded_dataset.name }}
+        >
+          {{ rowData.uploaded_dataset.name }}
         </router-link>
       </template>
 
       <template #cell(source_dataset)="{ rowData }">
-        <router-link
-          v-if="rowData.source_dataset"
-          :to="`/datasets/${rowData.source_dataset.id}`"
-          class="va-link"
-        >
-          {{ rowData.source_dataset.name }}
-        </router-link>
+        <div v-if="rowData.source_dataset">
+          <div v-if="!auth.canOperate">
+            {{ rowData.source_dataset.name }}
+          </div>
+          <router-link
+            v-else
+            :to="`/datasets/${rowData.source_dataset.id}`"
+            class="va-link"
+          >
+            {{ rowData.source_dataset.name }}
+          </router-link>
+        </div>
       </template>
 
       <template #cell(user)="{ rowData }">
