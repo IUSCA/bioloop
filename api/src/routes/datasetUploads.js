@@ -139,9 +139,9 @@ router.get(
   }),
 );
 
-const getUploadedDataProductPath = (datasetId) => path.join(
+const getUploadedDataProductPath = ({ datasetId = null, datasetType = null } = {}) => path.join(
   UPLOAD_PATH,
-  'data_products',
+  datasetType,
   `${datasetId}`,
   'processed',
 );
@@ -233,7 +233,7 @@ router.post(
       await tx.dataset.update({
         where: { id: uploadedDatasetId },
         data: {
-          origin_path: getUploadedDataProductPath(uploadedDatasetId),
+          origin_path: getUploadedDataProductPath({ datasetId: uploadedDatasetId, datasetType: type }),
         },
       });
 

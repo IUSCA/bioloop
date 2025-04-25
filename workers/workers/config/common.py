@@ -47,7 +47,6 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/path/to/data_product/upload',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
@@ -75,9 +74,6 @@ config = {
     },
     'upload': {
         'UPLOAD_RETRY_THRESHOLD_HOURS': 72,
-        'types': {
-            'DATASET': 'DATASET'
-        },
         'status': {
             'UPLOADING': 'UPLOADING',
             'UPLOAD_FAILED': 'UPLOAD_FAILED',

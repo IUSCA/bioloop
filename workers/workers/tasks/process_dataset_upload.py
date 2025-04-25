@@ -90,6 +90,7 @@ def merge_uploaded_file_chunks(file_upload_log_id: int,
 
 # Updates the upload status of a given dataset's upload and uploaded files to PROCESSING
 def update_upload_status_to_processing(dataset: dict):
+    # todo - don't use 'upload_log'
     dataset_upload_log = dataset['upload_log']['upload']
     upload_log_files = dataset_upload_log['files']
 
@@ -123,7 +124,7 @@ def process_dataset_upload(dataset: dict) -> None:
     dataset_upload_log_id = dataset_upload_log['id']
     upload_log_files = dataset_upload_log['files']
 
-    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
+    dataset_path = Path(dataset['origin_path'])
     # print(f"Upload directory: {dataset_path}")
     # time.sleep(30)
     if not dataset_path.exists():
@@ -261,7 +262,7 @@ def process(celery_task, dataset_id, **kwargs):
         print(f"Started workflow {int_wf} for dataset {dataset_id}")
 
     # purge uploaded files from the filesystem
-    dataset_path = Path(config['paths']['DATA_PRODUCT']['upload']) / str(dataset['id'])
+    dataset_path = Path(dataset['origin_path'])
     uploaded_chunks_path = dataset_path / 'uploaded_chunks'
     if uploaded_chunks_path.exists():
         shutil.rmtree(uploaded_chunks_path)

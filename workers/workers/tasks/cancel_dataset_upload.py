@@ -17,7 +17,7 @@ def purge_uploaded_resources(celery_task, dataset_id, **kwargs):
 
     dataset = api.get_dataset(dataset_id=dataset_id)
 
-    dataset_path = Path(config['paths'][dataset['type']]['upload']) / str(dataset_id)
+    dataset_path = Path(dataset['origin_path'])
     if dataset_path.exists():
         print(f"Found dataset {dataset_id}'s uploaded resources at: {dataset_path}")
         shutil.rmtree(dataset_path)
