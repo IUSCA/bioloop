@@ -1,32 +1,31 @@
 <template>
   <va-data-table
-      v-if="!noFilesSelected"
-      class="upload-file-table"
-      :items="props.files"
-      :columns="columns"
-      virtual-scroller
+    v-if="!noFilesSelected"
+    class="upload-file-table"
+    :items="props.files"
+    :columns="columns"
+    virtual-scroller
   >
     <template #cell(name)="{ rowData }">
       <div class="flex items-center gap-1 text-left">
         <Icon
-            v-if="rowData.type === 'directory'"
-            icon="mdi-folder"
-            class="text-xl flex-none text-gray-700"
+          v-if="rowData.type === 'directory'"
+          icon="mdi-folder"
+          class="text-xl flex-none text-gray-700"
         />
-        <FileTypeIcon v-else :filename="rowData.name"/>
+        <FileTypeIcon v-else :filename="rowData.name" />
         <span> {{ rowData.name }} </span>
       </div>
     </template>
 
-
     <template #cell(actions)="{ rowIndex }">
       <div class="flex justify-end">
         <va-button
-            preset="plain"
-            icon="delete"
-            color="danger"
-            @click="removeFile(rowIndex)"
-            :disabled="(props.files || []).length < 1"
+          preset="plain"
+          icon="delete"
+          color="danger"
+          @click="removeFile(rowIndex)"
+          :disabled="(props.files || []).length < 1"
         />
       </div>
     </template>
@@ -59,9 +58,9 @@ const columns = [
     thAlign: "left",
     tdAlign: "left",
     tdStyle:
-        "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
     thStyle:
-        "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "formattedSize",
@@ -70,9 +69,9 @@ const columns = [
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
-        "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
     thStyle:
-        "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "actions",
@@ -80,14 +79,13 @@ const columns = [
     thAlign: "right",
     tdAlign: "right",
     thStyle:
-        "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-  }
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
 ];
 
 const removeFile = (fileIndex) => {
   emit("file-removed", fileIndex);
 };
-
 </script>
 
 <style scoped>
@@ -96,4 +94,3 @@ const removeFile = (fileIndex) => {
   max-height: 300px;
 }
 </style>
-

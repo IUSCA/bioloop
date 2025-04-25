@@ -106,7 +106,7 @@
             class="flex-none"
             @click="
               isValid({ validate: true }) &&
-                (is_last_step ? handleCreate() : nextStep())
+              (is_last_step ? handleCreate() : nextStep())
             "
             :color="is_last_step ? 'success' : 'primary'"
             :disabled="!isValid()"

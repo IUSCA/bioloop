@@ -24,6 +24,5 @@ router.use('/fs', require('./fs'));
 router.use('/uploads', require('./uploads'));
 router.use('/datasetUploads', require('./datasetUploads'));
 router.use('/instruments', require('./instruments'));
-// router.use('/test', require('./test'));
 
 module.exports = router;

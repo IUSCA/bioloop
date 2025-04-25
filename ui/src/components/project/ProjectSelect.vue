@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import projectService from '@/services/projects'
+import projectService from "@/services/projects";
 // import { formatBytes } from "@/services/utils";
 
 const props = defineProps({
@@ -38,12 +38,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-})
+});
 
-const searchText = ref('')
-const projects = ref([])
+const searchText = ref("");
+const projects = ref([]);
 
 projectService.getAll({ forSelf: false }).then((res) => {
-  projects.value = (res.data.projects || []).filter((p) => !props.excludeIds.includes(p.id))
-})
+  projects.value = (res.data.projects || []).filter(
+    (p) => !props.excludeIds.includes(p.id),
+  );
+});
 </script>
