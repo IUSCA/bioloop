@@ -11,20 +11,15 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const datasetService = require('../services/dataset');
-const { dataset_access_check } = require('./datasets');
 const workflowService = require('../services/workflow');
-const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS, DATASET_CREATE_METHODS } = require('../constants');
-const { UPLOAD_STATUSES } = require('../constants');
-
-const UPLOAD_PATH = config.upload.path;
+const {
+  INCLUDE_DATASET_UPLOAD_LOG_RELATIONS, DATASET_CREATE_METHODS, WORKFLOWS, UPLOAD_STATUSES,
+} = require('../constants');
 
 const isPermittedTo = accessControl('datasetUploads');
 
 const router = express.Router();
 const prisma = new PrismaClient();
-
-const CANCEL_DATASET_UPLOAD_WORKFLOW = 'cancel_dataset_upload';
-const PROCESS_DATASET_UPLOAD_WORKFLOW = 'process_dataset_upload';
 
 const get_dataset_active_workflows = async ({ dataset } = {}) => {
   const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
@@ -39,7 +34,7 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
 router.get(
   '/all',
   validate([
-    query('status').isIn(Object.values()).optional(),
+    query('status').isIn(Object.values(UPLOAD_STATUSES)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
@@ -141,7 +136,7 @@ router.get(
 );
 
 const getUploadedDataProductPath = ({ datasetId = null, datasetType = null } = {}) => path.join(
-  UPLOAD_PATH,
+  config.upload.path,
   datasetType,
   `${datasetId}`,
   'processed',
@@ -278,9 +273,14 @@ router.patch(
         },
       });
 
-      if (dataset_upload_audit_log.user_id !== req.user.id) {
+      // A user can only update an upload log one of the following two conditions are met:
+      // 1. The user has either the `admin` or the `operator` role
+      // 2. The user has the `user` role, and they are the one who initiated this upload.
+      if (
+        !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
+          && dataset_upload_audit_log.user_id !== req.user.id
+      ) {
         return next(createError.Forbidden());
-        // throw new Error('Unauthorized to update this upload');
       }
 
       let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
@@ -310,14 +310,13 @@ router.patch(
 );
 
 // - Initiate the processing of uploaded files
-// - Used by workers
+// - Used by UI and workers
 router.post(
   '/:dataset_id/process',
   validate([
     param('dataset_id').isInt().toInt(),
   ]),
   isPermittedTo('update'),
-  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
@@ -333,7 +332,13 @@ router.post(
       },
     });
 
-    if (dataset_upload_audit_log.user_id !== req.user.id) {
+    // A user can only process an upload if one of the following two conditions are met:
+    // 1. The user has either the `admin` or the `operator` role
+    // 2. The user has the `user` role, and they are the one who initiated this upload.
+    if (
+      !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
+        && dataset_upload_audit_log.user_id !== req.user.id
+    ) {
       return next(createError.Forbidden());
     }
 
@@ -350,7 +355,6 @@ router.post(
       },
       include: {
         workflows: true,
-        // dataset_upload_log: true,
       },
     });
 
@@ -364,7 +368,7 @@ router.post(
     // cancelled, check if the workflow to cancel it is underway.
     uploadedDataset.workflows = await get_dataset_active_workflows({ dataset: uploadedDataset });
     const cancelUploadWorkflow = uploadedDataset.workflows.find(
-      (wf) => wf.name === CANCEL_DATASET_UPLOAD_WORKFLOW,
+      (wf) => wf.name === WORKFLOWS.CANCEL_DATASET_UPLOAD,
     );
     const isCancelUploadWorkflowRunning = !!cancelUploadWorkflow;
 
@@ -372,7 +376,7 @@ router.post(
       logger.info('Starting workflow to process the upload');
       const processUploadWorkflow = await datasetService.create_workflow(
         uploadedDataset,
-        PROCESS_DATASET_UPLOAD_WORKFLOW,
+        WORKFLOWS.PROCESS_DATASET_UPLOAD,
         req.user.id,
       );
       res.json(processUploadWorkflow);
@@ -380,21 +384,22 @@ router.post(
       const error = 'Cannot process upload. A request to cancel this upload '
             + `(workflow ${cancelUploadWorkflow.id}) is already in progress.`;
       logger.error(error);
-      return next(createError.Conflict(error));
+      return next(createError.BadRequest(error));
     }
   }),
 );
 
+// - Cancel an in-progress upload
+// - Used by UI
 router.post(
   '/:dataset_id/cancel',
   isPermittedTo('update'),
-  dataset_access_check,
   validate([
     param('dataset_id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
-    // #swagger.summary = 'Cancel a pending upload'
+    // #swagger.summary = 'Cancel an in-progress upload'
 
     logger.info(`Received request to cancel upload for dataset ${req.params.dataset_id}`);
 
@@ -407,7 +412,13 @@ router.post(
       },
     });
 
-    if (dataset_upload_audit_log.user_id !== req.user.id) {
+    // A user can only cancel an upload if one of the following two conditions are met:
+    // 1. The user has either the `admin` or the `operator` role
+    // 2. The user has the `user` role, and they are the one who initiated this upload.
+    if (
+      !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
+        && dataset_upload_audit_log.user_id !== req.user.id
+    ) {
       return next(createError.Forbidden());
     }
 
@@ -417,7 +428,6 @@ router.post(
       },
       include: {
         workflows: true,
-        // create_log: true,
       },
     });
 
@@ -425,7 +435,7 @@ router.post(
     // it's too late to cancel the upload.
     uploadedDataset.workflows = await get_dataset_active_workflows({ dataset: uploadedDataset });
     const processUploadWorkflow = uploadedDataset.workflows.find(
-      (wf) => wf.name === PROCESS_DATASET_UPLOAD_WORKFLOW,
+      (wf) => wf.name === WORKFLOWS.PROCESS_DATASET_UPLOAD,
     );
     const isProcessUploadWorkflowRunning = !!processUploadWorkflow;
 
@@ -433,7 +443,7 @@ router.post(
       logger.info('Starting workflow to cancel the upload');
       const cancelUploadWorkflow = await datasetService.create_workflow(
         uploadedDataset,
-        CANCEL_DATASET_UPLOAD_WORKFLOW,
+        WORKFLOWS.CANCEL_DATASET_UPLOAD,
         req.user.id,
       );
       res.json(cancelUploadWorkflow);
@@ -441,7 +451,7 @@ router.post(
       const error = 'Cannot cancel upload. A request to process this upload '
             + `(workflow ${processUploadWorkflow.id}) is already in progress.`;
       logger.error(error);
-      return next(createError.Conflict(error));
+      return next(createError.BadRequest(error));
     }
   }),
 );

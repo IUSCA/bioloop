@@ -110,6 +110,13 @@ const UPLOAD_STATUSES = {
   FAILED: 'FAILED',
 };
 
+const WORKFLOWS = {
+  INTEGRATED: 'integrated',
+  STAGE: 'stage',
+  PROCESS_DATASET_UPLOAD: 'process_dataset_upload',
+  CANCEL_DATASET_UPLOAD: 'cancel_dataset_upload',
+};
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
@@ -119,4 +126,5 @@ module.exports = {
   DONE_STATUSES,
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,
+  WORKFLOWS,
 };
