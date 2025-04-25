@@ -73,6 +73,7 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
         select: {
           id: true,
           name: true,
+          origin_path: true,
           source_datasets: {
             select: {
               source_dataset: true,

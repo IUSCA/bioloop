@@ -257,7 +257,7 @@
               <va-card-content>
                 <UploadedDatasetDetails
                   v-if="selectingFiles || selectingDirectory"
-                  :dataset="datasetUploadLog?.dataset"
+                  :dataset="datasetUploadLog?.audit_log.dataset"
                   v-model:populated-dataset-name="populatedDatasetName"
                   :input-disabled="submitAttempted"
                   :uploaded-data-product-error-messages="
@@ -348,7 +348,6 @@ const STEP_KEYS = {
   INFO: "info",
 };
 
-const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const HAS_SPACES_ERROR = "cannot contain spaces";
 
@@ -431,7 +430,7 @@ const selectedDatasetType = ref(
 
 const willUploadRawData = ref(false);
 
-const resetProjectSearch = (val) => {
+const resetProjectSearch = () => {
   projectSelected.value = null;
   projectSearchText.value = "";
 };
@@ -688,9 +687,21 @@ const isLastStep = computed(() => {
 const uploadFormData = computed(() => {
   return {
     name: populatedDatasetName.value,
-    type: "DATA_PRODUCT",
+    type: selectedDatasetType.value["value"],
     ...(selectedRawData.value && {
       source_dataset_id: selectedRawData.value.id,
+    }),
+    project_id: projectSelected.value ? projectSelected.value.id : null,
+    instrument_id: selectedSourceInstrument.value
+      ? selectedSourceInstrument.value.id
+      : null,
+    files_metadata: filesToUpload.value.map((e) => {
+      return {
+        name: e.name,
+        checksum: e.fileChecksum,
+        num_chunks: e.numChunks,
+        path: e.path,
+      };
     }),
   };
 });
@@ -718,14 +729,16 @@ const validateDatasetName = async () => {
       console.log(`datasetNameValidationRules[3] then`);
       console.log("res", res);
 
-      console.log("return val", {
-        isNameValid: !res,
-        error: res && DATASET_EXISTS_ERROR,
-      });
+      const datasetExistsError = (datasetType) => {
+        const datasetTypeLabel = datasetTypes.find(
+          (type) => type.value === datasetType,
+        ).label;
+        return `A ${datasetTypeLabel} with this name already exists.`;
+      };
 
       return {
         isNameValid: !res,
-        error: res && DATASET_EXISTS_ERROR,
+        error: res && datasetExistsError(selectedDatasetType.value["value"]),
       };
     })
     .catch(() => {
@@ -1077,8 +1090,14 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("index", i);
     chunkData.append("size", file.size);
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append("uploaded_entity_id", datasetUploadLog.value.dataset.id);
-    chunkData.append("upload_path", datasetUploadLog.value.dataset.origin_path);
+    chunkData.append(
+      "uploaded_entity_id",
+      datasetUploadLog.value.audit_log.dataset.id,
+    );
+    chunkData.append(
+      "upload_path",
+      datasetUploadLog.value.audit_log.dataset.origin_path,
+    );
     chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
     chunkData.append("file", fileData);
@@ -1151,7 +1170,7 @@ const uploadFile = async (fileDetails) => {
   if (uploaded) {
     try {
       await datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value.audit_log.dataset_id,
+        datasetUploadLog.value.audit_log.dataset.id,
         auth.user?.username,
         {
           files: [
@@ -1303,15 +1322,6 @@ const preUpload = async () => {
       }
     : {
         ...uploadFormData.value,
-        files_metadata: filesToUpload.value.map((e) => {
-          return {
-            name: e.name,
-            checksum: e.fileChecksum,
-            num_chunks: e.numChunks,
-            path: e.path,
-          };
-        }),
-        project_id: projectSelected.value ? projectSelected.value.id : null,
       };
 
   const res = await createOrUpdateUploadLog(logData);
@@ -1327,7 +1337,7 @@ const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
     ? datasetUploadService.logDatasetUpload(data)
     : datasetUploadService.updateDatasetUploadLog(
-        datasetUploadLog.value?.audit_log?.dataset_id,
+        datasetUploadLog.value?.audit_log?.dataset.id,
         auth.user?.username,
         data,
       );
@@ -1465,15 +1475,15 @@ onBeforeUnmount(async () => {
 
   if (isUploadIncomplete.value) {
     await datasetUploadService.cancelDatasetUpload(
-      datasetUploadLog.value.audit_log.dataset_id,
+      datasetUploadLog.value.audit_log.dataset.id,
     );
   }
 });
 
-watch((filesToUpload) => {
-  // debugger
-  console.log("filesToUpload", filesToUpload);
-});
+// watch((filesToUpload) => {
+//   // debugger
+//   console.log("filesToUpload", filesToUpload);
+// });
 </script>
 
 <style lang="scss">

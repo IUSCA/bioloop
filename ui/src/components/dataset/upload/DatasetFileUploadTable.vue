@@ -37,13 +37,13 @@
           <va-icon name="check_circle_outline" color="success" />
         </va-popover>
         <va-popover
-          v-if="value === config.UPLOAD_STATUSES.UPLOADING"
+          v-if="value === constants.UPLOAD_STATUSES.UPLOADING"
           message="Uploading"
         >
           <va-icon name="pending" color="info" />
         </va-popover>
         <va-popover
-          v-if="value === config.UPLOAD_STATUSES.UPLOAD_FAILED"
+          v-if="value === constants.UPLOAD_STATUSES.UPLOAD_FAILED"
           message="Failed"
         >
           <va-icon name="error_outline" color="danger" />

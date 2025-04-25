@@ -188,11 +188,13 @@ router.post(
                       }],
                     },
                   }),
-                  instrument: {
-                    connect: {
-                      id: instrument_id,
+                  ...(instrument_id && {
+                    instrument: {
+                      connect: {
+                        id: instrument_id,
+                      },
                     },
-                  },
+                  }),
                 },
               },
               create_method: DATASET_CREATE_METHODS.UPLOAD,
