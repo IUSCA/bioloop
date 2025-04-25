@@ -268,7 +268,7 @@ def get_all_workflows():
 
 def get_dataset_upload_logs():
     with APIServerSession() as s:
-        r = s.get(f'datasetUploads')
+        r = s.get(f'datasetUploads/all')
         r.raise_for_status()
         return r.json()
 

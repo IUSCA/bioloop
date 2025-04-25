@@ -81,23 +81,11 @@ model dataset_file_hierarchy {
   @@index([child_id])
 }
 
-// model dataset_create_log {
-//   id            Int                 @id @default(autoincrement())
-//   created_at    DateTime            @default(now()) @db.Timestamp(6)
-//   updated_at    DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-//   dataset_id    Int                 @unique
-//   dataset       dataset             @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-//   creator       user?               @relation(fields: [creator_id], references: [id], onDelete: SetNull)
-//   creator_id    Int?
-//   instrument    instrument?         @relation(fields: [instrument_id], references: [id], onDelete: SetNull)
-//   instrument_id Int?
-//   upload        dataset_upload_log?
-// }
-
 model dataset_upload_log {
   id           Int               @id @default(autoincrement())
   status       upload_status
   files        file_upload_log[]
+  updated_at   DateTime          @default(now()) @updatedAt @db.Timestamp(6)
   audit_log    dataset_audit     @relation(fields: [audit_log_id], references: [id], onDelete: Cascade)
   audit_log_id Int               @unique
 }

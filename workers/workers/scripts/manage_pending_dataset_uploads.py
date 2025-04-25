@@ -24,31 +24,30 @@ UPLOAD_RETRY_THRESHOLD_HOURS = config['upload']['UPLOAD_RETRY_THRESHOLD_HOURS']
 
 def main():
     past_dataset_uploads = api.get_dataset_upload_logs()
-    dataset_uploads = past_dataset_uploads['uploads']
+    dataset_upload_logs = past_dataset_uploads['uploads']
 
-    logger.info(f"Found {len(dataset_uploads)} dataset uploads")
+    logger.info(f"Found {len(dataset_upload_logs)} dataset uploads")
 
     dataset_uploads_pending_processing = [
-        upload for upload in dataset_uploads if (
-                upload['upload_log']['status'] == config['upload']['status']['PROCESSING_FAILED'] or
-                upload['upload_log']['status'] == config['upload']['status']['UPLOADED']
+        dataset_upload_log for dataset_upload_log in dataset_upload_logs if (
+                dataset_upload_log['status'] == config['upload']['status']['PROCESSING_FAILED'] or
+                dataset_upload_log['status'] == config['upload']['status']['UPLOADED']
         )]
 
     logger.info(f"Found {len(dataset_uploads_pending_processing)} dataset uploads that "
                 f" are currently pending processing, with an upload status of UPLOADED "
                 f"or PROCESSING_FAILED")
 
-    for dataset_upload in dataset_uploads_pending_processing:
-        upload_log = dataset_upload['upload_log']
-        upload_status = upload_log['status']
-
-        dataset_upload_log_id = dataset_upload['id']
-        dataset_id = dataset_upload['dataset_id']
+    for dataset_upload_log in dataset_uploads_pending_processing:
+        upload_status = dataset_upload_log['status']
+        dataset_upload_log_id = dataset_upload_log['id']
+        dataset_upload_audit_log = dataset_upload_log['audit_log']
+        dataset_id = dataset_upload_audit_log['dataset_id']
 
         logger.info(f"Processing dataset upload {dataset_upload_log_id} (dataset_id {dataset_id})")
         logger.info(f"Upload status: {upload_status}")
 
-        upload_last_updated_time = datetime.fromisoformat(upload_log['updated_at'][:-1])
+        upload_last_updated_time = datetime.fromisoformat(dataset_upload_log['updated_at'][:-1])
         current_time = datetime.now()
         difference = (current_time - upload_last_updated_time).total_seconds() / 3600
         logger.info(f"Dataset upload {dataset_upload_log_id} was last updated {difference} hours ago")
@@ -66,12 +65,12 @@ def main():
         if will_resume_workflow:
             logger.info(f"Will retry running workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for "
                         f"dataset upload {dataset_upload_log_id} (dataset_id: {dataset_id})")
-            restart_process_dataset_upload_workflow(dataset_upload=dataset_upload)
+            restart_process_dataset_upload_workflow(dataset_upload_log=dataset_upload_log)
 
 
-def restart_process_dataset_upload_workflow(dataset_upload: dict) -> None:
-    dataset_upload_log_id = dataset_upload['id']
-    dataset_id = dataset_upload['dataset_id']
+def restart_process_dataset_upload_workflow(dataset_upload_log: dict) -> None:
+    dataset_upload_log_id = dataset_upload_log['id']
+    dataset_id = dataset_upload_log['dataset_id']
 
     dataset = api.get_dataset(dataset_id=dataset_id, workflows=True)
 

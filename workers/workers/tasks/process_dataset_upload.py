@@ -88,10 +88,14 @@ def merge_uploaded_file_chunks(file_upload_log_id: int,
         else config['upload']['status']['COMPLETE']
 
 
+def get_dataset_upload_log(dataset: dict) -> dict:
+    dataset_upload_audit_log = [log for log in dataset['audit_logs'] if log['create_method'] == 'UPLOAD'][0]
+    return dataset_upload_audit_log['upload']
+
+
 # Updates the upload status of a given dataset's upload and uploaded files to PROCESSING
 def update_upload_status_to_processing(dataset: dict):
-    # todo - don't use 'upload_log'
-    dataset_upload_log = dataset['upload_log']['upload']
+    dataset_upload_log = get_dataset_upload_log(dataset)
     upload_log_files = dataset_upload_log['files']
 
     file_log_updates = []
@@ -120,7 +124,7 @@ def update_upload_status_to_processing(dataset: dict):
 
 def process_dataset_upload(dataset: dict) -> None:
     dataset_id = dataset['id']
-    dataset_upload_log = dataset['audit_log']['upload']
+    dataset_upload_log = get_dataset_upload_log(dataset)
     dataset_upload_log_id = dataset_upload_log['id']
     upload_log_files = dataset_upload_log['files']
 
@@ -226,8 +230,7 @@ def process(celery_task, dataset_id, **kwargs):
     except Exception as e:
         raise exc.RetryableException(e)
 
-    dataset_upload_audit_log = [log for log in dataset['audit_logs'] if log['create_method'] == 'UPLOAD'][0]
-    dataset_upload_log = dataset_upload_audit_log['upload']
+    dataset_upload_log = get_dataset_upload_log(dataset)
     dataset_upload_log_id = dataset_upload_log['id']
 
     if dataset_upload_log['status'] == config['upload']['status']['COMPLETE']:

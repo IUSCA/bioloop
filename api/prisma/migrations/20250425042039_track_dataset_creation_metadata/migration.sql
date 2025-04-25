@@ -43,7 +43,8 @@ ADD COLUMN     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE "dataset_upload_log" DROP COLUMN "dataset_id",
 DROP COLUMN "upload_log_id",
 ADD COLUMN     "audit_log_id" INTEGER NOT NULL,
-ADD COLUMN     "status" "upload_status" NOT NULL;
+ADD COLUMN     "status" "upload_status" NOT NULL,
+ADD COLUMN     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- AlterTable
 ALTER TABLE "file_upload_log" DROP COLUMN "upload_log_id",
