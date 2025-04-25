@@ -72,23 +72,6 @@ config = {
         'poll_interval_seconds': 10,
         'full_scan_every_n_scans': 90  # every 90th scan will be a full scan / full scan every 15 minutes
     },
-    'upload': {
-        'UPLOAD_RETRY_THRESHOLD_HOURS': 72,
-        'status': {
-            'UPLOADING': 'UPLOADING',
-            'UPLOAD_FAILED': 'UPLOAD_FAILED',
-            'UPLOADED': 'UPLOADED',
-            'PROCESSING': 'PROCESSING',
-            'PROCESSING_FAILED': 'PROCESSING_FAILED',
-            'COMPLETE': 'COMPLETE',
-            'FAILED': 'FAILED'
-        },
-    },
-    'DONE_STATUSES': {
-        'REVOKED': 'REVOKED',
-        'FAILURE': 'FAILURE',
-        'SUCCESS': 'SUCCESS'
-    },
     'service_user': 'bioloopuser',
     'stage': {
         'purge': {

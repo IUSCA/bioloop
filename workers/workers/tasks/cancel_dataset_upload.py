@@ -3,7 +3,6 @@ from pathlib import Path
 from celery import Celery
 from celery.utils.log import get_task_logger
 
-from workers.config import config
 import workers.config.celeryconfig as celeryconfig
 import workers.api as api
 

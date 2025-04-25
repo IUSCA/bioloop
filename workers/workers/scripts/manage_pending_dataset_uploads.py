@@ -4,18 +4,13 @@ from datetime import datetime
 from workers.celery_app import app as celery_app
 from workers import api
 from workers.config import config
+from workers.constants.upload import *
+from workers.constants.workflow import WORKFLOWS, WORKFLOW_FINISHED_STATUSES
 import workers.workflow_utils as wf_utils
 from sca_rhythm import Workflow
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-PROCESS_DATASET_UPLOAD_WORKFLOW = 'process_dataset_upload'
-DONE_STATUSES = [config['DONE_STATUSES']['REVOKED'],
-                 config['DONE_STATUSES']['FAILURE'],
-                 config['DONE_STATUSES']['SUCCESS']]
-
-UPLOAD_RETRY_THRESHOLD_HOURS = config['upload']['UPLOAD_RETRY_THRESHOLD_HOURS']
 
 
 # todo - send notification to admin for when a dataset has been PROCESSING for >= 72 hours,
@@ -63,7 +58,7 @@ def main():
                 )
         )
         if will_resume_workflow:
-            logger.info(f"Will retry running workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for "
+            logger.info(f"Will retry running workflow {WORKFLOWS['PROCESS_DATASET_UPLOAD_WORKFLOW']} for "
                         f"dataset upload {dataset_upload_log_id} (dataset_id: {dataset_id})")
             restart_process_dataset_upload_workflow(dataset_upload_log=dataset_upload_log)
 
@@ -75,26 +70,26 @@ def restart_process_dataset_upload_workflow(dataset_upload_log: dict) -> None:
     dataset = api.get_dataset(dataset_id=dataset_id, workflows=True)
 
     logger.info(f"Checking for active workflows of type"
-                f" {PROCESS_DATASET_UPLOAD_WORKFLOW} running for dataset {dataset_id}")
+                f" {WORKFLOWS['PROCESS_DATASET_UPLOAD_WORKFLOW']} running for dataset {dataset_id}")
     active_process_dataset_upload_wfs = [
         wf for wf in dataset['workflows'] if (
-                wf['name'] == PROCESS_DATASET_UPLOAD_WORKFLOW and
-                wf['status'] not in DONE_STATUSES
+                wf['name'] == WORKFLOWS['PROCESS_DATASET_UPLOAD_WORKFLOW'] and
+                wf['status'] not in WORKFLOW_FINISHED_STATUSES
         )
     ]
 
     if len(active_process_dataset_upload_wfs) > 0:
-        logger.info(f"The following workflows of type {PROCESS_DATASET_UPLOAD_WORKFLOW} "
+        logger.info(f"The following workflows of type {WORKFLOWS['PROCESS_DATASET_UPLOAD_WORKFLOW']} "
                     f"are currently running for dataset {dataset_id} "
                     f"(dataset_upload_log id: {dataset_upload_log_id}):")
         active_process_dataset_upload_wf_ids = [wf['id'] for wf in active_process_dataset_upload_wfs]
         logger.info(active_process_dataset_upload_wf_ids)
         logger.info(f"A new workflow will not be started.")
     else:
-        logger.info(f'No active workflows of type {PROCESS_DATASET_UPLOAD_WORKFLOW} found running '
-                    f'for dataset {dataset_id}')
-        logger.info(f'Starting workflow {PROCESS_DATASET_UPLOAD_WORKFLOW} for dataset {dataset_id}')
-        wf_body = wf_utils.get_wf_body(wf_name=PROCESS_DATASET_UPLOAD_WORKFLOW)
+        logger.info(f"No active workflows of type {WORKFLOWS['PROCESS_DATASET_UPLOAD_WORKFLOW']} found running "
+                    f"for dataset {dataset_id}")
+        logger.info(f"Starting workflow {WORKFLOWS['PROCESS_DATASET_UPLOAD_WORKFLOW']} for dataset {dataset_id}")
+        wf_body = wf_utils.get_wf_body(wf_name=WORKFLOWS['PROCESS_DATASET_UPLOAD_WORKFLOW'])
         wf = Workflow(celery_app=celery_app, **wf_body)
         wf_id = wf.workflow['_id']
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf_id)
