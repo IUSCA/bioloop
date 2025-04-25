@@ -35,7 +35,6 @@ model dataset {
   accesses          data_access_log[]
   stage_requests    stage_request_log[]
   bundle            bundle?
-  // create_log       dataset_create_log?
   src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
   src_instrument_id Int?
 

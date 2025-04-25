@@ -7,7 +7,8 @@ from celery import current_app
 from sca_rhythm import Workflow
 
 from workers.constants.dataset import CREATE_METHODS
-from workers.constants.workflow import WORKFLOWS, WORKFLOW_FINISHED_STATUSES
+from workers.constants.workflow import WORKFLOWS
+from workers.constants.upload import UPLOAD_STATUS
 from workers import exceptions as exc
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
@@ -79,9 +80,9 @@ def merge_uploaded_file_chunks(file_upload_log_id: int,
               f' ({num_chunks_expected}) don\'t equal number of chunks found'
               f' ({num_chunks_found}). This file\'s will not be processed')
 
-    return WORKFLOW_FINISHED_STATUSES['PROCESSING_FAILED'] \
+    return UPLOAD_STATUS['PROCESSING_FAILED'] \
         if processing_error \
-        else WORKFLOW_FINISHED_STATUSES['COMPLETE']
+        else UPLOAD_STATUS['COMPLETE']
 
 
 def get_dataset_upload_log(dataset: dict) -> dict:
@@ -97,21 +98,21 @@ def update_upload_status_to_processing(dataset: dict):
 
     file_log_updates = []
     for file_log in upload_log_files:
-        if (file_log['status'] != WORKFLOW_FINISHED_STATUSES['COMPLETE']
-                and file_log['status'] != WORKFLOW_FINISHED_STATUSES['PROCESSING']):
+        if (file_log['status'] != UPLOAD_STATUS['COMPLETE']
+                and file_log['status'] != UPLOAD_STATUS['PROCESSING']):
             file_log_updates.append({
                 'id': file_log['id'],
                 'data': {
-                    'status': WORKFLOW_FINISHED_STATUSES['PROCESSING']
+                    'status': UPLOAD_STATUS['PROCESSING']
                 }
             })
     print(f"Updating upload status of dataset upload log {dataset_upload_log['id']} \
-          and it's files to {WORKFLOW_FINISHED_STATUSES['PROCESSING']}")
+          and it's files to {UPLOAD_STATUS['PROCESSING']}")
     try:
         api.update_dataset_upload_log(
             uploaded_dataset_id=dataset['id'],
             log_data={
-                'status': WORKFLOW_FINISHED_STATUSES['PROCESSING'],
+                'status': UPLOAD_STATUS['PROCESSING'],
                 'files': file_log_updates
             }
         )
@@ -133,7 +134,7 @@ def process_dataset_upload(dataset: dict) -> None:
         dataset id {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})")
 
     files_pending_processing = [file for file in upload_log_files if
-                                file['status'] != WORKFLOW_FINISHED_STATUSES['COMPLETE']]
+                                file['status'] != UPLOAD_STATUS['COMPLETE']]
 
     dataset_merged_chunks_path = dataset_path / 'processed'
     if not dataset_merged_chunks_path.exists():
@@ -163,7 +164,7 @@ def process_dataset_upload(dataset: dict) -> None:
                                                      merged_chunks_path=dataset_merged_chunks_path,
                                                      num_chunks_expected=num_chunks_expected)
         except Exception as e:
-            f['status'] = WORKFLOW_FINISHED_STATUSES['PROCESSING_FAILED']
+            f['status'] = UPLOAD_STATUS['PROCESSING_FAILED']
             print(f"Encountered error while processing file {file_name} (file_upload_log_id: {file_upload_log_id}):\n")
             print(e)
         finally:
@@ -177,8 +178,8 @@ def process_dataset_upload(dataset: dict) -> None:
                 }
             }]
         }
-        updated_upload_status = WORKFLOW_FINISHED_STATUSES['PROCESSING_FAILED'] if (
-                f['status'] == WORKFLOW_FINISHED_STATUSES['PROCESSING_FAILED']
+        updated_upload_status = UPLOAD_STATUS['PROCESSING_FAILED'] if (
+                f['status'] == UPLOAD_STATUS['PROCESSING_FAILED']
         ) else None
         if updated_upload_status is not None:
             upload_log_payload['status'] = updated_upload_status
@@ -190,11 +191,11 @@ def process_dataset_upload(dataset: dict) -> None:
         except Exception as e:
             raise exc.RetryableException(e)
 
-        if f['status'] == WORKFLOW_FINISHED_STATUSES['PROCESSING_FAILED']:
+        if f['status'] == UPLOAD_STATUS['PROCESSING_FAILED']:
             raise Exception(f"Failed to process file {file_name} (file_upload_log_id: {file_upload_log_id})")
 
     files_failed_processing = [file for file in files_pending_processing if
-                               file['status'] != WORKFLOW_FINISHED_STATUSES['COMPLETE']]
+                               file['status'] != UPLOAD_STATUS['COMPLETE']]
     processed_with_errors = len(files_failed_processing) > 0
 
     processed_file_count = num_files_in_directory(dataset_merged_chunks_path)
@@ -212,7 +213,7 @@ def process_dataset_upload(dataset: dict) -> None:
             api.update_dataset_upload_log(
                 uploaded_dataset_id=dataset_id,
                 log_data={
-                    'status': WORKFLOW_FINISHED_STATUSES['COMPLETE'],
+                    'status': UPLOAD_STATUS['COMPLETE'],
                 }
             )
         except Exception as e:
@@ -230,9 +231,9 @@ def process(celery_task, dataset_id, **kwargs):
     dataset_upload_log = get_dataset_upload_log(dataset)
     dataset_upload_log_id = dataset_upload_log['id']
 
-    if dataset_upload_log['status'] == WORKFLOW_FINISHED_STATUSES['COMPLETE']:
+    if dataset_upload_log['status'] == UPLOAD_STATUS['COMPLETE']:
         print(
-            f"Dataset upload log {dataset_upload_log_id} has already been processed (current status: {WORKFLOW_FINISHED_STATUSES['COMPLETE']})")
+            f"Dataset upload log {dataset_upload_log_id} has already been processed (current status: {UPLOAD_STATUS['COMPLETE']})")
     else:
         print(
             f"Dataset upload log {dataset_upload_log_id} will be processed (current status: {dataset_upload_log['status']})")
