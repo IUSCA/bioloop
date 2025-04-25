@@ -78,6 +78,11 @@ const accessControl = _.curry((
   // const _resourceOwnerFn = resourceOwnerFn || ((req) => req.params.username);
   // const _requesterFn = requesterFn || ((req) => req.user.username);
   return (req, res, next) => {
+    console.log('req.user.id', req.user.id);
+    console.log('req.user.username', req.user.username);
+    console.log('req.params.username', req.params.username);
+    console.log('checkOwnership', checkOwnership);
+
     // filter user roles that match defined roles
     const roles = [...setIntersection(ac.getRoles(), req?.user?.roles || [])];
     const resourceOwner = req.params.username; // _resourceOwnerFn(req);
@@ -92,6 +97,7 @@ const accessControl = _.curry((
       const permission = (checkOwnership && requester === resourceOwner)
         ? acQuery[actions.own](resource)
         : acQuery[actions.any](resource);
+      console.log('permission', permission);
       if (permission.granted) {
         req.permission = permission;
         return next();

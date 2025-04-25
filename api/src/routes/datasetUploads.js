@@ -67,12 +67,12 @@ router.get(
           timestamp: 'desc',
         },
       },
-      include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
     };
 
     const [dataset_upload_logs, count] = await prisma.$transaction([
       prisma.dataset_upload_log.findMany({
         ...filter_query,
+        include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       }),
       prisma.dataset_upload_log.count({ ...query_obj }),
     ]);
@@ -90,7 +90,7 @@ router.get(
     query('offset').isInt({ min: 0 }).toInt().optional(),
     param('username').escape().notEmpty(),
   ]),
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Retrieve past uploads'
@@ -102,12 +102,12 @@ router.get(
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
         status,
-        user: {
-          username: req.params.username,
-        },
         audit_log: {
           dataset: {
             name: { contains: dataset_name },
+          },
+          user: {
+            username: req.params.username,
           },
         },
       }),
@@ -121,12 +121,12 @@ router.get(
           timestamp: 'desc',
         },
       },
-      include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
     };
 
     const [dataset_upload_logs, count] = await prisma.$transaction([
       prisma.dataset_upload_log.findMany({
         ...filter_query,
+        include: INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       }),
       prisma.dataset_upload_log.count({ ...query_obj }),
     ]);
@@ -395,7 +395,7 @@ router.post(
 // - Used by UI
 router.post(
   '/:dataset_id/cancel',
-  isPermittedTo('update'),
+  isPermittedTo('delete'),
   validate([
     param('dataset_id').isInt().toInt(),
   ]),

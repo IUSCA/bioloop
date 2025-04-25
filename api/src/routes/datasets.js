@@ -140,7 +140,7 @@ const buildUserRoleQueryObject = ({
 
 router.get(
   '/:username/all',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   query('deleted').toBoolean().default(false),
   query('type').isIn(config.dataset_types).optional(),
   query('name').notEmpty().optional(),
