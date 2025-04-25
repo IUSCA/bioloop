@@ -112,7 +112,7 @@ const exports = {
     ],
     admin_items: [],
   },
-  UPLOAD_STATES: {
+  UPLOAD_STATUSES: {
     UNINITIATED: "Uninitiated",
     PROCESSING: "Processing",
     PROCESSING_FAILED: "Processing Failed",
@@ -126,7 +126,7 @@ const exports = {
     UPLOAD: "UPLOAD",
     IMPORT: "IMPORT",
     SCAN: "SCAN",
-  }
+  },
 };
 
 export default exports;

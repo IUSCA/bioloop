@@ -94,6 +94,7 @@ import datasetUploadService from "@/services/upload/dataset";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
+import constants from "@/constants";
 
 const nav = useNavStore();
 const router = useRouter();
@@ -183,20 +184,20 @@ const columns = [
 const getStatusChipColor = (value) => {
   let color;
   switch (value) {
-    case config.upload.status.UPLOADING:
-    case config.upload.status.UPLOADED:
-    case config.upload.status.PROCESSING:
+    case constants.UPLOAD_STATUSES.UPLOADING:
+    case constants.UPLOAD_STATUSES.UPLOADED:
+    case constants.UPLOAD_STATUSES.PROCESSING:
       color = "primary";
       break;
-    case config.upload.status.UPLOAD_FAILED:
-    case config.upload.status.CHECKSUM_COMPUTATION_FAILED:
+    case constants.UPLOAD_STATUSES.UPLOAD_FAILED:
+    case constants.UPLOAD_STATUSES.CHECKSUM_COMPUTATION_FAILED:
       color = "warning";
       break;
-    case config.upload.status.COMPLETE:
+    case constants.UPLOAD_STATUSES.COMPLETE:
       color = "success";
       break;
-    case config.upload.status.PROCESSING_FAILED:
-    case config.upload.status.FAILED:
+    case constants.UPLOAD_STATUSES.PROCESSING_FAILED:
+    case constants.UPLOAD_STATUSES.FAILED:
       color = "danger";
       break;
     default:
@@ -248,6 +249,6 @@ watch(filter_query, (newQuery, oldQuery) => {
 
 <route lang="yaml">
 meta:
-  title: Dataset Uploads
-  requiresRoles: ["operator", "admin", "user"]
+title: Dataset Uploads
+requiresRoles: ["operator", "admin", "user"]
 </route>

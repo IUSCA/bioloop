@@ -111,18 +111,6 @@ const exports = {
   },
   upload: {
     scope_prefix: "upload_file:",
-    types: { DATASET: "DATASET" },
-    status: {
-      COMPUTING_CHECKSUMS: "COMPUTING_CHECKSUMS",
-      CHECKSUM_COMPUTATION_FAILED: "CHECKSUM_COMPUTATION_FAILED",
-      UPLOADING: "UPLOADING",
-      UPLOAD_FAILED: "UPLOAD_FAILED",
-      UPLOADED: "UPLOADED",
-      PROCESSING: "PROCESSING",
-      PROCESSING_FAILED: "PROCESSING_FAILED",
-      COMPLETE: "COMPLETE",
-      FAILED: "FAILED",
-    },
   },
 };
 

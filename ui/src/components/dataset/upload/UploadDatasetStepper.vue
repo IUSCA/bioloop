@@ -334,6 +334,7 @@ import { VaDivider, VaPopover } from "vuestic-ui";
 import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import { Icon } from "@iconify/vue";
 import instrumentService from "@/services/instrument";
+import constants from "@/constants";
 
 const auth = useAuthStore();
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
@@ -424,7 +425,6 @@ const datasetTypes = [
 
 const datasetTypeOptions = ref(datasetTypes);
 
-// const uploadingDatasetType = ref(config.dataset.types.DATA_PRODUCT.key)
 const selectedDatasetType = ref(
   datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
 );
@@ -504,9 +504,9 @@ const isNextButtonDisabled = computed(() => {
     stepHasErrors.value ||
     submissionSuccess.value ||
     [
-      Constants.UPLOAD_STATES.PROCESSING,
-      Constants.UPLOAD_STATES.UPLOADING,
-      Constants.UPLOAD_STATES.UPLOADED,
+      Constants.UPLOAD_STATUSES.PROCESSING,
+      Constants.UPLOAD_STATUSES.UPLOADING,
+      Constants.UPLOAD_STATUSES.UPLOADED,
     ].includes(submissionStatus.value) ||
     loading.value ||
     validatingForm.value
@@ -632,7 +632,7 @@ const selectedSourceInstrument = ref(null);
 const sourceInstrumentOptions = ref([]);
 const projectSelected = ref(null);
 const datasetUploadLog = ref(null);
-const submissionStatus = ref(Constants.UPLOAD_STATES.UNINITIATED);
+const submissionStatus = ref(Constants.UPLOAD_STATUSES.UNINITIATED);
 const statusChipColor = ref("");
 const submissionAlert = ref(""); // For handling network errors before upload begins
 const submissionAlertColor = ref("");
@@ -641,7 +641,7 @@ const submitAttempted = ref(false);
 const isUploadIncomplete = computed(() => {
   return (
     submitAttempted.value &&
-    submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
+    submissionStatus.value !== Constants.UPLOAD_STATUSES.UPLOADED
   );
 });
 
@@ -675,7 +675,7 @@ const uploadCancelled = ref(false);
 
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
-    (e) => e.uploadStatus !== config.upload.status.UPLOADED,
+    (e) => e.uploadStatus !== constants.UPLOAD_STATUSES.UPLOADED,
   );
 });
 const someFilesPendingUpload = computed(
@@ -1131,7 +1131,7 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  fileDetails.uploadStatus = config.upload.status.UPLOADING;
+  fileDetails.uploadStatus = constants.UPLOAD_STATUSES.UPLOADING;
   const checksum = fileDetails.fileChecksum;
 
   const uploaded = await uploadFileChunks(fileDetails);
@@ -1144,8 +1144,8 @@ const uploadFile = async (fileDetails) => {
     (e) => e.md5 === checksum,
   )?.id;
   fileDetails.uploadStatus = uploaded
-    ? config.upload.status.UPLOADED
-    : config.upload.status.UPLOAD_FAILED;
+    ? constants.UPLOAD_STATUSES.UPLOADED
+    : constants.UPLOAD_STATUSES.UPLOAD_FAILED;
 
   let updated = false;
   if (uploaded) {
@@ -1157,7 +1157,7 @@ const uploadFile = async (fileDetails) => {
           files: [
             {
               id: fileUploadLogId,
-              data: { status: config.upload.status.UPLOADED },
+              data: { status: constants.UPLOAD_STATUSES.UPLOADED },
             },
           ],
         },
@@ -1186,7 +1186,7 @@ const onSubmit = async () => {
     return Promise.reject();
   }
 
-  submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING;
+  submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING;
   statusChipColor.value = "primary";
   submissionAlert.value = null; // reset any alerts from previous submissions
   isSubmissionAlertVisible.value = false;
@@ -1196,21 +1196,21 @@ const onSubmit = async () => {
     preUpload()
       .then(async () => {
         submissionSuccess.value = true;
-        submissionStatus.value = Constants.UPLOAD_STATES.UPLOADING;
+        submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOADING;
 
         // const filesUploaded = await uploadFiles(filesNotUploaded.value)
         const filesUploaded = true;
         if (filesUploaded) {
           resolve();
         } else {
-          submissionStatus.value = Constants.UPLOAD_STATES.UPLOAD_FAILED;
+          submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
           submissionAlert.value = "Some files could not be uploaded.";
           reject();
         }
       })
       .catch((err) => {
         console.error(err);
-        submissionStatus.value = Constants.UPLOAD_STATES.PROCESSING_FAILED;
+        submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
         reject();
@@ -1220,7 +1220,7 @@ const onSubmit = async () => {
 
 const setPostSubmissionSuccessState = () => {
   if (!someFilesPendingUpload.value) {
-    submissionStatus.value = Constants.UPLOAD_STATES.UPLOADED;
+    submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOADED;
     statusChipColor.value = "primary";
     submissionAlertColor.value = "success";
     submissionAlert.value =
@@ -1237,7 +1237,7 @@ const postSubmit = () => {
       id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
         .id,
       data: {
-        status: config.upload.status.UPLOAD_FAILED,
+        status: constants.UPLOAD_STATUSES.UPLOAD_FAILED,
       },
     };
   });
@@ -1245,8 +1245,8 @@ const postSubmit = () => {
   if (datasetUploadLog.value) {
     createOrUpdateUploadLog({
       status: someFilesPendingUpload.value
-        ? config.upload.status.UPLOAD_FAILED
-        : config.upload.status.UPLOADED,
+        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
+        : constants.UPLOAD_STATUSES.UPLOADED,
       files: failedFileUpdates,
     })
       .then((res) => {
@@ -1299,7 +1299,7 @@ const preUpload = async () => {
 
   const logData = datasetUploadLog.value?.id
     ? {
-        status: config.upload.status.UPLOADING,
+        status: constants.UPLOAD_STATUSES.UPLOADING,
       }
     : {
         ...uploadFormData.value,
@@ -1383,7 +1383,7 @@ const setDirectory = (directoryDetails) => {
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: 0,
-    uploadStatus: config.upload.status.PROCESSING_FAILED,
+    uploadStatus: constants.UPLOAD_STATUSES.PROCESSING_FAILED,
   };
   // selectedDirectoryName.value = selectedDirectory.value.name;
 
@@ -1449,7 +1449,7 @@ onMounted(() => {
 // show alert before user moves to a different route
 onBeforeRouteLeave(() => {
   return submitAttempted.value &&
-    submissionStatus.value !== Constants.UPLOAD_STATES.UPLOADED
+    submissionStatus.value !== Constants.UPLOAD_STATUSES.UPLOADED
     ? window.confirm(
         "Leaving this page before all files have been processed/uploaded will" +
           " cancel the upload. Do you wish to continue?",

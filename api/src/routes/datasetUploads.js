@@ -14,6 +14,7 @@ const datasetService = require('../services/dataset');
 const { dataset_access_check } = require('./datasets');
 const workflowService = require('../services/workflow');
 const { INCLUDE_DATASET_UPLOAD_LOG_RELATIONS, DATASET_CREATE_METHODS } = require('../constants');
+const { UPLOAD_STATUSES } = require('../constants');
 
 const UPLOAD_PATH = config.upload.path;
 
@@ -38,7 +39,7 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
 router.get(
   '/all',
   validate([
-    query('status').isIn(Object.values(config.upload.status)).optional(),
+    query('status').isIn(Object.values()).optional(),
     query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
@@ -88,7 +89,7 @@ router.get(
 router.get(
   '/:username/all',
   validate([
-    query('status').isIn(Object.values(config.upload.status)).optional(),
+    query('status').isIn(Object.values(UPLOAD_STATUSES)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
@@ -208,14 +209,14 @@ router.post(
               },
             },
           },
-          status: config.upload.status.UPLOADING,
+          status: UPLOAD_STATUSES.UPLOADING,
           files: {
             create: files_metadata.map((file) => ({
               name: file.name,
               md5: file.checksum,
               num_chunks: file.num_chunks,
               path: file.path,
-              status: config.upload.status.UPLOADING,
+              status: UPLOAD_STATUSES.UPLOADING,
             })),
           },
         },

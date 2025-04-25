@@ -62,19 +62,7 @@
     }
   },
   "upload": {
-    "path": "",
-    "types": {
-      "DATASET": "DATASET"
-    },
-    "status": {
-      "UPLOADING": "UPLOADING",
-      "UPLOAD_FAILED": "UPLOAD_FAILED",
-      "UPLOADED": "UPLOADED",
-      "PROCESSING": "PROCESSING",
-      "PROCESSING_FAILED": "PROCESSING_FAILED",
-      "COMPLETE": "COMPLETE",
-      "FAILED": "FAILED"
-    }
+    "path": ""
   },
   "download_server": {
     "base_url": ""
