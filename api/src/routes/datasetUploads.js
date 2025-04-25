@@ -31,6 +31,34 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
   return workflowQueryResponse.data.results;
 };
 
+/**
+ * Sets the user who uploaded the dataset in the request object `req`, for the `auth`
+ * middleware to be able to retrieve the owner (uploader) of this resource (upload) and
+ * thus verify if the current user is permitted to take certain actions on this upload.
+ */
+const setUploader = async (req, res, next) => {
+  const dataset_upload_audit_log = await prisma.dataset_audit.findUniqueOrThrow({
+    where: {
+      dataset_id_create_method: {
+        dataset_id: parseInt(req.params.dataset_id, 10),
+        create_method: DATASET_CREATE_METHODS.UPLOAD,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
+
+  req.uploader = dataset_upload_audit_log.user;
+  console.log('datasetUploads: req.uploader:', req.uploader);
+  next();
+};
+
 router.get(
   '/all',
   validate([
@@ -250,7 +278,12 @@ router.post(
 // - Used by UI, workers
 router.patch(
   '/:dataset_id',
-  isPermittedTo('update'),
+  setUploader,
+  isPermittedTo(
+    'update',
+    { checkOwnership: true },
+    (req) => req.uploader.username, // resourceOwnerFn
+  ),
   validate([
     param('dataset_id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
@@ -265,6 +298,16 @@ router.patch(
       status,
     });
 
+    // A user can only update an upload log one of the following two conditions are met:
+    // 1. The user has either the `admin` or the `operator` role
+    // 2. The user has the `user` role, and they are the one who initiated this upload.
+    if (
+      !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
+        && req.uploader.id !== req.user.id
+    ) {
+      return next(createError.Forbidden());
+    }
+
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
         where: {
@@ -274,16 +317,6 @@ router.patch(
           },
         },
       });
-
-      // A user can only update an upload log one of the following two conditions are met:
-      // 1. The user has either the `admin` or the `operator` role
-      // 2. The user has the `user` role, and they are the one who initiated this upload.
-      if (
-        !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
-          && dataset_upload_audit_log.user_id !== req.user.id
-      ) {
-        return next(createError.Forbidden());
-      }
 
       let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
         where: { audit_log_id: dataset_upload_audit_log.id },
@@ -318,28 +351,24 @@ router.post(
   validate([
     param('dataset_id').isInt().toInt(),
   ]),
-  isPermittedTo('update'),
+  setUploader,
+  isPermittedTo(
+    'update',
+    { checkOwnership: true },
+    (req) => req.uploader.username, // resourceOwnerFn
+  ),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Initiate the processing of a completed upload'
 
     logger.info(`Received request to process upload for dataset ${req.params.dataset_id}`);
 
-    const dataset_upload_audit_log = await prisma.dataset_audit.findUniqueOrThrow({
-      where: {
-        dataset_id_create_method: {
-          dataset_id: req.params.dataset_id,
-          create_method: DATASET_CREATE_METHODS.UPLOAD,
-        },
-      },
-    });
-
     // A user can only process an upload if one of the following two conditions are met:
     // 1. The user has either the `admin` or the `operator` role
     // 2. The user has the `user` role, and they are the one who initiated this upload.
     if (
       !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
-        && dataset_upload_audit_log.user_id !== req.user.id
+        && req.uploader.id !== req.user.id
     ) {
       return next(createError.Forbidden());
     }
@@ -347,13 +376,6 @@ router.post(
     const uploadedDataset = await prisma.dataset.findUnique({
       where: {
         id: req.params.dataset_id,
-        dataset_upload_log: {
-          audit_log: {
-            user: {
-              username: req.params.username,
-            },
-          },
-        },
       },
       include: {
         workflows: true,
@@ -395,7 +417,12 @@ router.post(
 // - Used by UI
 router.post(
   '/:dataset_id/cancel',
-  isPermittedTo('delete'),
+  setUploader,
+  isPermittedTo(
+    'update',
+    { checkOwnership: true },
+    (req) => req.uploader.username, // resourceOwnerFn
+  ),
   validate([
     param('dataset_id').isInt().toInt(),
   ]),
@@ -405,21 +432,12 @@ router.post(
 
     logger.info(`Received request to cancel upload for dataset ${req.params.dataset_id}`);
 
-    const dataset_upload_audit_log = await prisma.dataset_audit.findUniqueOrThrow({
-      where: {
-        dataset_id_create_method: {
-          dataset_id: req.params.dataset_id,
-          create_method: DATASET_CREATE_METHODS.UPLOAD,
-        },
-      },
-    });
-
     // A user can only cancel an upload if one of the following two conditions are met:
     // 1. The user has either the `admin` or the `operator` role
     // 2. The user has the `user` role, and they are the one who initiated this upload.
     if (
       !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
-        && dataset_upload_audit_log.user_id !== req.user.id
+        && req.uploader.id !== req.user.id
     ) {
       return next(createError.Forbidden());
     }

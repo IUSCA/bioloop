@@ -86,6 +86,7 @@ const grantsObject = {
     },
     datasets: {
       'create:any': ['*'],
+      'read:own': ['*'],
     },
     dataset_name: {
       'read:any': ['*'],
@@ -148,8 +149,6 @@ const grantsObject = {
     instruments: {
       'create:any': ['*'],
       'read:any': ['*'],
-      'update:any': ['*'],
-      'delete:any': ['*'],
     },
     projects: {
       'create:any': ['*'],

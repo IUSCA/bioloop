@@ -21,19 +21,22 @@
 </template>
 
 <script setup>
-import projectService from '@/services/projects'
-import toast from '@/services/toast'
-import _ from 'lodash'
-import { useAuthStore } from '@/stores/auth'
+import projectService from "@/services/projects";
+import toast from "@/services/toast";
+import _ from "lodash";
+import { useAuthStore } from "@/stores/auth";
 
-const NAME_TRIM_THRESHOLD = 35
-const PAGE_SIZE = 10
+const NAME_TRIM_THRESHOLD = 35;
+const PAGE_SIZE = 10;
 
 const props = defineProps({
   selected: {
     type: [String, Object],
   },
-  searchTerm: { type: String, default: '' },
+  searchTerm: {
+    type: String,
+    default: "",
+  },
   disabled: {
     type: Boolean,
     default: false,
@@ -41,75 +44,81 @@ const props = defineProps({
   label: {
     type: String,
   },
-})
+});
 
-const emit = defineEmits(['clear', 'open', 'close', 'update:selected', 'update:searchTerm'])
+const emit = defineEmits([
+  "clear",
+  "open",
+  "close",
+  "update:selected",
+  "update:searchTerm",
+]);
 
-const auth = useAuthStore()
+const auth = useAuthStore();
 
-const loading = ref(false)
-const projects = ref([])
-const totalResultsCount = ref(0)
-const page = ref(1)
+const loading = ref(false);
+const projects = ref([]);
+const totalResultsCount = ref(0);
+const page = ref(1);
 const skip = computed(() => {
-  return PAGE_SIZE * (page.value - 1)
-})
+  return PAGE_SIZE * (page.value - 1);
+});
 
 const searchTerm = computed({
   get: () => {
-    return props.searchTerm
+    return props.searchTerm;
   },
   set: (val) => {
-    emit('update:searchTerm', val)
+    emit("update:searchTerm", val);
   },
-})
+});
 
-const debouncedSearch = ref(null)
-const searchIndex = ref(0)
-const searches = ref([])
-const latestQuery = ref(null)
-const checkboxes = ref({
-  rawData: false,
-  dataProduct: false,
-})
+const debouncedSearch = ref(null);
+const searchIndex = ref(0);
+const searches = ref([]);
+const latestQuery = ref(null);
 
 const onSelect = (item) => {
-  emit('update:searchTerm', item.name)
+  emit("update:searchTerm", item.name);
   // selectedResult.value = item
   // emit('select', item)
-  emit('update:selected', item)
-}
+  emit("update:selected", item);
+};
 
 const loadNextPage = () => {
   // console.log('loadNextPage')
   // console.log('searchTerm:', searchTerm.value)
-  page.value += 1 // increase page value for offset recalculation
-  return searchProjects({ appendToCurrentResults: true })
-}
+  page.value += 1; // increase page value for offset recalculation
+  return searchProjects({ appendToCurrentResults: true });
+};
 
 // todo - move to utils
 const trimName = (val) =>
-  val.length > NAME_TRIM_THRESHOLD ? val.substring(0, NAME_TRIM_THRESHOLD) + '...' : val
+  val.length > NAME_TRIM_THRESHOLD
+    ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
+    : val;
 
 const batchingQuery = computed(() => {
   return {
     offset: skip.value,
     limit: PAGE_SIZE,
-  }
-})
+  };
+});
 
 const fetchQuery = computed(() => {
   return {
     ...(searchTerm.value && { search: searchTerm.value }),
     ...batchingQuery.value,
-  }
-})
+  };
+});
 
 const queryProjects = ({ queryIndex = null, query = null } = {}) => {
-  return projectService.getAll({ ...query, forSelf: props.forSelf }).then((res) => {
-    return { data: res.data, ...(queryIndex && { queryIndex }) }
-  })
-}
+  return projectService
+    .getAll({ ...query, forSelf: !auth.canOperate })
+    .then((res) => {
+      return { data: res.data, ...(queryIndex && { queryIndex }) };
+    });
+};
 
 const searchProjects = ({
   searchIndex = null,
@@ -119,53 +128,53 @@ const searchProjects = ({
   // Ensure that the same query is not being run a second time (which
   // is possible due to debounced searches). If it is, the search
   // can be resolved immediately.
-  console.log('latestQuery:', latestQuery.value)
-  console.log('fetchQuery:', fetchQuery.value)
+  console.log("latestQuery:", latestQuery.value);
+  console.log("fetchQuery:", fetchQuery.value);
 
   if (_.isEqual(latestQuery.value, fetchQuery.value)) {
-    resolveSearch(searchIndex)
+    resolveSearch(searchIndex);
   } else {
     if (logQuery) {
-      latestQuery.value = fetchQuery.value
+      latestQuery.value = fetchQuery.value;
     }
 
-    console.log('will search projects:', fetchQuery.value)
+    console.log("will search projects:", fetchQuery.value);
     return queryProjects({
       ...(searchIndex && { queryIndex: searchIndex }),
       query: fetchQuery.value,
     })
       .then((res) => {
-        console.log('search results:', res.data.projects)
+        console.log("search results:", res.data.projects);
         projects.value = appendToCurrentResults
           ? projects.value.concat(res.data.projects)
-          : res.data.projects
-        totalResultsCount.value = res.data?.metadata?.count || 0
-        resolveSearch(res.queryIndex)
+          : res.data.projects;
+        totalResultsCount.value = res.data?.metadata?.count || 0;
+        resolveSearch(res.queryIndex);
       })
       .catch((e) => {
-        console.error(e)
-        toast.error('Failed to load datasets')
-      })
+        console.error(e);
+        toast.error("Failed to load datasets");
+      });
   }
-}
+};
 
 const resolveSearch = (searchIndex) => {
-  searches.value.splice(searches.value.indexOf(searchIndex), 1)
+  searches.value.splice(searches.value.indexOf(searchIndex), 1);
   if (searches.value.length === 0) {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const performSearch = (searchIndex) => {
   // reset page value
-  page.value = 1
+  page.value = 1;
   // load search results
   searchProjects({
     searchIndex,
     appendToCurrentResults: false,
     logQuery: true,
-  })
-}
+  });
+};
 
 const onOpen = () => {
   // if (props.populatedResult) {
@@ -174,32 +183,32 @@ const onOpen = () => {
   //
   // // selectedResult.value = null
   // emit('update:populatedResult', null)
-  emit('open')
-}
+  emit("open");
+};
 
 const onClose = () => {
-  emit('close')
-}
+  emit("close");
+};
 
 const onClear = () => {
-  console.log('onClear invoked')
-  emit('clear')
+  console.log("onClear invoked");
+  emit("clear");
   // emit('update:populatedResult', null)
-}
+};
 
 watch([searchTerm], (newVal, oldVal) => {
-  console.log('searchTerm or filterQuery changed')
-  console.log('searchTerm new Val:', newVal[0])
-  console.log('searchTerm new Val:', oldVal[0])
+  console.log("searchTerm or filterQuery changed");
+  console.log("searchTerm new Val:", newVal[0]);
+  console.log("searchTerm new Val:", oldVal[0]);
 
-  searchIndex.value += 1
-  searches.value.push(searchIndex.value)
+  searchIndex.value += 1;
+  searches.value.push(searchIndex.value);
 
-  loading.value = true
+  loading.value = true;
 
-  debouncedSearch.value = _.debounce(performSearch, 300)
-  debouncedSearch.value(searchIndex.value)
-})
+  debouncedSearch.value = _.debounce(performSearch, 300);
+  debouncedSearch.value(searchIndex.value);
+});
 
 // watch(
 //   () => props.populatedResult,
@@ -216,16 +225,16 @@ watch([searchTerm], (newVal, oldVal) => {
 // })
 
 onMounted(() => {
-  loading.value = true
-  console.log('onMounted invoked')
-  searchProjects()
-})
+  loading.value = true;
+  console.log("onMounted invoked");
+  searchProjects();
+});
 
 onBeforeUnmount(() => {
   if (debouncedSearch.value) {
-    debouncedSearch.value.cancel()
+    debouncedSearch.value.cancel();
   }
-})
+});
 </script>
 
 <style scoped></style>
