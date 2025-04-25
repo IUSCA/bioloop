@@ -60,7 +60,7 @@
       </template>
 
       <template #cell(uploaded_dataset_type)="{ value }">
-        <va-chip size="small">
+        <va-chip size="small" outline>
           {{ value }}
         </va-chip>
       </template>
