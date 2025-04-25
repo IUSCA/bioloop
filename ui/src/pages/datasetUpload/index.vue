@@ -59,6 +59,12 @@
         </router-link>
       </template>
 
+      <template #cell(uploaded_dataset_type)="{ value }">
+        <va-chip size="small">
+          {{ value }}
+        </va-chip>
+      </template>
+
       <template #cell(source_dataset)="{ rowData }">
         <div v-if="rowData.source_dataset">
           <div v-if="!auth.canOperate">
@@ -97,7 +103,6 @@
 
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
-import config from "@/config";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import datasetUploadService from "@/services/upload/dataset";
@@ -149,8 +154,8 @@ const columns = [
   { key: "status", width: "5%" },
   {
     key: "uploaded_dataset",
-    label: "Uploaded Data Product",
-    width: "30%",
+    label: "Uploaded Dataset",
+    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -159,9 +164,16 @@ const columns = [
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
+    key: "uploaded_dataset_type",
+    label: "Dataset Type",
+    width: "20%",
+    thAlign: "center",
+    tdAlign: "center",
+  },
+  {
     key: "source_dataset",
-    label: "Source Dataset",
-    width: "30%",
+    label: "Source Raw Data",
+    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -172,7 +184,7 @@ const columns = [
   {
     key: "user",
     label: "Uploaded By",
-    width: "25%",
+    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -231,6 +243,7 @@ const getUploadLogs = async () => {
             uploaded_dataset.source_datasets.length > 0
               ? uploaded_dataset.source_datasets[0].source_dataset
               : null,
+          uploaded_dataset_type: uploaded_dataset.type,
         };
       });
       total_results.value = res.data.metadata.count;
