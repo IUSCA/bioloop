@@ -428,7 +428,14 @@ const selectedDatasetType = ref(
   datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
 );
 
+// Determines whether the user will upload a Raw Data or a Data Product.
+// By default, the user will upload a Data Product.
 const willUploadRawData = ref(false);
+
+const clearSelectedRawData = () => {
+  selectedRawData.value = null;
+  datasetSearchText.value = "";
+};
 
 const resetProjectSearch = () => {
   projectSelected.value = null;
@@ -436,8 +443,7 @@ const resetProjectSearch = () => {
 };
 
 const resetRawDataSearch = (val) => {
-  selectedRawData.value = null;
-  datasetSearchText.value = "";
+  clearSelectedRawData();
   console.log("isAssignedSourceRawData changed ", val);
   if (!val) {
     datasetTypeOptions.value = datasetTypes;
@@ -478,10 +484,12 @@ const onProjectSearchClose = () => {
 };
 
 watch(selectedDatasetType, (newVal) => {
+  console.log("selectedDatasetType changed", newVal);
   if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
     isAssignedSourceRawData.value = false;
-    // rawDataSelected.value = []
-    selectedRawData.value = null;
+    clearSelectedRawData();
+    console.log("Clearing raw data selection");
+    console.log("selectedRawData", selectedRawData.value);
     willUploadRawData.value = true;
   } else {
     willUploadRawData.value = false;

@@ -230,20 +230,6 @@ watch([searchTerm, filterQuery], (newVal, oldVal) => {
   debouncedSearch.value(searchIndex.value);
 });
 
-// watch(
-//   () => props.populatedResult,
-//   (newVal, oldVal) => {
-//     console.log('populatedResult changed')
-//     console.log(`oldVal:`, oldVal)
-//     console.log(`newVal:`, newVal)
-//   }
-// )
-
-// watch(datasets, () => {
-//   console.log('datasets changed')
-//   console.log(`datasets:`, datasets.value)
-// })
-
 onMounted(() => {
   loading.value = true;
   searchDatasets();
