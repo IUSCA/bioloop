@@ -249,6 +249,7 @@
       <IngestionInfo
         :ingestion-dir="selectedFile"
         :source-raw-data="selectedRawData"
+        :dataset-type="selectedDatasetType?.value"
         :project="projectSelected"
         :source-instrument="selectedSourceInstrument"
         :ingestion-space="searchSpace.label"
@@ -342,7 +343,7 @@ const steps = [
   },
   {
     key: STEP_KEYS.INFO,
-    label: "Ingestion Details",
+    label: "Ingest",
     icon: "material-symbols:play-circle",
   },
 ];
@@ -428,7 +429,7 @@ const selectedDatasetType = ref(
   datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
 );
 
-const resetProjectSearch = (val) => {
+const resetProjectSearch = () => {
   projectSelected.value = null;
   projectSearchText.value = "";
 };
@@ -803,7 +804,7 @@ watch(
     isFileSearchAutocompleteOpen,
     searchSpace,
   ],
-  async (newVals, oldVals) => {
+  async () => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
     stepPristineStates.value[step.value][stepKey] = false;
@@ -815,7 +816,7 @@ watch(
 // fields as not pristine upon step changes
 watch(step, async () => {
   if (step.value !== 2) {
-    // step 3 is the `Ingestion Details` step
+    // step 3 is the `Ingest` step
     await setFormErrors();
   }
 });

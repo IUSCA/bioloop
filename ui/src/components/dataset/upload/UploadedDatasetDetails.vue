@@ -14,47 +14,62 @@
     <table class="va-table">
       <tbody>
         <tr>
-          <td>Data Product</td>
+          <td>Dataset Name</td>
           <td>
             <div v-if="props.dataset">
-              <router-link :to="`/datasets/${props.dataset.id}`" target="_blank">
+              <router-link
+                :to="`/datasets/${props.dataset.id}`"
+                target="_blank"
+              >
                 {{ props.dataset.name }}
               </router-link>
             </div>
-
-            <!--              :dataset-name="props.datasetName"-->
             <UploadedDatasetName
               v-else
               v-model:populated-dataset-name="datasetNameInput"
               :input-disabled="props.inputDisabled"
               :dataset-name-error="props.uploadedDataProductError"
-              :dataset-name-error-messages="props.uploadedDataProductErrorMessages"
+              :dataset-name-error-messages="
+                props.uploadedDataProductErrorMessages
+              "
             />
           </td>
         </tr>
 
-        <tr v-if="props.sourceRawData">
+        <tr>
+          <td>Dataset Type</td>
+          <td>
+            <va-chip size="small" outline>
+              {{ props.selectedDatasetType }}
+            </va-chip>
+          </td>
+        </tr>
+
+        <tr>
           <td>Source Raw Data</td>
           <td class="metadata">
-            <router-link :to="`/datasets/${props.sourceRawData?.id}`" target="_blank">
+            <router-link
+              :to="`/datasets/${props.sourceRawData?.id}`"
+              target="_blank"
+            >
               {{ props.sourceRawData?.name }}
             </router-link>
           </td>
         </tr>
 
-        <tr v-if="props.project">
+        <tr>
           <td>Project</td>
           <td class="metadata">
-            <router-link :to="`/projects/${props.project.id}`" target="_blank">
-              {{ props.project.name }}
+            <router-link :to="`/projects/${props.project?.id}`" target="_blank">
+              {{ props.project?.name }}
             </router-link>
           </td>
         </tr>
 
-        <tr v-if="props.sourceInstrument">
+        <tr>
           <td>Source Instrument</td>
           <td class="metadata">
-            {{ props.sourceInstrument.name }}
+            {{ props.sourceInstrument?.name }}
           </td>
         </tr>
 
@@ -75,9 +90,13 @@ const props = defineProps({
   dataset: {
     type: Object,
   },
+  selectedDatasetType: {
+    type: String,
+    required: true,
+  },
   populatedDatasetName: {
     type: String,
-    default: '',
+    default: "",
   },
   project: {
     type: Object,
@@ -91,7 +110,7 @@ const props = defineProps({
   },
   uploadedDataProductErrorMessages: {
     type: String,
-    default: '',
+    default: "",
   },
   uploadedDataProductError: {
     type: Boolean,
@@ -117,25 +136,25 @@ const props = defineProps({
   },
   submissionAlertColor: {
     type: String,
-    default: 'warning',
+    default: "warning",
   },
-})
+});
 
-const emit = defineEmits(['update:populatedDatasetName'])
+const emit = defineEmits(["update:populatedDatasetName"]);
 
 const datasetNameInput = computed({
   get() {
-    return props.populatedDatasetName
+    return props.populatedDatasetName;
   },
   set(value) {
-    emit('update:populatedDatasetName', value)
+    emit("update:populatedDatasetName", value);
   },
-})
+});
 
 // const sourceRawData = computed(() => props.sourceRawData[0]);
 const submissionAlertIcon = computed(() => {
-  return props.submissionAlertColor === 'success' ? 'check_circle' : 'warning'
-})
+  return props.submissionAlertColor === "success" ? "check_circle" : "warning";
+});
 </script>
 
 <style scoped>

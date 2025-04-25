@@ -258,6 +258,7 @@
                 <UploadedDatasetDetails
                   v-if="selectingFiles || selectingDirectory"
                   :dataset="datasetUploadLog?.audit_log.dataset"
+                  :selected-dataset-type="selectedDatasetType.value"
                   v-model:populated-dataset-name="populatedDatasetName"
                   :input-disabled="submitAttempted"
                   :uploaded-data-product-error-messages="
@@ -1535,8 +1536,8 @@ onBeforeUnmount(async () => {
   }
 
   .upload-details {
-    height: 290px;
-    max-height: 290px;
+    height: 400px;
+    max-height: 400px;
   }
 }
 </style>
