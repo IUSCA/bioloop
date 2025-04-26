@@ -1,0 +1,57 @@
+graph TD
+    A[User initiates upload from UI] --> B[Checksum computation]
+    B --> C{Checksums computed?}
+    C -->|Yes| D[Store metadata related to the upload in the database]
+    C -->|No| E[Checksum computation failed]
+    D --> F[UI: Request oAuth token from the API, which will be used to authorize into the File-Upload API]
+    F --> G[API: Request oAuth token from Signet]
+    G --> H[Signet: Generate oAuth token with the appropriate scope, and return it to API]
+    H --> I[API: Return generated token to UI]
+    I --> J[UI: Attach generated token to the HTTP request which will be issued to the File-Upload API]
+    J --> K[UI: Issue HTTP request to the File-Upload API to initiate upload]
+    K --> L{All chunks uploaded?}
+    L -->|No| M[Retry chunk upload]
+    M --> K
+    L -->|Yes| N[Trigger process_dataset_upload workflow]
+    N --> O[Merge file chunks]
+    O --> P[Validate recreated files' checksums]
+    P --> Q{Checksums valid?}
+    Q -->|No| R[Processing failed]
+    Q -->|Yes| S[Delete uploaded chunks]
+    S --> T[Initiate Integrated workflow]
+    T --> U[Register dataset in system]
+    U --> V[Upload complete]
+
+    %% Token refresh loop
+    K --> W{20 seconds passed?}
+    W -->|Yes| F
+    W -->|No| K
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#fff,stroke:#333,stroke-width:2px
+    style C fill:#fff,stroke:#333,stroke-width:2px
+    style D fill:#fff,stroke:#333,stroke-width:2px
+    style E fill:#fbb,stroke:#333,stroke-width:2px
+    style F fill:#fff,stroke:#333,stroke-width:2px
+    style G fill:#fff,stroke:#333,stroke-width:2px
+    style H fill:#fff,stroke:#333,stroke-width:2px
+    style I fill:#fff,stroke:#333,stroke-width:2px
+    style J fill:#fff,stroke:#333,stroke-width:2px
+    style K fill:#fff,stroke:#333,stroke-width:2px
+    style L fill:#fff,stroke:#333,stroke-width:2px
+    style M fill:#fff,stroke:#333,stroke-width:2px
+    style N fill:#fff,stroke:#333,stroke-width:2px
+    style O fill:#fff,stroke:#333,stroke-width:2px
+    style P fill:#fff,stroke:#333,stroke-width:2px
+    style Q fill:#fff,stroke:#333,stroke-width:2px
+    style R fill:#fbb,stroke:#333,stroke-width:2px
+    style S fill:#fff,stroke:#333,stroke-width:2px
+    style T fill:#fff,stroke:#333,stroke-width:2px
+    style U fill:#fff,stroke:#333,stroke-width:2px
+    style V fill:#bfb,stroke:#333,stroke-width:2px
+    style W fill:#ffff00,stroke:#333,stroke-width:2px
+
+    %% Use a different color for arrows
+    linkStyle default stroke:#0066cc,stroke-width:2px
+
+[![](https://mermaid.ink/img/pako:eNqdlm1v4jgQx7-KldXq3tCKhy4PeXErCktLH2mBVnehWplkkliEOGc7x3Zpv_uNHafAXnVXBQkpcf6_-c-Mx4St4_MAHNeJBM1iMhsuUoKfvjeXIAhLmWJUgSR5lnAakFDwNZmPn8jR0e_k1BvE4K9kviY-X2e5oorx9KmIcGokg20pkVYDwdfXQjHQipc_QL6QoTdVXABZg6IBVZQISNA2IIoTFUPpzlJzpxVLKuFpP84NfyHf3k2IhJQlEFj10OQ18uZjl9zDXzlIRXg_VzF6rSAtKtQu_cm4RjYx82OyYUlClpiGLFKiKOeC_QTMyGY4QoujeZEmktZsZMzOPFz5D7cpi1JQFjkzyLlXLLrkDFIQ2IsDbMP0JdrSLBM8E3qPiPR5BjVC0wDbp3KREqZ0trt0zk3scZmO0UQ2fmBDIzAv9WOjvzC96itFsRXvyHUe57PZBF2LAg-bxqTMdzv5fp8ujNGlMRpr_WHA91m9XA6onRAb7tKEu9r2MQM_ztNVOb-74bt6G5prDzshngvhYZzrIq19wozrjTcTLIrwgGD3fZDyux5JCeq7HdQNF6sw4Rsb58bEufWuQURAQizDpmWf35rnE--BJizQ1QjwBZgua7H8DeX2FFliYoi7vdP1t2bL6u7eqrv3JkWKLI0OD8Ldrp6pN4QE3rqItgfpTY3ZzBuXzR6nCqJiCn6pdGakc2xpxKTCBtnG6KMrn3FlbYVzI3zw7Hbq46ozwKfF88-fycwMmIBQgIxJwnm2v7uP22adSPB5GkiSUSl3e_u4q2y0v6L7cVkaSPWM29DXDU7cT2EvrEkl0NH91Gq17PXRhgUqdpvZj33mtGTCjzODCsywAvOtZJbLDzOjCj5nFZjzCsy4AnNRgbmswFxVYK4rMDcVmNsKzKQCc1eBua8wo9MKPrMKzLwC82CZZfjxeh53PmG9_j_Y2y8i_icjlAQsDEFAqvBXM-GChPilQvCNLIQJS1dT4xJASPNEkTJ8vd5u-_6_HJwa_vtjgeMqkUPNWYNYU33rbHXAhYPv3jUsHBcvAypWC2eRviKT0fRPztclJngexY4b0kTiXZ7pF9mQUXxP7CSQBiAGPE-V47bqJoTjbp0feNdsH3ca3S-NRu_kpNnptTs159lxj7rHvW630aq3us32Sb3X-fJac34a18Zxq4eybrN-0mh2241m5_Ufeh-L8A?type=png)](https://mermaid.live/edit#pako:eNqdlm1v4jgQx7-KldXq3tCKhy4PeXErCktLH2mBVnehWplkkliEOGc7x3Zpv_uNHafAXnVXBQkpcf6_-c-Mx4St4_MAHNeJBM1iMhsuUoKfvjeXIAhLmWJUgSR5lnAakFDwNZmPn8jR0e_k1BvE4K9kviY-X2e5oorx9KmIcGokg20pkVYDwdfXQjHQipc_QL6QoTdVXABZg6IBVZQISNA2IIoTFUPpzlJzpxVLKuFpP84NfyHf3k2IhJQlEFj10OQ18uZjl9zDXzlIRXg_VzF6rSAtKtQu_cm4RjYx82OyYUlClpiGLFKiKOeC_QTMyGY4QoujeZEmktZsZMzOPFz5D7cpi1JQFjkzyLlXLLrkDFIQ2IsDbMP0JdrSLBM8E3qPiPR5BjVC0wDbp3KREqZ0trt0zk3scZmO0UQ2fmBDIzAv9WOjvzC96itFsRXvyHUe57PZBF2LAg-bxqTMdzv5fp8ujNGlMRpr_WHA91m9XA6onRAb7tKEu9r2MQM_ztNVOb-74bt6G5prDzshngvhYZzrIq19wozrjTcTLIrwgGD3fZDyux5JCeq7HdQNF6sw4Rsb58bEufWuQURAQizDpmWf35rnE--BJizQ1QjwBZgua7H8DeX2FFliYoi7vdP1t2bL6u7eqrv3JkWKLI0OD8Ldrp6pN4QE3rqItgfpTY3ZzBuXzR6nCqJiCn6pdGakc2xpxKTCBtnG6KMrn3FlbYVzI3zw7Hbq46ozwKfF88-fycwMmIBQgIxJwnm2v7uP22adSPB5GkiSUSl3e_u4q2y0v6L7cVkaSPWM29DXDU7cT2EvrEkl0NH91Gq17PXRhgUqdpvZj33mtGTCjzODCsywAvOtZJbLDzOjCj5nFZjzCsy4AnNRgbmswFxVYK4rMDcVmNsKzKQCc1eBua8wo9MKPrMKzLwC82CZZfjxeh53PmG9_j_Y2y8i_icjlAQsDEFAqvBXM-GChPilQvCNLIQJS1dT4xJASPNEkTJ8vd5u-_6_HJwa_vtjgeMqkUPNWYNYU33rbHXAhYPv3jUsHBcvAypWC2eRviKT0fRPztclJngexY4b0kTiXZ7pF9mQUXxP7CSQBiAGPE-V47bqJoTjbp0feNdsH3ca3S-NRu_kpNnptTs159lxj7rHvW630aq3us32Sb3X-fJac34a18Zxq4eybrN-0mh2241m5_Ufeh-L8A)

@@ -15,7 +15,7 @@ Bioloop allows uploading datasets through the browser, while ensuring strict acc
 To meet the requirements outlined above, a distributed architecture is employed.
 
 - UI Client: User logs into the Bioloop application through their web browser and navigates to the appropriate page to initiate a dataset upload.
-- API: This node serves the UI as well as workers via API endpoints that are specific to dataset uploads.
+- API: This node serves the UI as well as workers via HTTP endpoints that are specific to dataset uploads.
 - Database: Any metadata related to an upload is stored in a PostgreSQL database.
   - The contents of the uploaded files themselves are not persisted to this database.
 - Rhythm API: This node is used to trigger workflows from the UI. These workflows process the uploaded dataset.
@@ -31,13 +31,13 @@ To meet the requirements outlined above, a distributed architecture is employed.
 For each upload, information is logged to the following relational tables (PostgreSQL):
 1. `dataset_audit` - used to create an audit log of a dataset being created in the system. Each record in this table is linked to a single `dataset` record.
 2. `dataset_upload_log` - contains metadata specific to a dataset's upload. Each record in this table is linked to multiple `file_upload_log` records.
-2. `file_upload_log` - contains metadata about each file that is uploaded as part of upload.
+3. `file_upload_log` - contains metadata about each file that is uploaded as part of upload.
 
 ![Upload ER Diagram](./public/api/upload/ER-diagram.png)
 
 ### 4.2 Steps
 
-1. Before an upload begins, the following things happen sequentially:
+1. Before an upload begins, the following events occur sequentially:
    - Checksum evaluation - MD5 checksums are evaluated for each file being uploaded, as well as for each chunk that a file being uploaded is split into. 
    - Any metadata associated with the upload is stored in the database. This includes:
      - Names, MD5 checksums, and relative paths of the files being uploaded.
@@ -45,11 +45,16 @@ For each upload, information is logged to the following relational tables (Postg
      - (Optional) Source Raw Data that the dataset being uploaded is being derived from.
      - (Optional) Project that the dataset being uploaded is assigned to
      - (Optional) Source instrument where the dataset being uploaded was collected from.
-2. Upload of files is initiated once the above steps are successful.
-3. Chunks are uploaded sequentially to the File-Upload API. If a chunk upload fails, the UI retries the upload upto 5 times before failing.
-   - For this, the client sends an HTTP request to upload a chunk to our File-Upload Server, which writes the received chunk to the filesystem, after validating its checksum.
-5. After all files' chunks are uploaded successfully, the UI makes a request to the Rhythm API to trigger the `process_dataset_upload` workflow, which merges each file's uploaded chunks into the corresponding file.
+   - The UI requests a bearer token which it will use to call the File-Upload API (see [Access Control](#44-access-control))
+2. Upload of files is initiated by the UI once the above steps are successful.
+3. Chunks are uploaded sequentially to the File-Upload API.
+   - For this, the client sends an HTTP request to the File-Upload API in order to upload a file chunk, which then writes the received chunk to the File-Upload Server, after validating its checksum.
+   - If a chunk upload fails, the UI retries the upload upto 5 times before failing.
+   - The bearer token that is being used to call the File-Upload API is refreshed every 20 seconds
+4. After all files' chunks are uploaded successfully, the UI makes a request to the Rhythm API to trigger the `process_dataset_upload` workflow, which merges each file's uploaded chunks into the corresponding file.
    - This worker expects to have access to be the location where the File-Upload API uploads files to.
+
+![Upload Steps Flowchart](./public/api/upload/steps-flowchart.png)
 
 ### 4.3 Directory structure
 The directories on the File-Upload Server that are used for uploads are described below.
@@ -109,7 +114,8 @@ path.join(
 
 1. To verify that a user is authorized to initiate an upload, we perform role-based checking in the core Bioloop API.
     - This validation cannot be performed in the File-Upload API, since evaluating permissions that are granted to a user for any given entity is done via information stored in the database, which the File-Upload API is not given access to, to keep it decoupled from the database.
-2. After verifying that the user is authorized to upload datasets, the core Bioloop API requests a Bearer token from the Signet service, and attaches it to the `Authorization` header of the HTTP request which is sent to the File-Upload API in order to upload a file.
+2. After verifying that the user is authorized to upload datasets, the UI issues a request to the core Bioloop API which requests the Signet service for a Bearer token, which is returned to the UI.
+   - The UI then attaches this token to the `Authorization` header of the HTTP request which is sent from the UI to the File-Upload API in order to upload a file.
    - The scope included in the generated token contains the name of the file prefixed with the string `upload_file`.
    - If the name of the file being uploaded has spaces in it, these spaces are replaced by hyphens in the granted token's scope.
    - For example, to upload file `my file.json`, the Bearer token that is used to call the File-Upload API file will be expected to have scope `upload_file:my-file.json`.
