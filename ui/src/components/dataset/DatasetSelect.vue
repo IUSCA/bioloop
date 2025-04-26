@@ -92,6 +92,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  fetchInactive: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["loading", "loaded"]);
