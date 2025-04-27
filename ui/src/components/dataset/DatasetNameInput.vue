@@ -7,21 +7,13 @@
     :disabled="props.inputDisabled"
   />
 
-  <div class="va-text-danger text-xs" v-if="props.datasetNameError">
-    {{ props.datasetNameErrorMessages }}
+  <div class="va-text-danger text-xs" v-if="props.showDatasetNameError">
+    {{ props.datasetNameError }}
   </div>
 </template>
 
 <script setup>
 const props = defineProps({
-  // datasetName: {
-  //   type: String,
-  //   default: "",
-  // },
-  // datasetNameInput: {
-  //   type: String,
-  //   default: "",
-  // },
   populatedDatasetName: {
     type: String,
     default: "",
@@ -30,11 +22,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  datasetNameError: {
+  showDatasetNameError: {
     type: Boolean,
     default: false,
   },
-  datasetNameErrorMessages: {
+  datasetNameError: {
     type: String,
     default: "",
   },

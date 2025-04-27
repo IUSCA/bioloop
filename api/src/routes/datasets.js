@@ -410,8 +410,9 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('project_id').optional(),
-    body('src_instrument_id').optional().notEmpty().escape(),
-    body('create_method').optional().notEmpty().escape(),
+    body('src_instrument_id').optional(),
+    body('src_dataset_id').optional(),
+    body('create_method').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -429,7 +430,7 @@ router.post(
     ])(req.body);
 
     const {
-      ingestion_space, create_method, project_id, src_instrument_id,
+      ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
     } = req.body;
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
@@ -474,6 +475,14 @@ router.post(
         connect: {
           id: src_instrument_id,
         },
+      };
+    }
+
+    if (src_dataset_id) {
+      data.source_datasets = {
+        create: [{
+          source_id: src_dataset_id,
+        }],
       };
     }
 
@@ -790,17 +799,27 @@ router.delete(
   }),
 );
 
+const workflow_access_check = async (req, res, next) => {
+  // user role:
+  //   kick off integrated, process/cancel upload workflows:
+  //   - check if user created the dataset
+  //   kick off stage workflows:
+  //   - check if user can access dataset through project associations
+  // operator/admin roles:
+  //   kick off any wf (use `dataset_access_check` middleware)
+};
+
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
   accessControl('workflow')('create'),
   validate([
     param('id').isInt().toInt(),
-    param('wf').isIn(['stage', 'integrated']),
+    param('wf').isIn(['stage', 'integrated', 'process_dataset_upload', 'cancel_dataset_upload']),
   ]),
   (req, res, next) => {
-    // admin and operator roles can run stage and integrated workflows
-    // user role can only run stage workflows
+    // Roles `admin`, `operator` and `user` can initiate workflows `stage`,
+    // `integrated`, `process_dataset_upload`, and `cancel_dataset_upload`
 
     // allowed_wfs is an object with keys as workflow names and values as true
     // filter only works on objects not arrays, so we use an object with true
@@ -838,9 +857,10 @@ router.post(
       workflows: true,
     });
 
-    const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
-    return res.json(wf);
+    // const wf_name = req.params.wf;
+    // const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
+    // return res.json(wf);
+    res.json(200);
   }),
 );
 
@@ -1041,6 +1061,7 @@ router.get(
   validate([
     param('datasetType').escape().notEmpty(),
     param('name').escape().notEmpty(),
+    // query('deleted').toBoolean().default(false),
   ]),
   accessControl('dataset_name')('read'),
   asyncHandler(async (req, res, next) => {
@@ -1057,4 +1078,3 @@ router.get(
 );
 
 module.exports = router;
-// module.exports.dataset_access_check = dataset_access_check;

@@ -19,13 +19,7 @@
           'step-button--completed': isCompleted,
         }"
         @click="setStep(i)"
-        :disabled="
-          submitAttempted ||
-          step < i ||
-          searchingFiles ||
-          loadingResources ||
-          validatingForm
-        "
+        :disabled="isStepperButtonDisabled(i)"
         preset="secondary"
       >
         <div class="flex flex-col items-center">
@@ -49,34 +43,17 @@
         />
 
         <div class="flex flex-col w-full">
-          <!--          @files-retrieved="setRetrievedFiles"-->
           <FileListAutoComplete
+            v-model:search-text="fileListSearchText"
+            v-model:selected="selectedFile"
+            @update:selected="fileList = []"
             :disabled="submitAttempted"
             :base-path="searchSpaceBasePath"
             :loading="searchingFiles"
             :validating="validatingForm"
             @clear="resetSearch"
-            @open="
-              () => {
-                isFileSearchAutocompleteOpen = true;
-                selectedFile = null;
-              }
-            "
-            @close="
-              () => {
-                if (!selectedFile) {
-                  fileListSearchText = '';
-                }
-                fileList = [];
-                isFileSearchAutocompleteOpen = false;
-                if (validatingForm) {
-                  validatingForm = false;
-                }
-              }
-            "
-            v-model:selected="selectedFile"
-            @update:selected="fileList = []"
-            v-model:search-text="fileListSearchText"
+            @open="onFileSearchAutocompleteOpen"
+            @close="onFileSearchAutocompleteClose"
             :options="fileList"
           />
 
@@ -117,8 +94,8 @@
           <div class="flex items-center">
             <va-checkbox
               v-model="isAssignedSourceRawData"
-              :disabled="willIngestRawData"
               @update:modelValue="resetRawDataSearch"
+              :disabled="willIngestRawData"
               color="primary"
               label="Assign source Raw Data"
               class="flex-grow"
@@ -128,9 +105,10 @@
 
         <div class="flex-grow flex items-center">
           <DatasetSelectAutoComplete
-            :disabled="submitAttempted || !isAssignedSourceRawData"
             v-model:selected="selectedRawData"
             v-model:search-term="datasetSearchText"
+            :disabled="submitAttempted || !isAssignedSourceRawData"
+            :dataset-type="config.dataset.types.RAW_DATA.key"
             placeholder="Search Raw Data"
             @clear="resetRawDataSearch"
             @open="onRawDataSearchOpen"
@@ -173,9 +151,9 @@
 
         <div class="flex-grow flex items-center">
           <ProjectAsyncAutoComplete
-            :disabled="submitAttempted || !isAssignedProject"
             v-model:selected="projectSelected"
             v-model:search-term="projectSearchText"
+            :disabled="submitAttempted || !isAssignedProject"
             placeholder="Search Projects"
             @clear="resetProjectSearch"
             @open="onProjectSearchOpen"
@@ -184,7 +162,6 @@
             :label="'Project'"
           >
           </ProjectAsyncAutoComplete>
-
           <va-popover>
             <template #body>
               <div class="w-96">
@@ -247,13 +224,18 @@
 
     <template #step-content-2>
       <IngestionInfo
+        v-model:populated-dataset-name="populatedDatasetName"
+        :dataset="dataset"
         :ingestion-dir="selectedFile"
-        :source-raw-data="selectedRawData"
         :dataset-type="selectedDatasetType?.value"
         :project="projectSelected"
+        :source-raw-data="selectedRawData"
         :source-instrument="selectedSourceInstrument"
         :ingestion-space="searchSpace.label"
-        :dataset-id="datasetId"
+        :created-dataset-error="formErrors[STEP_KEYS.INFO]"
+        :show-created-dataset-error="
+          !!formErrors[STEP_KEYS.INFO] && !stepIsPristine
+        "
       />
     </template>
 
@@ -279,7 +261,8 @@
           :color="isLastStep ? 'success' : 'primary'"
           :disabled="isNextButtonDisabled"
         >
-          {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}
+          <!--          {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}-->
+          {{ isLastStep ? "Ingest" : "Next" }}
         </va-button>
       </div>
     </template>
@@ -295,13 +278,10 @@ import fileSystemService from "@/services/fs";
 import toast from "@/services/toast";
 import { watchDebounced } from "@vueuse/core";
 import pm from "picomatch";
-import { useAuthStore } from "@/stores/auth";
 import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import { VaPopover } from "vuestic-ui";
 import { Icon } from "@iconify/vue";
 import Constants from "@/constants";
-
-const auth = useAuthStore();
 
 const STEP_KEYS = {
   DIRECTORY: "directory",
@@ -309,22 +289,15 @@ const STEP_KEYS = {
   INFO: "info",
 };
 
-const MISSING_METADATA_ERROR = "One or more fields have error";
-const DATASET_EXISTS_ERROR = "A Data Product with this name already exists.";
+const FORM_VALIDATION_ERROR = "An unknown error occurred";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const HAS_SPACES_ERROR = "cannot contain spaces";
-const FORM_VALIDATION_ERROR = "An unknown error occurred";
-const DATASET_NAME_MAX_LENGTH_ERROR =
+const MISSING_METADATA_ERROR = "One or more fields have error";
+const DATASET_NAME_MIN_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
-const DATASET_NAME_EXISTS_ERROR =
-  "A Data Product with this name already exists.";
 const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
 const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
-const SOURCE_RAW_DATA_REQUIRED_ERROR =
-  "You have requested a source Raw Data to be assigned. Please select one.";
-const PROJECT_REQUIRED_ERROR = "Project must be selected.";
-const INSTRUMENT_REQUIRED_ERROR = "You must select a source instrument.";
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -359,35 +332,61 @@ const datasetTypes = [
   },
 ];
 
+const populatedDatasetName = ref("");
 const datasetTypeOptions = ref(datasetTypes);
+// `willIngestRawData` determines whether the user will ingest a Raw Data or a
+// Data Product. By default, the user will ingest a Data Product.
 const willIngestRawData = ref(false);
 const isAssignedProject = ref(true);
-const instruments = ref([]);
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
 const fileListSearchText = ref("");
 const fileList = ref([]);
+const dataset = ref(null);
 const datasetId = ref();
 const loadingResources = ref(false); // determines if the initial resources needed for the stepper are being fetched
 const searchingFiles = ref(false);
 const validatingForm = ref(false);
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
-const rawDataList = ref([]);
 const isAssignedSourceInstrument = ref(true);
 const selectedRawData = ref(null);
 const datasetSearchText = ref("");
 const projectSearchText = ref("");
-const willUploadRawData = ref(false);
+const willImportRawData = ref(false);
 const selectedSourceInstrument = ref(null);
 const sourceInstrumentOptions = ref([]);
-
 const searchSpace = ref(
   FILESYSTEM_SEARCH_SPACES instanceof Array &&
     FILESYSTEM_SEARCH_SPACES.length > 0
     ? FILESYSTEM_SEARCH_SPACES[0]
     : "",
 );
+const step = ref(0);
+const projectSelected = ref(null);
+const selectedDatasetType = ref(
+  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
+);
+// `stepPristineStates` tracks if a step's form fields are pristine (i.e. not
+// touched by user) or not. Errors are only shown when a step's form fields are
+// not pristine. At this time, errors are only shown on steps 0
+// (STEP_KEYS.DIRECTORY) and 1 (STEP_KEYS.RAW_DATA)
+const stepPristineStates = ref([
+  { [STEP_KEYS.DIRECTORY]: true },
+  { [STEP_KEYS.GENERAL_INFO]: true },
+  { [STEP_KEYS.INFO]: true },
+]);
+const isFileSearchAutocompleteOpen = ref(false);
+const selectedFile = ref(null);
+const formErrors = ref({
+  [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.GENERAL_INFO]: null,
+  [STEP_KEYS.INFO]: null,
+});
+
+const loading = computed(() => {
+  return loadingResources.value || searchingFiles.value || validatingForm.value;
+});
 
 const searchSpaceBasePath = computed(() => searchSpace.value.base_path);
 
@@ -399,60 +398,71 @@ const _searchText = computed(() => {
   );
 });
 
-const step = ref(0);
 const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
-const projectSelected = ref(null);
 
 const isNextButtonDisabled = computed(() => {
-  return (
-    stepHasErrors.value ||
-    submissionSuccess.value ||
-    loadingResources.value ||
-    searchingFiles.value ||
-    validatingForm.value
-  );
+  return stepHasErrors.value || submissionSuccess.value || loading.value;
 });
 
 const isPreviousButtonDisabled = computed(() => {
-  return (
-    step.value === 0 ||
-    submissionSuccess.value ||
-    searchingFiles.value ||
-    loadingResources.value ||
-    validatingForm.value
-  );
+  return step.value === 0 || submissionSuccess.value || loading.value;
 });
 
-const selectedDatasetType = ref(
-  datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
-);
+const stepIsPristine = computed(() => {
+  return !!Object.values(stepPristineStates.value[step.value])[0];
+});
+
+const stepHasErrors = computed(() => {
+  if (step.value === 0) {
+    return !!formErrors.value[STEP_KEYS.DIRECTORY];
+  } else if (step.value === 1) {
+    return !!formErrors.value[STEP_KEYS.GENERAL_INFO];
+  } else if (step.value === 2) {
+    return !!formErrors.value[STEP_KEYS.INFO];
+  }
+});
+
+const onFileSearchAutocompleteOpen = () => {
+  isFileSearchAutocompleteOpen.value = true;
+  selectedFile.value = null;
+};
+
+const onFileSearchAutocompleteClose = () => {
+  if (!selectedFile.value) {
+    fileListSearchText.value = "";
+  }
+  fileList.value = [];
+  isFileSearchAutocompleteOpen.value = false;
+  if (validatingForm.value) {
+    validatingForm.value = false;
+  }
+};
 
 const resetProjectSearch = () => {
   projectSelected.value = null;
   projectSearchText.value = "";
 };
 
-const resetRawDataSearch = (val) => {
+const clearSelectedRawData = () => {
   selectedRawData.value = null;
   datasetSearchText.value = "";
-  console.log("isAssignedSourceRawData changed ", val);
+};
+
+const resetRawDataSearch = (val) => {
+  clearSelectedRawData();
   if (!val) {
     datasetTypeOptions.value = datasetTypes;
-    console.log("Clearing raw data selection");
   } else {
-    console.log("else");
     datasetTypeOptions.value = datasetTypes.filter(
       (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
     );
     selectedDatasetType.value = datasetTypeOptions.value.find(
       (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
     );
-    willUploadRawData.value = false;
+    willImportRawData.value = false;
   }
-  // todo - reset form errors
-  // formErrors.value[STEP_KEYS.GENERAL_INFO] = null
 };
 
 const onRawDataSearchOpen = () => {
@@ -475,59 +485,16 @@ const onProjectSearchClose = () => {
   }
 };
 
-watch(selectedDatasetType, (newVal) => {
-  if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
-    isAssignedSourceRawData.value = false;
-    selectedRawData.value = null;
-    willUploadRawData.value = true;
-  } else {
-    willUploadRawData.value = false;
-  }
-});
-
 const isStepperButtonDisabled = (stepIndex) => {
   return (
     submitAttempted.value ||
     submissionSuccess.value ||
     step.value < stepIndex ||
-    loadingResources.value ||
-    validatingForm.value
+    loading.value
   );
 };
 
-// Tracks if a step's form fields are pristine (i.e. not touched by user) or
-// not. Errors are only shown when a step's form fields are not pristine. At
-// this time, errors are only shown on steps 0 (STEP_KEYS.DIRECTORY) and 1
-// (STEP_KEYS.RAW_DATA)
-const stepPristineStates = ref([
-  { [STEP_KEYS.DIRECTORY]: true },
-  { [STEP_KEYS.GENERAL_INFO]: true },
-  { [STEP_KEYS.INFO]: true },
-]);
-
-const stepIsPristine = computed(() => {
-  return !!Object.values(stepPristineStates.value[step.value])[0];
-});
-
-const formErrors = ref({
-  [STEP_KEYS.DIRECTORY]: null,
-  [STEP_KEYS.GENERAL_INFO]: null,
-  [STEP_KEYS.INFO]: null,
-});
-
-const stepHasErrors = computed(() => {
-  if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.DIRECTORY];
-  } else if (step.value === 1) {
-    return !!formErrors.value[STEP_KEYS.GENERAL_INFO];
-  } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.INFO];
-  }
-});
-
-const isFileSearchAutocompleteOpen = ref(false);
-
-const selectedFile = ref(null);
+const hasSpacesErrorStr = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
 
 const resetFormErrors = () => {
   formErrors.value = {
@@ -539,28 +506,27 @@ const resetFormErrors = () => {
 
 const setFormErrors = async () => {
   resetFormErrors();
-  const { isNameValid: datasetNameIsValid, error } =
-    await validateDatasetName();
 
   if (step.value === 0) {
-    if (!datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.DIRECTORY] = error;
+    if (!selectedFile.value) {
+      formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_FILE_REQUIRED_ERROR;
+      return;
+    }
+    // check if the selected file is allowed to be ingested as a dataset
+    const restricted_dataset_paths = getRestrictedIngestionPaths();
+    const origin_path_is_restricted = selectedFile.value
+      ? restricted_dataset_paths.some((pattern) => {
+          const _path = selectedFile.value.path;
+          let isMatch = pm(pattern);
+          const matches = isMatch(_path, pattern);
+          return matches.isMatch;
+        })
+      : false;
+    if (origin_path_is_restricted) {
+      formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
+      return;
     } else {
-      const restricted_dataset_paths = getRestrictedIngestionPaths();
-      const origin_path_is_restricted = selectedFile.value
-        ? restricted_dataset_paths.some((pattern) => {
-            const _path = selectedFile.value.path;
-            let isMatch = pm(pattern);
-            const matches = isMatch(_path, pattern);
-            return matches.isMatch;
-          })
-        : false;
-
-      if (origin_path_is_restricted) {
-        formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
-      } else {
-        formErrors.value[STEP_KEYS.DIRECTORY] = null;
-      }
+      formErrors.value[STEP_KEYS.DIRECTORY] = null;
     }
   }
 
@@ -571,12 +537,21 @@ const setFormErrors = async () => {
       (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR;
-      return;
+    }
+  }
+
+  if (step.value === 2) {
+    const { isNameValid: datasetNameIsValid, error } =
+      await validateDatasetName();
+    if (datasetNameIsValid) {
+      formErrors.value[STEP_KEYS.INFO] = null;
+    } else {
+      formErrors.value[STEP_KEYS.INFO] = error;
     }
   }
 };
 
-// determines if the dataset (Data Product) named `value` already exists
+// determines if a dataset named `value` already exists
 const validateIfExists = (value) => {
   return new Promise((resolve, reject) => {
     // Vuestic claims that it should not run async validation if synchronous
@@ -592,12 +567,9 @@ const validateIfExists = (value) => {
           name: value,
         })
         .then((res) => {
-          console.log("res", res);
-          console.log("Dataset exists?", res.data.exists);
           resolve(res.data.exists);
         })
         .catch((e) => {
-          console.error("Error checking dataset existence");
           console.error(e);
           reject();
         });
@@ -606,53 +578,39 @@ const validateIfExists = (value) => {
 };
 
 const validateDatasetName = async () => {
-  const datasetName = selectedFile.value?.name;
-  if (datasetNameIsNull(datasetName)) {
-    return { isNameValid: false, error: INGESTION_FILE_REQUIRED_ERROR };
-  } else if (!datasetNameHasMinimumChars(datasetName)) {
-    return { isNameValid: false, error: DATASET_NAME_MAX_LENGTH_ERROR };
+  if (!populatedDatasetName.value) {
+    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
+  } else if (populatedDatasetName.value.length < 3) {
+    return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
+  } else if (stringHasSpaces(populatedDatasetName.value)) {
+    return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
   }
 
-  return validateIfExists(datasetName).then((res) => {
-    return {
-      isNameValid: res !== DATASET_NAME_EXISTS_ERROR,
-      error:
-        res !== DATASET_NAME_EXISTS_ERROR ? null : DATASET_NAME_EXISTS_ERROR,
-    };
-  });
-};
-
-const datasetNameHasMinimumChars = (name) => {
-  return name?.length >= 3;
-};
-
-const datasetNameIsNull = (name) => {
-  return !name;
-};
-
-onMounted(() => {
-  loadingResources.value = true;
-
-  datasetService
-    .getAll({ type: "RAW_DATA" })
+  validatingForm.value = true;
+  return validateIfExists(populatedDatasetName.value)
     .then((res) => {
-      rawDataList.value = res.data.datasets;
+      const datasetExistsError = (datasetType) => {
+        const datasetTypeLabel = datasetTypes.find(
+          (type) => type.value === datasetType,
+        ).label;
+        return `A ${datasetTypeLabel} with this name already exists.`;
+      };
+      return {
+        isNameValid: !res,
+        error: res && datasetExistsError(selectedDatasetType.value["value"]),
+      };
     })
-    .then(() => {
-      return instrumentService.getAll();
-    })
-    .then((res) => {
-      console.log("instruments:", res.data);
-      sourceInstrumentOptions.value = res.data;
-    })
-    .catch((err) => {
-      toast.error("Failed to load resources");
-      console.error(err);
+    .catch(() => {
+      return { isNameValid: false, error: FORM_VALIDATION_ERROR };
     })
     .finally(() => {
-      loadingResources.value = false;
+      validatingForm.value = false;
     });
-});
+};
+
+const stringHasSpaces = (name) => {
+  return name?.indexOf(" ") > -1;
+};
 
 const resetSearch = () => {
   selectedFile.value = null;
@@ -687,47 +645,31 @@ const searchFiles = async () => {
     });
 };
 
-// Set loading to true when FileListAutoComplete is either opened or typed into.
-// The actual search begins after a delay, but a loading indicator should be
-// shown before the search begins.
-watch([isFileSearchAutocompleteOpen, fileListSearchText], () => {
-  if (isFileSearchAutocompleteOpen.value) {
-    searchingFiles.value = true;
-  }
-});
-
-// Begin search once FileListAutoComplete is opened, or typed into, but
-// after a delay.
-watchDebounced(
-  [isFileSearchAutocompleteOpen, fileListSearchText],
-  () => {
-    if (isFileSearchAutocompleteOpen.value) {
-      searchFiles();
-    }
-  },
-  { debounce: 1000, maxWait: 3000 },
-);
-
 const setRetrievedFiles = (files) => {
   fileList.value = files;
 };
 
 const preIngestion = () => {
-  return datasetService.create_dataset({
-    name: selectedFile.value.name,
-    type: config.dataset.types.DATA_PRODUCT.key,
-    origin_path: selectedFile.value.path,
-    ingestion_space: searchSpace.value.key,
-    project_id: projectSelected.value ? projectSelected.value.id : null,
-    src_instrument_id: selectedSourceInstrument.value.id,
-    create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
-  });
+  if (!dataset.value) {
+    return datasetService.create_dataset({
+      name: populatedDatasetName.value,
+      type: config.dataset.types.DATA_PRODUCT.key,
+      origin_path: selectedFile.value.path,
+      ingestion_space: searchSpace.value.key,
+      project_id: projectSelected.value?.id,
+      src_instrument_id: selectedSourceInstrument.value?.id,
+      src_dataset_id: selectedRawData.value?.id,
+      create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
+    });
+  } else {
+    return Promise.resolve({ data: dataset.value });
+  }
 };
 
 const initiateIngestion = async () => {
   return datasetService
     .initiate_workflow_on_dataset({
-      dataset_id: datasetId.value,
+      dataset_id: dataset.value.id,
       workflow: "integrated",
     })
     .then(() => {
@@ -746,18 +688,21 @@ const onSubmit = async () => {
     await setFormErrors();
     return Promise.reject();
   }
+
   submitAttempted.value = true;
 
   return new Promise((resolve, reject) => {
     preIngestion()
       .then(async (res) => {
-        datasetId.value = res.data.id;
-        return datasetId.value;
+        dataset.value = res.data;
+        return Promise.resolve();
       })
       .catch((err) => {
         // handle 409 error when dataset already exists
         if (err.response.status === 409) {
-          toast.error("A Data Product with this name already exists.");
+          toast.error(
+            `A ${selectedDatasetType.value["label"]} with this name already exists.`,
+          );
           // TODO
           return Promise.reject();
         }
@@ -793,6 +738,7 @@ const onNextClick = (nextStep) => {
 watch(
   [
     step,
+    populatedDatasetName,
     projectSelected,
     isAssignedProject,
     selectedRawData,
@@ -804,10 +750,16 @@ watch(
     isFileSearchAutocompleteOpen,
     searchSpace,
   ],
-  async () => {
+  async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    stepPristineStates.value[step.value][stepKey] = false;
+    if (stepKey === STEP_KEYS.INFO) {
+      // `1` corresponds to `populatedDatasetName`
+      stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1];
+    } else {
+      stepPristineStates.value[step.value][stepKey] = false;
+    }
+
     await setFormErrors();
   },
 );
@@ -821,22 +773,46 @@ watch(step, async () => {
   }
 });
 
+watch(selectedDatasetType, (newVal) => {
+  if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
+    isAssignedSourceRawData.value = false;
+    clearSelectedRawData();
+    willImportRawData.value = true;
+  } else {
+    willImportRawData.value = false;
+  }
+});
+
+// Set loading to true when FileListAutoComplete is either opened or typed into.
+// The actual search begins after a delay, but a loading indicator should be
+// shown before the search begins.
+watch([isFileSearchAutocompleteOpen, fileListSearchText], () => {
+  if (isFileSearchAutocompleteOpen.value) {
+    searchingFiles.value = true;
+  }
+});
+
+// Begin search once FileListAutoComplete is opened, or typed into, but
+// after a delay.
+watchDebounced(
+  [isFileSearchAutocompleteOpen, fileListSearchText],
+  () => {
+    if (isFileSearchAutocompleteOpen.value) {
+      searchFiles();
+    }
+  },
+  { debounce: 1000, maxWait: 3000 },
+);
+
 onMounted(async () => {
   await setFormErrors();
 });
 
 onMounted(() => {
   loadingResources.value = true;
-  datasetService
-    .getAll({ type: "RAW_DATA" })
+  instrumentService
+    .getAll()
     .then((res) => {
-      rawDataList.value = res.data.datasets;
-    })
-    .then(() => {
-      return instrumentService.getAll();
-    })
-    .then((res) => {
-      console.log("instruments:", res.data);
       sourceInstrumentOptions.value = res.data;
     })
     .catch((err) => {

@@ -78,44 +78,46 @@ const get_mounted_search_dir = (req) => {
 
 router.get(
   '/',
-  verifyFileSystemSearchEnabled,
-  validatePath,
+  // verifyFileSystemSearchEnabled,
+  // validatePath,
   isPermittedTo('read'),
   query('dirs_only').optional().default(false),
   query('search_space').optional().escape().notEmpty(),
   asyncHandler(async (req, res, next) => {
-    const { dirs_only, path: query_path } = req.query;
+    res.json([{ name: 'scadev', isDir: true, path: '/N/scratch/scadev' }]);
 
-    if (!query_path) {
-      res.json([]);
-      return;
-    }
-
-    const mounted_search_dir = get_mounted_search_dir(req);
-
-    fs.access(mounted_search_dir, constants.F_OK, (err) => {
-      if (err) {
-        return next(createError.NotFound());
-      }
-
-      fs.readdir(mounted_search_dir, {
-        withFileTypes: true,
-      }, (_err, files) => {
-        let filesData = files.map((f) => {
-          const file = {
-            name: f.name,
-            isDir: f.isDirectory(),
-            path: path.join(query_path, f.name),
-          };
-          if (dirs_only) {
-            return file.isDir ? file : null;
-          }
-          return file;
-        });
-        filesData = _.compact(filesData);
-        res.json(filesData);
-      });
-    });
+    // const { dirs_only, path: query_path } = req.query;
+    //
+    // if (!query_path) {
+    //   res.json([]);
+    //   return;
+    // }
+    //
+    // const mounted_search_dir = get_mounted_search_dir(req);
+    //
+    // fs.access(mounted_search_dir, constants.F_OK, (err) => {
+    //   if (err) {
+    //     return next(createError.NotFound());
+    //   }
+    //
+    //   fs.readdir(mounted_search_dir, {
+    //     withFileTypes: true,
+    //   }, (_err, files) => {
+    //     let filesData = files.map((f) => {
+    //       const file = {
+    //         name: f.name,
+    //         isDir: f.isDirectory(),
+    //         path: path.join(query_path, f.name),
+    //       };
+    //       if (dirs_only) {
+    //         return file.isDir ? file : null;
+    //       }
+    //       return file;
+    //     });
+    //     filesData = _.compact(filesData);
+    //     res.json(filesData);
+    //   });
+    // });
   }),
 );
 

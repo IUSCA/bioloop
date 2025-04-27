@@ -57,12 +57,12 @@
           <td>Directories</td>
           <td>{{ props.dataset.num_directories }}</td>
         </tr>
-        <tr>
-          <td>Created By</td>
-          <td>
-            {{ datasetCreatorDisplayed }}
-          </td>
-        </tr>
+        <!--        <tr>-->
+        <!--          <td>Created By</td>-->
+        <!--          <td>-->
+        <!--            {{ datasetCreatorDisplayed }}-->
+        <!--          </td>-->
+        <!--        </tr>-->
         <tr>
           <td>Description</td>
           <td>
@@ -85,16 +85,16 @@ const props = defineProps({ dataset: Object });
 
 const auth = useAuthStore();
 
-const datasetCreateLog = computed(() => {
-  return (props.dataset?.audit_logs || []).find((e) => !!e.create_method);
-});
+// const datasetCreateLog = computed(() => {
+//   return (props.dataset?.audit_logs || []).find((e) => !!e.create_method);
+// });
 
-const datasetCreatorDisplayed = computed(() => {
-  const datasetCreator = datasetCreateLog.value?.user;
-  return datasetCreator
-    ? `${datasetCreator.username} (${datasetCreator.name})`
-    : null;
-});
+// const datasetCreatorDisplayed = computed(() => {
+//   const datasetCreator = datasetCreateLog.value?.user;
+//   return datasetCreator
+//     ? `${datasetCreator.username} (${datasetCreator.name})`
+//     : null;
+// });
 </script>
 
 <style lang="scss" scoped>

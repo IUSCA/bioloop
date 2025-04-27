@@ -17,21 +17,24 @@
           <td>Dataset Name</td>
           <td>
             <div v-if="props.dataset">
+              <div v-if="!auth.canOperate">
+                {{ props.dataset.name }}
+              </div>
               <router-link
+                v-else
                 :to="`/datasets/${props.dataset.id}`"
                 target="_blank"
               >
                 {{ props.dataset.name }}
               </router-link>
             </div>
-            <UploadedDatasetName
+            <DatasetNameInput
               v-else
               v-model:populated-dataset-name="datasetNameInput"
+              class="w-full"
               :input-disabled="props.inputDisabled"
-              :dataset-name-error="props.uploadedDataProductError"
-              :dataset-name-error-messages="
-                props.uploadedDataProductErrorMessages
-              "
+              :show-dataset-name-error="props.showUploadedDatasetError"
+              :dataset-name-error="props.uploadedDatasetError"
             />
           </td>
         </tr>
@@ -85,8 +88,10 @@
 </template>
 
 <script setup>
+import { useAuthStore } from "@/stores/auth";
+
 const props = defineProps({
-  // `dataset`: Dataset to be uploaded.
+  // `dataset`: Dataset to be uploaded
   dataset: {
     type: Object,
   },
@@ -108,11 +113,11 @@ const props = defineProps({
   sourceInstrument: {
     type: Object,
   },
-  uploadedDataProductErrorMessages: {
+  uploadedDatasetError: {
     type: String,
     default: "",
   },
-  uploadedDataProductError: {
+  showUploadedDatasetError: {
     type: Boolean,
     default: false,
   },
@@ -141,6 +146,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:populatedDatasetName"]);
+
+const auth = useAuthStore();
 
 const datasetNameInput = computed({
   get() {

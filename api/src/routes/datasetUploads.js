@@ -178,17 +178,19 @@ router.post(
   validate([
     body('type').escape().notEmpty().isIn(config.dataset_types),
     body('name').escape().notEmpty().isLength({ min: 3 }),
-    body('source_dataset_id').optional().isInt().toInt(),
+    body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // return next(createError.Forbidden());
+
     // #swagger.tags = ['uploads']
     // #swagger.summary = 'Create a record for a dataset upload'
 
     const {
-      name, source_dataset_id, files_metadata, type, project_id, src_instrument_id,
+      name, src_dataset_id, files_metadata, type, project_id, src_instrument_id,
     } = req.body;
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
@@ -198,10 +200,10 @@ router.post(
             create: {
               dataset: {
                 create: {
-                  ...(source_dataset_id && {
+                  ...(src_dataset_id && {
                     source_datasets: {
                       create: [{
-                        source_id: source_dataset_id,
+                        source_id: src_dataset_id,
                       }],
                     },
                   }),
