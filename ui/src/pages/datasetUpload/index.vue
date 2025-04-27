@@ -105,7 +105,7 @@
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import datasetUploadService from "@/services/upload/dataset";
+import datasetService from "@/services/dataset";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
@@ -229,7 +229,7 @@ const getStatusChipColor = (value) => {
 };
 
 const getUploadLogs = async () => {
-  return datasetUploadService
+  return datasetService
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {

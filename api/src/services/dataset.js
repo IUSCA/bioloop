@@ -12,6 +12,7 @@ const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
+const workflowService = require('./workflow');
 
 const prisma = new PrismaClient();
 
@@ -477,6 +478,34 @@ async function add_files({ dataset_id, data }) {
 }
 
 /**
+ * Creates a new dataset within a transaction.
+ *
+ * @param {Object} tx - Database transaction manager.
+ * @param {Object} data - The data object containing details of the dataset to be created.
+ * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
+ */
+async function createDatasetInTransaction(tx, data) {
+  // find if a dataset with the same name and type already exists
+  const existingDataset = await tx.dataset.findFirst({
+    where: {
+      name: data.name,
+      type: data.type,
+      is_deleted: false,
+    },
+    select: {
+      id: true,
+    },
+  });
+  if (existingDataset) {
+    return;
+  }
+  // if it doesn't exist, create it
+  return tx.dataset.create({
+    data,
+  });
+}
+
+/**
  * Creates a new dataset if one with the same name and type does not already exist.
  *
  * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
@@ -491,30 +520,22 @@ async function add_files({ dataset_id, data }) {
  * txA: create -> dataset created
  * txB: create -> unique constraint violation
  *
+ * @param {Object} data - The data object containing details of the dataset to be created.
  * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
  */
 function createDataset(data) {
-  return prisma.$transaction(async (tx) => {
-    // find if a dataset with the same name and type already exists
-    const existingDataset = await tx.dataset.findFirst({
-      where: {
-        name: data.name,
-        type: data.type,
-        is_deleted: false,
-      },
-      select: {
-        id: true,
-      },
-    });
-    if (existingDataset) {
-      return;
-    }
-    // if it doesn't exist, create it
-    return tx.dataset.create({
-      data,
-    });
-  });
+  return prisma.$transaction(async (tx) => createDatasetInTransaction(tx, data));
 }
+
+const get_dataset_active_workflows = async ({ dataset } = {}) => {
+  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
+  const workflowQueryResponse = await workflowService.getAll({
+    workflow_ids: datasetWorkflowIds,
+    app_id: config.get('app_id'),
+    status: 'ACTIVE',
+  });
+  return workflowQueryResponse.data.results;
+};
 
 const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
 
@@ -528,5 +549,7 @@ module.exports = {
   search_files,
   add_files,
   createDataset,
+  createDatasetInTransaction,
   get_bundle_name,
+  get_dataset_active_workflows,
 };

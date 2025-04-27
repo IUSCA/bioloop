@@ -281,7 +281,6 @@ import Constants from "@/constants";
 import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
-import datasetUploadService from "@/services/upload/dataset";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import { jwtDecode } from "jwt-decode";
@@ -568,10 +567,6 @@ const removeFile = (fileIndex) => {
   }
 };
 
-const stringHasSpaces = (name) => {
-  return name?.indexOf(" ") > -1;
-};
-
 const validateIfExists = (value) => {
   return new Promise((resolve, reject) => {
     // Vuestic claims that it should not run async validation if synchronous
@@ -610,9 +605,9 @@ const resetFormErrors = () => {
 const validateDatasetName = async () => {
   if (!populatedDatasetName.value) {
     return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
-  } else if (populatedDatasetName.value.length < 3) {
+  } else if (populatedDatasetName.value?.length < 3) {
     return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
-  } else if (stringHasSpaces(populatedDatasetName.value)) {
+  } else if (populatedDatasetName.value?.indexOf(" ") > -1) {
     return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
   }
 
@@ -978,7 +973,6 @@ const uploadFile = async (fileDetails) => {
   const checksum = fileDetails.fileChecksum;
 
   const uploaded = await uploadFileChunks(fileDetails);
-  // const uploaded = true; // Placeholder for actual upload logic
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
@@ -993,9 +987,8 @@ const uploadFile = async (fileDetails) => {
   let updated = false;
   if (uploaded) {
     try {
-      await datasetUploadService.updateDatasetUploadLog(
+      await datasetService.updateDatasetUploadLog(
         datasetUploadLog.value.audit_log.dataset.id,
-        auth.user?.username,
         {
           files: [
             {
@@ -1104,9 +1097,8 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return datasetUploadService.processDatasetUpload(
+      return datasetService.processDatasetUpload(
         datasetUploadLog.value.audit_log.dataset.id,
-        auth.user?.username,
       );
     })
     .catch((err) => {
@@ -1154,10 +1146,9 @@ const preUpload = async () => {
 // Log (or update) upload status
 const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
-    ? datasetUploadService.logDatasetUpload(data)
-    : datasetUploadService.updateDatasetUploadLog(
+    ? datasetService.logDatasetUpload(data)
+    : datasetService.updateDatasetUploadLog(
         datasetUploadLog.value?.audit_log?.dataset.id,
-        auth.user?.username,
         data,
       );
 };
@@ -1317,7 +1308,7 @@ onBeforeUnmount(async () => {
   window.removeEventListener("beforeunload", beforeUnload);
 
   if (isUploadIncomplete.value) {
-    await datasetUploadService.cancelDatasetUpload(
+    await datasetService.cancelDatasetUpload(
       datasetUploadLog.value.audit_log.dataset.id,
     );
   }

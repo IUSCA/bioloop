@@ -582,7 +582,7 @@ const validateDatasetName = async () => {
     return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
   } else if (populatedDatasetName.value.length < 3) {
     return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
-  } else if (stringHasSpaces(populatedDatasetName.value)) {
+  } else if (populatedDatasetName.value.indexOf(" ") > -1) {
     return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
   }
 
@@ -606,10 +606,6 @@ const validateDatasetName = async () => {
     .finally(() => {
       validatingForm.value = false;
     });
-};
-
-const stringHasSpaces = (name) => {
-  return name?.indexOf(" ") > -1;
 };
 
 const resetSearch = () => {

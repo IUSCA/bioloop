@@ -109,7 +109,7 @@ def update_upload_status_to_processing(dataset: dict):
     print(f"Updating upload status of dataset upload log {dataset_upload_log['id']} \
           and it's files to {UPLOAD_STATUS['PROCESSING']}")
     try:
-        api.update_dataset_upload_log(
+        api.update_dataset_upload(
             uploaded_dataset_id=dataset['id'],
             log_data={
                 'status': UPLOAD_STATUS['PROCESSING'],
@@ -184,7 +184,7 @@ def process_dataset_upload(dataset: dict) -> None:
         if updated_upload_status is not None:
             upload_log_payload['status'] = updated_upload_status
         try:
-            api.update_dataset_upload_log(
+            api.update_dataset_upload(
                 uploaded_dataset_id=dataset_id,
                 log_data=upload_log_payload
             )
@@ -210,7 +210,7 @@ def process_dataset_upload(dataset: dict) -> None:
         try:
             # Update status of upload to COMPLETE
             print(f"Updating upload status of dataset upload log {dataset_upload_log_id} to COMPLETE")
-            api.update_dataset_upload_log(
+            api.update_dataset_upload(
                 uploaded_dataset_id=dataset_id,
                 log_data={
                     'status': UPLOAD_STATUS['COMPLETE'],

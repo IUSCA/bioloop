@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 #   PROCESSING for more than 72 hours
 
 def main():
-    past_dataset_uploads = api.get_dataset_upload_logs()
+    past_dataset_uploads = api.get_dataset_uploads()
     dataset_upload_logs = past_dataset_uploads['uploads']
 
     logger.info(f"Found {len(dataset_upload_logs)} dataset uploads")

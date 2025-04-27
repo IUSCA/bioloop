@@ -1,5 +1,7 @@
 const AccessControl = require('accesscontrol');
 
+const CONSTANTS = require('../constants');
+
 const grantsObject = {
   admin: {
     user: {
@@ -22,12 +24,6 @@ const grantsObject = {
     },
     dataset_name: {
       'read:any': ['*'],
-    },
-    datasetUploads: {
-      'create:any': ['*'],
-      'read:any': ['*'],
-      'update:any': ['*'],
-      'delete:any': ['*'],
     },
     instruments: {
       'create:any': ['*'],
@@ -87,6 +83,7 @@ const grantsObject = {
     datasets: {
       'create:any': ['*'],
       'read:own': ['*'],
+      'update:own': ['*'],
     },
     dataset_name: {
       'read:any': ['*'],
@@ -96,13 +93,12 @@ const grantsObject = {
     },
     workflow: {
       // user role can only create these four workflows
-      'create:any': ['integrated', 'stage', 'process_dataset_upload', 'cancel_dataset_upload'],
-    },
-    datasetUploads: {
-      'create:any': ['*'],
-      'read:own': ['*'],
-      'update:own': ['*'],
-      'delete:own': ['*'],
+      'create:any': [
+        CONSTANTS.WORKFLOWS.INTEGRATED,
+        CONSTANTS.WORKFLOWS.STAGE,
+        CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
+        CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
+      ],
     },
     instruments: {
       'read:any': ['*'],
@@ -139,12 +135,6 @@ const grantsObject = {
     },
     dataset_name: {
       'read:any': ['*'],
-    },
-    datasetUploads: {
-      'create:any': ['*'],
-      'read:any': ['*'],
-      'update:any': ['*'],
-      'delete:any': ['*'],
     },
     instruments: {
       'create:any': ['*'],

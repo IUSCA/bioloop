@@ -152,6 +152,43 @@ class DatasetService {
   get_bundle_name(dataset) {
     return `${dataset.name}.${dataset.type}.tar`;
   }
+
+  logDatasetUpload(data) {
+    return api.post(`/datasets/upload`, data);
+  }
+
+  updateDatasetUploadLog(dataset_id, data) {
+    return api.patch(`/datasets/${dataset_id}/upload`, data);
+  }
+
+  processDatasetUpload(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/workflow/process_dataset_upload`);
+  }
+
+  cancelDatasetUpload(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/workflow/cancel_dataset_upload`);
+  }
+
+  getDatasetUploadLogs({
+    forSelf = true,
+    status = null,
+    dataset_name = null,
+    limit = null,
+    offset = null,
+    username = null,
+  } = {}) {
+    const path = forSelf
+      ? `/datasets/${username}/uploads`
+      : `/datasets/uploads`;
+    return api.get(path, {
+      params: {
+        status,
+        dataset_name,
+        offset,
+        limit,
+      },
+    });
+  }
 }
 
 export default new DatasetService();
