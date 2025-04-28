@@ -18,7 +18,7 @@ To meet the requirements outlined above, a distributed architecture is employed.
 - API: This node serves the UI as well as workers via HTTP endpoints that are specific to dataset uploads.
 - Database: Any metadata related to an upload is stored in a PostgreSQL database.
   - The contents of the uploaded files themselves are not persisted to this database.
-- Rhythm API: This node is used to trigger workflows from the UI. These workflows process the uploaded dataset.
+- Rhythm API: This node is used to initiate workflows from the UI. These workflows process the uploaded dataset.
 - Workers: Workflow tasks that process the uploaded dataset and register the uploaded dataset in the system.
 - Signet: An OAuth server that supports Client-Credentials flow. This is used to issue secure tokens which are needed for authorizing into the File-Upload API.
 - File-Upload API: A lightweight app hosted on the File-Upload Server, which writes files sent as part of an HTTP request to a filesystem.
@@ -51,7 +51,9 @@ For each upload, information is logged to the following relational tables (Postg
    - For this, the client sends an HTTP request to the File-Upload API in order to upload a file chunk, which then writes the received chunk to the File-Upload Server, after validating its checksum.
    - If a chunk upload fails, the UI retries the upload upto 5 times before failing.
    - The bearer token that is being used to call the File-Upload API is refreshed every 20 seconds
-4. After all files' chunks are uploaded successfully, the UI makes a request to the Rhythm API to trigger the `process_dataset_upload` workflow, which merges each file's uploaded chunks into the corresponding file.
+4. If the user chooses to navigate to a different route before all files have been uploaded, they see a browser alert asking to verify their choice.
+   - Upon verification, the upload is cancelled by initiating the `cancel_dataset_upload` workflow.
+5. After all files' chunks are uploaded successfully, the UI makes a request to the Rhythm API to initiate the `process_dataset_upload` workflow, which merges each file's uploaded chunks into the corresponding file.
    - This worker expects to have access to be the location where the File-Upload API uploads files to.
 
 ![Upload Steps Flowchart](./public/api/upload/steps-flowchart.png)
@@ -135,6 +137,8 @@ The status of an upload action goes through the following values:
 | PROCESSING                  | Upload currently being processed                                                                                                                                      |
 | PROCESSING_FAILED           | Encountered errors while processing a file in this upload                                                                                                             |
 | COMPLETE                    | All files in the upload processed successfully                                                                                                                        |
+
+Statuses `COMPUTING_CHECKSUMS` and `COMPUTING_CHECKSUMS` are only shown on the User Interface, and are not persisted to the database. Other statuses are persisted.
 
 ## 5. Processing
 - Uploaded file chunks are merged into the corresponding file by the `process_dataset_upload` workflow.
