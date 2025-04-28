@@ -566,7 +566,7 @@ const validateIfExists = (value) => {
           resolve(res.data.exists);
         })
         .catch((e) => {
-          console.error(e);
+          // console.error(e);
           reject();
         });
     }
@@ -625,7 +625,7 @@ const searchFiles = async () => {
       setRetrievedFiles(response.data);
     })
     .catch((err) => {
-      console.error(err);
+      // console.error(err);
       if (err.response.status === 403 || err.response.status === 404) {
         setRetrievedFiles([]);
       } else {
@@ -670,7 +670,7 @@ const initiateIngestion = async () => {
     })
     .catch((err) => {
       toast.error("Failed to initiate ingestion");
-      console.error(err);
+      // console.error(err);
       submissionSuccess.value = false;
     });
 };
@@ -705,7 +705,7 @@ const onSubmit = async () => {
       })
       .catch((err) => {
         toast.error("Failed to initiate ingestion");
-        console.error(err);
+        // console.error(err);
         reject(err);
       });
   });
@@ -809,7 +809,7 @@ onMounted(() => {
     })
     .catch((err) => {
       toast.error("Failed to load resources");
-      console.error(err);
+      // console.error(err);
     })
     .finally(() => {
       loadingResources.value = false;
