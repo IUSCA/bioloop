@@ -633,9 +633,9 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /*
-    * #swagger.description = 'workflow_id is optional. If the request body has
-    * workflow_id, a new relation is created between dataset and given workflow_id'
-    */
+      * #swagger.description = 'workflow_id is optional. If the request body has
+      * workflow_id, a new relation is created between dataset and given workflow_id'
+      */
 
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
@@ -696,80 +696,80 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create multiple datasets.'
     /* #swagger.description =
-        This endpoint is used to create multiple datasets in a single request.
-        It is useful for bulk uploading datasets.
-    */
+          This endpoint is used to create multiple datasets in a single request.
+          It is useful for bulk uploading datasets.
+      */
 
     /* #swagger.requestBody = {
-        "description": "Array of datasets to be created",
-        "required": true,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "datasets": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": "string",
-                                    "type": "string",
-                                    "origin_path": "string",
-                                    "metadata": "object",
-                                },
-                                "required": ["name", "type", "origin_path"]
-                            },
-                            "minItems": 1,
-                            "maxItems": 100
-                        }
-                    },
-                    "required": ["datasets"]
-                }
-            }
-        }
-    } */
+          "description": "Array of datasets to be created",
+          "required": true,
+          "content": {
+              "application/json": {
+                  "schema": {
+                      "type": "object",
+                      "properties": {
+                          "datasets": {
+                              "type": "array",
+                              "items": {
+                                  "type": "object",
+                                  "properties": {
+                                      "name": "string",
+                                      "type": "string",
+                                      "origin_path": "string",
+                                      "metadata": "object",
+                                  },
+                                  "required": ["name", "type", "origin_path"]
+                              },
+                              "minItems": 1,
+                              "maxItems": 100
+                          }
+                      },
+                      "required": ["datasets"]
+                  }
+              }
+          }
+      } */
 
     /* #swagger.responses[200] = {
-        "description": "Array of datasets created",
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "created": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/components/schemas/Dataset"
-                            }
-                        },
-                        "conflicted": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": "string",
-                                    "type": "string"
-                                },
-                                "required": ["name", "type"]
-                            }
-                        },
-                        "errored": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": "string",
-                                    "type": "string"
-                                },
-                                "required": ["name", "type"]
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } */
+          "description": "Array of datasets created",
+          "content": {
+              "application/json": {
+                  "schema": {
+                      "type": "object",
+                      "properties": {
+                          "created": {
+                              "type": "array",
+                              "items": {
+                                  "$ref": "#/components/schemas/Dataset"
+                              }
+                          },
+                          "conflicted": {
+                              "type": "array",
+                              "items": {
+                                  "type": "object",
+                                  "properties": {
+                                      "name": "string",
+                                      "type": "string"
+                                  },
+                                  "required": ["name", "type"]
+                              }
+                          },
+                          "errored": {
+                              "type": "array",
+                              "items": {
+                                  "type": "object",
+                                  "properties": {
+                                      "name": "string",
+                                      "type": "string"
+                                  },
+                                  "required": ["name", "type"]
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      } */
 
     const data = req.body.datasets
       .map((d) => {
@@ -837,10 +837,10 @@ router.patch(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Modify dataset.'
     /* #swagger.description =
-        To add files use POST "/datasets/:id/files"
-        To add workflow use POST "/datasets/:id/workflows"
-        To add state use POST "/datasets/:id/state"
-    */
+          To add files use POST "/datasets/:id/files"
+          To add workflow use POST "/datasets/:id/workflows"
+          To add state use POST "/datasets/:id/state"
+      */
     const datasetToUpdate = await prisma.dataset.findFirst({
       where: {
         id: req.params.id,
@@ -986,18 +986,22 @@ router.delete(
  * `process_dataset_upload` -> This workflow initiates the processing of a dataset upload,
  * which registers the dataset in the system. This workflow is triggered after the entirety of the dataset's contents
  * have been uploaded.
- * `cancel_dataset_upload`  -> This workflow cancels a pending dataset upload.
- * A dataset upload considered is considered pending if only a part of its contents have been uploaded at any given
- * moment.
  *
- * These two workflows should not run simultaneously on the same dataset.
- * - Workflow `process_dataset_upload` should not be initiated if workflow `cancel_dataset_upload` is already in
- * progress.
+ * `cancel_dataset_upload`  -> This workflow cancels an incomplete dataset upload.
+ *  A dataset upload is considered incomplete if one of the following conditions is met:
+ * - All files have not been uploaded
+ * - All files have been uploaded but the `process_dataset_upload` has not been initiated.
+ *
+ * It is possible that the API may receive requests to initiate both of these workflows on the same dataset in
+ * proximity, thus triggering both of these workflows in parallel, which would result in a conflict.
+ * To avoid this:
+ * - Workflow `process_dataset_upload` should not be initiated if workflow `cancel_dataset_upload` is
+ * already in progress.
  * - Workflow `cancel_dataset_upload` should not be initiated if workflow `process_dataset_upload` is already
  * in progress.
  *
- * This function checks for any conflicting workflows already in progress before initiating
- * the requested workflow. If a conflicting workflow is found, the function will not initiate the new workflow
+ * This function checks for a potential conflicting workflow that may already be in progress before initiating
+ * the requested workflow. If a conflicting workflow is found, the function will not initiate the requested workflow
  * and will return an error message instead.
  */
 const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null, user = null } = {}) => {
@@ -1018,7 +1022,7 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
     ? CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD
     : CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD;
   logger.info(`Workflow ${requestedWorkflow} will not be started if conflicting workflow `
-              + `${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
+      + `${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
   logger.info(`Checking if conflicting workflow ${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
   const foundConflictingUploadWorkflow = uploadedDataset.workflows.find(
     (wf) => wf.name === conflictingUploadWorkflow,
@@ -1033,12 +1037,20 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
     );
   } else {
     workflowInitiationError = `The workflow ${requestedWorkflow} cannot be started on dataset ${dataset.id} `
-                              + `because conflicting workflow ${foundConflictingUploadWorkflow.id}) is `
-                              + 'already in progress.';
+        + `because conflicting workflow ${foundConflictingUploadWorkflow.id}) is `
+        + 'already in progress.';
     logger.error(workflowInitiationError);
   }
 
-  return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
+  logger.info('Waiting');
+  return new Promise((resolve) => {
+    setTimeout(() => resolve({
+      workflowInitiated: requestedWorkflowInitiated,
+      workflowInitiationError,
+    }), 10000);
+  });
+
+  // return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
 };
 
 /**
@@ -1095,6 +1107,10 @@ const workflow_access_check = async (req, res, next) => {
       return next(createError.InternalServerError('Could not find an audit log'
           + ` for the creation of dataset ${req.params.id}`));
     }
+
+    console.log('dataset_creation_log.user_id', dataset_creation_log.user_id);
+    console.log('req.user.id', req.user.id);
+
     return dataset_creation_log.user_id === req.user.id ? next() : next(createError.Forbidden());
   }
   // Default:
@@ -1144,7 +1160,7 @@ router.post(
     });
 
     if (req.params.wf === CONSTANTS.WORKFLOWS.INTEGRATED
-        || req.params.wf === CONSTANTS.WORKFLOWS.STAGE) {
+          || req.params.wf === CONSTANTS.WORKFLOWS.STAGE) {
       // If staging a dataset Log the staging attempt first.
       if (req.params.wf === CONSTANTS.WORKFLOWS.STAGE) {
         try {
@@ -1158,27 +1174,27 @@ router.post(
           // console.log()
         }
       }
-      // const wf_name = req.params.wf;
-      // const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
-      // return res.json(wf);
+      const wf_name = req.params.wf;
+      const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
+      return res.json(wf);
     }
 
     if (req.params.wf === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
-        || req.params.wf === CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD) {
+          || req.params.wf === CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD) {
       const { workflowInitiated, workflowInitiationError } = await initiateUploadWorkflow({
         dataset,
         requestedWorkflow: req.params.wf,
         user: req.user,
       });
-      // return workflowInitiated
-      //   ? res.json(workflowInitiated)
-      //   : next(createError.InternalServerError(workflowInitiationError));
+      return workflowInitiated
+        ? res.json(workflowInitiated)
+        : next(createError.InternalServerError(workflowInitiationError));
     }
 
     // Default: Return 400 Bad Request if an invalid workflow name is provided.
-    // return next(createError.BadRequest(`Invalid workflow name provided (${req.params.wf})`));
+    return next(createError.BadRequest(`Invalid workflow name provided (${req.params.wf})`));
 
-    res.json(200);
+    // res.json(200);
   }),
 );
 
@@ -1243,9 +1259,9 @@ router.get(
       dataset_id: req.params.id,
       base: req.query.basepath,
     });
-    // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
-    // if a need arises
+      // cache indefinitely - 1 year
+      // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+      // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
