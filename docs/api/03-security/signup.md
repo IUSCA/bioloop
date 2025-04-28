@@ -93,9 +93,40 @@ Frontend stores JWT → Logged in
       "nonce": "<random>"
     }
     ```
+#### **Response Body on Successful Oauth Verification**
+
+Response from the backend after verifying the OAuth2 code and extracting the email:
+
+
+##### **If User Exists**
+```json
+{
+  "status": "success",
+  "token": "<login_jwt>",
+  "profile": {
+    "email": "<email>"
+  }
+}
+```
+
+##### **If User Does Not Exist and Signup is Allowed**
+```json
+{
+  "status": "signup_required",
+  "signup_token": "<signup_jwt_with_nonce>",
+  "email": "<email>"
+}
+```
+
+##### **If User Does Not Exist and Signup is Not Allowed**
+```json
+{
+  "status": "not_a_user"
+}
+```
 
 ### **Step 5: Frontend Signup Form**
-
+- Based on the response, the frontend will show a signup form if the user does not exist.
 - User sees form to complete profile: username, name, institution details, terms of use acceptance.
 - Email is displayed as read-only.
 - If user refreshes the signup page, they will be redirected to the login page.
