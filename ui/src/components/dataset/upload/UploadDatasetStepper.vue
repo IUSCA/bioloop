@@ -972,42 +972,17 @@ const uploadFileChunks = async (fileDetails) => {
 
 const uploadFile = async (fileDetails) => {
   fileDetails.uploadStatus = constants.UPLOAD_STATUSES.UPLOADING;
-  const checksum = fileDetails.fileChecksum;
 
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
     console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
-  const fileUploadLogId = datasetUploadLog.value.files.find(
-    (e) => e.md5 === checksum,
-  )?.id;
   fileDetails.uploadStatus = uploaded
     ? constants.UPLOAD_STATUSES.UPLOADED
     : constants.UPLOAD_STATUSES.UPLOAD_FAILED;
 
-  let updated = false;
-  if (uploaded) {
-    try {
-      await datasetService.updateDatasetUploadLog(
-        datasetUploadLog.value.audit_log.dataset.id,
-        {
-          files: [
-            {
-              id: fileUploadLogId,
-              data: { status: constants.UPLOAD_STATUSES.UPLOADED },
-            },
-          ],
-        },
-      );
-      updated = true;
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  const successful = uploaded && updated;
-  if (!successful) {
+  if (!uploaded) {
     if (selectingDirectory.value) {
       delete selectedDirectory.value.progress;
     } else if (selectingFiles.value) {
@@ -1015,7 +990,7 @@ const uploadFile = async (fileDetails) => {
     }
   }
 
-  return successful;
+  return uploaded;
 };
 
 const onSubmit = async () => {
