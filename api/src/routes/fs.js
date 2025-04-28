@@ -71,53 +71,51 @@ const get_mounted_search_dir = (req) => {
   const path_prefix = `${base_dir}/`;
 
   const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
-    + path_prefix.length);
+      + path_prefix.length);
   const mount_dir = get_mount_dir(req);
   return path.join(mount_dir, query_path);
 };
 
 router.get(
   '/',
-  // verifyFileSystemSearchEnabled,
-  // validatePath,
+  verifyFileSystemSearchEnabled,
+  validatePath,
   isPermittedTo('read'),
   query('dirs_only').optional().default(false),
   query('search_space').optional().escape().notEmpty(),
   asyncHandler(async (req, res, next) => {
-    res.json([{ name: 'scadev', isDir: true, path: '/N/scratch/scadev' }]);
+    const { dirs_only, path: query_path } = req.query;
 
-    // const { dirs_only, path: query_path } = req.query;
-    //
-    // if (!query_path) {
-    //   res.json([]);
-    //   return;
-    // }
-    //
-    // const mounted_search_dir = get_mounted_search_dir(req);
-    //
-    // fs.access(mounted_search_dir, constants.F_OK, (err) => {
-    //   if (err) {
-    //     return next(createError.NotFound());
-    //   }
-    //
-    //   fs.readdir(mounted_search_dir, {
-    //     withFileTypes: true,
-    //   }, (_err, files) => {
-    //     let filesData = files.map((f) => {
-    //       const file = {
-    //         name: f.name,
-    //         isDir: f.isDirectory(),
-    //         path: path.join(query_path, f.name),
-    //       };
-    //       if (dirs_only) {
-    //         return file.isDir ? file : null;
-    //       }
-    //       return file;
-    //     });
-    //     filesData = _.compact(filesData);
-    //     res.json(filesData);
-    //   });
-    // });
+    if (!query_path) {
+      res.json([]);
+      return;
+    }
+
+    const mounted_search_dir = get_mounted_search_dir(req);
+
+    fs.access(mounted_search_dir, constants.F_OK, (err) => {
+      if (err) {
+        return next(createError.NotFound());
+      }
+
+      fs.readdir(mounted_search_dir, {
+        withFileTypes: true,
+      }, (_err, files) => {
+        let filesData = files.map((f) => {
+          const file = {
+            name: f.name,
+            isDir: f.isDirectory(),
+            path: path.join(query_path, f.name),
+          };
+          if (dirs_only) {
+            return file.isDir ? file : null;
+          }
+          return file;
+        });
+        filesData = _.compact(filesData);
+        res.json(filesData);
+      });
+    });
   }),
 );
 

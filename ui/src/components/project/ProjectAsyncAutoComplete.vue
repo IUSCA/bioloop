@@ -86,17 +86,14 @@ const onSelect = (item) => {
 };
 
 const loadNextPage = () => {
-  // console.log('loadNextPage')
-  // console.log('searchTerm:', searchTerm.value)
   page.value += 1; // increase page value for offset recalculation
   return searchProjects({ appendToCurrentResults: true });
 };
 
-// todo - move to utils
-const trimName = (val) =>
-  val.length > NAME_TRIM_THRESHOLD
-    ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
-    : val;
+// const trimName = (val) =>
+//   val.length > NAME_TRIM_THRESHOLD
+//     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
+//     : val;
 
 const batchingQuery = computed(() => {
   return {
@@ -177,12 +174,6 @@ const performSearch = (searchIndex) => {
 };
 
 const onOpen = () => {
-  // if (props.populatedResult) {
-  //   datasets.value = [props.populatedResult]
-  // }
-  //
-  // // selectedResult.value = null
-  // emit('update:populatedResult', null)
   emit("open");
 };
 
@@ -193,14 +184,9 @@ const onClose = () => {
 const onClear = () => {
   console.log("onClear invoked");
   emit("clear");
-  // emit('update:populatedResult', null)
 };
 
-watch([searchTerm], (newVal, oldVal) => {
-  console.log("searchTerm or filterQuery changed");
-  console.log("searchTerm new Val:", newVal[0]);
-  console.log("searchTerm new Val:", oldVal[0]);
-
+watch([searchTerm], () => {
   searchIndex.value += 1;
   searches.value.push(searchIndex.value);
 
@@ -209,20 +195,6 @@ watch([searchTerm], (newVal, oldVal) => {
   debouncedSearch.value = _.debounce(performSearch, 300);
   debouncedSearch.value(searchIndex.value);
 });
-
-// watch(
-//   () => props.populatedResult,
-//   (newVal, oldVal) => {
-//     console.log('populatedResult changed')
-//     console.log(`oldVal:`, oldVal)
-//     console.log(`newVal:`, newVal)
-//   }
-// )
-
-// watch(datasets, () => {
-//   console.log('datasets changed')
-//   console.log(`datasets:`, datasets.value)
-// })
 
 onMounted(() => {
   loading.value = true;

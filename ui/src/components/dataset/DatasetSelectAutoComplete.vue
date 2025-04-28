@@ -103,11 +103,10 @@ const loadNextPage = () => {
   return searchDatasets({ appendToCurrentResults: true });
 };
 
-// todo - move to utils
-const trimName = (val) =>
-  val.length > NAME_TRIM_THRESHOLD
-    ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
-    : val;
+// const trimName = (val) =>
+//   val.length > NAME_TRIM_THRESHOLD
+//     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
+//     : val;
 
 const filterQuery = computed(() => {
   let query;
@@ -197,12 +196,6 @@ const performSearch = (searchIndex) => {
 };
 
 const onOpen = () => {
-  // if (props.populatedResult) {
-  //   datasets.value = [props.populatedResult]
-  // }
-  //
-  // // selectedResult.value = null
-  // emit('update:populatedResult', null)
   emit("open");
 };
 
@@ -211,16 +204,10 @@ const onClose = () => {
 };
 
 const onClear = () => {
-  console.log("onClear invoked");
   emit("clear");
-  // emit('update:populatedResult', null)
 };
 
-watch([searchTerm, filterQuery], (newVal, oldVal) => {
-  console.log("searchTerm or filterQuery changed");
-  console.log("searchTerm new Val:", newVal[0]);
-  console.log("searchTerm new Val:", oldVal[0]);
-
+watch([searchTerm, filterQuery], () => {
   searchIndex.value += 1;
   searches.value.push(searchIndex.value);
 
