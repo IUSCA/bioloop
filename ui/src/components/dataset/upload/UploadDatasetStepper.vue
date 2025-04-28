@@ -1054,7 +1054,7 @@ const setPostSubmissionSuccessState = () => {
  * Called when all files have been successfully uploaded, and a network request has been made
  * to initiate the `process_dataset_upload` workflow.
  */
-const postUpload = () => {
+const postSubmit = () => {
   if (uploadCancelled.value) {
     return;
   }
@@ -1104,7 +1104,7 @@ const handleSubmit = () => {
       isSubmissionAlertVisible.value = true;
     })
     .finally(() => {
-      postUpload();
+      postSubmit();
     });
 };
 
@@ -1203,7 +1203,6 @@ const setDirectory = (directoryDetails) => {
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: 0,
-    // uploadStatus: constants.UPLOAD_STATUSES.PROCESSING_FAILED,
   };
 
   displayedFilesToUpload.value = [selectedDirectory.value];

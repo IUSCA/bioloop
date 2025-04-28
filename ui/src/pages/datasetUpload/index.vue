@@ -219,7 +219,6 @@ const getStatusChipColor = (value) => {
       color = "success";
       break;
     case constants.UPLOAD_STATUSES.PROCESSING_FAILED:
-    case constants.UPLOAD_STATUSES.FAILED:
       color = "danger";
       break;
     default:

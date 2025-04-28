@@ -135,7 +135,6 @@ The status of an upload action goes through the following values:
 | PROCESSING                  | Upload currently being processed                                                                                                                                      |
 | PROCESSING_FAILED           | Encountered errors while processing a file in this upload                                                                                                             |
 | COMPLETE                    | All files in the upload processed successfully                                                                                                                        |
-| FAILED                      | Upload was failing processing (i.e. `status == PROCESSING_FAILED`) for more than 72 hours, and was therefore marked as `FAILED` and its filesystem resources deleted. |
 
 ## 5. Processing
 - Uploaded file chunks are merged into the corresponding file by the `process_dataset_upload` workflow.
@@ -150,4 +149,4 @@ The uploaded data goes through two stages of checksum validation:
 
 ## 7. Retry
 1. Upon encountering retryable exceptions, the `process_dataset_upload` worker retries itself 3 times before failing.
-2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that are failing (`status == PROCESSING_FAILED`), and retries to process the ones which have been failing for less than 72 hours. If some uploads have been failing for more than 72 hours, they are marked as `FAILED` and their filesystem resources (uploaded file chunks, and any processed files) are purged.
+2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that have been in states `PROCESSING_FAILED` or `UPLOADED`, and retries to process the ones which have been failing for less than 72 hours.
