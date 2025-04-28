@@ -6,6 +6,8 @@ const authService = require('../services/auth');
 const { setIntersection } = require('../utils');
 const ac = require('../services/accesscontrols');
 const nonceService = require('../services/nonce');
+const logger = require('../services/logger');
+const constants = require('../constants');
 
 const asyncHandler = require('./asyncHandler');
 
@@ -144,28 +146,27 @@ const loginHandler = asyncHandler(async (req, res, next) => {
       });
     }
 
-    resObj.status = 'success';
+    resObj.status = constants.auth.verify.response.status.SUCCESS;
     return res.json(resObj);
   }
   // User was authenticated but they are not a portal user
   if (config.get('auth.signup.enabled')) {
     const email = req.auth?.identity?.email;
     if (!email) {
-      return next(createError.InternalServerError(
-        'User authenticated but no email found in identity returned by the provider',
-      ));
+      logger.error('User authenticated but no email found in identity returned by the provider');
+      return next(createError.InternalServerError());
     }
     const nonce = await nonceService.createNonce();
     const signup_token = authService.issueSignupToken({ email, nonce });
-    return res.status(202).json({
-      status: 'signup_required',
+    return res.json({
+      status: constants.auth.verify.response.status.SIGNUP_REQUIRED,
       email,
       signup_token,
     });
   }
-  res.status(401).json({
-    status: 'not_a_user',
-    message: 'User authenticated but not a portal user',
+  return res.json({
+    status: constants.auth.verify.response.status.NOT_A_USER,
+    message: 'The user is authenticated but not recognized as a portal user.',
   });
 });
 

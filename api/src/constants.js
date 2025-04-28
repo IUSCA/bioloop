@@ -83,6 +83,18 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
 
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
+const auth = {
+  verify: {
+    response: {
+      status: {
+        SUCCESS: 'success',
+        SIGNUP_REQUIRED: 'signup_required',
+        NOT_A_USER: 'not_a_user',
+      },
+    },
+  },
+};
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
@@ -90,4 +102,5 @@ module.exports = {
   INCLUDE_AUDIT_LOGS,
   DONE_STATUSES,
   INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+  auth,
 };

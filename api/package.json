@@ -11,7 +11,7 @@
     "swagger": "node src/scripts/swagger.js",
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore",
     "test": "jest --watch --verbose false",
-    "check": "jest"
+    "check": "jest",
     "lint:file": "eslint --fix --ignore-path .gitignore"
   },
   "keywords": [],

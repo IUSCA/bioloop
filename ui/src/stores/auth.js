@@ -3,7 +3,6 @@ import constants from "@/constants";
 import authService from "@/services/auth";
 import uploadTokenService from "@/services/upload/token";
 import * as utils from "@/services/utils";
-import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
@@ -82,24 +81,19 @@ export const useAuthStore = defineStore("auth", () => {
               signupEmail.value = res.data.email;
               return res.data.status;
             }
+            if (
+              res.data.status ===
+              constants.auth.verify.response.status.NOT_A_USER
+            ) {
+              return res.data.status;
+            }
           }
           // not an expcected response
-          console.error("Unexpected response from verify API", res);
+          console.error("Unexpected response from the verify API", res);
           onLogout();
           return Promise.reject();
         })
         .catch((error) => {
-          // handle 401, status NOT_A_USER
-          if (axios.isAxiosError(error) && error.response) {
-            // The request was made and the server responded with a status code
-            if (
-              error.response.status === 401 &&
-              error.response.data.status ===
-                constants.auth.verify.response.status.NOT_A_USER
-            ) {
-              return error.response.data.status;
-            }
-          }
           // handle all other errors as is
           console.error("Login failed", error);
           onLogout();

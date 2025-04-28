@@ -2,7 +2,7 @@
   <div
     class="min-h-screen flex items-center justify-center bg-gray-300 dark:bg-gray-600"
   >
-    <va-card class="w-full max-w-md">
+    <va-card class="w-full max-w-sm">
       <va-card-content>
         <div class="flex flex-col gap-2 items-center justify-center opacity-90">
           <!-- <env-alert class="w-full" icon="warning" /> -->
@@ -15,28 +15,38 @@
           <va-divider />
         </div>
 
-        <p class="w-full text-center text-2xl font-semibold mb-6">
-          Login / Sign up with
+        <p
+          class="w-full text-center text-xl font-semibold mb-4 tracking-normal"
+        >
+          <span v-if="isFeatureEnabled({ featureKey: 'signup' })">
+            Sign Up or Log In
+          </span>
+          <span v-else>Log In with</span>
         </p>
 
         <!-- IU CAS -->
         <div class="flex justify-center px-8 mb-3">
           <va-button
-            class="flex-auto py-1"
+            class=""
             preset="secondary"
             border-color="secondary"
             @click="$router.push({ path: '/auth/iucas', query: $route.query })"
           >
-            <div class="flex justify-between items-center gap-3 w-full">
+            <template #prepend>
               <img
                 src="@/assets/Indiana_Hoosiers_logo.svg"
-                class="h-6"
+                class="h-6 ml-3"
                 loading="lazy"
                 alt="IU logo"
               />
-              <span class="dark:text-slate-100" data-testid="login-button">
+            </template>
+            <div class="flex justify-center items-center gap-3 w-[16rem]">
+              <p
+                class="dark:text-slate-100 text-base"
+                data-testid="login-button"
+              >
                 Indiana University
-              </span>
+              </p>
             </div>
           </va-button>
         </div>
@@ -47,19 +57,23 @@
           v-if="config.auth_enabled.google"
         >
           <va-button
-            class="flex-auto py-1"
+            class=""
             preset="secondary"
             border-color="secondary"
             @click="$router.push({ path: '/auth/google', query: $route.query })"
           >
-            <div class="flex justify-center items-center gap-3 w-full">
+            <template #prepend>
               <img
-                class="w-6 h-6"
+                class="w-6 h-6 ml-3"
                 src="@/assets/google-color.svg"
                 loading="lazy"
                 alt="google logo"
               />
-              <span class="dark:text-slate-100"> Google </span>
+            </template>
+            <div class="flex justify-center items-center gap-3 w-[16rem]">
+              <span class="dark:text-slate-100 text-base">
+                Continue with Google
+              </span>
             </div>
           </va-button>
         </div>
@@ -70,19 +84,23 @@
           v-if="config.auth_enabled.cilogon"
         >
           <va-button
-            class="flex-auto py-1"
+            class=""
             preset="secondary"
             border-color="secondary"
             @click="$router.push({ path: '/auth/cil', query: $route.query })"
           >
-            <div class="flex justify-center items-center gap-3 w-full">
+            <template #prepend>
               <img
-                class="w-7 h-7"
+                class="w-6 h-6 ml-3"
                 src="@/assets/CILogon-icon.png"
                 loading="lazy"
                 alt="CILogon logo"
               />
-              <span class="dark:text-slate-100"> CILogon </span>
+            </template>
+            <div class="flex justify-center items-center gap-3 w-[16rem]">
+              <span class="dark:text-slate-100 text-base">
+                Continue with CILogon
+              </span>
             </div>
           </va-button>
         </div>
@@ -93,21 +111,25 @@
           v-if="config.auth_enabled.microsoft"
         >
           <va-button
-            class="flex-auto py-1"
+            class=""
             preset="secondary"
             border-color="secondary"
             @click="
               $router.push({ path: '/auth/microsoft', query: $route.query })
             "
           >
-            <div class="flex justify-center items-center gap-3 w-full">
+            <template #prepend>
               <img
-                class="w-6 h-6"
+                class="w-6 h-6 ml-3"
                 src="@/assets/microsoft-icon.svg"
                 loading="lazy"
                 alt="microsoft logo"
               />
-              <span class="dark:text-slate-100"> Microsoft </span>
+            </template>
+            <div class="flex justify-center items-center gap-3 w-[16rem]">
+              <span class="dark:text-slate-100 text-base">
+                Continue with Microsoft
+              </span>
             </div>
           </va-button>
         </div>
@@ -118,6 +140,7 @@
 
 <script setup>
 import config from "@/config";
+import { isFeatureEnabled } from "@/services/utils";
 </script>
 
 <route lang="yaml">

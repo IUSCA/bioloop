@@ -18,6 +18,9 @@
               config.contact.app_admin
             }}</a>
           </span>
+          <div>
+            <va-button to="/auth">Go Back</va-button>
+          </div>
         </div>
         <div
           class="text-lg text-gray-700 flex flex-col items-center gap-5 text-center"
