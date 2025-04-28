@@ -33,7 +33,7 @@
           color="success"
           @click="router.push('/datasetUpload/new')"
         >
-          Upload Data Product
+          Upload Dataset
         </va-button>
       </div>
     </div>

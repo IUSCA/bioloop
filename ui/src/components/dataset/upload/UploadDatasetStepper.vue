@@ -1081,15 +1081,12 @@ const postSubmit = () => {
   });
 
   if (datasetUploadLog.value) {
-    createOrUpdateUploadLog(
-      {
-        status: someFilesPendingUpload.value
-          ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
-          : constants.UPLOAD_STATUSES.UPLOADED,
-        files: failedFileUpdates,
-      },
-      "postSubmit",
-    )
+    createOrUpdateUploadLog({
+      status: someFilesPendingUpload.value
+        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
+        : constants.UPLOAD_STATUSES.UPLOADED,
+      files: failedFileUpdates,
+    })
       .then((res) => {
         datasetUploadLog.value = res.data;
       })
@@ -1145,14 +1142,12 @@ const preUpload = async () => {
         ...uploadFormData.value,
       };
 
-  const res = await createOrUpdateUploadLog(logData, "preUpload"); // log creation or update from this function);
+  const res = await createOrUpdateUploadLog(logData); // log creation or update from this function);
   datasetUploadLog.value = res.data;
 };
 
 // Log (or update) upload status
-const createOrUpdateUploadLog = (data, caller) => {
-  console.log("createOrUpdateUploadLog called by", caller);
-  console.log("!datasetUploadLog.value", !datasetUploadLog.value);
+const createOrUpdateUploadLog = (data) => {
   return !datasetUploadLog.value
     ? datasetService.logDatasetUpload(data)
     : datasetService.updateDatasetUploadLog(
