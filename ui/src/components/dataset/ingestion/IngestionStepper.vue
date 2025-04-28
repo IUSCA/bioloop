@@ -58,7 +58,7 @@
           />
 
           <div class="text-xs va-text-danger" v-if="!stepIsPristine">
-            {{ formErrors[STEP_KEYS.DIRECTORY] }}
+            {{ formErrors[STEP_KEYS.SELECT_DIRECTORY] }}
           </div>
         </div>
       </div>
@@ -232,9 +232,9 @@
         :source-raw-data="selectedRawData"
         :source-instrument="selectedSourceInstrument"
         :ingestion-space="searchSpace.label"
-        :created-dataset-error="formErrors[STEP_KEYS.INFO]"
+        :created-dataset-error="formErrors[STEP_KEYS.INGEST]"
         :show-created-dataset-error="
-          !!formErrors[STEP_KEYS.INFO] && !stepIsPristine
+          !!formErrors[STEP_KEYS.INGEST] && !stepIsPristine
         "
       />
     </template>
@@ -284,18 +284,16 @@ import { Icon } from "@iconify/vue";
 import Constants from "@/constants";
 
 const STEP_KEYS = {
-  DIRECTORY: "directory",
+  SELECT_DIRECTORY: "selectDirectory",
   GENERAL_INFO: "generalInfo",
-  INFO: "info",
+  INGEST: "info",
 };
 
-const FORM_VALIDATION_ERROR = "An unknown error occurred";
+const UNKNOWN_VALIDATION_ERROR = "An unknown error occurred";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
-const HAS_SPACES_ERROR = "cannot contain spaces";
-const MISSING_METADATA_ERROR = "One or more fields have error";
+const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
 const DATASET_NAME_MIN_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
-const INGESTION_FILE_REQUIRED_ERROR = "A file must be selected for ingestion.";
 const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
 
@@ -305,7 +303,7 @@ const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
 
 const steps = [
   {
-    key: STEP_KEYS.DIRECTORY,
+    key: STEP_KEYS.SELECT_DIRECTORY,
     label: "Select Directory",
     icon: "material-symbols:folder",
   },
@@ -315,7 +313,7 @@ const steps = [
     icon: "material-symbols:info",
   },
   {
-    key: STEP_KEYS.INFO,
+    key: STEP_KEYS.INGEST,
     label: "Ingest",
     icon: "material-symbols:play-circle",
   },
@@ -369,19 +367,18 @@ const selectedDatasetType = ref(
 );
 // `stepPristineStates` tracks if a step's form fields are pristine (i.e. not
 // touched by user) or not. Errors are only shown when a step's form fields are
-// not pristine. At this time, errors are only shown on steps 0
-// (STEP_KEYS.DIRECTORY) and 1 (STEP_KEYS.RAW_DATA)
+// not pristine.
 const stepPristineStates = ref([
-  { [STEP_KEYS.DIRECTORY]: true },
+  { [STEP_KEYS.SELECT_DIRECTORY]: true },
   { [STEP_KEYS.GENERAL_INFO]: true },
-  { [STEP_KEYS.INFO]: true },
+  { [STEP_KEYS.INGEST]: true },
 ]);
 const isFileSearchAutocompleteOpen = ref(false);
 const selectedFile = ref(null);
 const formErrors = ref({
-  [STEP_KEYS.DIRECTORY]: null,
+  [STEP_KEYS.SELECT_DIRECTORY]: null,
   [STEP_KEYS.GENERAL_INFO]: null,
-  [STEP_KEYS.INFO]: null,
+  [STEP_KEYS.INGEST]: null,
 });
 
 const loading = computed(() => {
@@ -416,11 +413,11 @@ const stepIsPristine = computed(() => {
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.DIRECTORY];
+    return !!formErrors.value[STEP_KEYS.SELECT_DIRECTORY];
   } else if (step.value === 1) {
     return !!formErrors.value[STEP_KEYS.GENERAL_INFO];
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.INFO];
+    return !!formErrors.value[STEP_KEYS.INGEST];
   }
 });
 
@@ -494,13 +491,11 @@ const isStepperButtonDisabled = (stepIndex) => {
   );
 };
 
-const hasSpacesErrorStr = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
-
 const resetFormErrors = () => {
   formErrors.value = {
-    [STEP_KEYS.DIRECTORY]: null,
+    [STEP_KEYS.SELECT_DIRECTORY]: null,
     [STEP_KEYS.GENERAL_INFO]: null,
-    [STEP_KEYS.INFO]: null,
+    [STEP_KEYS.INGEST]: null,
   };
 };
 
@@ -509,7 +504,7 @@ const setFormErrors = async () => {
 
   if (step.value === 0) {
     if (!selectedFile.value) {
-      formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_FILE_REQUIRED_ERROR;
+      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = true;
       return;
     }
     // check if the selected file is allowed to be ingested as a dataset
@@ -523,10 +518,11 @@ const setFormErrors = async () => {
         })
       : false;
     if (origin_path_is_restricted) {
-      formErrors.value[STEP_KEYS.DIRECTORY] = INGESTION_NOT_ALLOWED_ERROR;
+      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] =
+        INGESTION_NOT_ALLOWED_ERROR;
       return;
     } else {
-      formErrors.value[STEP_KEYS.DIRECTORY] = null;
+      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = null;
     }
   }
 
@@ -536,7 +532,7 @@ const setFormErrors = async () => {
       (isAssignedProject.value && !projectSelected.value) ||
       (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
-      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR;
+      formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
     }
   }
 
@@ -544,9 +540,9 @@ const setFormErrors = async () => {
     const { isNameValid: datasetNameIsValid, error } =
       await validateDatasetName();
     if (datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.INFO] = null;
+      formErrors.value[STEP_KEYS.INGEST] = null;
     } else {
-      formErrors.value[STEP_KEYS.INFO] = error;
+      formErrors.value[STEP_KEYS.INGEST] = error;
     }
   }
 };
@@ -583,7 +579,7 @@ const validateDatasetName = async () => {
   } else if (populatedDatasetName.value.length < 3) {
     return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
   } else if (populatedDatasetName.value.indexOf(" ") > -1) {
-    return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
+    return { isNameValid: false, error: DATASET_NAME_HAS_SPACES_ERROR };
   }
 
   validatingForm.value = true;
@@ -601,7 +597,7 @@ const validateDatasetName = async () => {
       };
     })
     .catch(() => {
-      return { isNameValid: false, error: FORM_VALIDATION_ERROR };
+      return { isNameValid: false, error: UNKNOWN_VALIDATION_ERROR };
     })
     .finally(() => {
       validatingForm.value = false;
@@ -612,7 +608,7 @@ const resetSearch = () => {
   selectedFile.value = null;
   fileListSearchText.value = "";
   setRetrievedFiles([]);
-  formErrors.value[STEP_KEYS.DIRECTORY] = null;
+  formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = null;
   if (validatingForm.value) {
     validatingForm.value = false;
   }
@@ -749,7 +745,7 @@ watch(
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    if (stepKey === STEP_KEYS.INFO) {
+    if (stepKey === STEP_KEYS.INGEST) {
       // `1` corresponds to `populatedDatasetName`
       stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1];
     } else {

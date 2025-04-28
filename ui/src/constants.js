@@ -113,14 +113,18 @@ const exports = {
     admin_items: [],
   },
   UPLOAD_STATUSES: {
-    UNINITIATED: "Uninitiated",
-    PROCESSING: "Processing",
-    PROCESSING_FAILED: "Processing Failed",
-    COMPUTING_CHECKSUMS: "Computing Checksums",
-    CHECKSUM_COMPUTATION_FAILED: "Computing Checksums Failed",
-    UPLOADING: "Uploading",
-    UPLOAD_FAILED: "Upload Failed",
-    UPLOADED: "Uploaded",
+    // Statuses that only appear in the UI
+    UNINITIATED: "UNINITIATED",
+    COMPUTING_CHECKSUMS: "COMPUTING_CHECKSUMS",
+    CHECKSUM_COMPUTATION_FAILED: "CHECKSUM_COMPUTATION_FAILED",
+    // Statuses that appear in the UI and are also persisted to the database
+    UPLOADING: "UPLOADING",
+    UPLOAD_FAILED: "UPLOAD_FAILED",
+    UPLOADED: "UPLOADED",
+    PROCESSING: "PROCESSING",
+    PROCESSING_FAILED: "PROCESSING_FAILED",
+    COMPLETE: "COMPLETE",
+    FAILED: "FAILED",
   },
   DATASET_CREATE_METHODS: {
     UPLOAD: "UPLOAD",

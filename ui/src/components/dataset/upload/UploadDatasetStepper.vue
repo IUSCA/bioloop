@@ -220,9 +220,9 @@
                   :dataset="datasetUploadLog?.audit_log.dataset"
                   :selected-dataset-type="selectedDatasetType.value"
                   :input-disabled="submitAttempted"
-                  :uploaded-dataset-error="formErrors[STEP_KEYS.INFO]"
+                  :uploaded-dataset-error="formErrors[STEP_KEYS.UPLOAD]"
                   :show-uploaded-dataset-error="
-                    !!formErrors[STEP_KEYS.INFO] && !stepIsPristine
+                    !!formErrors[STEP_KEYS.UPLOAD] && !stepIsPristine
                   "
                   :project="projectSelected"
                   :source-instrument="selectedSourceInstrument"
@@ -296,17 +296,15 @@ const auth = useAuthStore();
 
 const STEP_KEYS = {
   GENERAL_INFO: "generalInfo",
+  SELECT_FILES: "selectFiles",
   UPLOAD: "upload",
-  INFO: "info",
 };
 
-const FORM_VALIDATION_ERROR = "An unknown error occurred";
+const UNKNOWN_VALIDATION_ERROR = "An unknown error occurred";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
-const HAS_SPACES_ERROR = "cannot contain spaces";
-const UPLOAD_FILE_REQUIRED_ERROR = "A file must be selected for upload.";
+const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
 const DATASET_NAME_MIN_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
-const MISSING_METADATA_ERROR = "One or more fields have error";
 
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
@@ -319,7 +317,7 @@ const blobSlice =
 
 const steps = [
   {
-    key: STEP_KEYS.UPLOAD,
+    key: STEP_KEYS.SELECT_FILES,
     label: "Select Files",
     icon: "material-symbols:folder",
   },
@@ -329,7 +327,7 @@ const steps = [
     icon: "material-symbols:info",
   },
   {
-    key: STEP_KEYS.INFO,
+    key: STEP_KEYS.UPLOAD,
     label: "Upload",
     icon: "material-symbols:play-circle",
   },
@@ -353,8 +351,8 @@ const FILE_TYPE = {
 
 const formErrors = ref({
   [STEP_KEYS.GENERAL_INFO]: null,
+  [STEP_KEYS.SELECT_FILES]: null,
   [STEP_KEYS.UPLOAD]: null,
-  [STEP_KEYS.INFO]: null,
 });
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
 const isAssignedSourceInstrument = ref(true);
@@ -376,8 +374,8 @@ const willUploadRawData = ref(false);
 // not pristine.
 const stepPristineStates = ref([
   { [STEP_KEYS.GENERAL_INFO]: true },
+  { [STEP_KEYS.SELECT_FILES]: true },
   { [STEP_KEYS.UPLOAD]: true },
-  { [STEP_KEYS.INFO]: true },
 ]);
 const loading = ref(false);
 const validatingForm = ref(false);
@@ -411,11 +409,11 @@ const uploadCancelled = ref(false);
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
-    return !!formErrors.value[STEP_KEYS.UPLOAD];
+    return !!formErrors.value[STEP_KEYS.SELECT_FILES];
   } else if (step.value === 1) {
     return !!formErrors.value[STEP_KEYS.GENERAL_INFO];
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.INFO];
+    return !!formErrors.value[STEP_KEYS.UPLOAD];
   }
 });
 
@@ -592,13 +590,11 @@ const validateIfExists = (value) => {
   });
 };
 
-const hasSpacesErrorStr = (prefix) => `${prefix} ${HAS_SPACES_ERROR}`;
-
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.GENERAL_INFO]: null,
+    [STEP_KEYS.SELECT_FILES]: null,
     [STEP_KEYS.UPLOAD]: null,
-    [STEP_KEYS.INFO]: null,
   };
 };
 
@@ -608,7 +604,7 @@ const validateDatasetName = async () => {
   } else if (populatedDatasetName.value?.length < 3) {
     return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
   } else if (populatedDatasetName.value?.indexOf(" ") > -1) {
-    return { isNameValid: false, error: hasSpacesErrorStr("Dataset name") };
+    return { isNameValid: false, error: DATASET_NAME_HAS_SPACES_ERROR };
   }
 
   validatingForm.value = true;
@@ -626,7 +622,7 @@ const validateDatasetName = async () => {
       };
     })
     .catch(() => {
-      return { isNameValid: false, error: FORM_VALIDATION_ERROR };
+      return { isNameValid: false, error: UNKNOWN_VALIDATION_ERROR };
     })
     .finally(() => {
       validatingForm.value = false;
@@ -663,7 +659,7 @@ const setFormErrors = async () => {
 
   if (step.value === 0) {
     if (displayedFilesToUpload.value.length === 0) {
-      formErrors.value[STEP_KEYS.UPLOAD] = UPLOAD_FILE_REQUIRED_ERROR;
+      formErrors.value[STEP_KEYS.SELECT_FILES] = true;
       return;
     }
   }
@@ -674,7 +670,7 @@ const setFormErrors = async () => {
       (isAssignedProject.value && !projectSelected.value) ||
       (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
-      formErrors.value[STEP_KEYS.GENERAL_INFO] = MISSING_METADATA_ERROR;
+      formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
       return;
     }
   }
@@ -683,9 +679,9 @@ const setFormErrors = async () => {
     const { isNameValid: datasetNameIsValid, error } =
       await validateDatasetName();
     if (datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.INFO] = null;
+      formErrors.value[STEP_KEYS.UPLOAD] = null;
     } else {
-      formErrors.value[STEP_KEYS.INFO] = error;
+      formErrors.value[STEP_KEYS.UPLOAD] = error;
     }
   }
 };
@@ -809,6 +805,11 @@ const uploadChunk = async (chunkData) => {
     try {
       // update upload token if needed
       await updateUploadToken(chunkData.get("name"));
+      console.log("token updated for: ", chunkData.get("name"));
+      console.log(
+        "calling uploadService.uploadFile(chunkData) for: ",
+        chunkData.get("name"),
+      );
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
@@ -820,6 +821,7 @@ const uploadChunk = async (chunkData) => {
   let retry_count = 0;
   let uploaded = false;
   while (!uploaded && !uploadCancelled.value) {
+    // uploaded = true; // Placeholder: Replace with actual upload logic
     uploaded = await upload();
     if (!uploaded) {
       retry_count += 1;
@@ -1079,12 +1081,15 @@ const postSubmit = () => {
   });
 
   if (datasetUploadLog.value) {
-    createOrUpdateUploadLog({
-      status: someFilesPendingUpload.value
-        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
-        : constants.UPLOAD_STATUSES.UPLOADED,
-      files: failedFileUpdates,
-    })
+    createOrUpdateUploadLog(
+      {
+        status: someFilesPendingUpload.value
+          ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
+          : constants.UPLOAD_STATUSES.UPLOADED,
+        files: failedFileUpdates,
+      },
+      "postSubmit",
+    )
       .then((res) => {
         datasetUploadLog.value = res.data;
       })
@@ -1105,6 +1110,7 @@ const handleSubmit = () => {
       console.error(err);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
+      submissionAlert.value = "An error occurred.";
       submissionAlertColor.value = "warning";
       isSubmissionAlertVisible.value = true;
     })
@@ -1139,12 +1145,14 @@ const preUpload = async () => {
         ...uploadFormData.value,
       };
 
-  const res = await createOrUpdateUploadLog(logData);
+  const res = await createOrUpdateUploadLog(logData, "preUpload"); // log creation or update from this function);
   datasetUploadLog.value = res.data;
 };
 
 // Log (or update) upload status
-const createOrUpdateUploadLog = (data) => {
+const createOrUpdateUploadLog = (data, caller) => {
+  console.log("createOrUpdateUploadLog called by", caller);
+  console.log("!datasetUploadLog.value", !datasetUploadLog.value);
   return !datasetUploadLog.value
     ? datasetService.logDatasetUpload(data)
     : datasetService.updateDatasetUploadLog(
@@ -1165,7 +1173,6 @@ const uploadFiles = async (files) => {
   return uploaded;
 };
 
-// two files can't have same path/name
 const setFiles = (files) => {
   _.range(0, files.length).forEach((i) => {
     const file = files.item(i);
@@ -1180,7 +1187,6 @@ const setFiles = (files) => {
   displayedFilesToUpload.value = filesToUpload.value;
 };
 
-// two files can't have the same name and path
 const setDirectory = (directoryDetails) => {
   const directoryFiles = directoryDetails.files;
   let directorySize = 0;
@@ -1201,7 +1207,7 @@ const setDirectory = (directoryDetails) => {
     name: directoryDetails.directoryName,
     formattedSize: formatBytes(directorySize),
     progress: 0,
-    uploadStatus: constants.UPLOAD_STATUSES.PROCESSING_FAILED,
+    // uploadStatus: constants.UPLOAD_STATUSES.PROCESSING_FAILED,
   };
 
   displayedFilesToUpload.value = [selectedDirectory.value];
@@ -1255,7 +1261,7 @@ watch(
   async (newVals, oldVals) => {
     // Mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    if (stepKey === STEP_KEYS.INFO) {
+    if (stepKey === STEP_KEYS.UPLOAD) {
       // `1` corresponds to `populatedDatasetName`
       stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1];
     } else {
