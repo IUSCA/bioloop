@@ -322,7 +322,7 @@ function normalize_name(name) {
   // replace consecutive hyphens with one -
 
   return (name || '')
-    .replaceAll(/[\W_]/g, '-')
+    .replaceAll(/[\W]/g, '-')
     .replaceAll(/-+/g, '-');
 }
 
@@ -348,7 +348,7 @@ router.post(
 
     // gather non-null data to create a new dataset
     const data = _.flow([
-      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size']),
+      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata']),
       _.omitBy(_.isNil),
     ])(req.body);
 
@@ -434,7 +434,8 @@ router.post(
                                 "properties": {
                                     "name": "string",
                                     "type": "string",
-                                    "origin_path": "string"
+                                    "origin_path": "string",
+                                    "metadata": "object",
                                 },
                                 "required": ["name", "type", "origin_path"]
                             },
@@ -491,7 +492,10 @@ router.post(
 
     const data = req.body.datasets
       .map((d) => {
-        const _d = _.pick(['name', 'type', 'origin_path'])(d);
+        const _d = _.flow([
+          _.pick(['name', 'type', 'origin_path', 'metadata']),
+          _.omitBy(_.isNil),
+        ])(d);
 
         // normalize name
         _d.name = normalize_name(_d.name);

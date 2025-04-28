@@ -38,7 +38,7 @@
     "jest": true
   },
   "parserOptions": {
-    "ecmaVersion": 13
+    "ecmaVersion": "latest"
   },
   "extends": [
     "airbnb-base",

@@ -29,7 +29,8 @@
                   class="flex-none"
                   :color="isDark ? '#9171f8' : '#A020F0'"
                 >
-                  <i-mdi-folder-open class="pr-2 text-xl" /> Browse Files
+                  <i-mdi-folder-open class="pr-2 text-xl" />
+                  Browse Files
                 </va-button>
 
                 <!-- edit description -->
@@ -146,7 +147,8 @@
                     preset="secondary"
                     @click="openModalToDownloadDataset"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" /> Download
+                    <i-mdi-download class="pr-2 text-2xl" />
+                    Download
                   </va-button>
                 </div>
               </va-card-content>
@@ -186,7 +188,9 @@
               <va-divider class="my-2" />
 
               <div class="flex flex-col items-center gap-2">
-                <div><i-mdi-zip-box-outline class="text-3xl" /></div>
+                <div>
+                  <i-mdi-zip-box-outline class="text-3xl" />
+                </div>
                 <span class="text-xl tracking-wide">
                   {{ config.dataset.types[dataset.type]?.label }} /
                   {{ dataset.name }}
@@ -482,6 +486,7 @@ function navigateToFileBrowser() {
 }
 
 const downloadModal = ref(null);
+
 function openModalToDownloadDataset() {
   downloadModal.value.show();
 }

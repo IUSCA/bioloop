@@ -5,12 +5,13 @@ import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { defineConfig, loadEnv } from "vite";
-import Pages from "vite-plugin-pages";
+import VueRouter from "unplugin-vue-router/vite";
 import Layouts from "vite-plugin-vue-layouts";
 // import basicSsl from "@vitejs/plugin-basic-ssl";
 import { visualizer } from "rollup-plugin-visualizer";
 import IconsResolver from "unplugin-icons/resolver";
 import Icons from "unplugin-icons/vite";
+import { VueRouterAutoImports } from "unplugin-vue-router";
 
 // https://vitejs.dev/config/
 // eslint-disable-next-line no-unused-vars
@@ -19,20 +20,24 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd());
   return {
     plugins: [
+      // https://github.com/posva/unplugin-vue-router
+      // ⚠️ `Vue` must be placed after VueRouter()
+      VueRouter({
+        // https://github.com/posva/unplugin-vue-router#configuration
+        dts: "./typed-router.d.ts",
+      }),
+
       // https://vuejs.org/guide/extras/reactivity-transform.html#refs-vs-reactive-variables
       vue({
         reactivityTransform: true,
       }),
-
-      // https://github.com/hannoeru/vite-plugin-pages
-      Pages(),
 
       // https://github.com/antfu/unplugin-auto-import
       AutoImport({
         eslintrc: {
           enabled: true, // generates .eslintrc-auto-import.json which is used in .eslintrc.cjs
         },
-        imports: ["vue", "vue/macros", "vue-router", "@vueuse/core"],
+        imports: ["vue", "vue/macros", "@vueuse/core", VueRouterAutoImports],
         dts: true,
         dirs: ["./src/composables"], // ./src/stores and ./src/services can be added to auto import, but should we? Your developers were so preoccupied with whether they could, they didn't stop to think if they should.
         vueTemplate: true,

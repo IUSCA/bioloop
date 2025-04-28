@@ -46,5 +46,12 @@ module.exports = {
         tabSize: 2,
       },
     ],
+    // Ignore parsing errors for custom tags like <route>
+    "vue/no-parsing-error": [
+      "error",
+      {
+        "invalid-first-character-of-tag-name": false,
+      },
+    ],
   },
 };
