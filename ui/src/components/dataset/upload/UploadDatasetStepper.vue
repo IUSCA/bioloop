@@ -389,12 +389,6 @@ const submissionAlert = ref(""); // For handling network errors before upload be
 const submissionAlertColor = ref("");
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
-const isUploadIncomplete = computed(() => {
-  return (
-    submitAttempted.value &&
-    submissionStatus.value !== Constants.UPLOAD_STATUSES.UPLOADED
-  );
-});
 const filesToUpload = ref([]);
 const displayedFilesToUpload = ref([]);
 const selectedDirectory = ref(null);
@@ -406,6 +400,20 @@ const selectingDirectory = ref(false);
 const populatedDatasetName = ref("");
 const step = ref(0);
 const uploadCancelled = ref(false);
+
+/**
+ * Determines if the upload process has been completed.
+ *
+ * An upload is considered complete if `submissionStatus` has been set to `UPLOADED`. This occurs when:
+ * - All files have been uploaded
+ * - A network request to initiate the `process_dataset_upload` has been made
+ */
+const isUploadIncomplete = computed(() => {
+  return (
+    submitAttempted.value &&
+    submissionStatus.value !== Constants.UPLOAD_STATUSES.UPLOADED
+  );
+});
 
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
@@ -583,7 +591,7 @@ const validateIfExists = (value) => {
           resolve(res.data.exists);
         })
         .catch((e) => {
-          console.error(e);
+          // console.error(e);
           reject();
         });
     }
@@ -720,13 +728,13 @@ const evaluateFileChecksums = (file) => {
       };
 
       fileReader.onerror = () => {
-        console.error(`file reading failed for file ${file.name}`);
+        // console.error(`file reading failed for file ${file.name}`);
         reject(fileReader.error);
       };
 
       loadNext(chunkIndex);
     } catch (err) {
-      console.error(err);
+      // console.error(err);
       reject(err);
     }
   });
@@ -758,9 +766,9 @@ const evaluateChecksums = (filesToUpload) => {
               })
               .catch(() => {
                 fileDetails.checksumsEvaluated = false;
-                console.error(
-                  `Failed to evaluate checksums of file ${file.name}`,
-                );
+                // console.error(
+                //   `Failed to evaluate checksums of file ${file.name}`,
+                // );
                 reject();
               });
           }),
@@ -805,15 +813,15 @@ const uploadChunk = async (chunkData) => {
     try {
       // update upload token if needed
       await updateUploadToken(chunkData.get("name"));
-      console.log("token updated for: ", chunkData.get("name"));
-      console.log(
-        "calling uploadService.uploadFile(chunkData) for: ",
-        chunkData.get("name"),
-      );
+      // console.log("token updated for: ", chunkData.get("name"));
+      // console.log(
+      //   "calling uploadService.uploadFile(chunkData) for: ",
+      //   chunkData.get("name"),
+      // );
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
-      console.error(`Encountered error uploading chunk`, e);
+      // console.error(`Encountered error uploading chunk`, e);
     }
     return chunkUploaded;
   };
@@ -827,9 +835,9 @@ const uploadChunk = async (chunkData) => {
       retry_count += 1;
     }
     if (retry_count > RETRY_COUNT_THRESHOLD) {
-      console.error(
-        `Exceeded retry threshold of ${RETRY_COUNT_THRESHOLD} times`,
-      );
+      // console.error(
+      //   `Exceeded retry threshold of ${RETRY_COUNT_THRESHOLD} times`,
+      // );
       break;
     }
   }
@@ -975,7 +983,7 @@ const uploadFile = async (fileDetails) => {
 
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
-    console.error(`Upload of file ${fileDetails.name} failed`);
+    // console.error(`Upload of file ${fileDetails.name} failed`);
   }
 
   fileDetails.uploadStatus = uploaded
@@ -1022,7 +1030,7 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        console.error(err);
+        // console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
@@ -1042,7 +1050,15 @@ const setPostSubmissionSuccessState = () => {
   }
 };
 
-const postSubmit = () => {
+/**
+ * Called when all files have been successfully uploaded, and a network request has been made
+ * to initiate the `process_dataset_upload` workflow.
+ */
+const postUpload = () => {
+  if (uploadCancelled.value) {
+    return;
+  }
+
   setPostSubmissionSuccessState();
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
@@ -1066,7 +1082,7 @@ const postSubmit = () => {
         datasetUploadLog.value = res.data;
       })
       .catch((err) => {
-        console.error(err);
+        // console.error(err);
       });
   }
 };
@@ -1074,12 +1090,13 @@ const postSubmit = () => {
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return datasetService.processDatasetUpload(
-        datasetUploadLog.value.audit_log.dataset.id,
-      );
+      return !uploadCancelled.value
+        ? datasetService.processDatasetUpload(
+            datasetUploadLog.value.audit_log.dataset.id,
+          )
+        : Promise.reject();
     })
-    .catch((err) => {
-      console.error(err);
+    .catch(() => {
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
       submissionAlert.value = "An error occurred.";
@@ -1087,7 +1104,7 @@ const handleSubmit = () => {
       isSubmissionAlertVisible.value = true;
     })
     .finally(() => {
-      postSubmit();
+      postUpload();
     });
 };
 
@@ -1117,18 +1134,27 @@ const preUpload = async () => {
         ...uploadFormData.value,
       };
 
-  const res = await createOrUpdateUploadLog(logData); // log creation or update from this function);
-  datasetUploadLog.value = res.data;
+  try {
+    const res = await createOrUpdateUploadLog(logData);
+    datasetUploadLog.value = res.data;
+  } catch (err) {
+    // console.error(err);
+    throw new Error("Error logging dataset upload");
+  }
 };
 
 // Log (or update) upload status
 const createOrUpdateUploadLog = (data) => {
-  return !datasetUploadLog.value
-    ? datasetService.logDatasetUpload(data)
-    : datasetService.updateDatasetUploadLog(
-        datasetUploadLog.value?.audit_log?.dataset.id,
-        data,
-      );
+  if (!uploadCancelled.value) {
+    return !datasetUploadLog.value
+      ? datasetService.logDatasetUpload(data)
+      : datasetService.updateDatasetUploadLog(
+          datasetUploadLog.value?.audit_log?.dataset.id,
+          data,
+        );
+  } else {
+    return Promise.reject();
+  }
 };
 
 const uploadFiles = async (files) => {
@@ -1181,13 +1207,6 @@ const setDirectory = (directoryDetails) => {
   };
 
   displayedFilesToUpload.value = [selectedDirectory.value];
-};
-
-const beforeUnload = (e) => {
-  if (isUploadIncomplete.value) {
-    // show warning before user leaves page
-    e.returnValue = true;
-  }
 };
 
 watch(selectedDatasetType, (newVal) => {
@@ -1251,7 +1270,7 @@ onMounted(() => {
     })
     .catch((err) => {
       toast.error("Failed to load resources");
-      console.error(err);
+      // console.error(err);
     })
     .finally(() => {
       loading.value = false;
@@ -1262,33 +1281,178 @@ onMounted(() => {
   setFormErrors();
 });
 
-onMounted(() => {
-  window.addEventListener("beforeunload", beforeUnload);
-});
+/**
+ * Route Change Handling Mechanism
+ *
+ * This mechanism is designed to handle the scenario when a user attempts to navigate away from the current page
+ * while the upload is incomplete. It uses Vue Router's navigation guards and component lifecycle hooks
+ * to prompt the user for confirmation and cancel the upload if necessary.
+ *
+ * Key Components:
+ *
+ * 1. `isUploadIncomplete`:
+ *    A computed property that determines if the upload is still in progress or incomplete.
+ *
+ * 2. `onBeforeRouteLeave`:
+ *    Navigation guard triggered when the user attempts to navigate to a different route.
+ *    It shows a browser confirmation dialog if the upload is incomplete.
+ *
+ * 3. `onBeforeUnmount`:
+ *    Lifecycle hook triggered when the component is about to be unmounted (which happens during navigation).
+ *    It cancels the upload if it's incomplete.
+ *
+ * 4. `uploadCancelled`:
+ *    A reactive variable used to signal that the upload should be considered cancelled.
+ *
+ * Flow:
+ * 1. User attempts to navigate to a different route
+ * 2. `onBeforeRouteLeave` is triggered
+ *    - If upload is incomplete, shows a confirmation dialog
+ *    - If user confirms, allows navigation; if user cancels, prevents navigation
+ * 3. If navigation is allowed, `onBeforeUnmount` is triggered
+ *    - Sets `uploadCancelled` to true
+ *    - If upload is incomplete, sends a request to cancel the upload
+ *
+ */
 
-// show alert before user moves to a different route
 onBeforeRouteLeave(() => {
-  return submitAttempted.value &&
-    submissionStatus.value !== Constants.UPLOAD_STATUSES.UPLOADED
+  // Before navigating to a different route, show user a confirmation dialog
+  return isUploadIncomplete.value
     ? window.confirm(
-        "Leaving this page before all files have been processed/uploaded will" +
+        "Leaving this page before all files have been uploaded will" +
           " cancel the upload. Do you wish to continue?",
       )
     : true;
 });
 
-onBeforeUnmount(async () => {
-  // stop any pending uploads before this component unmounts
+onBeforeUnmount(() => {
   uploadCancelled.value = true;
-
-  window.removeEventListener("beforeunload", beforeUnload);
-
-  if (isUploadIncomplete.value) {
-    await datasetService.cancelDatasetUpload(
+  if (isUploadIncomplete.value && datasetUploadLog.value) {
+    datasetService.cancelDatasetUpload(
       datasetUploadLog.value.audit_log.dataset.id,
     );
   }
 });
+
+/**
+ * Browser Tab Closure Handling Mechanism
+ *
+ * This handler is triggered when the user attempts to close the browser tab or navigate away from the page.
+ * It shows a browser alert to confirm the user's intention if an upload is in progress.
+ *
+ * @description
+ * - Checks if an upload is incomplete using the `isUploadIncomplete` computed property.
+ * - If an upload is incomplete:
+ *   - Sets the `returnValue` of the event to `true`, which prompts the browser to show a confirmation dialog.
+ * - This prevents accidental data loss by giving the user a chance to confirm before leaving the page during an upload.
+ *
+ */
+const onBeforeUnload = (e) => {
+  if (isUploadIncomplete.value) {
+    e.returnValue = true;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener("beforeunload", onBeforeUnload);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", onBeforeUnload);
+});
+
+/* eslint-disable */
+// /**
+//  * Browser Tab Closure Handling Mechanism
+//  *
+//  * This mechanism is designed to handle the scenario when a user attempts to close the browser tab
+//  * during an incomplete upload process. It uses a combination of browser events and a local storage
+//  * flag to determine whether to cancel the upload.
+//  *
+//  * Key Components:
+//  *
+//  * 1. `isClosingBrowserTab`:
+//  *    A reactive variable stored in local storage that indicates whether the browser tab is about to be closed.
+//  *
+//  * 2. `onBeforeUnload`:
+//  *    Event handler triggered when the user attempts to close the tab. It shows a browser
+//  *    confirmation dialog asking the user if they want to leave. If the upload is incomplete at this point,
+//  *    a flag (`isClosingBrowserTab`) is set to track this, with a reset-timeout.
+//  *
+//  * 3. `onUnload`:
+//  *    Event handler triggered if the user confirms that they wish to close the tab.
+//  *    - if the user confirms closing the tab within a short delay (500ms):
+//  *      - It checks if the upload is incomplete, and if so, cancels the upload
+//  *    - if the user takes longer than 500ms to confirm closing the tab:
+//  *      - The upload is not cancelled. In this case the system will end up with an incomplete upload,
+//  *        which can be cleaned up later.
+//  *
+//  * 4. Event Listeners:
+//  *    Added on component mount and removed on unmount to ensure proper cleanup of an incomplete upload.
+//  *
+//  * Flow:
+//  * 1. User attempts to close tab
+//  * 2. `onBeforeUnload` is triggered
+//  *    - Shows confirmation dialog
+//  *    - Sets the `isClosingBrowserTab` flag to `true`
+//  *    - Starts a 500ms timeout after which the flag is reset
+//  * 3. If user confirms that they wish to close the tab, `onUnload` is triggered
+//  *    - Checks `isClosingBrowserTab` and `isUploadIncomplete`
+//  *    - Cancels upload if both are true
+//  * 4. If user doesn't confirm within 500ms, the `isClosingBrowserTab` flag is reset
+//  *
+//  */
+//
+// // Used to indicate if the user intends to close the current browser tab.
+// const isClosingBrowserTab = ref(false);
+//
+// const onBeforeUnload = (e) => {
+//   debugger;
+//   if (isUploadIncomplete.value) {
+//     console.log(
+//         "Show user a browser alert to get confirmation before leaving the page",
+//     );
+//     e.returnValue = true; // this shows the browser alert before user leaves the page
+//     isClosingBrowserTab.value = true;
+//
+//     // If user hasn't confirmed or cancelled the browser alert within a short
+//     // delay, assume they are not leaving the page.
+//     // setTimeout(() => {
+//     //   console.log("500 ms elapsed. Assume user won't leave the page.");
+//     //   isClosingBrowserTab.value = false;
+//     // }, 500);
+//   }
+// };
+//
+// const onUnload = () => {
+//   if (isClosingBrowserTab.value) {
+//     console.log(
+//         "User confirmed that they are leaving page. Upload is incomplete, and will be cancelled.",
+//     );
+//     datasetService.cancelDatasetUpload(
+//         datasetUploadLog.value.audit_log.dataset.id,
+//     );
+//   } else {
+//     console.log(
+//         "User did not confirm leaving page within 500 ms. Upload is incomplete, but will not be cancelled.",
+//     );
+//   }
+//   isClosingBrowserTab.value = false;
+// };
+//
+// onMounted(() => {
+//   window.addEventListener("beforeunload", onBeforeUnload);
+//   window.addEventListener("unload", onUnload);
+// });
+//
+// onBeforeUnmount(() => {
+//   window.removeEventListener("beforeunload", onBeforeUnload);
+//   window.removeEventListener("unload", onUnload);
+//   // once the `onUnload` handler is finished, the `isClosingBrowserTab` flag
+//   // can be reset
+//   isClosingBrowserTab.value = false;
+// });
+/* eslint-enable */
 </script>
 
 <style lang="scss">

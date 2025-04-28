@@ -1067,15 +1067,15 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
  * @description
  * This middleware function checks if the user has the necessary permissions to initiate a workflow on a dataset.
  * Allowed workflows are:
- * - integrated
- * - stage
- * - process_dataset_upload
- * - cancel_dataset_upload
+ * - `integrated`
+ * - `stage`
+ * - `process_dataset_upload`
+ * - `cancel_dataset_upload`
  *
  * The access rules are as follows:
- * 1. Users with 'admin' or 'operator' roles are always allowed to initiate any of the above workflows.
+ * 1. Users with `admin` or `operator` roles are always allowed to initiate any of the above workflows.
  * 2. Users with 'user' role:
- *    - For 'integrated', 'process_dataset_upload', or 'cancel_dataset_upload' workflows:
+ *    - For `integrated`, `process_dataset_upload`, or `cancel_dataset_upload` workflows:
  *      They are allowed to proceed only if they created the dataset.
  *    - For other workflows:
  *      They are allowed to proceed if they are assigned to a project associated with the dataset.
@@ -1107,9 +1107,6 @@ const workflow_access_check = async (req, res, next) => {
       return next(createError.InternalServerError('Could not find an audit log'
           + ` for the creation of dataset ${req.params.id}`));
     }
-
-    console.log('dataset_creation_log.user_id', dataset_creation_log.user_id);
-    console.log('req.user.id', req.user.id);
 
     return dataset_creation_log.user_id === req.user.id ? next() : next(createError.Forbidden());
   }
