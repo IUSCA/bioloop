@@ -294,6 +294,7 @@ const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
 const DATASET_NAME_MIN_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
+const NO_FILE_SELECTED_ERROR = "A file must be selected for ingestion";
 const INGESTION_NOT_ALLOWED_ERROR =
   "Selected file cannot be ingested as a dataset";
 
@@ -341,7 +342,6 @@ const submissionSuccess = ref(false);
 const fileListSearchText = ref("");
 const fileList = ref([]);
 const dataset = ref(null);
-const datasetId = ref();
 const loadingResources = ref(false); // determines if the initial resources needed for the stepper are being fetched
 const searchingFiles = ref(false);
 const validatingForm = ref(false);
@@ -504,7 +504,7 @@ const setFormErrors = async () => {
 
   if (step.value === 0) {
     if (!selectedFile.value) {
-      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = true;
+      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = NO_FILE_SELECTED_ERROR;
       return;
     }
     // check if the selected file is allowed to be ingested as a dataset

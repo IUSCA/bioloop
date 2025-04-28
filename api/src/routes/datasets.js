@@ -9,6 +9,7 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 const pm = require('picomatch');
+const he = require('he');
 
 // const logger = require('../services/logger');
 const path = require('path');
@@ -621,6 +622,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('origin_path').notEmpty().escape(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
@@ -639,15 +641,18 @@ router.post(
 
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
-      name, type, origin_path, du_size, size, bundle_size, workflow_id, state,
+      name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
     } = req.body;
+
+    // remove any HTML entities inserted by browser because of URL encoding
+    const decoded_origin_path = he.decode(origin_path);
 
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
       const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
       const is_origin_path_restricted = restricted_ingestion_dirs.some((glob) => {
         const isMatch = pm(glob);
-        const matches = isMatch(origin_path, glob);
+        const matches = isMatch(decoded_origin_path, glob);
         return matches.isMatch;
       });
       if (is_origin_path_restricted) {
@@ -661,6 +666,7 @@ router.post(
       name,
       type,
       du_size,
+      origin_path: decoded_origin_path,
       size,
       bundle_size,
       workflow_id,
@@ -670,6 +676,7 @@ router.post(
       src_dataset_id,
       state,
       create_method,
+      metadata,
     });
 
     // idempotence: creates dataset or returns error 409 on repeated requests
@@ -1043,14 +1050,14 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
   }
 
   logger.info('Waiting');
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({
-      workflowInitiated: requestedWorkflowInitiated,
-      workflowInitiationError,
-    }), 10000);
-  });
+  // return new Promise((resolve) => {
+  //   setTimeout(() => resolve({
+  //     workflowInitiated: requestedWorkflowInitiated,
+  //     workflowInitiationError,
+  //   }), 10000);
+  // });
 
-  // return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
+  return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
 };
 
 /**
