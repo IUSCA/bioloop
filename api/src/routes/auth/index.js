@@ -17,6 +17,7 @@ const cilogonRouter = require('./cilogon');
 const casRouter = require('./iucas');
 const microsoftRouter = require('./microsoft');
 const signupRouter = require('./signup');
+const { isFeatureEnabled } = require('../../services/features');
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Auth']
@@ -116,7 +117,7 @@ if (config.get('auth.microsoft.enabled')) {
   router.use('/microsoft', microsoftRouter);
 }
 
-if (config.get('auth.signup.enabled')) {
+if (isFeatureEnabled({ key: 'signup' })) {
   router.use('/signup', signupRouter);
 }
 module.exports = router;

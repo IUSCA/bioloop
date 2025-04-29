@@ -50,7 +50,6 @@
       "default_role": "user"
     },
     "signup": {
-      "enabled": true,
       "default_role": "user",
       "dev_default_role": "admin",
       "jwt": {
@@ -196,7 +195,8 @@
     "fs": {
       "enabled_for_roles": ["admin"]
     },
-    "downloads": true
+    "downloads": true,
+    "signup": true
   },
   "institution_types": [
     "Commercial",
