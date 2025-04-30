@@ -1,4 +1,5 @@
 import config from "@/config";
+import axios from "axios";
 import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
@@ -277,6 +278,26 @@ function isFeatureEnabled({ featureKey, hasRole = () => false } = {}) {
   }
 }
 
+function isHTTPError(code) {
+  return (error) => axios.isAxiosError(error) && error.response.status === code;
+}
+
+const is404 = isHTTPError(404);
+const is403 = isHTTPError(403);
+
+function navigateBackSafely(router, fallback = "/") {
+  const from = router.currentRoute.value.fullPath;
+
+  window.history.back();
+
+  setTimeout(() => {
+    const to = router.currentRoute.value.fullPath;
+    if (to === from) {
+      router.replace(fallback);
+    }
+  }, 300);
+}
+
 export {
   arrayEquals,
   capitalize,
@@ -290,12 +311,17 @@ export {
   groupBy,
   groupByAndAggregate,
   initials,
+  is403,
+  is404,
   isFeatureEnabled,
+  isHTTPError,
   isLiveToken,
   lxor,
   mapValues,
   maybePluralize,
+  navigateBackSafely,
   setIntersection,
   union,
-  validateEmail,
+  validateEmail
 };
+
