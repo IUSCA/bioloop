@@ -42,3 +42,5 @@ coverage
 admins.json
 operators.json
 users.json
+
+/notebooks
