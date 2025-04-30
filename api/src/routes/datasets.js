@@ -538,9 +538,8 @@ function normalize_name(name) {
 const getDatasetCreateQuery = (data) => {
   /* eslint-disable no-unused-vars */
   const {
-    name, type, du_size, size, origin_path, bundle_size, workflow_id,
-    project_id, user_id, src_instrument_id, src_dataset_id,
-    state, create_method, metadata,
+    name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
+    project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -779,25 +778,7 @@ router.post(
       } */
 
     const data = req.body.datasets
-      .map((d) => {
-        const _d = _.flow([
-          _.pick(['name', 'type', 'origin_path', 'metadata']),
-          _.omitBy(_.isNil),
-        ])(d);
-
-        // normalize name
-        _d.name = normalize_name(_d.name);
-
-        // add a state
-        _d.states = {
-          create: [
-            {
-              state: d.state || 'REGISTERED',
-            },
-          ],
-        };
-        return _d;
-      });
+      .map((d) => getDatasetCreateQuery(d));
 
     // create in separate transactions to avoid deadlocks
     const results = await Promise.allSettled(data.map((d) => datasetService.createDataset(d)));
