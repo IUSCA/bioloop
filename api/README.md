@@ -321,7 +321,7 @@ Each role defines CRUD permissions on resources with two scopes: "own" and "any"
 
 The goal of the [accessControl](src/middleware/auth.js) middleware is to determine from an incoming request whether the requester has enough permissions to perform the desired operation on a particular resource.
 
-- <u>Note</u>: `req.permission.filter`: Uses [Notation](https://www.npmjs.com/package/notation) to filter attributes.
+- <u>Note</u>: `req.permission.filter` uses [Notation](https://www.npmjs.com/package/notation) to filter attributes.
 
 ### A simple use case: 
 
@@ -365,8 +365,8 @@ The goal of the [accessControl](src/middleware/auth.js) middleware is to determi
 **Permission check**:
 
 Before evaluating if the requester will be granted access to the requested resource, the resource owner needs to be determined. This can be done through one of two ways:
-- If a username is included as a parameter in the request, the resource owner is assumed to be this user.
-- If a username is not included as a parameter in the request, a callback can be provided to retrieve the resource owner through custom logic.
+- If a username is included as part of the request, the resource owner is assumed to be this user.
+- If a username is not included as part of request, a callback can be provided to retrieve the resource owner through custom logic.
 
 Once the resource owner has been determined, we check if the requester has the necessary permissions to access the requested resource.
 - If the requester and the resource owner are the same, the `readOwn` permission is examined against the requester's roles.
