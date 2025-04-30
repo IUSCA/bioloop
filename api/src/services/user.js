@@ -1,7 +1,21 @@
 const { Prisma, PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
+const config = require('config');
 
 const prisma = new PrismaClient();
+
+let systemUser = null;
+
+async function getSystemUser() {
+  if (!systemUser) {
+    const _systemUser = await prisma.user.findFirst({
+      where: { username: config.get('system_user.username') },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+    systemUser = transformUser(_systemUser);
+  }
+  return systemUser;
+}
 
 const INCLUDE_ROLES_LOGIN = {
   user_role: {
@@ -266,4 +280,5 @@ module.exports = {
   canUpdateUser,
   INCLUDE_ROLES_LOGIN,
   findUserBy,
+  getSystemUser,
 };
