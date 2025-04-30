@@ -1509,12 +1509,14 @@ router.post(
 );
 
 /**
- * Sets the user who uploaded the dataset in the request object `req`, for the `auth`
- * middleware to be able to retrieve the owner (uploader) of this resource (upload), and
- * thus verify if the current user is permitted to take certain actions on this upload.
+ * Gets the user who uploaded the dataset, which will be used by the `auth`
+ * middleware to determine if the user calling this API is the same
+ * as the user who uploaded the dataset, and thereby determine if the user
+ * calling this API is permitted to take certain actions on the uploaded
+ * dataset.
  */
-const setUploader = async (req, res, next) => {
-  const dataset_upload_audit_log = await prisma.dataset_audit.findUniqueOrThrow({
+const getUploader = async (req, res, next) => {
+  const dataset_upload_audit_log = await prisma.dataset_audit.findUnique({
     where: {
       dataset_id_create_method: {
         dataset_id: parseInt(req.params.dataset_id, 10),
@@ -1531,19 +1533,31 @@ const setUploader = async (req, res, next) => {
     },
   });
 
-  req.uploader = dataset_upload_audit_log.user;
-  next();
+  if (!dataset_upload_audit_log) {
+    return next(createError.NotFound("Expected to find an audit log for this dataset's upload, but found none."));
+  }
+  if (!dataset_upload_audit_log.user) {
+    return next(createError.InternalServerError('Could not determine the user who uploaded this dataset.'));
+  }
+
+  return dataset_upload_audit_log.user.username;
 };
 
 // - Update the metadata related to a dataset upload event
 // - Used by UI, workers
 router.patch(
   '/:dataset_id/upload',
-  setUploader,
+  /**
+   * A user can only update metadata related to a dataset upload if one of the
+   * following two conditions are met:
+   *   - The user has either the `admin` or the `operator` role
+   *   - The user has the `user` role, and they are the one who uploaded this dataset.
+   * This is checked by the `isPermittedTo` middleware.
+   */
   isPermittedTo(
     'update',
     { checkOwnership: true },
-    (req) => req.uploader.username, // resourceOwnerFn
+    getUploader, // `resourceOwnerFn` expected by the `auth` middleware
   ),
   validate([
     param('dataset_id').isInt().toInt(),
@@ -1555,19 +1569,9 @@ router.patch(
     // #swagger.summary = 'Update the metadata related to a dataset upload event'
 
     const { status, files = [] } = req.body;
-    const update_query = _.omitBy(_.isUndefined)({
+    const dataset_upload_log_update_query = _.omitBy(_.isUndefined)({
       status,
     });
-
-    // A user can only update an upload log one of the following two conditions are met:
-    //   - The user has either the `admin` or the `operator` role
-    //   - The user has the `user` role, and they are the one who initiated this upload.
-    if (
-      !(req.user.roles.includes('admin') || req.user.roles.includes('operator'))
-          && req.uploader.id !== req.user.id
-    ) {
-      return next(createError.Forbidden());
-    }
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
@@ -1582,22 +1586,30 @@ router.patch(
       let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
         where: { audit_log_id: dataset_upload_audit_log.id },
       });
-      await tx.dataset_upload_log.update({
-        where: { id: ds_upload_log.id },
-        data: update_query,
-      });
-      // eslint-disable-next-line no-restricted-syntax
-      for (const f of files) {
-        // eslint-disable-next-line no-await-in-loop
-        await tx.file_upload_log.update({
-          where: { id: f.id },
-          data: f.data,
+
+      if (Object.entries(dataset_upload_log_update_query).length > 0) {
+        await tx.dataset_upload_log.update({
+          where: { id: ds_upload_log.id },
+          data: dataset_upload_log_update_query,
         });
       }
+
+      if (files.length > 0) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const f of files) {
+          // eslint-disable-next-line no-await-in-loop
+          await tx.file_upload_log.update({
+            where: { id: f.id },
+            data: f.data,
+          });
+        }
+      }
+
       ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
         where: { id: ds_upload_log.id },
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
+
       return ds_upload_log;
     });
 

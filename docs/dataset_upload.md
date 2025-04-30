@@ -138,7 +138,8 @@ The status of an upload action goes through the following values:
 | PROCESSING_FAILED           | Encountered errors while processing a file in this upload                                                                                                             |
 | COMPLETE                    | All files in the upload processed successfully                                                                                                                        |
 
-Statuses `COMPUTING_CHECKSUMS` and `COMPUTING_CHECKSUMS` are only shown on the User Interface, and are not persisted to the database. Other statuses are persisted.
+- Statuses `COMPUTING_CHECKSUMS` and `COMPUTING_CHECKSUMS` are only shown on the User Interface, and are not persisted to the database.
+- All other statuses are persisted to the database.
 
 ## 5. Processing
 - Uploaded file chunks are merged into the corresponding file by the `process_dataset_upload` workflow.
