@@ -5,6 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
 
+const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
 const { log_axios_error } = require('../utils');
@@ -12,6 +13,11 @@ const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
+const workflowService = require('./workflow');
+const CONSTANTS = require('../constants');
+const asyncHandler = require('../middleware/asyncHandler');
+const { getPermission, accessControl } = require('../middleware/auth');
+const logger = require('./logger');
 
 const prisma = new PrismaClient();
 
@@ -100,7 +106,7 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
-  include_upload_log = false,
+  include_source_instrument = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -134,17 +140,13 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      dataset_upload_log: include_upload_log ? {
-        include: {
-          upload_log: {
-            select: {
-              id: true,
-              files: true,
-              status: true,
-            },
+      ...(include_source_instrument ? {
+        src_instrument: {
+          select: {
+            name: true,
           },
         },
-      } : false,
+      } : undefined),
     },
   });
   const dataset_workflows = dataset.workflows;
@@ -279,15 +281,21 @@ function create_filetree(files) {
   return root;
 }
 
+/**
+ * Check if the user has access to the given dataset.
+ * @param dataset_id
+ * @param user_id
+ * @returns {Promise<boolean>}
+ */
 async function has_dataset_assoc({
-  dataset_id, username,
+  dataset_id, user_id,
 }) {
   const projects = await prisma.project.findMany({
     where: {
       users: {
         some: {
           user: {
-            username,
+            id: user_id,
           },
         },
       },
@@ -302,6 +310,108 @@ async function has_dataset_assoc({
   });
 
   return projects.length > 0;
+}
+
+/**
+ * Gets the user who created the given dataset.
+ *
+ * @param {Object} params - The parameters object.
+ * @param {number} params.dataset_id - The ID of the dataset.
+ *
+ * @returns {Promise<Object>} A promise that resolves to the user object of the user who created the dataset.
+ *
+ * @throws {Error} If an audit log for the dataset's creation is not found.
+ * @throws {Error} If the user who created the dataset cannot be determined.
+ */
+async function get_dataset_creator({ dataset_id }) {
+  const dataset_creation_log = await prisma.dataset_audit.findFirst({
+    where: {
+      dataset_id,
+      create_method: {
+        in: [
+          CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
+          CONSTANTS.DATASET_CREATE_METHODS.IMPORT,
+          CONSTANTS.DATASET_CREATE_METHODS.SCAN,
+        ],
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
+  if (!dataset_creation_log) {
+    throw new Error(`Expected to find an audit log for the creation of dataset ${dataset_id}, but found none.`);
+  }
+  if (!dataset_creation_log.user) {
+    throw new Error(`Could not find user who created dataset ${dataset_id}.`);
+  }
+
+  return dataset_creation_log.user;
+}
+
+/**
+ * Determine if the user has access to initiate the given workflow for the given dataset.
+ *
+ * The access rules are as follows:
+ * 1. Users with `admin` or `operator` roles are always allowed to initiate any of the above workflows.
+ * 2. Users with 'user' role:
+ *     - For `integrated`, `process_dataset_upload`, or `cancel_dataset_upload` workflows:
+ *       - They are allowed to proceed only if they created the dataset.
+ *     - For other allowed workflows:
+ *       - They are allowed to proceed if they are assigned to a project associated with the dataset.
+ *
+ * If the user doesn't have the necessary permissions, a Forbidden error is thrown.
+ * If the dataset creation audit log can't be found, an InternalServerError is thrown.
+ *
+ * @param {Object} params - The parameters object.
+ * @param {string} params.workflow - The workflow name which is to be initiated.
+ * @param {number} params.dataset_id - The ID of the dataset on which the workflow is to be run.
+ * @param {number} params.user_id - The ID of the user who is requesting for the given workflow to be run on the given dataset.
+ *
+ * @returns {Promise<boolean>}
+ */
+async function has_workflow_access({ workflow, dataset_id, user_id }) {
+  const user = await prisma.user.findUnique({
+    where: { id: user_id },
+    include: {
+      user_role: {
+        select: {
+          roles: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+  const user_roles = user.user_role.map((ur) => ur.roles.name);
+
+  if (user_roles.some((role) => ['operator', 'admin'].includes(role))) {
+    return true;
+  }
+
+  let user_has_workflow_access = false;
+
+  if ([CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
+    CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
+    CONSTANTS.WORKFLOWS.INTEGRATED]
+    .includes(workflow)) {
+    const dataset_creator = await get_dataset_creator({ dataset_id });
+    user_has_workflow_access = dataset_creator.id === user_id;
+  } else {
+    user_has_workflow_access = await has_dataset_assoc({
+      dataset_id,
+      user_id,
+    });
+  }
+
+  return user_has_workflow_access;
 }
 
 // async function search_files({ dataset_id, query }) {
@@ -481,6 +591,34 @@ async function add_files({ dataset_id, data }) {
 }
 
 /**
+ * Creates a new dataset within a transaction.
+ *
+ * @param {Object} tx - Database transaction manager.
+ * @param {Object} data - The data object containing details of the dataset to be created.
+ * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
+ */
+async function createDatasetInTransaction(tx, data) {
+  // find if a dataset with the same name and type already exists
+  const existingDataset = await tx.dataset.findFirst({
+    where: {
+      name: data.name,
+      type: data.type,
+      is_deleted: false,
+    },
+    select: {
+      id: true,
+    },
+  });
+  if (existingDataset) {
+    return;
+  }
+  // if it doesn't exist, create it
+  return tx.dataset.create({
+    data,
+  });
+}
+
+/**
  * Creates a new dataset if one with the same name and type does not already exist.
  *
  * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
@@ -495,42 +633,137 @@ async function add_files({ dataset_id, data }) {
  * txA: create -> dataset created
  * txB: create -> unique constraint violation
  *
+ * @param {Object} data - The data object containing details of the dataset to be created.
  * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
  */
 function createDataset(data) {
-  return prisma.$transaction(async (tx) => {
-    // find if a dataset with the same name and type already exists
-    const existingDataset = await tx.dataset.findFirst({
-      where: {
-        name: data.name,
-        type: data.type,
-        is_deleted: false,
-      },
-      select: {
-        id: true,
-      },
-    });
-    if (existingDataset) {
-      return;
-    }
-    // if it doesn't exist, create it
-    return tx.dataset.create({
-      data,
-    });
-  });
+  return prisma.$transaction(async (tx) => createDatasetInTransaction(tx, data));
 }
 
+const get_dataset_active_workflows = async ({ dataset } = {}) => {
+  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
+  const workflowQueryResponse = await workflowService.getAll({
+    workflow_ids: datasetWorkflowIds,
+    app_id: config.get('app_id'),
+    status: 'ACTIVE',
+  });
+  return workflowQueryResponse.data.results;
+};
+
 const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+
+/**
+ * Middleware to check if a user has access to a dataset.
+ *
+ * @function dataset_access_check
+ * @async
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function.
+ * @throws {Error} Throws a Forbidden error if the user doesn't have access.
+ * @description
+ * This middleware function checks if the user has permission to access a dataset.
+ * It first checks if the user has general 'read' permission for datasets based on their roles.
+ * If not, it then checks if the user is associated with the dataset through a project.
+ * If neither condition is met, it throws a Forbidden error.
+ * The function assumes that req.params.id contains the dataset id and req.user contains user information.
+ */
+const dataset_access_check = asyncHandler(async (req, res, next) => {
+  // assumes req.params.id is the dataset id user is requesting access check
+  const permission = getPermission({
+    resource: 'datasets',
+    action: 'read',
+    requester_roles: req?.user?.roles,
+  });
+
+  if (!permission.granted) {
+    const user_dataset_assoc = await has_dataset_assoc({
+      user_id: req.user.id,
+      dataset_id: req.params.id,
+    });
+    if (!user_dataset_assoc) {
+      return next(createError.Forbidden());
+    }
+  }
+
+  next();
+});
+
+/**
+ * Middleware to check if a user has access to initiate a workflow on a dataset.
+ *
+ * @description
+ * This middleware checks if the user has the necessary permissions to initiate a workflow on a dataset.
+ * There are three conditions to check:
+ * - The first check determines if the user has the necessary permissions to
+ * create a workflow.
+ * - The second check determines if the requested workflow is in the list of workflows that the user's role is allowed
+ * to initiate.
+ *    - Role `admin` and `operator` are allowed to initiate any workflow.
+ *    - Role `user` is allowed to initiate workflows `integrated`, `stage`, `process_dataset_upload`,
+ *    and `cancel_dataset_upload`
+ * - The third check determines if the user has the necessary permissions to initiate the requested
+ * workflow on the requested dataset.
+ *    - Role `admin` and `operator` are allowed to initiate any workflow on any dataset.
+ *    - Role `user`:
+ *      - is allowed to initiate workflows `integrated`, `process_dataset_upload` and `cancel_dataset_upload` if they
+ *      created the dataset.
+ *      - is allowed to initiate workflow `stage` if they are associated to the dataset via a project that they are a
+ *      part of.
+ */
+const workflow_access_check = [
+  // determine if the user has the necessary permissions to create a workflow
+  accessControl('workflow')('create'),
+  // determine if the requested workflow is in the list of workflows that the user's role is allowed to initiate
+  (req, res, next) => {
+    // allowed_wfs is an object with keys as workflow names and values as true
+    // filter only works on objects not arrays, so we use an object with true
+    // value
+    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
+    if (allowed_wfs[req.params.wf]) {
+      return next();
+    }
+    // console.error(`Workflow ${req.params.wf} is not in the list of workflows allowed for this user.`);
+    next(createError.Forbidden());
+  },
+  // determine if the user has the necessary permissions to initiate the requested workflow on the requested dataset
+  asyncHandler(async (req, res, next) => {
+    const requested_dataset_id = parseInt(req.params.id, 10);
+
+    // At this point, it has been determined that the requester is allowed to create workflows.
+    // The next step is to check if the user has access to create the requested workflow on
+    // the requested dataset.
+    let user_has_workflow_access = false;
+    try {
+      user_has_workflow_access = await has_workflow_access({
+        workflow: req.params.wf,
+        dataset_id: requested_dataset_id,
+        user_id: req.user.id,
+      });
+    } catch (e) {
+      logger.error('Error checking if user has workflow access:', e);
+      return next(createError.InternalServerError());
+    }
+
+    return user_has_workflow_access ? next() : next(createError.Forbidden());
+  }),
+];
 
 module.exports = {
   soft_delete,
   get_dataset,
   create_workflow,
   create_filetree,
-  has_dataset_assoc,
   files_ls,
   search_files,
   add_files,
   createDataset,
+  createDatasetInTransaction,
   get_bundle_name,
+  get_dataset_active_workflows,
+  get_dataset_creator,
+  has_dataset_assoc,
+  has_workflow_access,
+  dataset_access_check,
+  workflow_access_check,
 };

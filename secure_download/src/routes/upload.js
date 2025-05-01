@@ -14,13 +14,8 @@ const router = express.Router();
 
 const UPLOAD_SCOPE = String(config.get('upload_scope'));
 
-const getUploadPath = (uploadedEntityId) => path.join(
-  config.upload_path.data_products,
-  uploadedEntityId,
-);
-
-const getFileChunksStorageDir = (uploadedEntityId, fileUploadLogId) => path.join(
-  getUploadPath(uploadedEntityId),
+const getFileChunksStorageDir = ({ uploadPath, fileUploadLogId } = {}) => path.join(
+  uploadPath,
   'uploaded_chunks',
   fileUploadLogId,
 );
@@ -31,8 +26,10 @@ const uploadFileStorage = multer.diskStorage({
   destination: async (req, file, cb) => {
     logger.info('Received request to persist file to filesystem');
     const chunkStorage = getFileChunksStorageDir(
-      req.body.uploaded_entity_id,
-      req.body.file_upload_log_id,
+      {
+        uploadPath: req.body.upload_path,
+        fileUploadLogId: req.body.file_upload_log_id,
+      },
     );
     await fsPromises.mkdir(chunkStorage, {
       recursive: true,
@@ -55,24 +52,25 @@ router.post(
   multer({ storage: uploadFileStorage }).single('file'),
   asyncHandler(async (req, res, next) => {
     const {
-      name, uploaded_entity_id, index, checksum, chunk_checksum,
+      name, uploaded_entity_id, upload_path, index, checksum, chunk_checksum,
     } = req.body;
 
     logger.info('Received request to accept file:');
     logger.info(`name: ${name}`);
     logger.info(`uploaded_entity_id: ${uploaded_entity_id}`);
+    logger.info(`upload_path: ${upload_path}`);
     logger.info(`index: ${index}`);
     logger.info(`checksum: ${checksum}`);
     logger.info(`chunk_checksum: ${chunk_checksum}`);
 
     const request_scope = req.token?.scope || '';
     logger.info(`Request scope: ${request_scope}`);
-    
-    // [^\w.-]+ matches one or more characters that are not word 
+
+    // [^\w.-]+ matches one or more characters that are not word
     // characters (letters, digits, or underscore), dots, or hyphens
     const hyphen_delimited_file_name = name.replace(/[^\w.-]+/g, '-');
     logger.info(`Hyphen-delimited file name: ${hyphen_delimited_file_name}`);
-    
+
     const expected_scope = `${UPLOAD_SCOPE}:${hyphen_delimited_file_name}`;
     logger.info(`Expected scope: ${expected_scope}`);
 

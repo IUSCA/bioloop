@@ -71,7 +71,7 @@ const get_mounted_search_dir = (req) => {
   const path_prefix = `${base_dir}/`;
 
   const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
-    + path_prefix.length);
+      + path_prefix.length);
   const mount_dir = get_mount_dir(req);
   return path.join(mount_dir, query_path);
 };

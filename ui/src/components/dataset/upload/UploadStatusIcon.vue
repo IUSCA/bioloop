@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADING"
+    v-if="props.submissionStatus === constants.UPLOAD_STATUSES.UPLOADING"
     class="flex items-center space-x-2"
   >
     <Icon
@@ -12,7 +12,7 @@
   </div>
 
   <div
-    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.PROCESSING"
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATUSES.PROCESSING"
     class="flex items-center space-x-2"
   >
     <va-icon
@@ -27,7 +27,7 @@
 
   <div
     v-else-if="
-      props.submissionStatus === constants.UPLOAD_STATES.COMPUTING_CHECKSUMS
+      props.submissionStatus === constants.UPLOAD_STATUSES.COMPUTING_CHECKSUMS
     "
     class="flex items-center space-x-2"
   >
@@ -42,7 +42,7 @@
   <div
     v-else-if="
       props.submissionStatus ===
-      constants.UPLOAD_STATES.CHECKSUM_COMPUTATION_FAILED
+      constants.UPLOAD_STATUSES.CHECKSUM_COMPUTATION_FAILED
     "
     class="flex items-center space-x-2"
   >
@@ -55,7 +55,9 @@
   </div>
 
   <div
-    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOAD_FAILED"
+    v-else-if="
+      props.submissionStatus === constants.UPLOAD_STATUSES.UPLOAD_FAILED
+    "
     class="flex items-center space-x-2"
   >
     <i-mdi-alert-circle-outline
@@ -67,7 +69,7 @@
   </div>
 
   <div
-    v-else-if="props.submissionStatus === constants.UPLOAD_STATES.UPLOADED"
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATUSES.UPLOADED"
     class="flex items-center space-x-2"
   >
     <i-mdi-check-circle

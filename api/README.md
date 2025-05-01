@@ -321,16 +321,18 @@ Each role defines CRUD permissions on resources with two scopes: "own" and "any"
 
 The goal of the [accessControl](src/middleware/auth.js) middleware is to determine from an incoming request whether the requester has enough permissions to perform the desired operation on a particular resource.
 
-`req.permission.filter`: Uses [Notation](https://www.npmjs.com/package/notation) to filter attributes.
+- <u>Note</u>: `req.permission.filter` uses [Notation](https://www.npmjs.com/package/notation) to filter attributes.
 
 ### A simple use case: 
 
-**Objective**: Users with `user` role are only permitted to read and update thier own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
+**Objective**:
+- Users with `user` role are only permitted to read and update their own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
+- Users with `user` role are only permitted to read datasets that they created. Whereas, users with `admin` role can access, read, update and delete any datasets.
 
 **Role design**:
 - roles: `admin`, `user`
 - actions: CRUD
-- resource: `user`
+- resources: `user`, `dataset`
 
 ```javascript
 {
@@ -341,11 +343,20 @@ The goal of the [accessControl](src/middleware/auth.js) middleware is to determi
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    dataset: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    }
   },
   user: {
     user: {
       'read:own': ['*'],
       'update:own': ['*'],
+    },
+    dataset: {
+      'read:own': ['*'],
     },
   },
 }
@@ -353,13 +364,25 @@ The goal of the [accessControl](src/middleware/auth.js) middleware is to determi
 
 **Permission check**:
 
-Code to check if the requester to is authorized to `GET /users/dduck`. This route is protected by `authenticate` middleware which attaches the requester profile to `req.user` if the token is valid.
+Before evaluating if the requester will be granted access to the requested resource, the resource owner needs to be determined. This can be done through one of two ways:
+- If a username is included as part of the request, the resource owner is assumed to be this user.
+- If a username is not included as part of request, a callback can be provided to retrieve the resource owner through custom logic.
+
+Once the resource owner has been determined, we check if the requester has the necessary permissions to access the requested resource.
+- If the requester and the resource owner are the same, the `readOwn` permission is examined against the requester's roles.
+- If the requester and the resource owner are not the same, the `readAny` permission is examined against the requester's roles.
+
+**Examples**:
+
+<u>Note</u>: The routes in the examples shown below are protected by the `authenticate` middleware, which attaches the requester profile to `req.user` if the token is valid.
+
+- <u>Example 1</u>: Code to check if the requester is authorized to `GET /users/dduck`:
 
 ```javascript
 const { authenticate } = require('../middleware/auth');
 const ac = require('../services/accesscontrols');
 
-router.get('/:username',
+router.get('/users/:username',
   authenticate,
   asyncHandler(async (req, res, next) => {
     
@@ -383,32 +406,105 @@ router.get('/:username',
 );
 ```
 
-readOwn permission is verified against user roles if the requester and resource owner are the same, otherwise readAny permission is examined. If the requester has only `user` role and is requesting the profile of other users, the request will be denied.
+- Results:
+  - If the requester has only `user` role and is requesting the profile of other users, this request will be denied.
+  - If the requester has role `admin` and is requesting the profile of other users, this request will succeed.
+
+---
+
+- <u>Example 2</u>: Code to check if the requester is authorized to `GET /datasets/GENO2023_Q2`:
+
+```javascript
+const { authenticate, accessControl } = require('../middleware/auth');
+const ac = require('../services/accesscontrols');
+const datasetService = require('../services/dataset');
+
+const fetchDatasetCreator = async (datasetName) => {
+  const datasetCreator = await datasetService.getDatasetCreator(datasetName);
+  return datasetCreator.username;
+}
+
+router.get('/datasets/:datasetName',
+  authenticate,
+  asyncHandler(async (req, res, next) => {
+
+    const roles = req.user.roles;
+    const resourceOwner = await fetchDatasetCreator(req.params.datasetName);
+    const requester = req.user?.username;
+
+    const permission = (requester === resourceOwner)
+        ? ac.can(roles).readOwn('dataset')
+        : ac.can(roles).readAny('dataset');
+    
+    if (!permission.granted) {
+      return next(createError(403)); // Forbidden
+    }
+    else {
+      const dataset = await datasetService.findDatasetBy('datasetName', req.params.datasetName);
+      if (dataset) { return res.json(dataset); }
+      return next(createError.NotFound());
+    }
+  }),
+);
+```
+
+- Results:
+  - If the requester has only `user` role and is requesting a dataset that was not created by them, this request will be denied. If the requested dataset was created by them, this request will succeed.
+  - If the requester has role `admin` and is requesting a dataset that was not created by them, this request will succeed.
+
 
 ### AccessControl Middleware Usage
 
 [accessControl](src/middleware/auth.js) middleware is a generic function to handle authorization for any action or resource with optional ownership checking.
 
-The above code can be written consicely with the help of accessControl middleware.
+The above code examples can be written concisely with the help of accessControl middleware.
 
-`routes/*.js`
+- <u>Example 1</u>: Simplified code to check if the requester is authorized to `GET /users/dduck`:
+
 ```javascript
 // import middleware
 const { authenticate, accessControl } = require('../middleware/auth');
 
-// configre the middleware to authorize requests to user resource
-// resource ownership is checked by default
-// throws 403 if not authorized
-const isPermittedTo = accessControl('user');
+// - configre the middleware to authorize requests to user resource
+// - resource ownership is checked by default
+// - throws 403 if not authorized
 
-//
 router.get(
-  '/:username',
+  '/users/:username',
   authenticate,
-  isPermittedTo('read', { checkOwnership: true }),
+  accessControl('user', 'read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     const user = await userService.findActiveUserBy('username', req.params.username);
     if (user) { return res.json(user); }
+    return next(createError.NotFound());
+  }),
+);
+```
+---
+- <u>Example 2</u>: Simplified code to check if the requester is authorized to `GET /datasets/GENO2023_Q2`:
+
+```javascript
+// import middleware
+const { authenticate, accessControl } = require('../middleware/auth');
+const datasetService = require('../services/dataset');
+
+const fetchDatasetCreator = async (datasetName) => {
+  const datasetCreator = await datasetService.getDatasetCreator(datasetName);
+  return datasetCreator.username;
+}
+
+// - configre the middleware to authorize requests to user resource
+// - resource ownership is checked by default
+// - provide a callback function that allows for the owner of the resource to be determined
+// - throws 403 if not authorized
+
+router.get(
+  '/datasets/:datasetName',
+  authenticate,
+  accessControl('dataset', 'read', { checkOwnership: true }, fetchDatasetCreator),
+  asyncHandler(async (req, res, next) => {
+    const dataset = await datasetService.findDatasetBy('datasetName', req.params.datasetName);
+    if (dataset) { return res.json(dataset); }
     return next(createError.NotFound());
   }),
 );

@@ -1,8 +1,7 @@
 <template>
-  <!-- File being/to be uploaded -->
   <va-data-table
-    class="upload-file-table"
     v-if="!noFilesSelected"
+    class="upload-file-table"
     :items="props.files"
     :columns="columns"
     virtual-scroller
@@ -19,44 +18,25 @@
       </div>
     </template>
 
-    <template #cell(progress)="{ value }">
-      <va-progress-circle
-        :model-value="value ? parseInt(value, 10) : 0"
-        size="small"
-      >
-        {{ value && value + "%" }}
-      </va-progress-circle>
-    </template>
-
-    <template #cell(uploadStatus)="{ value }">
-      <span class="flex justify-center">
-        <va-popover
-          v-if="value === constants.UPLOAD_STATUSES.UPLOADED"
-          message="Succeeded"
-        >
-          <va-icon name="check_circle_outline" color="success" />
-        </va-popover>
-        <va-popover
-          v-if="value === constants.UPLOAD_STATUSES.UPLOADING"
-          message="Uploading"
-        >
-          <va-icon name="pending" color="info" />
-        </va-popover>
-        <va-popover
-          v-if="value === constants.UPLOAD_STATUSES.UPLOAD_FAILED"
-          message="Failed"
-        >
-          <va-icon name="error_outline" color="danger" />
-        </va-popover>
-      </span>
+    <template #cell(actions)="{ rowIndex }">
+      <div class="flex justify-end">
+        <va-button
+          preset="plain"
+          icon="delete"
+          color="danger"
+          @click="removeFile(rowIndex)"
+          :disabled="(props.files || []).length < 1"
+        />
+      </div>
     </template>
   </va-data-table>
+
+  <!--  <div v-for="file in props.files">-->
+  <!--    {{ file.name }}-->
+  <!--  </div>-->
 </template>
 
 <script setup>
-import config from "@/config";
-import constants from "@/constants";
-
 const props = defineProps({
   files: {
     type: Array,
@@ -74,7 +54,7 @@ const columns = [
   {
     key: "name",
     label: "File",
-    width: "33%",
+    width: "40%",
     thAlign: "left",
     tdAlign: "left",
     tdStyle:
@@ -85,17 +65,6 @@ const columns = [
   {
     key: "formattedSize",
     label: "Size",
-    width: "15%",
-    thAlign: "center",
-    tdAlign: "center",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-  },
-  {
-    key: "uploadStatus",
-    label: "Status",
     width: "20%",
     thAlign: "center",
     tdAlign: "center",
@@ -105,14 +74,18 @@ const columns = [
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
-    key: "progress",
-    width: "17%",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    key: "actions",
+    width: "20%",
+    thAlign: "right",
+    tdAlign: "right",
     thStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
 ];
+
+const removeFile = (fileIndex) => {
+  emit("file-removed", fileIndex);
+};
 </script>
 
 <style scoped>

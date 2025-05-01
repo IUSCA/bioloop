@@ -44,6 +44,13 @@ const INCLUDE_AUDIT_LOGS = {
           },
         },
       },
+      upload: {
+        select: {
+          id: true,
+          files: true,
+          status: true,
+        },
+      },
     },
     orderBy: {
       timestamp: 'desc',
@@ -52,42 +59,73 @@ const INCLUDE_AUDIT_LOGS = {
 };
 
 const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
-  dataset: {
+  audit_log: {
     select: {
       id: true,
-      name: true,
-      source_datasets: {
+      user: true,
+      timestamp: true,
+      upload: {
         select: {
-          source_dataset: true,
+          status: true,
+        },
+      },
+      dataset: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          origin_path: true,
+          source_datasets: {
+            select: {
+              source_dataset: true,
+            },
+          },
         },
       },
     },
   },
-  upload_log: {
+  files: {
     select: {
       id: true,
-      user: true,
-      status: true,
-      initiated_at: true,
-      files: {
-        select: {
-          id: true,
-          md5: true,
-          name: true,
-          path: true,
-        },
-      },
+      md5: true,
+      name: true,
+      path: true,
     },
   },
 };
 
+const DATASET_CREATE_METHODS = {
+  UPLOAD: 'UPLOAD',
+  IMPORT: 'IMPORT',
+  SCAN: 'SCAN',
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
+
+const UPLOAD_STATUSES = {
+  UPLOADING: 'UPLOADING',
+  UPLOAD_FAILED: 'UPLOAD_FAILED',
+  UPLOADED: 'UPLOADED',
+  PROCESSING: 'PROCESSING',
+  PROCESSING_FAILED: 'PROCESSING_FAILED',
+  COMPLETE: 'COMPLETE',
+};
+
+const WORKFLOWS = {
+  INTEGRATED: 'integrated',
+  STAGE: 'stage',
+  PROCESS_DATASET_UPLOAD: 'process_dataset_upload',
+  CANCEL_DATASET_UPLOAD: 'cancel_dataset_upload',
+};
 
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
   INCLUDE_AUDIT_LOGS,
-  DONE_STATUSES,
   INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+  DONE_STATUSES,
+  DATASET_CREATE_METHODS,
+  UPLOAD_STATUSES,
+  WORKFLOWS,
 };

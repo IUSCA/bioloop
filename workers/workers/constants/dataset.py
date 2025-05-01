@@ -1,0 +1,5 @@
+CREATE_METHODS = {
+    'UPLOAD': 'UPLOAD',
+    'IMPORT': 'IMPORT',
+    'SCAN': 'SCAN'
+}

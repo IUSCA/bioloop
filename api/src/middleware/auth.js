@@ -70,17 +70,17 @@ const accessControl = _.curry((
   resource,
   action,
   { checkOwnership = false } = {},
-  // resourceOwnerFn = null,
+  resourceOwnerFn = null,
   // requesterFn = null,
 ) => {
   // https://github.com/pawangspandey/accesscontrol-middleware/blob/master/index.js
   const actions = buildActions(action);
   // const _resourceOwnerFn = resourceOwnerFn || ((req) => req.params.username);
   // const _requesterFn = requesterFn || ((req) => req.user.username);
-  return (req, res, next) => {
+  return async (req, res, next) => {
     // filter user roles that match defined roles
     const roles = [...setIntersection(ac.getRoles(), req?.user?.roles || [])];
-    const resourceOwner = req.params.username; // _resourceOwnerFn(req);
+    const resourceOwner = resourceOwnerFn ? await resourceOwnerFn(req, res, next) : req.params.username;
     const requester = req.user?.username; // _requesterFn(req);
 
     // console.log('access-controls', {

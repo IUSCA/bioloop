@@ -371,6 +371,7 @@ function fetch_dataset(show_loading = false) {
     id: props.datasetId,
     bundle: true,
     initiator: true,
+    include_source_instrument: true,
   })
     .then((res) => {
       const _dataset = res.data;
@@ -494,6 +495,6 @@ function openModalToDownloadDataset() {
 
 <route lang="yaml">
 meta:
-  title: Dataset
-  requiresRoles: ["operator", "admin"]
+title: Dataset
+requiresRoles: ["operator", "admin"]
 </route>
