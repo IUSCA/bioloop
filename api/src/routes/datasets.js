@@ -347,7 +347,9 @@ function verifyUploadEnabledForRole(req, res, next) {
   next();
 }
 
-// Used by UI
+// Used by:
+//  - UI
+//  - Workers
 router.get(
   '/uploads',
   verifyUploadEnabledForRole,
@@ -503,7 +505,7 @@ function normalize_name(name) {
 }
 
 /**
- * Generates a query object for creating a new dataset.
+ * Generates a Prisma query object for creating a new dataset.
  *
  * @function getDatasetCreateQuery
  * @param {Object} data - The data for creating the dataset.
@@ -1094,9 +1096,6 @@ router.post(
         ? res.json(workflowInitiated)
         : next(createError.InternalServerError(workflowInitiationError));
     }
-
-    // Default: Return 400 Bad Request if an invalid workflow name is provided.
-    return next(createError.BadRequest(`Invalid workflow name provided (${req.params.wf})`));
   }),
 );
 
