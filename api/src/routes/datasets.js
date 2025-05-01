@@ -14,7 +14,7 @@ const he = require('he');
 // const logger = require('../services/logger');
 const path = require('path');
 const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl, getPermission } = require('../middleware/auth');
+const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
@@ -335,29 +335,22 @@ router.get(
   }),
 );
 
-const dataset_access_check = asyncHandler(async (req, res, next) => {
-  // assumes req.params.id is the dataset id user is requesting
-  // access check
-  const permission = getPermission({
-    resource: 'datasets',
-    action: 'read',
-    requester_roles: req?.user?.roles,
-  });
-  if (!permission.granted) {
-    const user_dataset_assoc = await datasetService.has_dataset_assoc({
-      username: req.user.username,
-      dataset_id: req.params.id,
-    });
-    if (!user_dataset_assoc) {
-      return next(createError.Forbidden());
-    }
+// todo - register routes specific to dataset uploads optionally based on verifyUploadEnabledForRole middleware
+function verifyUploadEnabledForRole(req, res, next) {
+  const isUploadEnabledForUser = config.enabled_features.upload.enabled_for_roles.some(
+    (role) => req.user.roles.includes(role),
+  );
+  if (!isUploadEnabledForUser) {
+    console.error('Upload feature is not enabled for this user');
+    return next(createError.Forbidden());
   }
   next();
-});
+}
 
 // Used by UI
 router.get(
   '/uploads',
+  verifyUploadEnabledForRole,
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
@@ -409,6 +402,7 @@ router.get(
 // Used by UI
 router.get(
   '/:username/uploads',
+  verifyUploadEnabledForRole,
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
     query('dataset_name').notEmpty().escape().optional(),
@@ -476,7 +470,7 @@ router.get(
     query('initiator').optional().toBoolean(),
     query('include_source_instrument').toBoolean().optional(),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is
@@ -1030,7 +1024,7 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
     logger.error(workflowInitiationError);
   }
 
-  logger.info('Waiting');
+  // logger.info('Waiting');
   // return new Promise((resolve) => {
   //   setTimeout(() => resolve({
   //     workflowInitiated: requestedWorkflowInitiated,
@@ -1041,71 +1035,12 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
   return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
 };
 
-/**
- * Middleware to check if a user has access to initiate a workflow on a dataset.
- *
- * @async
- * @function workflow_access_check
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function.
- * @throws {Error} Forbidden error if user doesn't have necessary permissions to run this workflow.
- * @throws {Error} InternalServerError if audit log for this dataset's creation is not found.
- *
- * @description
- * This middleware function checks if the user has the necessary permissions to initiate a workflow on a dataset.
- * Allowed workflows are:
- * - `integrated`
- * - `stage`
- * - `process_dataset_upload`
- * - `cancel_dataset_upload`
- *
- * The access rules are as follows:
- * 1. Users with `admin` or `operator` roles are always allowed to initiate any of the above workflows.
- * 2. Users with 'user' role:
- *    - For `integrated`, `process_dataset_upload`, or `cancel_dataset_upload` workflows:
- *      They are allowed to proceed only if they created the dataset.
- *    - For other workflows:
- *      They are allowed to proceed if they are assigned to a project associated with the dataset.
- *
- * If the user doesn't have the necessary permissions, a Forbidden error is thrown.
- * If the dataset creation audit log can't be found, an InternalServerError is thrown.
- */
-const workflow_access_check = async (req, res, next) => {
-  // If user has the `admin` or the `operator` role
-  if (req.user.roles[0] === 'admin' || req.user.roles[0] === 'operator') {
-    return dataset_access_check(req, res, next);
-  }
-  // else (user has the `user` role):
-  if (req.params.wf === CONSTANTS.WORKFLOWS.INTEGRATED
-      || req.params.wf === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
-      || req.params.wf === CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD) {
-    const dataset_creation_log = await prisma.dataset_audit.findFirst({
-      where: {
-        dataset_id: req.params.id,
-        create_method: {
-          in: [
-            CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
-            CONSTANTS.DATASET_CREATE_METHODS.IMPORT,
-          ],
-        },
-      },
-    });
-    if (!dataset_creation_log) {
-      return next(createError.InternalServerError('Could not find an audit log'
-          + ` for the creation of dataset ${req.params.id}`));
-    }
-
-    return dataset_creation_log.user_id === req.user.id ? next() : next(createError.Forbidden());
-  }
-  // Default:
-  return dataset_access_check(req, res, next);
-};
-
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
-  accessControl('workflow')('create'),
+  // Verify if this user is allowed to initiate the requested workflow on
+  // the requested dataset.
+  datasetService.workflow_access_check,
   validate([
     param('id').isInt().toInt(),
     param('wf').isIn([
@@ -1115,25 +1050,6 @@ router.post(
       CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
     ]),
   ]),
-  (req, res, next) => {
-    // Verify if the requested workflow is in the list of workflows that
-    // this user's role is allowed to initiate.
-
-    // Roles `admin`, `operator` and `user` can initiate workflows `stage`,
-    // `integrated`, `process_dataset_upload`, and `cancel_dataset_upload`
-
-    // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true
-    // value
-    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
-    if (allowed_wfs[req.params.wf]) {
-      return next();
-    }
-    next(createError.Forbidden());
-  },
-  // Verify if this user is allowed to initiate this workflow based on the
-  // permissions granted to them for accessing this dataset
-  workflow_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
@@ -1166,6 +1082,9 @@ router.post(
 
     if (req.params.wf === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
           || req.params.wf === CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD) {
+      // return 403 Forbidden if the user is not allowed to initiate the requested workflow.
+      verifyUploadEnabledForRole(req, res, next);
+
       const { workflowInitiated, workflowInitiationError } = await initiateUploadWorkflow({
         dataset,
         requestedWorkflow: req.params.wf,
@@ -1178,8 +1097,6 @@ router.post(
 
     // Default: Return 400 Bad Request if an invalid workflow name is provided.
     return next(createError.BadRequest(`Invalid workflow name provided (${req.params.wf})`));
-
-    // res.json(200);
   }),
 );
 
@@ -1235,7 +1152,7 @@ router.get(
     param('id').isInt().toInt(),
     query('basepath').default(''),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
@@ -1257,7 +1174,7 @@ router.get(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get the file tree
@@ -1278,7 +1195,7 @@ router.get(
     param('id').isInt().toInt(),
     query('file_id').isInt().toInt().optional(),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
@@ -1362,7 +1279,7 @@ router.get(
     query('take').isInt().toInt().optional()
       .default(1000),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
@@ -1416,6 +1333,7 @@ const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) =
 // - Used by UI
 router.post(
   '/upload',
+  verifyUploadEnabledForRole,
   isPermittedTo('create'),
   validate([
     body('type').escape().notEmpty().isIn(config.dataset_types),
@@ -1489,45 +1407,11 @@ router.post(
   }),
 );
 
-/**
- * Gets the user who uploaded the dataset, which will be used by the `auth`
- * middleware to determine if the user calling this API is the same
- * as the user who uploaded the dataset, and thereby determine if the user
- * calling this API is permitted to take certain actions on the uploaded
- * dataset.
- */
-const getUploader = async (req, res, next) => {
-  const dataset_upload_audit_log = await prisma.dataset_audit.findUnique({
-    where: {
-      dataset_id_create_method: {
-        dataset_id: parseInt(req.params.dataset_id, 10),
-        create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
-      },
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-    },
-  });
-
-  if (!dataset_upload_audit_log) {
-    return next(createError.NotFound("Expected to find an audit log for this dataset's upload, but found none."));
-  }
-  if (!dataset_upload_audit_log.user) {
-    return next(createError.InternalServerError('Could not determine the user who uploaded this dataset.'));
-  }
-
-  return dataset_upload_audit_log.user.username;
-};
-
 // - Update the metadata related to a dataset upload event
 // - Used by UI, workers
 router.patch(
-  '/:dataset_id/upload',
+  '/:id/upload',
+  verifyUploadEnabledForRole,
   /**
    * A user can only update metadata related to a dataset upload if one of the
    * following two conditions are met:
@@ -1538,10 +1422,18 @@ router.patch(
   isPermittedTo(
     'update',
     { checkOwnership: true },
-    getUploader, // `resourceOwnerFn` expected by the `auth` middleware
+    async (req, res, next) => { // resourceOwnerFn
+      try {
+        const dataset_creator = await datasetService.get_dataset_creator({ dataset_id: parseInt(req.params.id, 10) });
+        return dataset_creator.username;
+      } catch (error) {
+        logger.error(error);
+        return next(createError.InternalServerError());
+      }
+    },
   ),
   validate([
-    param('dataset_id').isInt().toInt(),
+    param('id').isInt().toInt(),
     body('status').notEmpty().escape().optional(),
     body('files').isArray().optional(),
   ]),
@@ -1558,7 +1450,7 @@ router.patch(
       const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
         where: {
           dataset_id_create_method: {
-            dataset_id: req.params.dataset_id,
+            dataset_id: req.params.id,
             create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
           },
         },

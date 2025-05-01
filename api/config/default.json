@@ -170,8 +170,11 @@
     "slateScratch": ""
   },
   "enabled_features": {
+    "upload": {
+      "enabled_for_roles": ["admin"]
+    },
     "fs": {
-      "enabled_for_roles": ["admin", "operator", "user"]
+      "enabled_for_roles": ["admin"]
     },
     "downloads": true
   }
