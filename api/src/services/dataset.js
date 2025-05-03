@@ -174,7 +174,9 @@ async function get_dataset({
   }
   dataset?.audit_logs?.forEach((log) => {
     // eslint-disable-next-line no-param-reassign
-    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+    if (log.user) {
+      log.user = log.user ? userService.transformUser(log.user) : null;
+    }
   });
 
   return dataset;
@@ -269,7 +271,7 @@ function create_filetree(files) {
           metadata: {},
           children: {},
         };
-        // eslint-disable-next-line no-param-reassign
+          // eslint-disable-next-line no-param-reassign
         parent.children[dir_name] = curr;
         return curr;
       }, root);
@@ -640,18 +642,6 @@ function createDataset(data) {
   return prisma.$transaction(async (tx) => createDatasetInTransaction(tx, data));
 }
 
-const get_dataset_active_workflows = async ({ dataset } = {}) => {
-  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
-  const workflowQueryResponse = await workflowService.getAll({
-    workflow_ids: datasetWorkflowIds,
-    app_id: config.get('app_id'),
-    status: 'ACTIVE',
-  });
-  return workflowQueryResponse.data.results;
-};
-
-const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
-
 /**
  * Middleware to check if a user has access to a dataset.
  *
@@ -748,6 +738,25 @@ const workflow_access_check = [
     return user_has_workflow_access ? next() : next(createError.Forbidden());
   }),
 ];
+
+const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) => path.join(
+  config.upload.path,
+  datasetType.toLowerCase(),
+  `${datasetId}`,
+  'processed',
+);
+
+const get_dataset_active_workflows = async ({ dataset } = {}) => {
+  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
+  const workflowQueryResponse = await workflowService.getAll({
+    workflow_ids: datasetWorkflowIds,
+    app_id: config.get('app_id'),
+    status: 'ACTIVE',
+  });
+  return workflowQueryResponse.data.results;
+};
+
+const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
 
 module.exports = {
   soft_delete,

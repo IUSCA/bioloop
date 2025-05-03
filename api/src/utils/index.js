@@ -2,10 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
+const config = require('config');
 
 function renameKey(oldKey, newKey) {
   return (obj) => {
-  // eslint-disable-next-line no-param-reassign
+    // eslint-disable-next-line no-param-reassign
     obj[newKey] = obj[oldKey];
     // eslint-disable-next-line no-param-reassign
     delete obj[oldKey];
@@ -17,7 +18,9 @@ function setDifference(setA, setB) {
   const _setB = new Set(setB);
   const _difference = new Set(setA);
   // eslint-disable-next-line no-restricted-syntax
-  for (const elem of _setB) { _difference.delete(elem); }
+  for (const elem of _setB) {
+    _difference.delete(elem);
+  }
 
   return _difference;
 }
@@ -26,7 +29,9 @@ function setUnion(setA, setB) {
   const _setB = new Set(setB);
   const _union = new Set(setA);
   // eslint-disable-next-line no-restricted-syntax
-  for (const elem of _setB) { _union.add(elem); }
+  for (const elem of _setB) {
+    _union.add(elem);
+  }
 
   return _union;
 }
@@ -36,7 +41,9 @@ function setIntersection(setA, setB) {
   const _setB = new Set(setB);
   const _intersection = new Set();
   // eslint-disable-next-line no-restricted-syntax
-  for (const elem of _setA) { if (_setB.has(elem)) _intersection.add(elem); }
+  for (const elem of _setA) {
+    if (_setB.has(elem)) _intersection.add(elem);
+  }
 
   return _intersection;
 }
@@ -188,7 +195,8 @@ function numericStringsToNumbers(arr, numericStringFields = []) {
   return _.map((e) => {
     if (typeof e === 'string') {
       return !Number.isNaN(e) && Number(e);
-    } if (typeof e === 'object') {
+    }
+    if (typeof e === 'object') {
       const convertedFields = {};
       numericStringFields.forEach((field) => {
         if (Object.keys(e).includes(field)) {
@@ -310,6 +318,15 @@ function base64urlEncode(buf) {
     .replace(/\//g, '_'); // Replace '/' with '_'
 }
 
+function isFeatureEnabled({ feature = null, roles = [] } = {}) {
+  if (roles.length === 0) {
+    return false;
+  }
+  return config.enabled_features[feature].enabled_for_roles.some(
+    (role) => roles.includes(role),
+  );
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -324,4 +341,5 @@ module.exports = {
   transactionWithRetry,
   TransactionRetryError,
   base64urlEncode,
+  isFeatureEnabled,
 };
