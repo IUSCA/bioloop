@@ -5,6 +5,23 @@ order: 0
 
 # Worker Overview
 
+## Celery
+
+Celery is used in Bioloop as a task queue system. Its primary uses include:
+
+- Workflow Management: Celery helps in orchestrating complex workflows.
+- Distributed Processing: Tasks can be distributed across multiple worker processes, enabling parallel execution and improved performance.
+- Error Handling and Retries: Celery provides mechanisms for handling task failures and implementing retry logic.
+- Scalability: The autoscaling feature (`--autoscale=8,2`) allows the system to dynamically adjust the number of worker processes based on the workload.
+
+## RabbitMQ
+
+RabbitMQ serves as the message broker for Celery in Bioloop. Its uses include:
+
+- Message Queuing: RabbitMQ manages the task queue, ensuring reliable task delivery to workers.
+- Task Distribution: It facilitates the distribution of tasks across Celery workers.
+
+
 ## Coding Guidelines
 
 ### Hierarchical Config
@@ -25,6 +42,18 @@ order: 0
 - config specific to Celery is in `workers/config/celeryconfig.py`
 - Config is in python values, instead of a dict
 - Env specific values and secrets are loaded from `.env` file
+
+### RabbitMQ config
+
+- config specific to RabbitMQ is in `workers/config/celeryconfig.py`
+- `consumer_timeout`=86400000
+  - Tasks in Bioloop can take as long as 1 day to complete. But rabbitmq closes the channel if it does not receive acknowledgements within 30 min.
+  - When a consumer (Celery worker) receives a message from RabbitMQ, it starts processing the task.
+  - The `consumer_timeout` is the maximum time RabbitMQ will wait for an acknowledgment from the consumer after it has delivered a message.
+  - If the consumer doesn't acknowledge the message within this timeout period, RabbitMQ assumes the consumer has failed or crashed.
+  - When this happens, RabbitMQ will requeue the message. This re-queuing can result in the task being processed a second time by the worker.
+  - To ensure that this timeout being exceeded by a task does not result in the task being re-queued, this setting will need to be configured to be more than the upper limit of the time taken by tasks in the application.
+
 
 ### Code Organization
 
