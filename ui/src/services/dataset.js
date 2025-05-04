@@ -154,11 +154,11 @@ class DatasetService {
   }
 
   logDatasetUpload(data) {
-    return api.post(`/datasets/upload`, data);
+    return api.post(`/datasets/uploads`, data);
   }
 
   updateDatasetUploadLog(dataset_id, data) {
-    return api.patch(`/datasets/${dataset_id}/upload`, data);
+    return api.patch(`/datasets/uploads/${dataset_id}`, data);
   }
 
   processDatasetUpload(dataset_id) {
@@ -178,7 +178,7 @@ class DatasetService {
     username = null,
   } = {}) {
     const path = forSelf
-      ? `/datasets/${username}/uploads`
+      ? `/datasets/uploads/${username}`
       : `/datasets/uploads`;
     return api.get(path, {
       params: {

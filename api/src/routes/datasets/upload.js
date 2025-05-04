@@ -1,4 +1,3 @@
-const fsPromises = require('fs/promises');
 const express = require('express');
 const { PrismaClient, Prisma } = require('@prisma/client');
 const createError = require('http-errors');
@@ -20,6 +19,7 @@ const datasetService = require('../../services/dataset');
 const authService = require('../../services/auth');
 const CONSTANTS = require('../../constants');
 const logger = require('../../services/logger');
+const uploadRouter = require('./upload');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -30,10 +30,10 @@ const prisma = new PrismaClient();
 //  - UI
 //  - Workers
 router.get(
-  '/uploads',
+  '/',
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').notEmpty().escape().optional(),
+    query('dataset_name').optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
   ]),
@@ -81,10 +81,10 @@ router.get(
 
 // Used by UI
 router.get(
-  '/:username/uploads',
+  '/:username',
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').notEmpty().escape().optional(),
+    query('dataset_name').optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
     param('username').escape().notEmpty(),
@@ -137,7 +137,7 @@ router.get(
 // - Register an uploaded dataset in the system
 // - Used by UI
 router.post(
-  '/upload',
+  '/',
   isPermittedTo('create'),
   validate([
     body('type').escape().notEmpty().isIn(config.dataset_types),
@@ -214,7 +214,7 @@ router.post(
 // - Update the metadata related to a dataset upload event
 // - Used by UI, workers
 router.patch(
-  '/:id/upload',
+  '/:id',
   /**
      * A user can only update metadata related to a dataset upload if one of the
      * following two conditions are met:
@@ -237,7 +237,7 @@ router.patch(
   ),
   validate([
     param('id').isInt().toInt(),
-    body('status').notEmpty().escape().optional(),
+    body('status').optional(),
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
