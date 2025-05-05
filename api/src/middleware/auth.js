@@ -4,6 +4,11 @@ const _ = require('lodash/fp');
 const authService = require('../services/auth');
 const { setIntersection } = require('../utils');
 const ac = require('../services/accesscontrols');
+const nonceService = require('../services/nonce');
+const logger = require('../services/logger');
+const constants = require('../constants');
+const { isFeatureEnabled } = require('../services/features');
+
 const asyncHandler = require('./asyncHandler');
 
 function authenticate(req, res, next) {
@@ -121,9 +126,9 @@ function getPermission({
 }
 
 const loginHandler = asyncHandler(async (req, res, next) => {
-  const user = req.auth_user;
+  const user = req.auth?.user;
   if (user) {
-    const resObj = await authService.onLogin({ user, method: req.auth_method });
+    const resObj = await authService.onLogin({ user, method: req.auth?.method });
 
     if (user.roles.includes('admin')) {
       // set cookie
@@ -141,11 +146,28 @@ const loginHandler = asyncHandler(async (req, res, next) => {
       });
     }
 
+    resObj.status = constants.auth.verify.response.status.SUCCESS;
     return res.json(resObj);
   }
   // User was authenticated but they are not a portal user
-  // Send an empty success message
-  return res.status(204).send();
+  if (isFeatureEnabled({ key: 'signup' })) {
+    const email = req.auth?.identity?.email;
+    if (!email) {
+      logger.error('User authenticated but no email found in identity returned by the provider');
+      return next(createError.InternalServerError());
+    }
+    const nonce = await nonceService.createNonce();
+    const signup_token = authService.issueSignupToken({ email, nonce });
+    return res.json({
+      status: constants.auth.verify.response.status.SIGNUP_REQUIRED,
+      email,
+      signup_token,
+    });
+  }
+  return res.json({
+    status: constants.auth.verify.response.status.NOT_A_USER,
+    message: 'The user is authenticated but not recognized as a portal user.',
+  });
 });
 
 module.exports = {

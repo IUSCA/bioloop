@@ -118,12 +118,24 @@ const WORKFLOWS = {
   CANCEL_DATASET_UPLOAD: 'cancel_dataset_upload',
 };
 
+const auth = {
+  verify: {
+    response: {
+      status: {
+        SUCCESS: 'success',
+        SIGNUP_REQUIRED: 'signup_required',
+        NOT_A_USER: 'not_a_user',
+      },
+    },
+  },
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
   INCLUDE_AUDIT_LOGS,
   INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+  auth,
   DONE_STATUSES,
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,

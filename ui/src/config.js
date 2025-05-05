@@ -83,6 +83,7 @@ const exports = {
       enabledForRoles: ["admin"],
     },
     downloads: true,
+    signup: true,
     uploads: {
       enabledForRoles: ["admin"],
     },

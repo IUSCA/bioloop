@@ -1,11 +1,12 @@
 import config from "@/config";
+import axios from "axios";
 import api from "./api";
 
 class AuthService {
-  casVerify(casTicket) {
+  casVerify({ ticket }) {
     return api.post("/auth/cas/verify", {
       service: config.casReturn,
-      ticket: casTicket,
+      ticket,
     });
   }
 
@@ -67,6 +68,19 @@ class AuthService {
       redirect_uri: config.microsoftReturn,
       code,
       code_verifier,
+    });
+  }
+
+  signup(data) {
+    const axiosInstance = axios.create({
+      baseURL: config.apiBasePath,
+    });
+    const signupToken = ref(useLocalStorage("signup_token", ""));
+
+    return axiosInstance.post("/auth/signup", data, {
+      headers: {
+        Authorization: `Bearer ${signupToken.value}`,
+      },
     });
   }
 }

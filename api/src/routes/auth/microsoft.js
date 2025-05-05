@@ -7,10 +7,11 @@ const config = require('config');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 
-// const createHttpError = require('http-errors');
+const createError = require('http-errors');
 const { validate } = require('../../middleware/validators');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { loginHandler } = require('../../middleware/auth');
+const logger = require('../../services/logger');
 
 const authService = require('../../services/auth');
 const utils = require('../../utils');
@@ -61,10 +62,6 @@ router.get(
   }),
 );
 
-// possible response codes:
-// 200 - return JWT
-// 204 - user authenticated but not a portal user
-// 500 - error
 router.post(
   '/verify',
   validate([
@@ -123,13 +120,20 @@ router.post(
 
     const email = msft_user.mail || msft_user.userPrincipalName;
     if (!email) {
-      return res.status(500).json({ message: 'Failed to get email from auth provider' });
+      logger.error('Failed to get email from Microsoft token');
+      return next(createError.InternalServerError());
     }
     const user = await authService.getLoginUser('email', email, {
       name: msft_user.displayName,
     });
-    req.auth_user = user;
-    req.auth_method = 'microsoft';
+    req.auth = {
+      user,
+      method: 'MICROSOFT',
+      identity: {
+        email,
+        name: msft_user.displayName,
+      },
+    };
     next();
   }),
   loginHandler,

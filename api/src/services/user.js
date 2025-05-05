@@ -1,5 +1,7 @@
 const { Prisma, PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
+const usernameRegex = require('regex-username')();
+const usernameBlacklist = require('the-big-username-blacklist');
 const config = require('config');
 
 const prisma = new PrismaClient();
@@ -153,7 +155,7 @@ async function findAll({
 
 async function createUser(data) {
   const userData = _.flow([
-    _.pick(['username', 'name', 'email', 'cas_id', 'notes']),
+    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'metadata']),
     _.omitBy(_.isNil),
   ])(data);
   const roleObjs = await findRoles(data.roles || []);
@@ -265,6 +267,46 @@ async function canUpdateUser(username, requester) {
   return resource.roles?.includes('user');
 }
 
+async function generateUniqueUsername(username) {
+  let suffix = 1;
+  let uniqueUsername = username;
+  const maxSuffix = config.get('auth.signup.max_username_suffix');
+  await prisma.$transaction(async (tx) => {
+    while (suffix <= maxSuffix) {
+      // eslint-disable-next-line no-await-in-loop
+      const existingUser = await tx.user.findUnique({
+        where: { username: uniqueUsername },
+      });
+      if (!existingUser) {
+        break;
+      }
+      uniqueUsername = `${username}${suffix}`;
+      suffix += 1;
+    }
+  });
+  if (suffix > config.get('auth.signup.max_username_suffix')) {
+    throw new Error('Unable to generate unique username');
+  }
+  return uniqueUsername;
+}
+
+function validateUsernameOrThrow(username) {
+  // https://www.npmjs.com/package/regex-username
+  // GitHub username convention
+  // Username may only contain alphanumeric characters
+  // and only single hyphens, and cannot begin or end with a hyphen.
+  if (!usernameRegex.test(username)) {
+    throw new Error('Invalid username format: must be alphanumeric, \
+      may only contain single hyphen and cannot begin or end with a hyphen.');
+  }
+  // disallow reserved words (privilege, programming terms, section names, financial terms and actions)
+  if (!usernameBlacklist.validate(username)) {
+    throw new Error('Username is blacklisted.');
+  }
+
+  return true;
+}
+
 module.exports = {
   transformUser,
   findActiveUserBy,
@@ -280,5 +322,7 @@ module.exports = {
   canUpdateUser,
   INCLUDE_ROLES_LOGIN,
   findUserBy,
+  generateUniqueUsername,
+  validateUsernameOrThrow,
   getSystemUser,
 };

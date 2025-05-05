@@ -35,8 +35,8 @@ swagger_output.json
 # generated reports
 reports
 
-test.js
-src/test.js
+# Ignore personal test files
+src/_test.js
 coverage
 
 admins.json

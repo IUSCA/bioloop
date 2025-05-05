@@ -130,6 +130,17 @@ const exports = {
     IMPORT: "IMPORT",
     SCAN: "SCAN",
   },
+  auth: {
+    verify: {
+      response: {
+        status: {
+          SUCCESS: "success",
+          SIGNUP_REQUIRED: "signup_required",
+          NOT_A_USER: "not_a_user",
+        },
+      },
+    },
+  },
 };
 
 export default exports;
