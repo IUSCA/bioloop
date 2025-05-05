@@ -149,7 +149,7 @@ class DatasetService {
     return api.get(`/datasets/${type}/${name}/exists`);
   }
 
-  get_bundle_name(dataset) {
+  get_staged_bundle_name(dataset) {
     return `${dataset.name}.${dataset.type}.tar`;
   }
 

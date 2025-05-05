@@ -11,8 +11,6 @@ const config = require('config');
 const pm = require('picomatch');
 const he = require('he');
 
-// const logger = require('../services/logger');
-const path = require('path');
 const utils = require('../../utils');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { accessControl } = require('../../middleware/auth');
@@ -21,7 +19,6 @@ const datasetService = require('../../services/dataset');
 const authService = require('../../services/auth');
 const CONSTANTS = require('../../constants');
 const logger = require('../../services/logger');
-// const {utils} = require('../../utils');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -115,35 +112,6 @@ const assoc_body_schema = {
   },
 };
 
-const buildUserRoleQueryObject = ({
-  deleted, type, name, match_name_exact, username,
-}) => {
-  const query_obj = _.omitBy(_.isUndefined)({
-    is_deleted: deleted,
-    type,
-    name: name ? {
-      ...(match_name_exact ? { equals: name } : { contains: name }),
-      mode: 'insensitive', // case-insensitive search
-    } : undefined,
-    // Filter by projects assigned to this user
-    projects: {
-      some: {
-        project: {
-          users: {
-            some: {
-              user: {
-                username,
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return query_obj;
-};
-
 router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnership: true }),
@@ -159,7 +127,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
-    const query_obj = buildUserRoleQueryObject({ ...req.query, username: req.params.username });
+    const query_obj = datasetService.buildDatasetsFetchQueryForUser({ ...req.query, username: req.params.username });
 
     const filterQuery = {
       where: query_obj,
@@ -183,81 +151,8 @@ router.get(
       metadata: { count },
       datasets,
     });
-    // res.json('/ user role');
   }),
 );
-
-const buildQueryObject = ({
-  deleted, archived, staged, type, name, days_since_last_staged,
-  has_workflows, has_derived_data, has_source_data,
-  created_at_start, created_at_end, updated_at_start, updated_at_end,
-  match_name_exact,
-}) => {
-  const query_obj = _.omitBy(_.isUndefined)({
-    is_deleted: deleted,
-    is_staged: staged,
-    type,
-    name: name ? {
-      ...(match_name_exact ? { equals: name } : { contains: name }),
-      mode: 'insensitive', // case-insensitive search
-    } : undefined,
-  });
-
-  // has_workflows=true: datasets with one or more workflows associated
-  // has_workflows=false: datasets with no workflows associated
-  // has_workflows=undefined/null: no query based on workflow association
-  if (!_.isNil(has_workflows)) {
-    query_obj.workflows = { [has_workflows ? 'some' : 'none']: {} };
-  }
-
-  if (!_.isNil(has_derived_data)) {
-    query_obj.derived_datasets = { [has_derived_data ? 'some' : 'none']: {} };
-  }
-
-  if (!_.isNil(has_source_data)) {
-    query_obj.source_datasets = { [has_source_data ? 'some' : 'none']: {} };
-  }
-
-  if (!_.isNil(archived)) {
-    query_obj.archive_path = archived ? { not: null } : null;
-  }
-
-  // staged datasets where there is no STAGED state in last x days
-  if (_.isNumber(days_since_last_staged)) {
-    const xDaysAgo = new Date();
-    xDaysAgo.setDate(xDaysAgo.getDate() - days_since_last_staged);
-
-    query_obj.is_staged = true;
-    query_obj.NOT = {
-      states: {
-        some: {
-          state: 'STAGED',
-          timestamp: {
-            gte: xDaysAgo,
-          },
-        },
-      },
-    };
-  }
-
-  // created_at filter
-  if (created_at_start && created_at_end) {
-    query_obj.created_at = {
-      gte: new Date(created_at_start),
-      lte: new Date(created_at_end),
-    };
-  }
-
-  // updated_at filter
-  if (updated_at_start && updated_at_end) {
-    query_obj.updated_at = {
-      gte: new Date(updated_at_start),
-      lte: new Date(updated_at_end),
-    };
-  }
-
-  return query_obj;
-};
 
 router.post(
   '/associations',
@@ -305,9 +200,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
-    // console.log('req.user.roles', req.user.roles);
-
-    const query_obj = buildQueryObject(req.query);
+    const query_obj = datasetService.buildDatasetsFetchQuery(req.query);
 
     const filterQuery = { where: query_obj };
     const orderBy = {
@@ -339,60 +232,20 @@ router.get(
   }),
 );
 
-// router.get(
-//   '/uploads',
-//   // validate([
-//   //   query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-//   //   query('dataset_name').optional(),
-//   //   query('limit').isInt({ min: 1 }).toInt().optional(),
-//   //   query('offset').isInt({ min: 0 }).toInt().optional(),
-//   // ]),
-//   isPermittedTo('read'),
-//   asyncHandler(async (req, res) => {
-//     // #swagger.tags = ['datasets']
-//     // #swagger.summary = 'Retrieve past uploads'
-//
-//     const {
-//       status, dataset_name, offset, limit,
-//     } = req.query;
-//
-//     const query_obj = {
-//       where: _.omitBy(_.isUndefined)({
-//         status,
-//         audit_log: {
-//           dataset: {
-//             name: { contains: dataset_name },
-//           },
-//         },
-//       }),
-//     };
-//     const filter_query = {
-//       skip: offset,
-//       take: limit,
-//       ...query_obj,
-//       orderBy: {
-//         audit_log: {
-//           timestamp: 'desc',
-//         },
-//       },
-//     };
-//
-//     const [dataset_upload_logs, count] = await prisma.$transaction([
-//       prisma.dataset_upload_log.findMany({
-//         ...filter_query,
-//         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
-//       }),
-//       prisma.dataset_upload_log.count({ ...query_obj }),
-//     ]);
-//
-//     res.json({ metadata: { count }, uploads: dataset_upload_logs });
-//   }),
-// );
-
-// get by id - worker + UI
-
-// router.use('/uploads', uploadRouter);
-
+/**
+ * This invocation allows for routes related to Dataset-uploads to be enabled conditionally, based on the user's roles.
+ *
+ * The middleware provided checks if the Dataset Upload feature is enabled for the user's roles
+ * before allowing access to the upload routes.
+ *
+ * @description
+ * 1. Checks if the 'upload' feature is enabled for the user's roles
+ * 2. If enabled, it passes the request to a router dedicated for handling dataset uploads.
+ * 3. If disabled, it logs an error and returns a 403 Forbidden error
+ *
+ * Note: The `router.use('/uploads')` invocation needs to be placed before any subsequent routes defined
+ * in this file that could conflict with routes like `/datasets/uploads`.
+ */
 router.use('/uploads', (req, res, next) => {
   if (utils.isFeatureEnabled({ feature: 'upload', roles: req.user?.roles })) {
     return uploadRouter(req, res, next);
@@ -401,6 +254,7 @@ router.use('/uploads', (req, res, next) => {
   return next(createError.Forbidden());
 });
 
+// get by id - worker + UI
 router.get(
   '/:id',
   validate([
@@ -438,116 +292,6 @@ router.get(
   }),
 );
 
-function normalize_name(name) {
-  // replace all character other than a-z, 0-9, _ and - with -
-  // replace consecutive hyphens with one -
-
-  return (name || '')
-    .replaceAll(/[\W]/g, '-')
-    .replaceAll(/-+/g, '-');
-}
-
-/**
- * Generates a Prisma query object for creating a new dataset.
- *
- * @function getDatasetCreateQuery
- * @param {Object} data - The data for creating the dataset.
- * @param {string} data.name - The name of the dataset.
- * @param {string} data.type - The type of the dataset.
- * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
- * @param {BigInt} [data.size] - The size of the dataset.
- * @param {string} data.origin_path - The origin path of the dataset.
- * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
- * @param {string} [data.workflow_id] - The ID of the associated workflow.
- * @param {string} [data.project_id] - The ID of the associated project.
- * @param {string} data.user_id - The ID of the user creating the dataset.
- * @param {string} [data.src_instrument_id] - The ID of the source instrument.
- * @param {string} [data.src_dataset_id] - The ID of the source dataset.
- * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
- * @param {string} [data.create_method=CONSTANTS.DATASET_CREATE_METHODS.SCAN] - The method used to create the dataset.
- * @param {Object} [data.metadata] - Additional metadata for the dataset.
- * @returns {Object} An object containing the query for creating a new dataset in the database.
- *
- * @description
- * This function prepares a query object for creating a new dataset in the database.
- * It normalizes the dataset name, sets up associations with workflows and projects,
- * connects to source instruments and datasets, sets the initial state,
- * and creates an audit log entry for the dataset creation.
- */
-const getDatasetCreateQuery = (data) => {
-  /* eslint-disable no-unused-vars */
-  const {
-    name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
-  } = data;
-  /* eslint-disable no-unused-vars */
-
-  // gather non-null data to create a new dataset
-  const create_query = _.flow([
-    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata']),
-    _.omitBy(_.isNil),
-  ])(data);
-
-  create_query.name = normalize_name(create_query.name); // normalize name
-
-  // create workflow association
-  if (workflow_id) {
-    create_query.workflows = {
-      create: [
-        {
-          id: workflow_id,
-        },
-      ],
-    };
-  }
-
-  if (project_id) {
-    create_query.projects = {
-      create: [{
-        project_id,
-        assignor_id: user_id,
-      }],
-    };
-  }
-
-  if (src_instrument_id) {
-    create_query.src_instrument = {
-      connect: {
-        id: src_instrument_id,
-      },
-    };
-  }
-
-  if (src_dataset_id) {
-    create_query.source_datasets = {
-      create: [{
-        source_id: src_dataset_id,
-      }],
-    };
-  }
-
-  // add a state
-  create_query.states = {
-    create: [
-      {
-        state: state || 'REGISTERED',
-      },
-    ],
-  };
-
-  create_query.audit_logs = {
-    create: [
-      {
-        action: 'create',
-        create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
-        user_id,
-      },
-    ],
-  };
-
-  return create_query;
-};
-
 // Create a new dataset
 // Used by - workers + UI
 router.post(
@@ -573,26 +317,9 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /*
-                                                                                                              * #swagger.description
-                                                                                                              * =
-                                                                                                              * 'workflow_id
-                                                                                                              * is
-                                                                                                              * optional.
-                                                                                                              * If the
-                                                                                                              * request
-                                                                                                              * body
-                                                                                                              * has
-                                                                                                              * workflow_id,
-                                                                                                              * a new
-                                                                                                              * relation
-                                                                                                              * is
-                                                                                                              * created
-                                                                                                              * between
-                                                                                                              * dataset
-                                                                                                              * and
-                                                                                                              * given
-                                                                                                              * workflow_id'
-                                                                                                              */
+                                     * #swagger.description = 'workflow_id is optional. If the request body has
+                                     * workflow_id, a new relation is created between dataset and given workflow_id'
+                                     */
 
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
@@ -617,7 +344,7 @@ router.post(
       }
     }
 
-    const createQuery = getDatasetCreateQuery({
+    const createQuery = datasetService.buildDatasetCreateQuery({
       name,
       type,
       du_size,
@@ -657,81 +384,84 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create multiple datasets.'
-    /*
-                                                                                                              * #swagger.description
-                                                                                                              * = This
-                                                                                                              * endpoint
-                                                                                                              * is used
-                                                                                                              * to
-                                                                                                              * create
-                                                                                                              * multiple
-                                                                                                              * datasets
-                                                                                                              * in a
-                                                                                                              * single
-                                                                                                              * request.
-                                                                                                              * It is
-                                                                                                              * useful
-                                                                                                              * for
-                                                                                                              * bulk
-                                                                                                              * uploading
-                                                                                                              * datasets.
-                                                                                                              */
+    /* #swagger.description =
+                                  * This endpoint is used to create multiple datasets in a single request.
+                                  * It is useful for bulk uploading datasets.
+                                  */
 
     /* #swagger.requestBody = {
-                                                         * "description": "Array of datasets to be created", "required": true,
-                   * "content": {
-                                 * "application/json": {
-                           * "schema": {
-                                     * "type": "object", "properties": {
-                                     * "datasets": {
-                                           * "type": "array", "items": {
-                                                 * "type": "object", "properties": {
-                                                           * "name": "string", "type": "string", "origin_path": "string", "metadata": "object",
-                                                                                                                                          },
-                                                                           * "required": ["name", "type", "origin_path"]
-                                                                                                                                      },
-                                           * "minItems": 1, "maxItems": 100
-                                                                                                                                  }
-                                                                                                                              },
-                                           * "required": ["datasets"]
-                                                                                                                          }
-                                                                                                                      }
-                                                                                                                  }
-                                                                                                              } */
+                                      "description": "Array of datasets to be created",
+                                      "required": true,
+                                      "content": {
+                                          "application/json": {
+                                              "schema": {
+                                                  "type": "object",
+                                                  "properties": {
+                                                      "datasets": {
+                                                          "type": "array",
+                                                          "items": {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                  "name": "string",
+                                                                  "type": "string",
+                                                                  "origin_path": "string",
+                                                                  "metadata": "object",
+                                                              },
+                                                              "required": ["name", "type", "origin_path"]
+                                                          },
+                                                          "minItems": 1,
+                                                          "maxItems": 100
+                                                      }
+                                                  },
+                                                  "required": ["datasets"]
+                                              }
+                                          }
+                                      }
+                                  } */
 
     /* #swagger.responses[200] = {
-                                                   * "description": "Array of datasets created", "content":
-                                                   * {
-                                 * "application/json": {
-                           * "schema": {
-                                     * "type": "object", "properties": {
-                                   * "created": {
-                                           * "type": "array", "items": {
-                                                                     * "$ref": "#/components/schemas/Dataset"
-                                                                                                                                      }
-                                       * }, "conflicted": {
-                                           * "type": "array", "items": {
-                                                 * "type": "object", "properties": {
-                                                     * "name": "string", "type": "string"
-                                                                                                                                          },
-                                                           * "required": ["name", "type"]
-                                                                                                                                      }
-                                   * }, "errored": {
-                                           * "type": "array", "items": {
-                                                 * "type": "object", "properties": {
-                                                     * "name": "string", "type": "string"
-                                                                                                                                          },
-                                                           * "required": ["name", "type"]
-                                                                                                                                      }
-                                                                                                                                  }
-                                                                                                                              }
-                                                                                                                          }
-                                                                                                                      }
-                                                                                                                  }
-                                                                                                              } */
+                                      "description": "Array of datasets created",
+                                      "content": {
+                                          "application/json": {
+                                              "schema": {
+                                                  "type": "object",
+                                                  "properties": {
+                                                      "created": {
+                                                          "type": "array",
+                                                          "items": {
+                                                              "$ref": "#/components/schemas/Dataset"
+                                                          }
+                                                      },
+                                                      "conflicted": {
+                                                          "type": "array",
+                                                          "items": {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                  "name": "string",
+                                                                  "type": "string"
+                                                              },
+                                                              "required": ["name", "type"]
+                                                          }
+                                                      },
+                                                      "errored": {
+                                                          "type": "array",
+                                                          "items": {
+                                                              "type": "object",
+                                                              "properties": {
+                                                                  "name": "string",
+                                                                  "type": "string"
+                                                              },
+                                                              "required": ["name", "type"]
+                                                          }
+                                                      }
+                                                  }
+                                              }
+                                          }
+                                      }
+                                  } */
 
     const data = req.body.datasets
-      .map((d) => getDatasetCreateQuery(d));
+      .map((d) => datasetService.buildDatasetCreateQuery(d));
 
     // create in separate transactions to avoid deadlocks
     const results = await Promise.allSettled(data.map((d) => datasetService.createDataset(d)));
@@ -777,25 +507,12 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Modify dataset.'
-    /*
-                                                                                                              * #swagger.description
-                                                                                                              * = To
-                                                                                                              * add
-                                                                                                              * files
-                                                                                                              * use
-                                                                                                              * POST
-                                                                                                              * "/datasets/:id/files"
-                                                                                                              * To add
-                                                                                                              * workflow
-                                                                                                              * use
-                                                                                                              * POST
-                                                                                                              * "/datasets/:id/workflows"
-                                                                                                              * To add
-                                                                                                              * state
-                                                                                                              * use
-                                                                                                              * POST
-                                                                                                              * "/datasets/:id/state"
-                                                                                                              */
+    /* #swagger.description =
+                                          * To add files use POST "/datasets/:id/files"
+                                          * To add workflow use POST "/datasets/:id/workflows" To add state use POST
+                                          * "/datasets/:id/state"
+                                          */
+
     const datasetToUpdate = await prisma.dataset.findFirst({
       where: {
         id: req.params.id,
@@ -1213,7 +930,7 @@ router.get(
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${datasetService.get_bundle_name(dataset)}`;
+        : `${datasetService.get_staged_bundle_name(dataset)}`;
       const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
@@ -1276,7 +993,7 @@ router.get(
 
     // Upon registration, the name of a dataset is normalized. Hence, we need to normalize
     // the requested name before checking for the existence of a dataset with this name.
-    const normalizedName = normalize_name(req.params.name);
+    const normalizedName = datasetService.normalize_name(req.params.name);
 
     const matchingDataset = await prisma.dataset.findUnique({
       where: {
@@ -1290,9 +1007,5 @@ router.get(
     res.json({ exists: !!matchingDataset });
   }),
 );
-
-// router.use('/', uploadRouter);
-
-// const uploadRouter = require("./upload");
 
 module.exports = router;

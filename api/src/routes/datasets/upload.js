@@ -1,25 +1,25 @@
 const express = require('express');
-const { PrismaClient, Prisma } = require('@prisma/client');
+const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
 const {
-  query, param, body, checkSchema,
+  query, param, body,
 } = require('express-validator');
-const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
-const pm = require('picomatch');
-const he = require('he');
 
-// const logger = require('../services/logger');
-const path = require('path');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { accessControl } = require('../../middleware/auth');
 const { validate } = require('../../middleware/validators');
 const datasetService = require('../../services/dataset');
-const authService = require('../../services/auth');
 const CONSTANTS = require('../../constants');
 const logger = require('../../services/logger');
-const uploadRouter = require('./upload');
+
+/**
+ * Dataset-Upload Routes
+ *
+ * All routes in this router are prefixed with `/datasets`, since it is mounted by the base Datasets
+ * router defined in `../datasets/index.js`.
+ */
 
 const isPermittedTo = accessControl('datasets');
 
@@ -155,7 +155,7 @@ router.post(
       project_id, src_instrument_id, src_dataset_id, name, type, files_metadata,
     } = req.body;
 
-    const datasetCreateQuery = getDatasetCreateQuery({
+    const datasetCreateQuery = datasetService.buildDatasetCreateQuery({
       name,
       type,
       project_id,
@@ -196,7 +196,7 @@ router.post(
       await tx.dataset.update({
         where: { id: createdDataset.id },
         data: {
-          origin_path: getUploadedDatasetPath({ datasetId: createdDataset.id, datasetType: type }),
+          origin_path: datasetService.getUploadedDatasetPath({ datasetId: createdDataset.id, datasetType: type }),
         },
       });
 

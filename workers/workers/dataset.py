@@ -36,8 +36,8 @@ def compute_staging_path(dataset: dict) -> tuple[Path, str]:
 
 
 def get_bundle_staged_path(dataset: dict) -> str:
-    return f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{get_bundle_name(dataset)}'
+    return f'{config["paths"][dataset["type"]]["bundle"]["stage"]}/{get_staged_bundle_name(dataset)}'
 
 
-def get_bundle_name(dataset: dict) -> str:
+def get_staged_bundle_name(dataset: dict) -> str:
     return f"{dataset['name']}.{dataset['type']}.tar"
