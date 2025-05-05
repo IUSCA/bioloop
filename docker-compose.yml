@@ -1,35 +1,42 @@
-name: bioloop
-services:
+# This is the docker-compose file for the Bioloop project
+# Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
+# We use the command to run a script that runs any commands that need to run after the containers are up.
 
+services:
   ui:
     image: node:19
+    ports:
+      - 127.0.0.1:443:443
     env_file:
       - ui/.env.example
     volumes:
       - ./ui/:/opt/sca/app
     working_dir: /opt/sca/app
-    ports:
-      - 127.0.0.1:443:443
     entrypoint: ["bin/entrypoint.sh"]
     command: npm run dev
 
   api:
     image: node:19
-    env_file:
-      - tests/.env.example
-      - db/postgres/.env.example
-      - api/.env.example
-      - api/.env
-    volumes:
-      - ./api/:/opt/sca/app
-      # Mounting workers folder so we can create api token in .env config on api startup if needed
-      - ./workers/:/opt/sca/workers 
-    working_dir: /opt/sca/app
+    restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
     expose:
       - 3030
-    entrypoint: ["bin/entrypoint.sh"]
-    # Doing a script to run setup of connections to and from api
-    command: bin/dev_command.sh
+    env_file:
+      - tests/.env.example # Variables needed for testing user information
+      - db/postgres/.env.example # For Postgres connection settings
+      - api/.env.example  # For all default settings
+      - api/.env # For keys made after the first run
+    volumes:
+      - ./api/:/opt/sca/app
+      - ./workers/.env:/opt/sca/app/workers/.env # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production.
+      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
+    working_dir: /opt/sca/app
+    entrypoint: ["bin/entrypoint.sh"] 
+    command: ["bin/command.sh"] # Setup of connections settings to and from api mostly within .env files.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     depends_on:
       signet:
         condition: service_healthy
@@ -38,25 +45,16 @@ services:
       rhythm:
         condition: service_healthy
 
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
   postgres:
     image: postgres:14.5
-    env_file:
-      - db/postgres/.env.example
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/postgres/scripts:/docker-entrypoint-initdb.d
-      - ./db/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf 
     expose:
       - 5432
     ports:
       - 127.0.0.1:5432:5432
-    command: -c 'config_file=/etc/postgresql/postgresql.conf'
+    env_file:
+      - db/postgres/.env.example # For Postgres connection settings
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
   celery_worker:
@@ -65,10 +63,10 @@ services:
     environment:
       - WORKER_TYPE=celery_worker
     env_file:
-      - db/mongo/.env.example
-      - db/queue/.env.example
-      - workers/.env.example
-      - workers/.env
+      - db/mongo/.env.example # For MongoDB connection settings
+      - db/queue/.env.example # For RabbitMQ connection settings
+      - workers/.env.example # For all default settings
+      - workers/.env # For keys made after the first run
     volumes:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
@@ -89,10 +87,11 @@ services:
       - 5672
     ports:
       - 127.0.0.1:15672:15672
+    env_file:
+      - db/queue/.env.example # For RabbitMQ connection settings
     volumes:
       - queue_volume:/var/lib/rabbitmq/
-    env_file:
-      - db/queue/.env.example
+
 
   mongo:
     # https://hub.docker.com/_/mongo
@@ -102,48 +101,54 @@ services:
     ports:
       - 127.0.0.1:27017:27017
     env_file:
-      - db/mongo/.env.example
+      - db/mongo/.env.example # For MongoDB connection settings
     volumes:
       - mongo_db:/data/db
-      # for importing database files
-      - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # for importing database files.  This will automatically be run by being moutned into the initialization folder, if you're not using docker you will need to run this manually.
 
+  # You must clone the rhythm_api repo and place it in the rhythm folder
   rhythm:
     restart: unless-stopped
-    image: git.sca.iu.edu:5050/iusca/rhythm_api/rhythm:latest
+    build:
+      context: ./rhythm/rhythm_api
+      dockerfile: Dockerfile
     expose:
       - 5001
     env_file:
-      - db/mongo/.env.example
-      - db/queue/.env.example
-      - db/rhythm/.env.example
-    entrypoint: ["/opt/bin/entrypoint.sh"]
+      - db/mongo/.env.example # For MongoDB connection settings
+      - db/queue/.env.example # For RabbitMQ connection settings
+      - rhythm/.env.example # For all default settings
+      - api/.env # For being able to set the rhythm key into the api.  You should create this manually in production without a joint .env file.
     volumes:
-      - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh
-      - ./api:/app/api
-    depends_on:
-      - queue
-      - mongo
+      - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
+      - ./api/.env:/app/api/.env # This is the api .env file that is used to set up the environment
+      - ./workers/.env:/app/workers/.env # This is the workers .env file that is used to set up the environment vars for the workers.
+    working_dir: /app
+    entrypoint: ["/opt/bin/entrypoint.sh"]
+    command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+    depends_on:
+      - queue
+      - mongo
 
-# Secure_download containers
+  # Secure_download container
   secure_download:
     image: node:19
     restart: unless-stopped
     expose:
       - 3060
     env_file:
-      - secure_download/.env.example
+      - secure_download/.env.example # For all default settings
     volumes:
-      - landing_volume:/opt/sca/data
+      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.  
       - ./secure_download/:/opt/sca/app
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
-    command: npm run dev
+    command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
       interval: 30s
@@ -151,43 +156,45 @@ services:
       retries: 5
 
 # Signet containers
+  # You must clone the signet repo and place it in the signet folder
   signet:
     restart: unless-stopped
-    image: git.sca.iu.edu:5050/iusca/signet/signet:latest
+    build:
+      context: ./signet/signet
+      dockerfile: Dockerfile
     expose:
       - 5050
-    environment:
-      - PORT=5050
-      - AUTHLIB_INSECURE_TRANSPORT=1
-      - POSTGRES_DB=signet
-      - POSTGRES_USER=signet
-      - POSTGRES_PASSWORD=example
-      - POSTGRES_HOST=signet_db
-      - POSTGRES_PORT=5432
-    # env_file:
-    #   # - signet/.env.example
-    depends_on:
-      - signet_db
+    env_file:
+      - signet/.env.example # For all default settings
+    volumes:
+      - ./signet/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
+    entrypoint: ["/opt/bin/entrypoint.sh"]
+    command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+    depends_on:
+      signet_db:
+        condition: service_healthy
 
+
+  # For ease of startup we just do another postgres container for signet.  You can use the same one as the api if you want, but this is easier to manage.
   signet_db:
     image: postgres:14.5
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=signet
-      - POSTGRES_USER=signet
-      - POSTGRES_PASSWORD=example
-      - POSTGRES_SCHEMA=signet
-      - POSTGRES_PORT=5432
-    volumes:
-      - signet_db:/var/lib/postgresql/data
     expose:
       - 5432
-
+    restart: unless-stopped
+    env_file:
+      - signet/.env.example # For Postgres connection settings
+    volumes:
+      - signet_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "appuser"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 
 # Metrics containers
@@ -197,8 +204,6 @@ services:
       DATA_SOURCE_NAME: "postgresql://appuser:example@postgres:5432/app?sslmode=disable"
     depends_on:
       - postgres
-    # ports:
-      # - "9187:9187"
     volumes:
       - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
     command:
@@ -211,10 +216,6 @@ services:
       - prometheus_data:/prometheus  # Mount the volume for Prometheus data
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      
-
-    # ports:
-      # - "9090:9090"
 
   grafana:
     image: grafana/grafana
@@ -232,8 +233,6 @@ services:
         condition: service_started
       api:
         condition: service_healthy
-
-      
 
 volumes:
   postgres_data:

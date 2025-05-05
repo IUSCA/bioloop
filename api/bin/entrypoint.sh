@@ -21,7 +21,6 @@ else
 fi
 
 
-
 # Generate Prisma client
 npx prisma generate 
 

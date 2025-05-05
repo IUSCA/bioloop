@@ -48,7 +48,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/path/to/data_product/upload',
+            'upload': '/opt/sca/data',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
