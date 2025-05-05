@@ -310,6 +310,44 @@ function base64urlEncode(buf) {
     .replace(/\//g, '_'); // Replace '/' with '_'
 }
 
+/**
+ * Recursively sorts the keys of an object in ascending order.
+ * If the input is an array, it applies the sorting to each element.
+ * If the input is not an object or array, it returns the input as is.
+ *
+ * @param {Object|Array} obj - The object or array to sort.
+ * @returns {Object|Array} A new object or array with sorted keys.
+ *
+ * Example usage:
+ * const input = {
+ *   b: 2,
+ *   a: {
+ *     d: 4,
+ *     c: 3,
+ *   },
+ * };
+ * const sorted = deepSortKeys(input);
+ * console.log(sorted);
+ * // Output:
+ * // {
+ * //   a: {
+ * //     c: 3,
+ * //     d: 4,
+ * //   },
+ * //   b: 2,
+ * // }
+ */
+function deepSortKeys(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map(deepSortKeys);
+  } if (obj && typeof obj === 'object' && obj.constructor === Object) {
+    return Object.fromEntries(
+      Object.keys(obj).sort().map((k) => [k, deepSortKeys(obj[k])]),
+    );
+  }
+  return obj;
+}
+
 module.exports = {
   renameKey,
   setDifference,
@@ -324,4 +362,5 @@ module.exports = {
   transactionWithRetry,
   TransactionRetryError,
   base64urlEncode,
+  deepSortKeys,
 };

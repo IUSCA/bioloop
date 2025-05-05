@@ -96,9 +96,7 @@ if (paramsExist) {
           // read redirectPath value from local storage and reset it
           const _redirectPath = redirectPath.value;
           redirectPath.value = "";
-          router.push({
-            path: _redirectPath || "/",
-          });
+          router.push(_redirectPath || "/");
         } else {
           // User was authenticated with CAS but they are not a portal user
           console.log(
