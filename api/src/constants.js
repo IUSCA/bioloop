@@ -128,6 +128,7 @@ const auth = {
       },
     },
   },
+};
 
 module.exports = {
   INCLUDE_FILES,
