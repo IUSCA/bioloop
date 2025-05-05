@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
 import duration from "dayjs/plugin/duration";
+import relativeTime from "dayjs/plugin/relativeTime";
 
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
@@ -15,6 +15,19 @@ function date(value) {
    */
   if (value == null) return null;
   return dayjs(value).format("MMM D YYYY");
+}
+
+function displayDateTime(value) {
+  /**
+   * This function is intended to convert an ISO 8601 datetime string
+   * (with Z - UTC timezone) ex: "2023-06-14T01:18:40.501Z"
+   * to a date string of format MMM D YYYY HH:mm:ss AM/PM in browser's local time zone
+   * ex: "Jun 14 2023 01:18:40 AM"
+   *
+   * date("2023-06-14T01:18:40.501Z") -> "Jun 14 2023, 01:18:40 AM"
+   */
+  if (value == null) return null;
+  return dayjs(value).format("MMM D YYYY, HH:mm A");
 }
 
 function absolute(value, timezoneOffset = true) {
@@ -92,4 +105,32 @@ function formatDuration(duration) {
   return ans;
 }
 
-export { date, absolute, fromNow, readableDuration, formatDuration };
+/**
+ * Calculates and returns the Date object representing midnight of the next day.
+ *
+ * @returns {Date} A Date object set to midnight of the next day.
+ *
+ * @example
+ * If time is currently 2023-10-01 15:30:00,
+ * this function will return 2023-10-02 00:00:00.
+ */
+function getMidnightNextDay() {
+  const now = new Date();
+  const midnightNextDay = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+  );
+  return midnightNextDay;
+}
+
+export {
+  absolute,
+  date,
+  displayDateTime,
+  formatDuration,
+  fromNow,
+  getMidnightNextDay,
+  readableDuration
+};
+

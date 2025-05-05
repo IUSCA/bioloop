@@ -1,0 +1,73 @@
+graph TD
+    A[User initiates upload from UI] --> B[Checksum computation]
+    B --> C{Checksums computed?}
+    C -->|Yes| D[Store metadata related to the upload in the database]
+    C -->|No| E[Checksum computation failed]
+    D --> F[UI: Request oAuth token from the API, which will be used to authorize into the File-Upload API]
+    F --> G[API: Request oAuth token from Signet]
+    G --> H[Signet: Generate oAuth token with the appropriate scope, and return it to API]
+    H --> I[API: Return generated token to UI]
+    I --> J[UI: Attach generated token to the HTTP request which will be issued to the File-Upload API]
+    J --> K[UI: Issue HTTP request to the File-Upload API to upload the next queued file in chunks]
+    K --> L{All files uploaded?}
+    L -->|No| M[Retry file upload]
+    M --> K
+    L -->|Yes| N[Initiate process_dataset_upload workflow]
+    N --> O[Recreate uploaded files by merging their chunks]
+    O --> P[Validate recreated files' checksums]
+    P --> Q{Checksums valid?}
+    Q -->|No| R[Processing failed]
+    Q -->|Yes| S[Delete uploaded file's chunks]
+    S --> T[Initiate Integrated workflow]
+    T --> U[Register dataset in system]
+    U --> V[Upload complete]
+
+    %% Token-refresh loop
+    K --> W{20 seconds passed?}
+    W -->|Yes| F
+    W -->|No| K
+
+    %% Navigation-check loop
+    K --> X{User tries to navigate to different route?}
+    X -->|Yes| Y{All files uploaded?}
+    Y -->|No| Z[Show browser alert]
+    Z --> AA{User confirms?}
+    AA -->|Yes| AB[Initiate cancel_dataset_upload workflow]
+    AA -->|No| K
+    Y -->|Yes| AC[Navigation successful]
+    X -->|No| K
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#fff,stroke:#333,stroke-width:2px
+    style C fill:#fff,stroke:#333,stroke-width:2px
+    style D fill:#fff,stroke:#333,stroke-width:2px
+    style E fill:#fbb,stroke:#333,stroke-width:2px
+    style F fill:#fff,stroke:#333,stroke-width:2px
+    style G fill:#fff,stroke:#333,stroke-width:2px
+    style H fill:#fff,stroke:#333,stroke-width:2px
+    style I fill:#fff,stroke:#333,stroke-width:2px
+    style J fill:#fff,stroke:#333,stroke-width:2px
+    style K fill:#fff,stroke:#333,stroke-width:2px
+    style L fill:#fff,stroke:#333,stroke-width:2px
+    style M fill:#fff,stroke:#333,stroke-width:2px
+    style N fill:#fff,stroke:#333,stroke-width:2px
+    style O fill:#fff,stroke:#333,stroke-width:2px
+    style P fill:#fff,stroke:#333,stroke-width:2px
+    style Q fill:#fff,stroke:#333,stroke-width:2px
+    style R fill:#fbb,stroke:#333,stroke-width:2px
+    style S fill:#fff,stroke:#333,stroke-width:2px
+    style T fill:#fff,stroke:#333,stroke-width:2px
+    style U fill:#fff,stroke:#333,stroke-width:2px
+    style V fill:#bfb,stroke:#333,stroke-width:2px
+    style W fill:#ffff00,stroke:#333,stroke-width:2px
+    style X fill:#ffff00,stroke:#333,stroke-width:2px
+    style Y fill:#ffff00,stroke:#333,stroke-width:2px
+    style Z fill:#ffa500,stroke:#333,stroke-width:2px
+    style AA fill:#ffa500,stroke:#333,stroke-width:2px
+    style AB fill:#ff6347,stroke:#333,stroke-width:2px
+    style AC fill:#bfb,stroke:#333,stroke-width:2px
+
+    %% Use a different color for arrows
+    linkStyle default stroke:#0066cc,stroke-width:2px
+
+[![](https://mermaid.ink/img/pako:eNqdl2tv4joQhv-KldVqv0AVCoU2H3aVwralV1qgt1CtTOIQqyHOsZ2lXdr_fsaOQ2C32sNJpUpJmGfed8bjXJaWzwJiOdaM4zRCo94kQfDnemNBOKIJlRRLIlCWxgwHKORsjsb9J1Svf0WHXjci_rPI5shn8zSTWFKWPOUZDnVId1mECBNDgm_veURXRbw9EPGGet5QMk7QnEgcYIkRJzHIBkgyJCNSqNNEn6mIKRbkaT3PJXtD3z80hEJMYxKY6J72deSN-w66If9kREjE3ExGoPVMkrxCpeIO-jW0iKgfoQWNYzQFGyK3hCGccfqLgCPj8Agk6uPcJpBG7EiLHXtw5S9qQzpLiDTIsUZOvPyig45JQjj0YgNbUHUIsjhNOUu5WiMkfJaSGsJJAO2TGU8QlcptaedE5-4XdnTMzOQPTGoAxkV8X8ef6l65UmJoxQfhysfJaDQA1bzAzaZRIbJyJT_u06kWOtNCfRW_mfBjVl02g6F-TciLRBCvxEKIVNPiR1nyLIzImRY5X7rgSwUUQ11O5Plqki48aA9_zRPlYSbLRW51HdAjfOn1zWZBsCQ-EeKHmlNB5A9jcsH4cxizhUl0qRNdgZDPicIKN8bc9BW2A5_RZKbKo3yzmCtND7xbHNNA0dykMfgXCDcbzxADTVyvbcifii1qv17VfuMN8gKU9MbeuS7LHXo9EpPfXX8Rmy6HWnNUtqafSDLL5-e3dox06BjaMaNCwr3HdE8to3iFK3MTONaBt54ZBLXRlRH4Nf_982c0UqNZ5yTkREQoZixdn4C75a6NBPFZEgiUYiHKAbgrCzxav6LacrYmcIl_0pm-udR1m__QuF_q-6fkFFYS5jTJAaKOAxqGhJNEIs7gflho35faD3-Z0YeVoUdvGLEFmnK2UFo4Jry4iTxqE66bu4BKQ8rnokjhuqWUe1gujo8Tn8T_MbYGNh0pHeXZul7ZGiQyX41RmMVP6yVuNFPIV9hhrio2dj6FB2FNSA7L53xqNpvmuL6ggYyc3fRlnTksmHB7pluB6VVgvhfMdLo1c1RB57gCc1KB6VdgTiswZxWY8wrMRQXmsgJzVYEZVGCuKzA3FWZ0WEFnVIEZV2BuDTMNt6_nrtQJbXtr7L4a9lANe1xheO9_YK5bkStvrO1mq7M91916AVbPUXg8Ibz2QPRZzDgK4R9z9VjLA2OaPA-1RkBCnMUSFeltu932_T8UrBp8ztDAciTPSM2C16g5VqfWUiWcWPA-NScTy4FDk3FiTZJ3wFKcPDI2L0h4QM8iywlxLOAsS9WbVo9ieIOZr66C8YDwLssSaTl7ncaezmI5S-vFclrtnUar02nu2futXdvePahZr5ZT32_ZO3ajYzca0OGDzn77vWb90rq7OwedZrvTbkKiVrvdBIAEFD6OLvLPNP219v4vSNaCrQ?type=png)](https://mermaid.live/edit#pako:eNqdl2tv4joQhv-KldVqv0AVCoU2H3aVwralV1qgt1CtTOIQqyHOsZ2lXdr_fsaOQ2C32sNJpUpJmGfed8bjXJaWzwJiOdaM4zRCo94kQfDnemNBOKIJlRRLIlCWxgwHKORsjsb9J1Svf0WHXjci_rPI5shn8zSTWFKWPOUZDnVId1mECBNDgm_veURXRbw9EPGGet5QMk7QnEgcYIkRJzHIBkgyJCNSqNNEn6mIKRbkaT3PJXtD3z80hEJMYxKY6J72deSN-w66If9kREjE3ExGoPVMkrxCpeIO-jW0iKgfoQWNYzQFGyK3hCGccfqLgCPj8Agk6uPcJpBG7EiLHXtw5S9qQzpLiDTIsUZOvPyig45JQjj0YgNbUHUIsjhNOUu5WiMkfJaSGsJJAO2TGU8QlcptaedE5-4XdnTMzOQPTGoAxkV8X8ef6l65UmJoxQfhysfJaDQA1bzAzaZRIbJyJT_u06kWOtNCfRW_mfBjVl02g6F-TciLRBCvxEKIVNPiR1nyLIzImRY5X7rgSwUUQ11O5Plqki48aA9_zRPlYSbLRW51HdAjfOn1zWZBsCQ-EeKHmlNB5A9jcsH4cxizhUl0qRNdgZDPicIKN8bc9BW2A5_RZKbKo3yzmCtND7xbHNNA0dykMfgXCDcbzxADTVyvbcifii1qv17VfuMN8gKU9MbeuS7LHXo9EpPfXX8Rmy6HWnNUtqafSDLL5-e3dox06BjaMaNCwr3HdE8to3iFK3MTONaBt54ZBLXRlRH4Nf_982c0UqNZ5yTkREQoZixdn4C75a6NBPFZEgiUYiHKAbgrCzxav6LacrYmcIl_0pm-udR1m__QuF_q-6fkFFYS5jTJAaKOAxqGhJNEIs7gflho35faD3-Z0YeVoUdvGLEFmnK2UFo4Jry4iTxqE66bu4BKQ8rnokjhuqWUe1gujo8Tn8T_MbYGNh0pHeXZul7ZGiQyX41RmMVP6yVuNFPIV9hhrio2dj6FB2FNSA7L53xqNpvmuL6ggYyc3fRlnTksmHB7pluB6VVgvhfMdLo1c1RB57gCc1KB6VdgTiswZxWY8wrMRQXmsgJzVYEZVGCuKzA3FWZ0WEFnVIEZV2BuDTMNt6_nrtQJbXtr7L4a9lANe1xheO9_YK5bkStvrO1mq7M91916AVbPUXg8Ibz2QPRZzDgK4R9z9VjLA2OaPA-1RkBCnMUSFeltu932_T8UrBp8ztDAciTPSM2C16g5VqfWUiWcWPA-NScTy4FDk3FiTZJ3wFKcPDI2L0h4QM8iywlxLOAsS9WbVo9ieIOZr66C8YDwLssSaTl7ncaezmI5S-vFclrtnUar02nu2futXdvePahZr5ZT32_ZO3ajYzca0OGDzn77vWb90rq7OwedZrvTbkKiVrvdBIAEFD6OLvLPNP219v4vSNaCrQ)

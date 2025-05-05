@@ -8,39 +8,78 @@
             <tr>
               <td>Dataset Name</td>
               <td>
-                <a
-                  :href="`/datasets/${props.datasetId}`"
-                  v-if="props.datasetId"
-                >
-                  {{ props.ingestionDir.name }}</a
-                >
-                <span v-else>{{ props.ingestionDir.name }}</span>
+                <div v-if="props.dataset">
+                  <div v-if="!auth.canOperate">
+                    {{ props.dataset.name }}
+                  </div>
+                  <a v-else :href="`/datasets/${props.dataset.id}`">
+                    {{ props.dataset.name }}
+                  </a>
+                </div>
+                <DatasetNameInput
+                  v-else
+                  v-model:populated-dataset-name="datasetNameInput"
+                  class="w-full"
+                  :input-disabled="props.inputDisabled"
+                  :show-dataset-name-error="props.showCreatedDatasetError"
+                  :dataset-name-error="props.createdDatasetError"
+                />
               </td>
             </tr>
-            <tr>
-              <td>Ingestion Source Directory</td>
-              <td><CopyText :text="props.ingestionDir.path" /></td>
-            </tr>
-            <tr v-if="props.ingestionSpace">
-              <td>Ingestion Source Space</td>
-              <td>
-                <va-chip size="small">{{ props.ingestionSpace }}</va-chip>
-              </td>
-            </tr>
+
             <tr>
               <td>Dataset Type</td>
               <td>
-                <va-chip size="small" outline>{{
-                  config.dataset.types.DATA_PRODUCT.label
-                }}</va-chip>
+                <va-chip size="small" outline>
+                  {{ props.datasetType }}
+                </va-chip>
               </td>
             </tr>
-            <tr v-if="props.sourceRawData">
+
+            <tr>
               <td>Source Raw Data</td>
+              <td class="metadata">
+                <router-link
+                  :to="`/datasets/${props.sourceRawData?.id}`"
+                  target="_blank"
+                >
+                  {{ props.sourceRawData?.name }}
+                </router-link>
+              </td>
+            </tr>
+
+            <tr>
+              <td>Project</td>
+              <td class="metadata">
+                <router-link
+                  :to="`/projects/${props.project?.id}`"
+                  target="_blank"
+                >
+                  {{ props.project?.name }}
+                </router-link>
+              </td>
+            </tr>
+
+            <tr>
+              <td>Source Instrument</td>
+              <td class="metadata">
+                {{ props.sourceInstrument?.name }}
+              </td>
+            </tr>
+
+            <tr>
+              <td>Source Directory</td>
               <td>
-                <a :href="`/datasets/${props.sourceRawData.id}`">{{
-                  props.sourceRawData.name
-                }}</a>
+                <CopyText :text="props.ingestionDir?.path" />
+              </td>
+            </tr>
+
+            <tr>
+              <td>Ingested from</td>
+              <td>
+                <va-chip size="small" outline>
+                  {{ props.ingestionSpace }}
+                </va-chip>
               </td>
             </tr>
           </tbody>
@@ -51,9 +90,17 @@
 </template>
 
 <script setup>
-import config from "@/config";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
+  // `dataset`: Dataset to be created
+  dataset: {
+    type: Object,
+  },
+  populatedDatasetName: {
+    type: String,
+    default: "",
+  },
   ingestionSpace: {
     type: String,
   },
@@ -61,13 +108,47 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  datasetType: {
+    type: String,
+    required: true,
+  },
+  sourceInstrument: {
+    type: Object,
+  },
   sourceRawData: {
     type: Object,
   },
-  datasetId: {
-    type: [String, Number],
+  project: {
+    type: Object,
+  },
+  createdDatasetError: {
+    type: String,
+    default: "",
+  },
+  showCreatedDatasetError: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(["update:populatedDatasetName"]);
+
+const auth = useAuthStore();
+
+const datasetNameInput = computed({
+  get() {
+    return props.populatedDatasetName;
+  },
+  set(value) {
+    emit("update:populatedDatasetName", value);
   },
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.metadata {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+</style>

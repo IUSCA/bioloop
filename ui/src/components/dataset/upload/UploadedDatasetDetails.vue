@@ -1,65 +1,85 @@
 <template>
+  <!-- Alert to be shown when an upload finishes successfully or encounters an error -->
+  <va-alert
+    v-if="props.isSubmissionAlertVisible"
+    dense
+    :icon="submissionAlertIcon"
+    :color="props.submissionAlertColor"
+  >
+    {{ props.submissionAlert }}
+  </va-alert>
+
   <!-- Details of the dataset being uploaded -->
   <div class="va-table-responsive">
     <table class="va-table">
       <tbody>
-        <tr v-if="props.selectingFiles || props.selectingDirectory">
-          <td>Data Product</td>
+        <tr>
+          <td>Dataset Name</td>
           <td>
             <div v-if="props.dataset">
+              <div v-if="!auth.canOperate">
+                {{ props.dataset.name }}
+              </div>
               <router-link
+                v-else
                 :to="`/datasets/${props.dataset.id}`"
                 target="_blank"
               >
                 {{ props.dataset.name }}
               </router-link>
             </div>
-
-            <UploadedDatasetName
+            <DatasetNameInput
               v-else
-              v-model:dataset-name-input="datasetNameInput"
-              :dataset-name="props.datasetName"
+              v-model:populated-dataset-name="datasetNameInput"
+              class="w-full"
               :input-disabled="props.inputDisabled"
-              :dataset-name-error="props.uploadedDataProductError"
-              :dataset-name-error-messages="
-                props.uploadedDataProductErrorMessages
-              "
-              :selecting-files="props.selectingFiles"
-              :selecting-directory="props.selectingDirectory"
+              :show-dataset-name-error="props.showUploadedDatasetError"
+              :dataset-name-error="props.uploadedDatasetError"
             />
           </td>
         </tr>
 
-        <tr v-if="sourceRawData">
+        <tr>
+          <td>Dataset Type</td>
+          <td>
+            <va-chip size="small" outline>
+              {{ props.selectedDatasetType }}
+            </va-chip>
+          </td>
+        </tr>
+
+        <tr>
           <td>Source Raw Data</td>
-          <td class="source-raw-data-name">
-            <router-link :to="`/datasets/${sourceRawData?.id}`" target="_blank">
-              {{ sourceRawData?.name }}
+          <td class="metadata">
+            <router-link
+              :to="`/datasets/${props.sourceRawData?.id}`"
+              target="_blank"
+            >
+              {{ props.sourceRawData?.name }}
             </router-link>
           </td>
         </tr>
 
         <tr>
+          <td>Project</td>
+          <td class="metadata">
+            <router-link :to="`/projects/${props.project?.id}`" target="_blank">
+              {{ props.project?.name }}
+            </router-link>
+          </td>
+        </tr>
+
+        <tr>
+          <td>Source Instrument</td>
+          <td class="metadata">
+            {{ props.sourceInstrument?.name }}
+          </td>
+        </tr>
+
+        <tr>
           <td>Status</td>
-          <td class="flex items-center gap-2">
-            <va-progress-circle
-              v-if="
-                props.submissionStatus ===
-                  constants.UPLOAD_STATES.COMPUTING_CHECKSUMS &&
-                props.checksumComputationPercentage > 0
-              "
-              :model-value="checksumComputationPercentage"
-              size="small"
-            >
-              {{ checksumComputationPercentage }}%
-            </va-progress-circle>
-            <UploadStatusIcon
-              :submission-status="props.submissionStatus"
-              :show-icon="
-                props.submissionStatus !==
-                constants.UPLOAD_STATES.COMPUTING_CHECKSUMS
-              "
-            />
+          <td>
+            <UploadStatusIcon :submission-status="props.submissionStatus" />
           </td>
         </tr>
       </tbody>
@@ -68,42 +88,36 @@
 </template>
 
 <script setup>
-import constants from "@/constants";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
-  // `dataset`: Dataset to be uploaded.
+  // `dataset`: Dataset to be uploaded
   dataset: {
     type: Object,
   },
-  // `datasetName`: Pre-selected name for a dataset that is to be uploaded.
-  // Used when a directory is being uploaded.
-  datasetName: {
+  selectedDatasetType: {
+    type: String,
+    required: true,
+  },
+  populatedDatasetName: {
     type: String,
     default: "",
   },
-  // `datasetNameInput`: User-entered name for a dataset that is to be
-  // uploaded. Used when individual files are being uploaded.
-  datasetNameInput: {
-    type: String,
-    required: true,
+  project: {
+    type: Object,
   },
   inputDisabled: {
     type: Boolean,
     default: false,
   },
-  selectingFiles: {
-    type: Boolean,
-    required: true,
+  sourceInstrument: {
+    type: Object,
   },
-  selectingDirectory: {
-    type: Boolean,
-    required: true,
-  },
-  uploadedDataProductErrorMessages: {
+  uploadedDatasetError: {
     type: String,
     default: "",
   },
-  uploadedDataProductError: {
+  showUploadedDatasetError: {
     type: Boolean,
     default: false,
   },
@@ -116,8 +130,7 @@ const props = defineProps({
     required: true,
   },
   sourceRawData: {
-    type: Array,
-    default: () => [],
+    type: Object,
   },
   isSubmissionAlertVisible: {
     type: Boolean,
@@ -130,38 +143,29 @@ const props = defineProps({
     type: String,
     default: "warning",
   },
-  checksumComputationPercentage: {
-    type: Number,
-    default: 0,
-  },
 });
 
-const checksumComputationPercentage = computed({
-  get() {
-    return props.checksumComputationPercentage;
-  },
-  set(value) {},
-});
+const emit = defineEmits(["update:populatedDatasetName"]);
 
-const emit = defineEmits(["update:datasetNameInput"]);
+const auth = useAuthStore();
 
 const datasetNameInput = computed({
   get() {
-    return props.datasetNameInput;
+    return props.populatedDatasetName;
   },
   set(value) {
-    emit("update:datasetNameInput", value);
+    emit("update:populatedDatasetName", value);
   },
 });
 
-const sourceRawData = computed(() => props.sourceRawData[0]);
+// const sourceRawData = computed(() => props.sourceRawData[0]);
 const submissionAlertIcon = computed(() => {
   return props.submissionAlertColor === "success" ? "check_circle" : "warning";
 });
 </script>
 
 <style scoped>
-.source-raw-data-name {
+.metadata {
   white-space: pre-wrap;
   word-wrap: break-word;
   word-break: break-word;

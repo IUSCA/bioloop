@@ -29,5 +29,5 @@ nav.setNavItems([
 <route lang="yaml">
 meta:
   title: Ingest
-  requiresRoles: ["operator", "admin"]
+  requiresRoles: ["operator", "admin", "user"]
 </route>

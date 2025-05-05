@@ -6,6 +6,19 @@ const config = require('config');
 
 const prisma = new PrismaClient();
 
+let systemUser = null;
+
+async function getSystemUser() {
+  if (!systemUser) {
+    const _systemUser = await prisma.user.findFirst({
+      where: { username: config.get('system_user.username') },
+      include: INCLUDE_ROLES_LOGIN,
+    });
+    systemUser = transformUser(_systemUser);
+  }
+  return systemUser;
+}
+
 const INCLUDE_ROLES_LOGIN = {
   user_role: {
     select: { roles: true },
@@ -311,4 +324,5 @@ module.exports = {
   findUserBy,
   generateUniqueUsername,
   validateUsernameOrThrow,
+  getSystemUser,
 };

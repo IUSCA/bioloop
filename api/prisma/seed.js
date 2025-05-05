@@ -295,6 +295,16 @@ async function main() {
   await prisma.stage_request_log.createMany({
     data: stage_request_logs,
   });
+
+  // create instruments
+  // delete pre-existing records
+  await prisma.instrument.deleteMany();
+  await prisma.instrument.createMany({
+    data: _.range(0, 10).map((i) => ({
+      name: `Instrument ${i + 1}`,
+      host: `instrument ${i + 1}.iu.edu`,
+    })),
+  });
 }
 
 main()

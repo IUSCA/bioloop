@@ -1,6 +1,9 @@
 import config from "@/config";
 import toast from "@/services/toast";
 import api from "./api";
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 
 class DatasetService {
   /**
@@ -22,7 +25,10 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    return api.get("/datasets", {
+    const url = !auth.canOperate
+      ? `/datasets/${auth.user.username}/all`
+      : "/datasets";
+    return api.get(url, {
       params,
     });
   }
@@ -37,6 +43,7 @@ class DatasetService {
     bundle = false,
     include_projects = false,
     initiator = false,
+    include_source_instrument = false,
   }) {
     return api.get(`/datasets/${id}`, {
       params: {
@@ -48,6 +55,7 @@ class DatasetService {
         bundle,
         include_projects,
         initiator,
+        include_source_instrument,
       },
     });
   }
@@ -137,8 +145,49 @@ class DatasetService {
     return api.post(`/datasets/${dataset_id}/workflow/${workflow}`);
   }
 
+  check_if_exists({ name, type } = {}) {
+    return api.get(`/datasets/${type}/${name}/exists`);
+  }
+
   get_bundle_name(dataset) {
     return `${dataset.name}.${dataset.type}.tar`;
+  }
+
+  logDatasetUpload(data) {
+    return api.post(`/datasets/upload`, data);
+  }
+
+  updateDatasetUploadLog(dataset_id, data) {
+    return api.patch(`/datasets/${dataset_id}/upload`, data);
+  }
+
+  processDatasetUpload(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/workflow/process_dataset_upload`);
+  }
+
+  cancelDatasetUpload(dataset_id) {
+    return api.post(`/datasets/${dataset_id}/workflow/cancel_dataset_upload`);
+  }
+
+  getDatasetUploadLogs({
+    forSelf = true,
+    status = null,
+    dataset_name = null,
+    limit = null,
+    offset = null,
+    username = null,
+  } = {}) {
+    const path = forSelf
+      ? `/datasets/${username}/uploads`
+      : `/datasets/uploads`;
+    return api.get(path, {
+      params: {
+        status,
+        dataset_name,
+        offset,
+        limit,
+      },
+    });
   }
 }
 

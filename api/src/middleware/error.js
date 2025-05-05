@@ -5,6 +5,7 @@ const axios = require('axios');
 const _ = require('lodash/fp');
 const { log_axios_error } = require('../utils');
 const logger = require('../services/logger');
+const ConflictError = require('../services/errors/ConflictError');
 
 // catch 404 and forward to error handler
 function notFound(req, res, next) {
@@ -67,6 +68,14 @@ function axiosErrorHandler(error, req, res, next) {
   return next(error);
 }
 
+function conflictErrorHandler(e, req, res, next) {
+  if (e instanceof ConflictError) {
+    logger.error(e);
+    return next(createError.Conflict(e.message));
+  }
+  return next(e);
+}
+
 function errorHandler(err, req, res, next) {
   // delegate to the default Express error handler,
   // when the headers have already been sent to the client
@@ -93,4 +102,5 @@ module.exports = {
   assertionErrorHandler,
   axiosErrorHandler,
   prismaConstraintFailedHandler,
+  conflictErrorHandler,
 };

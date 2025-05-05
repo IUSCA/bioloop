@@ -25,17 +25,17 @@ const auth = useAuthStore();
 
 nav.setNavItems([
   {
-    label: "Dataset Upload",
+    label: "Dataset Uploads",
     to: "/datasetUpload",
   },
   {
-    label: "Upload Dataset",
+    label: "Upload New",
   },
 ]);
 </script>
 
 <route lang="yaml">
 meta:
-  title: Data Product Uploads
-  requiresRoles: ["operator", "admin"]
+title: Dataset Uploads
+requiresRoles: ["operator", "admin", "user"]
 </route>

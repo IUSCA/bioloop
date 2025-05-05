@@ -20,11 +20,14 @@
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "explicit"
   },
-  "eslint.validate": ["javascript"],
+  "eslint.validate": [
+    "javascript"
+  ],
   "files.associations": {
     "*.css": "postcss"
   },
   "editor.formatOnSave": false,
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
   "files.exclude": {
     "**/.git": true,
     "**/.DS_Store": true,

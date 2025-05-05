@@ -12,7 +12,7 @@ services:
       - -c
       - |
         npm install && exec npm run builddev
-    
+  
 
   api:
     restart: unless-stopped
@@ -30,7 +30,7 @@ services:
       - 3030
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
-     - postgres
+      - postgres
     networks:
       network:
         ipv4_address: 172.19.0.2
@@ -54,7 +54,7 @@ services:
       network:
         ipv4_address: 172.19.0.3
 
-# sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
+  # sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
   pgbackup:
     image: postgres:14.5
     environment:
@@ -75,7 +75,7 @@ services:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
     depends_on:
       - postgres
-    # ports:
+      # ports:
       # - "9187:9187"
     volumes:
       - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
@@ -92,7 +92,7 @@ services:
       - prometheus_data:/prometheus  # Mount the volume for Prometheus data
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-    # ports:
+      # ports:
       # - "9090:9090"
     networks:
       network:

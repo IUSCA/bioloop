@@ -1,7 +1,9 @@
 {
   "name": "docs",
   "devDependencies": {
+    "mermaid": "^11.6.0",
     "vitepress": "~1.6.3",
+    "vitepress-plugin-mermaid": "^2.0.17",
     "vitepress-sidebar": "^1.31.1"
   },
   "scripts": {
@@ -9,8 +11,5 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "cloc": "git ls-files -z | grep -z -v -E '(^|/)(package-lock\\.json|poetry\\.lock|docs/\\.vitepress/dist/|metrics/grafana/config/provisioning/dashboards/)' | xargs -0 npx cloc"
-  },
-  "dependencies": {
-    
   }
 }

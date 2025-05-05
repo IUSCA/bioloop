@@ -47,7 +47,6 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/path/to/data_product/upload',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
@@ -72,26 +71,6 @@ config = {
         'wait_between_stability_checks_seconds': FIVE_MINUTES,
         'poll_interval_seconds': 10,
         'full_scan_every_n_scans': 90  # every 90th scan will be a full scan / full scan every 15 minutes
-    },
-    'upload': {
-        'UPLOAD_RETRY_THRESHOLD_HOURS': 72,
-        'types': {
-            'DATASET': 'DATASET'
-        },
-        'status': {
-            'UPLOADING': 'UPLOADING',
-            'UPLOAD_FAILED': 'UPLOAD_FAILED',
-            'UPLOADED': 'UPLOADED',
-            'PROCESSING': 'PROCESSING',
-            'PROCESSING_FAILED': 'PROCESSING_FAILED',
-            'COMPLETE': 'COMPLETE',
-            'FAILED': 'FAILED'
-        },
-    },
-    'DONE_STATUSES': {
-        'REVOKED': 'REVOKED',
-        'FAILURE': 'FAILURE',
-        'SUCCESS': 'SUCCESS'
     },
     'service_user': 'bioloopuser',
     'stage': {
