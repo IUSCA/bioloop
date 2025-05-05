@@ -381,6 +381,7 @@ model nonce {
   created_at DateTime  @default(now()) @db.Timestamp(6)
   purpose    String?
   expires_at DateTime?
+}
 
 model instrument {
   id               Int       @id @default(autoincrement())
