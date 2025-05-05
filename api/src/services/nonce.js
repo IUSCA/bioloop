@@ -17,8 +17,8 @@ async function useNonce(nonce) {
     where: {
       id: nonce,
       OR: [
-        { expires_at: null },
-        { expires_at: { gte: new Date() } },
+        { expires_at: null }, // Nonces without expiration
+        { expires_at: { gte: new Date() } }, // Or nonces that haven't expired yet
       ],
     },
   });

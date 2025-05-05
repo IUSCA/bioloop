@@ -15,7 +15,7 @@ const logger = require('../../services/logger');
 
 const router = express.Router();
 
-function validateSingupToken(req, res, next) {
+function validateSignupToken(req, res, next) {
   const authHeader = req.headers.authorization || '';
   if (!authHeader) return next(createError.Unauthorized('Signup failed. Token not found.'));
 
@@ -41,7 +41,7 @@ function validateSingupToken(req, res, next) {
 
 router.post(
   '/',
-  validateSingupToken,
+  validateSignupToken,
   validate([
     body('username').trim().toLowerCase().isLength({ min: 3, max: 30 })
       .custom(userService.validateUsernameOrThrow),
@@ -55,7 +55,7 @@ router.post(
     // #swagger.tags = ['Auth']
 
     const signupFailedErr = createError.Unauthorized('Signup failed');
-    const { _token } = req; // set in validateSingupToken
+    const { _token } = req; // set in validateSignupToken
 
     const {
       username, email, full_name, institution_name, institution_type,
@@ -83,9 +83,9 @@ router.post(
     }
 
     // validate nonce
-    const isConsumed = await nonceService.useNonce(_token.nonce);
-    if (!isConsumed) {
-      logger.error('Signup failed: Nonce already consumed or invalid');
+    const isUsedNow = await nonceService.useNonce(_token.nonce);
+    if (!isUsedNow) {
+      logger.error('Signup failed: The nonce has already been consumed or is invalid');
       return next(signupFailedErr);
     }
 
