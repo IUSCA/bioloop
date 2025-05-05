@@ -339,31 +339,32 @@ router.get(
 function verifyUploadEnabledForRole(req, res, next) {
   // Check if enabled_features is defined
   if (!config.enabled_features) {
-    logger.warn('enabled_features is not defined in the config');
-    return next(createError.Forbidden());
+    logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
+    return next();
   }
 
   const upload_enabled = config.enabled_features.upload;
 
   // Check if upload feature is defined
-  if (upload_enabled === undefined) {
-    logger.error('Upload feature is not defined in the config');
-    return next(createError.Forbidden());
+  if (upload_enabled == null) {
+    logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
+    return next();
   }
 
-  // Check if upload feature is a boolean true
+  // Check if upload feature is a boolean `true`
   if (upload_enabled === true) {
-    return next(); // Allow all roles if upload is simply set to true
+    logger.info('Upload feature is enabled');
+    return next(); // Allow all roles if upload is set to `true`
   }
 
-  // Check if upload feature is boolean false
+  // Check if upload feature is boolean `false`
   if (upload_enabled === false) {
     logger.warn('Upload feature is disabled');
     return next(createError.Forbidden());
   }
 
   // Check if upload feature is an object
-  if (typeof upload_enabled !== 'object' || upload_enabled === null) {
+  if (typeof upload_enabled !== 'object') {
     logger.error('Invalid config for enabling dataset uploads');
     return next(createError.Forbidden());
   }
@@ -678,9 +679,10 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /*
-            * #swagger.description = 'workflow_id is optional. If the request body has
-            * workflow_id, a new relation is created between dataset and given workflow_id'
-            */
+                                          * #swagger.description = 'workflow_id is optional. If the request body has
+                                          * workflow_id, a new relation is created between dataset and given
+                                          * workflow_id'
+                                          */
 
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
@@ -869,13 +871,16 @@ router.patch(
     body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Modify dataset.'
-    /* #swagger.description =
-            To add files use POST "/datasets/:id/files"
-            To add workflow use POST "/datasets/:id/workflows"
-            To add state use POST "/datasets/:id/state"
-        */
+    /* eslint-disable */
+      // #swagger.tags = ['datasets']
+      // #swagger.summary = 'Modify dataset.'
+      /* #swagger.description =
+              To add files use POST "/datasets/:id/files"
+              To add workflow use POST "/datasets/:id/workflows"
+              To add state use POST "/datasets/:id/state"
+          */
+      /* eslint-enable */
+
     const datasetToUpdate = await prisma.dataset.findFirst({
       where: {
         id: req.params.id,
@@ -1079,14 +1084,6 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
     logger.error(workflowInitiationError);
   }
 
-  // logger.info('Waiting');
-  // return new Promise((resolve) => {
-  //   setTimeout(() => resolve({
-  //     workflowInitiated: requestedWorkflowInitiated,
-  //     workflowInitiationError,
-  //   }), 10000);
-  // });
-
   return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
 };
 
@@ -1138,7 +1135,7 @@ router.post(
           // console.log()
         }
       }
-      console.log(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
+      logger.info(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
       const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
       return res.json(wf);
     }
