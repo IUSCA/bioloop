@@ -17,6 +17,18 @@ function date(value) {
   return dayjs(value).format("MMM D YYYY");
 }
 
+function time(value) {
+  /**
+   * This function is intended to convert an ISO 8601 datetime string
+   * (with Z - UTC timezone) ex: "2023-06-14T01:18:40.501Z"
+   * to a date string of format HH:mm:ss AM/PM in browser's local time zone ex: "11:34:29 AM"
+   *
+   * date("2023-06-14T01:18:40.501Z") -> "01:18:40 AM"
+   */
+  if (value == null) return null;
+  return dayjs(value).format("HH:mm:ss A");
+}
+
 function displayDateTime(value) {
   /**
    * This function is intended to convert an ISO 8601 datetime string
@@ -49,6 +61,14 @@ function fromNow(value, withoutSuffix) {
    */
   if (value == null) return null;
   return dayjs(value).fromNow(withoutSuffix);
+}
+
+function daysFromNow(value) {
+  /**
+   * daysFromNow("2023-06-14T01:18:40.501Z") -> 2
+   */
+  if (value == null) return null;
+  return dayjs(value).diff(dayjs(), "days");
 }
 
 function readableDuration(t, withSuffix) {
@@ -127,10 +147,12 @@ function getMidnightNextDay() {
 export {
   absolute,
   date,
+  daysFromNow,
   displayDateTime,
   formatDuration,
   fromNow,
   getMidnightNextDay,
-  readableDuration
+  readableDuration,
+  time
 };
 
