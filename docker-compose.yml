@@ -209,6 +209,8 @@ services:
       - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
     command:
       - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+    profiles:
+      - metrics
 
   prometheus:
     image: prom/prometheus

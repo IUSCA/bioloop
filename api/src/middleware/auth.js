@@ -4,6 +4,11 @@ const _ = require('lodash/fp');
 const authService = require('../services/auth');
 const { setIntersection } = require('../utils');
 const ac = require('../services/accesscontrols');
+const nonceService = require('../services/nonce');
+const logger = require('../services/logger');
+const constants = require('../constants');
+const { isFeatureEnabled } = require('../services/features');
+
 const asyncHandler = require('./asyncHandler');
 
 function authenticate(req, res, next) {
@@ -69,27 +74,27 @@ function buildActions(action) {
 const accessControl = _.curry((
   resource,
   action,
-  { checkOwnerShip = false } = {},
-  // resourceOwnerFn = null,
+  { checkOwnership = false } = {},
+  resourceOwnerFn = null,
   // requesterFn = null,
 ) => {
   // https://github.com/pawangspandey/accesscontrol-middleware/blob/master/index.js
   const actions = buildActions(action);
   // const _resourceOwnerFn = resourceOwnerFn || ((req) => req.params.username);
   // const _requesterFn = requesterFn || ((req) => req.user.username);
-  return (req, res, next) => {
+  return async (req, res, next) => {
     // filter user roles that match defined roles
     const roles = [...setIntersection(ac.getRoles(), req?.user?.roles || [])];
-    const resourceOwner = req.params.username; // _resourceOwnerFn(req);
+    const resourceOwner = resourceOwnerFn ? await resourceOwnerFn(req, res, next) : req.params.username;
     const requester = req.user?.username; // _requesterFn(req);
 
     // console.log('access-controls', {
-    //   resource, action, checkOwnerShip, resourceOwner, requester, roles,
+    //   resource, action, checkOwnership, resourceOwner, requester, roles,
     // });
 
     if (roles && roles.length > 0) {
       const acQuery = ac.can(roles);
-      const permission = (checkOwnerShip && requester === resourceOwner)
+      const permission = (checkOwnership && requester === resourceOwner)
         ? acQuery[actions.own](resource)
         : acQuery[actions.any](resource);
       if (permission.granted) {
@@ -105,7 +110,7 @@ function getPermission({
   resource,
   action,
   requester_roles,
-  checkOwnerShip = false,
+  checkOwnership = false,
   requester,
   resourceOwner,
 }) {
@@ -114,16 +119,16 @@ function getPermission({
   const roles = [...setIntersection(ac.getRoles(), requester_roles || [])];
   if (roles && roles.length > 0) {
     const acQuery = ac.can(roles);
-    return (checkOwnerShip && requester === resourceOwner)
+    return (checkOwnership && requester === resourceOwner)
       ? acQuery[actions.own](resource)
       : acQuery[actions.any](resource);
   }
 }
 
 const loginHandler = asyncHandler(async (req, res, next) => {
-  const user = req.auth_user;
+  const user = req.auth?.user;
   if (user) {
-    const resObj = await authService.onLogin({ user, method: req.auth_method });
+    const resObj = await authService.onLogin({ user, method: req.auth?.method });
 
     if (user.roles.includes('admin')) {
       // set cookie
@@ -141,11 +146,28 @@ const loginHandler = asyncHandler(async (req, res, next) => {
       });
     }
 
+    resObj.status = constants.auth.verify.response.status.SUCCESS;
     return res.json(resObj);
   }
   // User was authenticated but they are not a portal user
-  // Send an empty success message
-  return res.status(204).send();
+  if (isFeatureEnabled({ key: 'signup' })) {
+    const email = req.auth?.identity?.email;
+    if (!email) {
+      logger.error('User authenticated but no email found in identity returned by the provider');
+      return next(createError.InternalServerError());
+    }
+    const nonce = await nonceService.createNonce();
+    const signup_token = authService.issueSignupToken({ email, nonce });
+    return res.json({
+      status: constants.auth.verify.response.status.SIGNUP_REQUIRED,
+      email,
+      signup_token,
+    });
+  }
+  return res.json({
+    status: constants.auth.verify.response.status.NOT_A_USER,
+    message: 'The user is authenticated but not recognized as a portal user.',
+  });
 });
 
 module.exports = {

@@ -105,7 +105,7 @@ const find_or_create_test_user = async ({ role }) => {
 };
 
 function get_upload_token(file_path) {
-  // [^\w.-]+ matches one or more characters that are not word 
+  // [^\w.-]+ matches one or more characters that are not word
   // characters (letters, digits, or underscore), dots, or hyphens
   const hyphen_delimited_file_path = file_path.replace(/[^\w.-]+/g, '-');
   const scope = `${config.get('oauth.upload.scope_prefix')}${hyphen_delimited_file_path}`;
@@ -208,6 +208,21 @@ async function getLoginUser(attribute_key, value, user_data = {}) {
   return null;
 }
 
+function issueSignupToken({ email, nonce }) {
+  const claim = {
+    iss: config.get('auth.jwt.iss'),
+    exp: (Date.now() + config.get('auth.signup.jwt.ttl_milliseconds')) / 1000,
+    sub: email,
+    scope: config.get('auth.signup.jwt.scope'),
+    nonce,
+  };
+  return jsonwt.sign(claim, key, signOpt);
+}
+
+function issueToken(claim) {
+  return jsonwt.sign(claim, key, signOpt);
+}
+
 module.exports = {
   onLogin,
   issueJWT,
@@ -219,4 +234,6 @@ module.exports = {
   getJWKS,
   issueGrafanaToken,
   getLoginUser,
+  issueSignupToken,
+  issueToken,
 };

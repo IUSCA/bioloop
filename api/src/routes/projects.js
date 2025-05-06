@@ -220,7 +220,7 @@ router.get(
 
 router.get(
   '/:username/:id/datasets',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   validate([
     param('username').notEmpty().escape(),
     query('staged').toBoolean().optional(),
@@ -349,7 +349,7 @@ const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
 
 router.get(
   '/:username/all',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   validate([
     query('take').default(25).isInt().toInt(),
     query('skip').default(0).isInt().toInt(),
@@ -455,7 +455,7 @@ router.get(
   validate([
     query('include_datasets').toBoolean().optional().default(true),
   ]),
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project associated with a username

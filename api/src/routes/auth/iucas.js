@@ -3,9 +3,11 @@ const { query, body } = require('express-validator');
 const IULoginHelper = require('@iusca/iulogin-helper');
 const config = require('config');
 
+const createError = require('http-errors');
 const { validate } = require('../../middleware/validators');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { loginHandler } = require('../../middleware/auth');
+const logger = require('../../services/logger');
 
 const authService = require('../../services/auth');
 
@@ -39,12 +41,19 @@ router.post(
     // eslint-disable-next-line no-unused-vars
     const login = async (cas_id) => {
       if (!cas_id) {
-        return next(new Error('Invalid CAS ID'));
+        logger.error('CAS login failed: no cas_id');
+        return next(createError.InternalServerError());
       }
       const user = await authService.getLoginUser('cas_id', cas_id);
 
-      req.auth_user = user;
-      req.auth_method = 'IUCAS';
+      req.auth = {
+        user,
+        method: 'IUCAS',
+        identity: {
+          email: `${cas_id}@iu.edu`,
+          cas_id,
+        },
+      };
       next();
     };
 

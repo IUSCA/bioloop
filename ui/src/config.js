@@ -1,6 +1,6 @@
 const exports = {
   mode: "development",
-  // vite server redirects traffic on starting with apiBaseURL
+  // vite server redirects traffic on URLs starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
   uploadApiBasePath:
@@ -14,7 +14,7 @@ const exports = {
     import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
-    uploadToken: 5,
+    uploadToken: 20,
   },
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
@@ -83,7 +83,10 @@ const exports = {
       enabledForRoles: ["admin"],
     },
     downloads: true,
-    uploads: { enabledForRoles: ["admin"] },
+    signup: true,
+    uploads: {
+      enabledForRoles: ["admin"],
+    },
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
@@ -111,18 +114,6 @@ const exports = {
   },
   upload: {
     scope_prefix: "upload_file:",
-    types: { DATASET: "DATASET" },
-    status: {
-      COMPUTING_CHECKSUMS: "COMPUTING_CHECKSUMS",
-      CHECKSUM_COMPUTATION_FAILED: "CHECKSUM_COMPUTATION_FAILED",
-      UPLOADING: "UPLOADING",
-      UPLOAD_FAILED: "UPLOAD_FAILED",
-      UPLOADED: "UPLOADED",
-      PROCESSING: "PROCESSING",
-      PROCESSING_FAILED: "PROCESSING_FAILED",
-      COMPLETE: "COMPLETE",
-      FAILED: "FAILED",
-    },
   },
 };
 

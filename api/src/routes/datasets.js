@@ -9,10 +9,12 @@ const multer = require('multer');
 const _ = require('lodash/fp');
 const config = require('config');
 const pm = require('picomatch');
+const he = require('he');
 
 // const logger = require('../services/logger');
+const path = require('path');
 const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl, getPermission } = require('../middleware/auth');
+const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
@@ -108,6 +110,78 @@ const assoc_body_schema = {
     toInt: true,
   },
 };
+
+const buildUserRoleQueryObject = ({
+  deleted, type, name, match_name_exact, username,
+}) => {
+  const query_obj = _.omitBy(_.isUndefined)({
+    is_deleted: deleted,
+    type,
+    name: name ? {
+      ...(match_name_exact ? { equals: name } : { contains: name }),
+      mode: 'insensitive', // case-insensitive search
+    } : undefined,
+    // Filter by projects assigned to this user
+    projects: {
+      some: {
+        project: {
+          users: {
+            some: {
+              user: {
+                username,
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return query_obj;
+};
+
+router.get(
+  '/:username/all',
+  isPermittedTo('read', { checkOwnership: true }),
+  query('deleted').toBoolean().default(false),
+  query('type').isIn(config.dataset_types).optional(),
+  query('name').notEmpty().optional(),
+  query('limit').isInt({ min: 1 }).toInt().optional(), // optional because watch script needs all datasets at once
+  query('offset').isInt({ min: 0 }).toInt().optional(),
+  query('sort_by').default('updated_at'),
+  query('sort_order').default('desc').isIn(['asc', 'desc']),
+  query('match_name_exact').default(false).toBoolean(),
+
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+
+    const query_obj = buildUserRoleQueryObject({ ...req.query, username: req.params.username });
+
+    const filterQuery = {
+      where: query_obj,
+    };
+    const orderBy = {
+      [req.query.sort_by]: req.query.sort_order,
+    };
+    const datasetRetrievalQuery = {
+      skip: req.query.offset,
+      take: req.query.limit,
+      ...filterQuery,
+      orderBy,
+    };
+
+    const [datasets, count] = await prisma.$transaction([
+      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
+      prisma.dataset.count({ ...filterQuery }),
+    ]);
+
+    res.json({
+      metadata: { count },
+      datasets,
+    });
+    // res.json('/ user role');
+  }),
+);
 
 const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
@@ -227,6 +301,8 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
+    // console.log('req.user.roles', req.user.roles);
+
     const query_obj = buildQueryObject(req.query);
 
     const filterQuery = { where: query_obj };
@@ -259,25 +335,176 @@ router.get(
   }),
 );
 
-const dataset_access_check = asyncHandler(async (req, res, next) => {
-  // assumes req.params.id is the dataset id user is requesting
-  // access check
-  const permission = getPermission({
-    resource: 'datasets',
-    action: 'read',
-    requester_roles: req?.user?.roles,
-  });
-  if (!permission.granted) {
-    const user_dataset_assoc = await datasetService.has_dataset_assoc({
-      username: req.user.username,
-      dataset_id: req.params.id,
-    });
-    if (!user_dataset_assoc) {
-      return next(createError.Forbidden());
-    }
+// todo - register routes specific to dataset uploads optionally based on verifyUploadEnabledForRole middleware
+function verifyUploadEnabledForRole(req, res, next) {
+  // Check if enabled_features is defined
+  if (!config.enabled_features) {
+    logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
+    return next();
   }
+
+  const upload_enabled = config.enabled_features.upload;
+
+  // Check if upload feature is defined
+  if (upload_enabled == null) {
+    logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
+    return next();
+  }
+
+  // Check if upload feature is a boolean `true`
+  if (upload_enabled === true) {
+    logger.info('Upload feature is enabled');
+    return next(); // Allow all roles if upload is set to `true`
+  }
+
+  // Check if upload feature is boolean `false`
+  if (upload_enabled === false) {
+    logger.warn('Upload feature is disabled');
+    return next(createError.Forbidden());
+  }
+
+  // Check if upload feature is an object
+  if (typeof upload_enabled !== 'object') {
+    logger.error('Invalid config for enabling dataset uploads');
+    return next(createError.Forbidden());
+  }
+
+  const upload_enabled_for_roles = upload_enabled.enabled_for_roles;
+
+  // Check if enabled_for_roles is an array
+  if (!Array.isArray(upload_enabled_for_roles)) {
+    logger.error('Invalid config for enabling dataset uploads: enabled_for_roles is not an array');
+    return next(createError.Forbidden());
+  }
+
+  // Check if enabled_for_roles is empty
+  if (upload_enabled_for_roles.length === 0) {
+    logger.error('No roles specified for enabling dataset uploads');
+    return next(createError.Forbidden());
+  }
+
+  // Check if user has one of the allowed roles
+  const isUploadEnabledForUser = upload_enabled_for_roles.some(
+    (role) => req.user.roles.includes(role),
+  );
+
+  if (!isUploadEnabledForUser) {
+    logger.error('Upload feature is not enabled for this user');
+    return next(createError.Forbidden());
+  }
+
   next();
-});
+}
+
+// Used by:
+//  - UI
+//  - Workers
+router.get(
+  '/uploads',
+  verifyUploadEnabledForRole,
+  validate([
+    query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
+    query('dataset_name').notEmpty().escape().optional(),
+    query('limit').isInt({ min: 1 }).toInt().optional(),
+    query('offset').isInt({ min: 0 }).toInt().optional(),
+  ]),
+  isPermittedTo('read'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Retrieve past uploads'
+
+    const {
+      status, dataset_name, offset, limit,
+    } = req.query;
+
+    const query_obj = {
+      where: _.omitBy(_.isUndefined)({
+        status,
+        audit_log: {
+          dataset: {
+            name: { contains: dataset_name },
+          },
+        },
+      }),
+    };
+    const filter_query = {
+      skip: offset,
+      take: limit,
+      ...query_obj,
+      orderBy: {
+        audit_log: {
+          timestamp: 'desc',
+        },
+      },
+    };
+
+    const [dataset_upload_logs, count] = await prisma.$transaction([
+      prisma.dataset_upload_log.findMany({
+        ...filter_query,
+        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+      }),
+      prisma.dataset_upload_log.count({ ...query_obj }),
+    ]);
+
+    res.json({ metadata: { count }, uploads: dataset_upload_logs });
+  }),
+);
+
+// Used by UI
+router.get(
+  '/:username/uploads',
+  verifyUploadEnabledForRole,
+  validate([
+    query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
+    query('dataset_name').notEmpty().escape().optional(),
+    query('limit').isInt({ min: 1 }).toInt().optional(),
+    query('offset').isInt({ min: 0 }).toInt().optional(),
+    param('username').escape().notEmpty(),
+  ]),
+  isPermittedTo('read', { checkOwnership: true }),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Retrieve past uploads for a specific user'
+
+    const {
+      status, dataset_name, offset, limit,
+    } = req.query;
+
+    const query_obj = {
+      where: _.omitBy(_.isUndefined)({
+        status,
+        audit_log: {
+          dataset: {
+            name: { contains: dataset_name },
+          },
+          user: {
+            username: req.params.username,
+          },
+        },
+      }),
+    };
+    const filter_query = {
+      skip: offset,
+      take: limit,
+      ...query_obj,
+      orderBy: {
+        audit_log: {
+          timestamp: 'desc',
+        },
+      },
+    };
+
+    const [dataset_upload_logs, count] = await prisma.$transaction([
+      prisma.dataset_upload_log.findMany({
+        ...filter_query,
+        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+      }),
+      prisma.dataset_upload_log.count({ ...query_obj }),
+    ]);
+
+    res.json({ metadata: { count }, uploads: dataset_upload_logs });
+  }),
+);
 
 // get by id - worker + UI
 router.get(
@@ -292,9 +519,9 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
-    query('include_upload_log').toBoolean().default(false),
+    query('include_source_instrument').toBoolean().optional(),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // only select path and md5 columns from the dataset_file table if files is
@@ -310,7 +537,7 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
-      include_upload_log: req.query.include_upload_log,
+      include_source_instrument: req.query.include_source_instrument || false,
     });
 
     res.json(dataset);
@@ -326,7 +553,109 @@ function normalize_name(name) {
     .replaceAll(/-+/g, '-');
 }
 
-// create - worker
+/**
+ * Generates a Prisma query object for creating a new dataset.
+ *
+ * @function getDatasetCreateQuery
+ * @param {Object} data - The data for creating the dataset.
+ * @param {string} data.name - The name of the dataset.
+ * @param {string} data.type - The type of the dataset.
+ * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
+ * @param {BigInt} [data.size] - The size of the dataset.
+ * @param {string} data.origin_path - The origin path of the dataset.
+ * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
+ * @param {string} [data.workflow_id] - The ID of the associated workflow.
+ * @param {string} [data.project_id] - The ID of the associated project.
+ * @param {string} data.user_id - The ID of the user creating the dataset.
+ * @param {string} [data.src_instrument_id] - The ID of the source instrument.
+ * @param {string} [data.src_dataset_id] - The ID of the source dataset.
+ * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
+ * @param {string} [data.create_method=CONSTANTS.DATASET_CREATE_METHODS.SCAN] - The method used to create the dataset.
+ * @param {Object} [data.metadata] - Additional metadata for the dataset.
+ * @returns {Object} An object containing the query for creating a new dataset in the database.
+ *
+ * @description
+ * This function prepares a query object for creating a new dataset in the database.
+ * It normalizes the dataset name, sets up associations with workflows and projects,
+ * connects to source instruments and datasets, sets the initial state,
+ * and creates an audit log entry for the dataset creation.
+ */
+const getDatasetCreateQuery = (data) => {
+  /* eslint-disable no-unused-vars */
+  const {
+    name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
+    project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
+  } = data;
+  /* eslint-disable no-unused-vars */
+
+  // gather non-null data to create a new dataset
+  const create_query = _.flow([
+    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata']),
+    _.omitBy(_.isNil),
+  ])(data);
+
+  create_query.name = normalize_name(create_query.name); // normalize name
+
+  // create workflow association
+  if (workflow_id) {
+    create_query.workflows = {
+      create: [
+        {
+          id: workflow_id,
+        },
+      ],
+    };
+  }
+
+  if (project_id) {
+    create_query.projects = {
+      create: [{
+        project_id,
+        assignor_id: user_id,
+      }],
+    };
+  }
+
+  if (src_instrument_id) {
+    create_query.src_instrument = {
+      connect: {
+        id: src_instrument_id,
+      },
+    };
+  }
+
+  if (src_dataset_id) {
+    create_query.source_datasets = {
+      create: [{
+        source_id: src_dataset_id,
+      }],
+    };
+  }
+
+  // add a state
+  create_query.states = {
+    create: [
+      {
+        state: state || 'REGISTERED',
+      },
+    ],
+  };
+
+  create_query.audit_logs = {
+    create: [
+      {
+        action: 'create',
+        create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
+        user_id,
+      },
+    ],
+  };
+
+  return create_query;
+};
+
+// Create a new dataset
+// Used by - workers + UI
 router.post(
   '/',
   isPermittedTo('create'),
@@ -337,28 +666,38 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('origin_path').notEmpty().escape(),
+    body('project_id').optional(),
+    body('src_instrument_id').optional(),
+    body('src_dataset_id').optional(),
+    body('create_method').optional(),
+    body('workflow_id').optional(),
+    body('state').optional(),
+    body('metadata').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /*
-    * #swagger.description = 'workflow_id is optional. If the request body has
-    * workflow_id, a new relation is created between dataset and given workflow_id'
-    */
+                                          * #swagger.description = 'workflow_id is optional. If the request body has
+                                          * workflow_id, a new relation is created between dataset and given
+                                          * workflow_id'
+                                          */
 
-    // gather non-null data to create a new dataset
-    const data = _.flow([
-      _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size']),
-      _.omitBy(_.isNil),
-    ])(req.body);
+    const {
+      ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
+      name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
+    } = req.body;
 
-    const { ingestion_space } = req.body;
+    // remove any HTML entities inserted by browser because of URL encoding
+    const decoded_origin_path = he.decode(origin_path);
+
     if (ingestion_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
       const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
       const is_origin_path_restricted = restricted_ingestion_dirs.some((glob) => {
         const isMatch = pm(glob);
-        const matches = isMatch(data.origin_path, glob);
+        const matches = isMatch(decoded_origin_path, glob);
         return matches.isMatch;
       });
       if (is_origin_path_restricted) {
@@ -368,33 +707,27 @@ router.post(
       }
     }
 
-    // normalize name
-    data.name = normalize_name(data.name);
-
-    // create workflow association
-    if (req.body.workflow_id) {
-      data.workflows = {
-        create: [
-          {
-            id: req.body.workflow_id,
-          },
-        ],
-      };
-    }
-
-    // add a state
-    data.states = {
-      create: [
-        {
-          state: req.body.state || 'REGISTERED',
-        },
-      ],
-    };
+    const createQuery = getDatasetCreateQuery({
+      name,
+      type,
+      du_size,
+      origin_path: decoded_origin_path,
+      size,
+      bundle_size,
+      workflow_id,
+      project_id,
+      user_id: req.user.id,
+      src_instrument_id,
+      src_dataset_id,
+      state,
+      create_method,
+      metadata,
+    });
 
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    const dataset = await datasetService.createDataset(data);
+    const dataset = await datasetService.createDataset(createQuery);
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -412,100 +745,89 @@ router.post(
     body('datasets.*.origin_path').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Create multiple datasets.'
-    /* #swagger.description =
-        This endpoint is used to create multiple datasets in a single request.
-        It is useful for bulk uploading datasets.
-    */
+    /* eslint-disable */
 
-    /* #swagger.requestBody = {
-        "description": "Array of datasets to be created",
-        "required": true,
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "datasets": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": "string",
-                                    "type": "string",
-                                    "origin_path": "string"
+      // #swagger.tags = ['datasets']
+      // #swagger.summary = 'Create multiple datasets.'
+      /* #swagger.description =
+            This endpoint is used to create multiple datasets in a single request.
+            It is useful for bulk uploading datasets.
+        */
+
+      /* #swagger.requestBody = {
+            "description": "Array of datasets to be created",
+            "required": true,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "datasets": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": "string",
+                                        "type": "string",
+                                        "origin_path": "string",
+                                        "metadata": "object",
+                                    },
+                                    "required": ["name", "type", "origin_path"]
                                 },
-                                "required": ["name", "type", "origin_path"]
-                            },
-                            "minItems": 1,
-                            "maxItems": 100
-                        }
-                    },
-                    "required": ["datasets"]
+                                "minItems": 1,
+                                "maxItems": 100
+                            }
+                        },
+                        "required": ["datasets"]
+                    }
                 }
             }
-        }
-    } */
+        } */
 
-    /* #swagger.responses[200] = {
-        "description": "Array of datasets created",
-        "content": {
-            "application/json": {
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "created": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/components/schemas/Dataset"
-                            }
-                        },
-                        "conflicted": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": "string",
-                                    "type": "string"
-                                },
-                                "required": ["name", "type"]
-                            }
-                        },
-                        "errored": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": "string",
-                                    "type": "string"
-                                },
-                                "required": ["name", "type"]
+      /* #swagger.responses[200] = {
+            "description": "Array of datasets created",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "created": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Dataset"
+                                }
+                            },
+                            "conflicted": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": "string",
+                                        "type": "string"
+                                    },
+                                    "required": ["name", "type"]
+                                }
+                            },
+                            "errored": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": "string",
+                                        "type": "string"
+                                    },
+                                    "required": ["name", "type"]
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    } */
+        } */
+      /* eslint-enable */
 
     const data = req.body.datasets
-      .map((d) => {
-        const _d = _.pick(['name', 'type', 'origin_path'])(d);
-
-        // normalize name
-        _d.name = normalize_name(_d.name);
-
-        // add a state
-        _d.states = {
-          create: [
-            {
-              state: d.state || 'REGISTERED',
-            },
-          ],
-        };
-        return _d;
-      });
+      .map((d) => getDatasetCreateQuery(d));
 
     // create in separate transactions to avoid deadlocks
     const results = await Promise.allSettled(data.map((d) => datasetService.createDataset(d)));
@@ -549,19 +871,24 @@ router.patch(
     body('bundle').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Modify dataset.'
-    /* #swagger.description =
-        To add files use POST "/datasets/:id/files"
-        To add workflow use POST "/datasets/:id/workflows"
-        To add state use POST "/datasets/:id/state"
-    */
+    /* eslint-disable */
+      // #swagger.tags = ['datasets']
+      // #swagger.summary = 'Modify dataset.'
+      /* #swagger.description =
+              To add files use POST "/datasets/:id/files"
+              To add workflow use POST "/datasets/:id/workflows"
+              To add state use POST "/datasets/:id/state"
+          */
+      /* eslint-enable */
+
     const datasetToUpdate = await prisma.dataset.findFirst({
       where: {
         id: req.params.id,
       },
     });
-    if (!datasetToUpdate) { return next(createError(404)); }
+    if (!datasetToUpdate) {
+      return next(createError(404));
+    }
 
     const { metadata, ...data } = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
@@ -681,57 +1008,162 @@ router.delete(
   }),
 );
 
+/**
+ * Initiates a workflow which either processes or cancels a dataset upload.
+ *
+ * @async
+ * @function initiateUploadWorkflow
+ * @param {Object} options - The options object.
+ * @param {Object} options.dataset - The dataset to initiate the workflow on.
+ * @param {string} options.requestedWorkflow - The name of the workflow to initiate.
+ * @param {Object} options.user - The user initiating the workflow.
+ * @returns {Promise<Object>} An object containing the initiated workflow and any error messages.
+ * @property {Object|null} workflowInitiated - The initiated workflow object, or null if not initiated.
+ * @property {string|null} workflowInitiationError - Error message if workflow initiation failed, or null if successful.
+ *
+ * @description
+ * This function attempts to initiate either the 'process_dataset_upload' or the 'cancel_dataset_upload' workflow
+ * on a given dataset.
+ *
+ * `process_dataset_upload` -> This workflow initiates the processing of a dataset upload,
+ * which registers the dataset in the system. This workflow is triggered after the entirety of the dataset's contents
+ * have been uploaded.
+ *
+ * `cancel_dataset_upload`  -> This workflow cancels an incomplete dataset upload.
+ *  A dataset upload is considered incomplete if one of the following conditions is met:
+ * - All files have not been uploaded
+ * - All files have been uploaded but the `process_dataset_upload` has not been initiated.
+ *
+ * It is possible that the API may receive requests to initiate both of these workflows on the same dataset in
+ * proximity, thus triggering both of these workflows in parallel, which would result in a conflict.
+ * To avoid this:
+ * - Workflow `process_dataset_upload` should not be initiated if workflow `cancel_dataset_upload` is
+ * already in progress.
+ * - Workflow `cancel_dataset_upload` should not be initiated if workflow `process_dataset_upload` is already
+ * in progress.
+ *
+ * This function checks for a potential conflicting workflow that may already be in progress before initiating
+ * the requested workflow. If a conflicting workflow is found, the function will not initiate the requested workflow
+ * and will return an error message instead.
+ */
+const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null, user = null } = {}) => {
+  // return {
+  //   workflowInitiated: true,
+  //   workflowInitiationError: null,
+  // };
+
+  logger.info(`Received request to initiate workflow ${requestedWorkflow} on dataset ${dataset.id}`);
+
+  const uploadedDataset = dataset;
+  uploadedDataset.workflows = await datasetService.get_dataset_active_workflows({ dataset });
+
+  let requestedWorkflowInitiated;
+  let workflowInitiationError;
+
+  const conflictingUploadWorkflow = requestedWorkflow === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
+    ? CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD
+    : CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD;
+  logger.info(`Workflow ${requestedWorkflow} will not be started if conflicting workflow `
+      + `${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
+  logger.info(`Checking if conflicting workflow ${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
+  const foundConflictingUploadWorkflow = uploadedDataset.workflows.find(
+    (wf) => wf.name === conflictingUploadWorkflow,
+  );
+  if (!foundConflictingUploadWorkflow) {
+    logger.info(`Conflicting workflow ${conflictingUploadWorkflow} is not running on dataset ${dataset.id}`);
+    logger.info(`Starting workflow ${requestedWorkflow} on dataset ${dataset.id}`);
+    requestedWorkflowInitiated = await datasetService.create_workflow(
+      uploadedDataset,
+      requestedWorkflow,
+      user.id,
+    );
+  } else {
+    workflowInitiationError = `The workflow ${requestedWorkflow} cannot be started on dataset ${dataset.id} `
+        + `because conflicting workflow ${foundConflictingUploadWorkflow.id}) is `
+        + 'already in progress.';
+    logger.error(workflowInitiationError);
+  }
+
+  return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
+};
+
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
-  accessControl('workflow')('create'),
+  // Verify if this user is allowed to initiate the requested workflow on
+  // the requested dataset.
+  datasetService.workflow_access_check,
   validate([
     param('id').isInt().toInt(),
-    param('wf').isIn(['stage', 'integrated']),
+    param('wf').isIn([
+      CONSTANTS.WORKFLOWS.INTEGRATED,
+      CONSTANTS.WORKFLOWS.STAGE,
+      CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
+      CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
+    ]),
   ]),
-  (req, res, next) => {
-    // admin and operator roles can run stage and integrated workflows
-    // user role can only run stage workflows
-
-    // allowed_wfs is an object with keys as workflow names and values as true
-    // filter only works on objects not arrays, so we use an object with true
-    // value
-    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
-    if (allowed_wfs[req.params.wf]) {
-      return next();
-    }
-    next(createError.Forbidden());
-  },
-  // user role can only run wf on the datasets they can access through project
-  // associations
-  dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
-    // Allowed names are stage, integrated
+    // Allowed workflows are stage, integrated, process_dataset_upload, and cancel_dataset_upload.
 
-    // Log the staging attempt first.
-    if (req.params.wf === 'stage') {
-      try {
-        await prisma.stage_request_log.create({
-          data: {
-            dataset_id: req.params.id,
-            user_id: req.user.id,
-          },
-        });
-      } catch (e) {
-        // console.log()
-      }
-    }
+    const wf_name = req.params.wf;
 
     const dataset = await datasetService.get_dataset({
       id: req.params.id,
       workflows: true,
     });
 
-    const wf_name = req.params.wf;
-    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
-    return res.json(wf);
+    if (!dataset) {
+      return next(createError(404, 'Dataset not found'));
+    }
+
+    if (wf_name === CONSTANTS.WORKFLOWS.INTEGRATED
+          || wf_name === CONSTANTS.WORKFLOWS.STAGE) {
+      // If staging a dataset Log the staging attempt first.
+      if (wf_name === CONSTANTS.WORKFLOWS.STAGE) {
+        try {
+          await prisma.stage_request_log.create({
+            data: {
+              dataset_id: req.params.id,
+              user_id: req.user.id,
+            },
+          });
+        } catch (e) {
+          logger.error('Error creating stage request log', e);
+          return next(createError(500, 'Error creating stage request log'));
+          // console.log()
+        }
+      }
+      logger.info(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
+      const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
+      return res.json(wf);
+    }
+
+    if (wf_name === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
+          || wf_name === CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD) {
+      verifyUploadEnabledForRole(req, res, (err) => {
+        if (err) {
+          return next(err);
+        }
+        // Continue with the workflow initiation
+        initiateUploadWorkflow({
+          dataset,
+          requestedWorkflow: wf_name,
+          user: req.user,
+        }).then(({ workflowInitiated, workflowInitiationError }) => {
+          if (workflowInitiated) {
+            return res.json(workflowInitiated);
+          }
+          next(createError.InternalServerError(workflowInitiationError));
+        }).catch(next);
+      });
+      // return workflowInitiated
+      //   ? res.json(workflowInitiated)
+      //   : next(createError.InternalServerError(workflowInitiationError));
+    } else {
+      return next(createError(400, 'Invalid workflow type'));
+    }
   }),
 );
 
@@ -787,7 +1219,7 @@ router.get(
     param('id').isInt().toInt(),
     query('basepath').default(''),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
@@ -796,9 +1228,9 @@ router.get(
       dataset_id: req.params.id,
       base: req.query.basepath,
     });
-    // cache indefinitely - 1 year
-    // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
-    // if a need arises
+      // cache indefinitely - 1 year
+      // use ui/src/config.js file_browser.cache_busting_id to invalidate cache
+      // if a need arises
     res.set('Cache-control', 'private, max-age=31536000');
     res.json(files);
   }),
@@ -809,7 +1241,7 @@ router.get(
   validate([
     param('id').isInt().toInt(),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get the file tree
@@ -830,7 +1262,7 @@ router.get(
     param('id').isInt().toInt(),
     query('file_id').isInt().toInt().optional(),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get file download URL and token
@@ -914,7 +1346,7 @@ router.get(
     query('take').isInt().toInt().optional()
       .default(1000),
   ]),
-  dataset_access_check,
+  datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
@@ -924,6 +1356,204 @@ router.get(
       ...req.query,
     });
     res.json(files);
+  }),
+);
+
+// Used by UI
+router.get(
+  '/:datasetType/:name/exists',
+  validate([
+    param('datasetType').escape().notEmpty(),
+    param('name').escape().notEmpty(),
+    query('deleted').toBoolean().default(false),
+  ]),
+  accessControl('dataset_name')('read'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Determine if a dataset with a given name exists'
+
+    // Upon registration, the name of a dataset is normalized. Hence, we need to normalize
+    // the requested name before checking for the existence of a dataset with this name.
+    const normalizedName = normalize_name(req.params.name);
+
+    const matchingDataset = await prisma.dataset.findUnique({
+      where: {
+        name_type_is_deleted: {
+          name: normalizedName,
+          type: req.params.datasetType,
+          is_deleted: req.query.deleted,
+        },
+      },
+    });
+    res.json({ exists: !!matchingDataset });
+  }),
+);
+
+const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) => path.join(
+  config.upload.path,
+  datasetType.toLowerCase(),
+  `${datasetId}`,
+  'processed',
+);
+
+// - Register an uploaded dataset in the system
+// - Used by UI
+router.post(
+  '/upload',
+  verifyUploadEnabledForRole,
+  isPermittedTo('create'),
+  validate([
+    body('type').escape().notEmpty().isIn(config.dataset_types),
+    body('name').escape().notEmpty().isLength({ min: 3 }),
+    body('src_dataset_id').optional().isInt().toInt(),
+    body('files_metadata').isArray(),
+    body('project_id').optional(),
+    body('src_instrument_id').optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Register an uploaded dataset in the system'
+
+    const {
+      project_id, src_instrument_id, src_dataset_id, name, type, files_metadata,
+    } = req.body;
+
+    const datasetCreateQuery = getDatasetCreateQuery({
+      name,
+      type,
+      project_id,
+      user_id: req.user.id,
+      src_instrument_id,
+      src_dataset_id,
+    });
+
+    const dataset_upload_log = await prisma.$transaction(async (tx) => {
+      const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
+
+      const created_dataset_upload_log = await tx.dataset_upload_log.create({
+        data: {
+          status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
+          files: {
+            create: files_metadata.map((file) => ({
+              name: file.name,
+              md5: file.checksum,
+              num_chunks: file.num_chunks,
+              path: file.path,
+              status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
+            })),
+          },
+          audit_log: {
+            create: {
+              action: 'create',
+              create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
+              dataset_id: createdDataset.id,
+              user_id: req.user.id,
+            },
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await tx.dataset.update({
+        where: { id: createdDataset.id },
+        data: {
+          origin_path: getUploadedDatasetPath({ datasetId: createdDataset.id, datasetType: type }),
+        },
+      });
+
+      const updated_dataset_upload_log = await tx.dataset_upload_log.findUnique({
+        where: { id: created_dataset_upload_log.id },
+        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+      });
+      return updated_dataset_upload_log;
+    });
+
+    res.json(dataset_upload_log);
+  }),
+);
+
+// - Update the metadata related to a dataset upload event
+// - Used by UI, workers
+router.patch(
+  '/:id/upload',
+  verifyUploadEnabledForRole,
+  /**
+     * A user can only update metadata related to a dataset upload if one of the
+     * following two conditions are met:
+     *   - The user has either the `admin` or the `operator` role
+     *   - The user has the `user` role, and they are the one who uploaded this dataset.
+     * This is checked by the `isPermittedTo` middleware.
+     */
+  isPermittedTo(
+    'update',
+    { checkOwnership: true },
+    async (req, res, next) => { // resourceOwnerFn
+      try {
+        const dataset_creator = await datasetService.get_dataset_creator({ dataset_id: parseInt(req.params.id, 10) });
+        return dataset_creator.username;
+      } catch (error) {
+        logger.error(error);
+        return next(createError.InternalServerError());
+      }
+    },
+  ),
+  validate([
+    param('id').isInt().toInt(),
+    body('status').notEmpty().escape().optional(),
+    body('files').isArray().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['uploads']
+    // #swagger.summary = 'Update the metadata related to a dataset upload event'
+
+    const { status, files = [] } = req.body;
+    const dataset_upload_log_update_query = _.omitBy(_.isUndefined)({
+      status,
+    });
+
+    const dataset_upload_log = await prisma.$transaction(async (tx) => {
+      const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
+        where: {
+          dataset_id_create_method: {
+            dataset_id: req.params.id,
+            create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
+          },
+        },
+      });
+
+      let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
+        where: { audit_log_id: dataset_upload_audit_log.id },
+      });
+
+      if (Object.entries(dataset_upload_log_update_query).length > 0) {
+        await tx.dataset_upload_log.update({
+          where: { id: ds_upload_log.id },
+          data: dataset_upload_log_update_query,
+        });
+      }
+
+      if (files.length > 0) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const f of files) {
+          // eslint-disable-next-line no-await-in-loop
+          await tx.file_upload_log.update({
+            where: { id: f.id },
+            data: f.data,
+          });
+        }
+      }
+
+      ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
+        where: { id: ds_upload_log.id },
+        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+      });
+
+      return ds_upload_log;
+    });
+
+    res.json(dataset_upload_log);
   }),
 );
 

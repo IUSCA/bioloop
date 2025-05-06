@@ -15,7 +15,7 @@ const router = express.Router();
 
 router.get(
   '/:username',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const user = await userService.findActiveUserBy('username', req.params.username);
@@ -78,7 +78,7 @@ router.post(
 
 router.patch(
   '/:username',
-  isPermittedTo('update', { checkOwnerShip: true }),
+  isPermittedTo('update', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
 
@@ -124,36 +124,27 @@ router.patch(
 
 router.delete(
   '/:username',
-  isPermittedTo('delete', { checkOwnerShip: true }),
+  isPermittedTo('delete', { checkOwnership: true }),
   validate([
-    // Validate and transform hard_delete into a boolean with a default value
-    // of false
-    query('hard_delete')
-      .toBoolean()
-      .default(false), // Defaults to false if the parameter is not provided
+    query('hard_delete').isBoolean().toBoolean().default(false),
   ]),
   asyncHandler(async (req, res, next) => {
-    try {
-      // #swagger.tags = ['Users']
-      const { username } = req.params;
-      const hardDelete = req.query.hard_delete; // Already validated and transformed to a boolean
+    // #swagger.tags = ['Users']
+    const { username } = req.params;
+    const hardDelete = req.query.hard_delete; // Already validated and transformed to a boolean
 
-      let result;
-      if (hardDelete) {
-        // Perform hard delete
-        result = await userService.hardDeleteUser(username);
-        res.status(200).json({
-          message: 'User and associated data deleted/disassociated successfully.',
-          data: result, // Return relevant details
-        });
-      } else {
-        // Perform soft delete
-        result = await userService.softDeleteUser(username);
-        res.status(200).json(result); // Return transformed user object
-      }
-    } catch (error) {
-      // console.error(`Error deleting user (hardDelete=${hardDelete}):`,error);
-      return next(createError.InternalServerError('Error deleting user.'));
+    let result;
+    if (hardDelete) {
+      // Perform hard delete
+      result = await userService.hardDeleteUser(username);
+      res.status(200).json({
+        message: 'User and associated data deleted/disassociated successfully.',
+        data: result, // Return relevant details
+      });
+    } else {
+      // Perform soft delete
+      result = await userService.softDeleteUser(username);
+      res.status(200).json(result); // Return transformed user object
     }
   }),
 );

@@ -1,8 +1,9 @@
 import { defineConfig } from 'vitepress';
+import { withMermaid } from "vitepress-plugin-mermaid";
 import { withSidebar } from 'vitepress-sidebar';
 
 // https://vitepress.dev/reference/site-config
-const vitePressOptions =  {
+let vitePressOptions =  {
   title: "Bioloop",
   base: "/bioloop/docs/",
   description: "Bioloop Documentation",
@@ -65,6 +66,17 @@ const vitePressOptions =  {
     }
   ]
 };
+
+vitePressOptions = withMermaid({
+  ...vitePressOptions,
+  mermaid: {
+    // refer https://mermaid.js.org/config/setup/modules/mermaidAPI.html#mermaidapi-configuration-defaults for options
+  },
+  // optionally set additional config for plugin itself with MermaidPluginConfig
+  mermaidPlugin: {
+    class: "mermaid my-class", // set additional css classes for parent container 
+  },
+})
 
 
 const vitePressSidebarOptions = {

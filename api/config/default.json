@@ -48,6 +48,16 @@
     "auto_sign_up": {
       "enabled": false,
       "default_role": "user"
+    },
+    "signup": {
+      "default_role": "user",
+      "dev_default_role": "admin",
+      "jwt": {
+        "scope": "signup",
+        "ttl_milliseconds": 600000
+      },
+      "auto_generate_username_if_not_unique": true,
+      "max_username_suffix": 999
     }
   },
   "oauth": {
@@ -62,19 +72,7 @@
     }
   },
   "upload": {
-    "path": "",
-    "types": {
-      "DATASET": "DATASET"
-    },
-    "status": {
-      "UPLOADING": "UPLOADING",
-      "UPLOAD_FAILED": "UPLOAD_FAILED",
-      "UPLOADED": "UPLOADED",
-      "PROCESSING": "PROCESSING",
-      "PROCESSING_FAILED": "PROCESSING_FAILED",
-      "COMPLETE": "COMPLETE",
-      "FAILED": "FAILED"
-    }
+    "path": ""
   },
   "download_server": {
     "base_url": ""
@@ -182,9 +180,20 @@
     "slateScratch": ""
   },
   "enabled_features": {
+    "upload": {
+      "enabled_for_roles": ["admin"]
+    },
     "fs": {
       "enabled_for_roles": ["admin"]
     },
-    "downloads": true
-  }
+    "downloads": true,
+    "signup": true
+  },
+  "institution_types": [
+    "Commercial",
+    "External Academic",
+    "Internal Academic",
+    "Non-profit",
+    "Other"
+  ]
 }

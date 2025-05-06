@@ -1,14 +1,14 @@
 <template>
   <AuthStatus
     :get-url="authService.getCiUrl"
-    :verify="auth.ciLogin"
+    :verify="auth.withHandledVerifyResponse(authService.ciVerify)"
     :param-names="['code', 'state']"
   />
 </template>
 
 <script setup>
-import { useAuthStore } from "@/stores/auth";
 import authService from "@/services/auth";
+import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 </script>

@@ -1,7 +1,7 @@
 <template>
   <AuthStatus
     :get-url="authService.getMicrosoftUrl"
-    :verify="auth.microsoftLogin"
+    :verify="auth.withHandledVerifyResponse(authService.microsoftVerify)"
     :param-names="['code', 'state']"
   />
 </template>

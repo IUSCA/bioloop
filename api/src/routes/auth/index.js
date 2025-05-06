@@ -16,12 +16,14 @@ const googleRouter = require('./google');
 const cilogonRouter = require('./cilogon');
 const casRouter = require('./iucas');
 const microsoftRouter = require('./microsoft');
+const signupRouter = require('./signup');
+const { isFeatureEnabled } = require('../../services/features');
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Auth']
   const user = await userService.findActiveUserBy('username', req.user.username);
   if (user) {
-    const resObj = await authService.onLogin({ user });
+    const resObj = await authService.onLogin({ user, updateLastLogin: false });
     if (user.roles.includes('admin')) {
       // set cookie
       res.cookie('grafana_token', authService.issueGrafanaToken(user), {
@@ -113,5 +115,9 @@ if (config.get('auth.cilogon.enabled')) {
 
 if (config.get('auth.microsoft.enabled')) {
   router.use('/microsoft', microsoftRouter);
+}
+
+if (isFeatureEnabled({ key: 'signup' })) {
+  router.use('/signup', signupRouter);
 }
 module.exports = router;

@@ -9,6 +9,7 @@ const path = require('node:path');
 const createError = require('http-errors');
 
 const config = require('config');
+// eslint-disable-next-line lodash-fp/use-fp
 const _ = require('lodash');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
@@ -70,7 +71,7 @@ const get_mounted_search_dir = (req) => {
   const path_prefix = `${base_dir}/`;
 
   const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
-    + path_prefix.length);
+      + path_prefix.length);
   const mount_dir = get_mount_dir(req);
   return path.join(mount_dir, query_path);
 };
