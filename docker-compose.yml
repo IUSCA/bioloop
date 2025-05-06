@@ -4,7 +4,7 @@
 
 services:
   ui:
-    image: node:19
+    image: node:21
     ports:
       - 127.0.0.1:443:443
     env_file:
@@ -16,7 +16,7 @@ services:
     command: npm run dev
 
   api:
-    image: node:19
+    image: node:21
     restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
     expose:
       - 3030
