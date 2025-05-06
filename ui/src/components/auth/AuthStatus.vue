@@ -104,9 +104,7 @@ if (paramsExist) {
           // read redirectPath value from local storage and reset it
           const _redirectPath = redirectPath.value;
           redirectPath.value = "";
-          router.push({
-            path: _redirectPath || "/",
-          });
+          router.push(_redirectPath || "/");
         } else if (
           status === constants.auth.verify.response.status.SIGNUP_REQUIRED
         ) {
