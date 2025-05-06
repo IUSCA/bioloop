@@ -3,13 +3,6 @@
 # It will set up the environment variables and start the server.
 set -e
 
-# Check if a specific string exists in a file and has anything following it
-workers_env="workers/.env"
-if [ ! -f "$workers_env" ]; then
-  echo "The file $workers_env does not exist."
-  exit 1
-fi
-
 
 echo "Checking if the database needs seeding..."
 if ! npx prisma db seed --preview-feature --dry-run | grep -q "No seeders found"; then
@@ -65,23 +58,10 @@ if [ -z "${OAUTH_DOWNLOAD_CLIENT_ID}" ] || [ -z "${OAUTH_DOWNLOAD_CLIENT_SECRET}
 fi
 
 
-
-worker_token="APP_API_TOKEN"
-echo "Checking if the string '${worker_token}' exists in the file '$workers_env'..."
-if grep -q "^${worker_token}=" "$workers_env"; then
-  value=$(grep "^${worker_token}=" "$workers_env" | cut -d'=' -f2)
-  if [ -n "$value" ]; then
-    echo "The file contains the string '${worker_token}' with a value: $value"
-  else
-    echo "The string '${worker_token}' exists but has no value."
-    sed -i '/^APP_API_TOKEN/d' $workers_env
-    echo "APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)" >> $workers_env
-  fi
-else
-  echo "Adding '${worker_token}' to the env file."
-  echo "APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)" >> $workers_env
+if ! grep -q "^APP_API_TOKEN=[^ ]\+" "workers/.env"; then
+  echo "APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)"
+  echo "APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)" >> workers/.env
 fi
 
 
-
-npm run dev 
+npm run dev

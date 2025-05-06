@@ -67,6 +67,7 @@ services:
       - db/queue/.env.example # For RabbitMQ connection settings
       - workers/.env.example # For all default settings
       - workers/.env # For keys made after the first run
+    working_dir: /opt/sca/app
     volumes:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
