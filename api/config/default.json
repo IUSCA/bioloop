@@ -186,6 +186,9 @@
     "fs": {
       "enabled_for_roles": ["admin"]
     },
+    "autoCreateProjectOnDatasetCreation": {
+      "enabled_for_roles": ["user"]
+    },
     "downloads": true,
     "signup": true
   },

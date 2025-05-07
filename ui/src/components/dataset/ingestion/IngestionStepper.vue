@@ -79,12 +79,13 @@
           <va-popover>
             <template #body>
               <div class="w-96">
-                Raw Data: Original, unprocessed data collected from instruments.
+                - Raw Data: Original, unprocessed data collected from
+                instruments.
                 <br />
-                Dara Product: Processed data derived from Raw Data
+                - Data Product: Processed data derived from Raw Data
               </div>
             </template>
-            <Icon icon="mdi:information" class="text-xl text-gray-500" />
+            <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
           </va-popover>
         </div>
       </div>
@@ -125,7 +126,7 @@
                 This linkage helps to trace the origins of processed data
               </div>
             </template>
-            <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+            <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
           </va-popover>
         </div>
       </div>
@@ -173,7 +174,7 @@
                 working on the same project.
               </div>
             </template>
-            <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+            <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
           </va-popover>
         </div>
       </div>
@@ -215,7 +216,7 @@
                   Source instrument where this data was collected from.
                 </div>
               </template>
-              <Icon icon="mdi:information" class="text-xl text-gray-500" />
+              <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
             </va-popover>
           </div>
         </div>

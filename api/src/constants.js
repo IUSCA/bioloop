@@ -80,6 +80,11 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
               source_dataset: true,
             },
           },
+          projects: {
+            select: {
+              project: true,
+            },
+          },
         },
       },
     },

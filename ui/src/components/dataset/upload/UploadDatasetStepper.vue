@@ -59,13 +59,13 @@
             <va-popover>
               <template #body>
                 <div class="w-96">
-                  Raw Data: Original, unprocessed data collected from
+                  - Raw Data: Original, unprocessed data collected from
                   instruments.
                   <br />
-                  Dara Product: Processed data derived from Raw Data
+                  - Data Product: Processed data derived from Raw Data
                 </div>
               </template>
-              <Icon icon="mdi:information" class="text-xl text-gray-500" />
+              <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
             </va-popover>
           </div>
         </div>
@@ -76,7 +76,9 @@
               <va-checkbox
                 v-model="isAssignedSourceRawData"
                 @update:modelValue="resetRawDataSearch"
-                :disabled="willUploadRawData"
+                :disabled="
+                  submitAttempted || willUploadRawData || noRawDataToAssign
+                "
                 color="primary"
                 label="Assign source Raw Data"
                 class="flex-grow"
@@ -88,14 +90,18 @@
             <DatasetSelectAutoComplete
               v-model:selected="selectedRawData"
               v-model:search-term="datasetSearchText"
-              :disabled="submitAttempted || !isAssignedSourceRawData"
+              :disabled="
+                submitAttempted || !isAssignedSourceRawData || noRawDataToAssign
+              "
               :dataset-type="config.dataset.types.RAW_DATA.key"
               placeholder="Search Raw Data"
               @clear="resetRawDataSearch"
               @open="onRawDataSearchOpen"
               @close="onRawDataSearchClose"
+              @load-initial="onInitialRawDataLoad"
               class="flex-grow"
               :label="'Dataset'"
+              :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
             >
             </DatasetSelectAutoComplete>
             <va-popover>
@@ -107,7 +113,7 @@
                   data
                 </div>
               </template>
-              <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+              <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
             </va-popover>
           </div>
         </div>
@@ -124,6 +130,7 @@
                     }
                   }
                 "
+                :disabled="submitAttempted || noProjectsToAssign"
                 color="primary"
                 label="Assign Project"
                 class="flex-grow"
@@ -132,18 +139,26 @@
           </div>
 
           <div class="flex-grow flex items-center">
-            <ProjectAsyncAutoComplete
-              v-model:selected="projectSelected"
-              v-model:search-term="projectSearchText"
-              :disabled="submitAttempted || !isAssignedProject"
-              placeholder="Search Projects"
-              @clear="resetProjectSearch"
-              @open="onProjectSearchOpen"
-              @close="onProjectSearchClose"
-              class="flex-grow"
-              :label="'Project'"
-            >
-            </ProjectAsyncAutoComplete>
+            <div class="flex-grow">
+              <!--              <div class="flex flex-col">-->
+              <ProjectAsyncAutoComplete
+                v-model:selected="projectSelected"
+                v-model:search-term="projectSearchText"
+                :disabled="
+                  submitAttempted || !isAssignedProject || noProjectsToAssign
+                "
+                placeholder="Search Projects"
+                @clear="resetProjectSearch"
+                @open="onProjectSearchOpen"
+                @close="onProjectSearchClose"
+                @load-initial="onInitialProjectsLoad"
+                :label="'Project'"
+                :messages="noProjectsToAssign ? 'No Projects to select' : null"
+              >
+              </ProjectAsyncAutoComplete>
+              <!--              <VaAlert dense color="info" border="left">Yo...</VaAlert>-->
+              <!--              </div>-->
+            </div>
             <va-popover>
               <template #body>
                 <div class="w-96">
@@ -155,7 +170,7 @@
                   members working on the same project.
                 </div>
               </template>
-              <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+              <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
             </va-popover>
           </div>
         </div>
@@ -172,6 +187,7 @@
                     }
                   }
                 "
+                :disabled="submitAttempted || noInstrumentsToAssign"
                 color="primary"
                 label="Assign source Instrument"
                 class="flex-grow"
@@ -183,12 +199,19 @@
             <va-select
               v-model="selectedSourceInstrument"
               :options="sourceInstrumentOptions"
-              :disabled="!isAssignedSourceInstrument"
+              :disabled="
+                submitAttempted ||
+                !isAssignedSourceInstrument ||
+                noInstrumentsToAssign
+              "
               label="Source Instrument"
               placeholder="Select Source Instrument"
               class="flex-grow"
               :text-by="'name'"
               :track-by="'id'"
+              :messages="
+                noInstrumentsToAssign ? 'No Instruments to select' : null
+              "
             />
             <div class="flex items-center ml-2">
               <va-popover>
@@ -197,7 +220,7 @@
                     Source instrument where this data was collected from.
                   </div>
                 </template>
-                <Icon icon="mdi:information" class="text-xl text-gray-500" />
+                <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
               </va-popover>
             </div>
           </div>
@@ -400,6 +423,14 @@ const selectingDirectory = ref(false);
 const populatedDatasetName = ref("");
 const step = ref(0);
 const uploadCancelled = ref(false);
+const projectOptions = ref([]);
+const rawDataOptions = ref([]);
+const noRawDataToAssign = ref(false);
+const noProjectsToAssign = ref(false);
+
+const noInstrumentsToAssign = computed(() => {
+  return sourceInstrumentOptions.value.length === 0;
+});
 
 /**
  * Determines if the upload process has been completed.
@@ -467,13 +498,34 @@ const isLastStep = computed(() => {
 });
 
 const uploadFormData = computed(() => {
+  let project_payload = null;
+  if (noProjectsToAssign.value) {
+    /**
+     * If user has no Projects to assign to the Dataset being uploaded, a new Project will be auto-created for them,
+     * if this feature is enabled.
+     */
+    if (auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")) {
+      project_payload = {
+        browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
+        assignor_id: auth.user.id,
+        assignee_ids: [auth.user.id],
+        user_assignor_id: auth.user.id,
+      };
+    }
+  } else {
+    project_payload = {
+      project_id: projectSelected.value ? projectSelected.value.id : null,
+    };
+  }
+
   return {
     name: populatedDatasetName.value,
     type: selectedDatasetType.value["value"],
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    project_id: projectSelected.value ? projectSelected.value.id : null,
+    project_payload,
+    // project_id: projectSelected.value ? projectSelected.value.id : null,
     src_instrument_id: selectedSourceInstrument.value
       ? selectedSourceInstrument.value.id
       : null,
@@ -541,6 +593,12 @@ const onRawDataSearchClose = () => {
   }
 };
 
+const onInitialRawDataLoad = (datasets) => {
+  // rawDataOptions.value = datasets;
+  noRawDataToAssign.value = datasets.length === 0;
+  isAssignedSourceRawData.value = !noRawDataToAssign.value;
+};
+
 const onProjectSearchOpen = () => {
   projectSelected.value = null;
 };
@@ -549,6 +607,12 @@ const onProjectSearchClose = () => {
   if (!projectSelected.value) {
     projectSearchText.value = "";
   }
+};
+
+const onInitialProjectsLoad = (projects) => {
+  // projectOptions.value = projects;
+  noProjectsToAssign.value = projects.length === 0;
+  isAssignedProject.value = !noProjectsToAssign.value;
 };
 
 const isStepperButtonDisabled = (stepIndex) => {
@@ -1137,6 +1201,8 @@ const preUpload = async () => {
   try {
     const res = await createOrUpdateUploadLog(logData);
     datasetUploadLog.value = res.data;
+    projectSelected.value =
+      datasetUploadLog.value.audit_log.dataset.projects[0].project;
   } catch (err) {
     // console.error(err);
     throw new Error("Error logging dataset upload");
@@ -1266,8 +1332,9 @@ onMounted(() => {
     .getAll()
     .then((res) => {
       sourceInstrumentOptions.value = res.data;
+      isAssignedSourceInstrument.value = !noInstrumentsToAssign.value;
     })
-    .catch((err) => {
+    .catch(() => {
       toast.error("Failed to load resources");
       // console.error(err);
     })

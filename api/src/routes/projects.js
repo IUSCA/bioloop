@@ -157,7 +157,7 @@ router.get(
     ]);
 
     res.json({
-      metadata: { count: totalCount },
+      metadata: { totalCount },
       projects,
     });
   }),
@@ -234,10 +234,10 @@ router.get(
     // #swagger.summary = get all datasets associated with a project, with
     // optional params for filtering;
     /*
-    * #swagger.description = user role:
-    * can only see datasets if they have access to the project.
-      operator, admin: can see any project's datasets
-    */
+        * #swagger.description = user role:
+        * can only see datasets if they have access to the project.
+          operator, admin: can see any project's datasets
+        */
 
     const hasProjectAssociation = await projectService.has_project_assoc({
       projectId: req.params.id,
@@ -362,8 +362,8 @@ router.get(
     // #swagger.summary = get all projects associated with a username with
     // pagination.
     /* #swagger.description = user role: can only see their projects.
-      operator, admin: can see anyone's projects
-    */
+          operator, admin: can see anyone's projects
+        */
     const { search, sort_order, sort_by } = req.query;
     const { username } = req.params;
 
@@ -460,8 +460,8 @@ router.get(
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project associated with a username
     /* #swagger.description = user role: can only see their project.
-      operator, admin: can see anyone's project
-    */
+          operator, admin: can see anyone's project
+        */
     const { include_datasets } = req.query;
 
     const project = await prisma.project.findFirstOrThrow({
@@ -523,9 +523,9 @@ router.post(
     // #swagger.tags = ['Projects']
     // #swagger.summary = create a project
     /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+        * #swagger.description = admin and operator roles are allowed and user role
+        * is forbidden
+        */
     const { user_ids, dataset_ids, ...projectData } = req.body;
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
@@ -570,9 +570,9 @@ router.post(
     // #swagger.tags = ['Projects']
     // #swagger.summary = merge multiple projects into a source project
     /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+        * #swagger.description = admin and operator roles are allowed and user role
+        * is forbidden
+        */
 
     // get source project
     const source_porject = await prisma.project.findFirstOrThrow({
@@ -643,9 +643,9 @@ router.put(
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate users to a project
     /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+        * #swagger.description = admin and operator roles are allowed and user role
+        * is forbidden
+        */
 
     // get project or send 404 if not found
     const project = await prisma.project.findFirstOrThrow({
@@ -696,9 +696,9 @@ router.put(
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate contacts / external users to a project
     /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+        * #swagger.description = admin and operator roles are allowed and user role
+        * is forbidden
+        */
 
     // get project or send 404 if not found
     await prisma.project.findFirstOrThrow({
@@ -750,9 +750,9 @@ router.patch(
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
     /*
-     * #swagger.description = admin and operator roles are allowed and user
-     * role is forbidden
-     */
+         * #swagger.description = admin and operator roles are allowed and user
+         * role is forbidden
+         */
 
     // get project or send 404 if not found
     await prisma.project.findFirstOrThrow({
@@ -778,7 +778,7 @@ router.patch(
     const add_assocs = prisma.project_dataset.createMany({
       data: create_data,
     });
-    // delete existing associations
+      // delete existing associations
     const delete_assocs = prisma.project_dataset.deleteMany({
       where: {
         OR: delete_data,
@@ -802,9 +802,9 @@ router.patch(
     // #swagger.tags = ['Projects']
     // #swagger.summary = update a project
     /*
-     * #swagger.description = admin and operator roles are allowed and user
-     * role is forbidden
-     */
+         * #swagger.description = admin and operator roles are allowed and user
+         * role is forbidden
+         */
 
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
@@ -847,9 +847,9 @@ router.delete(
     // #swagger.tags = ['Projects']
     // #swagger.summary = delete a project and all its associations
     /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+        * #swagger.description = admin and operator roles are allowed and user role
+        * is forbidden
+        */
 
     const deleted_project = await prisma.project.delete({
       where: {

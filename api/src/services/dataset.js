@@ -8,7 +8,7 @@ const config = require('config');
 const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
-const { log_axios_error } = require('../utils');
+const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
@@ -18,6 +18,7 @@ const CONSTANTS = require('../constants');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPermission, accessControl } = require('../middleware/auth');
 const logger = require('./logger');
+const projectService = require('./project');
 
 const prisma = new PrismaClient();
 
@@ -174,7 +175,9 @@ async function get_dataset({
   }
   dataset?.audit_logs?.forEach((log) => {
     // eslint-disable-next-line no-param-reassign
-    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+    if (log.user) {
+      log.user = log.user ? userService.transformUser(log.user) : null;
+    }
   });
 
   return dataset;
@@ -269,7 +272,7 @@ function create_filetree(files) {
           metadata: {},
           children: {},
         };
-        // eslint-disable-next-line no-param-reassign
+          // eslint-disable-next-line no-param-reassign
         parent.children[dir_name] = curr;
         return curr;
       }, root);
@@ -749,6 +752,55 @@ const workflow_access_check = [
   }),
 ];
 
+async function buildProjectAssociationQuery({
+  project_id = null,
+  project_assignor_id = null,
+  project_assignee_ids = [],
+  user_assignor_id = null,
+  user_roles = [],
+  browser_enabled = false,
+  dataset_name = '',
+} = {}) {
+  let create_query = null;
+  if (project_id) {
+    // If a Project ID is provided, associate dataset with the existing project
+    create_query = {
+      create: [{
+        project_id,
+        ...(project_assignor_id && { assignor_id: project_assignor_id }),
+      }],
+    };
+  } else if (isFeatureEnabledForRole({ feature: 'autoCreateProjectOnDatasetCreation', roles: user_roles })) {
+    // If a Project ID is not provided and auto-creation of projects is enabled,
+    // create a new project, assign the current user to it, and associate the dataset with the new project.
+    const generated_project_name = projectService.generate_new_project_name(
+      { suffix: dataset_name },
+    );
+    create_query = {
+      create: [{
+        project: {
+          create: {
+            name: generated_project_name,
+            slug: await projectService.generate_slug({ name: generated_project_name }),
+            description: `Auto-generated project for dataset ${generated_project_name}.`,
+            browser_enabled,
+            ...(project_assignee_ids.length > 0 && { // Check if any users needs to be assigned to the project.
+              users: {
+                create: project_assignee_ids.map((id) => ({
+                  user_id: id,
+                  ...(user_assignor_id && { assignor_id: user_assignor_id }),
+                })),
+              },
+            }),
+          },
+        },
+        ...(project_assignor_id && { assignor: { connect: { id: project_assignor_id } } }),
+      }],
+    };
+  }
+  return create_query;
+}
+
 module.exports = {
   soft_delete,
   get_dataset,
@@ -766,4 +818,5 @@ module.exports = {
   has_workflow_access,
   dataset_access_check,
   workflow_access_check,
+  buildProjectAssociationQuery,
 };

@@ -3,9 +3,12 @@ const path = require('path');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
 
+const config = require('config');
+const logger = require('../services/logger');
+
 function renameKey(oldKey, newKey) {
   return (obj) => {
-  // eslint-disable-next-line no-param-reassign
+    // eslint-disable-next-line no-param-reassign
     obj[newKey] = obj[oldKey];
     // eslint-disable-next-line no-param-reassign
     delete obj[oldKey];
@@ -188,7 +191,8 @@ function numericStringsToNumbers(arr, numericStringFields = []) {
   return _.map((e) => {
     if (typeof e === 'string') {
       return !Number.isNaN(e) && Number(e);
-    } if (typeof e === 'object') {
+    }
+    if (typeof e === 'object') {
       const convertedFields = {};
       numericStringFields.forEach((field) => {
         if (Object.keys(e).includes(field)) {
@@ -310,6 +314,77 @@ function base64urlEncode(buf) {
     .replace(/\//g, '_'); // Replace '/' with '_'
 }
 
+function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
+  logger.info(`Checking if feature ${feature} is null`);
+  if (!feature) {
+    return true;
+  }
+
+  console.log(`Checking if feature ${feature} is null`);
+  // Check if enabled_features is defined
+  if (!config.enabled_features) {
+    logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
+    return true;
+  }
+
+  const feature_enabled = config.enabled_features[feature];
+  logger.info(`Feature ${feature} is enabled:`);
+  logger.info(feature_enabled);
+
+  // Check if upload feature is defined
+  if (feature_enabled == null) {
+    logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
+    return true;
+  }
+  logger.info('not null');
+
+  // Check if upload feature is a boolean `true`
+  if (typeof feature_enabled === 'boolean') {
+    logger.info('feature_enabled === \'boolean');
+    return feature_enabled;
+  }
+  logger.info('not boolean');
+
+  // Check if upload feature is an object
+  if (typeof feature_enabled !== 'object') {
+    logger.error('Invalid config for enabling dataset uploads');
+    return false;
+  }
+  logger.info('is object');
+
+  const feature_enabled_for_roles = feature_enabled.enabled_for_roles;
+  logger.info('feature_enabled_for_roles:');
+  logger.info(feature_enabled_for_roles);
+
+  // Check if enabled_for_roles is an array
+  if (!Array.isArray(feature_enabled_for_roles)) {
+    logger.error('Invalid config for enabling dataset uploads: enabled_for_roles is not an array');
+    return false;
+  }
+  logger.info('is array');
+
+  // Check if enabled_for_roles is empty
+  if (feature_enabled_for_roles.length === 0) {
+    logger.error('No roles specified for enabling dataset uploads');
+    return false;
+  }
+  logger.info('not empty');
+
+  // Check if user has one of the allowed roles
+  const is_feature_enabled_for_user = feature_enabled_for_roles.some(
+    (role) => roles.includes(role),
+  );
+  logger.info('is_feature_enabled_for_user:');
+  logger.info(is_feature_enabled_for_user);
+  if (!is_feature_enabled_for_user) {
+    logger.info('Upload feature is not enabled for this user');
+  } else {
+    logger.info('Upload feature is enabled for this user');
+  }
+
+  return is_feature_enabled_for_user;
+}
+
 /**
  * Recursively sorts the keys of an object in ascending order.
  * If the input is an array, it applies the sorting to each element.
@@ -362,5 +437,6 @@ module.exports = {
   transactionWithRetry,
   TransactionRetryError,
   base64urlEncode,
+  isFeatureEnabledForRole,
   deepSortKeys,
 };

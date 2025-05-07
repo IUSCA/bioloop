@@ -63,9 +63,22 @@
         <tr>
           <td>Project</td>
           <td class="metadata">
-            <router-link :to="`/projects/${props.project?.id}`" target="_blank">
-              {{ props.project?.name }}
-            </router-link>
+            <div v-if="props.project">
+              <router-link
+                :to="`/projects/${props.project.id}`"
+                target="_blank"
+              >
+                {{ props.project.name }}
+              </router-link>
+            </div>
+            <InfoHighlight
+              v-else-if="
+                auth.isFeatureEnabled('autoCreateProjectOnDatasetCreation')
+              "
+              class="va-text-secondary"
+            >
+              A new Project will be created
+            </InfoHighlight>
           </td>
         </tr>
 

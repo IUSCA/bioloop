@@ -1,6 +1,4 @@
 <template>
-  <!--  v-model:populated-result="populatedResult"-->
-
   <AutoComplete
     v-model:search-text="searchTerm"
     :async="true"
@@ -17,6 +15,7 @@
     @close="onClose"
     :disabled="props.disabled"
     :label="props.label"
+    :messages="props.messages"
   />
 </template>
 
@@ -25,7 +24,7 @@ import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import _ from "lodash";
 
-const NAME_TRIM_THRESHOLD = 35;
+// const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
@@ -46,10 +45,7 @@ const props = defineProps({
   label: {
     type: String,
   },
-  error: {
-    type: String,
-  },
-  errorMessages: {
+  messages: {
     type: Array,
     default: () => [],
   },
@@ -59,6 +55,7 @@ const emit = defineEmits([
   "clear",
   "open",
   "close",
+  "load-initial",
   "update:selected",
   "update:searchTerm",
 ]);
@@ -70,19 +67,14 @@ const page = ref(1);
 const skip = computed(() => {
   return PAGE_SIZE * (page.value - 1);
 });
-// const selectedResult = ref(null)
 const searchTerm = computed({
   get: () => {
-    // return props.populatedResult ? props.populatedResult['name'] : ''
     return props.searchTerm;
   },
   set: (val) => {
     emit("update:searchTerm", val);
-    // emit('update:populatedResult', null)
   },
 });
-
-// const searchTerm = ref('')
 
 const debouncedSearch = ref(null);
 const searchIndex = ref(0);
@@ -91,14 +83,10 @@ const latestQuery = ref(null);
 
 const onSelect = (item) => {
   emit("update:searchTerm", item.name);
-  // selectedResult.value = item
-  // emit('select', item)
   emit("update:selected", item);
 };
 
 const loadNextPage = () => {
-  // console.log('loadNextPage')
-  // console.log('searchTerm:', searchTerm.value)
   page.value += 1; // increase page value for offset recalculation
   return searchDatasets({ appendToCurrentResults: true });
 };
@@ -145,6 +133,7 @@ const queryDatasets = ({ queryIndex = null, query = null } = {}) => {
 };
 
 const searchDatasets = ({
+  isInitialLoad = false,
   searchIndex = null,
   appendToCurrentResults = false,
   logQuery = false,
@@ -167,8 +156,8 @@ const searchDatasets = ({
         datasets.value = appendToCurrentResults
           ? datasets.value.concat(res.data.datasets)
           : res.data.datasets;
-        totalResultsCount.value = res.data.metadata.count;
-        resolveSearch(res.queryIndex);
+        totalResultsCount.value = res.data?.metadata?.count;
+        resolveSearch(res.queryIndex, isInitialLoad);
       })
       .catch((e) => {
         console.error(e);
@@ -177,10 +166,13 @@ const searchDatasets = ({
   }
 };
 
-const resolveSearch = (searchIndex) => {
+const resolveSearch = (searchIndex, isInitialLoad = false) => {
   searches.value.splice(searches.value.indexOf(searchIndex), 1);
   if (searches.value.length === 0) {
     loading.value = false;
+    if (isInitialLoad) {
+      emit("load-initial", datasets.value);
+    }
   }
 };
 
@@ -219,7 +211,7 @@ watch([searchTerm, filterQuery], () => {
 
 onMounted(() => {
   loading.value = true;
-  searchDatasets();
+  searchDatasets({ isInitialLoad: true });
 });
 
 onBeforeUnmount(() => {

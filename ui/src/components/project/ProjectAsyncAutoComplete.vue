@@ -1,6 +1,4 @@
 <template>
-  <!--  v-model:populated-result="populatedResult"-->
-
   <AutoComplete
     v-model:search-text="searchTerm"
     :async="true"
@@ -17,6 +15,7 @@
     @close="onClose"
     :disabled="props.disabled"
     :label="props.label"
+    :messages="props.messages"
   />
 </template>
 
@@ -26,7 +25,7 @@ import toast from "@/services/toast";
 import _ from "lodash";
 import { useAuthStore } from "@/stores/auth";
 
-const NAME_TRIM_THRESHOLD = 35;
+// const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
@@ -44,12 +43,17 @@ const props = defineProps({
   label: {
     type: String,
   },
+  messages: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits([
   "clear",
   "open",
   "close",
+  "load-initial",
   "update:selected",
   "update:searchTerm",
 ]);
@@ -80,8 +84,6 @@ const latestQuery = ref(null);
 
 const onSelect = (item) => {
   emit("update:searchTerm", item.name);
-  // selectedResult.value = item
-  // emit('select', item)
   emit("update:selected", item);
 };
 
@@ -111,23 +113,25 @@ const fetchQuery = computed(() => {
 
 const queryProjects = ({ queryIndex = null, query = null } = {}) => {
   return projectService
-    .getAll({ ...query, forSelf: !auth.canOperate })
+    .getAll({
+      ...query,
+      forSelf: !(auth.canOperate || auth.canAdmin),
+    })
     .then((res) => {
       return { data: res.data, ...(queryIndex && { queryIndex }) };
     });
 };
 
 const searchProjects = ({
+  isInitialLoad = false,
   searchIndex = null,
   appendToCurrentResults = false,
   logQuery = false,
 } = {}) => {
+  console.log("searching", fetchQuery.value);
   // Ensure that the same query is not being run a second time (which
   // is possible due to debounced searches). If it is, the search
   // can be resolved immediately.
-  console.log("latestQuery:", latestQuery.value);
-  console.log("fetchQuery:", fetchQuery.value);
-
   if (_.isEqual(latestQuery.value, fetchQuery.value)) {
     resolveSearch(searchIndex);
   } else {
@@ -135,30 +139,30 @@ const searchProjects = ({
       latestQuery.value = fetchQuery.value;
     }
 
-    console.log("will search projects:", fetchQuery.value);
     return queryProjects({
       ...(searchIndex && { queryIndex: searchIndex }),
       query: fetchQuery.value,
     })
       .then((res) => {
-        console.log("search results:", res.data.projects);
         projects.value = appendToCurrentResults
           ? projects.value.concat(res.data.projects)
           : res.data.projects;
         totalResultsCount.value = res.data?.metadata?.count || 0;
-        resolveSearch(res.queryIndex);
+        resolveSearch(res.queryIndex, isInitialLoad);
       })
-      .catch((e) => {
-        console.error(e);
+      .catch(() => {
         toast.error("Failed to load datasets");
       });
   }
 };
 
-const resolveSearch = (searchIndex) => {
+const resolveSearch = (searchIndex, isInitialLoad = false) => {
   searches.value.splice(searches.value.indexOf(searchIndex), 1);
   if (searches.value.length === 0) {
     loading.value = false;
+    if (isInitialLoad) {
+      emit("load-initial", projects.value);
+    }
   }
 };
 
@@ -182,7 +186,6 @@ const onClose = () => {
 };
 
 const onClear = () => {
-  console.log("onClear invoked");
   emit("clear");
 };
 
@@ -198,8 +201,7 @@ watch([searchTerm], () => {
 
 onMounted(() => {
   loading.value = true;
-  console.log("onMounted invoked");
-  searchProjects();
+  searchProjects({ isInitialLoad: true });
 });
 
 onBeforeUnmount(() => {
