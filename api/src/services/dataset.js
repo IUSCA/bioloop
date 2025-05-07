@@ -174,7 +174,9 @@ async function get_dataset({
   }
   dataset?.audit_logs?.forEach((log) => {
     // eslint-disable-next-line no-param-reassign
-    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+    if (log.user) {
+      log.user = log.user ? userService.transformUser(log.user) : null;
+    }
   });
 
   return dataset;
@@ -269,7 +271,7 @@ function create_filetree(files) {
           metadata: {},
           children: {},
         };
-        // eslint-disable-next-line no-param-reassign
+          // eslint-disable-next-line no-param-reassign
         parent.children[dir_name] = curr;
         return curr;
       }, root);

@@ -596,6 +596,9 @@ const getDatasetCreateQuery = (data) => {
 
   create_query.name = normalize_name(create_query.name); // normalize name
 
+  // Assign method of creation
+  create_query.create_method = create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN;
+
   // create workflow association
   if (workflow_id) {
     create_query.workflows = {
@@ -645,7 +648,6 @@ const getDatasetCreateQuery = (data) => {
     create: [
       {
         action: 'create',
-        create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
         user_id,
       },
     ],
@@ -679,10 +681,11 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /*
-                                          * #swagger.description = 'workflow_id is optional. If the request body has
-                                          * workflow_id, a new relation is created between dataset and given
-                                          * workflow_id'
-                                          */
+                                                                * #swagger.description = 'workflow_id is optional.
+                                                                * If the request body has workflow_id,
+                                                                * a new relation is created between dataset and given
+                                                                * workflow_id'
+                                                                */
 
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
@@ -1421,6 +1424,7 @@ router.post(
     const datasetCreateQuery = getDatasetCreateQuery({
       name,
       type,
+      create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
       project_id,
       user_id: req.user.id,
       src_instrument_id,
@@ -1445,7 +1449,6 @@ router.post(
           audit_log: {
             create: {
               action: 'create',
-              create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
               dataset_id: createdDataset.id,
               user_id: req.user.id,
             },
@@ -1514,12 +1517,10 @@ router.patch(
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
+      const dataset_upload_audit_log = await tx.dataset_audit.findFirst({
         where: {
-          dataset_id_create_method: {
-            dataset_id: req.params.id,
-            create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
-          },
+          dataset_id: req.params.id,
+          action: CONSTANTS.DATASET_ACTIONS.CREATE,
         },
       });
 

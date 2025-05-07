@@ -100,6 +100,12 @@ const DATASET_CREATE_METHODS = {
   SCAN: 'SCAN',
 };
 
+const DATASET_ACTIONS = {
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+};
+
 const DONE_STATUSES = ['REVOKED', 'FAILURE', 'SUCCESS'];
 
 const UPLOAD_STATUSES = {
@@ -139,6 +145,7 @@ module.exports = {
   auth,
   DONE_STATUSES,
   DATASET_CREATE_METHODS,
+  DATASET_ACTIONS,
   UPLOAD_STATUSES,
   WORKFLOWS,
 };
