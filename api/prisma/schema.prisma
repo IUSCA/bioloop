@@ -8,7 +8,7 @@ datasource db {
 }
 
 model dataset {
-  id                Int                 @id @default(autoincrement())
+  id                Int                    @id @default(autoincrement())
   name              String
   type              String
   num_directories   Int?
@@ -17,26 +17,27 @@ model dataset {
   size              BigInt?
   bundle_size       BigInt?
   description       String?
-  created_at        DateTime            @default(now()) @db.Timestamp(6)
-  updated_at        DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  created_at        DateTime               @default(now()) @db.Timestamp(6)
+  updated_at        DateTime               @default(now()) @updatedAt @db.Timestamp(6)
   origin_path       String?
   archive_path      String?
   staged_path       String?
-  is_deleted        Boolean             @default(false)
-  is_staged         Boolean             @default(false)
+  is_deleted        Boolean                @default(false)
+  is_staged         Boolean                @default(false)
   metadata          Json?
   workflows         workflow[]
   files             dataset_file[]
   audit_logs        dataset_audit[]
   states            dataset_state[]
-  derived_datasets  dataset_hierarchy[] @relation("source_datasets")
-  source_datasets   dataset_hierarchy[] @relation("derived_datasets")
+  derived_datasets  dataset_hierarchy[]    @relation("source_datasets")
+  source_datasets   dataset_hierarchy[]    @relation("derived_datasets")
   projects          project_dataset[]
   accesses          data_access_log[]
   stage_requests    stage_request_log[]
   bundle            bundle?
-  src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
+  src_instrument    instrument?            @relation(fields: [src_instrument_id], references: [id])
   src_instrument_id Int?
+  create_method     DATASET_CREATE_METHOD?
 
   @@unique([name, type, is_deleted])
 }
@@ -101,20 +102,19 @@ model file_upload_log {
 }
 
 model dataset_audit {
-  id            Int                    @id @default(autoincrement())
-  action        String
-  create_method DATASET_CREATE_METHOD?
-  updated_at    DateTime               @default(now()) @updatedAt @db.Timestamp(6)
-  timestamp     DateTime               @default(now())
-  old_data      Json?
-  new_data      Json?
-  user_id       Int?
-  user          user?                  @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  dataset_id    Int?
-  dataset       dataset?               @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  upload        dataset_upload_log?
+  id         Int                 @id @default(autoincrement())
+  action     String
+  updated_at DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  timestamp  DateTime            @default(now())
+  old_data   Json?
+  new_data   Json?
+  user_id    Int?
+  user       user?               @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  dataset_id Int?
+  dataset    dataset?            @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  upload     dataset_upload_log?
 
-  @@unique([dataset_id, create_method])
+  // @@unique([dataset_id, create_method])
 }
 
 model dataset_state {
