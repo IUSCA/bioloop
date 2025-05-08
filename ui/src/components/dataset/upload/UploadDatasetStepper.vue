@@ -308,12 +308,10 @@ import projectService from "@/services/projects";
 
 const auth = useAuthStore();
 
-const STEP_KEYS = {
-  GENERAL_INFO: "generalInfo",
-  SELECT_FILES: "selectFiles",
-  UPLOAD: "upload",
-};
-
+/**
+ * Various errors that may be shown to the user during the process of uploading a dataset.
+ * @type {string}
+ */
 const UNKNOWN_VALIDATION_ERROR = "An unknown error occurred";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
@@ -323,12 +321,22 @@ const DATASET_NAME_MIN_LENGTH_ERROR =
 const RETRY_COUNT_THRESHOLD = 5;
 const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 
-// Blob.slice method is used to segment files.
-// At the same time, this method is used in different browsers in different
-// ways.
+/**
+ * Blob.slice method is used to segment files. At the same time,
+ * this method is used in different browsers in different ways.
+ */
 const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
+const STEP_KEYS = {
+  GENERAL_INFO: "generalInfo",
+  SELECT_FILES: "selectFiles",
+  UPLOAD: "upload",
+};
+
+/**
+ * The various steps that the user will taken through during the process of uploading a dataset.
+ */
 const steps = [
   {
     key: STEP_KEYS.SELECT_FILES,
@@ -347,6 +355,9 @@ const steps = [
   },
 ];
 
+/**
+ * Types of Datasets available to upload
+ */
 const datasetTypes = [
   {
     label: config.dataset.types.RAW_DATA.label,
@@ -358,68 +369,127 @@ const datasetTypes = [
   },
 ];
 
+/**
+ * Whether individual files are being uploaded, or a single directory is being uploaded.
+ */
 const FILE_TYPE = {
   FILE: "file",
   DIRECTORY: "directory",
 };
 
+/**
+ * An object containing the form validation errors for each step.
+ */
 const formErrors = ref({
   [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.SELECT_FILES]: null,
   [STEP_KEYS.UPLOAD]: null,
 });
+
+/**
+ * Bearer token used to send requests to the File-Uplload API
+ */
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
+
 const canAssignSourceInstrument = ref(true);
-// todo - document when this is true/false, and where it's used
-// const willAssignSourceRawData = ref(true);
+const canAssignProject = ref(true);
+
 const selectedRawData = ref(null);
+
 const datasetSearchText = ref("");
 const projectSearchText = ref("");
-const canAssignProject = ref(true);
-const submissionSuccess = ref(false);
+
+/**
+ * Options available to choose from in the `Dataset Type` dropdown.
+ */
 const datasetTypeOptions = ref(datasetTypes);
+
+/**
+ * The type of Dataset that the user has selected to upload.
+ */
 const selectedDatasetType = ref(
-  // By default, the user will upload a Data Product.
+  // By default, it is assumed that user will upload a Data Product.
   datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
 );
-const willUploadRawData = computed(() => {
-  return (
-    selectedDatasetType.value["value"] === config.dataset.types.RAW_DATA.key
-  );
-});
-// `stepPristineStates` tracks if a step's form fields are pristine (i.e. not
-// touched by user) or not. Errors are only shown when a step's form fields are
-// not pristine.
+
+/**
+ * `stepPristineStates` tracks if a step's form fields are pristine (i.e. not touched by user) or not.
+ * Errors are only shown when a step's form fields are not pristine.
+ */
 const stepPristineStates = ref([
   { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.SELECT_FILES]: true },
   { [STEP_KEYS.UPLOAD]: true },
 ]);
+
 const loading = ref(false);
 const validatingForm = ref(false);
-const selectedSourceInstrument = ref(null);
-const sourceInstrumentOptions = ref([]);
-const projectSelected = ref(null);
+
+/**
+ * Stores information about the uploaded Dataset.
+ */
 const datasetUploadLog = ref(null);
+
+/**
+ * Various variables related to the submission process.
+ */
+const submissionSuccess = ref(false);
 const submissionStatus = ref(Constants.UPLOAD_STATUSES.UNINITIATED);
 const statusChipColor = ref("");
 const submissionAlert = ref(""); // For handling network errors before upload begins
 const submissionAlertColor = ref("");
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
+
+/**
+ * `filesToUpload`: The list of files that are sent in the network requests made to the File-Upload API.
+ */
 const filesToUpload = ref([]);
+/**
+ * `displayedFilesToUpload`: The list of files that are displayed to the user.
+ */
 const displayedFilesToUpload = ref([]);
+
 const selectedDirectory = ref(null);
+
 const selectedDirectoryChunkCount = ref(0);
 const totalUploadedChunkCount = ref(0);
+
 const uploadingFilesState = ref({});
+
 const selectingFiles = ref(false);
 const selectingDirectory = ref(false);
+
 const populatedDatasetName = ref("");
+
+/**
+ * current step index
+ */
 const step = ref(0);
+
 const uploadCancelled = ref(false);
+
+const selectedSourceInstrument = ref(null);
+const sourceInstrumentOptions = ref([]);
+
+const projectSelected = ref(null);
+
+/**
+ * `noRawDataToAssign`: determines whether there are any Raw Data options to choose from
+ */
 const noRawDataToAssign = ref(false);
+/**
+ * `noProjectsToAssign`: determines whether there are any Project options to choose from
+ */
 const noProjectsToAssign = ref(false);
+/**
+ * `willUploadRawData` determines whether the Dataset being uploaded is of type Raw Data or some other type.
+ */
+const willUploadRawData = computed(() => {
+  return (
+    selectedDatasetType.value["value"] === config.dataset.types.RAW_DATA.key
+  );
+});
 
 /**
  * Determines if the upload process has been completed.
@@ -1366,7 +1436,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", onBeforeUnload);
 });
 
-watch(selectedDatasetType, (newVal, oldVal) => {
+watch(selectedDatasetType, () => {
   resetRawDataSearch();
   if (!willUploadRawData.value && !noRawDataToAssign.value) {
     rawDataCheckboxInternalState.value = true;
@@ -1389,6 +1459,9 @@ const rawDataCheckboxModelValue = computed({
 });
 
 const isRawDataCheckboxDisabled = computed(() => {
+  // Raw Data checkbox is disabled if:
+  // - There are no Raw Data options to choose from
+  // - OR, the Dataset being uploaded is a Raw Data
   return noRawDataToAssign.value || willUploadRawData.value;
 });
 
@@ -1409,7 +1482,6 @@ onMounted(async () => {
     type: config.dataset.types.RAW_DATA.key,
   });
   noRawDataToAssign.value = initialRawDataOptions.data.datasets.length === 0;
-  console.log("noRawDataToAssign", noRawDataToAssign.value);
 
   const initialProjectOptions = await projectService.getAll({
     forSelf: !(auth.canOperate || auth.canAdmin),
@@ -1417,8 +1489,6 @@ onMounted(async () => {
   noProjectsToAssign.value = initialProjectOptions.data.projects.length > 0;
 
   loading.value = false;
-
-  console.log("onMounted done");
 
   // Raw Data v-model:
   //  - IF
