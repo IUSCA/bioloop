@@ -76,7 +76,7 @@
               <va-checkbox
                 v-model="rawDataCheckboxModelValue"
                 @update:modelValue="resetRawDataSearch"
-                :disabled="isRawDataCheckboxDisabled"
+                :disabled="submitAttempted || isRawDataCheckboxDisabled"
                 color="primary"
                 label="Assign source Raw Data"
                 class="flex-grow"
@@ -117,7 +117,7 @@
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="canAssignProject"
+                v-model="projectCheckboxModelValue"
                 @update:modelValue="
                   (val) => {
                     if (!val) {
@@ -125,7 +125,7 @@
                     }
                   }
                 "
-                :disabled="submitAttempted || noProjectsToAssign"
+                :disabled="submitAttempted || isProjectCheckboxDisabled"
                 color="primary"
                 label="Assign Project"
                 class="flex-grow"
@@ -137,9 +137,7 @@
             <ProjectAsyncAutoComplete
               v-model:selected="projectSelected"
               v-model:search-term="projectSearchText"
-              :disabled="
-                submitAttempted || !canAssignProject || noProjectsToAssign
-              "
+              :disabled="submitAttempted || !isProjectSearchEnabled"
               placeholder="Search Projects"
               @clear="resetProjectSearch"
               @open="onProjectSearchOpen"
@@ -474,6 +472,10 @@ const sourceInstrumentOptions = ref([]);
 
 const projectSelected = ref(null);
 
+/**
+ * `noInstrumentsToAssign`: determines whether there are any Instrument options to choose from
+ */
+const noInstrumentsToAssign = ref(false);
 /**
  * `noRawDataToAssign`: determines whether there are any Raw Data options to choose from
  */
@@ -1352,98 +1354,91 @@ watch(
   },
 );
 
-onMounted(() => {
-  setFormErrors();
+/**
+ * `Assign Project` checkbox is disabled if:
+ * - There are no Project options to choose from
+ */
+const isProjectCheckboxDisabled = computed(() => {
+  return noProjectsToAssign.value;
+});
+/**
+ * Project search field is enabled if:
+ * - `Assign Project` checkbox is enabled, AND
+ * - `Assign Project` checkbox is checked
+ */
+const isProjectSearchEnabled = computed(() => {
+  return !isProjectCheckboxDisabled.value && projectCheckboxModelValue.value;
+});
+/**
+ * `projectCheckboxInternalState`: Internal checked/unchecked state for the `Assign Project` checkbox.
+ * - Used as the default state of the checkbox
+ * - Used to update the state of the checkbox
+ */
+const projectCheckboxInternalState = ref(true);
+/**
+ * `projectCheckboxModelValue`: A writable Computed property that manages the checked/unchecked state of the 'Assign
+ * Project' checkbox.
+ *
+ * @property {Function} get - Getter function for the checkbox state.
+ *   - Returns `false` if there are no Projects to choose from.
+ *   - Otherwise, returns the internal checkbox state.
+ *
+ * @property {Function} set - Setter function for the checkbox state.
+ *   - Updates the internal checkbox state only if there are Project option to choose from.
+ *
+ * @returns {boolean} The current checked/unchecked state of the 'Assign Project' checkbox.
+ */
+const projectCheckboxModelValue = computed({
+  get: () => {
+    if (noProjectsToAssign.value) {
+      return false;
+    }
+    return projectCheckboxInternalState.value;
+  },
+  set: (newValue) => {
+    if (!noProjectsToAssign.value) {
+      projectCheckboxInternalState.value = newValue;
+    }
+  },
 });
 
 /**
- * Route Change Handling Mechanism
- *
- * This mechanism is designed to handle the scenario when a user attempts to navigate away from the current page
- * while the upload is incomplete. It uses Vue Router's navigation guards and component lifecycle hooks
- * to prompt the user for confirmation and cancel the upload if necessary.
- *
- * Key Components:
- *
- * 1. `isUploadIncomplete`:
- *    A computed property that determines if the upload is still in progress or incomplete.
- *
- * 2. `onBeforeRouteLeave`:
- *    Navigation guard triggered when the user attempts to navigate to a different route.
- *    It shows a browser confirmation dialog if the upload is incomplete.
- *
- * 3. `onBeforeUnmount`:
- *    Lifecycle hook triggered when the component is about to be unmounted (which happens during navigation).
- *    It cancels the upload if it's incomplete.
- *
- * 4. `uploadCancelled`:
- *    A reactive variable used to signal that the upload should be considered cancelled.
- *
- * Flow:
- * 1. User attempts to navigate to a different route
- * 2. `onBeforeRouteLeave` is triggered
- *    - If upload is incomplete, shows a confirmation dialog
- *    - If user confirms, allows navigation; if user cancels, prevents navigation
- * 3. If navigation is allowed, `onBeforeUnmount` is triggered
- *    - Sets `uploadCancelled` to true
- *    - If upload is incomplete, sends a request to cancel the upload
- *
+ * `Assign Raw Data` checkbox is disabled if:
+ * - There are no Raw Data options to choose from, OR,
+ * - The Dataset being uploaded is a Raw Data
  */
-
-onBeforeRouteLeave(() => {
-  // Before navigating to a different route, show user a confirmation dialog
-  return isUploadIncomplete.value
-    ? window.confirm(
-        "Leaving this page before all files have been uploaded will" +
-          " cancel the upload. Do you wish to continue?",
-      )
-    : true;
+const isRawDataCheckboxDisabled = computed(() => {
+  return noRawDataToAssign.value || willUploadRawData.value;
 });
-
-onBeforeUnmount(() => {
-  uploadCancelled.value = true;
-  if (isUploadIncomplete.value && datasetUploadLog.value) {
-    datasetService.cancelDatasetUpload(
-      datasetUploadLog.value.audit_log.dataset.id,
-    );
-  }
-});
-
 /**
- * Browser Tab Closure Handling Mechanism
- *
- * This handler is triggered when the user attempts to close the browser tab or navigate away from the page.
- * It shows a browser alert to confirm the user's intention if an upload is in progress.
- *
- * @description
- * - Checks if an upload is incomplete using the `isUploadIncomplete` computed property.
- * - If an upload is incomplete:
- *   - Sets the `returnValue` of the event to `true`, which prompts the browser to show a confirmation dialog.
- * - This prevents accidental data loss by giving the user a chance to confirm before leaving the page during an upload.
- *
+ * Raw Data search field is enabled if:
+ * - `Assign Raw Data` checkbox is enabled, AND,
+ * - `Assign Raw Data` checkbox is checked
  */
-const onBeforeUnload = (e) => {
-  if (isUploadIncomplete.value) {
-    e.returnValue = true;
-  }
-};
-
-onMounted(() => {
-  window.addEventListener("beforeunload", onBeforeUnload);
+const isRawDataSearchEnabled = computed(() => {
+  return !isRawDataCheckboxDisabled.value && rawDataCheckboxModelValue.value;
 });
-
-onBeforeUnmount(() => {
-  window.removeEventListener("beforeunload", onBeforeUnload);
-});
-
-watch(selectedDatasetType, () => {
-  resetRawDataSearch();
-  if (!willUploadRawData.value && !noRawDataToAssign.value) {
-    rawDataCheckboxInternalState.value = true;
-  }
-});
-
+/**
+ * `rawDataCheckboxInternalState`: Internal checked/unchecked state for the `Assign Raw Data` checkbox.
+ * - Used as the default state of the checkbox
+ * - Used to update the state of the checkbox
+ */
 const rawDataCheckboxInternalState = ref(true);
+/**
+ * `rawDataCheckboxModelValue`: A writable Computed property that manages the checked/unchecked state of the 'Assign
+ * Raw Data' checkbox.
+ *
+ * @property {Function} get - Getter function for the checkbox state.
+ *   - Returns `false` if there are no Raw Data to choose from, or if the type of the Dataset being uploaded is a Raw
+ *   Data.
+ *   - Otherwise, returns the internal checkbox state.
+ *
+ * @property {Function} set - Setter function for the checkbox state.
+ *   - Updates the internal checkbox state only if there are Raw Data options to choose from,
+ *   and the type of the Dataset being uploaded is not a Raw Data.
+ *
+ * @returns {boolean} The current checked/unchecked state of the 'Assign Raw Data' checkbox.
+ */
 const rawDataCheckboxModelValue = computed({
   get: () => {
     if (noRawDataToAssign.value || willUploadRawData.value) {
@@ -1457,36 +1452,61 @@ const rawDataCheckboxModelValue = computed({
     }
   },
 });
-
-const isRawDataCheckboxDisabled = computed(() => {
-  // Raw Data checkbox is disabled if:
-  // - There are no Raw Data options to choose from
-  // - OR, the Dataset being uploaded is a Raw Data
-  return noRawDataToAssign.value || willUploadRawData.value;
+/**
+ * Handler for when the type of the Dataset to be uploaded changes.
+ * - Resets the search query for the Raw Data search field
+ * - Updates the internal state of the `Assign Raw Data` checkbox to `true` (checked) if:
+ *   - The Dataset to be uploaded is not of type Raw Data, AND
+ *   - There are Raw Data options to choose from for assignment to the uploaded Dataset
+ */
+watch(selectedDatasetType, () => {
+  resetRawDataSearch();
+  if (!willUploadRawData.value && !noRawDataToAssign.value) {
+    rawDataCheckboxInternalState.value = true;
+  }
 });
 
-const isRawDataSearchEnabled = computed(() => {
-  // Raw Data checkbox is enabled AND checked
-  return !isRawDataCheckboxDisabled.value && rawDataCheckboxModelValue.value;
-});
-
+/**
+ * When first mounted, load the resources which will be needed in the rest of the form.
+ * - Load resources are:
+ *  - A list of Instruments that Datasets originate from
+ *  - A list of Raw Data that may be assigned to the Dataset being uploaded
+ *  - A list of Projects that may be assigned to the Dataset being uploaded
+ *
+ *  Only a subset of the entirety of the Raw Data and Projects available to the user for assignment are loaded at this
+ *  point. If a user has access to more Raw Data and Projects to choose from, they will be lazily-loaded later.
+ *  This initial load of a subset of options is done only to permanently disable the "Raw Data" and "Project"
+ *  search fields if the user has zero options to choose from.
+ */
 onMounted(async () => {
-  console.log("onMounted");
+  // console.log("onMounted");
   loading.value = true;
 
-  const sourceInstrumentResponse = await instrumentService.getAll();
-  sourceInstrumentOptions.value = sourceInstrumentResponse.data;
-  canAssignSourceInstrument.value = sourceInstrumentOptions.value.length > 0;
+  try {
+    // Load Instruments that will be available for assignment to the Dataset being uploaded.
+    const onLoadInstrumentResponse = await instrumentService.getAll();
+    sourceInstrumentOptions.value = onLoadInstrumentResponse.data;
+    noInstrumentsToAssign.value = sourceInstrumentOptions.value.length === 0;
 
-  const initialRawDataOptions = await datasetService.getAll({
-    type: config.dataset.types.RAW_DATA.key,
-  });
-  noRawDataToAssign.value = initialRawDataOptions.data.datasets.length === 0;
+    // Do an initial load of Raw Data to verify whether the user has access to any Raw Data to choose from for
+    // assignment to the Dataset being uploaded. If not, the `Assign Raw Data` checkbox will always be disabled.
+    const onLoadRawDataOptionsResponse = await datasetService.getAll({
+      type: config.dataset.types.RAW_DATA.key,
+    });
+    noRawDataToAssign.value =
+      onLoadRawDataOptionsResponse.data.datasets.length === 0;
 
-  const initialProjectOptions = await projectService.getAll({
-    forSelf: !(auth.canOperate || auth.canAdmin),
-  });
-  noProjectsToAssign.value = initialProjectOptions.data.projects.length > 0;
+    // Do an initial load of Projects to verify whether the user has access to any Projects to choose from for
+    // assignment to the Dataset being uploaded. If not, the `Assign Project` checkbox will always be disabled.
+    const onLoadProjectOptionsResponse = await projectService.getAll({
+      forSelf: !(auth.canOperate || auth.canAdmin),
+    });
+    noProjectsToAssign.value =
+      onLoadProjectOptionsResponse.data.projects.length === 0;
+  } catch (error) {
+    console.error("Error loading resources:", error);
+    toast.error("An error occurred. Please refresh the page to try again.");
+  }
 
   loading.value = false;
 
@@ -1525,6 +1545,94 @@ onMounted(async () => {
   //           - User checks raw data checkbox:
   //             - checkbox CHECKED and ENABLED
   //             - search ENABLED
+});
+
+/**
+ * Evaluate form-validation errors when first mounted, to make sure any form-buttons are disabled until all
+ * form-validations are passing.
+ */
+onMounted(() => {
+  setFormErrors();
+});
+
+/**
+ * Route Change Handling Mechanism
+ *
+ * This mechanism is designed to handle the scenario when a user attempts to navigate away from the current page
+ * while the upload is incomplete. It uses Vue Router's navigation guards and component lifecycle hooks
+ * to prompt the user for confirmation and cancel the upload if necessary.
+ *
+ * Key Components:
+ *
+ * 1. `isUploadIncomplete`:
+ *    A computed property that determines if the upload is still in progress or incomplete.
+ *
+ * 2. `onBeforeRouteLeave`:
+ *    Navigation guard triggered when the user attempts to navigate to a different route.
+ *    It shows a browser confirmation dialog if the upload is incomplete.
+ *
+ * 3. `onBeforeUnmount`:
+ *    Lifecycle hook triggered when the component is about to be unmounted (which happens during navigation).
+ *    It cancels the upload if it's incomplete.
+ *
+ * 4. `uploadCancelled`:
+ *    A reactive variable used to signal that the upload should be considered cancelled.
+ *
+ * Flow:
+ * 1. User attempts to navigate to a different route
+ * 2. `onBeforeRouteLeave` is triggered
+ *    - If upload is incomplete, shows a confirmation dialog
+ *    - If user confirms, allows navigation; if user cancels, prevents navigation
+ * 3. If navigation is allowed, `onBeforeUnmount` is triggered
+ *    - Sets `uploadCancelled` to true
+ *    - If upload is incomplete, sends a request to cancel the upload
+ *
+ */
+onBeforeRouteLeave(() => {
+  // Before navigating to a different route, show user a confirmation dialog
+  return isUploadIncomplete.value
+    ? window.confirm(
+        "Leaving this page before all files have been uploaded will" +
+          " cancel the upload. Do you wish to continue?",
+      )
+    : true;
+});
+
+onBeforeUnmount(() => {
+  uploadCancelled.value = true;
+  if (isUploadIncomplete.value && datasetUploadLog.value) {
+    datasetService.cancelDatasetUpload(
+      datasetUploadLog.value.audit_log.dataset.id,
+    );
+  }
+});
+
+/**
+ * Browser Tab Closure Handling Mechanism
+ *
+ * This handler is triggered when the user attempts to close the browser tab or navigate away from the page.
+ * It shows a browser alert to confirm the user's intention if an upload is in progress.
+ *
+ * @description
+ * - Checks if an upload is incomplete using the `isUploadIncomplete` computed property.
+ * - If an upload is incomplete:
+ *   - Sets the `returnValue` of the event to `true`, which prompts the browser to show a confirmation dialog.
+ * - This prevents accidental data loss by giving the user a chance to confirm before leaving the page during an
+ * upload.
+ *
+ */
+const onBeforeUnload = (e) => {
+  if (isUploadIncomplete.value) {
+    e.returnValue = true;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener("beforeunload", onBeforeUnload);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", onBeforeUnload);
 });
 </script>
 
