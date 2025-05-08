@@ -8,6 +8,7 @@ const config = require('config');
 const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
+const projectService = require('./project');
 const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
@@ -18,7 +19,6 @@ const CONSTANTS = require('../constants');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPermission, accessControl } = require('../middleware/auth');
 const logger = require('./logger');
-const projectService = require('./project');
 
 const prisma = new PrismaClient();
 
@@ -752,27 +752,52 @@ const workflow_access_check = [
   }),
 ];
 
+/**
+ * Builds a Prisma query object for associating a dataset with a project.
+ *
+ * @async
+ * @function buildProjectAssociationQuery
+ * @param {Object} options - The options for building the query.
+ * @param {string|null} [options.project_id=null] - The ID of an existing Project to associate with the Dataset.
+ * @param {string|null} [options.project_assignor_id=null] - The ID of the user associating the Project to the Dataset.
+ * @param {string[]} [options.project_assignee_ids=[]] - The IDs of users being associated to the Project.
+ * @param {string|null} [options.user_assignor_id=null] - The ID of the user associating other users to the Project.
+ * @param {boolean} [options.browser_enabled=false] - Whether the Genome Browser will be enabled for a new Project that will be created.
+ * @param {string} [options.dataset_name=''] - The name of the Dataset being created.
+ * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
+ *
+ * @description
+ * This function builds a query for associating a Dataset with a Project. It handles two scenarios:
+ * 1. If a `project_id` is provided, it creates an association with the corresponding Project.
+ * 2. If no `project_id` is provided and auto-creation of Projects is enabled for the assignor's role,
+ *    it creates a new Project and associates the Dataset with it.*
+ */
 async function buildProjectAssociationQuery({
   project_id = null,
   project_assignor_id = null,
   project_assignee_ids = [],
   user_assignor_id = null,
-  user_roles = [],
   browser_enabled = false,
   dataset_name = '',
 } = {}) {
+  const project_assignor_roles = await userService.getUserRoles({
+    user_id: project_assignor_id,
+  });
+
   let create_query = null;
   if (project_id) {
-    // If a Project ID is provided, associate dataset with the existing project
+    // If a Project ID is provided, associate the Dataset with the existing Project
     create_query = {
       create: [{
         project_id,
         ...(project_assignor_id && { assignor_id: project_assignor_id }),
       }],
     };
-  } else if (isFeatureEnabledForRole({ feature: 'autoCreateProjectOnDatasetCreation', roles: user_roles })) {
-    // If a Project ID is not provided and auto-creation of projects is enabled,
-    // create a new project, assign the current user to it, and associate the dataset with the new project.
+  } else if (isFeatureEnabledForRole({ feature: 'autoCreateProjectOnDatasetCreation', roles: project_assignor_roles })) {
+    // Else, if a Project ID is not provided and auto-creation of Projects is
+    // enabled for the user who needs to associate the Dataset with a Project,
+    // create a new Project, assign the requested assignees to it, and associate
+    // the Dataset with the new Project.
     const generated_project_name = projectService.generate_new_project_name(
       { suffix: dataset_name },
     );

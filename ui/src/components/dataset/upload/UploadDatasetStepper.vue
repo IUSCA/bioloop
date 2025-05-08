@@ -139,26 +139,22 @@
           </div>
 
           <div class="flex-grow flex items-center">
-            <div class="flex-grow">
-              <!--              <div class="flex flex-col">-->
-              <ProjectAsyncAutoComplete
-                v-model:selected="projectSelected"
-                v-model:search-term="projectSearchText"
-                :disabled="
-                  submitAttempted || !isAssignedProject || noProjectsToAssign
-                "
-                placeholder="Search Projects"
-                @clear="resetProjectSearch"
-                @open="onProjectSearchOpen"
-                @close="onProjectSearchClose"
-                @load-initial="onInitialProjectsLoad"
-                :label="'Project'"
-                :messages="noProjectsToAssign ? 'No Projects to select' : null"
-              >
-              </ProjectAsyncAutoComplete>
-              <!--              <VaAlert dense color="info" border="left">Yo...</VaAlert>-->
-              <!--              </div>-->
-            </div>
+            <ProjectAsyncAutoComplete
+              v-model:selected="projectSelected"
+              v-model:search-term="projectSearchText"
+              :disabled="
+                submitAttempted || !isAssignedProject || noProjectsToAssign
+              "
+              placeholder="Search Projects"
+              @clear="resetProjectSearch"
+              @open="onProjectSearchOpen"
+              @close="onProjectSearchClose"
+              @load-initial="onInitialProjectsLoad"
+              class="flex-grow"
+              :label="'Project'"
+              :messages="noProjectsToAssign ? 'No Projects to select' : null"
+            >
+            </ProjectAsyncAutoComplete>
             <va-popover>
               <template #body>
                 <div class="w-96">
@@ -423,8 +419,6 @@ const selectingDirectory = ref(false);
 const populatedDatasetName = ref("");
 const step = ref(0);
 const uploadCancelled = ref(false);
-const projectOptions = ref([]);
-const rawDataOptions = ref([]);
 const noRawDataToAssign = ref(false);
 const noProjectsToAssign = ref(false);
 
@@ -497,7 +491,7 @@ const isLastStep = computed(() => {
   return step.value === steps.length - 1;
 });
 
-const uploadFormData = computed(() => {
+const getProjectCreationPayload = () => {
   let project_payload = null;
   if (noProjectsToAssign.value) {
     /**
@@ -517,6 +511,11 @@ const uploadFormData = computed(() => {
       project_id: projectSelected.value ? projectSelected.value.id : null,
     };
   }
+  return project_payload;
+};
+
+const uploadFormData = computed(() => {
+  let project_payload = getProjectCreationPayload();
 
   return {
     name: populatedDatasetName.value,
@@ -525,7 +524,6 @@ const uploadFormData = computed(() => {
       src_dataset_id: selectedRawData.value.id,
     }),
     project_payload,
-    // project_id: projectSelected.value ? projectSelected.value.id : null,
     src_instrument_id: selectedSourceInstrument.value
       ? selectedSourceInstrument.value.id
       : null,
@@ -594,7 +592,6 @@ const onRawDataSearchClose = () => {
 };
 
 const onInitialRawDataLoad = (datasets) => {
-  // rawDataOptions.value = datasets;
   noRawDataToAssign.value = datasets.length === 0;
   isAssignedSourceRawData.value = !noRawDataToAssign.value;
 };
@@ -610,7 +607,6 @@ const onProjectSearchClose = () => {
 };
 
 const onInitialProjectsLoad = (projects) => {
-  // projectOptions.value = projects;
   noProjectsToAssign.value = projects.length === 0;
   isAssignedProject.value = !noProjectsToAssign.value;
 };

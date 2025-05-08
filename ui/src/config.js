@@ -80,7 +80,7 @@ const exports = {
       enabledForRoles: [],
     },
     ingestion: {
-      enabledForRoles: ["admin"],
+      enabledForRoles: ["admin", "user"],
     },
     downloads: true,
     signup: true,

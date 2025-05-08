@@ -567,7 +567,12 @@ function normalize_name(name) {
  * @param {string} data.origin_path - The origin path of the dataset.
  * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
  * @param {string} [data.workflow_id] - The ID of the associated workflow.
- // * @param {string} [data.project_id] - The ID of the associated project.
+ * @param {Object} [data.project_payload] - The payload containing information needed for associating this dataset to a project.
+ * @param {string} [data.project_payload.project_id] - The ID of an existing project to associate with the dataset.
+ * @param {boolean} [data.project_payload.browser_enabled] - Whether the genome browser is enabled for a new project that will be created.
+ * @param {string} [data.project_payload.assignor_id] - The ID of the user associating the project to the dataset.
+ * @param {string[]} [data.project_payload.assignee_ids] - The IDs of users being associated to the project.
+ * @param {string} [data.project_payload.user_assignor_id] - The ID of the user associating other users to the project.
  * @param {string} data.user_id - The ID of the user creating the dataset.
  * @param {string} [data.src_instrument_id] - The ID of the source instrument.
  * @param {string} [data.src_dataset_id] - The ID of the source dataset.
@@ -577,16 +582,13 @@ function normalize_name(name) {
  * @returns {Object} An object containing the query for creating a new dataset in the database.
  *
  * @description
- * This function prepares a query object for creating a new dataset in the database.
- * It normalizes the dataset name, sets up associations with workflows and projects,
- * connects to source instruments and datasets, sets the initial state,
- * and creates an audit log entry for the dataset creation.
+ * This function prepares a Prisma query object for creating a new dataset in the database.
  */
 const getDatasetCreateQuery = async (data) => {
   /* eslint-disable no-unused-vars */
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    project_payload, user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method,
+    project_payload, user_id, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -622,7 +624,6 @@ const getDatasetCreateQuery = async (data) => {
       project_assignor_id,
       project_assignee_ids,
       user_assignor_id,
-      user_roles,
       browser_enabled,
       dataset_name: create_query.name,
     });
@@ -694,11 +695,11 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /* eslint-disable */
-    /*
-      * #swagger.description = 'workflow_id is optional. If the request body has
-      * workflow_id, a new relation is created between dataset and given workflow_id'
-      */
-    /* eslint-enable */
+      /*
+        * #swagger.description = 'workflow_id is optional. If the request body has
+        * workflow_id, a new relation is created between dataset and given workflow_id'
+        */
+      /* eslint-enable */
 
     const {
       ingestion_space, create_method, project_payload, src_instrument_id, src_dataset_id,
@@ -1439,7 +1440,6 @@ router.post(
       name,
       type,
       user_id: req.user.id,
-      user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
       project_payload,

@@ -94,9 +94,9 @@
         <div class="w-60 flex flex-shrink-0 mr-4">
           <div class="flex items-center">
             <va-checkbox
-              v-model="isAssignedSourceRawData"
+              v-model="isAssigningSourceRawData"
               @update:modelValue="resetRawDataSearch"
-              :disabled="willIngestRawData"
+              :disabled="willIngestRawData || noRawDataToAssign"
               color="primary"
               label="Assign source Raw Data"
               class="flex-grow"
@@ -108,14 +108,18 @@
           <DatasetSelectAutoComplete
             v-model:selected="selectedRawData"
             v-model:search-term="datasetSearchText"
-            :disabled="submitAttempted || !isAssignedSourceRawData"
+            :disabled="
+              submitAttempted || !isAssigningSourceRawData || noRawDataToAssign
+            "
             :dataset-type="config.dataset.types.RAW_DATA.key"
             placeholder="Search Raw Data"
             @clear="resetRawDataSearch"
             @open="onRawDataSearchOpen"
             @close="onRawDataSearchClose"
+            @load-initial="onInitialRawDataLoad"
             class="flex-grow"
             :label="'Dataset'"
+            :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
           >
           </DatasetSelectAutoComplete>
           <va-popover>
@@ -135,7 +139,7 @@
         <div class="w-60 flex flex-shrink-0 mr-4">
           <div class="flex items-center">
             <va-checkbox
-              v-model="isAssignedProject"
+              v-model="isAssigningProject"
               @update:modelValue="
                 (val) => {
                   if (!val) {
@@ -143,6 +147,7 @@
                   }
                 }
               "
+              :disabled="submitAttempted || noProjectsToAssign"
               color="primary"
               label="Assign Project"
               class="flex-grow"
@@ -154,13 +159,17 @@
           <ProjectAsyncAutoComplete
             v-model:selected="projectSelected"
             v-model:search-term="projectSearchText"
-            :disabled="submitAttempted || !isAssignedProject"
+            :disabled="
+              submitAttempted || !isAssigningProject || noProjectsToAssign
+            "
             placeholder="Search Projects"
             @clear="resetProjectSearch"
             @open="onProjectSearchOpen"
             @close="onProjectSearchClose"
+            @load-initial="onInitialProjectsLoad"
             class="flex-grow"
             :label="'Project'"
+            :messages="noProjectsToAssign ? 'No Projects to select' : null"
           >
           </ProjectAsyncAutoComplete>
           <va-popover>
@@ -191,6 +200,7 @@
                   }
                 }
               "
+              :disabled="submitAttempted || noInstrumentsToAssign"
               color="primary"
               label="Assign source Instrument"
               class="flex-grow"
@@ -202,12 +212,19 @@
           <va-select
             v-model="selectedSourceInstrument"
             :options="sourceInstrumentOptions"
-            :disabled="!isAssignedSourceInstrument"
+            :disabled="
+              submitAttempted ||
+              !isAssignedSourceInstrument ||
+              noInstrumentsToAssign
+            "
             label="Source Instrument"
             placeholder="Select Source Instrument"
             class="flex-grow"
             :text-by="'name'"
             :track-by="'id'"
+            :messages="
+              noInstrumentsToAssign ? 'No Instruments to select' : null
+            "
           />
           <div class="flex items-center ml-2">
             <va-popover>
@@ -226,7 +243,7 @@
     <template #step-content-2>
       <IngestionInfo
         v-model:populated-dataset-name="populatedDatasetName"
-        :dataset="dataset"
+        :dataset="createdDataset"
         :ingestion-dir="selectedFile"
         :dataset-type="selectedDatasetType?.value"
         :project="projectSelected"
@@ -283,6 +300,10 @@ import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoCom
 import { VaPopover } from "vuestic-ui";
 import { Icon } from "@iconify/vue";
 import Constants from "@/constants";
+import { useAuthStore } from "@/stores/auth";
+import projectService from "@/services/project";
+
+const auth = useAuthStore();
 
 const STEP_KEYS = {
   SELECT_DIRECTORY: "selectDirectory",
@@ -337,17 +358,20 @@ const datasetTypeOptions = ref(datasetTypes);
 // `willIngestRawData` determines whether the user will ingest a Raw Data or a
 // Data Product. By default, the user will ingest a Data Product.
 const willIngestRawData = ref(false);
-const isAssignedProject = ref(true);
-const isAssignedSourceRawData = ref(true);
+const isAssigningProject = ref(true);
+const isAssigningSourceRawData = ref(true);
 const submissionSuccess = ref(false);
 const fileListSearchText = ref("");
 const fileList = ref([]);
-const dataset = ref(null);
+// const createdDatasetId = ref(null);
+const createdDataset = ref({});
+const associatedProject = ref({});
 const loadingResources = ref(false); // determines if the initial resources needed for the stepper are being fetched
 const searchingFiles = ref(false);
 const validatingForm = ref(false);
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
+const submissionButtonText = ref("Ingest");
 const isAssignedSourceInstrument = ref(true);
 const selectedRawData = ref(null);
 const datasetSearchText = ref("");
@@ -380,6 +404,12 @@ const formErrors = ref({
   [STEP_KEYS.SELECT_DIRECTORY]: null,
   [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.INGEST]: null,
+});
+const noRawDataToAssign = ref(false);
+const noProjectsToAssign = ref(false);
+
+const noInstrumentsToAssign = computed(() => {
+  return sourceInstrumentOptions.value.length === 0;
 });
 
 const loading = computed(() => {
@@ -473,6 +503,11 @@ const onRawDataSearchClose = () => {
   }
 };
 
+const onInitialRawDataLoad = (datasets) => {
+  noRawDataToAssign.value = datasets.length === 0;
+  isAssigningSourceRawData.value = !noRawDataToAssign.value;
+};
+
 const onProjectSearchOpen = () => {
   projectSelected.value = null;
 };
@@ -481,6 +516,11 @@ const onProjectSearchClose = () => {
   if (!projectSelected.value) {
     projectSearchText.value = "";
   }
+};
+
+const onInitialProjectsLoad = (projects) => {
+  noProjectsToAssign.value = projects.length === 0;
+  isAssigningProject.value = !noProjectsToAssign.value;
 };
 
 const isStepperButtonDisabled = (stepIndex) => {
@@ -529,8 +569,8 @@ const setFormErrors = async () => {
 
   if (step.value === 1) {
     if (
-      (isAssignedSourceRawData.value && !selectedRawData.value) ||
-      (isAssignedProject.value && !projectSelected.value) ||
+      (isAssigningSourceRawData.value && !selectedRawData.value) ||
+      (isAssigningProject.value && !projectSelected.value) ||
       (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
@@ -642,88 +682,232 @@ const setRetrievedFiles = (files) => {
   fileList.value = files;
 };
 
-const preIngestion = () => {
-  if (!dataset.value) {
-    return datasetService.create_dataset({
-      name: populatedDatasetName.value,
-      type: config.dataset.types.DATA_PRODUCT.key,
-      origin_path: selectedFile.value.path,
-      ingestion_space: searchSpace.value.key,
-      project_id: projectSelected.value?.id,
-      src_instrument_id: selectedSourceInstrument.value?.id,
-      src_dataset_id: selectedRawData.value?.id,
-      create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
-    });
+const projectCreationPayload = computed(() => {
+  let payload = null;
+  if (noProjectsToAssign.value) {
+    /**
+     * If user has no Projects to assign to the Dataset being uploaded, a new Project will be auto-created for them,
+     * if this feature is enabled.
+     */
+    if (auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")) {
+      payload = {
+        browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
+        assignor_id: auth.user.id,
+        assignee_ids: [auth.user.id],
+        user_assignor_id: auth.user.id,
+      };
+    }
   } else {
-    return Promise.resolve({ data: dataset.value });
+    payload = {
+      project_id: projectSelected.value ? projectSelected.value.id : null,
+    };
   }
-};
+  return payload;
+});
 
-const initiateIngestion = async () => {
-  return datasetService
-    .initiate_workflow_on_dataset({
-      dataset_id: dataset.value.id,
-      workflow: "integrated",
-    })
-    .then(() => {
-      toast.success("Initiated dataset ingestion");
-      submissionSuccess.value = true;
-    })
-    .catch((err) => {
-      toast.error("Failed to initiate ingestion");
-      // console.error(err);
-      submissionSuccess.value = false;
-    });
-};
+// Todos: send notification to operator/admin on wf initiation errors
+//  - how to track
 
+// - submitButton clicked
+//   - createDataset() called
+//     - createDataset() THEN:
+//       - getDatasetById() called
+//         - getDatasetById() THEN:
+//           - initiateIngestion() called
+//             - initiateIngestion() THEN:
+//               - submitButton text = "SUCCESS"
+//               - No need to do anything else
+//             - initiateIngestion() CATCH:
+//               - submitButton text = "RETRY"
+//               - clicking submitButton again should call initiateIngestion() again
+//         - getDatasetById() CATCH:
+//           - submitButton text = "RETRY"
+//           - clicking submitButton should call getDatasetById() again
+//   - createDataset() CATCH:
+//     - submitButton text = "RETRY"
+//     - clicking submitButton should call createDataset() again
+
+//     - todo - show unique error on 409
 const onSubmit = async () => {
+  console.log("onSubmit called");
   if (!selectedFile.value) {
     await setFormErrors();
     return Promise.reject();
   }
 
   submitAttempted.value = true;
+  submissionButtonText.value = "Processing...";
 
-  return new Promise((resolve, reject) => {
-    preIngestion()
-      .then(async (res) => {
-        dataset.value = res.data;
-        return Promise.resolve();
-      })
-      .catch((err) => {
-        // handle 409 error when dataset already exists
-        if (err.response.status === 409) {
-          toast.error(
-            `A ${selectedDatasetType.value["label"]} with this name already exists.`,
-          );
-          // TODO
-          return Promise.reject();
-        }
-        return Promise.reject(err);
-      })
-      .then(() => {
-        return initiateIngestion();
-      })
-      .catch((err) => {
-        toast.error("Failed to initiate ingestion");
-        // console.error(err);
-        reject(err);
+  console.log("submitAttempted: ", submitAttempted.value);
+  try {
+    await createDataset();
+    await fetchAssociatedProjects();
+    await fetchAssociatedProjectDetails();
+    await initiateIngestion();
+    handleSuccessfulIngestion();
+  } catch (error) {
+    handleRetryableError(error);
+  }
+};
+
+const createDataset = async () => {
+  console.log("createDataset called");
+  if (Object.entries(createdDataset.value).length === 0) {
+    console.log("dataset not created yet");
+    try {
+      console.log("creating dataset");
+      const res = await datasetService.create_dataset({
+        name: populatedDatasetName.value,
+        type: config.dataset.types.DATA_PRODUCT.key,
+        origin_path: selectedFile.value.path,
+        ingestion_space: searchSpace.value.key,
+        project_payload: projectCreationPayload.value,
+        src_instrument_id: selectedSourceInstrument.value?.id,
+        src_dataset_id: selectedRawData.value?.id,
+        create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
       });
-  });
+      createdDataset.value = res.data;
+      console.log("Created dataaset");
+      return res;
+    } catch (error) {
+      console.log("Error creating dataset:", error);
+      throw new Error(ERRORS.CREATE_DATASET);
+    }
+  }
+  console.log("dataset already created");
+};
+
+const fetchAssociatedProjects = async () => {
+  console.log("fetchAssociatedProjects called");
+  // If user has chosen not to assign a Project, of if associated Projects
+  // have already been fetched, skip.
+  if (
+    !projectCreationPayload.value ||
+    createdDataset.value.projects.length > 0
+  ) {
+    console.log(
+      "Project is not being assigned, or assigned projects already fetched",
+    );
+    return;
+  }
+  // else, fetch associated Projects.
+  try {
+    console.log("Fetching associated projects");
+    createdDataset.value = await datasetService.getById({
+      id: createdDataset.value.id,
+      include_projects: true,
+    });
+    console.log("Fetched associated projects: ");
+  } catch (error) {
+    console.error("Error fetching associated projects:", error);
+    throw new Error(ERRORS.FETCH_ASSOCIATED_PROJECTS);
+  }
+};
+
+const fetchAssociatedProjectDetails = async () => {
+  console.log("fetchAssociatedProjectDetails called");
+  // If user has chosen not to assign a Project, or if associated Project's
+  // details have already been fetched, skip.
+  if (!projectCreationPayload.value || !!associatedProject.value) {
+    console.log(
+      "project is not being assigned, or assigned project details already fetched",
+    );
+    return;
+  }
+  console.log("Fetching associated project details");
+  try {
+    associatedProject.value = await projectService.getById({
+      id: createdDataset.value.projects[0].id,
+    });
+    // console.log("Project details:", associatedProject.value);
+    console.log("Fetched associated project details");
+  } catch (error) {
+    console.error("Error fetching associated project details:", error);
+    throw new Error(ERRORS.GET_PROJECT);
+  }
+};
+
+const initiateIngestion = async () => {
+  console.log("initiateIngestion called");
+  // todo - handle case where workflow is already in progress
+  try {
+    await datasetService.initiate_workflow_on_dataset({
+      dataset_id: createdDataset.value.id,
+      workflow: "integrated",
+    });
+    toast.success("Initiated dataset ingestion");
+    submissionSuccess.value = true;
+    console.log("Initiated dataset ingestion");
+  } catch (error) {
+    console.error("Error initiating ingestion:", error);
+    throw new Error(ERRORS.INITIATE_INGESTION);
+  }
+};
+
+const handleSuccessfulIngestion = () => {
+  console.log("handleSuccessfulIngestion called");
+  submissionButtonText.value = "SUCCESS";
+  submissionSuccess.value = true;
+  console.log("Dataset ingestion successful");
+};
+
+const handleRetryableError = (error) => {
+  let errorMessage = "An error occurred. Please try again.";
+
+  switch (error.message) {
+    case ERRORS.CREATE_DATASET:
+      errorMessage = "Failed to create dataset. Please try again.";
+      break;
+    case ERRORS.FETCH_ASSOCIATED_PROJECTS:
+      errorMessage = "Failed to fetch associated project. Please try again.";
+      break;
+    case ERRORS.GET_PROJECT:
+      errorMessage = "Failed to retrieve project details. Please try again.";
+      break;
+    case ERRORS.INITIATE_INGESTION:
+      errorMessage = "Failed to initiate ingestion. Please try again.";
+      break;
+    default:
+      errorMessage =
+        error.message || "An unexpected error occurred. Please try again.";
+  }
+
+  toast.error(errorMessage);
+  submissionButtonText.value = "RETRY";
+  submitAttempted.value = false;
+};
+
+const ERRORS = {
+  CREATE_DATASET: "createDatasetError",
+  FETCH_ASSOCIATED_PROJECTS: "fetchAssociatedProjectsError",
+  GET_PROJECT: "getProjectByIdError",
+  INITIATE_INGESTION: "initiateIngestionError",
+};
+
+// todo - there are situations where not having an associated project is fine
+const onNextClick = (nextStep) => {
+  if (isLastStep.value) {
+    console.log("Submitting dataset");
+    console.log("submitAttempted.value", submitAttempted.value);
+    if (submitAttempted.value) {
+      console.log("submissionButtonText.value", submissionButtonText.value);
+      if (submissionButtonText.value === "RETRY") {
+        console.log("Calling onSubmit() again");
+        onSubmit();
+      }
+    } else {
+      console.log("Calling onSubmit() for the first time");
+      onSubmit();
+    }
+  } else {
+    nextStep();
+  }
 };
 
 const getRestrictedIngestionPaths = () => {
   return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(
     ",",
   );
-};
-
-const onNextClick = (nextStep) => {
-  if (isLastStep.value) {
-    onSubmit();
-  } else {
-    nextStep();
-  }
 };
 
 // Form errors are set when this component mounts, or when a form field's value
@@ -733,9 +917,9 @@ watch(
     step,
     populatedDatasetName,
     projectSelected,
-    isAssignedProject,
+    isAssigningProject,
     selectedRawData,
-    isAssignedSourceRawData,
+    isAssigningSourceRawData,
     selectedSourceInstrument,
     isAssignedSourceInstrument,
     selectedFile,
@@ -768,7 +952,7 @@ watch(step, async () => {
 
 watch(selectedDatasetType, (newVal) => {
   if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
-    isAssignedSourceRawData.value = false;
+    isAssigningSourceRawData.value = false;
     clearSelectedRawData();
     willImportRawData.value = true;
   } else {
