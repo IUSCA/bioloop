@@ -94,9 +94,9 @@
         <div class="w-60 flex flex-shrink-0 mr-4">
           <div class="flex items-center">
             <va-checkbox
-              v-model="isAssigningSourceRawData"
+              v-model="canAssignSourceRawData"
               @update:modelValue="resetRawDataSearch"
-              :disabled="willIngestRawData || noRawDataToAssign"
+              :disabled="willIngestRawData"
               color="primary"
               label="Assign source Raw Data"
               class="flex-grow"
@@ -107,16 +107,15 @@
         <div class="flex-grow flex items-center">
           <DatasetSelectAutoComplete
             v-model:selected="selectedRawData"
-            v-model:search-term="datasetSearchText"
+            v-model:search-term="rawDataSearchText"
             :disabled="
-              submitAttempted || !isAssigningSourceRawData || noRawDataToAssign
+              submitAttempted || !canAssignSourceRawData || noRawDataToAssign
             "
             :dataset-type="config.dataset.types.RAW_DATA.key"
             placeholder="Search Raw Data"
             @clear="resetRawDataSearch"
             @open="onRawDataSearchOpen"
             @close="onRawDataSearchClose"
-            @load-initial="onInitialRawDataLoad"
             class="flex-grow"
             :label="'Dataset'"
             :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
@@ -139,7 +138,7 @@
         <div class="w-60 flex flex-shrink-0 mr-4">
           <div class="flex items-center">
             <va-checkbox
-              v-model="isAssigningProject"
+              v-model="canAssignProject"
               @update:modelValue="
                 (val) => {
                   if (!val) {
@@ -160,13 +159,12 @@
             v-model:selected="projectSelected"
             v-model:search-term="projectSearchText"
             :disabled="
-              submitAttempted || !isAssigningProject || noProjectsToAssign
+              submitAttempted || !canAssignProject || noProjectsToAssign
             "
             placeholder="Search Projects"
             @clear="resetProjectSearch"
             @open="onProjectSearchOpen"
             @close="onProjectSearchClose"
-            @load-initial="onInitialProjectsLoad"
             class="flex-grow"
             :label="'Project'"
             :messages="noProjectsToAssign ? 'No Projects to select' : null"
@@ -192,7 +190,7 @@
         <div class="w-60 flex flex-shrink-0 mr-4">
           <div class="flex items-center">
             <va-checkbox
-              v-model="isAssignedSourceInstrument"
+              v-model="canAssignSourceInstrument"
               @update:modelValue="
                 (val) => {
                   if (!val) {
@@ -214,7 +212,7 @@
             :options="sourceInstrumentOptions"
             :disabled="
               submitAttempted ||
-              !isAssignedSourceInstrument ||
+              !canAssignSourceInstrument ||
               noInstrumentsToAssign
             "
             label="Source Instrument"
@@ -301,7 +299,7 @@ import { VaPopover } from "vuestic-ui";
 import { Icon } from "@iconify/vue";
 import Constants from "@/constants";
 import { useAuthStore } from "@/stores/auth";
-import projectService from "@/services/project";
+import projectService from "@/services/projects";
 
 const auth = useAuthStore();
 
@@ -358,12 +356,12 @@ const datasetTypeOptions = ref(datasetTypes);
 // `willIngestRawData` determines whether the user will ingest a Raw Data or a
 // Data Product. By default, the user will ingest a Data Product.
 const willIngestRawData = ref(false);
-const isAssigningProject = ref(true);
-const isAssigningSourceRawData = ref(true);
+const canAssignProject = ref(true);
+const canAssignSourceRawData = ref(true);
+const canAssignSourceInstrument = ref(true);
 const submissionSuccess = ref(false);
 const fileListSearchText = ref("");
 const fileList = ref([]);
-// const createdDatasetId = ref(null);
 const createdDataset = ref({});
 const associatedProject = ref({});
 const loadingResources = ref(false); // determines if the initial resources needed for the stepper are being fetched
@@ -372,9 +370,8 @@ const validatingForm = ref(false);
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
 const submissionButtonText = ref("Ingest");
-const isAssignedSourceInstrument = ref(true);
 const selectedRawData = ref(null);
-const datasetSearchText = ref("");
+const rawDataSearchText = ref("");
 const projectSearchText = ref("");
 const willImportRawData = ref(false);
 const selectedSourceInstrument = ref(null);
@@ -475,7 +472,7 @@ const resetProjectSearch = () => {
 
 const clearSelectedRawData = () => {
   selectedRawData.value = null;
-  datasetSearchText.value = "";
+  rawDataSearchText.value = "";
 };
 
 const resetRawDataSearch = (val) => {
@@ -499,13 +496,8 @@ const onRawDataSearchOpen = () => {
 
 const onRawDataSearchClose = () => {
   if (!selectedRawData.value) {
-    datasetSearchText.value = "";
+    rawDataSearchText.value = "";
   }
-};
-
-const onInitialRawDataLoad = (datasets) => {
-  noRawDataToAssign.value = datasets.length === 0;
-  isAssigningSourceRawData.value = !noRawDataToAssign.value;
 };
 
 const onProjectSearchOpen = () => {
@@ -516,11 +508,6 @@ const onProjectSearchClose = () => {
   if (!projectSelected.value) {
     projectSearchText.value = "";
   }
-};
-
-const onInitialProjectsLoad = (projects) => {
-  noProjectsToAssign.value = projects.length === 0;
-  isAssigningProject.value = !noProjectsToAssign.value;
 };
 
 const isStepperButtonDisabled = (stepIndex) => {
@@ -569,9 +556,9 @@ const setFormErrors = async () => {
 
   if (step.value === 1) {
     if (
-      (isAssigningSourceRawData.value && !selectedRawData.value) ||
-      (isAssigningProject.value && !projectSelected.value) ||
-      (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
+      (canAssignSourceRawData.value && !selectedRawData.value) ||
+      (canAssignProject.value && !projectSelected.value) ||
+      (canAssignSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
     }
@@ -917,11 +904,11 @@ watch(
     step,
     populatedDatasetName,
     projectSelected,
-    isAssigningProject,
+    canAssignProject,
     selectedRawData,
-    isAssigningSourceRawData,
+    canAssignSourceRawData,
     selectedSourceInstrument,
-    isAssignedSourceInstrument,
+    canAssignSourceInstrument,
     selectedFile,
     fileListSearchText,
     isFileSearchAutocompleteOpen,
@@ -952,7 +939,7 @@ watch(step, async () => {
 
 watch(selectedDatasetType, (newVal) => {
   if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
-    isAssigningSourceRawData.value = false;
+    canAssignSourceRawData.value = false;
     clearSelectedRawData();
     willImportRawData.value = true;
   } else {
@@ -985,20 +972,23 @@ onMounted(async () => {
   await setFormErrors();
 });
 
-onMounted(() => {
+onMounted(async () => {
   loadingResources.value = true;
-  instrumentService
-    .getAll()
-    .then((res) => {
-      sourceInstrumentOptions.value = res.data;
-    })
-    .catch((err) => {
-      toast.error("Failed to load resources");
-      // console.error(err);
-    })
-    .finally(() => {
-      loadingResources.value = false;
-    });
+
+  sourceInstrumentOptions.value = await instrumentService.getAll().data;
+  canAssignSourceInstrument.value = !noInstrumentsToAssign.value;
+
+  const rawDataOptions = await datasetService.getAll({
+    type: config.dataset.types.RAW_DATA.key,
+  }).data.datasets;
+  canAssignSourceRawData.value = rawDataOptions.length > 0;
+
+  const projectOptions = await projectService.getAll({
+    forSelf: !(auth.canOperate || auth.canAdmin),
+  }).data.projects;
+  canAssignProject.value = projectOptions.length > 0;
+
+  loadingResources.value = false;
 });
 </script>
 

@@ -180,6 +180,9 @@
     "slateScratch": ""
   },
   "enabled_features": {
+    "ingestion": {
+      "enabled_for_roles": ["admin", "user"]
+    },
     "upload": {
       "enabled_for_roles": ["admin", "user"]
     },
@@ -190,7 +193,7 @@
       "enabled_for_roles": ["admin", "user"]
     },
     "downloads": true,
-    "signup": true
+    "signup": false
   },
   "institution_types": [
     "Commercial",

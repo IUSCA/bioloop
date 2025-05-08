@@ -55,7 +55,6 @@ const emit = defineEmits([
   "clear",
   "open",
   "close",
-  "load-initial",
   "update:selected",
   "update:searchTerm",
 ]);
@@ -133,7 +132,6 @@ const queryDatasets = ({ queryIndex = null, query = null } = {}) => {
 };
 
 const searchDatasets = ({
-  isInitialLoad = false,
   searchIndex = null,
   appendToCurrentResults = false,
   logQuery = false,
@@ -157,7 +155,7 @@ const searchDatasets = ({
           ? datasets.value.concat(res.data.datasets)
           : res.data.datasets;
         totalResultsCount.value = res.data?.metadata?.count;
-        resolveSearch(res.queryIndex, isInitialLoad);
+        resolveSearch(res.queryIndex);
       })
       .catch((e) => {
         console.error(e);
@@ -166,13 +164,10 @@ const searchDatasets = ({
   }
 };
 
-const resolveSearch = (searchIndex, isInitialLoad = false) => {
+const resolveSearch = (searchIndex) => {
   searches.value.splice(searches.value.indexOf(searchIndex), 1);
   if (searches.value.length === 0) {
     loading.value = false;
-    if (isInitialLoad) {
-      emit("load-initial", datasets.value);
-    }
   }
 };
 
@@ -211,7 +206,7 @@ watch([searchTerm, filterQuery], () => {
 
 onMounted(() => {
   loading.value = true;
-  searchDatasets({ isInitialLoad: true });
+  searchDatasets();
 });
 
 onBeforeUnmount(() => {

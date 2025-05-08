@@ -53,7 +53,6 @@ const emit = defineEmits([
   "clear",
   "open",
   "close",
-  "load-initial",
   "update:selected",
   "update:searchTerm",
 ]);
@@ -123,12 +122,10 @@ const queryProjects = ({ queryIndex = null, query = null } = {}) => {
 };
 
 const searchProjects = ({
-  isInitialLoad = false,
   searchIndex = null,
   appendToCurrentResults = false,
   logQuery = false,
 } = {}) => {
-  console.log("searching", fetchQuery.value);
   // Ensure that the same query is not being run a second time (which
   // is possible due to debounced searches). If it is, the search
   // can be resolved immediately.
@@ -148,7 +145,7 @@ const searchProjects = ({
           ? projects.value.concat(res.data.projects)
           : res.data.projects;
         totalResultsCount.value = res.data?.metadata?.count || 0;
-        resolveSearch(res.queryIndex, isInitialLoad);
+        resolveSearch(res.queryIndex);
       })
       .catch(() => {
         toast.error("Failed to load datasets");
@@ -156,13 +153,10 @@ const searchProjects = ({
   }
 };
 
-const resolveSearch = (searchIndex, isInitialLoad = false) => {
+const resolveSearch = (searchIndex) => {
   searches.value.splice(searches.value.indexOf(searchIndex), 1);
   if (searches.value.length === 0) {
     loading.value = false;
-    if (isInitialLoad) {
-      emit("load-initial", projects.value);
-    }
   }
 };
 
@@ -201,7 +195,7 @@ watch([searchTerm], () => {
 
 onMounted(() => {
   loading.value = true;
-  searchProjects({ isInitialLoad: true });
+  searchProjects();
 });
 
 onBeforeUnmount(() => {

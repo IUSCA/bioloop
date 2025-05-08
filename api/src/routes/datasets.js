@@ -701,6 +701,10 @@ router.post(
         */
       /* eslint-enable */
 
+    if (true) {
+      throw new Error('test');
+    }
+
     const {
       ingestion_space, create_method, project_payload, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,

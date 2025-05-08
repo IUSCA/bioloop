@@ -74,11 +74,9 @@
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="isAssignedSourceRawData"
+                v-model="rawDataCheckboxModelValue"
                 @update:modelValue="resetRawDataSearch"
-                :disabled="
-                  submitAttempted || willUploadRawData || noRawDataToAssign
-                "
+                :disabled="isRawDataCheckboxDisabled"
                 color="primary"
                 label="Assign source Raw Data"
                 class="flex-grow"
@@ -90,15 +88,12 @@
             <DatasetSelectAutoComplete
               v-model:selected="selectedRawData"
               v-model:search-term="datasetSearchText"
-              :disabled="
-                submitAttempted || !isAssignedSourceRawData || noRawDataToAssign
-              "
+              :disabled="submitAttempted || !isRawDataSearchEnabled"
               :dataset-type="config.dataset.types.RAW_DATA.key"
               placeholder="Search Raw Data"
               @clear="resetRawDataSearch"
               @open="onRawDataSearchOpen"
               @close="onRawDataSearchClose"
-              @load-initial="onInitialRawDataLoad"
               class="flex-grow"
               :label="'Dataset'"
               :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
@@ -122,7 +117,7 @@
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="isAssignedProject"
+                v-model="canAssignProject"
                 @update:modelValue="
                   (val) => {
                     if (!val) {
@@ -143,13 +138,12 @@
               v-model:selected="projectSelected"
               v-model:search-term="projectSearchText"
               :disabled="
-                submitAttempted || !isAssignedProject || noProjectsToAssign
+                submitAttempted || !canAssignProject || noProjectsToAssign
               "
               placeholder="Search Projects"
               @clear="resetProjectSearch"
               @open="onProjectSearchOpen"
               @close="onProjectSearchClose"
-              @load-initial="onInitialProjectsLoad"
               class="flex-grow"
               :label="'Project'"
               :messages="noProjectsToAssign ? 'No Projects to select' : null"
@@ -175,7 +169,7 @@
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="isAssignedSourceInstrument"
+                v-model="canAssignSourceInstrument"
                 @update:modelValue="
                   (val) => {
                     if (!val) {
@@ -197,7 +191,7 @@
               :options="sourceInstrumentOptions"
               :disabled="
                 submitAttempted ||
-                !isAssignedSourceInstrument ||
+                !canAssignSourceInstrument ||
                 noInstrumentsToAssign
               "
               label="Source Instrument"
@@ -310,6 +304,7 @@ import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoCom
 import { Icon } from "@iconify/vue";
 import instrumentService from "@/services/instrument";
 import constants from "@/constants";
+import projectService from "@/services/projects";
 
 const auth = useAuthStore();
 
@@ -374,20 +369,24 @@ const formErrors = ref({
   [STEP_KEYS.UPLOAD]: null,
 });
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
-const isAssignedSourceInstrument = ref(true);
-const isAssignedSourceRawData = ref(true);
+const canAssignSourceInstrument = ref(true);
+// todo - document when this is true/false, and where it's used
+// const willAssignSourceRawData = ref(true);
 const selectedRawData = ref(null);
 const datasetSearchText = ref("");
 const projectSearchText = ref("");
-const isAssignedProject = ref(true);
+const canAssignProject = ref(true);
 const submissionSuccess = ref(false);
 const datasetTypeOptions = ref(datasetTypes);
 const selectedDatasetType = ref(
+  // By default, the user will upload a Data Product.
   datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
 );
-// `willUploadRawData` determines whether the user will upload a Raw Data or a
-// Data Product. By default, the user will upload a Data Product.
-const willUploadRawData = ref(false);
+const willUploadRawData = computed(() => {
+  return (
+    selectedDatasetType.value["value"] === config.dataset.types.RAW_DATA.key
+  );
+});
 // `stepPristineStates` tracks if a step's form fields are pristine (i.e. not
 // touched by user) or not. Errors are only shown when a step's form fields are
 // not pristine.
@@ -421,10 +420,6 @@ const step = ref(0);
 const uploadCancelled = ref(false);
 const noRawDataToAssign = ref(false);
 const noProjectsToAssign = ref(false);
-
-const noInstrumentsToAssign = computed(() => {
-  return sourceInstrumentOptions.value.length === 0;
-});
 
 /**
  * Determines if the upload process has been completed.
@@ -556,7 +551,7 @@ const onDirectoryAdded = (directoryDetails) => {
   setUploadedFileType(FILE_TYPE.DIRECTORY);
 };
 
-const clearSelectedRawData = () => {
+const resetRawDataSearch = () => {
   selectedRawData.value = null;
   datasetSearchText.value = "";
 };
@@ -564,21 +559,6 @@ const clearSelectedRawData = () => {
 const resetProjectSearch = () => {
   projectSelected.value = null;
   projectSearchText.value = "";
-};
-
-const resetRawDataSearch = (val) => {
-  clearSelectedRawData();
-  if (!val) {
-    datasetTypeOptions.value = datasetTypes;
-  } else {
-    datasetTypeOptions.value = datasetTypes.filter(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
-    );
-    selectedDatasetType.value = datasetTypeOptions.value.find(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
-    );
-    willUploadRawData.value = false;
-  }
 };
 
 const onRawDataSearchOpen = () => {
@@ -591,11 +571,6 @@ const onRawDataSearchClose = () => {
   }
 };
 
-const onInitialRawDataLoad = (datasets) => {
-  noRawDataToAssign.value = datasets.length === 0;
-  isAssignedSourceRawData.value = !noRawDataToAssign.value;
-};
-
 const onProjectSearchOpen = () => {
   projectSelected.value = null;
 };
@@ -604,11 +579,6 @@ const onProjectSearchClose = () => {
   if (!projectSelected.value) {
     projectSearchText.value = "";
   }
-};
-
-const onInitialProjectsLoad = (projects) => {
-  noProjectsToAssign.value = projects.length === 0;
-  isAssignedProject.value = !noProjectsToAssign.value;
 };
 
 const isStepperButtonDisabled = (stepIndex) => {
@@ -732,16 +702,16 @@ const setFormErrors = async () => {
     }
   }
 
-  if (step.value === 1) {
-    if (
-      (isAssignedSourceRawData.value && !selectedRawData.value) ||
-      (isAssignedProject.value && !projectSelected.value) ||
-      (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
-    ) {
-      formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
-      return;
-    }
-  }
+  // if (step.value === 1) {
+  //   if (
+  //     (willAssignSourceRawData.value && !selectedRawData.value) ||
+  //     (canAssignProject.value && !projectSelected.value) ||
+  //     (canAssignSourceInstrument.value && !selectedSourceInstrument.value)
+  //   ) {
+  //     formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
+  //     return;
+  //   }
+  // }
 
   if (step.value === 2) {
     const { isNameValid: datasetNameIsValid, error } =
@@ -1270,16 +1240,6 @@ const setDirectory = (directoryDetails) => {
   displayedFilesToUpload.value = [selectedDirectory.value];
 };
 
-watch(selectedDatasetType, (newVal) => {
-  if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
-    isAssignedSourceRawData.value = false;
-    clearSelectedRawData();
-    willUploadRawData.value = true;
-  } else {
-    willUploadRawData.value = false;
-  }
-});
-
 watch(selectingFiles, () => {
   if (selectingFiles.value) {
     populatedDatasetName.value = "";
@@ -1299,11 +1259,11 @@ watch(
     step,
     populatedDatasetName,
     projectSelected,
-    isAssignedProject,
+    canAssignProject,
     selectedRawData,
-    isAssignedSourceRawData,
+    // willAssignSourceRawData, // todo - add changed fields to watch
     selectedSourceInstrument,
-    isAssignedSourceInstrument,
+    canAssignSourceInstrument,
     selectingFiles,
     selectingDirectory,
     filesToUpload,
@@ -1321,23 +1281,6 @@ watch(
     await setFormErrors();
   },
 );
-
-onMounted(() => {
-  loading.value = true;
-  instrumentService
-    .getAll()
-    .then((res) => {
-      sourceInstrumentOptions.value = res.data;
-      isAssignedSourceInstrument.value = !noInstrumentsToAssign.value;
-    })
-    .catch(() => {
-      toast.error("Failed to load resources");
-      // console.error(err);
-    })
-    .finally(() => {
-      loading.value = false;
-    });
-});
 
 onMounted(() => {
   setFormErrors();
@@ -1423,98 +1366,96 @@ onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", onBeforeUnload);
 });
 
-/* eslint-disable */
-// /**
-//  * Browser Tab Closure Handling Mechanism
-//  *
-//  * This mechanism is designed to handle the scenario when a user attempts to close the browser tab
-//  * during an incomplete upload process. It uses a combination of browser events and a local storage
-//  * flag to determine whether to cancel the upload.
-//  *
-//  * Key Components:
-//  *
-//  * 1. `isClosingBrowserTab`:
-//  *    A reactive variable stored in local storage that indicates whether the browser tab is about to be closed.
-//  *
-//  * 2. `onBeforeUnload`:
-//  *    Event handler triggered when the user attempts to close the tab. It shows a browser
-//  *    confirmation dialog asking the user if they want to leave. If the upload is incomplete at this point,
-//  *    a flag (`isClosingBrowserTab`) is set to track this, with a reset-timeout.
-//  *
-//  * 3. `onUnload`:
-//  *    Event handler triggered if the user confirms that they wish to close the tab.
-//  *    - if the user confirms closing the tab within a short delay (500ms):
-//  *      - It checks if the upload is incomplete, and if so, cancels the upload
-//  *    - if the user takes longer than 500ms to confirm closing the tab:
-//  *      - The upload is not cancelled. In this case the system will end up with an incomplete upload,
-//  *        which can be cleaned up later.
-//  *
-//  * 4. Event Listeners:
-//  *    Added on component mount and removed on unmount to ensure proper cleanup of an incomplete upload.
-//  *
-//  * Flow:
-//  * 1. User attempts to close tab
-//  * 2. `onBeforeUnload` is triggered
-//  *    - Shows confirmation dialog
-//  *    - Sets the `isClosingBrowserTab` flag to `true`
-//  *    - Starts a 500ms timeout after which the flag is reset
-//  * 3. If user confirms that they wish to close the tab, `onUnload` is triggered
-//  *    - Checks `isClosingBrowserTab` and `isUploadIncomplete`
-//  *    - Cancels upload if both are true
-//  * 4. If user doesn't confirm within 500ms, the `isClosingBrowserTab` flag is reset
-//  *
-//  */
-//
-// // Used to indicate if the user intends to close the current browser tab.
-// const isClosingBrowserTab = ref(false);
-//
-// const onBeforeUnload = (e) => {
-//   debugger;
-//   if (isUploadIncomplete.value) {
-//     console.log(
-//         "Show user a browser alert to get confirmation before leaving the page",
-//     );
-//     e.returnValue = true; // this shows the browser alert before user leaves the page
-//     isClosingBrowserTab.value = true;
-//
-//     // If user hasn't confirmed or cancelled the browser alert within a short
-//     // delay, assume they are not leaving the page.
-//     // setTimeout(() => {
-//     //   console.log("500 ms elapsed. Assume user won't leave the page.");
-//     //   isClosingBrowserTab.value = false;
-//     // }, 500);
-//   }
-// };
-//
-// const onUnload = () => {
-//   if (isClosingBrowserTab.value) {
-//     console.log(
-//         "User confirmed that they are leaving page. Upload is incomplete, and will be cancelled.",
-//     );
-//     datasetService.cancelDatasetUpload(
-//         datasetUploadLog.value.audit_log.dataset.id,
-//     );
-//   } else {
-//     console.log(
-//         "User did not confirm leaving page within 500 ms. Upload is incomplete, but will not be cancelled.",
-//     );
-//   }
-//   isClosingBrowserTab.value = false;
-// };
-//
-// onMounted(() => {
-//   window.addEventListener("beforeunload", onBeforeUnload);
-//   window.addEventListener("unload", onUnload);
-// });
-//
-// onBeforeUnmount(() => {
-//   window.removeEventListener("beforeunload", onBeforeUnload);
-//   window.removeEventListener("unload", onUnload);
-//   // once the `onUnload` handler is finished, the `isClosingBrowserTab` flag
-//   // can be reset
-//   isClosingBrowserTab.value = false;
-// });
-/* eslint-enable */
+watch(selectedDatasetType, (newVal, oldVal) => {
+  resetRawDataSearch();
+  if (!willUploadRawData.value && !noRawDataToAssign.value) {
+    rawDataCheckboxInternalState.value = true;
+  }
+});
+
+const rawDataCheckboxInternalState = ref(true);
+const rawDataCheckboxModelValue = computed({
+  get: () => {
+    if (noRawDataToAssign.value || willUploadRawData.value) {
+      return false;
+    }
+    return rawDataCheckboxInternalState.value;
+  },
+  set: (newValue) => {
+    if (!noRawDataToAssign.value && !willUploadRawData.value) {
+      rawDataCheckboxInternalState.value = newValue;
+    }
+  },
+});
+
+const isRawDataCheckboxDisabled = computed(() => {
+  return noRawDataToAssign.value || willUploadRawData.value;
+});
+
+const isRawDataSearchEnabled = computed(() => {
+  // Raw Data checkbox is enabled AND checked
+  return !isRawDataCheckboxDisabled.value && rawDataCheckboxModelValue.value;
+});
+
+onMounted(async () => {
+  console.log("onMounted");
+  loading.value = true;
+
+  const sourceInstrumentResponse = await instrumentService.getAll();
+  sourceInstrumentOptions.value = sourceInstrumentResponse.data;
+  canAssignSourceInstrument.value = sourceInstrumentOptions.value.length > 0;
+
+  const initialRawDataOptions = await datasetService.getAll({
+    type: config.dataset.types.RAW_DATA.key,
+  });
+  noRawDataToAssign.value = initialRawDataOptions.data.datasets.length === 0;
+  console.log("noRawDataToAssign", noRawDataToAssign.value);
+
+  const initialProjectOptions = await projectService.getAll({
+    forSelf: !(auth.canOperate || auth.canAdmin),
+  });
+  noProjectsToAssign.value = initialProjectOptions.data.projects.length > 0;
+
+  loading.value = false;
+
+  console.log("onMounted done");
+
+  // Raw Data v-model:
+  //  - IF
+  //    - (computed) no raw data to assign at load : - UNCHECKED and DISABLED
+  //  - ELSE
+  //    - (v-model) user choice
+  // Raw Data search disabled:
+  //  - Disabled state governed entirely by:
+  //    - Raw Data checkbox v-model (true/false)
+  //
+  // -----------------------------------------
+  //
+  //   - IF
+  //     - No raw data to assign on load::
+  //       - checkbox UNCHECKED and DISABLED
+  //       - search DISABLED
+  //   - ELSE:
+  //       - checkbox CHECKED and ENABLED
+  //       - search ENABLED
+  //     - User Interation:
+  //       - User changes dataset type:
+  //         - IF
+  //           - new dataset type is raw data:
+  //             - checkbox UNCHECKED and DISABLED
+  //             - search DISABLED
+  //           - new dataset type is not raw data:
+  //             - checkbox CHECKED and ENABLED
+  //             - search ENABLED
+  //       - User checks/unchecks raw data checkbox:
+  //         - IF
+  //           - User unchecks raw data checkbox:
+  //             - checkbox UNCHECKED and ENABLED
+  //             - search DISABLED
+  //           - User checks raw data checkbox:
+  //             - checkbox CHECKED and ENABLED
+  //             - search ENABLED
+});
 </script>
 
 <style lang="scss">

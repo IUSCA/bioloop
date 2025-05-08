@@ -84,11 +84,13 @@ router.get(
   query('dirs_only').optional().default(false),
   query('search_space').optional().escape().notEmpty(),
   asyncHandler(async (req, res, next) => {
-    const f = 'file';
+    const { dirs_only, path: query_path } = req.query;
+
+    const name = 'filename';
     res.json([{
-      name: f,
+      name,
       isDir: true,
-      path: path.join('/path/to', f),
+      path: path.join(query_path, name),
     }]);
 
     // const { dirs_only, path: query_path } = req.query;
