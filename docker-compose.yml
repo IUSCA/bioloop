@@ -284,3 +284,5 @@ volumes:
     external: false
   landing_volume:
     external: false
+  docs_modules:
+    external: false
