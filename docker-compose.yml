@@ -13,7 +13,7 @@ services:
       - ./ui/:/opt/sca/app
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
-    command: npm run dev
+    command: ["npm", "run", "dev"] 
 
   api:
     image: node:21
@@ -31,7 +31,7 @@ services:
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"] 
-    command: ["bin/command.sh"] # Setup of connections settings to and from api mostly within .env files.
+    command: ["npm", "run", "dev"] 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
       interval: 30s
@@ -119,7 +119,6 @@ services:
       - db/mongo/.env.example # For MongoDB connection settings
       - db/queue/.env.example # For RabbitMQ connection settings
       - rhythm/.env.example # For all default settings
-      - api/.env # For being able to set the rhythm key into the api.  You should create this manually in production without a joint .env file.
     volumes:
       - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
       - ./api/.env:/app/api/.env # This is the api .env file that is used to set up the environment
@@ -197,6 +196,36 @@ services:
       timeout: 10s
       retries: 5
 
+# Dev containers
+  docs:
+    image: node:21
+    volumes:
+      - ./package.json:/opt/sca/app/package.json
+      - ./package-lock.json:/opt/sca/app/package-lock.json
+      - ./docs/:/opt/sca/app/docs
+      - docs_modules:/opt/sca/app/node_modules
+    ports:
+      - 127.0.0.1:5173:5173
+    working_dir: /opt/sca/app
+    entrypoint:
+      - sh
+      - -c
+      - |
+        npm install && exec /opt/sca/app/node_modules/.bin/vitepress dev docs --host
+
+
+  jupyter_ijs:
+    image: darkbluestudios/jupyter-ijavascript-utils:latest
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./api/notebooks:/home/jovyan/work/notebooks
+      - ./api/node_modules:/home/jovyan/work/node_modules
+      - ./api/package.json:/home/jovyan/work/package.json:ro
+    # stdin_open: true
+    # tty: true
+    profiles:
+      - repl
 
 # Metrics containers
   postgres_exporter:
@@ -219,6 +248,8 @@ services:
       - prometheus_data:/prometheus  # Mount the volume for Prometheus data
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+    profiles:
+      - metrics
 
   grafana:
     image: grafana/grafana
@@ -236,7 +267,8 @@ services:
         condition: service_started
       api:
         condition: service_healthy
-
+    profiles:
+      - metrics
 volumes:
   postgres_data:
     external: false
