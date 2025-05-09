@@ -43,7 +43,7 @@ router.get(
       order by timestamp desc
   `;
 
-    // convert numeric strs to numbers
+    // convert numeric strings to numbers
     res.json(numericStringsToNumbers(
       metrics,
       ['usage', 'limit'],

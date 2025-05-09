@@ -575,7 +575,7 @@ router.post(
     */
 
     // get source project
-    const source_porject = await prisma.project.findFirstOrThrow({
+    const source_project = await prisma.project.findFirstOrThrow({
       where: {
         id: req.params.src,
       },
@@ -598,7 +598,7 @@ router.post(
     ));
 
     // find dataset ids which are not already associated with the source project
-    const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
+    const source_dataset_ids = source_project.datasets.map((obj) => obj.dataset.id);
 
     const dataset_ids_to_add = [
       ...setDifference(target_dataset_ids, new Set(source_dataset_ids)),

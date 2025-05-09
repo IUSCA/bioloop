@@ -65,10 +65,10 @@ router.post(
     // decoded id_token looks like this:
     // {
     //   "iss": "accounts.google.com",
-    //   "sub": "100338926102874330519",
-    //   "email": "ddeepak6992@gmail.com",
+    //   "sub": "1132891511",
+    //   "email": "user@gmail.com",
     //   "email_verified": true,
-    //   "at_hash": "soIBpOyDtjm3yw9633IB_A",
+    //   "at_hash": "<hash>",
     //   "iat": 1698353577,
     //   "exp": 1698357177
     // }

@@ -1,4 +1,4 @@
-const AccessControl = require('accesscontrol');
+const AccessControl = require('accesscontrol'); // cspell: disable-line
 
 const CONSTANTS = require('../constants');
 

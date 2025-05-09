@@ -29,12 +29,12 @@ ENTRYPOINT npm ci && npx prisma generate client && exec pm2-runtime ecosystem.co
 # ENTRYPOINT pnpm fetch && npx prisma db push && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
 
 # Entrypoint will be run in the shell mode - https://docs.docker.com/engine/reference/builder/#shell-form-entrypoint-example
-# any CMD or docker run command line arguments or commad in docker-compose are ignored
+# any CMD or docker run command line arguments or command in docker-compose are ignored
 # use --entrypoint or entrypoint in docker-compose to override this.
 
 
 # pnpm fetch
-#   Inorder to make builds predictable, it is necessary to install packages using `npm ci` which uses frozen package-lock.json.
+#   In order to make builds predictable, it is necessary to install packages using `npm ci` which uses frozen package-lock.json.
 #   This file is generated automatically during `npm install` and I don't want to run npm install in the dev environment.
 #   Having multiple repositories leading to increased disk usage. To address this, I employ pnpm to minimize disk usage, but unfortunately, there is no way to convert pnpm-lock.yaml to package-lock.json.
 

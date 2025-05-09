@@ -114,7 +114,7 @@ router.patch(
     }
 
     if (!can_update) {
-      return next(createError.Forbidden('Insufficient privilages to update user'));
+      return next(createError.Forbidden('Insufficient privileges to update user'));
     }
 
     const updatedUser = await userService.updateUser(req.params.username, updates);
