@@ -181,19 +181,19 @@
   },
   "enabled_features": {
     "ingestion": {
-      "enabled_for_roles": ["admin", "user"]
+      "enabled_for_roles": ["admin"]
     },
     "upload": {
-      "enabled_for_roles": ["admin", "user"]
+      "enabled_for_roles": ["admin"]
     },
     "fs": {
-      "enabled_for_roles": ["admin", "user"]
+      "enabled_for_roles": ["admin"]
     },
     "autoCreateProjectOnDatasetCreation": {
-      "enabled_for_roles": ["admin", "operator", "user"]
+      "enabled_for_roles": ["user"]
     },
     "downloads": true,
-    "signup": false
+    "signup": true
   },
   "institution_types": [
     "Commercial",

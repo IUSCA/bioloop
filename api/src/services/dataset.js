@@ -753,7 +753,7 @@ const workflow_access_check = [
 ];
 
 /**
- * Builds a Prisma query object for associating a dataset with a new project that will be created.
+ * Builds a Prisma query object for creating a new Project and associating a dataset with it.
  *
  * @async
  * @function buildAssociationQueryForExistingProject
