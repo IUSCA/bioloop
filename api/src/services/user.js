@@ -49,8 +49,8 @@ const transformUser = _.flow([
 ]);
 
 async function findRoles(roles, _prisma) {
-  const __primsa = _prisma || prisma;
-  return __primsa.role.findMany({
+  const __prisma = _prisma || prisma;
+  return __prisma.role.findMany({
     where: {
       OR: roles.map((role) => ({
         name: {

@@ -144,7 +144,7 @@ services:
       - |
         npm install && exec /opt/sca/app/node_modules/.bin/vitepress dev docs --host
 
-
+# cspell: ignore darkbluestudios jovyan ijavascript
   jupyter_ijs:
     image: darkbluestudios/jupyter-ijavascript-utils:latest
     ports:

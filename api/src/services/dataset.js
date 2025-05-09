@@ -260,8 +260,8 @@ function create_filetree(files) {
   };
 
   files.forEach((file) => {
-    const { path: relpath, ...rest } = file;
-    const pathObject = path.parse(relpath);
+    const { path: relPath, ...rest } = file;
+    const pathObject = path.parse(relPath);
     const parent_dir = pathObject.dir
       .split(path.sep)
       .reduce((parent, dir_name) => {
@@ -544,10 +544,10 @@ async function add_files({ dataset_id, data }) {
     ...f,
   }));
 
-  // create a file tree using graph datastructure
+  // create a file tree using graph data structure
   const graph = new FileGraph(files.map((f) => f.path));
 
-  // query non leaf nodes (directories) from the graph datastrucure
+  // query non leaf nodes (directories) from the graph data structure
   const directories = graph.non_leaf_nodes().map((p) => ({
     dataset_id,
     name: path.parse(p).base,
@@ -561,7 +561,7 @@ async function add_files({ dataset_id, data }) {
     skipDuplicates: true,
   });
 
-  // retrive all files and directories for this dataset to get their ids
+  // retrieve all files and directories for this dataset to get their ids
   const fileObjs = await prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -578,7 +578,7 @@ async function add_files({ dataset_id, data }) {
     return acc;
   }, {});
 
-  // query edges / parent-child relationships from the graph datastructure
+  // query edges / parent-child relationships from the graph data structure
   const edges = graph.edges().map(([src, dst]) => ({
     parent_id: path_to_ids[src],
     child_id: path_to_ids[dst],

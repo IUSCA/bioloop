@@ -1,6 +1,6 @@
 const express = require('express');
 const { query, body } = require('express-validator');
-const IULoginHelper = require('@iusca/iulogin-helper');
+const IULoginHelper = require('@iusca/iulogin-helper'); // cspell: disable-line
 const config = require('config');
 
 const createError = require('http-errors');

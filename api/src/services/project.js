@@ -3,7 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 function normalize_name(name) {
-  // conver to lowercase
+  // convert to lowercase
   // replace all character other than a-z, 0-9, and - with -
   // replace consecutive hyphens with one -
 

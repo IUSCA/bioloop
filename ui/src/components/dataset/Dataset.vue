@@ -306,7 +306,7 @@
         >
           <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
           <span class="text-lg">
-            There are no workflows associated with this datatset.
+            There are no workflows associated with this dataset.
           </span>
         </div>
       </div>
@@ -396,7 +396,7 @@ function fetch_dataset(show_loading = false) {
       console.error(err);
       if (err?.response?.status == 404)
         toast.error("Could not find the dataset");
-      else toast.error("Could not fetch datatset");
+      else toast.error("Could not fetch dataset");
     })
     .finally(() => {
       loading.value = false;

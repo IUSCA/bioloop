@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable import/no-extraneous-dependencies */
+// cspell:ignore Mersenne
 const { Random, MersenneTwister19937 } = require('random-js');
 // eslint-disable-next-line lodash-fp/use-fp
 const _ = require('lodash');

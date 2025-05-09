@@ -176,7 +176,7 @@ async function main() {
 
   // upsert raw data - data product associations
   await Promise.all(
-    data.dataset_heirarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
+    data.dataset_hierarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
       where: {
         source_id_derived_id: sd,
       },

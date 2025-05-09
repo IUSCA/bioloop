@@ -9,7 +9,7 @@ set -o pipefail # Exit if any command in a pipeline fails
 
 } || {
 
-  echo "Defaulting to the user and group of the current directory's onwer because the provided user or group was not found."
+  echo "Defaulting to the user and group of the current directory's owner because the provided user or group was not found."
   APP_UID=$(ls -ldn `pwd` | awk '{print $3}') &&
   APP_GID=$(ls -ldn `pwd` | awk '{print $4}')
 }
@@ -68,5 +68,5 @@ sudo docker compose -f "docker-compose-prod.yml" up -d postgres
 sudo docker compose -f "docker-compose-prod.yml" up -d --force-recreate ui api
 
 # start grafana if it is not running
-# this will also start prometheus and postres-exporter if they are not running
+# this will also start prometheus and postgres-exporter if they are not running
 sudo docker compose -f "docker-compose-prod.yml" up -d grafana

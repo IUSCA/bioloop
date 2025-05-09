@@ -1,6 +1,6 @@
 # Authentication
 
-The API uses IU CAS authnetication model. 
+The API uses IU CAS authentication model. 
 
 <img src="/api_auth.png" >
 

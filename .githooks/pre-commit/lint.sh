@@ -10,6 +10,9 @@ if [[ -z "$staged_files" ]]; then
   exit 0
 fi
 
+# spell check staged files
+npx cspell --no-progress --no-summary $staged_files
+
 # Initialize variables
 ui_files=""
 api_files=""

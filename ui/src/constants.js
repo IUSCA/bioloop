@@ -47,7 +47,7 @@ const exports = {
       // {
       //   icon: "mdi-folder-upload",
       //   title: "Data Uploader",
-      //   path: "/datauploader",
+      //   path: "/datauploader",  // cspell: disable-line
       // },
       {
         icon: "mdi-dna",

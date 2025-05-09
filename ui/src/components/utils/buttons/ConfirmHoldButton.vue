@@ -1,5 +1,5 @@
 <template>
-  <div class="holdbtn rounded">
+  <div class="hold-btn rounded">
     <va-button ref="longBtn" :color="props.color" preset="primary">
       <Icon :icon="props.icon" class="mr-3 text-xl" />
 
@@ -37,7 +37,7 @@ const isHovered = useElementHover(longBtn);
 <style scoped>
 /* https://stackoverflow.com/questions/17212094/fill-background-color-left-to-right-css */
 /* https://jsfiddle.net/75Umu/3/ */
-div.holdbtn {
+div.hold-btn {
   background: linear-gradient(
     to right,
     rgba(175, 175, 175, 0.4) 50%,
@@ -47,7 +47,7 @@ div.holdbtn {
   background-position: right bottom;
   transition: all 3s ease;
 }
-div.holdbtn:active {
+div.hold-btn:active {
   background-position: left bottom;
 }
 </style>
