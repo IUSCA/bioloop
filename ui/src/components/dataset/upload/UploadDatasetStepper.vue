@@ -1143,6 +1143,24 @@ const uploadFile = async (fileDetails) => {
   return uploaded;
 };
 
+/**
+ * Handles the submission of the dataset upload form.
+ * This function is called when the user clicks the "Upload" button on the final step of the stepper.
+ *
+ * @async
+ * @function onSubmit
+ *
+ * @description
+ * This function performs the following steps:
+ * 1. Sets the submission attributes to indicate that an upload is in progress.
+ * 2. Before initiating the upload, evaluates file checksums, and registers the Dataset to be uploaded in the database.
+ * 3. Sequentially uploads any files that have not been uploaded yet.
+ * 4. Once all files have been uploaded, or if the upload is interrupted, it sets appropriate error messages and status.
+ *
+ * @throws {Error} If there's an issue with dataset creation or file upload.
+ *
+ * @returns {Promise<void>}
+ */
 const onSubmit = async () => {
   if (filesToUpload.value.length === 0) {
     await setFormErrors();
@@ -1264,7 +1282,11 @@ const onNextClick = (nextStep) => {
   }
 };
 
-// Evaluates selected file checksums, logs the upload
+/**
+ * This function:
+ * 1. evaluates the checksums of the files to be uploaded.
+ * 2. Logs any upload-related information that needs to be persisted in the database.
+ */
 const preUpload = async () => {
   await evaluateChecksums(filesNotUploaded.value);
 
@@ -1287,7 +1309,10 @@ const preUpload = async () => {
   }
 };
 
-// Log (or update) upload status
+/**
+ * Creates a log entry for this Dataset's upload in the database, or updates an existing log.
+ * @param data
+ */
 const createOrUpdateUploadLog = (data) => {
   if (!uploadCancelled.value) {
     return !datasetUploadLog.value
