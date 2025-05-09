@@ -71,9 +71,7 @@
               </router-link>
             </div>
             <InfoHighlight
-              v-else-if="
-                auth.isFeatureEnabled('autoCreateProjectOnDatasetCreation')
-              "
+              v-else-if="props.creatingNewProject"
               class="va-text-secondary"
             >
               A new Project will be created
@@ -117,6 +115,10 @@ const props = defineProps({
   },
   project: {
     type: Object,
+  },
+  creatingNewProject: {
+    type: Boolean,
+    default: false,
   },
   inputDisabled: {
     type: Boolean,

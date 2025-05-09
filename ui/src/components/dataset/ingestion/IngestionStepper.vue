@@ -238,6 +238,7 @@
         :ingestion-dir="selectedFile"
         :dataset-type="selectedDatasetType?.value"
         :project="projectSelected || projectCreated"
+        :creating-new-project="willCreateNewProject"
         :source-raw-data="selectedRawData"
         :source-instrument="selectedSourceInstrument"
         :ingestion-space="searchSpace.label"
@@ -442,6 +443,14 @@ const willIngestRawData = computed(() => {
   );
 });
 
+// Determines whether a new Project will be created and associated with the Dataset being ingested.
+const willCreateNewProject = computed(() => {
+  return (
+    noProjectsToAssign.value &&
+    auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")
+  );
+});
+
 // Determines whether the current step has form-validation errors.
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
@@ -469,16 +478,13 @@ const isNextButtonDisabled = computed(() => {
  * if this feature is enabled.
  */
 const getProjectCreationPayload = () => {
-  let project_payload = null;
-  if (noProjectsToAssign.value) {
-    // If user has no Projects to choose from, auto-create a new Project
-    // for the user, if this feature is enabled.
-    if (auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")) {
-      project_payload = {
-        browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
-        assignee_ids: [auth.user.id],
-      };
-    }
+  let project_payload;
+  // If a new Project is to be created, the current user will be assigned to it.
+  if (willCreateNewProject.value) {
+    project_payload = {
+      browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
+      assignee_ids: [auth.user.id],
+    };
   } else {
     project_payload = projectSelected.value && {
       project_id: projectSelected.value.id,
@@ -1007,9 +1013,16 @@ const onSubmit = async () => {
   submissionButtonText.value = SUBMIT_BUTTON.PROCESSING;
 
   try {
+    // create the Dataset in the database
     await createDataset();
-    await fetchAssociatedProjects();
-    await fetchAssociatedProjectDetails();
+    // If a Project is associated with the Dataset being ingested, its details will need to be fetched to show in the UI
+    const shouldFetchAssociatedProject =
+      projectSelected.value || willCreateNewProject.value;
+    if (shouldFetchAssociatedProject) {
+      await fetchAssociatedProject();
+      await fetchAssociatedProjectDetails();
+    }
+    // Initiate the ingestion process
     await initiateIngestion();
     handleSuccessfulIngestion();
   } catch (error) {
@@ -1017,6 +1030,7 @@ const onSubmit = async () => {
   }
 };
 
+// This method is expected to be idempotent, to ensure that it can be called upon form-submission retries.
 const createDataset = async () => {
   if (createdDataset.value) {
     return;
@@ -1034,85 +1048,45 @@ const createDataset = async () => {
   }
 };
 
-const fetchAssociatedProjects = async () => {
-  // If a new Project is to be created and assigned to the Dataset being uploaded, of if associated Project
-  // has already been fetched, skip.
-  console.log("Fetching associated Projects...");
-  // If associated Project's details have already been fetched (through a prior network call that failed after this
-  // request), skip.
+// This method is expected to be idempotent, to ensure that it can be called upon form-submission retries.
+const fetchAssociatedProject = async () => {
+  // If associated Project has already been fetched, skip.
   if ((createdDataset.value.projects || []).length > 0) {
-    console.log("Associated project details have already been fetched.");
     return;
   }
-
-  const shouldFetchProject =
-    projectSelected.value ||
-    (noProjectsToAssign.value &&
-      auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation"));
-
-  if (!shouldFetchProject) {
-    console.log("No need to fetch project details.");
-    return;
-  }
-
-  // else, fetch associated Projects.
+  // Fetch associated Projects.
   try {
-    console.log("Fetching associated Projects...");
     const res = await datasetService.getById({
       id: createdDataset.value.id,
       include_projects: true,
     });
     createdDataset.value.projects = res.data.projects;
-    console.log("Fetched associated Projects:");
   } catch (error) {
-    console.error("Error fetching associated projects:", error);
+    // console.error("Error fetching associated projects:", error);
     throw new Error(ERRORS.FETCH_ASSOCIATED_PROJECTS);
   }
 };
 
-// If project is selected:
-//   - always fetch it
-// If project not selected:
-//   - Fetch it:
-//     - only if it is being auto-created, i.e.:
-//       - there are no projects to choose from,
-//       - AND, auto-creation is enabled
+// This method is expected to be idempotent, to ensure that it can be called upon form-submission retries.
 const fetchAssociatedProjectDetails = async () => {
-  // If a new Project is to be created and assigned to the Dataset being uploaded, of if associated Project
-  // has already been fetched, skip.
-  console.log("Fetching associated Projects...");
-  // If associated Project's details have already been fetched (through a prior network call that failed after this
-  // request), skip.
+  // If associated Project's details has already been fetched, skip.
   if (projectCreated.value) {
-    console.log("Associated project details have already been fetched.");
     return;
   }
-
-  const shouldFetchProject =
-    projectSelected.value ||
-    (noProjectsToAssign.value &&
-      auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation"));
-
-  if (!shouldFetchProject) {
-    console.log("No need to fetch project details.");
-    return;
-  }
-
+  // Fetch associated Project's details.
   try {
-    console.log("Fetching associated Project Details...");
     const res = await projectService.getById({
       id: createdDataset.value.projects[0].project_id,
+      forSelf: !(auth.canOperate || auth.canAdmin),
     });
     projectCreated.value = res.data;
-    console.log("Fetched associated Project Details:");
   } catch (error) {
-    console.error("Error fetching associated project details:", error);
+    // console.error("Error fetching associated project details:", error);
     throw new Error(ERRORS.GET_PROJECT_DETAILS);
   }
 };
 
 const initiateIngestion = async () => {
-  // todo - handle case where workflow is already in progress
   try {
     await datasetService.initiate_workflow_on_dataset({
       dataset_id: createdDataset.value.id,
@@ -1161,7 +1135,6 @@ const ERRORS = {
   INITIATE_INGESTION: "Failed to initiate Ingestion",
 };
 
-// todo - there are situations where not having an associated project is fine
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
     if (submitAttempted.value && !submissionSuccess.value) {
@@ -1241,7 +1214,6 @@ watch(
  *  search fields if the user has zero options to choose from.
  */
 onMounted(async () => {
-  //
   loadingResources.value = true;
 
   try {
@@ -1266,7 +1238,7 @@ onMounted(async () => {
     noProjectsToAssign.value =
       onLoadProjectOptionsResponse.data.projects.length === 0;
   } catch (error) {
-    console.error("Error loading resources:", error);
+    // console.error("Error loading resources:", error);
     toast.error("An error occurred. Please refresh the page to try again.");
   }
 

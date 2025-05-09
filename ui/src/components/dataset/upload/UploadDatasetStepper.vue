@@ -230,7 +230,8 @@
                   :dataset-name-error="
                     !stepIsPristine && formErrors[STEP_KEYS.UPLOAD]
                   "
-                  :project="projectSelected"
+                  :project="projectSelected || projectCreated"
+                  :creating-new-project="willCreateNewProject"
                   :source-instrument="selectedSourceInstrument"
                   :source-raw-data="selectedRawData"
                   :submission-status="submissionStatus"
@@ -459,8 +460,10 @@ const sourceInstrumentOptions = ref([]);
 
 // The Raw Data that will be assigned to the Dataset being uploaded.
 const selectedRawData = ref(null);
-// The Project that will be assigned to the Dataset being uploaded.
+// The (existing) Project that will be assigned to the Dataset being ingested.
 const projectSelected = ref(null);
+// The (new) Project that will be assigned to the Dataset being ingested.
+const projectCreated = ref(null);
 // The Instrument that will be assigned to the Dataset being uploaded.
 const selectedSourceInstrument = ref(null);
 
@@ -475,6 +478,14 @@ const noInstrumentsToAssign = ref(false);
 const willUploadRawData = computed(() => {
   return (
     selectedDatasetType.value["value"] === config.dataset.types.RAW_DATA.key
+  );
+});
+
+// Determines whether a new Project will be created and associated with the Dataset being uploaded.
+const willCreateNewProject = computed(() => {
+  return (
+    noProjectsToAssign.value &&
+    auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")
   );
 });
 
@@ -546,21 +557,16 @@ const someFilesPendingUpload = computed(
  * if this feature is enabled.
  */
 const getProjectCreationPayload = () => {
-  let project_payload = null;
-  if (noProjectsToAssign.value) {
-    // If user has no Projects to choose from, auto-create a new Project
-    // for the user, if this feature is enabled.
-    if (auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")) {
-      project_payload = {
-        browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
-        assignor_id: auth.user.id,
-        assignee_ids: [auth.user.id],
-        user_assignor_id: auth.user.id,
-      };
-    }
-  } else {
+  let project_payload;
+  if (willCreateNewProject.value) {
+    // If a new Project is to be created, the current user will be assigned to it.
     project_payload = {
-      project_id: projectSelected.value?.id,
+      browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
+      assignee_ids: [auth.user.id],
+    };
+  } else {
+    project_payload = projectSelected.value && {
+      project_id: projectSelected.value.id,
     };
   }
   return project_payload;
@@ -570,16 +576,18 @@ const getProjectCreationPayload = () => {
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being uploaded.
  */
 const uploadFormData = computed(() => {
+  let project_payload = getProjectCreationPayload();
+
   return {
     name: uploadedDatasetName.value,
     type: selectedDatasetType.value["value"],
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    project_payload: getProjectCreationPayload(),
-    src_instrument_id: selectedSourceInstrument.value
-      ? selectedSourceInstrument.value.id
-      : null,
+    ...(project_payload && { project_payload }),
+    ...(selectedSourceInstrument.value && {
+      src_instrument_id: selectedSourceInstrument.value.id,
+    }),
     files_metadata: filesToUpload.value.map((e) => {
       return {
         name: e.name,
@@ -1255,7 +1263,8 @@ const handleSubmit = () => {
           )
         : Promise.reject();
     })
-    .catch(() => {
+    .catch((e) => {
+      // console.error(e);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
       submissionAlert.value = "An error occurred.";
@@ -1300,8 +1309,10 @@ const preUpload = async () => {
   try {
     const res = await createOrUpdateUploadLog(logData);
     datasetUploadLog.value = res.data;
-    projectSelected.value =
-      datasetUploadLog.value.audit_log.dataset.projects[0].project;
+    if ((datasetUploadLog.value.audit_log.dataset.projects || []).length > 0) {
+      projectCreated.value =
+        datasetUploadLog.value.audit_log.dataset.projects[0]?.project;
+    }
   } catch (err) {
     // console.error(err);
     throw new Error("Error logging dataset upload");

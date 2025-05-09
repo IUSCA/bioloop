@@ -636,7 +636,7 @@ const getDatasetCreateQuery = async (data) => {
         project_name: `Project-${create_query.name}`,
         browser_enabled,
         project_assignor_id: user_id,
-        assignee_ids: project_assignee_ids,
+        project_assignee_ids,
         user_assignor_id: user_id,
       });
     }
