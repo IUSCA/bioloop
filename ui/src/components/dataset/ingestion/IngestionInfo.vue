@@ -21,8 +21,7 @@
                   v-model:populated-dataset-name="datasetNameInput"
                   class="w-full"
                   :input-disabled="props.inputDisabled"
-                  :show-dataset-name-error="props.showCreatedDatasetError"
-                  :dataset-name-error="props.createdDatasetError"
+                  :error="props.datasetNameError"
                 />
               </td>
             </tr>
@@ -121,13 +120,9 @@ const props = defineProps({
   project: {
     type: Object,
   },
-  createdDatasetError: {
+  datasetNameError: {
     type: String,
     default: "",
-  },
-  showCreatedDatasetError: {
-    type: Boolean,
-    default: false,
   },
 });
 

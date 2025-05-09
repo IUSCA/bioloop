@@ -241,10 +241,7 @@
         :source-raw-data="selectedRawData"
         :source-instrument="selectedSourceInstrument"
         :ingestion-space="searchSpace.label"
-        :created-dataset-error="formErrors[STEP_KEYS.INGEST]"
-        :show-created-dataset-error="
-          !!formErrors[STEP_KEYS.INGEST] && !stepIsPristine
-        "
+        :dataset-name-error="!stepIsPristine && formErrors[STEP_KEYS.INGEST]"
       />
     </template>
 

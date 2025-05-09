@@ -227,9 +227,8 @@
                   :dataset="datasetUploadLog?.audit_log.dataset"
                   :selected-dataset-type="selectedDatasetType.value"
                   :input-disabled="submitAttempted"
-                  :uploaded-dataset-error="formErrors[STEP_KEYS.UPLOAD]"
-                  :show-uploaded-dataset-error="
-                    !!formErrors[STEP_KEYS.UPLOAD] && !stepIsPristine
+                  :dataset-name-error="
+                    !stepIsPristine && formErrors[STEP_KEYS.UPLOAD]
                   "
                   :project="projectSelected"
                   :source-instrument="selectedSourceInstrument"

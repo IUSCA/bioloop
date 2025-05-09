@@ -33,8 +33,7 @@
               v-model:populated-dataset-name="datasetNameInput"
               class="w-full"
               :input-disabled="props.inputDisabled"
-              :show-dataset-name-error="props.showUploadedDatasetError"
-              :dataset-name-error="props.uploadedDatasetError"
+              :error="props.datasetNameError"
             />
           </td>
         </tr>
@@ -126,13 +125,9 @@ const props = defineProps({
   sourceInstrument: {
     type: Object,
   },
-  uploadedDatasetError: {
+  datasetNameError: {
     type: String,
     default: "",
-  },
-  showUploadedDatasetError: {
-    type: Boolean,
-    default: false,
   },
   statusChipColor: {
     type: String,
