@@ -58,12 +58,17 @@
                     {{ props.project.name }}
                   </router-link>
                 </div>
-                <InfoHighlight
+                <OutlinedAlert
                   v-else-if="props.creatingNewProject"
-                  class="va-text-secondary"
+                  color="secondary"
+                  border="left"
+                  size="medium"
+                  padding-direction="left"
+                  padding-amount="sm"
+                  icon="info"
                 >
                   A new Project will be created
-                </InfoHighlight>
+                </OutlinedAlert>
               </td>
             </tr>
 
@@ -98,6 +103,7 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
+import OutlinedAlert from "@/components/utils/OutlinedAlert.vue";
 
 const props = defineProps({
   // `dataset`: Dataset to be created
