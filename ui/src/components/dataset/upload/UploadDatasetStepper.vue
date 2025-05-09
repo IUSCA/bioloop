@@ -540,8 +540,8 @@ const someFilesPendingUpload = computed(
 );
 
 /**
- * Payload for associating the Dataset being uploaded to a new or existing Project.
- * Sent along with the network request to an entry for the Dataset being uploaded in the database.
+ * Request payload for associating the Dataset being uploaded to a new or existing Project.
+ * Sent along with the network request used to create an entry for the Dataset being uploaded in the database.
  *
  * - If user has no Projects to assign to the Dataset being uploaded, a new Project will be auto-created for them,
  * if this feature is enabled.
@@ -1692,7 +1692,6 @@ watch(
  *  search fields if the user has zero options to choose from.
  */
 onMounted(async () => {
-  // console.log("onMounted");
   loading.value = true;
 
   try {
