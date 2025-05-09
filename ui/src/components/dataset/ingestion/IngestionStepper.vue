@@ -237,7 +237,7 @@
         :dataset="createdDataset"
         :ingestion-dir="selectedFile"
         :dataset-type="selectedDatasetType?.value"
-        :project="projectSelected"
+        :project="projectSelected || projectCreated"
         :source-raw-data="selectedRawData"
         :source-instrument="selectedSourceInstrument"
         :ingestion-space="searchSpace.label"
@@ -393,11 +393,6 @@ const loading = computed(() => {
   return loadingResources.value || searchingFiles.value || validatingForm.value;
 });
 
-// stores information about the ingested Dataset.
-const createdDataset = ref(null);
-// stores information about the Project that the ingested Dataset will be associated with.
-const associatedProject = ref(null);
-
 // Various values related to the submission process.
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
@@ -422,10 +417,14 @@ const selectedFile = ref(null);
 // The list of available Instruments for assigning to the Dataset being ingested.
 const sourceInstrumentOptions = ref([]);
 
+// Stores information about the ingested Dataset.
+const createdDataset = ref(null);
 // The Raw Data that will be assigned to the Dataset being ingested.
 const selectedRawData = ref(null);
-// The Project that will be assigned to the Dataset being ingested.
+// The (existing) Project that will be assigned to the Dataset being ingested.
 const projectSelected = ref(null);
+// The (new) Project that will be assigned to the Dataset being ingested.
+const projectCreated = ref(null);
 // The Instrument that will be assigned to the Dataset being ingested.
 const selectedSourceInstrument = ref(null);
 
@@ -1036,40 +1035,78 @@ const createDataset = async () => {
 };
 
 const fetchAssociatedProjects = async () => {
-  // If user has chosen not to assign a Project, of if associated Project
+  // If a new Project is to be created and assigned to the Dataset being uploaded, of if associated Project
   // has already been fetched, skip.
-  if (
-    !projectSelected.value ||
-    (createdDataset.value.projects || []).length > 0
-  ) {
+  console.log("Fetching associated Projects...");
+  // If associated Project's details have already been fetched (through a prior network call that failed after this
+  // request), skip.
+  if ((createdDataset.value.projects || []).length > 0) {
+    console.log("Associated project details have already been fetched.");
     return;
   }
+
+  const shouldFetchProject =
+    projectSelected.value ||
+    (noProjectsToAssign.value &&
+      auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation"));
+
+  if (!shouldFetchProject) {
+    console.log("No need to fetch project details.");
+    return;
+  }
+
   // else, fetch associated Projects.
   try {
+    console.log("Fetching associated Projects...");
     const res = await datasetService.getById({
       id: createdDataset.value.id,
       include_projects: true,
     });
     createdDataset.value.projects = res.data.projects;
+    console.log("Fetched associated Projects:");
   } catch (error) {
-    // console.error("Error fetching associated projects:", error);
+    console.error("Error fetching associated projects:", error);
     throw new Error(ERRORS.FETCH_ASSOCIATED_PROJECTS);
   }
 };
 
+// If project is selected:
+//   - always fetch it
+// If project not selected:
+//   - Fetch it:
+//     - only if it is being auto-created, i.e.:
+//       - there are no projects to choose from,
+//       - AND, auto-creation is enabled
 const fetchAssociatedProjectDetails = async () => {
-  // If user has chosen not to assign a Project, or if associated Project's
-  // details have already been fetched, skip.
-  if (!projectSelected.value || !!associatedProject.value) {
+  // If a new Project is to be created and assigned to the Dataset being uploaded, of if associated Project
+  // has already been fetched, skip.
+  console.log("Fetching associated Projects...");
+  // If associated Project's details have already been fetched (through a prior network call that failed after this
+  // request), skip.
+  if (projectCreated.value) {
+    console.log("Associated project details have already been fetched.");
     return;
   }
+
+  const shouldFetchProject =
+    projectSelected.value ||
+    (noProjectsToAssign.value &&
+      auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation"));
+
+  if (!shouldFetchProject) {
+    console.log("No need to fetch project details.");
+    return;
+  }
+
   try {
+    console.log("Fetching associated Project Details...");
     const res = await projectService.getById({
       id: createdDataset.value.projects[0].project_id,
     });
-    associatedProject.value = res.data;
+    projectCreated.value = res.data;
+    console.log("Fetched associated Project Details:");
   } catch (error) {
-    // console.error("Error fetching associated project details:", error);
+    console.error("Error fetching associated project details:", error);
     throw new Error(ERRORS.GET_PROJECT_DETAILS);
   }
 };

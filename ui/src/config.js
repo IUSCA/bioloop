@@ -80,7 +80,7 @@ const exports = {
       enabledForRoles: [],
     },
     ingestion: {
-      enabledForRoles: ["admin", "user"],
+      enabledForRoles: ["admin", "operator", "user"],
     },
     downloads: true,
     signup: false,
@@ -88,7 +88,7 @@ const exports = {
       enabledForRoles: ["admin", "user"],
     },
     autoCreateProjectOnDatasetCreation: {
-      enabledForRoles: ["admin", "user"],
+      enabledForRoles: ["admin", "operator", "user"],
     },
   },
   notifications: {

@@ -633,7 +633,7 @@ const getDatasetCreateQuery = async (data) => {
       const browser_enabled = project_payload?.browser_enabled; // Determines whether a new Project that will be created for this Dataset will have the Genome Browser enabled
       const project_assignee_ids = project_payload?.assignee_ids; // Users who the project is being assigned to
       create_query.projects = await datasetService.buildAssociationQueryForNewProject({
-        project_name: create_query.name,
+        project_name: `Project-${create_query.name}`,
         browser_enabled,
         project_assignor_id: user_id,
         assignee_ids: project_assignee_ids,

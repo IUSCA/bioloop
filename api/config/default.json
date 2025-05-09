@@ -190,7 +190,7 @@
       "enabled_for_roles": ["admin", "user"]
     },
     "autoCreateProjectOnDatasetCreation": {
-      "enabled_for_roles": ["admin", "user"]
+      "enabled_for_roles": ["admin", "operator", "user"]
     },
     "downloads": true,
     "signup": false
