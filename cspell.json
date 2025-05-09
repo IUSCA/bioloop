@@ -1,0 +1,51 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "autoresize",
+    "Biobank",
+    "BIOLOOP",
+    "celeryconfig",
+    "cilogon",
+    "dataproducts",
+    "dtype",
+    "echarts",
+    "filetree",
+    "hoverable",
+    "iconify",
+    "iucas",
+    "jsonify",
+    "lxor",
+    "picomatch",
+    "pinia",
+    "rawdata",
+    "rgba",
+    "traceback",
+    "unplugin",
+    "utils",
+    "vite",
+    "vitejs",
+    "vitest",
+    "vuestic",
+    "vueuse"
+  ],
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    "docs/.vitepress",
+    "/data",
+    "/db",
+    "logs",
+    "/ui/src/components/filebrowser/vsiFileIconName.js",
+    "/ui/stats.html",
+    "/ui/typed-router.d.ts",
+    "/ui/public",
+    "/ui/auto-imports.d.ts",
+    "/ui/components.d.ts",
+    "/ui/package.json",
+    "ui/src/assets/"
+  ],
+  "ignoreRegExpList": [
+    "mdi-.*"
+  ]
+}

@@ -1,16 +1,5 @@
 {
   "cSpell.words": [
-    "celeryconfig",
-    "filetree",
-    "iconify",
-    "jsonify",
-    "pinia",
-    "traceback",
-    "unplugin",
-    "vite",
-    "vitejs",
-    "vitest",
-    "vueuse"
   ],
   "i18n-ally.sourceLanguage": "en",
   "i18n-ally.keystyle": "nested",
@@ -37,5 +26,8 @@
   },
   "editor.detectIndentation": false,
   "editor.tabSize": 2,
-  "editor.insertSpaces": true
+  "editor.insertSpaces": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  }
 }

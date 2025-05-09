@@ -1,6 +1,7 @@
 {
   "name": "docs",
   "devDependencies": {
+    "cspell": "^9.0.1",
     "mermaid": "^11.6.0",
     "vitepress": "~1.6.3",
     "vitepress-plugin-mermaid": "^2.0.17",

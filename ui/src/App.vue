@@ -5,8 +5,7 @@
     
     This is useful when navigating to the same component, ex: from /datasets/1 to /datasets/2
 
-    By default, for these navigations, the component is not unmounted, only the props change 
-    and the setup code is not run again.
+    By default, the component is not unmounted, only the props change and the setup code is not run again.
   -->
     <RouterView :key="$route.path" />
   </va-inner-loading>
@@ -14,11 +13,11 @@
 
 <script setup>
 import router from "@/router";
+import envService from "@/services/env";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
 import { useBreakpoint, useColors } from "vuestic-ui";
-import envService from "@/services/env";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
