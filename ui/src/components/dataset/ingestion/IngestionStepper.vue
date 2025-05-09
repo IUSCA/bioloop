@@ -1043,7 +1043,7 @@ const onSubmit = async () => {
     await initiateIngestion();
     handleSuccessfulIngestion();
   } catch (error) {
-    handleRetryableError(error);
+    handleSubmissionError(error);
   }
 };
 
@@ -1063,7 +1063,11 @@ const createDataset = async () => {
     return res;
   } catch (error) {
     console.log("Error creating dataset:", error);
-    throw new Error(ERRORS.CREATE_DATASET);
+    if (error.response && error.response.status === 409) {
+      throw new Error(ERRORS.DATASET_EXISTS);
+    } else {
+      throw new Error(ERRORS.CREATE_DATASET);
+    }
   }
 };
 
@@ -1114,7 +1118,7 @@ const fetchAssociatedProjectDetails = async () => {
     console.log("Fetched associated project details");
   } catch (error) {
     console.error("Error fetching associated project details:", error);
-    throw new Error(ERRORS.GET_PROJECT);
+    throw new Error(ERRORS.GET_PROJECT_DETAILS);
   }
 };
 
@@ -1141,21 +1145,19 @@ const handleSuccessfulIngestion = () => {
   console.log("Dataset ingestion successful");
 };
 
-const handleRetryableError = (error) => {
-  let errorMessage = "An error occurred. Please try again.";
+const handleSubmissionError = (error) => {
+  // console.error("Error during submission:", error);
+  let errorMessage;
 
   switch (error.message) {
     case ERRORS.CREATE_DATASET:
-      errorMessage = "Failed to create dataset. Please try again.";
-      break;
     case ERRORS.FETCH_ASSOCIATED_PROJECTS:
-      errorMessage = "Failed to fetch associated project. Please try again.";
-      break;
-    case ERRORS.GET_PROJECT:
-      errorMessage = "Failed to retrieve project details. Please try again.";
-      break;
+    case ERRORS.GET_PROJECT_DETAILS:
     case ERRORS.INITIATE_INGESTION:
-      errorMessage = "Failed to initiate ingestion. Please try again.";
+      errorMessage = "An error occurred. Please try again.";
+      break;
+    case ERRORS.DATASET_EXISTS:
+      errorMessage = ERRORS.DATASET_EXISTS;
       break;
     default:
       errorMessage =
@@ -1167,10 +1169,11 @@ const handleRetryableError = (error) => {
 };
 
 const ERRORS = {
-  CREATE_DATASET: "createDatasetError",
-  FETCH_ASSOCIATED_PROJECTS: "fetchAssociatedProjectsError",
-  GET_PROJECT: "getProjectByIdError",
-  INITIATE_INGESTION: "initiateIngestionError",
+  CREATE_DATASET: "Failed to create Dataset",
+  DATASET_EXISTS: "A Dataset with this name already exists",
+  FETCH_ASSOCIATED_PROJECTS: "Failed to fetch associated Project",
+  GET_PROJECT_DETAILS: "Failed to retrieve associated Project's details",
+  INITIATE_INGESTION: "Failed to initiate Ingestion",
 };
 
 // todo - there are situations where not having an associated project is fine
