@@ -8,7 +8,8 @@ const config = require('config');
 const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
-const { log_axios_error } = require('../utils');
+const projectService = require('./project');
+const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
@@ -174,7 +175,9 @@ async function get_dataset({
   }
   dataset?.audit_logs?.forEach((log) => {
     // eslint-disable-next-line no-param-reassign
-    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+    if (log.user) {
+      log.user = log.user ? userService.transformUser(log.user) : null;
+    }
   });
 
   return dataset;
@@ -269,7 +272,7 @@ function create_filetree(files) {
           metadata: {},
           children: {},
         };
-        // eslint-disable-next-line no-param-reassign
+          // eslint-disable-next-line no-param-reassign
         parent.children[dir_name] = curr;
         return curr;
       }, root);
@@ -749,6 +752,77 @@ const workflow_access_check = [
   }),
 ];
 
+/**
+ * Builds a Prisma query object for associating a dataset with a new project that will be created.
+ *
+ * @async
+ * @function buildAssociationQueryForExistingProject
+ * @param {Object} options - The options for building the query.
+ * @param {string} [options.project_name=''] - The ID of the user associating the Project to the Dataset.
+ * @param {int} [options.project_assignor_id] - The ID of the user associating the Project to the Dataset.
+ * @param {int[]} [options.project_assignee_ids=[]] - The IDs of users being associated to the Project.
+ * @param {int} [options.user_assignor_id] - The ID of the user associating other users to the Project.
+ * @param {boolean} [options.browser_enabled=false] - Whether the Genome Browser will be enabled for a new Project that will be created.
+ * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
+ */
+async function buildAssociationQueryForNewProject({
+  project_name = '',
+  project_assignor_id,
+  project_assignee_ids = [],
+  user_assignor_id,
+  browser_enabled = false,
+} = {}) {
+  return {
+    create: [{
+      project: {
+        create: {
+          name: project_name,
+          slug: await projectService.generate_slug({ name: project_name }),
+          description: `Auto-generated project for dataset ${project_name}.`,
+          browser_enabled,
+          ...(project_assignee_ids.length > 0 && { // Check if any users needs to be assigned to the project.
+            users: {
+              create: project_assignee_ids.map((id) => ({
+                user_id: id,
+                ...(user_assignor_id && { assignor_id: user_assignor_id }),
+              })),
+            },
+          }),
+        },
+      },
+      ...(project_assignor_id && { assignor: { connect: { id: project_assignor_id } } }),
+    }],
+  };
+}
+
+/**
+ * Builds a Prisma query object for associating a dataset with an existing project.
+ *
+ * @async
+ * @function buildAssociationQueryForExistingProject
+ * @param {Object} options - The options for building the query.
+ * @param {string} [options.project_id] - The ID of an existing Project to associate with the Dataset.
+ * @param {int} [options.project_assignor_id] - The ID of the user associating the Project to the Dataset.
+ * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
+ *
+ * @description
+ * This function builds a query for associating a Dataset with a Project. It handles two scenarios:
+ * 1. If a `project_id` is provided, it creates an association with the corresponding Project.
+ * 2. If no `project_id` is provided and auto-creation of Projects is enabled for the assignor's role,
+ *    it creates a new Project and associates the Dataset with it.*
+ */
+async function buildAssociationQueryForExistingProject({
+  project_id,
+  project_assignor_id,
+}) {
+  return {
+    create: [{
+      project_id,
+      ...(project_assignor_id && { assignor_id: project_assignor_id }),
+    }],
+  };
+}
+
 module.exports = {
   soft_delete,
   get_dataset,
@@ -766,4 +840,6 @@ module.exports = {
   has_workflow_access,
   dataset_access_check,
   workflow_access_check,
+  buildAssociationQueryForNewProject,
+  buildAssociationQueryForExistingProject,
 };

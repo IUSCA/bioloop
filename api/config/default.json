@@ -180,14 +180,20 @@
     "slateScratch": ""
   },
   "enabled_features": {
+    "ingestion": {
+      "enabled_for_roles": ["admin", "user"]
+    },
     "upload": {
-      "enabled_for_roles": ["admin"]
+      "enabled_for_roles": ["admin", "user"]
     },
     "fs": {
-      "enabled_for_roles": ["admin"]
+      "enabled_for_roles": ["admin", "user"]
+    },
+    "autoCreateProjectOnDatasetCreation": {
+      "enabled_for_roles": ["admin", "operator", "user"]
     },
     "downloads": true,
-    "signup": true
+    "signup": false
   },
   "institution_types": [
     "Commercial",

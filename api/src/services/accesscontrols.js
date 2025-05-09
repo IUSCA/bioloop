@@ -78,6 +78,7 @@ const grantsObject = {
       'update:own': ['*'],
     },
     projects: {
+      'create:any': ['*'],
       'read:own': ['*', '!users'], // cannot read associated users to the project
     },
     datasets: {

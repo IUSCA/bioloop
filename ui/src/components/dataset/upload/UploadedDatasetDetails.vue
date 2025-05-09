@@ -33,8 +33,7 @@
               v-model:populated-dataset-name="datasetNameInput"
               class="w-full"
               :input-disabled="props.inputDisabled"
-              :show-dataset-name-error="props.showUploadedDatasetError"
-              :dataset-name-error="props.uploadedDatasetError"
+              :error="props.datasetNameError"
             />
           </td>
         </tr>
@@ -63,9 +62,25 @@
         <tr>
           <td>Project</td>
           <td class="metadata">
-            <router-link :to="`/projects/${props.project?.id}`" target="_blank">
-              {{ props.project?.name }}
-            </router-link>
+            <div v-if="props.project">
+              <router-link
+                :to="`/projects/${props.project.id}`"
+                target="_blank"
+              >
+                {{ props.project.name }}
+              </router-link>
+            </div>
+            <OutlinedAlert
+              v-else-if="props.creatingNewProject"
+              color="secondary"
+              border="left"
+              size="medium"
+              padding-direction="left"
+              padding-amount="sm"
+              icon="info"
+            >
+              A new Project will be created
+            </OutlinedAlert>
           </td>
         </tr>
 
@@ -89,6 +104,7 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
+import OutlinedAlert from "@/components/utils/OutlinedAlert.vue";
 
 const props = defineProps({
   // `dataset`: Dataset to be uploaded
@@ -106,6 +122,10 @@ const props = defineProps({
   project: {
     type: Object,
   },
+  creatingNewProject: {
+    type: Boolean,
+    default: false,
+  },
   inputDisabled: {
     type: Boolean,
     default: false,
@@ -113,13 +133,9 @@ const props = defineProps({
   sourceInstrument: {
     type: Object,
   },
-  uploadedDatasetError: {
+  datasetNameError: {
     type: String,
     default: "",
-  },
-  showUploadedDatasetError: {
-    type: Boolean,
-    default: false,
   },
   statusChipColor: {
     type: String,

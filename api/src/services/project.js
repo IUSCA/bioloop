@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const crypto = require('node:crypto');
 
 const prisma = new PrismaClient();
 
@@ -34,6 +35,7 @@ function identifier_suffix_gen(identifiers) {
       i += 1;
     }
   }
+
   return gen;
 }
 
@@ -88,8 +90,39 @@ async function has_project_assoc({
   return projectUserAssociations.length > 0;
 }
 
+/**
+ * Generates a name for an automatically created project.
+ *
+ * @param {Object} options - The options for generating the project name.
+ * @param {string} [options.suffix] - An optional suffix to append to the project name.
+ * @returns {string} The generated project name.
+ *
+ * @description
+ * If a suffix is provided, the function returns "Project-{suffix}".
+ * If no suffix is provided, it generates a unique identifier using cryptographically strong random bytes.
+ * The resulting project name will be in the format "Project-{randomString}",
+ * where randomString is a 16-character hexadecimal string.
+ *
+ * @example
+ * // With a provided suffix
+ * generate_new_project_name({ suffix: 'test' }) // Returns: "Project-test"
+ *
+ * // Without a suffix (generates a random identifier)
+ * generate_new_project_name() // Returns something like: "Project-3a7bd1c9f0b24e8e"
+ */
+function generate_new_project_name({ suffix }) {
+  if (suffix) {
+    return `Project-${suffix}`;
+  }
+
+  // generate a unique identifier
+  const randomStr = crypto.randomBytes(8).toString('hex'); // Generate 16 random characters
+  return `Project-${randomStr}`;
+}
+
 module.exports = {
   normalize_name,
   generate_slug,
   has_project_assoc,
+  generate_new_project_name,
 };
