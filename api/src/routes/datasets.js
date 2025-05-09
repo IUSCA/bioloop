@@ -542,6 +542,10 @@ router.get(
       include_source_instrument: req.query.include_source_instrument || false,
     });
 
+    // if (true) {
+    //   throw new Error('Failed to fetch datasets');
+    // }
+
     res.json(dataset);
   }),
 );
@@ -574,6 +578,7 @@ function normalize_name(name) {
  * @param {string[]} [data.project_payload.assignee_ids] - The IDs of users being associated to the project.
  * @param {string} [data.project_payload.user_assignor_id] - The ID of the user associating other users to the project.
  * @param {string} data.user_id - The ID of the user creating the dataset.
+ * @param {string} data.user_roles - The roles of the user creating the dataset.
  * @param {string} [data.src_instrument_id] - The ID of the source instrument.
  * @param {string} [data.src_dataset_id] - The ID of the source dataset.
  * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
@@ -588,7 +593,7 @@ const getDatasetCreateQuery = async (data) => {
   /* eslint-disable no-unused-vars */
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    project_payload, user_id, src_instrument_id, src_dataset_id, state, create_method,
+    project_payload, user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -613,20 +618,28 @@ const getDatasetCreateQuery = async (data) => {
 
   // Associate this Dataset with a Project
   if (project_payload) {
-    const project_id = project_payload?.project_id; // ID of the Project that is to be associated with the dataset
-    const browser_enabled = project_payload?.browser_enabled; // Determines whether a new Project that will be created for this Dataset will have the Genome Browser enabled
-    const project_assignor_id = project_payload?.assignor_id; // User who is assigning the project to the dataset
-    const project_assignee_ids = project_payload?.assignee_ids; // Users who the project is being assigned to
-    const user_assignor_id = project_payload?.user_assignor_id; // User who is assigning the assignees to the project
-
-    create_query.projects = await datasetService.buildProjectAssociationQuery({
-      project_id,
-      project_assignor_id,
-      project_assignee_ids,
-      user_assignor_id,
-      browser_enabled,
-      dataset_name: create_query.name,
-    });
+    const project_id = project_payload?.project_id; // ID of an existing Project that is to be associated with the dataset
+    if (project_id) {
+      // If Project ID is provided, associate this Dataset with the Project
+      create_query.projects = await datasetService.buildAssociationQueryForExistingProject({
+        project_id,
+        project_assignor_id: user_id,
+      });
+    } else if (isFeatureEnabledForRole({
+      feature: 'autoCreateProjectOnDatasetCreation',
+      roles: user_roles,
+    })) {
+      // Else, if auto-creation of Project is enabled, create a new Project and associate this Dataset with it.
+      const browser_enabled = project_payload?.browser_enabled; // Determines whether a new Project that will be created for this Dataset will have the Genome Browser enabled
+      const project_assignee_ids = project_payload?.assignee_ids; // Users who the project is being assigned to
+      create_query.projects = await datasetService.buildAssociationQueryForNewProject({
+        project_name: create_query.name,
+        browser_enabled,
+        project_assignor_id: user_id,
+        assignee_ids: project_assignee_ids,
+        user_assignor_id: user_id,
+      });
+    }
   }
 
   // Assign source Instrument to this dataset
@@ -684,6 +697,12 @@ router.post(
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('origin_path').notEmpty().escape(),
     body('project_payload').optional().isObject(),
+    body('project_payload.project_id').optional().escape().notEmpty(),
+    body('project_payload.browser_enabled').optional().isBoolean(),
+    body('project_payload.assignee_ids')
+      .optional()
+      .isArray()
+      .custom((e) => e.every((id) => Number.isInteger(id))),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
     body('create_method').optional(),
@@ -700,10 +719,6 @@ router.post(
         * workflow_id, a new relation is created between dataset and given workflow_id'
         */
       /* eslint-enable */
-
-    if (true) {
-      throw new Error('test');
-    }
 
     const {
       ingestion_space, create_method, project_payload, src_instrument_id, src_dataset_id,
@@ -738,12 +753,17 @@ router.post(
       workflow_id,
       project_payload,
       user_id: req.user.id,
+      user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
       state,
       create_method,
       metadata,
     });
+
+    // if (true) {
+    //   throw new Error('test');
+    // }
 
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
@@ -1429,6 +1449,12 @@ router.post(
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
     body('project_payload').optional().isObject(),
+    body('project_payload.project_id').optional().escape().notEmpty(),
+    body('project_payload.browser_enabled').optional().isBoolean(),
+    body('project_payload.assignee_ids')
+      .optional()
+      .isArray()
+      .custom((e) => e.every((id) => Number.isInteger(id))),
     body('src_instrument_id').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -1444,6 +1470,7 @@ router.post(
       name,
       type,
       user_id: req.user.id,
+      user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
       project_payload,

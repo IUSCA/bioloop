@@ -71,6 +71,7 @@
           :text-by="'label'"
           :track-by="'value'"
           :options="datasetTypeOptions"
+          :disabled="submitAttempted"
           label="Dataset Type"
           placeholder="Select dataset type"
           class="flex-grow"
@@ -269,8 +270,7 @@
           :color="isLastStep ? 'success' : 'primary'"
           :disabled="isNextButtonDisabled"
         >
-          <!--          {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}-->
-          {{ isLastStep ? "Ingest" : "Next" }}
+          {{ isLastStep ? submissionButtonText : "Next" }}
         </va-button>
       </div>
     </template>
@@ -347,6 +347,13 @@ const datasetTypes = [
   },
 ];
 
+// Various values that the Submission button can display, based on the current state of the form submission.
+const SUBMIT_BUTTON = {
+  INGEST: "Ingest",
+  PROCESSING: "Processing",
+  RETRY: "Retry",
+};
+
 // An object containing the form validation errors for each step.
 const formErrors = ref({
   [STEP_KEYS.SELECT_DIRECTORY]: null,
@@ -389,13 +396,15 @@ const loading = computed(() => {
   return loadingResources.value || searchingFiles.value || validatingForm.value;
 });
 
-// `createdDataset` stores information about the ingested Dataset that is persisted to the Database.
-const createdDataset = ref({});
+// stores information about the ingested Dataset.
+const createdDataset = ref(null);
+// stores information about the Project that the ingested Dataset will be associated with.
+const associatedProject = ref(null);
 
 // Various values related to the submission process.
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
-const submissionButtonText = ref("Ingest");
+const submissionButtonText = ref(SUBMIT_BUTTON.INGEST);
 const submissionSuccess = ref(false);
 
 /**
@@ -449,7 +458,7 @@ const stepHasErrors = computed(() => {
 });
 
 const isPreviousButtonDisabled = computed(() => {
-  return step.value === 0 || submissionSuccess.value || loading.value;
+  return step.value === 0 || submitAttempted.value || loading.value;
 });
 
 const isNextButtonDisabled = computed(() => {
@@ -471,14 +480,12 @@ const getProjectCreationPayload = () => {
     if (auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")) {
       project_payload = {
         browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
-        assignor_id: auth.user.id,
         assignee_ids: [auth.user.id],
-        user_assignor_id: auth.user.id,
       };
     }
   } else {
-    project_payload = {
-      project_id: projectSelected.value ? projectSelected.value.id : null,
+    project_payload = projectSelected.value && {
+      project_id: projectSelected.value.id,
     };
   }
   return project_payload;
@@ -487,20 +494,23 @@ const getProjectCreationPayload = () => {
 /**
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being ingested.
  */
-const ingestionFormData = computed(() => ({
-  name: ingestedDatasetName.value,
-  type: selectedDatasetType.value["value"],
-  ...(selectedRawData.value && {
-    src_dataset_id: selectedRawData.value.id,
-  }),
-  project_payload: getProjectCreationPayload(),
-  src_instrument_id: selectedSourceInstrument.value
-    ? selectedSourceInstrument.value.id
-    : null,
-  origin_path: selectedFile.value.path,
-  ingestion_space: searchSpace.value.key,
-  create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
-}));
+const ingestionFormData = computed(() => {
+  let project_payload = getProjectCreationPayload();
+  return {
+    name: ingestedDatasetName.value,
+    type: selectedDatasetType.value["value"],
+    ...(selectedRawData.value && {
+      src_dataset_id: selectedRawData.value.id,
+    }),
+    ...(project_payload && { project_payload }),
+    ...(selectedSourceInstrument.value && {
+      src_instrument_id: selectedSourceInstrument.value,
+    }),
+    origin_path: selectedFile.value.path,
+    ingestion_space: searchSpace.value.key,
+    create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
+  };
+});
 
 const resetRawDataSearch = () => {
   selectedRawData.value = null;
@@ -1014,8 +1024,6 @@ watch(selectedDatasetType, () => {
 
 // Todo: send notification to operator/admin on wf initiation errors
 
-const associatedProject = ref({});
-
 const onSubmit = async () => {
   console.log("onSubmit called");
   if (!selectedFile.value) {
@@ -1024,7 +1032,7 @@ const onSubmit = async () => {
   }
 
   submitAttempted.value = true;
-  submissionButtonText.value = "Processing...";
+  submissionButtonText.value = SUBMIT_BUTTON.PROCESSING;
 
   console.log("submitAttempted: ", submitAttempted.value);
   try {
@@ -1041,29 +1049,31 @@ const onSubmit = async () => {
 
 const createDataset = async () => {
   console.log("createDataset called");
-  if (Object.entries(createdDataset.value).length === 0) {
-    console.log("dataset not created yet");
-    try {
-      console.log("creating dataset");
-      const res = await datasetService.create_dataset(ingestionFormData.value);
-      createdDataset.value = res.data;
-      console.log("Created dataaset");
-      return res;
-    } catch (error) {
-      console.log("Error creating dataset:", error);
-      throw new Error(ERRORS.CREATE_DATASET);
-    }
+  if (createdDataset.value) {
+    console.log("dataset already created");
+    return;
   }
-  console.log("dataset already created");
+  console.log("dataset not created yet");
+  try {
+    console.log("creating dataset");
+    const res = await datasetService.create_dataset(ingestionFormData.value);
+    console.log("Created dataset response: ", res);
+    createdDataset.value = res.data;
+    console.log("Created dataset");
+    return res;
+  } catch (error) {
+    console.log("Error creating dataset:", error);
+    throw new Error(ERRORS.CREATE_DATASET);
+  }
 };
 
 const fetchAssociatedProjects = async () => {
   console.log("fetchAssociatedProjects called");
-  // If user has chosen not to assign a Project, of if associated Projects
-  // have already been fetched, skip.
+  // If user has chosen not to assign a Project, of if associated Project
+  // has already been fetched, skip.
   if (
-    !projectCreationPayload.value ||
-    createdDataset.value.projects.length > 0
+    !projectSelected.value ||
+    (createdDataset.value.projects || []).length > 0
   ) {
     console.log(
       "Project is not being assigned, or assigned projects already fetched",
@@ -1073,10 +1083,11 @@ const fetchAssociatedProjects = async () => {
   // else, fetch associated Projects.
   try {
     console.log("Fetching associated projects");
-    createdDataset.value = await datasetService.getById({
+    const res = await datasetService.getById({
       id: createdDataset.value.id,
       include_projects: true,
     });
+    createdDataset.value.projects = res.data.projects;
     console.log("Fetched associated projects: ");
   } catch (error) {
     console.error("Error fetching associated projects:", error);
@@ -1088,7 +1099,7 @@ const fetchAssociatedProjectDetails = async () => {
   console.log("fetchAssociatedProjectDetails called");
   // If user has chosen not to assign a Project, or if associated Project's
   // details have already been fetched, skip.
-  if (!projectCreationPayload.value || !!associatedProject.value) {
+  if (!projectSelected.value || !!associatedProject.value) {
     console.log(
       "project is not being assigned, or assigned project details already fetched",
     );
@@ -1096,10 +1107,10 @@ const fetchAssociatedProjectDetails = async () => {
   }
   console.log("Fetching associated project details");
   try {
-    associatedProject.value = await projectService.getById({
-      id: createdDataset.value.projects[0].id,
+    const res = await projectService.getById({
+      id: createdDataset.value.projects[0].project_id,
     });
-    // console.log("Project details:", associatedProject.value);
+    associatedProject.value = res.data;
     console.log("Fetched associated project details");
   } catch (error) {
     console.error("Error fetching associated project details:", error);
@@ -1116,7 +1127,6 @@ const initiateIngestion = async () => {
       workflow: "integrated",
     });
     toast.success("Initiated dataset ingestion");
-    submissionSuccess.value = true;
     console.log("Initiated dataset ingestion");
   } catch (error) {
     console.error("Error initiating ingestion:", error);
@@ -1126,7 +1136,7 @@ const initiateIngestion = async () => {
 
 const handleSuccessfulIngestion = () => {
   console.log("handleSuccessfulIngestion called");
-  submissionButtonText.value = "SUCCESS";
+  submissionButtonText.value = SUBMIT_BUTTON.INGEST;
   submissionSuccess.value = true;
   console.log("Dataset ingestion successful");
 };
@@ -1153,8 +1163,7 @@ const handleRetryableError = (error) => {
   }
 
   toast.error(errorMessage);
-  submissionButtonText.value = "RETRY";
-  submitAttempted.value = false;
+  submissionButtonText.value = SUBMIT_BUTTON.RETRY;
 };
 
 const ERRORS = {
@@ -1169,9 +1178,9 @@ const onNextClick = (nextStep) => {
   if (isLastStep.value) {
     console.log("Submitting dataset");
     console.log("submitAttempted.value", submitAttempted.value);
-    if (submitAttempted.value) {
+    if (submitAttempted.value && !submissionSuccess.value) {
       console.log("submissionButtonText.value", submissionButtonText.value);
-      if (submissionButtonText.value === "RETRY") {
+      if (submissionButtonText.value === SUBMIT_BUTTON.RETRY) {
         console.log("Calling onSubmit() again");
         onSubmit();
       }
@@ -1250,7 +1259,7 @@ watch(
  */
 onMounted(async () => {
   // console.log("onMounted");
-  loading.value = true;
+  loadingResources.value = true;
 
   try {
     // Load Instruments that will be available for assignment to the Dataset being ingested.
@@ -1278,7 +1287,7 @@ onMounted(async () => {
     toast.error("An error occurred. Please refresh the page to try again.");
   }
 
-  loading.value = false;
+  loadingResources.value = false;
 });
 
 /**

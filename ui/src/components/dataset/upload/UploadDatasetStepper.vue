@@ -561,7 +561,7 @@ const getProjectCreationPayload = () => {
     }
   } else {
     project_payload = {
-      project_id: projectSelected.value ? projectSelected.value.id : null,
+      project_id: projectSelected.value?.id,
     };
   }
   return project_payload;
