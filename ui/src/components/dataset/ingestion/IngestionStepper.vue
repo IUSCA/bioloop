@@ -504,7 +504,7 @@ const ingestionFormData = computed(() => {
     }),
     ...(project_payload && { project_payload }),
     ...(selectedSourceInstrument.value && {
-      src_instrument_id: selectedSourceInstrument.value,
+      src_instrument_id: selectedSourceInstrument.value.id,
     }),
     origin_path: selectedFile.value.path,
     ingestion_space: searchSpace.value.key,
@@ -755,29 +755,6 @@ const getRestrictedIngestionPaths = () => {
   );
 };
 
-const projectCreationPayload = computed(() => {
-  let payload = null;
-  if (noProjectsToAssign.value) {
-    /**
-     * If user has no Projects to assign to the Dataset being ingested, a new Project will be auto-created for them,
-     * if this feature is enabled.
-     */
-    if (auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")) {
-      payload = {
-        browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
-        assignor_id: auth.user.id,
-        assignee_ids: [auth.user.id],
-        user_assignor_id: auth.user.id,
-      };
-    }
-  } else {
-    payload = {
-      project_id: projectSelected.value ? projectSelected.value.id : null,
-    };
-  }
-  return payload;
-});
-
 /**
  * ## Instrument checkbox and selection behavior
  *
@@ -1025,7 +1002,6 @@ watch(selectedDatasetType, () => {
 // Todo: send notification to operator/admin on wf initiation errors
 
 const onSubmit = async () => {
-  console.log("onSubmit called");
   if (!selectedFile.value) {
     await setFormErrors();
     return Promise.reject();
@@ -1034,9 +1010,7 @@ const onSubmit = async () => {
   submitAttempted.value = true;
   submissionButtonText.value = SUBMIT_BUTTON.PROCESSING;
 
-  console.log("submitAttempted: ", submitAttempted.value);
   try {
-    // todo - show unique error on createDataset returinng 409
     await createDataset();
     await fetchAssociatedProjects();
     await fetchAssociatedProjectDetails();
@@ -1048,21 +1022,14 @@ const onSubmit = async () => {
 };
 
 const createDataset = async () => {
-  console.log("createDataset called");
   if (createdDataset.value) {
-    console.log("dataset already created");
     return;
   }
-  console.log("dataset not created yet");
   try {
-    console.log("creating dataset");
     const res = await datasetService.create_dataset(ingestionFormData.value);
-    console.log("Created dataset response: ", res);
     createdDataset.value = res.data;
-    console.log("Created dataset");
     return res;
   } catch (error) {
-    console.log("Error creating dataset:", error);
     if (error.response && error.response.status === 409) {
       throw new Error(ERRORS.DATASET_EXISTS);
     } else {
@@ -1072,58 +1039,45 @@ const createDataset = async () => {
 };
 
 const fetchAssociatedProjects = async () => {
-  console.log("fetchAssociatedProjects called");
   // If user has chosen not to assign a Project, of if associated Project
   // has already been fetched, skip.
   if (
     !projectSelected.value ||
     (createdDataset.value.projects || []).length > 0
   ) {
-    console.log(
-      "Project is not being assigned, or assigned projects already fetched",
-    );
     return;
   }
   // else, fetch associated Projects.
   try {
-    console.log("Fetching associated projects");
     const res = await datasetService.getById({
       id: createdDataset.value.id,
       include_projects: true,
     });
     createdDataset.value.projects = res.data.projects;
-    console.log("Fetched associated projects: ");
   } catch (error) {
-    console.error("Error fetching associated projects:", error);
+    // console.error("Error fetching associated projects:", error);
     throw new Error(ERRORS.FETCH_ASSOCIATED_PROJECTS);
   }
 };
 
 const fetchAssociatedProjectDetails = async () => {
-  console.log("fetchAssociatedProjectDetails called");
   // If user has chosen not to assign a Project, or if associated Project's
   // details have already been fetched, skip.
   if (!projectSelected.value || !!associatedProject.value) {
-    console.log(
-      "project is not being assigned, or assigned project details already fetched",
-    );
     return;
   }
-  console.log("Fetching associated project details");
   try {
     const res = await projectService.getById({
       id: createdDataset.value.projects[0].project_id,
     });
     associatedProject.value = res.data;
-    console.log("Fetched associated project details");
   } catch (error) {
-    console.error("Error fetching associated project details:", error);
+    // console.error("Error fetching associated project details:", error);
     throw new Error(ERRORS.GET_PROJECT_DETAILS);
   }
 };
 
 const initiateIngestion = async () => {
-  console.log("initiateIngestion called");
   // todo - handle case where workflow is already in progress
   try {
     await datasetService.initiate_workflow_on_dataset({
@@ -1131,18 +1085,15 @@ const initiateIngestion = async () => {
       workflow: "integrated",
     });
     toast.success("Initiated dataset ingestion");
-    console.log("Initiated dataset ingestion");
   } catch (error) {
-    console.error("Error initiating ingestion:", error);
+    // console.error("Error initiating ingestion:", error);
     throw new Error(ERRORS.INITIATE_INGESTION);
   }
 };
 
 const handleSuccessfulIngestion = () => {
-  console.log("handleSuccessfulIngestion called");
   submissionButtonText.value = SUBMIT_BUTTON.INGEST;
   submissionSuccess.value = true;
-  console.log("Dataset ingestion successful");
 };
 
 const handleSubmissionError = (error) => {
@@ -1179,16 +1130,11 @@ const ERRORS = {
 // todo - there are situations where not having an associated project is fine
 const onNextClick = (nextStep) => {
   if (isLastStep.value) {
-    console.log("Submitting dataset");
-    console.log("submitAttempted.value", submitAttempted.value);
     if (submitAttempted.value && !submissionSuccess.value) {
-      console.log("submissionButtonText.value", submissionButtonText.value);
       if (submissionButtonText.value === SUBMIT_BUTTON.RETRY) {
-        console.log("Calling onSubmit() again");
         onSubmit();
       }
     } else {
-      console.log("Calling onSubmit() for the first time");
       onSubmit();
     }
   } else {
@@ -1261,7 +1207,7 @@ watch(
  *  search fields if the user has zero options to choose from.
  */
 onMounted(async () => {
-  // console.log("onMounted");
+  //
   loadingResources.value = true;
 
   try {
