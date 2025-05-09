@@ -1381,6 +1381,29 @@ watch(selectingFiles, () => {
 });
 
 /**
+ * ## Instrument checkbox and selection behavior
+ *
+ * This section explains the behavior of the "Assign Source Instrument" checkbox and select fields.
+ * The state is managed through refs, computed properties and watchers.
+ *
+ * Initial State:
+ * - If no Instruments available to assign:
+ *   - Checkbox is unchecked and disabled
+ *   - Instrument select is disabled
+ * - If Instrument is available to assign:
+ *   - Checkbox is checked and enabled
+ *   - Instrument select is enabled
+ *
+ * State changes:
+ * - User interaction with checkbox:
+ *    - If user unchecks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes disabled
+ *    - If user checks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes enabled
+ */
+/**
  * `Assign Source Instrument` checkbox is disabled if:
  * - There are no Instrument options to choose from
  */
@@ -1433,6 +1456,29 @@ const willAssignSourceInstrument = computed({
 });
 
 /**
+ * ## Project checkbox and search behavior
+ *
+ * This section explains the behavior of the "Assign Project" checkbox and search fields.
+ * The state is managed through refs, computed properties and watchers.
+ *
+ * Initial State:
+ * - If no Project available to assign:
+ *   - Checkbox is unchecked and disabled
+ *   - Project search is disabled
+ * - If Project is available to assign:
+ *   - Checkbox is checked and enabled
+ *   - Project search is enabled
+ *
+ * State changes:
+ * - User interaction with checkbox:
+ *    - If user unchecks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes disabled
+ *    - If user checks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes enabled
+ */
+/**
  * `Assign Project` checkbox is disabled if:
  * - There are no Project options to choose from
  */
@@ -1481,6 +1527,37 @@ const willAssignProject = computed({
   },
 });
 
+/**
+ * ## Source Raw Data checkbox and search behavior
+ *
+ * This section explains the behavior of the "Assign Raw Data" checkbox and search fields.
+ * The state is managed through refs, computed properties and watchers.
+ *
+ * Initial State:
+ * - If no Raw Data available to assign:
+ *   - Checkbox is unchecked and disabled
+ *   - Raw Data search is disabled
+ * - If Raw Data is available to assign:
+ *   - Checkbox is checked and enabled
+ *   - Raw Data search is enabled
+ *
+ * State changes:
+ * 1. When type of Dataset to be uploaded changes:
+ *    - If new type is Raw Data:
+ *      - Checkbox becomes unchecked and disabled (since a Raw Data cannot be assigned as the source of another Raw
+ *      Data)
+ *      - Search field is disabled
+ *    - If new type is not Raw Data:
+ *      - Checkbox becomes checked and enabled
+ *      - Search field is enabled
+ * 2. User interaction with checkbox:
+ *    - If user unchecks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes disabled
+ *    - If user checks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes enabled
+ */
 /**
  * `Assign Raw Data` checkbox is disabled if:
  * - There are no Raw Data options to choose from, OR,
@@ -1620,42 +1697,6 @@ onMounted(async () => {
   }
 
   loading.value = false;
-
-  // Raw Data v-model:
-  //  - IF
-  //    - (computed) no raw data to assign at load : - UNCHECKED and DISABLED
-  //  - ELSE
-  //    - (v-model) user choice
-  // Raw Data search disabled:
-  //  - Disabled state governed entirely by:
-  //    - Raw Data checkbox v-model (true/false)
-  //
-  // -----------------------------------------
-  //
-  //   - IF
-  //     - No raw data to assign on load::
-  //       - checkbox UNCHECKED and DISABLED
-  //       - search DISABLED
-  //   - ELSE:
-  //       - checkbox CHECKED and ENABLED
-  //       - search ENABLED
-  //     - User Interation:
-  //       - User changes dataset type:
-  //         - IF
-  //           - new dataset type is raw data:
-  //             - checkbox UNCHECKED and DISABLED
-  //             - search DISABLED
-  //           - new dataset type is not raw data:
-  //             - checkbox CHECKED and ENABLED
-  //             - search ENABLED
-  //       - User checks/unchecks raw data checkbox:
-  //         - IF
-  //           - User unchecks raw data checkbox:
-  //             - checkbox UNCHECKED and ENABLED
-  //             - search DISABLED
-  //           - User checks raw data checkbox:
-  //             - checkbox CHECKED and ENABLED
-  //             - search ENABLED
 });
 
 /**
