@@ -2,7 +2,7 @@
 title: Docker
 order: 1
 ---
-
+<!-- cspell:ignore panl dbaeumer Hoppscotch -->
 # Installation Guide
 
 This guide will help you set up Bioloop using Docker for local development or production deployment.
