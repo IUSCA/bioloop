@@ -29,6 +29,7 @@ declare module 'vue-router/auto-routes' {
     '/auth/iucas': RouteRecordInfo<'/auth/iucas', '/auth/iucas', Record<never, never>, Record<never, never>>,
     '/auth/logout': RouteRecordInfo<'/auth/logout', '/auth/logout', Record<never, never>, Record<never, never>>,
     '/auth/microsoft': RouteRecordInfo<'/auth/microsoft', '/auth/microsoft', Record<never, never>, Record<never, never>>,
+    '/auth/signup': RouteRecordInfo<'/auth/signup', '/auth/signup', Record<never, never>, Record<never, never>>,
     '/dashboard': RouteRecordInfo<'/dashboard', '/dashboard', Record<never, never>, Record<never, never>>,
     '/dataproducts/': RouteRecordInfo<'/dataproducts/', '/dataproducts', Record<never, never>, Record<never, never>>,
     '/datasets/[datasetId]/': RouteRecordInfo<'/datasets/[datasetId]/', '/datasets/:datasetId', { datasetId: ParamValue<true> }, { datasetId: ParamValue<false> }>,

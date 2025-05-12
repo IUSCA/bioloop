@@ -29,12 +29,13 @@
         "tabSize": 2
       }
     ],
-    "max-len": ["error", { "ignoreComments": true, "code": 120 }]
+    "max-len": ["error", { "ignoreComments": true, "code": 120 }],
+    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}]
   },
   "env": {
     "node": true,
-    "mocha": true,
-    "es2020": true  // <- activate “es2020” globals
+    "es2020": true,  // <- activate “es2020” globals
+    "jest": true
   },
   "parserOptions": {
     "ecmaVersion": "latest"

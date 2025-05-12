@@ -143,7 +143,7 @@
   >
     <div class="max-w-lg">
       <va-inner-loading :loading="modal_loading">
-        <va-form class="flex flex-wrap gap-2 gap-y-6" ref="modifyFormRef">
+        <va-form class="flex flex-wrap gap-2 gap-y-4" ref="modifyFormRef">
           <va-input
             data-testid="user-name-input"
             class="w-full"
@@ -227,6 +227,18 @@
               :options="roleOptions"
             />
           </div>
+
+          <!-- temporary view -->
+          <va-textarea
+            data-testid="user-metadata-input"
+            class="w-full text-sm"
+            :modelValue="JSON.stringify(editedUser.metadata || {}, null, 2)"
+            label="Metadata"
+            autosize
+            readonly
+            preset="solid"
+          />
+          <!-- <JSONTable v-model="editedUser.metadata" editable /> -->
 
           <va-textarea
             data-testid="user-notes-input"

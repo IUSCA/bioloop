@@ -79,11 +79,12 @@ function auth_guard(to, _from) {
       }
     } else {
       // route requires auth and user is not logged in
-      // redirect to auth page with requested route path as query parameter
+      // redirect to auth page with requested route path and query params as
+      // query parameter
       return {
         name: "/auth/",
         query: {
-          redirect_to: to.path,
+          redirect_to: to.fullPath, // preserves the full path including query params
         },
       };
     }

@@ -168,6 +168,7 @@ model user {
   created_at                 DateTime            @default(now()) @db.Timestamp(6)
   updated_at                 DateTime            @default(now()) @updatedAt @db.Timestamp(6)
   is_deleted                 Boolean             @default(false)
+  metadata                   Json?
   user_role                  user_role[]
   settings                   user_settings?
   contacts                   contact[]
@@ -373,6 +374,13 @@ model about {
   created_at         DateTime @default(now()) @db.Timestamp(6)
   last_updated_by    user?    @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
   last_updated_by_id Int?
+}
+
+model nonce {
+  id         String    @id @default(uuid())
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  purpose    String?
+  expires_at DateTime?
 }
 
 model instrument {
