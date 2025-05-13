@@ -1,9 +1,16 @@
 import config from "@/config";
 import toast from "@/services/toast";
-import api from "./api";
 import { useAuthStore } from "@/stores/auth";
+import qs from "qs";
+import api from "./api";
 
 const auth = useAuthStore();
+
+function cleanParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v !== null && v !== undefined),
+  );
+}
 
 class DatasetService {
   /**
@@ -29,7 +36,9 @@ class DatasetService {
       ? `/datasets/${auth.user.username}/all`
       : "/datasets";
     return api.get(url, {
-      params,
+      params: cleanParams(params),
+      paramsSerializer: (params) =>
+        qs.stringify(params, { arrayFormat: "repeat" }),
     });
   }
 
