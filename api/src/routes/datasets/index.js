@@ -128,7 +128,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
-    const query_obj = datasetService.buildDatasetsFetchQueryForUser({ ...req.query, username: req.params.username });
+    const query_obj = datasetService.buildDatasetsFetchQuery({ ...req.query, username: req.params.username });
 
     const filterQuery = {
       where: query_obj,

@@ -908,46 +908,6 @@ const workflow_access_check = [
 ];
 
 /**
- * Builds a query object for fetching datasets for a specified user and other criteria.
- *
- * @function buildDatasetsFetchQueryForUser
- * @param {Object} params - The parameters for building the query.
- * @param {boolean} [params.deleted] - Whether to include deleted datasets.
- * @param {string} [params.type] - The type of datasets to fetch.
- * @param {string} [params.name] - The name (or part of the name) of datasets to fetch.
- * @param {boolean} [params.match_name_exact] - Whether to match the dataset name exactly.
- * @returns {Object} A query object for use with Prisma ORM.
- */
-const buildDatasetsFetchQueryForUser = ({
-  deleted, type, name, match_name_exact, username,
-}) => {
-  const query_obj = _.omitBy(_.isUndefined)({
-    is_deleted: deleted,
-    type,
-    name: name ? {
-      ...(match_name_exact ? { equals: name } : { contains: name }),
-      mode: 'insensitive', // case-insensitive search
-    } : undefined,
-    // Filter by projects assigned to this user
-    projects: {
-      some: {
-        project: {
-          users: {
-            some: {
-              user: {
-                username,
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return query_obj;
-};
-
-/**
  * Builds a query object for fetching datasets based on various criteria.
  *
  * @function buildDatasetsFetchQuery
@@ -966,13 +926,25 @@ const buildDatasetsFetchQueryForUser = ({
  * @param {string} [params.updated_at_start] - Start date for dataset update time range.
  * @param {string} [params.updated_at_end] - End date for dataset update time range.
  * @param {boolean} [params.match_name_exact] - Whether to match the dataset name exactly.
+ * @param {string} [params.username] - The username to filter datasets by user's projects.
  * @returns {Object} A query object for use with Prisma ORM.
  */
 const buildDatasetsFetchQuery = ({
-  deleted, archived, staged, type, name, days_since_last_staged,
-  has_workflows, has_derived_data, has_source_data,
-  created_at_start, created_at_end, updated_at_start, updated_at_end,
+  deleted,
+  archived,
+  staged,
+  type,
+  name,
+  days_since_last_staged,
+  has_workflows,
+  has_derived_data,
+  has_source_data,
+  created_at_start,
+  created_at_end,
+  updated_at_start,
+  updated_at_end,
   match_name_exact,
+  username,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
@@ -1034,6 +1006,23 @@ const buildDatasetsFetchQuery = ({
     query_obj.updated_at = {
       gte: new Date(updated_at_start),
       lte: new Date(updated_at_end),
+    };
+  }
+
+  // Filter by projects assigned to this user if username is provided
+  if (username) {
+    query_obj.projects = {
+      some: {
+        project: {
+          users: {
+            some: {
+              user: {
+                username,
+              },
+            },
+          },
+        },
+      },
     };
   }
 
@@ -1188,7 +1177,7 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
   logger.info(`Received request to initiate workflow ${requestedWorkflow} on dataset ${dataset.id}`);
 
   const uploadedDataset = dataset;
-  uploadedDataset.workflows = await datasetService.get_dataset_active_workflows({ dataset });
+  uploadedDataset.workflows = await get_dataset_active_workflows({ dataset });
 
   let requestedWorkflowInitiated;
   let workflowInitiationError;
