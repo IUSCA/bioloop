@@ -22,7 +22,7 @@ MONGO_PASSWORD = os.environ['MONGO_PASS']
 ALIAS_SALT = os.environ['ALIAS_SALT']
 
 ONE_HOUR = 60 * 60
-ONE_GIGABYTE = 1024 * 1024 * 1024
+# ONE_GIGABYTE = 1024 * 1024 * 1024
 FIVE_MINUTES = 5 * 60
 
 config = {
@@ -30,45 +30,45 @@ config = {
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'base_url': 'http://localhost:3030',
+        'base_url': 'http://api:3030',
         'auth_token': APP_API_TOKEN,
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
     },
     'paths': {
-        'scratch': '/path/to/scratch',
+        'scratch': '/data/scratch',
         'RAW_DATA': {
-            'archive': f'development/{YEAR}/raw_data',
-            'stage': '/path/to/staged/raw_data',
+            'archive': f'/data/archive/{YEAR}/raw_data',
+            'stage': '/data/stage/raw_data',
             'bundle': {
-                'generate': '/path/for/raw_data/bundle/generation',
-                'stage': '/path/for/raw_data/bundle/staging',
+                'generate': '/data/bundles/raw_data',
+                'stage': '/data/bundles/raw_data',
             },
-            'qc': '/path/to/qc'
+            'qc': '/data/qc'
         },
         'DATA_PRODUCT': {
-            'archive': f'development/{YEAR}/data_products',
-            'stage': '/path/to/staged/data_products',
+            'archive': f'/data/archive/{YEAR}/data_products',
+            'stage': '/data/stage/data_products',
             'bundle': {
-                'generate': '/path/for/data_products/bundle/generation',
-                'stage': '/path/for/data_products/bundle/staging',
+                'generate': '/data/bundles/data_products',
+                'stage': '/data/bundles/data_products',
             },
         },
-        'download_dir': '/path/to/download_dir',
-        'root': '/path/to/root'
+        'download_dir': '/data/downloads',
+        'root': '/data'
     },
     'registration': {
         'RAW_DATA': {
-            'source_dir': '/path/to/source/raw_data',
+            'source_dir': '/data/source/raw_data',
             'rejects': ['.snapshots'],
         },
         'DATA_PRODUCT': {
-            'source_dir': '/path/to/source/data_products',
+            'source_dir': '/data/source/data_products',
             'rejects': ['.snapshots'],
         },
-        'recency_threshold_seconds': ONE_HOUR,
-        'minimum_dataset_size': ONE_GIGABYTE,
-        'wait_between_stability_checks_seconds': FIVE_MINUTES,
+        'recency_threshold_seconds': 60, # 1 minute
+        # 'minimum_dataset_size': ONE_GIGABYTE,
+        'wait_between_stability_checks_seconds': 10, # seconds
         'poll_interval_seconds': 10,
         'full_scan_every_n_scans': 90  # every 90th scan will be a full scan / full scan every 15 minutes
     },

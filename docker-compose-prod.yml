@@ -2,7 +2,7 @@ name: bioloop
 services:
   ui:
     restart: unless-stopped
-    image: node:19
+    image: node:21
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules

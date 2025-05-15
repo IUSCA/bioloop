@@ -150,11 +150,10 @@ class FSBackend(StorageBackend):
         return cmd.execute(command)
 
     def get_hash(self, storage_file: str, missing_ok: bool = False) -> str | None:
-        command = ['md5', storage_file]
+        command = ['md5sum', storage_file]
         try:
             stdout, stderr = cmd.execute(command)
-            checksum = stdout.strip().split('=')[1]
-            return checksum.strip()
+            return stdout.strip().split()[0]
         except cmd.SubprocessError:
             if missing_ok:
                 return None
