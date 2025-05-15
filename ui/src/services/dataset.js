@@ -162,11 +162,15 @@ class DatasetService {
   }
 
   processDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/process_dataset_upload`);
+    return api.post(
+      `/datasets/upload/${dataset_id}/workflow/process_dataset_upload`,
+    );
   }
 
   cancelDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/cancel_dataset_upload`);
+    return api.post(
+      `/datasets/upload/${dataset_id}/workflow/cancel_dataset_upload`,
+    );
   }
 
   getDatasetUploadLogs({

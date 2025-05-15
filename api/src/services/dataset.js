@@ -492,11 +492,11 @@ async function get_dataset_creator({ dataset_id }) {
  * Determine if the user has access to initiate the given workflow for the given dataset.
  *
  * The access rules are as follows:
- * 1. Users with `admin` or `operator` roles are always allowed to initiate any of the above workflows.
+ * 1. Users with `admin` or `operator` roles are always allowed to initiate any workflows.
  * 2. Users with 'user' role:
  *     - For `integrated`, `process_dataset_upload`, or `cancel_dataset_upload` workflows:
  *       - They are allowed to proceed only if they created the dataset.
- *     - For other allowed workflows:
+ *     - For other allowed workflows (like `stage`):
  *       - They are allowed to proceed if they are assigned to a project associated with the dataset.
  *
  * If the user doesn't have the necessary permissions, a Forbidden error is thrown.
@@ -530,7 +530,7 @@ async function has_workflow_access({ workflow, dataset_id, user_id }) {
     return true;
   }
 
-  let user_has_workflow_access = false;
+  let user_has_workflow_access;
 
   if ([CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
     CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,

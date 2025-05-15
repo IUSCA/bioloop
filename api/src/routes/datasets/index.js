@@ -11,8 +11,8 @@ const config = require('config');
 const pm = require('picomatch');
 const he = require('he');
 
-const utils = require('../../utils');
 const path = require('path');
+const utils = require('../../utils');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { accessControl } = require('../../middleware/auth');
 const { validate } = require('../../middleware/validators');
@@ -318,12 +318,12 @@ router.post(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
     /* eslint-disable */
-    /*
-      * #swagger.description = 'workflow_id is optional. If the request body has
-      * workflow_id, a new relation is created between dataset and given
-      * workflow_id'
-      */
-    /* eslint-enable */
+      /*
+        * #swagger.description = 'workflow_id is optional. If the request body has
+        * workflow_id, a new relation is created between dataset and given
+        * workflow_id'
+        */
+      /* eslint-enable */
 
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
@@ -649,85 +649,6 @@ router.delete(
   }),
 );
 
-/**
- * Initiates a workflow which either processes or cancels a dataset upload.
- *
- * @async
- * @function initiateUploadWorkflow
- * @param {Object} options - The options object.
- * @param {Object} options.dataset - The dataset to initiate the workflow on.
- * @param {string} options.requestedWorkflow - The name of the workflow to initiate.
- * @param {Object} options.user - The user initiating the workflow.
- * @returns {Promise<Object>} An object containing the initiated workflow and any error messages.
- * @property {Object|null} workflowInitiated - The initiated workflow object, or null if not initiated.
- * @property {string|null} workflowInitiationError - Error message if workflow initiation failed, or null if successful.
- *
- * @description
- * This function attempts to initiate either the 'process_dataset_upload' or the 'cancel_dataset_upload' workflow
- * on a given dataset.
- *
- * `process_dataset_upload` -> This workflow initiates the processing of a dataset upload,
- * which registers the dataset in the system. This workflow is triggered after the entirety of the dataset's contents
- * have been uploaded.
- *
- * `cancel_dataset_upload`  -> This workflow cancels an incomplete dataset upload.
- *  A dataset upload is considered incomplete if one of the following conditions is met:
- * - All files have not been uploaded
- * - All files have been uploaded but the `process_dataset_upload` has not been initiated.
- *
- * It is possible that the API may receive requests to initiate both of these workflows on the same dataset in
- * proximity, thus triggering both of these workflows in parallel, which would result in a conflict.
- * To avoid this:
- * - Workflow `process_dataset_upload` should not be initiated if workflow `cancel_dataset_upload` is
- * already in progress.
- * - Workflow `cancel_dataset_upload` should not be initiated if workflow `process_dataset_upload` is already
- * in progress.
- *
- * This function checks for a potential conflicting workflow that may already be in progress before initiating
- * the requested workflow. If a conflicting workflow is found, the function will not initiate the requested workflow
- * and will return an error message instead.
- */
-const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null, user = null } = {}) => {
-  // return {
-  //   workflowInitiated: true,
-  //   workflowInitiationError: null,
-  // };
-
-  logger.info(`Received request to initiate workflow ${requestedWorkflow} on dataset ${dataset.id}`);
-
-  const uploadedDataset = dataset;
-  uploadedDataset.workflows = await datasetService.get_dataset_active_workflows({ dataset });
-
-  let requestedWorkflowInitiated;
-  let workflowInitiationError;
-
-  const conflictingUploadWorkflow = requestedWorkflow === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
-    ? CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD
-    : CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD;
-  logger.info(`Workflow ${requestedWorkflow} will not be started if conflicting workflow `
-      + `${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
-  logger.info(`Checking if conflicting workflow ${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
-  const foundConflictingUploadWorkflow = uploadedDataset.workflows.find(
-    (wf) => wf.name === conflictingUploadWorkflow,
-  );
-  if (!foundConflictingUploadWorkflow) {
-    logger.info(`Conflicting workflow ${conflictingUploadWorkflow} is not running on dataset ${dataset.id}`);
-    logger.info(`Starting workflow ${requestedWorkflow} on dataset ${dataset.id}`);
-    requestedWorkflowInitiated = await datasetService.create_workflow(
-      uploadedDataset,
-      requestedWorkflow,
-      user.id,
-    );
-  } else {
-    workflowInitiationError = `The workflow ${requestedWorkflow} cannot be started on dataset ${dataset.id} `
-        + `because conflicting workflow ${foundConflictingUploadWorkflow.id}) is `
-        + 'already in progress.';
-    logger.error(workflowInitiationError);
-  }
-
-  return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
-};
-
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
@@ -739,14 +660,12 @@ router.post(
     param('wf').isIn([
       CONSTANTS.WORKFLOWS.INTEGRATED,
       CONSTANTS.WORKFLOWS.STAGE,
-      CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
-      CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
     ]),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
-    // Allowed workflows are stage, integrated, process_dataset_upload, and cancel_dataset_upload.
+    // Allowed workflows are `Stage` and `Integrated`.
 
     const wf_name = req.params.wf;
 
@@ -759,49 +678,27 @@ router.post(
       return next(createError(404, 'Dataset not found'));
     }
 
-    if (wf_name === CONSTANTS.WORKFLOWS.INTEGRATED
-          || wf_name === CONSTANTS.WORKFLOWS.STAGE) {
-      // If staging a dataset Log the staging attempt first.
-      if (wf_name === CONSTANTS.WORKFLOWS.STAGE) {
-        try {
-          await prisma.stage_request_log.create({
-            data: {
-              dataset_id: req.params.id,
-              user_id: req.user.id,
-            },
-          });
-        } catch (e) {
-          logger.error('Error creating stage request log', e);
-          return next(createError(500, 'Error creating stage request log'));
-          // console.log()
-        }
+    // if (wf_name === CONSTANTS.WORKFLOWS.INTEGRATED
+    //       || wf_name === CONSTANTS.WORKFLOWS.STAGE) {
+    // If staging a dataset Log the staging attempt first.
+    if (wf_name === CONSTANTS.WORKFLOWS.STAGE) {
+      try {
+        await prisma.stage_request_log.create({
+          data: {
+            dataset_id: req.params.id,
+            user_id: req.user.id,
+          },
+        });
+      } catch (e) {
+        logger.error('Error creating stage request log', e);
+        return next(createError(500, 'Error creating stage request log'));
+        // console.log()
       }
-      logger.info(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
-      const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
-      return res.json(wf);
     }
-
-    if (wf_name === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
-          || wf_name === CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD) {
-      verifyUploadEnabledForRole(req, res, (err) => {
-        if (err) {
-          return next(err);
-        }
-        // Continue with the workflow initiation
-        initiateUploadWorkflow({
-          dataset,
-          requestedWorkflow: wf_name,
-          user: req.user,
-        }).then(({ workflowInitiated, workflowInitiationError }) => {
-          if (workflowInitiated) {
-            return res.json(workflowInitiated);
-          }
-          next(createError.InternalServerError(workflowInitiationError));
-        }).catch(next);
-      });
-    } else {
-      return next(createError(400, 'Invalid workflow type'));
-    }
+    logger.info(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
+    return res.json(wf);
+    // }
   }),
 );
 
