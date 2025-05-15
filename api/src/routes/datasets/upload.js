@@ -327,7 +327,7 @@ router.post(
       return next(createError(400, 'Invalid workflow name'));
     }
 
-    initiateUploadWorkflow({
+    datasetService.initiateUploadWorkflow({
       dataset,
       requestedWorkflow: wf_name,
       user: req.user,

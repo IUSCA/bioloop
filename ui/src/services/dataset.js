@@ -1,7 +1,7 @@
 import config from "@/config";
 import toast from "@/services/toast";
-import api from "./api";
 import { useAuthStore } from "@/stores/auth";
+import api from "./api";
 
 const auth = useAuthStore();
 
@@ -163,13 +163,13 @@ class DatasetService {
 
   processDatasetUpload(dataset_id) {
     return api.post(
-      `/datasets/upload/${dataset_id}/workflow/process_dataset_upload`,
+      `/datasets/uploads/${dataset_id}/workflow/process_dataset_upload`,
     );
   }
 
   cancelDatasetUpload(dataset_id) {
     return api.post(
-      `/datasets/upload/${dataset_id}/workflow/cancel_dataset_upload`,
+      `/datasets/uploads/${dataset_id}/workflow/cancel_dataset_upload`,
     );
   }
 

@@ -1194,7 +1194,7 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
   if (!foundConflictingUploadWorkflow) {
     logger.info(`Conflicting workflow ${conflictingUploadWorkflow} is not running on dataset ${dataset.id}`);
     logger.info(`Starting workflow ${requestedWorkflow} on dataset ${dataset.id}`);
-    requestedWorkflowInitiated = await datasetService.create_workflow(
+    requestedWorkflowInitiated = await create_workflow(
       uploadedDataset,
       requestedWorkflow,
       user.id,
@@ -1223,7 +1223,6 @@ module.exports = {
   get_dataset_active_workflows,
   buildDatasetCreateQuery,
   buildDatasetsFetchQuery,
-  buildDatasetsFetchQueryForUser,
   get_dataset_creator,
   getUploadedDatasetPath,
   dataset_access_check,
