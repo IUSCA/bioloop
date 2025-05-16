@@ -181,13 +181,13 @@
   },
   "enabled_features": {
     "upload": {
-      "enabled_for_roles": ["admin"]
+      "enabled_for_roles": ["admin", "user"]
     },
     "fs": {
       "enabled_for_roles": ["admin"]
     },
     "downloads": true,
-    "signup": true
+    "signup": false
   },
   "institution_types": [
     "Commercial",
