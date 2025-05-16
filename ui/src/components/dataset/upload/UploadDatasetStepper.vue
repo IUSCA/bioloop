@@ -290,6 +290,7 @@ import { VaDivider, VaPopover } from "vuestic-ui";
 import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import { Icon } from "@iconify/vue";
 import instrumentService from "@/services/instrument";
+import constants from "@/constants";
 
 const auth = useAuthStore();
 
@@ -453,7 +454,7 @@ const stepIsPristine = computed(() => {
 
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
-    (e) => e.uploadStatus !== Constants.UPLOAD_STATUSES.UPLOADED,
+    (e) => e.uploadStatus !== constants.UPLOAD_STATUSES.UPLOADED,
   );
 });
 
@@ -978,7 +979,7 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  fileDetails.uploadStatus = Constants.UPLOAD_STATUSES.UPLOADING;
+  fileDetails.uploadStatus = constants.UPLOAD_STATUSES.UPLOADING;
 
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
@@ -986,8 +987,8 @@ const uploadFile = async (fileDetails) => {
   }
 
   fileDetails.uploadStatus = uploaded
-    ? Constants.UPLOAD_STATUSES.UPLOADED
-    : Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
+    ? constants.UPLOAD_STATUSES.UPLOADED
+    : constants.UPLOAD_STATUSES.UPLOAD_FAILED;
 
   if (!uploaded) {
     if (selectingDirectory.value) {
@@ -1065,7 +1066,7 @@ const postSubmit = () => {
       id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
         .id,
       data: {
-        status: Constants.UPLOAD_STATUSES.UPLOAD_FAILED,
+        status: constants.UPLOAD_STATUSES.UPLOAD_FAILED,
       },
     };
   });
@@ -1073,8 +1074,8 @@ const postSubmit = () => {
   if (datasetUploadLog.value) {
     createOrUpdateUploadLog({
       status: someFilesPendingUpload.value
-        ? Constants.UPLOAD_STATUSES.UPLOAD_FAILED
-        : Constants.UPLOAD_STATUSES.UPLOADED,
+        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
+        : constants.UPLOAD_STATUSES.UPLOADED,
       files: failedFileUpdates,
     })
       .then((res) => {
@@ -1127,7 +1128,7 @@ const preUpload = async () => {
 
   const logData = datasetUploadLog.value?.id
     ? {
-        status: Constants.UPLOAD_STATUSES.UPLOADING,
+        status: constants.UPLOAD_STATUSES.UPLOADING,
       }
     : {
         ...uploadFormData.value,
