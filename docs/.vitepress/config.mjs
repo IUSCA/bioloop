@@ -5,7 +5,7 @@ import { withSidebar } from 'vitepress-sidebar';
 // https://vitepress.dev/reference/site-config
 let vitePressOptions =  {
   title: "Bioloop",
-  base: "/bioloop-test/",
+  base: "/bioloop/",
   description: "Bioloop Documentation",
   head: [['link', { rel: 'icon', href: '/bioloop/docs/favicon.ico' }]],
   lastUpdated: true, // Enable last updated timestamp
