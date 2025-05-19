@@ -81,7 +81,7 @@
               <div class="w-96">
                 Raw Data: Original, unprocessed data collected from instruments.
                 <br />
-                Dara Product: Processed data derived from Raw Data
+                Data Product: Processed data derived from Raw Data
               </div>
             </template>
             <Icon icon="mdi:information" class="text-xl text-gray-500" />
@@ -271,17 +271,17 @@
 </template>
 
 <script setup>
+import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import config from "@/config";
-import instrumentService from "@/services/instrument";
+import Constants from "@/constants";
 import datasetService from "@/services/dataset";
 import fileSystemService from "@/services/fs";
+import instrumentService from "@/services/instrument";
 import toast from "@/services/toast";
+import { Icon } from "@iconify/vue";
 import { watchDebounced } from "@vueuse/core";
 import pm from "picomatch";
-import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import { VaPopover } from "vuestic-ui";
-import { Icon } from "@iconify/vue";
-import Constants from "@/constants";
 
 const STEP_KEYS = {
   SELECT_DIRECTORY: "selectDirectory",
@@ -566,7 +566,7 @@ const validateIfExists = (value) => {
           resolve(res.data.exists);
         })
         .catch((e) => {
-          // console.error(e);
+          console.error(e);
           reject();
         });
     }
@@ -670,7 +670,7 @@ const initiateIngestion = async () => {
     })
     .catch((err) => {
       toast.error("Failed to initiate ingestion");
-      // console.error(err);
+      console.error(err);
       submissionSuccess.value = false;
     });
 };
@@ -809,7 +809,7 @@ onMounted(() => {
     })
     .catch((err) => {
       toast.error("Failed to load resources");
-      // console.error(err);
+      console.error(err);
     })
     .finally(() => {
       loadingResources.value = false;
@@ -837,7 +837,7 @@ onMounted(() => {
 
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
-    // min-height: 0 to shrink the elemenet to below its calculated min-height of children
+    // min-height: 0 to shrink the element to below its calculated min-height of children
     display: flex;
     flex-direction: column;
     flex: 1;

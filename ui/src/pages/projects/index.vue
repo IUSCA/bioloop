@@ -228,7 +228,7 @@ const row_items = computed(() => {
 });
 
 // This could've been split into two variables user_columns and admin_columns
-// and concataned based on user roles
+// and concatenated based on user roles
 // but the order of columns would not be preserved
 const columns = [
   { key: "name", sortable: true },
@@ -251,7 +251,7 @@ function fetch_projects() {
 
   const skip = (params.value.currentPage - 1) * params.value.itemsPerPage;
 
-  const queryparams = {
+  const queryParams = {
     forSelf: !auth.canOperate,
     search: params.value.search,
     take: params.value.itemsPerPage,
@@ -261,7 +261,7 @@ function fetch_projects() {
   };
 
   projectService
-    .getAll(queryparams)
+    .getAll(queryParams)
     .then((res) => {
       projects.value = res.data.projects;
       totalItems.value = res.data.metadata.count;

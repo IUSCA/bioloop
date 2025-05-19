@@ -12,7 +12,7 @@ cp .env.example .env
 ``` 
 and populate the config values to all the keys.
 
-In the developement environment, the API calls from the UI are proxied by the vite server. For example, the UI running on https://localhost:443 make an API call GET https://localhost:443/api/users which the vite server intercepts and proxies it to the API server running on `VITE_API_REDIRECT_URL` (ex: http://localhost:3000) as GET http://localhost:3000/users.
+In the development environment, the API calls from the UI are proxied by the vite server. For example, the UI running on https://localhost:443 make an API call GET https://localhost:443/api/users which the vite server intercepts and proxies it to the API server running on `VITE_API_REDIRECT_URL` (ex: http://localhost:3000) as GET http://localhost:3000/users.
 
 ### Running using docker
 1. Set `VITE_API_REDIRECT_URL` to http://api:3000
@@ -56,7 +56,7 @@ There are multiple ways to include icons:
 
 Iconify icons are installed using
 - Installation: option-1: https://docs.iconify.design/icon-components/vue/
-- Installation: option-2: https://github.com/antfu/unplugin-icons and [autoimporting](https://github.com/antfu/unplugin-icons#auto-importing)
+- Installation: option-2: https://github.com/antfu/unplugin-icons and [auto-importing](https://github.com/antfu/unplugin-icons#auto-importing)
   - need to install [specific packs](https://github.com/antfu/unplugin-icons#icons-data) ex: `pnpm i -D @iconify-json/mdi`
   - mdi is installed in this repo and is a recommended icon library to use
 
@@ -254,7 +254,7 @@ datetime.readableDuration(130*1000) // "2 minutes"
 datetime.formatDuration(12000 * 1000) // "3h 20m"
 ```
 
-If you have a usecase to display in formats other than above in more than one component, add a function to [datetime](src/services/datetime.js) service and use it.
+If you have a use-case to display in formats other than above in more than one component, add a function to [datetime](src/services/datetime.js) service and use it.
 
 ## Feature Flags
 
@@ -343,7 +343,7 @@ getRecords()
   .catch((err) => {
     if (err?.response?.status == 404)
         toast.info("No datasets");
-    else toast.error("Could not fetch datatset");
+    else toast.error("Could not fetch dataset");
   })
 ```
 

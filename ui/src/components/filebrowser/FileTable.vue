@@ -11,7 +11,7 @@
     virtual-scroller
     sticky-header
     style="height: calc(100vh - 13.75rem)"
-    class="filetable"
+    class="file-table"
   >
     <template #cell(size)="{ rowData }">
       <span v-if="rowData.filetype !== 'directory'">
@@ -43,7 +43,7 @@
     </template>
 
     <template #cell(download)="{ rowData }">
-      <!-- donwload button -->
+      <!-- download button -->
       <va-button
         class="flex-none"
         preset="plain"
@@ -227,7 +227,7 @@ function nameSortingFn(a, b) {
 </script>
 
 <style scoped>
-.filetable {
+.file-table {
   --va-data-table-cell-padding: 8px;
 }
 </style>

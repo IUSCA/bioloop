@@ -49,7 +49,7 @@ For each upload, information is logged to the following relational tables (Postg
 2. Upload of files is initiated by the UI once the above steps are successful.
 3. Chunks are uploaded sequentially to the File-Upload API.
    - For this, the client sends an HTTP request to the File-Upload API in order to upload a file chunk, which then writes the received chunk to the File-Upload Server, after validating its checksum.
-   - If a chunk upload fails, the UI retries the upload upto 5 times before failing.
+   - If a chunk upload fails, the UI retries the upload up to 5 times before failing.
    - The bearer token that is being used to call the File-Upload API is refreshed every 20 seconds
 4. If the user chooses to navigate to a different route before all files have been uploaded, they see a browser alert asking to verify their choice.
    - Upon verification, the upload is cancelled by initiating the `cancel_dataset_upload` workflow.

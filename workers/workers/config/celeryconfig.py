@@ -69,7 +69,7 @@ task_soft_time_limit = ONE_DAY - TEN_MINUTES
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-routes
 # task_routes = {
-#     'tasksB.task2': 'subtractqueue'
+#     'tasksB.task2': 'subtractqueue' # cspell: disable-line
 # }
 
 # default value is 'celery'
