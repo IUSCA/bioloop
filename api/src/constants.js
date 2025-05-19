@@ -44,13 +44,6 @@ const INCLUDE_AUDIT_LOGS = {
           },
         },
       },
-      upload: {
-        select: {
-          id: true,
-          files: true,
-          status: true,
-        },
-      },
     },
     orderBy: {
       timestamp: 'desc',
@@ -59,37 +52,29 @@ const INCLUDE_AUDIT_LOGS = {
 };
 
 const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
-  audit_log: {
-    select: {
-      id: true,
-      user: true,
-      timestamp: true,
-      upload: {
-        select: {
-          status: true,
-        },
-      },
-      dataset: {
+  create_log: {
+    upload_log: {
+      files: {
         select: {
           id: true,
+          md5: true,
           name: true,
-          type: true,
-          origin_path: true,
-          source_datasets: {
-            select: {
-              source_dataset: true,
-            },
-          },
+          path: true,
         },
       },
     },
-  },
-  files: {
-    select: {
-      id: true,
-      md5: true,
-      name: true,
-      path: true,
+    dataset: {
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        origin_path: true,
+        source_datasets: {
+          select: {
+            source_dataset: true,
+          },
+        },
+      },
     },
   },
 };

@@ -326,16 +326,9 @@ async function has_dataset_assoc({
  * @throws {Error} If the user who created the dataset cannot be determined.
  */
 async function get_dataset_creator({ dataset_id }) {
-  const dataset_creation_log = await prisma.dataset_audit.findFirst({
+  const dataset_creation_log = await prisma.dataset_creation_log.findUnique({
     where: {
       dataset_id,
-      create_method: {
-        in: [
-          CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
-          CONSTANTS.DATASET_CREATE_METHODS.IMPORT,
-          CONSTANTS.DATASET_CREATE_METHODS.SCAN,
-        ],
-      },
     },
     include: {
       user: {

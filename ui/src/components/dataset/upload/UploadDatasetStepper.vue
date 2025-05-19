@@ -217,7 +217,7 @@
                 <UploadedDatasetDetails
                   v-if="selectingFiles || selectingDirectory"
                   v-model:populated-dataset-name="populatedDatasetName"
-                  :dataset="datasetUploadLog?.audit_log.dataset"
+                  :dataset="uploadLog?.create_log.dataset"
                   :selected-dataset-type="selectedDatasetType.value"
                   :input-disabled="submitAttempted"
                   :uploaded-dataset-error="formErrors[STEP_KEYS.UPLOAD]"
@@ -276,6 +276,12 @@
 </template>
 
 <script setup>
+// joins:
+// 1. upload_log.create_log.dataset
+// 2. upload_log.create_log.dataset.id
+// 3. upload_log.files (name, md5, etc.)
+// 3.
+
 import config from "@/config";
 import Constants from "@/constants";
 import datasetService from "@/services/dataset";
@@ -382,7 +388,7 @@ const validatingForm = ref(false);
 const selectedSourceInstrument = ref(null);
 const sourceInstrumentOptions = ref([]);
 const projectSelected = ref(null);
-const datasetUploadLog = ref(null);
+const uploadLog = ref(null);
 const submissionStatus = ref(Constants.UPLOAD_STATUSES.UNINITIATED);
 const statusChipColor = ref("");
 const submissionAlert = ref(""); // For handling network errors before upload begins
@@ -846,7 +852,7 @@ const uploadChunk = async (chunkData) => {
 };
 
 const getFileUploadLog = ({ name, path }) => {
-  return datasetUploadLog.value.files.find((fileUploadLog) => {
+  return uploadLog.value.files.find((fileUploadLog) => {
     return selectingDirectory.value
       ? fileUploadLog.name === name && fileUploadLog.path === path
       : fileUploadLog.name === name;
@@ -921,11 +927,11 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append(
       "uploaded_entity_id",
-      datasetUploadLog.value.audit_log.dataset.id,
+      uploadLog.value.create_log.dataset.id,
     );
     chunkData.append(
       "upload_path",
-      datasetUploadLog.value.audit_log.dataset.origin_path,
+      uploadLog.value.create_log.dataset.origin_path,
     );
     chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
@@ -1063,27 +1069,23 @@ const postSubmit = () => {
 
   const failedFileUpdates = filesNotUploaded.value.map((file) => {
     return {
-      id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
-        .id,
+      id: uploadLog.value.files.find((f) => f.md5 === file.fileChecksum).id,
       data: {
         status: constants.UPLOAD_STATUSES.UPLOAD_FAILED,
       },
     };
   });
 
-  if (datasetUploadLog.value) {
-    createOrUpdateUploadLog({
-      status: someFilesPendingUpload.value
-        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
-        : constants.UPLOAD_STATUSES.UPLOADED,
-      files: failedFileUpdates,
-    })
-      .then((res) => {
-        datasetUploadLog.value = res.data;
-      })
-      .catch((err) => {
-        // console.error(err);
-      });
+  if (!uploadCancelled.value && uploadLog.value) {
+    return datasetService.updateDatasetUploadLog(
+      uploadLog.value?.create_log?.dataset.id,
+      {
+        status: someFilesPendingUpload.value
+          ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
+          : constants.UPLOAD_STATUSES.UPLOADED,
+        files: failedFileUpdates,
+      },
+    );
   }
 };
 
@@ -1092,7 +1094,7 @@ const handleSubmit = () => {
     .then(() => {
       return !uploadCancelled.value
         ? datasetService.processDatasetUpload(
-            datasetUploadLog.value.audit_log.dataset.id,
+            uploadLog.value.create_log.dataset.id,
           )
         : Promise.reject();
     })
@@ -1124,36 +1126,18 @@ const onNextClick = (nextStep) => {
 
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
+  if (uploadCancelled.value || uploadLog.value) {
+    return;
+  }
+
   await evaluateChecksums(filesNotUploaded.value);
 
-  const logData = datasetUploadLog.value?.id
-    ? {
-        status: constants.UPLOAD_STATUSES.UPLOADING,
-      }
-    : {
-        ...uploadFormData.value,
-      };
-
   try {
-    const res = await createOrUpdateUploadLog(logData);
-    datasetUploadLog.value = res.data;
+    const res = await datasetService.logDatasetUpload(...uploadFormData.value);
+    uploadLog.value = res.data;
   } catch (err) {
     // console.error(err);
     throw new Error("Error logging dataset upload");
-  }
-};
-
-// Log (or update) upload status
-const createOrUpdateUploadLog = (data) => {
-  if (!uploadCancelled.value) {
-    return !datasetUploadLog.value
-      ? datasetService.logDatasetUpload(data)
-      : datasetService.updateDatasetUploadLog(
-          datasetUploadLog.value?.audit_log?.dataset.id,
-          data,
-        );
-  } else {
-    return Promise.reject();
   }
 };
 
@@ -1326,10 +1310,8 @@ onBeforeRouteLeave(() => {
 
 onBeforeUnmount(() => {
   uploadCancelled.value = true;
-  if (isUploadIncomplete.value && datasetUploadLog.value) {
-    datasetService.cancelDatasetUpload(
-      datasetUploadLog.value.audit_log.dataset.id,
-    );
+  if (isUploadIncomplete.value && uploadLog.value) {
+    datasetService.cancelDatasetUpload(uploadLog.value.create_log.dataset.id);
   }
 });
 
@@ -1429,7 +1411,7 @@ onBeforeUnmount(() => {
 //         "User confirmed that they are leaving page. Upload is incomplete, and will be cancelled.",
 //     );
 //     datasetService.cancelDatasetUpload(
-//         datasetUploadLog.value.audit_log.dataset.id,
+//         uploadLog.value.audit_log.dataset.id,
 //     );
 //   } else {
 //     console.log(

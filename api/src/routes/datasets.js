@@ -420,7 +420,7 @@ router.get(
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
         status,
-        audit_log: {
+        dataset_create_log: {
           dataset: {
             name: { contains: dataset_name },
           },
@@ -431,19 +431,19 @@ router.get(
       skip: offset,
       take: limit,
       ...query_obj,
-      orderBy: {
-        audit_log: {
-          timestamp: 'desc',
-        },
-      },
     };
 
     const [dataset_upload_logs, count] = await prisma.$transaction([
-      prisma.dataset_upload_log.findMany({
+      prisma.upload_log.findMany({
         ...filter_query,
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+        orderBy: {
+          create_log: {
+            created_at: 'desc',
+          },
+        },
       }),
-      prisma.dataset_upload_log.count({ ...query_obj }),
+      prisma.upload_log.count({ ...query_obj }),
     ]);
 
     res.json({ metadata: { count }, uploads: dataset_upload_logs });
@@ -473,11 +473,11 @@ router.get(
     const query_obj = {
       where: _.omitBy(_.isUndefined)({
         status,
-        audit_log: {
+        dataset_create_log: {
           dataset: {
             name: { contains: dataset_name },
           },
-          user: {
+          creator: {
             username: req.params.username,
           },
         },
@@ -487,19 +487,19 @@ router.get(
       skip: offset,
       take: limit,
       ...query_obj,
-      orderBy: {
-        audit_log: {
-          timestamp: 'desc',
-        },
-      },
     };
 
     const [dataset_upload_logs, count] = await prisma.$transaction([
-      prisma.dataset_upload_log.findMany({
+      prisma.upload_log.findMany({
         ...filter_query,
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+        orderBy: {
+          create_log: {
+            created_at: 'desc',
+          },
+        },
       }),
-      prisma.dataset_upload_log.count({ ...query_obj }),
+      prisma.upload_log.count({ ...query_obj }),
     ]);
 
     res.json({ metadata: { count }, uploads: dataset_upload_logs });
@@ -596,8 +596,23 @@ const getDatasetCreateQuery = (data) => {
 
   create_query.name = normalize_name(create_query.name); // normalize name
 
-  // Assign method of creation
-  create_query.create_method = create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN;
+  // Log creation of the Dataset
+  create_query.dataset_create_log = {
+    create: {
+      create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
+      creator: { connect: { id: user_id } },
+      ...(src_instrument_id && { src_instrument: { connect: { id: src_instrument_id } } }),
+    },
+  };
+
+  // Log the Action taken which brought the Dataset into existence
+  create_query.audit_logs = {
+    create: [{
+      action: CONSTANTS.DATASET_ACTIONS.CREATE,
+      user: { connect: { id: user_id } },
+      dataset: { connect: { id: create_query.id } },
+    }],
+  };
 
   // create workflow association
   if (workflow_id) {
@@ -647,7 +662,7 @@ const getDatasetCreateQuery = (data) => {
   create_query.audit_logs = {
     create: [
       {
-        action: 'create',
+        action: CONSTANTS.DATASET_ACTIONS.CREATE,
         user_id,
       },
     ],
@@ -680,12 +695,13 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /*
-                                                                * #swagger.description = 'workflow_id is optional.
-                                                                * If the request body has workflow_id,
-                                                                * a new relation is created between dataset and given
-                                                                * workflow_id'
-                                                                */
+    /* eslint-disable */
+      // #swagger.description = 'workflow_id is optional.
+      // If the request body has workflow_id,
+      // a new relation is created between dataset and given
+      // workflow_id'
+      //
+      /* eslint-enable */
 
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
@@ -1448,7 +1464,7 @@ router.post(
           },
           audit_log: {
             create: {
-              action: 'create',
+              action: CONSTANTS.DATASET_ACTIONS.CREATE,
               dataset_id: createdDataset.id,
               user_id: req.user.id,
             },
@@ -1512,26 +1528,30 @@ router.patch(
     // #swagger.summary = 'Update the metadata related to a dataset upload event'
 
     const { status, files = [] } = req.body;
-    const dataset_upload_log_update_query = _.omitBy(_.isUndefined)({
+    const upload_log_update_query = _.omitBy(_.isUndefined)({
       status,
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const dataset_upload_audit_log = await tx.dataset_audit.findFirst({
+      const uploaded_dataset = await tx.dataset.findUnique({
         where: {
-          dataset_id: req.params.id,
-          action: CONSTANTS.DATASET_ACTIONS.CREATE,
+          id: req.params.id,
+        },
+        include: {
+          create_log: {
+            select: {
+              upload_log_id: true,
+            },
+          },
         },
       });
 
-      let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
-        where: { audit_log_id: dataset_upload_audit_log.id },
-      });
+      const { create_log } = uploaded_dataset;
 
-      if (Object.entries(dataset_upload_log_update_query).length > 0) {
-        await tx.dataset_upload_log.update({
-          where: { id: ds_upload_log.id },
-          data: dataset_upload_log_update_query,
+      if (Object.entries(upload_log_update_query).length > 0) {
+        await tx.upload_log.update({
+          where: { id: create_log.upload_log_id },
+          data: upload_log_update_query,
         });
       }
 
@@ -1546,12 +1566,12 @@ router.patch(
         }
       }
 
-      ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
-        where: { id: ds_upload_log.id },
+      const upload_log = await tx.upload_log.findUniqueOrThrow({
+        where: { dataset_create_log_id: create_log.upload_log_id },
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
 
-      return ds_upload_log;
+      return upload_log;
     });
 
     res.json(dataset_upload_log);

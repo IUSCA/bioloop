@@ -13,8 +13,17 @@ const userService = require('./user');
 
 const prisma = new PrismaClient();
 
-const key = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.key')));
-const pub = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.pub')));
+const basedir = global.__basedir || path.join(__dirname, '..', '..');
+const key = fs.readFileSync(path.join(basedir, config.get('auth.jwt.key')));
+const pub = fs.readFileSync(path.join(basedir, config.get('auth.jwt.pub')));
+
+console.log('__basedir:', global.__basedir);
+console.log('Resolved basedir:', basedir);
+console.log('Attempting to read key from:', path.join(basedir, config.get('auth.jwt.key')));
+console.log('Attempting to read pub from:', path.join(basedir, config.get('auth.jwt.pub')));
+
+// const key = fs.readFileSync(path.join(basedir, config.get('auth.jwt.key')));
+// const pub = fs.readFileSync(path.join(basedir, config.get('auth.jwt.pub')));
 const signOpt = {
   algorithm: config.get('auth.jwt.sign_algorithm'),
 };
@@ -33,7 +42,9 @@ function issueJWT({ userProfile, forever = false, aud }) {
 const get_user_profile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id']);
 
 async function onLogin({ user, method, updateLastLogin = true }) {
-  if (updateLastLogin) { await userService.updateLastLogin({ id: user.id, method }); }
+  if (updateLastLogin) {
+    await userService.updateLastLogin({ id: user.id, method });
+  }
 
   const userProfile = get_user_profile(user);
 

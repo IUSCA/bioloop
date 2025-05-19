@@ -5,7 +5,6 @@ from celery.utils.log import get_task_logger
 
 import workers.config.celeryconfig as celeryconfig
 import workers.api as api
-from workers.tasks.process_dataset_upload import get_dataset_upload_log
 from workers.constants.upload import UPLOAD_STATUS
 
 app = Celery("tasks")
@@ -24,7 +23,7 @@ def purge_uploaded_resources(celery_task, dataset_id, **kwargs):
         raise Exception(
             f"Expected dataset {dataset_id} to not have been archived, but found archive_path: {sda_path}")
 
-    dataset_upload_log = get_dataset_upload_log(dataset)
+    dataset_upload_log = dataset['upload_log']
 
     # Check if dataset upload is in a processing state. If it is, skip. The resources
     # will be purged by a cleanup process, if necessary.

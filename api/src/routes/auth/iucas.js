@@ -40,11 +40,13 @@ router.post(
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
     const login = async (cas_id) => {
+      console.log('CAS login: cas_id', cas_id);
       if (!cas_id) {
         logger.error('CAS login failed: no cas_id');
         return next(createError.InternalServerError());
       }
       const user = await authService.getLoginUser('cas_id', cas_id);
+      console.log('CAS login: user', user);
 
       req.auth = {
         user,

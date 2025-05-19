@@ -232,11 +232,11 @@ const getUploadLogs = async () => {
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {
-        let uploaded_dataset = e.audit_log.dataset;
+        let uploaded_dataset = e.create_log.dataset;
         return {
           ...e,
           initiated_at: e.audit_log.timestamp,
-          user: e.audit_log.user,
+          user: e.create_log.creator,
           uploaded_dataset,
           source_dataset:
             uploaded_dataset.source_datasets.length > 0

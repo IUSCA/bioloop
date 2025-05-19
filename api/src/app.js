@@ -7,6 +7,7 @@ const compression = require('compression');
 const swaggerUi = require('swagger-ui-express');
 const config = require('config');
 
+const path = require('path');
 const indexRouter = require('./routes/index');
 const {
   notFound,
@@ -16,6 +17,8 @@ const {
   axiosErrorHandler,
   prismaConstraintFailedHandler,
 } = require('./middleware/error');
+
+global.__basedir = path.join(__dirname, '..');
 
 // Register application
 const app = express();

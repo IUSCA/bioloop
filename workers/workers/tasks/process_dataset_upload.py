@@ -6,7 +6,6 @@ from celery.utils.log import get_task_logger
 from celery import current_app
 from sca_rhythm import Workflow
 
-from workers.constants.dataset import CREATE_METHODS
 from workers.constants.workflow import WORKFLOWS
 from workers.constants.upload import UPLOAD_STATUS
 from workers import exceptions as exc
@@ -86,14 +85,12 @@ def merge_uploaded_file_chunks(file_upload_log_id: int,
 
 
 def get_dataset_upload_log(dataset: dict) -> dict:
-    dataset_upload_audit_log = \
-        [log for log in dataset['audit_logs'] if log['create_method'] == CREATE_METHODS['UPLOAD']][0]
-    return dataset_upload_audit_log['upload']
+    return dataset['upload_log']
 
 
 # Updates the upload status of a given dataset's upload and uploaded files to PROCESSING
 def update_upload_status_to_processing(dataset: dict):
-    dataset_upload_log = get_dataset_upload_log(dataset)
+    dataset_upload_log = dataset['upload_log']
     upload_log_files = dataset_upload_log['files']
 
     file_log_updates = []
@@ -122,7 +119,7 @@ def update_upload_status_to_processing(dataset: dict):
 
 def process_dataset_upload(dataset: dict) -> None:
     dataset_id = dataset['id']
-    dataset_upload_log = get_dataset_upload_log(dataset)
+    dataset_upload_log = dataset['upload_log']
     dataset_upload_log_id = dataset_upload_log['id']
     upload_log_files = dataset_upload_log['files']
 
@@ -228,7 +225,7 @@ def process(celery_task, dataset_id, **kwargs):
     except Exception as e:
         raise exc.RetryableException(e)
 
-    dataset_upload_log = get_dataset_upload_log(dataset)
+    dataset_upload_log = dataset['upload_log']
     dataset_upload_log_id = dataset_upload_log['id']
 
     if dataset_upload_log['status'] == UPLOAD_STATUS['COMPLETE']:

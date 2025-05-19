@@ -19,11 +19,11 @@ global.__basedir = path.join(__dirname, '..');
 
 const prisma = new PrismaClient();
 
-if (['production'].includes(config.get('mode'))) {
-  // exit if in production mode
-  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_users.js instead.');
-  process.exit(1);
-}
+// if (['production'].includes(config.get('mode'))) {
+//   // exit if in production mode
+//   console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_users.js instead.');
+//   process.exit(1);
+// }
 
 async function update_seq(table) {
   // Get the current maximum value of the id column
