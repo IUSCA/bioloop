@@ -68,6 +68,7 @@
     "prerun",
     "prometheuscommunity",
     "psql",
+    "pyproject",
     "rabbitmq",
     "rawdata",
     "Retryable",
