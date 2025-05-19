@@ -151,12 +151,14 @@ def get_all_datasets(
 def get_dataset(dataset_id: str,
                 files: bool = False,
                 bundle: bool = False,
-                workflows: bool = False):
+                workflows: bool = False,
+                include_create_log=False):
     with APIServerSession() as s:
         payload = {
             'files': files,
             'bundle': bundle,
             'workflows': workflows,
+            'include_create_log': include_create_log,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 

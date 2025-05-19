@@ -15,7 +15,7 @@ logger = get_task_logger(__name__)
 def purge_uploaded_resources(celery_task, dataset_id, **kwargs):
     print(f"Purging uploaded resources for dataset {dataset_id}")
 
-    dataset = api.get_dataset(dataset_id=dataset_id)
+    dataset = api.get_dataset(dataset_id=dataset_id, include_create_log=True)
 
     # Sanity check: Ensure dataset is not already archived.
     sda_path = dataset['archive_path']
@@ -23,7 +23,7 @@ def purge_uploaded_resources(celery_task, dataset_id, **kwargs):
         raise Exception(
             f"Expected dataset {dataset_id} to not have been archived, but found archive_path: {sda_path}")
 
-    dataset_upload_log = dataset['upload_log']
+    dataset_upload_log = dataset['create_log']['log']
 
     # Check if dataset upload is in a processing state. If it is, skip. The resources
     # will be purged by a cleanup process, if necessary.

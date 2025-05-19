@@ -106,7 +106,7 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
-  include_source_instrument = false,
+  include_create_log = false,
 }) {
   const fileSelect = files ? {
     select: {
@@ -140,15 +140,54 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      ...(include_source_instrument ? {
-        src_instrument: {
-          select: {
-            name: true,
+      ...(include_create_log ? {
+        create_log: {
+          include: {
+            src_instrument: {
+              select: {
+                name: true,
+              },
+            },
+            dataset_upload_log: {
+              include: {
+                files: {
+                  select: {
+                    name: true,
+                    path: true,
+                    md5: true,
+                  },
+                },
+              },
+            },
+            dataset_import_log: true,
+            dataset_scan_log: true,
           },
         },
       } : undefined),
     },
   });
+
+  // After fetching the dataset, filter the log based on the create_method
+  if (dataset.create_log) {
+    switch (dataset.create_log.create_method) {
+      case CONSTANTS.DATASET_CREATE_METHODS.UPLOAD:
+        dataset.create_log.log = dataset.create_log.upload_log;
+        break;
+      case CONSTANTS.DATASET_CREATE_METHODS.IMPORT:
+        dataset.create_log.log = dataset.create_log.import_log;
+        break;
+      case CONSTANTS.DATASET_CREATE_METHODS.SCAN:
+        dataset.create_log.log = dataset.create_log.scan_log;
+        break;
+      default:
+        dataset.create_log.log = null;
+    }
+    // Remove the individual log fields to clean up the response
+    delete dataset.create_log.upload_log;
+    delete dataset.create_log.import_log;
+    delete dataset.create_log.scan_log;
+  }
+
   const dataset_workflows = dataset.workflows;
 
   if (workflows && dataset.workflows.length > 0) {
@@ -331,7 +370,7 @@ async function get_dataset_creator({ dataset_id }) {
       dataset_id,
     },
     include: {
-      user: {
+      creator: {
         select: {
           id: true,
           username: true,
@@ -346,7 +385,7 @@ async function get_dataset_creator({ dataset_id }) {
     throw new Error(`Could not find user who created dataset ${dataset_id}.`);
   }
 
-  return dataset_creation_log.user;
+  return dataset_creation_log.creator;
 }
 
 /**

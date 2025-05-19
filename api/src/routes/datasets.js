@@ -519,7 +519,7 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
-    query('include_source_instrument').toBoolean().optional(),
+    query('include_create_log').toBoolean().optional(),
   ]),
   datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -537,7 +537,7 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
-      include_source_instrument: req.query.include_source_instrument || false,
+      include_create_log: req.query.include_create_log || false,
     });
 
     res.json(dataset);
@@ -605,15 +605,6 @@ const getDatasetCreateQuery = (data) => {
     },
   };
 
-  // Log the Action taken which brought the Dataset into existence
-  create_query.audit_logs = {
-    create: [{
-      action: CONSTANTS.DATASET_ACTIONS.CREATE,
-      user: { connect: { id: user_id } },
-      dataset: { connect: { id: create_query.id } },
-    }],
-  };
-
   // create workflow association
   if (workflow_id) {
     create_query.workflows = {
@@ -634,14 +625,6 @@ const getDatasetCreateQuery = (data) => {
     };
   }
 
-  if (src_instrument_id) {
-    create_query.src_instrument = {
-      connect: {
-        id: src_instrument_id,
-      },
-    };
-  }
-
   if (src_dataset_id) {
     create_query.source_datasets = {
       create: [{
@@ -659,6 +642,7 @@ const getDatasetCreateQuery = (data) => {
     ],
   };
 
+  // Log the Action taken. For dataset-creation, the action is CREATE.
   create_query.audit_logs = {
     create: [
       {
@@ -1447,10 +1431,10 @@ router.post(
       src_dataset_id,
     });
 
-    const dataset_upload_log = await prisma.$transaction(async (tx) => {
+    const upload_log = await prisma.$transaction(async (tx) => {
       const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
 
-      const created_dataset_upload_log = await tx.dataset_upload_log.create({
+      const dataset_upload_log = await tx.upload_log.create({
         data: {
           status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
           files: {
@@ -1461,13 +1445,6 @@ router.post(
               path: file.path,
               status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
             })),
-          },
-          audit_log: {
-            create: {
-              action: CONSTANTS.DATASET_ACTIONS.CREATE,
-              dataset_id: createdDataset.id,
-              user_id: req.user.id,
-            },
           },
         },
         select: {
@@ -1482,14 +1459,14 @@ router.post(
         },
       });
 
-      const updated_dataset_upload_log = await tx.dataset_upload_log.findUnique({
-        where: { id: created_dataset_upload_log.id },
+      const updated_dataset_upload_log = await tx.upload_log.findUnique({
+        where: { id: dataset_upload_log.id },
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
       return updated_dataset_upload_log;
     });
 
-    res.json(dataset_upload_log);
+    res.json(upload_log);
   }),
 );
 
@@ -1500,7 +1477,7 @@ router.patch(
   verifyUploadEnabledForRole,
   /**
      * A user can only update metadata related to a dataset upload if one of the
-     * following two conditions are met:
+     * following two` conditions are met:
      *   - The user has either the `admin` or the `operator` role
      *   - The user has the `user` role, and they are the one who uploaded this dataset.
      * This is checked by the `isPermittedTo` middleware.
