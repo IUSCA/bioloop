@@ -33,7 +33,7 @@ For each upload, information is logged to the following relational tables (Postg
 2. `dataset_upload_log` - contains metadata specific to a dataset's upload. Each record in this table is linked to multiple `file_upload_log` records.
 3. `file_upload_log` - contains metadata about each file that is uploaded as part of upload.
 
-![Upload ER Diagram](./public/api/upload/ER-diagram.png)
+![Upload ER Diagram](/api/upload/ER-diagram.png)
 
 ### 4.2 Steps
 
@@ -56,7 +56,7 @@ For each upload, information is logged to the following relational tables (Postg
 5. After all files' chunks are uploaded successfully, the UI makes a request to the Rhythm API to initiate the `process_dataset_upload` workflow, which merges each file's uploaded chunks into the corresponding file.
    - This worker expects to have access to be the location where the File-Upload API uploads files to.
 
-![Upload Steps Flowchart](./public/api/upload/steps-flowchart.jpeg)
+![Upload Steps Flowchart](/api/upload/steps-flowchart.jpeg)
 
 ### 4.3 Directory structure
 The directories on the File-Upload Server that are used for uploads are described below.
