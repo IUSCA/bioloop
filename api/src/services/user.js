@@ -1,10 +1,10 @@
-const { Prisma, PrismaClient } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 const _ = require('lodash/fp');
 const usernameRegex = require('regex-username')();
 const usernameBlacklist = require('the-big-username-blacklist');
 const config = require('config');
 
-const prisma = new PrismaClient();
+const prisma = require('@/db');
 
 let systemUser = null;
 

@@ -1,25 +1,24 @@
 const assert = require('assert');
 const path = require('node:path');
 
-const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
-
 const createError = require('http-errors');
+
+const prisma = require('@/db');
 const wfService = require('./workflow');
 const userService = require('./user');
-const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
+const workflowService = require('./workflow');
+const logger = require('./logger');
+
+const { log_axios_error } = require('../utils');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
-const workflowService = require('./workflow');
 const CONSTANTS = require('../constants');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPermission, accessControl } = require('../middleware/auth');
-const logger = require('./logger');
-
-const prisma = new PrismaClient();
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);

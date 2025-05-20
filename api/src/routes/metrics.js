@@ -1,15 +1,15 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const he = require('he');
 const { query } = require('express-validator');
-const asyncHandler = require('../middleware/asyncHandler');
-const { numericStringsToNumbers } = require('../utils');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
+
+const asyncHandler = require('@/middleware/asyncHandler');
+const { numericStringsToNumbers } = require('@/utils');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('metrics');
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.get('/latest', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']
