@@ -19,10 +19,12 @@
   "license": "ISC",
   "devDependencies": {
     "@types/jest": "^29.5.14",
-    "eslint": "^8.48.0",
+    "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-import-resolver-module-alias": "^0.1.0",
+    "eslint-import-resolver-node": "^0.3.9",
     "eslint-plugin-comment-length": "^1.7.3",
-    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-lodash-fp": "2.2.0-a1",
     "fast-check": "^4.1.1",
     "git-hooks": "^1.1.10",
@@ -53,6 +55,7 @@
     "jsdom": "^24.0.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
+    "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
     "multer": "1.4.5-lts.1",
     "picomatch": "^4.0.2",
@@ -72,5 +75,8 @@
       "tests/**/*.js",
       "!src/_test.js"
     ]
+  },
+    "_moduleAliases": {
+    "@": "src"
   }
 }
