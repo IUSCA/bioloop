@@ -217,7 +217,7 @@
                 <UploadedDatasetDetails
                   v-if="selectingFiles || selectingDirectory"
                   v-model:populated-dataset-name="populatedDatasetName"
-                  :dataset="uploadLog?.create_log.dataset"
+                  :dataset="uploadLog?.dataset_create_log.dataset"
                   :selected-dataset-type="selectedDatasetType.value"
                   :input-disabled="submitAttempted"
                   :uploaded-dataset-error="formErrors[STEP_KEYS.UPLOAD]"
@@ -927,11 +927,11 @@ const uploadFileChunks = async (fileDetails) => {
     chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
     chunkData.append(
       "uploaded_entity_id",
-      uploadLog.value.create_log.dataset.id,
+      uploadLog.value.dataset_create_log.dataset.id,
     );
     chunkData.append(
       "upload_path",
-      uploadLog.value.create_log.dataset.origin_path,
+      uploadLog.value.dataset_create_log.dataset.origin_path,
     );
     chunkData.append("file_upload_log_id", fileUploadLog?.id);
     // After setting the request's body, set the request's file
@@ -1036,7 +1036,8 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        // console.error(err);
+        console.log("in postUpload() error: ", err);
+        console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
@@ -1078,7 +1079,7 @@ const postSubmit = () => {
 
   if (!uploadCancelled.value && uploadLog.value) {
     return datasetService.updateDatasetUploadLog(
-      uploadLog.value?.create_log?.dataset.id,
+      uploadLog.value?.dataset_create_log?.dataset.id,
       {
         status: someFilesPendingUpload.value
           ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
@@ -1094,11 +1095,13 @@ const handleSubmit = () => {
     .then(() => {
       return !uploadCancelled.value
         ? datasetService.processDatasetUpload(
-            uploadLog.value.create_log.dataset.id,
+            uploadLog.value.dataset_create_log.dataset.id,
           )
         : Promise.reject();
     })
-    .catch(() => {
+    .catch((e) => {
+      console.log(" in handleSubmit: Error processing dataset upload workflow");
+      console.error(e);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
       submissionAlert.value = "An error occurred.";
@@ -1127,16 +1130,19 @@ const onNextClick = (nextStep) => {
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
   if (uploadCancelled.value || uploadLog.value) {
+    console.log("Upload cancelled or already logged");
+    console.log("uploadLog: ", uploadLog.value);
     return;
   }
 
   await evaluateChecksums(filesNotUploaded.value);
 
   try {
-    const res = await datasetService.logDatasetUpload(...uploadFormData.value);
+    const res = await datasetService.logDatasetUpload(uploadFormData.value);
     uploadLog.value = res.data;
   } catch (err) {
-    // console.error(err);
+    console.log("in preUpload() error: ", err);
+    console.error(err);
     throw new Error("Error logging dataset upload");
   }
 };
@@ -1311,7 +1317,9 @@ onBeforeRouteLeave(() => {
 onBeforeUnmount(() => {
   uploadCancelled.value = true;
   if (isUploadIncomplete.value && uploadLog.value) {
-    datasetService.cancelDatasetUpload(uploadLog.value.create_log.dataset.id);
+    datasetService.cancelDatasetUpload(
+      uploadLog.value.dataset_create_log.dataset.id,
+    );
   }
 });
 

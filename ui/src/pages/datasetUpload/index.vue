@@ -147,6 +147,7 @@ const filter_query = computed(() => {
     ...(!!search_query.value && { ...search_query.value }),
     username: auth.user?.username,
     forSelf: !auth.canOperate,
+    include_create_log: true,
   };
 });
 
@@ -232,12 +233,16 @@ const getUploadLogs = async () => {
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {
-        let uploaded_dataset = e.create_log.dataset;
+        let uploaded_dataset = e.dataset_create_log.dataset;
         return {
-          ...e,
-          initiated_at: e.audit_log.timestamp,
-          user: e.create_log.creator,
-          uploaded_dataset,
+          // ...e,
+          status: e.status,
+          initiated_at: e.dataset_create_log.created_at,
+          user: e.dataset_create_log.creator,
+          uploaded_dataset: {
+            name: uploaded_dataset.name,
+            id: uploaded_dataset.id,
+          },
           source_dataset:
             uploaded_dataset.source_datasets.length > 0
               ? uploaded_dataset.source_datasets[0].source_dataset

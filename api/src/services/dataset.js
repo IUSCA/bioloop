@@ -96,6 +96,34 @@ async function soft_delete(dataset, user_id) {
   });
 }
 
+function fetch_creation_log({ dataset } = {}) {
+  if (!(dataset && dataset.create_log)) {
+    return null;
+  }
+
+  const _dataset = { ...dataset };
+  if (dataset.create_log) {
+    switch (dataset.create_log.create_method) {
+      case CONSTANTS.DATASET_CREATE_METHODS.UPLOAD:
+        _dataset.create_log.log = dataset.create_log.upload_log;
+        break;
+      case CONSTANTS.DATASET_CREATE_METHODS.IMPORT:
+        _dataset.create_log.log = dataset.create_log.import_log;
+        break;
+      case CONSTANTS.DATASET_CREATE_METHODS.SCAN:
+        _dataset.create_log.log = _dataset.create_log.scan_log;
+        break;
+      default:
+        _dataset.create_log.log = null;
+    }
+    // Remove the individual log fields to clean up the response
+    delete _dataset.create_log.upload_log;
+    delete _dataset.create_log.import_log;
+    delete _dataset.create_log.scan_log;
+  }
+  return _dataset.create_log;
+}
+
 async function get_dataset({
   id = null,
   files = false,
@@ -148,7 +176,7 @@ async function get_dataset({
                 name: true,
               },
             },
-            dataset_upload_log: {
+            upload_log: {
               include: {
                 files: {
                   select: {
@@ -167,25 +195,9 @@ async function get_dataset({
     },
   });
 
-  // After fetching the dataset, filter the log based on the create_method
-  if (dataset.create_log) {
-    switch (dataset.create_log.create_method) {
-      case CONSTANTS.DATASET_CREATE_METHODS.UPLOAD:
-        dataset.create_log.log = dataset.create_log.upload_log;
-        break;
-      case CONSTANTS.DATASET_CREATE_METHODS.IMPORT:
-        dataset.create_log.log = dataset.create_log.import_log;
-        break;
-      case CONSTANTS.DATASET_CREATE_METHODS.SCAN:
-        dataset.create_log.log = dataset.create_log.scan_log;
-        break;
-      default:
-        dataset.create_log.log = null;
-    }
-    // Remove the individual log fields to clean up the response
-    delete dataset.create_log.upload_log;
-    delete dataset.create_log.import_log;
-    delete dataset.create_log.scan_log;
+  if (include_create_log) {
+    // After fetching the dataset, get the log that was created for thus dataset's creation
+    dataset.create_log = fetch_creation_log({ dataset });
   }
 
   const dataset_workflows = dataset.workflows;
@@ -365,7 +377,7 @@ async function has_dataset_assoc({
  * @throws {Error} If the user who created the dataset cannot be determined.
  */
 async function get_dataset_creator({ dataset_id }) {
-  const dataset_creation_log = await prisma.dataset_creation_log.findUnique({
+  const dataset_create_log = await prisma.dataset_create_log.findUnique({
     where: {
       dataset_id,
     },
@@ -378,14 +390,14 @@ async function get_dataset_creator({ dataset_id }) {
       },
     },
   });
-  if (!dataset_creation_log) {
+  if (!dataset_create_log) {
     throw new Error(`Expected to find an audit log for the creation of dataset ${dataset_id}, but found none.`);
   }
-  if (!dataset_creation_log.user) {
+  if (!dataset_create_log.creator) {
     throw new Error(`Could not find user who created dataset ${dataset_id}.`);
   }
 
-  return dataset_creation_log.creator;
+  return dataset_create_log.creator;
 }
 
 /**

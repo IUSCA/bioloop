@@ -407,6 +407,8 @@ router.get(
     query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
+    query('include_create_log').toBoolean().default(false),
+
   ]),
   isPermittedTo('read'),
   asyncHandler(async (req, res) => {
@@ -436,9 +438,9 @@ router.get(
     const [dataset_upload_logs, count] = await prisma.$transaction([
       prisma.upload_log.findMany({
         ...filter_query,
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+        include: CONSTANTS.INCLUDE_DATASET_UPLOADS,
         orderBy: {
-          create_log: {
+          dataset_create_log: {
             created_at: 'desc',
           },
         },
@@ -460,6 +462,7 @@ router.get(
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
     param('username').escape().notEmpty(),
+    query('include_create_log').toBoolean().default(false),
   ]),
   isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
@@ -492,9 +495,9 @@ router.get(
     const [dataset_upload_logs, count] = await prisma.$transaction([
       prisma.upload_log.findMany({
         ...filter_query,
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+        include: CONSTANTS.INCLUDE_DATASET_UPLOADS,
         orderBy: {
-          create_log: {
+          dataset_create_log: {
             created_at: 'desc',
           },
         },
@@ -595,15 +598,6 @@ const getDatasetCreateQuery = (data) => {
   ])(data);
 
   create_query.name = normalize_name(create_query.name); // normalize name
-
-  // Log creation of the Dataset
-  create_query.dataset_create_log = {
-    create: {
-      create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
-      creator: { connect: { id: user_id } },
-      ...(src_instrument_id && { src_instrument: { connect: { id: src_instrument_id } } }),
-    },
-  };
 
   // create workflow association
   if (workflow_id) {
@@ -1447,8 +1441,30 @@ router.post(
             })),
           },
         },
-        select: {
-          id: true,
+        select: { id: true },
+      });
+
+      const dataset_create_log = await tx.dataset_create_log.create({
+        data: {
+          create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
+          creator: { connect: { id: req.user.id } },
+          ...(src_instrument_id && { src_instrument: { connect: { id: src_instrument_id } } }),
+          dataset: { connect: { id: createdDataset.id } },
+          // Prisma does not connect the upload_log row to dataset_create_log row despite providing the upload_log_id
+          // foreign key to the dataset_create_log row. As a result,
+          // the upload_log_id on the dataset_create_log row needs to be manually set (se below).
+          upload_log_id: dataset_upload_log.id,
+        },
+        select: { id: true },
+      });
+
+      // manually set the upload_log_id on the dataset_create_log row,
+      // since Prisma does not natively connect the upload_log row to dataset_create_log row when a dataset_create_row
+      // is created.
+      await tx.upload_log.update({
+        where: { id: dataset_upload_log.id },
+        data: {
+          dataset_create_log_id: dataset_create_log.id,
         },
       });
 
@@ -1461,8 +1477,27 @@ router.post(
 
       const updated_dataset_upload_log = await tx.upload_log.findUnique({
         where: { id: dataset_upload_log.id },
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+        include: {
+          dataset_create_log: {
+            include: {
+              dataset: {
+                select: {
+                  id: true,
+                  origin_path: true,
+                },
+              },
+            },
+          },
+          files: {
+            select: {
+              name: true,
+              path: true,
+              md5: true,
+            },
+          },
+        },
       });
+
       return updated_dataset_upload_log;
     });
 
@@ -1487,6 +1522,9 @@ router.patch(
     { checkOwnership: true },
     async (req, res, next) => { // resourceOwnerFn
       try {
+        console.log(`Patching dataset upload with id: ${req.params.id}`);
+        console.log('dataset_id', req.params.id);
+        console.log('parseInt(req.params.id, 10)', parseInt(req.params.id, 10));
         const dataset_creator = await datasetService.get_dataset_creator({ dataset_id: parseInt(req.params.id, 10) });
         return dataset_creator.username;
       } catch (error) {
@@ -1544,8 +1582,8 @@ router.patch(
       }
 
       const upload_log = await tx.upload_log.findUniqueOrThrow({
-        where: { dataset_create_log_id: create_log.upload_log_id },
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+        where: { id: create_log.upload_log_id },
+        // include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
 
       return upload_log;

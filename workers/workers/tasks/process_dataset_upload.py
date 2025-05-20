@@ -171,9 +171,11 @@ def process_dataset_upload(dataset: dict) -> None:
                 }
             }]
         }
-        updated_upload_status = UPLOAD_STATUS['PROCESSING_FAILED'] if (
+
+        updated_upload_status = f['status'] if (
                 f['status'] == UPLOAD_STATUS['PROCESSING_FAILED']
         ) else None
+
         if updated_upload_status is not None:
             upload_log_payload['status'] = updated_upload_status
         try:
@@ -198,6 +200,7 @@ def process_dataset_upload(dataset: dict) -> None:
     print(f"processed_with_errors: {processed_with_errors}")
 
     if not processed_with_errors:
+        successfully_processed_files = files_pending_processing
         print(f'All uploaded files for dataset {dataset_id} (dataset_upload_log_id: {dataset_upload_log_id})\
             have been processed successfully.')
         try:
@@ -207,6 +210,14 @@ def process_dataset_upload(dataset: dict) -> None:
                 uploaded_dataset_id=dataset_id,
                 log_data={
                     'status': UPLOAD_STATUS['COMPLETE'],
+                    'files': [
+                        {
+                            'id': file['id'],
+                            'data': {
+                                'status': UPLOAD_STATUS['COMPLETE']
+                            }
+                        } for file in successfully_processed_files
+                    ]
                 }
             )
         except Exception as e:
@@ -220,6 +231,19 @@ def process(celery_task, dataset_id, **kwargs):
         dataset = api.get_dataset(dataset_id=dataset_id, workflows=True, include_create_log=True)
     except Exception as e:
         raise exc.RetryableException(e)
+
+    # dataset['origin_path']
+    # dataset['id']
+    # dataset['create_log']['log']
+    # dataset_upload_log['id']
+    # dataset_upload_log['status']
+    # dataset_upload_log['files']
+    # dataset_upload_log['files'][n]['name']
+    # dataset_upload_log['files'][n]['num_chunks']
+    # dataset_upload_log['files'][n]['md5']
+    # dataset_upload_log['files'][n]['path']
+    # dataset_upload_log['files'][n]['status']
+    # dataset_upload_log['files'][n]['id']
 
     dataset_upload_log = dataset['create_log']['log']
     dataset_upload_log_id = dataset_upload_log['id']

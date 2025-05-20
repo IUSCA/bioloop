@@ -176,6 +176,7 @@ class DatasetService {
     limit = null,
     offset = null,
     username = null,
+    include_create_log = false,
   } = {}) {
     const path = forSelf
       ? `/datasets/${username}/uploads`
@@ -186,6 +187,7 @@ class DatasetService {
         dataset_name,
         offset,
         limit,
+        include_create_log,
       },
     });
   }

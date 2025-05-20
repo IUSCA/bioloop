@@ -51,27 +51,24 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
-const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
-  create_log: {
-    upload_log: {
-      files: {
-        select: {
-          id: true,
-          md5: true,
-          name: true,
-          path: true,
-        },
-      },
+const INCLUDE_DATASET_UPLOADS = {
+  files: {
+    select: {
+      id: true,
+      md5: true,
+      name: true,
+      path: true,
     },
-    dataset: {
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        origin_path: true,
-        source_datasets: {
-          select: {
-            source_dataset: true,
+  },
+  dataset_create_log: {
+    include: {
+      creator: true,
+      dataset: {
+        include: {
+          source_datasets: {
+            include: {
+              source_dataset: true,
+            },
           },
         },
       },
@@ -126,7 +123,7 @@ module.exports = {
   INCLUDE_STATES,
   INCLUDE_WORKFLOWS,
   INCLUDE_AUDIT_LOGS,
-  INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
+  INCLUDE_DATASET_UPLOADS,
   auth,
   DONE_STATUSES,
   DATASET_CREATE_METHODS,

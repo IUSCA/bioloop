@@ -49,9 +49,20 @@ CREATE TABLE "dataset_create_log" (
 );
 
 -- CreateTable
+CREATE TABLE "upload_log" (
+    "id" SERIAL NOT NULL,
+    "dataset_create_log_id" INTEGER,
+    "status" "upload_status" NOT NULL,
+    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "upload_log_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "import_log" (
     "id" SERIAL NOT NULL,
-    "dataset_create_log_id" INTEGER NOT NULL,
+    "dataset_create_log_id" INTEGER,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -61,22 +72,11 @@ CREATE TABLE "import_log" (
 -- CreateTable
 CREATE TABLE "scan_log" (
     "id" SERIAL NOT NULL,
-    "dataset_create_log_id" INTEGER NOT NULL,
+    "dataset_create_log_id" INTEGER,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "scan_log_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "upload_log" (
-    "id" SERIAL NOT NULL,
-    "dataset_create_log_id" INTEGER NOT NULL,
-    "status" "upload_status" NOT NULL,
-    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "upload_log_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -92,13 +92,13 @@ CREATE UNIQUE INDEX "dataset_create_log_import_log_id_key" ON "dataset_create_lo
 CREATE UNIQUE INDEX "dataset_create_log_scan_log_id_key" ON "dataset_create_log"("scan_log_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "upload_log_dataset_create_log_id_key" ON "upload_log"("dataset_create_log_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "import_log_dataset_create_log_id_key" ON "import_log"("dataset_create_log_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "scan_log_dataset_create_log_id_key" ON "scan_log"("dataset_create_log_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "upload_log_dataset_create_log_id_key" ON "upload_log"("dataset_create_log_id");
 
 -- AddForeignKey
 ALTER TABLE "dataset_create_log" ADD CONSTRAINT "dataset_create_log_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -110,19 +110,18 @@ ALTER TABLE "dataset_create_log" ADD CONSTRAINT "dataset_create_log_src_instrume
 ALTER TABLE "dataset_create_log" ADD CONSTRAINT "dataset_create_log_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "import_log" ADD CONSTRAINT "import_log_dataset_create_log_id_fkey" FOREIGN KEY ("dataset_create_log_id") REFERENCES "dataset_create_log"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_log" ADD CONSTRAINT "upload_log_dataset_create_log_id_fkey" FOREIGN KEY ("dataset_create_log_id") REFERENCES "dataset_create_log"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "scan_log" ADD CONSTRAINT "scan_log_dataset_create_log_id_fkey" FOREIGN KEY ("dataset_create_log_id") REFERENCES "dataset_create_log"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "import_log" ADD CONSTRAINT "import_log_dataset_create_log_id_fkey" FOREIGN KEY ("dataset_create_log_id") REFERENCES "dataset_create_log"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "upload_log" ADD CONSTRAINT "upload_log_dataset_create_log_id_fkey" FOREIGN KEY ("dataset_create_log_id") REFERENCES "dataset_create_log"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "scan_log" ADD CONSTRAINT "scan_log_dataset_create_log_id_fkey" FOREIGN KEY ("dataset_create_log_id") REFERENCES "dataset_create_log"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "file_upload_log" ADD CONSTRAINT "file_upload_log_upload_log_id_fkey" FOREIGN KEY ("upload_log_id") REFERENCES "upload_log"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Migration: Enforce dataset creation method consistency
-
 --
 -- This constraint ensures that the `create_method` field in the `DatasetCreateLog` table
 -- stays consistent with the corresponding foreign key to one of the method-specific log tables.
