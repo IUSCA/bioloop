@@ -371,7 +371,7 @@ function fetch_dataset(show_loading = false) {
     id: props.datasetId,
     bundle: true,
     initiator: true,
-    include_upload_log: true,
+    include_create_log: true,
   })
     .then((res) => {
       const _dataset = res.data;

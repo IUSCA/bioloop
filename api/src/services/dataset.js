@@ -171,6 +171,12 @@ async function get_dataset({
       ...(include_create_log ? {
         create_log: {
           include: {
+            creator: {
+              select: {
+                name: true,
+                username: true,
+              },
+            },
             src_instrument: {
               select: {
                 name: true,
@@ -187,8 +193,8 @@ async function get_dataset({
                 },
               },
             },
-            dataset_import_log: true,
-            dataset_scan_log: true,
+            import_log: true,
+            scan_log: true,
           },
         },
       } : undefined),

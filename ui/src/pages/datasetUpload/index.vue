@@ -235,7 +235,6 @@ const getUploadLogs = async () => {
       pastUploads.value = res.data.uploads.map((e) => {
         let uploaded_dataset = e.dataset_create_log.dataset;
         return {
-          // ...e,
           status: e.status,
           initiated_at: e.dataset_create_log.created_at,
           user: e.dataset_create_log.creator,

@@ -66,7 +66,7 @@
         <tr>
           <td>Created via</td>
           <td>
-            {{ datasetCreatorDisplayed }}
+            {{ props.dataset.create_log?.create_method }}
           </td>
         </tr>
         <tr>
@@ -91,12 +91,8 @@ const props = defineProps({ dataset: Object });
 
 const auth = useAuthStore();
 
-const datasetCreateLog = computed(() => {
-  return (props.dataset?.upload_log || []).find((e) => !!e.create_method);
-});
-
 const datasetCreatorDisplayed = computed(() => {
-  const datasetCreator = datasetCreateLog.value?.user;
+  const datasetCreator = props.dataset?.create_log?.creator;
   return datasetCreator
     ? `${datasetCreator.username} (${datasetCreator.name})`
     : null;

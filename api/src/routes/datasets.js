@@ -1512,7 +1512,7 @@ router.patch(
   verifyUploadEnabledForRole,
   /**
      * A user can only update metadata related to a dataset upload if one of the
-     * following two` conditions are met:
+     * following two conditions are met:
      *   - The user has either the `admin` or the `operator` role
      *   - The user has the `user` role, and they are the one who uploaded this dataset.
      * This is checked by the `isPermittedTo` middleware.
@@ -1522,9 +1522,6 @@ router.patch(
     { checkOwnership: true },
     async (req, res, next) => { // resourceOwnerFn
       try {
-        console.log(`Patching dataset upload with id: ${req.params.id}`);
-        console.log('dataset_id', req.params.id);
-        console.log('parseInt(req.params.id, 10)', parseInt(req.params.id, 10));
         const dataset_creator = await datasetService.get_dataset_creator({ dataset_id: parseInt(req.params.id, 10) });
         return dataset_creator.username;
       } catch (error) {
@@ -1583,7 +1580,6 @@ router.patch(
 
       const upload_log = await tx.upload_log.findUniqueOrThrow({
         where: { id: create_log.upload_log_id },
-        // include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       });
 
       return upload_log;

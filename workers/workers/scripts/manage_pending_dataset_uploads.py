@@ -50,7 +50,6 @@ def manage_pending_uploads(dry_run=True):
     for dataset_upload_log in dataset_uploads_pending_processing:
         upload_status = dataset_upload_log['status']
         dataset_upload_log_id = dataset_upload_log['id']
-        # dataset_upload_audit_log = dataset_upload_log['audit_log']
         dataset_id = dataset_upload_log['create_log']['dataset']['id']
 
         logger.info(f"Processing dataset upload {dataset_upload_log_id} (dataset_id {dataset_id})")

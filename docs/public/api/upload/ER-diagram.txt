@@ -1,24 +1,27 @@
 erDiagram
-    dataset_audit ||--o| dataset_upload_log : "has one"
-    dataset_upload_log ||--o{ file_upload_log : "has many"
-    dataset ||--o{ dataset_audit : "has many"
+    dataset ||--|| dataset_create_log : "has one"
+    dataset_create_log ||--o| upload_log : "has one"
+    upload_log ||--o{ file_upload_log : "has many"
 
-    dataset_audit {
+    dataset {
         Int id PK
-        String action
-        DateTime updated_at
-        DateTime timestamp
-        Json old_data
-        Json new_data
-        Int user_id FK
-        Int dataset_id FK
+        String name
+        String type
+        Boolean is_deleted
     }
 
-    dataset_upload_log {
+    dataset_create_log {
         Int id PK
+        Int dataset_id FK,UK
+        DATASET_CREATE_METHOD create_method
+        Int creator_id FK
+        Int upload_log_id FK,UK
+    }
+
+    upload_log {
+        Int id PK
+        Int dataset_create_log_id FK,UK
         upload_status status
-        DateTime updated_at
-        Int audit_log_id FK,UK
     }
 
     file_upload_log {
@@ -28,15 +31,7 @@ erDiagram
         Int num_chunks
         upload_status status
         String path
-        Int dataset_upload_log_id FK
+        Int upload_log_id FK
     }
 
-    dataset {
-        Int id PK
-        String name
-        String type
-        Boolean is_deleted
-        DATASET_CREATE_METHOD create_method
-    }
-
-[![](https://mermaid.ink/img/pako:eNqlU1Fv2jAQ_ivWPaeIhWaEvLHCtK2aNq3py4RknfA1iRrbkWNrY9D_PjtACRmqkOaHRPedv7vvPuu2sNaCIAMyiwoLg3KlmD8CLbZkOTpRWbbb3dzo3Svomlqj4LUuWMZWUGLLtKIVnFN7tzr-lj1VNV0iS1SbAftIOdcxJFzSut2D4XxWllWCfb8_QQ_WVKpguLaVVid4Mc_nD8uc3_1YzvMl_7rMP31bsLUhtMQl2VKL3mUP5pUk5hrfmgRHeyFp_ae1KJtT7kurFdO14EHxAFb0awAH9a4lw_0IH-_P8ePIvdTL0I6e0W97crjoxVrXsv3vymlDtc720GavJnocCho--1UvpFDSP6AUyTlXOcnXpVPP7bXjHCo1aMvLlp6EvuXufwxhN00P_KB1TahY1XJBNXmDDw0hgsJUAjJrHEUgyUgMIXSdV2BL8sUhrIRA8xzWIXAaVD-1lkea0a4oIXvCuvXR_gkPi_6KGlKCzJ12ykIWv-tqQLaF3z5K01HyPp6M4zi9nU4mcQQbyCbT0fR2NkvHSRLP4vE0eYngT9d0PEp99BfyBVbK?type=png)
+[![](https://mermaid.ink/img/pako:eNqdU9tOwzAM_ZXIz91U1nW9vA02BEIIBOMFTaqixWsrmqRKE4mx7t_pZZd2XITIS2SfHPvYsbewkgwhBFSzlMaK8qUg1WFU0wI1KcvBoCwPZrRSSDVGmYxJSJaQ0IJIgUvokbqvar4sickzSdlPvA7avN-SdZph9A2JU7GpWX2R29asz63QJGXk8e7ketYqFTERlOMXp97kHeellBlSQdIiYpihRtZiu7OE3QJ_z127DqQKur6zXjrobLqYPs8X0dXTfLqYR_fzxc3DjOyDc9SJZP1QDSRVG6oPnZp1lugovtPOv4s-VfqN_n3EQlNtCtJeZ0nPP_L_X8WZ2-cKw6NVYsRb8RdFnUg51cnvzdsXARbEKmUQamXQAo6K09qEpool6AQroVAPJ8M1NZmuZ7Om5VS8SskPTCVNnEC4pllRWSavuov7dTt6FQqG6koaoSG8sO2LJgqEW3iH0HFGw7E3CrzKP_H9sWfBBsKB5w7Hjufa9ngUjIJJsLPgo0lrDwPXt23f913Hdya261uALK1m575d92brd59ALzpd?type=png)](https://mermaid.live/edit#pako:eNqdU9tOwzAM_ZXIz91U1nW9vA02BEIIBOMFTaqixWsrmqRKE4mx7t_pZZd2XITIS2SfHPvYsbewkgwhBFSzlMaK8qUg1WFU0wI1KcvBoCwPZrRSSDVGmYxJSJaQ0IJIgUvokbqvar4sickzSdlPvA7avN-SdZph9A2JU7GpWX2R29asz63QJGXk8e7ketYqFTERlOMXp97kHeellBlSQdIiYpihRtZiu7OE3QJ_z127DqQKur6zXjrobLqYPs8X0dXTfLqYR_fzxc3DjOyDc9SJZP1QDSRVG6oPnZp1lugovtPOv4s-VfqN_n3EQlNtCtJeZ0nPP_L_X8WZ2-cKw6NVYsRb8RdFnUg51cnvzdsXARbEKmUQamXQAo6K09qEpool6AQroVAPJ8M1NZmuZ7Om5VS8SskPTCVNnEC4pllRWSavuov7dTt6FQqG6koaoSG8sO2LJgqEW3iH0HFGw7E3CrzKP_H9sWfBBsKB5w7Hjufa9ngUjIJJsLPgo0lrDwPXt23f913Hdya261uALK1m575d92brd59ALzpd)

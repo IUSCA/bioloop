@@ -232,19 +232,6 @@ def process(celery_task, dataset_id, **kwargs):
     except Exception as e:
         raise exc.RetryableException(e)
 
-    # dataset['origin_path']
-    # dataset['id']
-    # dataset['create_log']['log']
-    # dataset_upload_log['id']
-    # dataset_upload_log['status']
-    # dataset_upload_log['files']
-    # dataset_upload_log['files'][n]['name']
-    # dataset_upload_log['files'][n]['num_chunks']
-    # dataset_upload_log['files'][n]['md5']
-    # dataset_upload_log['files'][n]['path']
-    # dataset_upload_log['files'][n]['status']
-    # dataset_upload_log['files'][n]['id']
-
     dataset_upload_log = dataset['create_log']['log']
     dataset_upload_log_id = dataset_upload_log['id']
 

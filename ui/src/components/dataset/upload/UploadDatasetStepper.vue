@@ -276,12 +276,6 @@
 </template>
 
 <script setup>
-// joins:
-// 1. upload_log.create_log.dataset
-// 2. upload_log.create_log.dataset.id
-// 3. upload_log.files (name, md5, etc.)
-// 3.
-
 import config from "@/config";
 import Constants from "@/constants";
 import datasetService from "@/services/dataset";
@@ -1036,8 +1030,7 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        console.log("in postUpload() error: ", err);
-        console.error(err);
+        // console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
@@ -1100,8 +1093,7 @@ const handleSubmit = () => {
         : Promise.reject();
     })
     .catch((e) => {
-      console.log(" in handleSubmit: Error processing dataset upload workflow");
-      console.error(e);
+      // console.error(e);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
       submissionAlert.value = "An error occurred.";
@@ -1130,8 +1122,6 @@ const onNextClick = (nextStep) => {
 // Evaluates selected file checksums, logs the upload
 const preUpload = async () => {
   if (uploadCancelled.value || uploadLog.value) {
-    console.log("Upload cancelled or already logged");
-    console.log("uploadLog: ", uploadLog.value);
     return;
   }
 
@@ -1141,8 +1131,7 @@ const preUpload = async () => {
     const res = await datasetService.logDatasetUpload(uploadFormData.value);
     uploadLog.value = res.data;
   } catch (err) {
-    console.log("in preUpload() error: ", err);
-    console.error(err);
+    // console.error(err);
     throw new Error("Error logging dataset upload");
   }
 };
