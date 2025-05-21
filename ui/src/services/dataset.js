@@ -1,7 +1,7 @@
 import config from "@/config";
 import toast from "@/services/toast";
-import api from "./api";
 import { useAuthStore } from "@/stores/auth";
+import api from "./api";
 
 const auth = useAuthStore();
 
@@ -149,24 +149,28 @@ class DatasetService {
     return api.get(`/datasets/${type}/${name}/exists`);
   }
 
-  get_bundle_name(dataset) {
+  get_staged_bundle_name(dataset) {
     return `${dataset.name}.${dataset.type}.tar`;
   }
 
   logDatasetUpload(data) {
-    return api.post(`/datasets/upload`, data);
+    return api.post(`/datasets/uploads`, data);
   }
 
   updateDatasetUploadLog(dataset_id, data) {
-    return api.patch(`/datasets/${dataset_id}/upload`, data);
+    return api.patch(`/datasets/uploads/${dataset_id}`, data);
   }
 
   processDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/process_dataset_upload`);
+    return api.post(
+      `/datasets/uploads/${dataset_id}/workflow/process_dataset_upload`,
+    );
   }
 
   cancelDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/cancel_dataset_upload`);
+    return api.post(
+      `/datasets/uploads/${dataset_id}/workflow/cancel_dataset_upload`,
+    );
   }
 
   getDatasetUploadLogs({
@@ -178,7 +182,7 @@ class DatasetService {
     username = null,
   } = {}) {
     const path = forSelf
-      ? `/datasets/${username}/uploads`
+      ? `/datasets/uploads/${username}`
       : `/datasets/uploads`;
     return api.get(path, {
       params: {
