@@ -1175,6 +1175,7 @@ const setFiles = (files) => {
       type: FILE_TYPE.FILE,
       file: file,
       name: file.name,
+      size: file.size,
       formattedSize: formatBytes(file.size),
       progress: 0,
     });
@@ -1191,6 +1192,7 @@ const setDirectory = (directoryDetails) => {
       type: FILE_TYPE.FILE,
       file: file,
       name: file.name,
+      size: file.size,
       formattedSize: formatBytes(file.size),
       progress: 0,
       path: file.path,

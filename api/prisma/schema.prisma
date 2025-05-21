@@ -96,6 +96,7 @@ model file_upload_log {
   num_chunks            Int
   status                upload_status
   path                  String?
+  size                  BigInt
   dataset_upload_log    dataset_upload_log? @relation(fields: [dataset_upload_log_id], references: [id], onDelete: Cascade)
   dataset_upload_log_id Int?
 }
