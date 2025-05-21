@@ -35,6 +35,11 @@ class DatasetService {
     const url = !auth.canOperate
       ? `/datasets/${auth.user.username}/all`
       : "/datasets";
+    // What qs.stringify does?
+    // Before: /datasets?id[]=1&id[]=2&id[]=3
+    // After: /datasets?id=1&id=2&id=3
+    // qs.stringify preserves the parameters which are null/undefined. API doesn't expect null/undefined to be sent,
+    // so we need to clean the parameters (removes keys which have null/undefined value).
     return api.get(url, {
       params: cleanParams(params),
       paramsSerializer: (params) =>
