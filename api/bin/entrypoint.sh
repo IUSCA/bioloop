@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# check if .env file exists
+if [ ! -f "workers/.env" ]; then
+  echo "Creating .env file..."
+  touch workers/.env
+fi
+
 # Check if pre-requisites are installed
 while ! grep -q "^WORKFLOW_AUTH_TOKEN=[^ ]\+" ".env"; do
   echo "Waiting for .env file to be ready and contain WORKFLOW_AUTH_TOKEN..."
@@ -91,7 +97,12 @@ if ! grep -q "^APP_API_TOKEN=[^ ]\+" "workers/.env"; then
   echo "APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)" >> workers/.env
 fi
 
-
+# Dynamically load environment variables from .env file
+# This will export all variables in the .env file to the environment
+# This ensure that the script can access the variables we generated during startup
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
 
 # Run the application
 $*

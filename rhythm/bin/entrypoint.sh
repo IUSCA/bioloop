@@ -2,6 +2,17 @@
 
 set -e
 
+api_env="api/.env"
+
+# Check if .env file exists in api directory
+if [ -f "$api_env" ]; then
+  echo ".env file exists in api directory."
+else
+  echo "Creating .env file in api directory..."
+  touch $api_env
+fi
+
+
 if [ -f "keys/auth.key" ] && [ -f "keys/auth.pub" ]; then 
   echo "Keys already exist. Skipping key generation."
 else
@@ -10,12 +21,7 @@ else
   cd ../
 fi
 
-# Check if a specific string exists in a file and has anything following it
-api_env="api/.env"
-if [ ! -f "$api_env" ]; then
-  echo "The file $api_env does not exist."
-  exit 1
-fi
+
 
 # Check if the string exists in the file
 api_token="WORKFLOW_AUTH_TOKEN"

@@ -1,14 +1,14 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-
+name: bioloop
 services:
   ui:
     image: node:21
     ports:
       - 127.0.0.1:443:443
     env_file:
-      - ui/.env.example
+      - ui/.env.default
     volumes:
       - ./ui/:/opt/sca/app
     working_dir: /opt/sca/app
@@ -21,13 +21,13 @@ services:
     expose:
       - 3030
     env_file:
-      - tests/.env.example # Variables needed for testing user information
-      - db/postgres/.env.example # For Postgres connection settings
-      - api/.env.example  # For all default settings
-      - api/.env # For keys made after the first run
+      - tests/.env.default # Variables needed for testing user information
+      - db/postgres/.env.default # For Postgres connection settings
+      - api/.env.default  # For all default settings
+      # - api/.env? # For keys made after the first run
     volumes:
-      - ./api/:/opt/sca/app
-      - ./workers/.env:/opt/sca/app/workers/.env # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production.
+      - ./api:/opt/sca/app
+      - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"] 
@@ -52,9 +52,9 @@ services:
     ports:
       - 127.0.0.1:5432:5432
     env_file:
-      - db/postgres/.env.example # For Postgres connection settings
+      - db/postgres/.env.default # For Postgres connection settings
     volumes:
-      - postgres_data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
+      - ./db/postgres/data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
   celery_worker:
@@ -63,10 +63,10 @@ services:
     environment:
       - WORKER_TYPE=celery_worker
     env_file:
-      - db/mongo/.env.example # For MongoDB connection settings
-      - db/queue/.env.example # For RabbitMQ connection settings
-      - workers/.env.example # For all default settings
-      - workers/.env # For keys made after the first run
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - workers/.env.default # For all default settings
+      # - workers/.env? # For keys made after the first run
     working_dir: /opt/sca/app
     volumes:
       - ./workers/:/opt/sca/app
@@ -89,7 +89,7 @@ services:
     ports:
       - 127.0.0.1:15672:15672
     env_file:
-      - db/queue/.env.example # For RabbitMQ connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
       - queue_volume:/var/lib/rabbitmq/
 
@@ -102,27 +102,24 @@ services:
     ports:
       - 127.0.0.1:27017:27017
     env_file:
-      - db/mongo/.env.example # For MongoDB connection settings
+      - db/mongo/.env.default # For MongoDB connection settings
     volumes:
-      - mongo_db:/data/db
+      - ./db/mongo/data:/data/db
       - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # for importing database files.  This will automatically be run by being moutned into the initialization folder, if you're not using docker you will need to run this manually.
 
   # You must clone the rhythm_api repo and place it in the rhythm folder
   rhythm:
     restart: unless-stopped
-    build:
-      context: ./rhythm/rhythm_api
-      dockerfile: Dockerfile
+    image: harbor.sca.iu.edu/rhythm/api:latest
     expose:
       - 5001
     env_file:
-      - db/mongo/.env.example # For MongoDB connection settings
-      - db/queue/.env.example # For RabbitMQ connection settings
-      - rhythm/.env.example # For all default settings
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - rhythm/.env.default # For all default settings
     volumes:
       - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
-      - ./api/.env:/app/api/.env # This is the api .env file that is used to set up the environment
-      - ./workers/.env:/app/workers/.env # This is the workers .env file that is used to set up the environment vars for the workers.
+      - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
     working_dir: /app
     entrypoint: ["/opt/bin/entrypoint.sh"]
     command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
@@ -142,7 +139,7 @@ services:
     expose:
       - 3060
     env_file:
-      - secure_download/.env.example # For all default settings
+      - secure_download/.env.default # For all default settings
     volumes:
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.  
       - ./secure_download/:/opt/sca/app
@@ -159,13 +156,11 @@ services:
   # You must clone the signet repo and place it in the signet folder
   signet:
     restart: unless-stopped
-    build:
-      context: ./signet/signet
-      dockerfile: Dockerfile
+    image: harbor.sca.iu.edu/signet/signet:latest
     expose:
       - 5050
     env_file:
-      - signet/.env.example # For all default settings
+      - signet/.env.default # For all default settings
     volumes:
       - ./signet/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
     entrypoint: ["/opt/bin/entrypoint.sh"]
@@ -187,7 +182,7 @@ services:
       - 5432
     restart: unless-stopped
     env_file:
-      - signet/.env.example # For Postgres connection settings
+      - signet/.env.default # For Postgres connection settings
     volumes:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
@@ -231,7 +226,7 @@ services:
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://appuser:example@postgres:5432/app?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://appuser:default@postgres:5432/app?sslmode=disable"
     depends_on:
       - postgres
     volumes:
@@ -269,14 +264,11 @@ services:
         condition: service_healthy
     profiles:
       - metrics
+
 volumes:
-  postgres_data:
-    external: false
   grafana_data:
     external: false
   prometheus_data:
-    external: false
-  mongo_db:
     external: false
   queue_volume:
     external: false

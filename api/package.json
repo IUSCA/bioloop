@@ -7,8 +7,7 @@
     "node": ">=18.12.0"
   },
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "nodemon --ignore 'tests/**/*.js' src/index.js",
+    "dev": "nodemon --ignore 'tests/**/*.js' src/index.js",
     "swagger": "node src/scripts/swagger.js",
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore",
     "test": "jest --watch --verbose false",
@@ -29,7 +28,7 @@
     "git-hooks": "^1.1.10",
     "jest": "^29.7.0",
     "nodemon": "^3.0.1",
-    "prisma": "^6.5.0",
+    "prisma": "^5.18.0",
     "random": "^4.1.0",
     "random-js": "^2.1.0",
     "supertest": "^7.1.0"
@@ -37,7 +36,7 @@
   "dependencies": {
     "@badgateway/oauth2-client": "^2.2.3",
     "@iusca/iulogin-helper": "^0.1.4",
-    "@prisma/client": "^6.5.0",
+    "@prisma/client": "^5.18.0",
     "accesscontrol": "^2.2.1",
     "axios": "^1.5.0",
     "compression": "^1.7.4",
