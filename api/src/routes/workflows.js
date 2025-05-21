@@ -1,4 +1,5 @@
 const express = require('express');
+const { Prisma } = require('@prisma/client');
 const config = require('config');
 const { query, param, checkSchema } = require('express-validator');
 const _ = require('lodash/fp');
@@ -166,7 +167,7 @@ router.post(
           pid,
           task_id,
           step,
-          tags,
+          tags: tags ?? Prisma.skip,
           hostname,
           workflow_id,
           ...(start_time ? { start_time } : {}),
@@ -318,7 +319,7 @@ router.delete(
 
       const result = await prisma.worker_process.deleteMany({
         where: {
-          workflow_id: req.params.worker_process_id,
+          workflow_id: req.params.workflow_id,
         },
       });
       res.json(result);

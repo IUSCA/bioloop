@@ -124,7 +124,8 @@ router.delete(
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    const queryParams = req.query;
+    // remove keys with undefined values
+    const queryParams = _.omitBy(_.isUndefined)(req.query);
 
     if (Object.keys(queryParams).length === 0) {
       res.send({
