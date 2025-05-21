@@ -12,7 +12,7 @@ const projectService = require('./project');
 const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
-  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, PROJECT_DATASET_ASSOCIATION_ERRORS,
 } = require('../constants');
 const workflowService = require('./workflow');
 const CONSTANTS = require('../constants');
@@ -21,6 +21,17 @@ const { getPermission, accessControl } = require('../middleware/auth');
 const logger = require('./logger');
 
 const prisma = new PrismaClient();
+
+/**
+ * Error message for when a user is not associated with a specified project.
+ *
+ * This constant is used to provide an error message when attempting
+ * to perform operations that require a user to be associated with a project,
+ * but the Project-User association does not exist.
+ *
+ * @constant {string}
+ */
+const noProjectUserAssociation = 'User is not associated with the specified project';
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
@@ -760,7 +771,7 @@ const workflow_access_check = [
  * @param {Object} options - The options for building the query.
  * @param {string} [options.project_name=''] - The ID of the user associating the Project to the Dataset.
  * @param {int} [options.project_assignor_id] - The ID of the user associating the Project to the Dataset.
- * @param {int[]} [options.project_assignee_ids=[]] - The IDs of users being associated to the Project.
+ * @param {int[]} [options.project_user_assignee_ids=[]] - The IDs of users being associated to the Project.
  * @param {int} [options.user_assignor_id] - The ID of the user associating other users to the Project.
  * @param {boolean} [options.browser_enabled=false] - Whether the Genome Browser will be enabled for a new Project that will be created.
  * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
@@ -768,7 +779,7 @@ const workflow_access_check = [
 async function buildAssociationQueryForNewProject({
   project_name = '',
   project_assignor_id,
-  project_assignee_ids = [],
+  user_assignee_ids = [],
   user_assignor_id,
   browser_enabled = false,
 } = {}) {
@@ -780,9 +791,9 @@ async function buildAssociationQueryForNewProject({
           slug: await projectService.generate_slug({ name: project_name }),
           description: `Auto-generated project for dataset ${project_name}.`,
           browser_enabled,
-          ...(project_assignee_ids.length > 0 && { // Check if any users needs to be assigned to the project.
+          ...(user_assignee_ids.length > 0 && { // Check if any users needs to be assigned to the project.
             users: {
-              create: project_assignee_ids.map((id) => ({
+              create: user_assignee_ids.map((id) => ({
                 user_id: id,
                 ...(user_assignor_id && { assignor_id: user_assignor_id }),
               })),
@@ -790,6 +801,7 @@ async function buildAssociationQueryForNewProject({
           }),
         },
       },
+      // todo - test project_user creation
       ...(project_assignor_id && { assignor: { connect: { id: project_assignor_id } } }),
     }],
   };
@@ -806,22 +818,90 @@ async function buildAssociationQueryForNewProject({
  * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
  *
  * @description
- * This function builds a query for associating a Dataset with a Project. It handles two scenarios:
- * 1. If a `project_id` is provided, it creates an association with the corresponding Project.
- * 2. If no `project_id` is provided and auto-creation of Projects is enabled for the assignor's role,
- *    it creates a new Project and associates the Dataset with it.*
+ * This function builds a query for associating a Dataset with the existing Project that corresponds to the
+ * `project_id`. If the user does not have access to the Project, an error is thrown.
+ *
  */
 async function buildAssociationQueryForExistingProject({
   project_id,
+  assignee_user_ids = [],
+  user_assignor_id,
+  assignee_datasets_ids = [],
   project_assignor_id,
-}) {
+} = {}) {
+  // Check if the project exists and whether the user who is requesting the Project represented by `project_id` is
+  // allowed to this Project. A `user` role can only assi
+  const projectUserAssociation = await prisma.project_user.findUnique({
+    where: {
+      project_id_user_id: {
+        project_id,
+        user_id: project_assignor_id,
+      },
+    },
+  });
+
+  if (!projectUserAssociation) {
+    throw new Error(PROJECT_DATASET_ASSOCIATION_ERRORS.noProjectUserAssociation);
+  }
+
   return {
     create: [{
       project_id,
       ...(project_assignor_id && { assignor_id: project_assignor_id }),
+      ...(assignee_user_ids.length > 0 && { // Check if any users needs to be assigned to the Project.
+        users: {
+          create: assignee_user_ids.map((id) => ({
+            user_id: id,
+            ...(user_assignor_id && { assignor_id: user_assignor_id }),
+          })),
+        },
+        datasets: {
+          create: assignee_datasets_ids.map((id) => ({
+            user_id: id,
+            ...(assignee_datasets_ids && { assignor_id: assignee_datasets_ids }),
+          })),
+        },
+      }),
     }],
   };
 }
+
+const buildProjectAssociationQuery = async ({
+  project_id,
+  project_name,
+  project_assignor_id,
+  user_assignee_ids = [],
+  user_assignor_id,
+  browser_enabled = false,
+} = {}) => {
+  let project_dataset_association_query = {};
+
+  const project_assignor_roles = await userService.getUserRoles({ user_id: project_assignor_id });
+
+  if (project_id) {
+    // If Project ID is provided, associate this Dataset with the existing Project
+    project_dataset_association_query = await buildAssociationQueryForExistingProject({
+      project_id,
+      project_assignor_id,
+      user_assignee_ids,
+      user_assignor_id,
+    });
+  } else if (isFeatureEnabledForRole({
+    feature: 'autoCreateProjectOnDatasetCreation',
+    roles: project_assignor_roles,
+  })) {
+    // Else, if auto-creation of Project is enabled, create a new Project and associate this Dataset with it.
+    project_dataset_association_query = await buildAssociationQueryForNewProject({
+      project_name: project_name
+          || projectService.generate_project_name({ suffix: project_dataset_association_query.name }),
+      project_assignor_id,
+      user_assignee_ids,
+      user_assignor_id: project_assignor_id,
+      browser_enabled,
+    });
+  }
+  return project_dataset_association_query;
+};
 
 module.exports = {
   soft_delete,
@@ -840,6 +920,8 @@ module.exports = {
   has_workflow_access,
   dataset_access_check,
   workflow_access_check,
+  buildProjectAssociationQuery,
   buildAssociationQueryForNewProject,
   buildAssociationQueryForExistingProject,
+  noProjectUserAssociation,
 };

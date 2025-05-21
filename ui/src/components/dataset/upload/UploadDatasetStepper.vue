@@ -562,7 +562,7 @@ const getProjectCreationPayload = () => {
     // If a new Project is to be created, the current user will be assigned to it.
     project_payload = {
       browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
-      assignee_ids: [auth.user.id],
+      user_assignee_ids: [auth.user.id],
     };
   } else {
     project_payload = projectSelected.value && {
