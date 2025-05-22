@@ -1,6 +1,6 @@
 const fsPromises = require('fs/promises');
 const express = require('express');
-const { PrismaClient, Prisma } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 const createError = require('http-errors');
 const {
   query, param, body, checkSchema,
@@ -11,20 +11,19 @@ const config = require('config');
 const pm = require('picomatch');
 const he = require('he');
 
-// const logger = require('../services/logger');
+// const logger = require('@/services/logger');
 const path = require('path');
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
-const datasetService = require('../services/dataset');
-const authService = require('../services/auth');
-const CONSTANTS = require('../constants');
-const logger = require('../services/logger');
+const prisma = require('@/db');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const datasetService = require('@/services/dataset');
+const authService = require('@/services/auth');
+const CONSTANTS = require('@/constants');
+const logger = require('@/services/logger');
 
 const isPermittedTo = accessControl('datasets');
-
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // stats - UI
 router.get(

@@ -1,17 +1,15 @@
-// const { date_minus_months } = require('../utils');
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const dayjs = require('dayjs');
 const { query } = require('express-validator');
 
-const { accessControl } = require('../middleware/auth');
-const asyncHandler = require('../middleware/asyncHandler');
-const { validate } = require('../middleware/validators');
-const { groupByAndAggregate, numericStringsToNumbers } = require('../utils');
+const { accessControl } = require('@/middleware/auth');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { validate } = require('@/middleware/validators');
+const { groupByAndAggregate, numericStringsToNumbers } = require('@/utils');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('statistics');
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Retrieves the starting and ending extremes of the date range across which any files or datasets
 // have been accessed.

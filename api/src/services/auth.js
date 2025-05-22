@@ -7,12 +7,10 @@ const jsonwt = require('jsonwebtoken');
 const _ = require('lodash/fp');
 const config = require('config');
 const { OAuth2Client } = require('@badgateway/oauth2-client'); // cspell: disable-line
-const { PrismaClient } = require('@prisma/client');
 
+const prisma = require('@/db');
 const logger = require('./logger');
 const userService = require('./user');
-
-const prisma = new PrismaClient();
 
 const key = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.key')));
 const pub = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.pub')));
