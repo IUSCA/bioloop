@@ -11,7 +11,27 @@ if [[ -z "$staged_files" ]]; then
 fi
 
 # spell check staged files
-npx cspell --no-progress --no-summary $staged_files
+# echo $staged_files
+# echo "Running spell check on staged files..."
+set +e
+output=$(npx cspell --no-progress $staged_files 2>&1)
+cspellStatus=$?
+set -e
+# if cspellStatus is not 0
+# if output contains "Files checked: 0" then do nothing
+# else exit with cspellStatus
+
+if [[ $cspellStatus -ne 0 ]]; then
+  if [[ $output == *"Files checked: 0"* ]]; then
+    :
+  else
+    echo "Spelling errors found:"
+    echo "$output"
+    exit $cspellStatus
+  fi
+fi
+
+# echo "Running ESLint on staged files..."
 
 # Initialize variables
 ui_files=""
