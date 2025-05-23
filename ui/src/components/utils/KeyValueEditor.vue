@@ -93,7 +93,7 @@
 
 <script setup>
 const props = defineProps({
-  modelValue: { type: Object, required: true },
+  modelValue: { type: Object, required: false, default: () => ({}) },
   keyWidth: { type: String, default: "150px" },
   valueWidth: { type: String, default: "250px" },
   keyPlaceholder: { type: String, default: "New Key" },
@@ -191,18 +191,18 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .key-input {
-  width: v-bind("keyWidth");
-  min-width: v-bind("keyWidth");
-  max-width: v-bind("keyWidth");
+  width: v-bind("props.keyWidth");
+  min-width: v-bind("props.keyWidth");
+  max-width: v-bind("props.keyWidth");
   display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .value-input {
-  width: v-bind("valueWidth");
-  min-width: v-bind("valueWidth");
-  max-width: v-bind("valueWidth");
+  width: v-bind("props.valueWidth");
+  min-width: v-bind("props.valueWidth");
+  max-width: v-bind("props.valueWidth");
   display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;

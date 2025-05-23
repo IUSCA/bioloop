@@ -238,17 +238,6 @@
           </div>
 
           <!-- metadata -->
-          <!-- temporary view -->
-          <!-- <va-textarea
-            data-testid="user-metadata-input"
-            class="w-full text-sm"
-            :modelValue="JSON.stringify(editedUser.metadata || {}, null, 2)"
-            label="Metadata"
-            autosize
-            readonly
-            preset="solid"
-          /> -->
-          <!-- <JSONTable v-model="editedUser.metadata" editable /> -->
           <div class="flex-[1_1_100%]">
             <span
               class="block text-xs font-semibold mb-3"
