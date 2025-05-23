@@ -327,8 +327,6 @@ router.get(
       };
     }
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
       ...filterQuery,
       orderBy,
       include: {
@@ -339,6 +337,14 @@ router.get(
         states: req.query.include_states || false,
       },
     };
+
+    if (req.query.offset != null) {
+      datasetRetrievalQuery.skip = req.query.offset;
+    }
+
+    if (req.query.limit != null) {
+      datasetRetrievalQuery.take = req.query.limit;
+    }
 
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
