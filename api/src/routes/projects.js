@@ -523,14 +523,14 @@ router.post(
     * #swagger.description = admin and operator roles are allowed and user role
     * is forbidden
     */
-    const { user_ids, dataset_ids, ...projectData } = req.body;
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
       _.omitBy(_.isNil),
-    ])(projectData);
+    ])(req.body);
     data.slug = await projectService.generate_slug({ name: data.name });
 
-    if ((user_ids || []).length > 0) {
+    const user_ids = (req.body.user_ids || []).filter((id) => id != null);
+    if (user_ids.length > 0) {
       data.users = {
         create: user_ids.map((id) => ({
           user_id: id,
@@ -539,7 +539,8 @@ router.post(
       };
     }
 
-    if ((dataset_ids || []).length > 0) {
+    const dataset_ids = (req.body.dataset_ids || []).filter((id) => id != null);
+    if (dataset_ids.length > 0) {
       data.datasets = {
         create: dataset_ids.map((id) => ({
           dataset_id: id,
