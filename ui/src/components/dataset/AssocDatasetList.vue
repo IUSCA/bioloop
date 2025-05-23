@@ -25,20 +25,20 @@
         <span>{{ datetime.date(value) }}</span>
       </template>
 
-      <template #cell(archive_path)="{ value }">
-        <span class="flex justify-center">
-          <Icon :icon="value ? 'mdi-check' : 'mdi-close'" />
+      <template #cell(archive_path)="{ source }">
+        <span v-if="source" class="flex justify-center">
+          <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
 
-      <template #cell(is_staged)="{ value }">
-        <span class="flex justify-center">
-          <Icon :icon="value ? 'mdi-check' : 'mdi-close'" />
+      <template #cell(is_staged)="{ source }">
+        <span v-if="source" class="flex justify-center">
+          <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
-      <template #cell(is_deleted)="{ value }">
-        <span class="flex justify-center">
-          <Icon :icon="value ? 'mdi-check' : 'mdi-close'" />
+      <template #cell(is_deleted)="{ source }">
+        <span v-if="source" class="flex justify-center">
+          <i-mdi-check-circle-outline class="text-green-700" />
         </span>
       </template>
     </va-data-table>
