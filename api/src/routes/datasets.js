@@ -93,22 +93,6 @@ router.get(
 );
 
 // add hierarchy association
-const assoc_body_schema = {
-  '0.source_id': {
-    in: ['body'],
-    isInt: {
-      errorMessage: 'Source ID must be an integer',
-    },
-    toInt: true,
-  },
-  '0.derived_id': {
-    in: ['body'],
-    isInt: {
-      errorMessage: 'Derived ID must be an integer',
-    },
-    toInt: true,
-  },
-};
 
 const buildUserRoleQueryObject = ({
   deleted, type, name, match_name_exact, username,
@@ -262,6 +246,23 @@ const buildQueryObject = ({
   }
 
   return query_obj;
+};
+
+const assoc_body_schema = {
+  '*.source_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Source ID must be an integer',
+    },
+    toInt: true,
+  },
+  '*.derived_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Derived ID must be an integer',
+    },
+    toInt: true,
+  },
 };
 
 router.post(
@@ -421,7 +422,6 @@ router.get(
   verifyUploadEnabledForRole,
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
   ]),
@@ -473,10 +473,8 @@ router.get(
   verifyUploadEnabledForRole,
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
-    param('username').escape().notEmpty(),
   ]),
   isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
@@ -683,7 +681,7 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
-    body('origin_path').notEmpty().escape(),
+    body('origin_path').notEmpty(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
@@ -1379,8 +1377,6 @@ router.get(
 router.get(
   '/:datasetType/:name/exists',
   validate([
-    param('datasetType').escape().notEmpty(),
-    param('name').escape().notEmpty(),
     query('deleted').toBoolean().default(false),
   ]),
   accessControl('dataset_name')('read'),
@@ -1419,8 +1415,8 @@ router.post(
   verifyUploadEnabledForRole,
   isPermittedTo('create'),
   validate([
-    body('type').escape().notEmpty().isIn(config.dataset_types),
-    body('name').escape().notEmpty().isLength({ min: 3 }),
+    body('type').isIn(config.dataset_types),
+    body('name').isLength({ min: 3 }),
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
     body('project_id').optional(),

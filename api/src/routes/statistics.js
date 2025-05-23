@@ -327,7 +327,7 @@ router.post(
   '/data-access-log',
   isPermittedTo('create'),
   validate([
-    query('access_type').notEmpty().escape(),
+    query('access_type').notEmpty(),
     query('file_id').isInt().toInt().optional(),
     query('dataset_id').isInt().toInt().optional(),
   ]),

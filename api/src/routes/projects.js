@@ -220,11 +220,10 @@ router.get(
   '/:username/:id/datasets',
   isPermittedTo('read', { checkOwnership: true }),
   validate([
-    param('username').notEmpty().escape(),
+    param('username').notEmpty(),
     query('staged').toBoolean().optional(),
     query('take').isInt().toInt().optional(),
     query('skip').isInt().toInt().optional(),
-    query('name').notEmpty().escape().optional(),
     query('sortBy').isObject().optional(),
   ]),
   asyncHandler(async (req, res, next) => {

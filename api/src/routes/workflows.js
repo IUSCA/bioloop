@@ -181,11 +181,11 @@ router.post(
 // make sure that the request body is array of objects which at least will have
 // a "message" key
 const append_log_schema = {
-  '0.message': {
+  '*.message': {
     in: ['body'],
     notEmpty: true,
   },
-  '0.level': {
+  '*.level': {
     in: ['body'],
     default: 'stdout',
   },

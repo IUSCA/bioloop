@@ -82,7 +82,6 @@ router.get(
   validatePath,
   isPermittedTo('read'),
   query('dirs_only').default(false),
-  query('search_space').optional().escape().notEmpty(),
   asyncHandler(async (req, res, next) => {
     const { dirs_only, path: query_path } = req.query;
 
