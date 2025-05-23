@@ -225,7 +225,9 @@ router.post(
 router.get(
   '/processes',
   isPermittedTo('read'),
-  validate([query('pid').isInt().toInt().optional()]),
+  validate([
+    query('pid').isInt().toInt().optional(),
+  ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']

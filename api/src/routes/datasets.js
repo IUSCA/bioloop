@@ -163,8 +163,8 @@ router.get(
       [req.query.sort_by]: req.query.sort_order,
     };
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
+      skip: req.query.offset ?? Prisma.skip,
+      take: req.query.limit ?? Prisma.skip,
       ...filterQuery,
       orderBy,
     };
@@ -327,6 +327,8 @@ router.get(
       };
     }
     const datasetRetrievalQuery = {
+      skip: req.query.offset ?? Prisma.skip,
+      take: req.query.limit ?? Prisma.skip,
       ...filterQuery,
       orderBy,
       include: {
@@ -337,14 +339,6 @@ router.get(
         states: req.query.include_states || false,
       },
     };
-
-    if (req.query.offset != null) {
-      datasetRetrievalQuery.skip = req.query.offset;
-    }
-
-    if (req.query.limit != null) {
-      datasetRetrievalQuery.take = req.query.limit;
-    }
 
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
@@ -451,8 +445,8 @@ router.get(
       }),
     };
     const filter_query = {
-      skip: offset,
-      take: limit,
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
       ...query_obj,
       orderBy: {
         audit_log: {
@@ -507,8 +501,8 @@ router.get(
       }),
     };
     const filter_query = {
-      skip: offset,
-      take: limit,
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
       ...query_obj,
       orderBy: {
         audit_log: {
@@ -913,7 +907,7 @@ router.patch(
       return next(createError(404));
     }
 
-    const { metadata, ...data } = req.body;
+    const { metadata, ...data } = _.omitBy(_.isUndefined)(req.body);
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
 
     if (req.body.bundle) {
@@ -1303,8 +1297,8 @@ router.get(
       await prisma.data_access_log.create({
         data: {
           access_type: 'BROWSER',
-          file_id: isFileDownload ? req.query.file_id : undefined,
-          dataset_id: !isFileDownload ? req.params.id : undefined,
+          file_id: isFileDownload ? req.query.file_id : Prisma.skip,
+          dataset_id: !isFileDownload ? req.params.id : Prisma.skip,
           user_id: req.user.id,
         },
       });
@@ -1359,24 +1353,23 @@ router.get(
   validate([
     param('id').isInt().toInt(),
     query('name').default(''),
-    query('basepath').optional().default(''),
+    query('basepath').default(''),
     query('filetype').isIn(['file', 'directory', 'symbolic link']).optional(),
     query('extension').optional(),
     query('min_file_size').isInt().toInt().optional(),
     query('max_file_size').isInt().toInt().optional(),
-    query('skip').isInt().toInt().optional()
-      .default(0),
-    query('take').isInt().toInt().optional()
-      .default(1000),
+    query('skip').default(0).isInt().toInt(),
+    query('take').default(1000).isInt().toInt(),
   ]),
   datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
+
     const files = await datasetService.search_files({
       dataset_id: req.params.id,
       base: req.query.basepath,
-      ...req.query,
+      ..._.omitBy(_.isUndefined)(req.query),
     });
     res.json(files);
   }),
@@ -1524,7 +1517,6 @@ router.patch(
   ),
   validate([
     param('id').isInt().toInt(),
-    body('status').notEmpty().escape().optional(),
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {

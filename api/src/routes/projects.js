@@ -2,6 +2,7 @@ const express = require('express');
 const _ = require('lodash/fp');
 const { query, body, param } = require('express-validator');
 const createError = require('http-errors');
+const { Prisma } = require('@prisma/client');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -164,7 +165,7 @@ router.get(
   '/:id',
   isPermittedTo('read'),
   validate([
-    query('include_datasets').toBoolean().optional().default(true),
+    query('include_datasets').default(true).toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -272,13 +273,13 @@ router.get(
         contains: req.query.name,
         mode: 'insensitive', // case-insensitive search
       } : undefined,
-      is_staged: req.query.staged,
+      is_staged: req.query.staged ?? Prisma.skip,
     });
 
     const filterQuery = { where: query_obj };
     const datasetRetrievalQuery = {
-      skip: req.query.skip,
-      take: req.query.take,
+      skip: req.query.skip ?? Prisma.skip,
+      take: req.query.take ?? Prisma.skip,
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
@@ -450,7 +451,7 @@ router.get(
 router.get(
   '/:username/:id',
   validate([
-    query('include_datasets').toBoolean().optional().default(true),
+    query('include_datasets').default(true).toBoolean(),
   ]),
   isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
