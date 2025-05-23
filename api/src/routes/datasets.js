@@ -434,20 +434,23 @@ router.get(
       status, dataset_name, offset, limit,
     } = req.query;
 
-    const query_obj = {
-      where: _.omitBy(_.isUndefined)({
-        status,
-        audit_log: {
-          dataset: {
-            name: { contains: dataset_name },
-          },
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+    if (dataset_name) {
+      where.dataset = {
+        name: {
+          contains: dataset_name,
+          mode: 'insensitive',
         },
-      }),
-    };
+      };
+    }
+
     const filter_query = {
       skip: offset ?? Prisma.skip,
       take: limit ?? Prisma.skip,
-      ...query_obj,
+      where,
       orderBy: {
         audit_log: {
           timestamp: 'desc',
@@ -460,7 +463,7 @@ router.get(
         ...filter_query,
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       }),
-      prisma.dataset_upload_log.count({ ...query_obj }),
+      prisma.dataset_upload_log.count({ where }),
     ]);
 
     res.json({ metadata: { count }, uploads: dataset_upload_logs });
@@ -1356,7 +1359,7 @@ router.get(
     query('extension').optional(),
     query('min_file_size').isInt().toInt().optional(),
     query('max_file_size').isInt().toInt().optional(),
-    query('skip').default(0).isInt().toInt(),
+    query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('take').default(1000).isInt().toInt(),
   ]),
   datasetService.dataset_access_check,

@@ -1,3 +1,5 @@
+const { Prisma } = require('@prisma/client');
+
 const prisma = require('@/db');
 
 function normalize_name(name) {
@@ -43,7 +45,7 @@ async function is_slug_unique(slug, project_id) {
     where: {
       slug,
       NOT: {
-        id: project_id,
+        id: project_id ?? Prisma.skip,
       },
     },
   });

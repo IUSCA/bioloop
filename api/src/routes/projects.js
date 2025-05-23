@@ -87,7 +87,7 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('take').default(25).isInt().toInt(),
-    query('skip').default(0).isInt().toInt(),
+    query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('search').default(''), // Adding search query validation
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
@@ -223,7 +223,7 @@ router.get(
     param('username').notEmpty(),
     query('staged').toBoolean().optional(),
     query('take').isInt().toInt().optional(),
-    query('skip').isInt().toInt().optional(),
+    query('skip').isInt({ min: 0 }).toInt().optional(),
     query('sortBy').isObject().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -348,8 +348,8 @@ router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnership: true }),
   validate([
-    query('take').default(25).isInt().toInt(),
-    query('skip').default(0).isInt().toInt(),
+    query('take').default(25).isInt({ min: 1 }).toInt(),
+    query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('search').default(''), // Adding search query validation
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),

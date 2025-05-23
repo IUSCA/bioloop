@@ -117,7 +117,7 @@ router.get(
   '/most-accessed-data',
   isPermittedTo('read'),
   validate([
-    query('limit').default(100).isInt().toInt(),
+    query('limit').default(100).isInt({ min: 1 }).toInt(),
     query('include_datasets').default(false).isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -226,7 +226,7 @@ router.get(
   '/most-staged-datasets',
   isPermittedTo('read'),
   validate([
-    query('limit').default(100).isInt().toInt(),
+    query('limit').default(100).isInt({ min: 1 }).toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     const most_staged_datasets = await prisma.$queryRaw`
@@ -297,7 +297,7 @@ router.get(
   '/users-by-bandwidth',
   isPermittedTo('read'),
   validate([
-    query('limit').isInt().toInt(),
+    query('limit').isInt({ min: 1 }).toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     const users_by_bandwidth = await prisma.$queryRaw`
