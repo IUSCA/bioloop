@@ -186,7 +186,7 @@ const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
-  match_name_exact,
+  match_name_exact, id,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
@@ -251,6 +251,16 @@ const buildQueryObject = ({
     };
   }
 
+  // id filter
+  if (id) {
+    // if id is an array, use 'in' operator
+    if (Array.isArray(id)) {
+      query_obj.id = { in: id };
+    } else {
+      query_obj.id = id;
+    }
+  }
+
   return query_obj;
 };
 
@@ -296,6 +306,7 @@ router.get(
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').toBoolean().optional(),
+    query('id').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -308,9 +319,14 @@ router.get(
     const orderBy = {
       [req.query.sort_by]: req.query.sort_order,
     };
+    const optional_sort_columns = ['du_size', 'size', 'bundle_size'];
+    if (optional_sort_columns.includes(req.query.sort_by)) {
+      orderBy[req.query.sort_by] = {
+        nulls: 'last',
+        sort: req.query.sort_order,
+      };
+    }
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
       ...filterQuery,
       orderBy,
       include: {
@@ -321,6 +337,14 @@ router.get(
         states: req.query.include_states || false,
       },
     };
+
+    if (req.query.offset != null) {
+      datasetRetrievalQuery.skip = req.query.offset;
+    }
+
+    if (req.query.limit != null) {
+      datasetRetrievalQuery.take = req.query.limit;
+    }
 
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),

@@ -1,5 +1,6 @@
 const path = require('path');
 
+global.__basedir = path.join(__dirname, '..');
 const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
@@ -14,8 +15,6 @@ const { generate_stage_request_logs } = require('./seed_data/stage_request_logs'
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
-
-global.__basedir = path.join(__dirname, '..');
 
 const prisma = new PrismaClient();
 

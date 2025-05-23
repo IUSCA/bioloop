@@ -1,9 +1,16 @@
 import config from "@/config";
 import toast from "@/services/toast";
-import api from "./api";
 import { useAuthStore } from "@/stores/auth";
+import qs from "qs";
+import api from "./api";
 
 const auth = useAuthStore();
+
+function cleanParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v !== null && v !== undefined),
+  );
+}
 
 class DatasetService {
   /**
@@ -28,8 +35,15 @@ class DatasetService {
     const url = !auth.canOperate
       ? `/datasets/${auth.user.username}/all`
       : "/datasets";
+    // What qs.stringify does?
+    // Before: /datasets?id[]=1&id[]=2&id[]=3
+    // After: /datasets?id=1&id=2&id=3
+    // qs.stringify preserves the parameters which are null/undefined. API doesn't expect null/undefined to be sent,
+    // so we need to clean the parameters (removes keys which have null/undefined value).
     return api.get(url, {
-      params,
+      params: cleanParams(params),
+      paramsSerializer: (params) =>
+        qs.stringify(params, { arrayFormat: "repeat" }),
     });
   }
 
