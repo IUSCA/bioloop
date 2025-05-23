@@ -222,7 +222,7 @@ async function hardDeleteUser(username) {
 
 async function updateUser(username, data) {
   const updates = _.flow([
-    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'is_deleted']),
+    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'is_deleted', 'metadata']),
     _.omitBy(_.isNil),
   ])(data);
 
