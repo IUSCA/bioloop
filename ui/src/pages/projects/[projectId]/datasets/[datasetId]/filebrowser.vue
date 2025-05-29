@@ -63,4 +63,5 @@ Promise.all([
 <route lang="yaml">
 meta:
   title: File Browser
+  requiresRoles: ["operator", "admin"]
 </route>
