@@ -492,9 +492,3 @@ function openModalToDownloadDataset() {
   downloadModal.value.show();
 }
 </script>
-
-<route lang="yaml">
-meta:
-  title: Dataset
-  requiresRoles: ["operator", "admin"]
-</route>
