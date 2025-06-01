@@ -69,6 +69,12 @@ const grantsObject = {
     upload: {
       'create:any': ['*'],
     },
+    alert: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 
   // user role permissions
@@ -111,6 +117,9 @@ const grantsObject = {
       'create:any': ['*'],
     },
     fs: {
+      'read:any': ['*'],
+    },
+    alert: {
       'read:any': ['*'],
     },
   },
@@ -173,6 +182,12 @@ const grantsObject = {
     upload: {
       'create:any': ['*'],
     },
+  },
+  alert: {
+    'create:any': ['*'],
+    'read:any': ['*'],
+    'update:any': ['*'],
+    'delete:any': ['*'],
   },
 };
 const ac = new AccessControl(grantsObject);
