@@ -3,11 +3,12 @@ const {
   body, query, param, validationResult,
 } = require('express-validator');
 const { PrismaClient } = require('@prisma/client');
+const createError = require('http-errors');
 
-const { validate } = require('@/middleware/validators');
-const { accessControl } = require('@/middleware/auth');
-const asyncHandler = require('@/middleware/asyncHandler');
-const CONSTANTS = require('@/constants');
+const { validate } = require('../middleware/validators');
+const { accessControl } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
+const CONSTANTS = require('../constants');
 
 const isPermittedTo = accessControl('alerts');
 

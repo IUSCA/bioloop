@@ -182,12 +182,12 @@ const grantsObject = {
     upload: {
       'create:any': ['*'],
     },
-  },
-  alert: {
-    'create:any': ['*'],
-    'read:any': ['*'],
-    'update:any': ['*'],
-    'delete:any': ['*'],
+    alert: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 };
 const ac = new AccessControl(grantsObject);
