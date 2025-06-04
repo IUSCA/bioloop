@@ -21,9 +21,17 @@
           :options="['INFO', 'WARNING', 'ERROR']"
         />
       </div>
-      <div class="flex flex-row items-center">
-        <va-checkbox v-model="alertData.global" label="Global" />
-      </div>
+      <!--      <div class="flex flex-row items-center">-->
+      <!--        <va-checkbox v-model="alertData.global" label="Global" />-->
+      <!--      </div>-->
+
+      <va-select
+        v-model="alertData.pages"
+        label="Display on Pages"
+        multiple
+        :options="availablePages"
+      />
+
       <va-textarea
         v-model="alertData.message"
         label="Message"
@@ -36,9 +44,10 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
 import alertService from "@/services/alert";
 import toast from "@/services/toast";
+import { getPagesList } from "@/services/routeUitls";
+import { routes } from "vue-router/auto-routes";
 
 const props = defineProps({
   alert: {
@@ -51,6 +60,8 @@ const emit = defineEmits(["update"]);
 
 const visible = ref(false);
 const loading = ref(false);
+
+const availablePages = ref([]);
 
 const alertData = ref({
   label: "",
@@ -95,6 +106,11 @@ const saveAlert = async () => {
     loading.value = false;
   }
 };
+
+onMounted(() => {
+  availablePages.value = getPagesList(routes);
+  console.log(availablePages.value);
+});
 
 defineExpose({ showModal });
 </script>

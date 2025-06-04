@@ -405,6 +405,7 @@ model alert {
   message       String?
   global        Boolean    @default(false)
   type          ALERT_TYPE
+  metadata      Json?
 }
 
 enum access_type {
@@ -440,6 +441,7 @@ enum DATASET_CREATE_METHOD {
   SCAN
 }
 
+// todo - to metadata column
 enum ALERT_TYPE {
   INFO
   WARNING
