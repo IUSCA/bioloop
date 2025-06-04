@@ -25,11 +25,14 @@
 import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
+import alertService from "@/services/alert";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 
 let isSidebarCollapsed = ref(false);
+
+const alerts = ref([]);
 
 watch(
   () => breakpoint.current,
@@ -62,4 +65,8 @@ watch(
 const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
+
+alertService.getAll().then((res) => {
+  alerts.value = res.data.alerts;
+});
 </script>

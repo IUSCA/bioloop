@@ -6,26 +6,31 @@
     @cancel="hideModal"
     :loading="loading"
   >
-    <va-form @submit.prevent="saveAlert">
-      <va-input
-        v-model="alertData.label"
-        label="Label"
-        class="mb-4"
-        :rules="[(v) => !!v || 'Label is required']"
-      />
+    <va-form @submit.prevent="saveAlert" class="flex flex-col gap-6">
+      <div class="flex flex-row gap-4">
+        <va-input
+          v-model="alertData.label"
+          label="Label"
+          class="flex-grow"
+          :rules="[(v) => !!v || 'Label is required']"
+        />
+        <va-select
+          v-model="alertData.type"
+          label="Type"
+          class="w-1/3"
+          :options="['INFO', 'WARNING', 'ERROR']"
+        />
+      </div>
+      <div class="flex flex-row items-center">
+        <va-checkbox v-model="alertData.global" label="Global" />
+      </div>
       <va-textarea
         v-model="alertData.message"
         label="Message"
-        class="mb-4"
+        class="w-full"
         :rules="[(v) => !!v || 'Message is required']"
+        rows="4"
       />
-      <va-select
-        v-model="alertData.type"
-        label="Type"
-        class="mb-4"
-        :options="['INFO', 'WARNING', 'ERROR']"
-      />
-      <va-checkbox v-model="alertData.global" label="Global" class="mb-4" />
     </va-form>
   </va-modal>
 </template>

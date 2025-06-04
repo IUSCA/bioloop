@@ -69,7 +69,7 @@ const grantsObject = {
     upload: {
       'create:any': ['*'],
     },
-    alert: {
+    alerts: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
@@ -119,7 +119,7 @@ const grantsObject = {
     fs: {
       'read:any': ['*'],
     },
-    alert: {
+    alerts: {
       'read:any': ['*'],
     },
   },
@@ -182,7 +182,7 @@ const grantsObject = {
     upload: {
       'create:any': ['*'],
     },
-    alert: {
+    alerts: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

@@ -23,7 +23,7 @@ router.get(
   validate([
     query('label').optional().isString(),
     query('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
-    query('active').optional().isBoolean(),
+    query('active').optional().isBoolean().default(true),
     query('limit').optional().isInt(),
     query('offset').optional().isInt({ min: 0 }),
     query('sortBy').optional().isString(),
@@ -40,9 +40,9 @@ router.get(
         ...(active !== undefined && { active: active === 'true' }),
       };
 
-      const [alerts, total] = await Promise.all([
+      const [alerts, count] = await Promise.all([
         prisma.alert.findMany({
-          where,
+          // where,
           include: { created_by: { select: { id: true, name: true, username: true } } },
           take: parseInt(limit) || 10,
           skip: parseInt(offset) || 0,
@@ -51,7 +51,7 @@ router.get(
         prisma.alert.count({ where }),
       ]);
 
-      res.json({ data: alerts, metadata: { total } });
+      res.json({ alerts, metadata: { count } });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch alerts' });
     }
@@ -66,8 +66,8 @@ router.post(
     body('label').notEmpty().isString().trim(),
     body('message').optional().isString().trim(),
     body('type').isIn(Object.values(CONSTANTS.ALERT_TYPES)),
-    body('active').isBoolean(),
-    body('global').isBoolean(),
+    body('active').optional().isBoolean().default(true),
+    body('global').optional().isBoolean().default(false),
   ]),
   asyncHandler(async (req, res) => {
     const {

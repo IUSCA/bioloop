@@ -1,96 +1,97 @@
 <template>
-  <div>
-    <div class="flex items-center gap-3 mb-3">
-      <div class="flex-none">
-        <va-button
-          icon="add"
-          class="px-1"
-          color="success"
-          @click="showNewAlertModal"
-        >
-          New Alert
-        </va-button>
-      </div>
+  <div class="flex gap-3 mb-3">
+    <div class="flex-none">
+      <va-button
+        icon="add"
+        class="px-1"
+        color="success"
+        @click="showNewAlertModal"
+      >
+        New Alert
+      </va-button>
     </div>
-
-    <va-data-table
-      :items="alerts"
-      :columns="columns"
-      v-model:sort-by="params.sortBy"
-      v-model:sorting-order="params.sortingOrder"
-      disable-client-side-sorting
-      hoverable
-      :loading="loading"
-    >
-      <template #cell(created_at)="{ value }">
-        <span>{{ datetime.date(value) }}</span>
-      </template>
-
-      <template #cell(type)="{ value }">
-        <va-badge
-          :color="
-            value === 'ERROR'
-              ? 'danger'
-              : value === 'WARNING'
-                ? 'warning'
-                : 'info'
-          "
-        >
-          {{ value }}
-        </va-badge>
-      </template>
-
-      <template #cell(active)="{ value }">
-        <va-badge :color="value ? 'success' : 'danger'">
-          {{ value ? "Active" : "Inactive" }}
-        </va-badge>
-      </template>
-
-      <template #cell(global)="{ value }">
-        <va-badge :color="value ? 'primary' : 'secondary'">
-          {{ value ? "Global" : "Local" }}
-        </va-badge>
-      </template>
-
-      <template #cell(created_by)="{ rowData }">
-        <span
-          >{{ rowData.created_by.name }} ({{
-            rowData.created_by.username
-          }})</span
-        >
-      </template>
-
-      <template #cell(actions)="{ rowData }">
-        <div class="flex gap-1">
-          <va-button
-            class="flex-auto"
-            preset="plain"
-            icon="edit"
-            @click="showEditAlertModal(rowData)"
-          />
-          <va-button
-            class="flex-auto"
-            preset="plain"
-            icon="delete"
-            color="danger"
-            @click="showDeleteAlertModal(rowData)"
-          />
-        </div>
-      </template>
-    </va-data-table>
-
-    <Pagination
-      class="mt-4 px-1 lg:px-3"
-      v-model:page="params.page"
-      v-model:page_size="params.pageSize"
-      :total_results="totalAlerts"
-      :curr_items="alerts.length"
-      :page_size_options="PAGE_SIZE_OPTIONS"
-    />
-
-    <CreateOrEditAlertModal ref="createOrEditModal" @update="fetchAlerts" />
-    <DeleteAlertModal ref="deleteModal" @update="fetchAlerts" />
   </div>
+
+  <va-data-table
+    :items="alerts"
+    :columns="columns"
+    v-model:sort-by="params.sortBy"
+    v-model:sorting-order="params.sortingOrder"
+    disable-client-side-sorting
+    hoverable
+    :loading="loading"
+  >
+    <template #cell(created_at)="{ value }">
+      <span>{{ datetime.date(value) }}</span>
+    </template>
+
+    <template #cell(type)="{ value }">
+      <va-badge
+        :color="
+          value === 'ERROR'
+            ? 'danger'
+            : value === 'WARNING'
+              ? 'warning'
+              : 'info'
+        "
+      >
+        {{ value }}
+      </va-badge>
+    </template>
+
+    <template #cell(active)="{ value }">
+      <va-badge :color="value ? 'success' : 'danger'">
+        {{ value ? "Active" : "Inactive" }}
+      </va-badge>
+    </template>
+
+    <template #cell(message)="{ value }">
+      {{ trimAlertMessage(value) }}
+    </template>
+
+    <template #cell(global)="{ value }">
+      <va-badge :color="value ? 'primary' : 'secondary'">
+        {{ value ? "Global" : "Local" }}
+      </va-badge>
+    </template>
+
+    <template #cell(created_by)="{ rowData }">
+      <span
+        >{{ rowData.created_by.name }} ({{ rowData.created_by.username }})</span
+      >
+    </template>
+
+    <template #cell(actions)="{ rowData }">
+      <div class="flex gap-1">
+        <va-button
+          class="flex-auto"
+          preset="plain"
+          icon="edit"
+          @click="showEditAlertModal(rowData)"
+        />
+        <va-button
+          class="flex-auto"
+          preset="plain"
+          icon="delete"
+          color="danger"
+          @click="showDeleteAlertModal(rowData)"
+        />
+      </div>
+    </template>
+  </va-data-table>
+
+  <Pagination
+    class="mt-4 px-1 lg:px-3"
+    v-model:page="params.page"
+    v-model:page_size="params.pageSize"
+    :total_results="totalAlertsCount"
+    :curr_items="alerts.length"
+    :page_size_options="PAGE_SIZE_OPTIONS"
+  />
+
+  <CreateOrEditAlertModal ref="createOrEditModal" @update="fetchAlerts" />
+
+  <DeleteAlertModal ref="deleteModal" @update="fetchAlerts" />
 </template>
 
 <script setup>
@@ -155,7 +156,7 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 const loading = ref(false);
 const alerts = ref([]);
-const totalAlerts = ref(0);
+const totalAlertsCount = ref(0);
 
 const params = ref({
   page: 1,
@@ -180,8 +181,9 @@ const fetchAlerts = async () => {
   loading.value = true;
   try {
     const response = await alertService.getAll(filter_query.value);
-    alerts.value = response.data;
-    totalAlerts.value = response.metadata.total;
+    console.log(response);
+    alerts.value = response.data.alerts;
+    totalAlertsCount.value = response.data.metadata.count;
   } catch (error) {
     toast.error("Failed to fetch alerts");
   } finally {
@@ -199,6 +201,10 @@ const showEditAlertModal = (alert) => {
 
 const showDeleteAlertModal = (alert) => {
   deleteModal.value.showModal(alert);
+};
+
+const trimAlertMessage = (message) => {
+  return message.length > 100 ? `${message.substring(0, 100)}...` : message;
 };
 
 onMounted(fetchAlerts);
