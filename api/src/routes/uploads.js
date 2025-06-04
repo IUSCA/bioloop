@@ -1,5 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
+const he = require('he');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const { validate } = require('../middleware/validators');
@@ -18,9 +19,10 @@ router.post(
     body('file_name').notEmpty().escape(),
   ]),
   asyncHandler(async (req, res) => {
+    // console.log('Request to generate upload token for:', req.body.file_name);
     let token;
     try {
-      token = await authService.get_upload_token(req.body.file_name);
+      token = await authService.get_upload_token(he.decode(req.body.file_name));
     } catch (e) {
       console.error(e);
     }
