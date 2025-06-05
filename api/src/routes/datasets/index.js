@@ -233,27 +233,27 @@ router.get(
   }),
 );
 
-/**
- * This invocation allows for routes related to Dataset-uploads to be enabled conditionally, based on the user's roles.
- *
- * The middleware provided checks if the Dataset Upload feature is enabled for the user's roles
- * before allowing access to the upload routes.
- *
- * @description
- * 1. Checks if the 'upload' feature is enabled for the user's roles
- * 2. If enabled, it passes the request to a router dedicated for handling dataset uploads.
- * 3. If disabled, it logs an error and returns a 403 Forbidden error
- *
- * Note: The `router.use('/uploads')` invocation needs to be placed before any subsequent routes defined
- * in this file that could conflict with routes like `/datasets/uploads`.
- */
-router.use('/uploads', (req, res, next) => {
-  if (utils.isFeatureEnabled({ feature: 'upload', roles: req.user?.roles })) {
-    return uploadRouter(req, res, next);
-  }
-  logger.error(`The Upload feature is disabled for roles: ${req.user?.roles}`);
-  return next(createError.Forbidden());
-});
+// /**
+//  * This invocation allows for routes related to Dataset-uploads to be enabled conditionally, based on the user's roles.
+//  *
+//  * The middleware provided checks if the Dataset Upload feature is enabled for the user's roles
+//  * before allowing access to the upload routes.
+//  *
+//  * @description
+//  * 1. Checks if the 'upload' feature is enabled for the user's roles
+//  * 2. If enabled, it passes the request to a router dedicated for handling dataset uploads.
+//  * 3. If disabled, it logs an error and returns a 403 Forbidden error
+//  *
+//  * Note: The `router.use('/uploads')` invocation needs to be placed before any subsequent routes defined
+//  * in this file that could conflict with routes like `/datasets/uploads`.
+//  */
+// router.use('/uploads', (req, res, next) => {
+//   if (utils.isFeatureEnabled({ feature: 'upload', roles: req.user?.roles })) {
+//     return uploadRouter(req, res, next);
+//   }
+//   logger.error(`The Upload feature is disabled for roles: ${req.user?.roles}`);
+//   return next(createError.Forbidden());
+// });
 
 // get by id - worker + UI
 router.get(
