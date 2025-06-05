@@ -187,7 +187,7 @@
       "enabled_for_roles": ["admin"]
     },
     "downloads": true,
-    "signup": false
+    "signup": true
   },
   "institution_types": [
     "Commercial",
