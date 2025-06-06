@@ -14,12 +14,12 @@ const datasetService = require('../../services/dataset');
 const CONSTANTS = require('../../constants');
 const logger = require('../../services/logger');
 
-/**
- * Dataset-Upload Routes
- *
- * All routes in this router are prefixed with `/datasets`, since it is mounted by the base Datasets
- * router defined in `../datasets/index.js`.
- */
+// /**
+//  * Dataset-Upload Routes
+//  *
+//  * All routes in this router are prefixed with `/datasets`, since it is mounted by the base Datasets
+//  * router defined in `../datasets/index.js`.
+//  */
 
 const isPermittedTo = accessControl('datasets');
 

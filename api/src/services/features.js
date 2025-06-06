@@ -1,6 +1,6 @@
 const config = require('config');
 
-function isFeatureEnabled({ key, hasRole = () => false }) {
+function isFeatureEnabled({ key }) {
   if (!key) {
     return true;
   }
@@ -12,17 +12,11 @@ function isFeatureEnabled({ key, hasRole = () => false }) {
 
   const featureEnabled = features[key];
   if (featureEnabled == null) {
-    // feature's enabled status is not present in the config
+    // feature's enabled status is not present in the config - assume enabled
     return true;
   } if (typeof featureEnabled === 'boolean') {
-    // feature is either enabled or disabled for all roles
+    // feature is either enabled or disabled
     return featureEnabled;
-  } if (
-    Array.isArray(featureEnabled.enabledForRoles)
-    && featureEnabled.enabledForRoles.length > 0
-  ) {
-    // feature is enabled for certain roles
-    return featureEnabled.enabledForRoles.some((role) => hasRole(role));
   }
   // invalid config found for feature's enabled status
   return false;

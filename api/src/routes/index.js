@@ -1,6 +1,7 @@
 const express = require('express');
 
 const { authenticate } = require('../middleware/auth');
+const uploadRouter = require('./datasets/upload');
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.use('/env', require('./env'));
 router.use(authenticate);
 
 router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/datasets/uploads', require('./datasets/upload') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/workflows', require('./workflows') /* #swagger.security = [{"BearerAuth": []}] */);
@@ -23,7 +25,7 @@ router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAu
 router.use('/statistics', require('./statistics'));
 router.use('/notifications', require('./notifications'));
 router.use('/fs', require('./fs'));
-router.use('/uploads', require('./uploads'));
+// router.use('/uploads', require('./uploads'));
 router.use('/instruments', require('./instruments'));
 
 module.exports = router;

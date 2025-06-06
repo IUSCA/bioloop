@@ -356,15 +356,6 @@ function deepSortKeys(obj) {
   return obj;
 }
 
-function isFeatureEnabled({ feature = null, roles = [] } = {}) {
-  if (roles.length === 0) {
-    return false;
-  }
-  return config.enabled_features[feature].enabled_for_roles.some(
-    (role) => roles.includes(role),
-  );
-}
-
 module.exports = {
   renameKey,
   setDifference,
@@ -380,5 +371,4 @@ module.exports = {
   TransactionRetryError,
   base64urlEncode,
   deepSortKeys,
-  isFeatureEnabled,
 };
