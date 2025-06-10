@@ -26,16 +26,7 @@
     </template>
 
     <template #cell(type)="{ value }">
-      <va-badge
-        :text="value"
-        :color="
-          value === 'ERROR'
-            ? 'danger'
-            : value === 'WARNING'
-              ? 'warning'
-              : 'info'
-        "
-      />
+      <va-badge :text="value" :color="alertService.getAlertColor(value)" />
     </template>
 
     <template #cell(active)="{ value }">

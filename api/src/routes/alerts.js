@@ -43,7 +43,7 @@ router.get(
 
       const [alerts, count] = await Promise.all([
         prisma.alert.findMany({
-          // where,
+          where,
           include: { created_by: { select: { id: true, name: true, username: true } } },
           take: parseInt(limit) || 10,
           skip: parseInt(offset) || 0,

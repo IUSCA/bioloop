@@ -69,6 +69,32 @@ class AlertService {
   delete(id) {
     return api.delete(`/alerts/${id}`);
   }
+
+  getAlertIcon(alertType) {
+    switch (alertType) {
+      case "ERROR":
+        return "warning";
+      case "WARNING":
+        return "warning";
+      case "INFO":
+        return "info";
+      default:
+        return "info";
+    }
+  }
+
+  getAlertColor(alertType) {
+    switch (alertType) {
+      case "ERROR":
+        return "danger";
+      case "WARNING":
+        return "warning";
+      case "INFO":
+        return "info";
+      default:
+        return "info";
+    }
+  }
 }
 
 export default new AlertService();

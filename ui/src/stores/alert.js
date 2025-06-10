@@ -10,6 +10,7 @@ export const useAlertStore = defineStore("alert", () => {
     try {
       const response = await alertService.getAll();
       alerts.value = response.data.alerts;
+      // alerts.value = []
     } catch (error) {
       console.error("Failed to fetch alerts:", error);
     }
@@ -33,5 +34,6 @@ export const useAlertStore = defineStore("alert", () => {
     fetchAlerts,
     dismissAlert,
     getNonDismissedAlerts,
+    isAlertDismissed,
   };
 });

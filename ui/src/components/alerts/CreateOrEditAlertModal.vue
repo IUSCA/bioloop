@@ -22,13 +22,6 @@
         />
       </div>
 
-      <!--      <va-select-->
-      <!--        v-model="alertData.pages"-->
-      <!--        label="Display on Pages"-->
-      <!--        multiple-->
-      <!--        :options="availablePages"-->
-      <!--      />-->
-
       <va-textarea
         v-model="alertData.message"
         label="Message"

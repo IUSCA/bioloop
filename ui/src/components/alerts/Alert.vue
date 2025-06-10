@@ -2,14 +2,8 @@
   <va-alert
     v-model="isVisible"
     class="y-padding-0 w-full square-corners bold-title"
-    :icon="props.showIcon && icon"
-    :color="
-      props.type === 'ERROR'
-        ? 'danger'
-        : props.type === 'WARNING'
-          ? 'warning'
-          : 'info'
-    "
+    :icon="alertService.getAlertIcon(props.type)"
+    :color="alertService.getAlertColor(props.type)"
     :title="props.label"
     closeable
     dense
@@ -19,6 +13,8 @@
 </template>
 
 <script setup>
+import alertService from "@/services/alert";
+
 const props = defineProps({
   label: {
     type: String,
@@ -31,13 +27,6 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  icon: {
-    type: String,
-  },
-  showIcon: {
-    type: Boolean,
-    default: true,
-  },
 });
 
 const emit = defineEmits(["close"]);
@@ -48,23 +37,6 @@ watch(isVisible, (newValue) => {
   if (!newValue) {
     console.log("Alert closed");
     emit("close");
-  }
-});
-
-const icon = computed(() => {
-  if (props.icon) {
-    return props.icon;
-  }
-
-  switch (props.type) {
-    case "ERROR":
-      return "warning";
-    case "WARNING":
-      return "warning";
-    case "INFO":
-      return "info";
-    default:
-      return null;
   }
 });
 </script>
