@@ -18,18 +18,18 @@
     </div>
 
     <!-- Filter button -->
-    <!--    <va-button @click="showSearchModal" preset="primary" class="flex-none">-->
-    <!--      <i-mdi-filter />-->
-    <!--      <span> Filters </span>-->
-    <!--    </va-button>-->
+    <va-button @click="showSearchModal" preset="primary" class="flex-none">
+      <i-mdi-filter />
+      <span> Filters </span>
+    </va-button>
 
     <!-- active filter chips -->
-    <!--    <AlertSearchFilters-->
-    <!--      v-if="activeFilters.length > 0"-->
-    <!--      class="flex-none"-->
-    <!--      @search="handleSearch"-->
-    <!--      @open="showSearchModal"-->
-    <!--    />-->
+    <AlertSearchFilters
+      v-if="activeFilters.length > 0"
+      class="flex-none"
+      @search="handleSearch"
+      @open="showSearchModal"
+    />
 
     <va-button
       icon="add"
@@ -104,6 +104,7 @@
 
   <CreateOrEditAlertModal ref="createOrEditModal" @update="fetchAlerts" />
   <DeleteAlertModal ref="deleteModal" @update="fetchAlerts" />
+  <AlertSearchModal ref="searchModal" @search="handleSearch" />
 </template>
 
 <script setup>
@@ -111,6 +112,7 @@ import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import alertService from "@/services/alert";
 import { useAlertStore } from "@/stores/alert";
+import { storeToRefs } from "pinia";
 
 const columns = [
   {
@@ -168,6 +170,7 @@ const columns = [
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 const alertStore = useAlertStore();
+const { filters, query, params, activeFilters } = storeToRefs(alertStore);
 
 const loading = ref(false);
 const alerts = ref([]);
@@ -175,36 +178,32 @@ const totalAlertsCount = ref(0);
 const searchQuery = ref("");
 const selectedFilter = ref(null);
 
-// const { filters, query, params, activeFilters } = storeToRefs(alertStore);
+const createOrEditModal = ref(null);
+const deleteModal = ref(null);
+const searchModal = ref(null);
 
-const params = ref({
-  page: 1,
-  pageSize: 10,
-  sortBy: "created_at",
-  sortingOrder: "desc",
-});
-
-const filterOptions = [
-  { value: "all", text: "All" },
-  { value: "active", text: "Active" },
-  { value: "inactive", text: "Inactive" },
-  { value: "info", text: "Info" },
-  { value: "warning", text: "Warning" },
-  { value: "error", text: "Error" },
-];
+// const params = ref({
+//   page: 1,
+//   pageSize: 10,
+//   sortBy: "created_at",
+//   sortingOrder: "desc",
+// });
 
 const offset = computed(() => (params.value.page - 1) * params.value.pageSize);
 
+// const filter_query = computed(() => ({
+//   offset: offset.value,
+//   limit: params.value.pageSize,
+//   sortBy: params.value.sortBy,
+//   sortingOrder: params.value.sortingOrder,
+//   label: searchQuery.value,
+// }));
+
 const filter_query = computed(() => ({
-  offset: offset.value,
-  limit: params.value.pageSize,
-  sortBy: params.value.sortBy,
-  sortingOrder: params.value.sortingOrder,
+  ...query.value,
+  ...filters.value,
   label: searchQuery.value,
 }));
-
-const createOrEditModal = ref(null);
-const deleteModal = ref(null);
 
 const fetchAlerts = async () => {
   loading.value = true;
@@ -230,6 +229,10 @@ const showEditAlertModal = (alert) => {
 
 const showDeleteAlertModal = (alert) => {
   deleteModal.value.showModal(alert);
+};
+
+const showSearchModal = () => {
+  searchModal.value.show();
 };
 
 const trimAlertMessage = (message) => {

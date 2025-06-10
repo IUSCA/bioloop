@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { useLocalStorage } from "@vueuse/core";
 import alertService from "@/services/alert";
+import { mapValues } from "@/services/utils";
 
 export const useAlertStore = defineStore("alert", () => {
   const alerts = ref([]);
