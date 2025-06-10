@@ -18,12 +18,16 @@
       </va-menu-item>
 
       <template v-else>
-        <va-menu-item v-for="alert in activeAlerts" :key="alert.id">
+        <va-menu-item
+          v-for="alert in activeAlerts"
+          :key="alert.id"
+          :class="['alert-item', `alert-${alert.type.toLowerCase()}`]"
+        >
           <div class="flex items-center">
             <Icon
               :icon="'mdi-' + alertService.getAlertIcon(alert.type)"
               :color="alertService.getAlertColor(alert.type)"
-              class="mr-2"
+              class="mr-2 flex-none"
               height="24px"
               width="24px"
             />
@@ -51,8 +55,22 @@ onMounted(() => {
 });
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .alert-bell {
   color: var(--va-text-primary) !important;
+}
+
+.alert-item {
+  &.alert-error {
+    background-color: var(--va-danger);
+  }
+
+  &.alert-warning {
+    background-color: var(--va-warning);
+  }
+
+  &.alert-info {
+    background-color: var(--va-info);
+  }
 }
 </style>
