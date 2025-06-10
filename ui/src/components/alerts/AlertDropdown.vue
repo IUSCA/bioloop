@@ -18,24 +18,14 @@
       </va-menu-item>
 
       <template v-else>
-        <va-menu-item
-          v-for="alert in activeAlerts"
-          :key="alert.id"
-          :class="['alert-item', `alert-${alert.type.toLowerCase()}`]"
-        >
-          <div class="flex items-center">
-            <Icon
-              :icon="'mdi-' + alertService.getAlertIcon(alert.type)"
-              :color="alertService.getAlertColor(alert.type)"
-              class="mr-2 flex-none"
-              height="24px"
-              width="24px"
-            />
-            <div class="flex-grow">
-              <div class="font-bold">{{ alert.label }}</div>
-              <div class="text-sm">{{ alert.message }}</div>
-            </div>
-          </div>
+        <va-menu-item v-for="alert in activeAlerts" :key="alert.id">
+          <Alert
+            :key="alert.id"
+            :type="alert.type"
+            :message="alert.message"
+            :label="alert.label"
+            :dismissable="false"
+          />
         </va-menu-item>
       </template>
     </div>
@@ -44,7 +34,6 @@
 
 <script setup>
 import { useAlertStore } from "@/stores/alert";
-import alertService from "@/services/alert";
 
 const alertStore = useAlertStore();
 
@@ -58,19 +47,5 @@ onMounted(() => {
 <style scoped>
 .alert-bell {
   color: var(--va-text-primary) !important;
-}
-
-.alert-item {
-  &.alert-error {
-    background-color: var(--va-danger);
-  }
-
-  &.alert-warning {
-    background-color: var(--va-warning);
-  }
-
-  &.alert-info {
-    background-color: var(--va-info);
-  }
 }
 </style>

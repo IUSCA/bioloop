@@ -5,7 +5,7 @@
     :icon="alertService.getAlertIcon(props.type)"
     :color="alertService.getAlertColor(props.type)"
     :title="props.label"
-    closeable
+    :closeable="props.dismissable"
     dense
   >
     {{ props.message }}
@@ -26,6 +26,10 @@ const props = defineProps({
   type: {
     type: String,
     required: true,
+  },
+  dismissable: {
+    type: Boolean,
+    default: true,
   },
 });
 

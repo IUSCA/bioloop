@@ -31,8 +31,10 @@ router.get(
   ]),
   asyncHandler(async (req, res) => {
     const {
-      label, type, active, limit, offset, sortBy,
+      label, type, active, limit, offset,
     } = req.query;
+
+    const sortBy = req.query.sortBy || 'created_at';
 
     try {
       const where = {
