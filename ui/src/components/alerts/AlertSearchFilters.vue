@@ -8,7 +8,6 @@
     >
       {{ filter.label }}: {{ filter.value }}
     </va-chip>
-    <va-button small flat @click="$emit('open')"> Edit Filters </va-button>
   </div>
 </template>
 

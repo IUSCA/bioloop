@@ -20,7 +20,12 @@
     <!-- Filter button -->
     <va-button @click="showSearchModal" preset="primary" class="flex-none">
       <i-mdi-filter />
-      <span> Filters </span>
+      <span>
+        Filters
+        <span v-if="activeFilters.length > 0" class="ml-1">
+          ({{ activeFilters.length }})
+        </span>
+      </span>
     </va-button>
 
     <!-- active filter chips -->
@@ -28,8 +33,8 @@
       v-if="activeFilters.length > 0"
       class="flex-none"
       @search="handleSearch"
-      @open="showSearchModal"
     />
+    <!--    @open="showSearchModal"-->
 
     <va-button
       icon="add"
