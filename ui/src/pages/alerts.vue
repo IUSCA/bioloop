@@ -1,15 +1,44 @@
 <template>
-  <div class="flex gap-3 mb-3">
-    <div class="flex-none">
-      <va-button
-        icon="add"
-        class="px-1"
-        color="success"
-        @click="showNewAlertModal"
+  <!-- search bar and filter -->
+  <div class="flex mb-3 gap-3">
+    <!-- search bar -->
+    <div class="flex-1">
+      <va-input
+        v-model="searchQuery"
+        class="w-full"
+        placeholder="Search alerts"
+        outline
+        clearable
+        @update:model-value="handleSearch"
       >
-        New Alert
-      </va-button>
+        <template #prependInner>
+          <Icon icon="material-symbols:search" class="text-xl" />
+        </template>
+      </va-input>
     </div>
+
+    <!-- Filter button -->
+    <!--    <va-button @click="showSearchModal" preset="primary" class="flex-none">-->
+    <!--      <i-mdi-filter />-->
+    <!--      <span> Filters </span>-->
+    <!--    </va-button>-->
+
+    <!-- active filter chips -->
+    <!--    <AlertSearchFilters-->
+    <!--      v-if="activeFilters.length > 0"-->
+    <!--      class="flex-none"-->
+    <!--      @search="handleSearch"-->
+    <!--      @open="showSearchModal"-->
+    <!--    />-->
+
+    <va-button
+      icon="add"
+      class="px-1"
+      color="success"
+      @click="showNewAlertModal"
+    >
+      New Alert
+    </va-button>
   </div>
 
   <va-data-table
@@ -74,17 +103,14 @@
   />
 
   <CreateOrEditAlertModal ref="createOrEditModal" @update="fetchAlerts" />
-
   <DeleteAlertModal ref="deleteModal" @update="fetchAlerts" />
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import alertService from "@/services/alert";
-import CreateOrEditAlertModal from "@/components/alerts/CreateOrEditAlertModal.vue";
-import DeleteAlertModal from "@/components/alerts/DeleteAlertModal.vue";
+import { useAlertStore } from "@/stores/alert";
 
 const columns = [
   {
@@ -141,9 +167,15 @@ const columns = [
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
+const alertStore = useAlertStore();
+
 const loading = ref(false);
 const alerts = ref([]);
 const totalAlertsCount = ref(0);
+const searchQuery = ref("");
+const selectedFilter = ref(null);
+
+// const { filters, query, params, activeFilters } = storeToRefs(alertStore);
 
 const params = ref({
   page: 1,
@@ -152,6 +184,15 @@ const params = ref({
   sortingOrder: "desc",
 });
 
+const filterOptions = [
+  { value: "all", text: "All" },
+  { value: "active", text: "Active" },
+  { value: "inactive", text: "Inactive" },
+  { value: "info", text: "Info" },
+  { value: "warning", text: "Warning" },
+  { value: "error", text: "Error" },
+];
+
 const offset = computed(() => (params.value.page - 1) * params.value.pageSize);
 
 const filter_query = computed(() => ({
@@ -159,6 +200,7 @@ const filter_query = computed(() => ({
   limit: params.value.pageSize,
   sortBy: params.value.sortBy,
   sortingOrder: params.value.sortingOrder,
+  label: searchQuery.value,
 }));
 
 const createOrEditModal = ref(null);
@@ -168,7 +210,7 @@ const fetchAlerts = async () => {
   loading.value = true;
   try {
     const response = await alertService.getAll(filter_query.value);
-    console.log(response);
+    // console.log(response);
     alerts.value = response.data.alerts;
     totalAlertsCount.value = response.data.metadata.count;
   } catch (error) {
@@ -194,7 +236,34 @@ const trimAlertMessage = (message) => {
   return message.length > 80 ? `${message.substring(0, 100)}...` : message;
 };
 
+const handleSearch = useDebounceFn(() => {
+  params.value.page = 1;
+  fetchAlerts();
+}, 500);
+
+// const handleFilterChange = () => {
+//   params.value.page = 1;
+//   fetchAlerts();
+// };
+
 onMounted(fetchAlerts);
+
+watch(
+  [
+    () => params.value.sortBy,
+    () => params.value.sortingOrder,
+    () => params.value.pageSize,
+  ],
+  () => {
+    if (params.value.page === 1) {
+      fetchAlerts();
+    } else {
+      params.value.page = 1;
+    }
+  },
+);
+
+watch(() => params.value.page, fetchAlerts);
 </script>
 
 <style scoped></style>

@@ -23,6 +23,7 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('label').optional().isString(),
+    query('message').optional().isString(),
     query('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
     query('active').optional().isBoolean().default(true),
     query('limit').optional().isInt(),
@@ -31,7 +32,7 @@ router.get(
   ]),
   asyncHandler(async (req, res) => {
     const {
-      label, type, active, limit, offset,
+      label, message, type, active, limit, offset,
     } = req.query;
 
     const sortBy = req.query.sortBy || 'created_at';
@@ -39,6 +40,7 @@ router.get(
     try {
       const where = {
         ...(label && { label: { contains: label, mode: 'insensitive' } }),
+        ...(message && { message: { contains: message, mode: 'insensitive' } }),
         ...(type && { type }),
         ...(active !== undefined && { active: active === 'true' }),
       };

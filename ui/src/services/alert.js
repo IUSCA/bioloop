@@ -6,6 +6,7 @@ class AlertService {
    * @param active    Boolean field to filter datasets by `is_deleted` field
    * @param type       Field to filter alerts by `type`. One of 'INFO', 'WARNING' or 'ERROR'
    * @param label       Field to filter alerts by `name`
+   * @param message     Field to filter alerts by `message`
    * @param limit      The number of datasets to be retrieved
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
@@ -14,6 +15,7 @@ class AlertService {
    */
   getAll({
     label = "",
+    message = "",
     type = null,
     active = true,
     limit = 10,
@@ -23,6 +25,7 @@ class AlertService {
     return api.get(`/alerts`, {
       params: {
         label,
+        message,
         type,
         active,
         limit,
