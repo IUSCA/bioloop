@@ -27,6 +27,7 @@
 
     <template #cell(type)="{ value }">
       <va-badge
+        :text="value"
         :color="
           value === 'ERROR'
             ? 'danger'
@@ -34,25 +35,17 @@
               ? 'warning'
               : 'info'
         "
-      >
-        {{ value }}
-      </va-badge>
+      />
     </template>
 
     <template #cell(active)="{ value }">
-      <va-badge :color="value ? 'success' : 'danger'">
-        {{ value ? "Active" : "Inactive" }}
-      </va-badge>
+      <span v-if="value" class="flex justify-center">
+        <i-mdi-check-circle-outline class="text-green-700" />
+      </span>
     </template>
 
     <template #cell(message)="{ value }">
       {{ trimAlertMessage(value) }}
-    </template>
-
-    <template #cell(global)="{ value }">
-      <va-badge :color="value ? 'primary' : 'secondary'">
-        {{ value ? "Global" : "Local" }}
-      </va-badge>
     </template>
 
     <template #cell(created_by)="{ rowData }">
@@ -106,8 +99,8 @@ const columns = [
   {
     key: "label",
     width: "15%",
-    thAlign: "center",
-    tdAlign: "center",
+    thAlign: "left",
+    tdAlign: "left",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
@@ -122,19 +115,20 @@ const columns = [
   {
     key: "type",
     width: "10%",
+    thAlign: "center",
+    tdAlign: "center",
   },
   {
     key: "active",
     width: "10%",
-  },
-  {
-    key: "global",
-    sortable: true,
-    width: "10%",
+    thAlign: "center",
+    tdAlign: "center",
   },
   {
     key: "created_by",
     width: "15%",
+    thAlign: "center",
+    tdAlign: "center",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
@@ -142,13 +136,15 @@ const columns = [
     key: "created_at",
     label: "Created At",
     width: "15%",
-    thAlign: "right",
-    tdAlign: "right",
+    thAlign: "center",
+    tdAlign: "center",
   },
   {
     key: "actions",
-    width: "10%",
+    width: "6%",
     sortable: false,
+    thAlign: "right",
+    tdAlign: "right",
   },
 ];
 
@@ -204,7 +200,7 @@ const showDeleteAlertModal = (alert) => {
 };
 
 const trimAlertMessage = (message) => {
-  return message.length > 100 ? `${message.substring(0, 100)}...` : message;
+  return message.length > 80 ? `${message.substring(0, 100)}...` : message;
 };
 
 onMounted(fetchAlerts);

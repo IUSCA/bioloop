@@ -21,22 +21,18 @@
           :options="['INFO', 'WARNING', 'ERROR']"
         />
       </div>
-      <!--      <div class="flex flex-row items-center">-->
-      <!--        <va-checkbox v-model="alertData.global" label="Global" />-->
-      <!--      </div>-->
 
-      <va-select
-        v-model="alertData.pages"
-        label="Display on Pages"
-        multiple
-        :options="availablePages"
-      />
+      <!--      <va-select-->
+      <!--        v-model="alertData.pages"-->
+      <!--        label="Display on Pages"-->
+      <!--        multiple-->
+      <!--        :options="availablePages"-->
+      <!--      />-->
 
       <va-textarea
         v-model="alertData.message"
         label="Message"
         class="w-full"
-        :rules="[(v) => !!v || 'Message is required']"
         rows="4"
       />
     </va-form>
@@ -66,7 +62,6 @@ const availablePages = ref([]);
 const alertData = ref({
   label: "",
   message: "",
-  global: false,
   type: "INFO",
 });
 
@@ -78,7 +73,6 @@ const showModal = (alert = null) => {
     alertData.value = {
       label: "",
       message: "",
-      global: false,
       type: "INFO",
     };
   }

@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-  body, query, param, validationResult,
+  body, query, param,
 } = require('express-validator');
 const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
@@ -9,6 +9,7 @@ const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const CONSTANTS = require('../constants');
+const logger = require('../services/logger');
 
 const isPermittedTo = accessControl('alerts');
 
@@ -51,9 +52,13 @@ router.get(
         prisma.alert.count({ where }),
       ]);
 
-      res.json({ alerts, metadata: { count } });
+      res.json({
+        alerts,
+        metadata: { count },
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch alerts' });
+      logger.error(error);
     }
   }),
 );
@@ -63,27 +68,32 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
-    body('label').notEmpty().isString().trim(),
-    body('message').optional().isString().trim(),
+    body('label').notEmpty().isString().trim()
+      .escape(),
+    body('message').optional().isString().trim()
+      .escape(),
     body('type').isIn(Object.values(CONSTANTS.ALERT_TYPES)),
     body('active').optional().isBoolean().default(true),
-    body('global').optional().isBoolean().default(false),
   ]),
   asyncHandler(async (req, res) => {
     const {
-      label, message, type, active, global,
+      label, message, type,
     } = req.body;
+    const active = req.body.active === undefined ? true : req.body.active;
+    // logger.info(active);
+
     const created_by_id = req.user.id;
 
     try {
       const newAlert = await prisma.alert.create({
         data: {
-          label, message, type, active, global, created_by_id,
+          label, message, type, active, created_by_id,
         },
       });
       res.status(201).json(newAlert);
     } catch (error) {
       res.status(500).json({ error: 'Failed to create alert' });
+      logger.error(error);
     }
   }),
 );
@@ -94,23 +104,24 @@ router.patch(
   isPermittedTo('update'),
   validate([
     param('id').isInt(),
-    body('label').optional().isString().trim(),
-    body('message').optional().isString().trim(),
+    body('label').optional().isString().trim()
+      .escape(),
+    body('message').optional().isString().trim()
+      .escape(),
     body('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
     body('active').optional().isBoolean(),
-    body('global').optional().isBoolean(),
   ]),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const {
-      label, message, type, global,
+      label, message, type,
     } = req.body;
 
     try {
       const updatedAlert = await prisma.alert.update({
         where: { id: parseInt(id) },
         data: {
-          label, message, type, global,
+          label, message, type,
         },
       });
       res.json(updatedAlert);

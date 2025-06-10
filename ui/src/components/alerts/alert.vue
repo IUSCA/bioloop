@@ -53,7 +53,7 @@ const icon = computed(() => {
 
   switch (props.type) {
     case "ERROR":
-      return "danger";
+      return "warning";
     case "WARNING":
       return "warning";
     case "INFO":

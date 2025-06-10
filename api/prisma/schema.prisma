@@ -400,12 +400,10 @@ model alert {
   updated_at    DateTime   @default(now()) @db.Timestamp(6)
   created_by_id Int
   created_by    user       @relation(fields: [created_by_id], references: [id], onDelete: Cascade)
-  active        Boolean    @default(false)
+  active        Boolean    @default(true)
   label         String
   message       String?
-  global        Boolean    @default(false)
   type          ALERT_TYPE
-  metadata      Json?
 }
 
 enum access_type {
