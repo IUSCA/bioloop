@@ -1,6 +1,7 @@
 <template>
   <va-alert
-    class="w-full"
+    v-model="isVisible"
+    class="y-padding-0 w-full square-corners bold-title"
     :icon="props.showIcon && icon"
     :color="
       props.type === 'ERROR'
@@ -10,6 +11,8 @@
           : 'info'
     "
     :title="props.label"
+    closeable
+    dense
   >
     {{ props.message }}
   </va-alert>
@@ -17,20 +20,12 @@
 
 <script setup>
 const props = defineProps({
-  active: {
-    type: Boolean,
-    required: true,
-  },
   label: {
     type: String,
     required: true,
   },
   message: {
     type: String,
-  },
-  global: {
-    type: Boolean,
-    required: true,
   },
   type: {
     type: String,
@@ -39,11 +34,21 @@ const props = defineProps({
   icon: {
     type: String,
   },
-  // todo - hide icon at small screens
   showIcon: {
     type: Boolean,
     default: true,
   },
+});
+
+const emit = defineEmits(["close"]);
+
+const isVisible = ref(true);
+
+watch(isVisible, (newValue) => {
+  if (!newValue) {
+    console.log("Alert closed");
+    emit("close");
+  }
 });
 
 const icon = computed(() => {
@@ -64,4 +69,16 @@ const icon = computed(() => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.y-padding-0 {
+  --va-alert-margin-y: 0;
+}
+
+.square-corners {
+  border-radius: 0;
+}
+
+.bold-title :deep(.va-alert__title) {
+  font-weight: bold;
+}
+</style>

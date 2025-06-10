@@ -1,15 +1,5 @@
 <template>
   <div class="flex flex-col gap-4">
-    <!-- Alert -->
-    <Alert
-      v-for="alert in alerts"
-      :key="alert.id"
-      :type="alert.type"
-      :message="alert.message"
-      :label="alert.label"
-    />
-    <!--    :icon="'error'"-->
-
     <!-- Storage -->
     <div>
       <span class="text-xl font-bold block mb-1">RESOURCE USAGE</span>
@@ -73,7 +63,6 @@
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
 // import workflowService from "@/services/workflow";
-import alertService from "@/services/alert";
 import { useNavStore } from "@/stores/nav";
 
 const nav = useNavStore();
@@ -83,8 +72,6 @@ nav.setNavItems([], false);
 // const workflows = ref([]);
 const raw_data_stats = ref({});
 const data_products_stats = ref({});
-
-const alerts = ref([]);
 
 // workflowService
 //   .getAll({ last_task_run: true, status: "ACTIVE" })
@@ -114,13 +101,9 @@ DatasetService.getStats({ type: "DATA_PRODUCT" })
     console.error(err);
     toast.error("Unable to fetch data products stats");
   });
-
-alertService.getAll().then((res) => {
-  alerts.value = res.data.alerts;
-});
 </script>
 
 <route lang="yaml">
 meta:
-title: Dashboard
+  title: Dashboard
 </route>

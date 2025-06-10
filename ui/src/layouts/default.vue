@@ -4,6 +4,10 @@
     @toggle-sidebar-visibility="toggleSidebarVisibility"
   >
   </Header>
+
+  <!-- Show any active alerts in the system  -->
+  <Alerts />
+
   <div class="flex flex-row h-screen">
     <nav
       aria-label="menu nav"
@@ -25,14 +29,13 @@
 import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
-import alertService from "@/services/alert";
+import { useAlertStore } from "@/stores/alert";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
+const alertStore = useAlertStore();
 
 let isSidebarCollapsed = ref(false);
-
-const alerts = ref([]);
 
 watch(
   () => breakpoint.current,
@@ -66,7 +69,8 @@ const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-alertService.getAll().then((res) => {
-  alerts.value = res.data.alerts;
+// Fetch alerts when the component is mounted
+onMounted(() => {
+  alertStore.fetchAlerts();
 });
 </script>
