@@ -1364,10 +1364,10 @@ router.get(
     query('extension').optional(),
     query('min_file_size').isInt().toInt().optional(),
     query('max_file_size').isInt().toInt().optional(),
-    query('skip').isInt().toInt().optional()
-      .default(0),
-    query('take').isInt().toInt().optional()
-      .default(1000),
+    query('sort_by').default('name').isIn(['name', 'size']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+    query('skip').default(0).isInt().toInt(),
+    query('take').default(1000).isInt().toInt(),
   ]),
   datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {

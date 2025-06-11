@@ -26,6 +26,7 @@
           :show-download="props.showDownload"
           :files="files"
           :dataset-id="props.datasetId"
+          @search="search_files"
         />
       </va-inner-loading>
     </div>
@@ -81,7 +82,7 @@ function payload() {
   return p;
 }
 
-function search_files() {
+function search_files({ sortBy = null, sortingOrder = null } = {}) {
   data_loading.value = true;
   const p = payload();
   // console.log("payload", p);
@@ -89,6 +90,8 @@ function search_files() {
     .search_files({
       id: props.datasetId,
       ...p,
+      sortBy,
+      sortOrder: sortingOrder,
     })
     .then((res) => {
       searchResults.value = res.data;

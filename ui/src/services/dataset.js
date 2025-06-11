@@ -136,6 +136,8 @@ class DatasetService {
     filetype,
     minSize,
     maxSize,
+    sortBy = null,
+    sortOrder = null,
   }) {
     return api.get(`/datasets/${id}/files/search`, {
       params: {
@@ -147,6 +149,8 @@ class DatasetService {
         filetype,
         min_file_size: minSize,
         max_file_size: maxSize,
+        sort_by: sortBy,
+        sort_order: sortOrder,
       },
     });
   }
