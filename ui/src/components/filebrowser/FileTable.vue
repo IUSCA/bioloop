@@ -4,6 +4,7 @@
     :columns="columns"
     v-model:sort-by="sortBy"
     v-model:sorting-order="sortingOrder"
+    :disableClientSideSorting="store.isInSearchMode"
     :loading="data_loading"
     hoverable
     :row-bind="getRowBind"
@@ -104,6 +105,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["search"]);
+
 const columns = computed(() => {
   if (store.isInSearchMode) {
     return [
@@ -112,6 +115,7 @@ const columns = computed(() => {
         label: "name",
         tdStyle:
           "min-width: 300px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+        sortable: true,
       },
       { key: "download", label: "DL", width: "30px", tdAlign: "left" },
       {
@@ -122,7 +126,7 @@ const columns = computed(() => {
           "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
         tdAlign: "center",
       },
-      { key: "size", width: "100px" },
+      { key: "size", width: "100px", sortable: true },
       { key: "md5", width: "250px", label: "MD5 Checksum" },
     ];
   } else {
@@ -224,6 +228,16 @@ function nameSortingFn(a, b) {
     return 1;
   }
 }
+
+watch([sortBy, sortingOrder], ([newSortBy, newSortingOrder]) => {
+  if (!store.isInSearchMode) return;
+
+  const sortKey = newSortBy === "typeSortableName" ? "name" : newSortBy;
+  emit("search", {
+    sortBy: sortKey,
+    sortingOrder: newSortingOrder,
+  });
+});
 </script>
 
 <style scoped>

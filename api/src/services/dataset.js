@@ -469,6 +469,7 @@ async function search_files({
   dataset_id, name = '', base = '',
   skip, take,
   extension = null, filetype = null, min_file_size = null, max_file_size = null,
+  sort_order = null, sort_by = null,
 }) {
   // TODO: filter by extension, size, filetype, status
 
@@ -523,6 +524,16 @@ async function search_files({
     };
   }
 
+  let orderBy = {};
+  if (sort_order && sort_by) {
+    orderBy = {
+      [sort_by]: {
+        sort: sort_order,
+        nulls: 'last',
+      },
+    };
+  }
+
   return prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -533,6 +544,7 @@ async function search_files({
     },
     skip,
     take,
+    orderBy,
   });
 }
 
