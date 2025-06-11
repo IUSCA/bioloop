@@ -29,20 +29,16 @@ const activeFilters = computed(() => {
 
 function formatFilterLabel(key) {
   const labels = {
-    is_active: "Status",
-    start_time: "Start Time",
-    end_time: "End Time",
+    date_range: "Date Range",
     type: "Type",
   };
   return labels[key] || key.charAt(0).toUpperCase() + key.slice(1);
 }
 
 function formatFilterValue(filter) {
-  if (filter.key === "is_active") {
-    return filter.value ? "Active" : "Inactive";
-  }
-  if (["start_time", "end_time"].includes(filter.key)) {
-    return `${datetime.date(filter.value[0])} - ${datetime.date(filter.value[1])}`;
+  if (filter.key === "date_range") {
+    //   filter.value will be like `{ "start": "2025-06-11T04:00:00.000Z", "end": "2025-06-19T04:00:00.000Z" }`
+    return `${datetime.date(filter.value.start)} - ${datetime.date(filter.value.end)}`;
   }
   return filter.value;
 }

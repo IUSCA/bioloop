@@ -55,8 +55,12 @@
     hoverable
     :loading="loading"
   >
-    <template #cell(created_at)="{ value }">
-      <span>{{ datetime.date(value) }}</span>
+    <template #cell(start_time)="{ value }">
+      <span>{{ datetime.displayDateTime(value) }}</span>
+    </template>
+
+    <template #cell(end_time)="{ value }">
+      <span>{{ datetime.displayDateTime(value) }}</span>
     </template>
 
     <template #cell(type)="{ value }">
@@ -165,8 +169,9 @@ const columns = [
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
-    key: "created_by",
-    width: "15%",
+    key: "start_time",
+    label: "Start Time",
+    width: "7%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -175,8 +180,18 @@ const columns = [
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
-    key: "created_at",
-    label: "Created At",
+    key: "end_time",
+    label: "End Time",
+    width: "7%",
+    thAlign: "center",
+    tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
+  {
+    key: "created_by",
     width: "15%",
     thAlign: "center",
     tdAlign: "center",

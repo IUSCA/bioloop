@@ -45,7 +45,7 @@ export const useAlertStore = defineStore("alert", () => {
       type: null,
       start_time: null,
       end_time: null,
-      is_active: null,
+      // is_active: null,
     };
   }
 

@@ -25,16 +25,10 @@
 
         <!-- Start time filter -->
         <va-date-input
-          v-model="form.start_time"
-          placeholder="Filter by start time"
-          label="Start Time"
-        />
-
-        <!-- End time filter -->
-        <va-date-input
-          v-model="form.end_time"
-          placeholder="Filter by end time"
-          label="End Time"
+          v-model="form.date_range"
+          mode="range"
+          placeholder="Filter by Date range"
+          label="Date Range"
         />
 
         <!-- type filter -->
@@ -97,19 +91,42 @@ function hide() {
 }
 
 function show() {
-  form.value = { ...filters.value };
+  const currentFilters = { ...filters.value };
+  if (currentFilters.start_time && currentFilters.end_time) {
+    currentFilters.date_range = {
+      start: currentFilters.start_time,
+      end: currentFilters.end_time,
+    };
+    delete currentFilters.start_time;
+    delete currentFilters.end_time;
+  }
+  form.value = currentFilters;
+
   visible.value = true;
 }
 
 function handleSearch() {
-  filters.value = { ...form.value };
-  hide();
   console.log("AlertSearchModal handleSearch called");
+  console.log("form.value: ", form.value);
+  const newFilters = { ...form.value };
+  if (newFilters.date_range) {
+    newFilters.start_time = newFilters.date_range.start;
+    newFilters.end_time = newFilters.date_range.end;
+    delete newFilters.date_range;
+  }
+  filters.value = newFilters;
+  console.log("filters.value after reset: ", filters.value);
+
+  hide();
+  // console.log("AlertSearchModal handleSearch called");
   emit("search");
 }
 
 function handleReset() {
-  form.value = store.defaultFilters();
+  form.value = {
+    ...store.defaultFilters(),
+    date_range: null,
+  };
 }
 
 defineExpose({
