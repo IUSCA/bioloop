@@ -23,13 +23,21 @@
         >
         </va-select>
 
-        <!-- Start time filter -->
-        <va-date-input
-          v-model="form.date_range"
-          mode="range"
-          placeholder="Filter by Date range"
-          label="Date Range"
-        />
+        <div class="flex gap-3 md:gap-5">
+          <!-- Start time filter -->
+          <va-date-input
+            v-model="form.start_time"
+            placeholder="Start Date after"
+            label="Start Date"
+          />
+
+          <!-- End time filter -->
+          <va-date-input
+            v-model="form.end_time"
+            placeholder="End Date before"
+            label="End Date"
+          />
+        </div>
 
         <!-- type filter -->
         <va-select
@@ -92,14 +100,6 @@ function hide() {
 
 function show() {
   const currentFilters = { ...filters.value };
-  if (currentFilters.start_time && currentFilters.end_time) {
-    currentFilters.date_range = {
-      start: currentFilters.start_time,
-      end: currentFilters.end_time,
-    };
-    delete currentFilters.start_time;
-    delete currentFilters.end_time;
-  }
   form.value = currentFilters;
 
   visible.value = true;
@@ -109,11 +109,6 @@ function handleSearch() {
   console.log("AlertSearchModal handleSearch called");
   console.log("form.value: ", form.value);
   const newFilters = { ...form.value };
-  if (newFilters.date_range) {
-    newFilters.start_time = newFilters.date_range.start;
-    newFilters.end_time = newFilters.date_range.end;
-    delete newFilters.date_range;
-  }
   filters.value = newFilters;
   console.log("filters.value after reset: ", filters.value);
 
@@ -125,7 +120,7 @@ function handleSearch() {
 function handleReset() {
   form.value = {
     ...store.defaultFilters(),
-    date_range: null,
+    // date_range: null,
   };
 }
 

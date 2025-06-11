@@ -15,6 +15,8 @@ export const useAlertStore = defineStore("alert", () => {
   const filters = computed({
     get: () => params.value.filters,
     set: (newFilters) => {
+      console.log("filters changed, updating refObject");
+      console.log("new filters:", newFilters);
       params.value.filters = newFilters;
     },
   });

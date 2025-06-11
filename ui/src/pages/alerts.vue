@@ -28,7 +28,7 @@
       </span>
     </va-button>
 
-    <!-- active filter chips -->
+    <!-- active filters -->
     <AlertSearchFilters
       v-if="activeFilters.length > 0"
       class="flex-1"
@@ -60,7 +60,7 @@
     </template>
 
     <template #cell(end_time)="{ value }">
-      <span>{{ datetime.displayDateTime(value) }}</span>
+      <span>{{ value ? datetime.displayDateTime(value) : null }}</span>
     </template>
 
     <template #cell(type)="{ value }">
@@ -84,21 +84,21 @@
     </template>
 
     <template #cell(actions)="{ rowData }">
-      <div class="flex gap-1">
-        <va-button
-          class="flex-auto"
-          preset="plain"
-          icon="edit"
-          @click="showEditAlertModal(rowData)"
-        />
-        <!--        <va-button-->
-        <!--          class="flex-auto"-->
-        <!--          preset="plain"-->
-        <!--          icon="delete"-->
-        <!--          color="danger"-->
-        <!--          @click="showDeleteAlertModal(rowData)"-->
-        <!--        />-->
-      </div>
+      <!--      <div class="flex gap-1">-->
+      <va-button
+        class="flex-auto"
+        preset="plain"
+        icon="edit"
+        @click="showEditAlertModal(rowData)"
+      />
+      <!--        <va-button-->
+      <!--          class="flex-auto"-->
+      <!--          preset="plain"-->
+      <!--          icon="delete"-->
+      <!--          color="danger"-->
+      <!--          @click="showDeleteAlertModal(rowData)"-->
+      <!--        />-->
+      <!--      </div>-->
     </template>
   </va-data-table>
 
@@ -202,7 +202,7 @@ const columns = [
   },
   {
     key: "actions",
-    width: "5%",
+    width: "7%",
     sortable: false,
     thAlign: "right",
     tdAlign: "right",
@@ -276,7 +276,7 @@ const isAlertActive = (alert) => {
 };
 
 const handleSearch = useDebounceFn(() => {
-  params.value.page = 1;
+  params.value.query.page = 1;
   fetchAlerts();
 }, 500);
 
@@ -289,20 +289,27 @@ onMounted(fetchAlerts);
 
 watch(
   [
-    () => params.value.sortBy,
-    () => params.value.sortingOrder,
-    () => params.value.pageSize,
+    () => params.value.query.sortBy,
+    () => params.value.query.sortingOrder,
+    () => params.value.query.pageSize,
   ],
   () => {
-    if (params.value.page === 1) {
+    if (params.value.query.page === 1) {
       fetchAlerts();
     } else {
-      params.value.page = 1;
+      params.value.query.page = 1;
     }
   },
 );
 
-watch(() => params.value.page, fetchAlerts);
+watch(() => params.value.query.page, fetchAlerts);
+
+watch(
+  () => activeFilters.value,
+  () => {
+    console.log("filters changed");
+  },
+);
 </script>
 
 <style scoped></style>

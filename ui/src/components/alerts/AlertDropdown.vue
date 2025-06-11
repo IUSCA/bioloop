@@ -7,7 +7,7 @@
         overlap
       >
         <va-button class="alert-bell" plain>
-          <Icon icon="mdi-info-outline" height="36px" width="36px" />
+          <Icon icon="mdi-alert-outline" height="36px" width="36px" />
         </va-button>
       </va-badge>
     </template>
