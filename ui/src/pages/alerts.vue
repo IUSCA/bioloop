@@ -2,7 +2,7 @@
   <!-- search bar and filter -->
   <div class="flex mb-3 gap-3">
     <!-- search bar -->
-    <div class="flex-1">
+    <div class="flex-1" v-if="activeFilters.length === 0">
       <va-input
         v-model="searchQuery"
         class="w-full"
@@ -31,7 +31,7 @@
     <!-- active filter chips -->
     <AlertSearchFilters
       v-if="activeFilters.length > 0"
-      class="flex-none"
+      class="flex-1"
       @search="handleSearch"
     />
     <!--    @open="showSearchModal"-->
@@ -63,8 +63,8 @@
       <va-badge :text="value" :color="alertService.getAlertColor(value)" />
     </template>
 
-    <template #cell(active)="{ value }">
-      <span v-if="value" class="flex justify-center">
+    <template #cell(active)="{ rowData }">
+      <span v-if="isAlertActive(rowData)" class="flex justify-center">
         <i-mdi-check-circle-outline class="text-green-700" />
       </span>
     </template>
@@ -87,21 +87,21 @@
           icon="edit"
           @click="showEditAlertModal(rowData)"
         />
-        <va-button
-          class="flex-auto"
-          preset="plain"
-          icon="delete"
-          color="danger"
-          @click="showDeleteAlertModal(rowData)"
-        />
+        <!--        <va-button-->
+        <!--          class="flex-auto"-->
+        <!--          preset="plain"-->
+        <!--          icon="delete"-->
+        <!--          color="danger"-->
+        <!--          @click="showDeleteAlertModal(rowData)"-->
+        <!--        />-->
       </div>
     </template>
   </va-data-table>
 
   <Pagination
     class="mt-4 px-1 lg:px-3"
-    v-model:page="params.page"
-    v-model:page_size="params.pageSize"
+    v-model:page="params.query.page"
+    v-model:page_size="params.query.pageSize"
     :total_results="totalAlertsCount"
     :curr_items="alerts.length"
     :page_size_options="PAGE_SIZE_OPTIONS"
@@ -109,7 +109,15 @@
 
   <CreateOrEditAlertModal ref="createOrEditModal" @update="fetchAlerts" />
   <DeleteAlertModal ref="deleteModal" @update="fetchAlerts" />
-  <AlertSearchModal ref="searchModal" @search="handleSearch" />
+  <AlertSearchModal
+    ref="searchModal"
+    @search="
+      () => {
+        // console.log('searching...');
+        handleSearch();
+      }
+    "
+  />
 </template>
 
 <script setup>
@@ -127,6 +135,8 @@ const columns = [
     tdAlign: "left",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "message",
@@ -135,18 +145,24 @@ const columns = [
     tdAlign: "center",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "type",
     width: "10%",
     thAlign: "center",
     tdAlign: "center",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "active",
     width: "10%",
     thAlign: "center",
     tdAlign: "center",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "created_by",
@@ -155,6 +171,8 @@ const columns = [
     tdAlign: "center",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "created_at",
@@ -162,13 +180,19 @@ const columns = [
     width: "15%",
     thAlign: "center",
     tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "actions",
-    width: "6%",
+    width: "5%",
     sortable: false,
     thAlign: "right",
     tdAlign: "right",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
 ];
 
@@ -177,38 +201,22 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const alertStore = useAlertStore();
 const { filters, query, params, activeFilters } = storeToRefs(alertStore);
 
-const loading = ref(false);
-const alerts = ref([]);
-const totalAlertsCount = ref(0);
-const searchQuery = ref("");
-const selectedFilter = ref(null);
-
-const createOrEditModal = ref(null);
-const deleteModal = ref(null);
-const searchModal = ref(null);
-
-// const params = ref({
-//   page: 1,
-//   pageSize: 10,
-//   sortBy: "created_at",
-//   sortingOrder: "desc",
-// });
-
-const offset = computed(() => (params.value.page - 1) * params.value.pageSize);
-
-// const filter_query = computed(() => ({
-//   offset: offset.value,
-//   limit: params.value.pageSize,
-//   sortBy: params.value.sortBy,
-//   sortingOrder: params.value.sortingOrder,
-//   label: searchQuery.value,
-// }));
-
 const filter_query = computed(() => ({
   ...query.value,
   ...filters.value,
   label: searchQuery.value,
 }));
+
+const loading = ref(false);
+
+const alerts = ref([]);
+const totalAlertsCount = ref(0);
+
+const searchQuery = ref("");
+
+const createOrEditModal = ref(null);
+const deleteModal = ref(null);
+const searchModal = ref(null);
 
 const fetchAlerts = async () => {
   loading.value = true;
@@ -232,9 +240,9 @@ const showEditAlertModal = (alert) => {
   createOrEditModal.value.showModal(alert);
 };
 
-const showDeleteAlertModal = (alert) => {
-  deleteModal.value.showModal(alert);
-};
+// const showDeleteAlertModal = (alert) => {
+//   deleteModal.value.showModal(alert);
+// };
 
 const showSearchModal = () => {
   searchModal.value.show();
@@ -242,6 +250,14 @@ const showSearchModal = () => {
 
 const trimAlertMessage = (message) => {
   return message.length > 80 ? `${message.substring(0, 100)}...` : message;
+};
+
+const isAlertActive = (alert) => {
+  const now = new Date();
+  return (
+    new Date(alert.start_time) <= now &&
+    (!alert.end_time || new Date(alert.end_time) > now)
+  );
 };
 
 const handleSearch = useDebounceFn(() => {

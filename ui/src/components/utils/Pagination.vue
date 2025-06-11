@@ -75,6 +75,7 @@ const emit = defineEmits(["update:page", "update:page_size"]);
 
 const page = computed({
   get() {
+    console.log("page:", props.page);
     return props.page;
   },
   set(value) {
@@ -84,6 +85,7 @@ const page = computed({
 
 const page_size = computed({
   get() {
+    console.log("page_size:", props.page_size);
     return props.page_size;
   },
   set(value) {
@@ -96,6 +98,8 @@ const total_page_count = computed(() => {
 });
 
 const skip = computed(() => {
+  console.log("Pagination");
+  console.log("skip:", page_size.value, page.value);
   return page_size.value * (page.value - 1);
 });
 

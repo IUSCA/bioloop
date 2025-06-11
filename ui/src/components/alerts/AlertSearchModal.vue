@@ -21,10 +21,21 @@
           label="Status"
           placeholder="Choose a status"
         >
-          <template #prependInner>
-            <Icon icon="mdi:check-circle-outline" class="text-xl" />
-          </template>
         </va-select>
+
+        <!-- Start time filter -->
+        <va-date-input
+          v-model="form.start_time"
+          placeholder="Filter by start time"
+          label="Start Time"
+        />
+
+        <!-- End time filter -->
+        <va-date-input
+          v-model="form.end_time"
+          placeholder="Filter by end time"
+          label="End Time"
+        />
 
         <!-- type filter -->
         <va-select
@@ -40,9 +51,6 @@
           label="Type"
           placeholder="Choose a type"
         >
-          <template #prependInner>
-            <Icon icon="mdi:alert-circle-outline" class="text-xl" />
-          </template>
         </va-select>
       </va-form>
     </div>
@@ -81,7 +89,8 @@ const store = useAlertStore();
 const { filters } = storeToRefs(store);
 
 const visible = ref(false);
-const form = ref({});
+
+const form = ref(store.defaultFilters());
 
 function hide() {
   visible.value = false;
@@ -95,6 +104,7 @@ function show() {
 function handleSearch() {
   filters.value = { ...form.value };
   hide();
+  console.log("AlertSearchModal handleSearch called");
   emit("search");
 }
 

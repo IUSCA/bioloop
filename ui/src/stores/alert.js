@@ -4,33 +4,11 @@ import alertService from "@/services/alert";
 import { mapValues } from "@/services/utils";
 
 export const useAlertStore = defineStore("alert", () => {
+  // Any active alerts that have been created in the system
   const alerts = ref([]);
+
+  // Alerts which are not currently shown in the portal, since they have been dismissed by the current user
   const dismissedAlerts = useLocalStorage("dismissedAlerts", {});
-
-  function defaultFilters() {
-    return {
-      active: null,
-      type: null,
-      created_at: null,
-    };
-  }
-
-  function defaultQuery() {
-    return {
-      page: 1,
-      pageSize: 10,
-      sortBy: "created_at",
-      sortingOrder: "desc",
-    };
-  }
-
-  function defaultParams() {
-    return {
-      filters: defaultFilters(),
-      query: defaultQuery(),
-      inclusive_query: null,
-    };
-  }
 
   const params = ref(defaultParams());
 
@@ -48,19 +26,6 @@ export const useAlertStore = defineStore("alert", () => {
     },
   });
 
-  function resetFilters() {
-    params.value.filters = defaultFilters();
-  }
-
-  function resetQuery() {
-    params.value.query = defaultQuery();
-  }
-
-  function resetFilterByKey(key) {
-    const defaults = defaultFilters();
-    params.value.filters[key] = defaults[key];
-  }
-
   const filterStatus = computed(() => {
     const defaults = defaultFilters();
     return mapValues(
@@ -74,6 +39,45 @@ export const useAlertStore = defineStore("alert", () => {
       (key) => filterStatus.value[key],
     );
   });
+
+  function defaultFilters() {
+    return {
+      type: null,
+      start_time: null,
+      end_time: null,
+      is_active: null,
+    };
+  }
+
+  function defaultQuery() {
+    return {
+      page: 1,
+      pageSize: 10,
+      sortBy: "created_at",
+      sortingOrder: "desc",
+    };
+  }
+
+  function defaultParams() {
+    return {
+      filters: defaultFilters(),
+      query: defaultQuery(),
+      // inclusive_query: null,
+    };
+  }
+
+  function resetFilters() {
+    params.value.filters = defaultFilters();
+  }
+
+  function resetQuery() {
+    params.value.query = defaultQuery();
+  }
+
+  function resetFilterByKey(key) {
+    const defaults = defaultFilters();
+    params.value.filters[key] = defaults[key];
+  }
 
   function reset() {
     resetFilters();

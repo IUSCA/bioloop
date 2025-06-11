@@ -70,7 +70,7 @@ const toggleSidebarVisibility = () => {
 };
 
 // Fetch alerts when the component is mounted
-onMounted(() => {
-  alertStore.fetchAlerts();
-});
+// onMounted(() => {
+//   alertStore.fetchAlerts();
+// });
 </script>
