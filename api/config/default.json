@@ -153,6 +153,9 @@
     "RAW_DATA",
     "DATA_PRODUCT"
   ],
+  "system_user": {
+    "username": "svc_tasks"
+  },
   "e2e": {
     "users": {
       "admin": {

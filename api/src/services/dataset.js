@@ -629,7 +629,7 @@ async function create(tx, data) {
     return await tx.dataset.create({
       data,
     });
-  } catch(e) {
+  } catch (e) {
     console.error('Error creating dataset:', e);
     throw e;
   }
