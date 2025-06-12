@@ -629,7 +629,7 @@ const getDatasetCreateQuery = (data) => {
     create_query.projects = {
       create: [{
         project_id,
-        assignor_id: user_id,
+        assignor_id: user_id ?? Prisma.skip,
       }],
     };
   }
@@ -664,7 +664,7 @@ const getDatasetCreateQuery = (data) => {
       {
         action: 'create',
         create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
-        user_id,
+        user_id: user_id ?? Prisma.skip,
       },
     ],
   };
@@ -745,7 +745,7 @@ router.post(
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    const dataset = await datasetService.createDataset(createQuery);
+    const dataset = await datasetService.create(prisma, createQuery);
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -847,8 +847,7 @@ router.post(
     const data = req.body.datasets
       .map((d) => getDatasetCreateQuery(d));
 
-    // create in separate transactions to avoid deadlocks
-    const results = await Promise.allSettled(data.map((d) => datasetService.createDataset(d)));
+    const results = await Promise.allSettled(data.map((d) => datasetService.create(prisma, d)));
 
     // separate results into created and failed
     const created = [];
@@ -1443,7 +1442,7 @@ router.post(
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
+      const createdDataset = await datasetService.create(tx, datasetCreateQuery);
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {
