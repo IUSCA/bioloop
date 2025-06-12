@@ -122,7 +122,8 @@
     "workers/pyproject.toml",
     "metrics/grafana/config/provisioning/dashboards/",
     "docs/public",
-    "/todo*.md"
+    "/todo*.md",
+    ".vscode"
   ],
   "ignoreRegExpList": [
     "mdi-.*"
