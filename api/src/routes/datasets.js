@@ -862,7 +862,7 @@ router.post(
         // P2002 - Unique constraint failed
         conflicted.push(_.pick(['name', 'type'])(data[index]));
       } else {
-        logger.warn('Error creating dataset', JSON.stringify({ dataset: data[index], error: result.reason }));
+        logger.warn(`Error creating dataset: ${JSON.stringify({ dataset: data[index], error: result.reason })}`);
         errored.push(_.pick(['name', 'type'])(data[index]));
       }
     });
