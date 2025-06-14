@@ -49,8 +49,8 @@
   <va-data-table
     :items="alerts"
     :columns="columns"
-    v-model:sort-by="params.sortBy"
-    v-model:sorting-order="params.sortingOrder"
+    v-model:sort-by="params.query.sort_by"
+    v-model:sorting-order="params.query.sort_order"
     disable-client-side-sorting
     hoverable
     :loading="loading"
@@ -255,10 +255,6 @@ const showEditAlertModal = (alert) => {
   createOrEditModal.value.showModal(alert);
 };
 
-// const showDeleteAlertModal = (alert) => {
-//   deleteModal.value.showModal(alert);
-// };
-
 const showSearchModal = () => {
   searchModal.value.show();
 };
@@ -285,12 +281,10 @@ const handleSearch = useDebounceFn(() => {
 //   fetchAlerts();
 // };
 
-onMounted(fetchAlerts);
-
 watch(
   [
-    () => params.value.query.sortBy,
-    () => params.value.query.sortingOrder,
+    () => params.value.query.sort_by,
+    () => params.value.query.sort_order,
     () => params.value.query.pageSize,
   ],
   () => {
@@ -310,6 +304,8 @@ watch(
     console.log("filters changed");
   },
 );
+
+onMounted(fetchAlerts);
 </script>
 
 <style scoped></style>

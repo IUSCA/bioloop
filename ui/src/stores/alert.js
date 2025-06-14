@@ -10,7 +10,12 @@ export const useAlertStore = defineStore("alert", () => {
   // Alerts which are not currently shown in the portal, since they have been dismissed by the current user
   const dismissedAlerts = useLocalStorage("dismissedAlerts", {});
 
+  // Parameters related to the current search and sorting
   const params = ref(defaultParams());
+
+  // Polling related state
+  const pollingInterval = ref(null);
+  const pollingFrequency = ref(5000); // 1 minute by default
 
   const filters = computed({
     get: () => params.value.filters,
@@ -55,8 +60,8 @@ export const useAlertStore = defineStore("alert", () => {
     return {
       page: 1,
       pageSize: 10,
-      sortBy: "created_at",
-      sortingOrder: "desc",
+      sort_by: "created_at",
+      sort_order: "desc",
     };
   }
 
@@ -87,14 +92,50 @@ export const useAlertStore = defineStore("alert", () => {
   }
 
   async function fetchAlerts() {
+    // const currentTime = new Date().toISOString();
     try {
-      const response = await alertService.getAll();
+      const response = await alertService.getAll({
+        active: true,
+      });
       alerts.value = response.data.alerts;
       // alerts.value = []
     } catch (error) {
       console.error("Failed to fetch alerts:", error);
     }
   }
+
+  async function startPolling() {
+    if (!pollingInterval.value) {
+      try {
+        await fetchAlerts();
+      } catch (error) {
+        console.error("Initial fetch failed:", error);
+      }
+
+      pollingInterval.value = setInterval(async () => {
+        try {
+          await fetchAlerts();
+        } catch (error) {
+          console.error("Polling fetch failed:", error);
+        }
+      }, pollingFrequency.value);
+    }
+  }
+
+  function stopPolling() {
+    if (pollingInterval.value) {
+      clearInterval(pollingInterval.value);
+      pollingInterval.value = null;
+    }
+  }
+
+  // async function setPollingFrequency(frequency) {
+  //   pollingFrequency.value = frequency;
+  //   if (pollingInterval.value) {
+  //     stopPolling();
+  //     await startPolling();
+  //   }
+  // }
 
   function dismissAlert(alertId) {
     dismissedAlerts.value[alertId] = true;
@@ -126,5 +167,8 @@ export const useAlertStore = defineStore("alert", () => {
     dismissAlert,
     getNonDismissedAlerts,
     isAlertDismissed,
+    startPolling,
+    stopPolling,
+    // setPollingFrequency,
   };
 });

@@ -6,34 +6,45 @@ class AlertService {
    * @param type       Field to filter alerts by `type`. One of 'INFO', 'WARNING' or 'ERROR'
    * @param label       Field to filter alerts by `name`
    * @param message     Field to filter alerts by `message`
+   * @param active      If true, only active alerts (i.e. alerts with start_time in the past and end_time in the future) will be returned
    * @param start_time ISO 8601 string representing the start time to filter alerts starting after this time
+   * @param start_time_operator Operator to use for comparing alert's `start_time` (lt, lte, gt, gte) with the `start_time` provided
    * @param end_time   ISO 8601 string representing the end time to filter alerts ending before this time
-   * @param limit      The number of datasets to be retrieved
+   * @param end_time_operator Operator to use for comparing alert's `end_time` (lt, lte, gt, gte) with the `end_time` provided
+   * @param limit      The number of alerts to be retrieved
    * @param offset     Database offset starting at which results will be retrieved
-   * @param sortBy     Object containing property to sort datasets by, whose key is the name
-   *                   of said property, and value is one of 'asc' or 'desc'
+   * @param sort_by     Property to sort alerts by
+   * @param sort_order  Sort order ('asc' or 'desc')
    * @returns {Promise<Object>} A promise that resolves to an object containing alerts and metadata
    */
   getAll({
     label = "",
     message = "",
     type = null,
+    active = false,
     start_time = null,
+    start_time_operator = null,
     end_time = null,
+    end_time_operator = null,
     limit = 10,
     offset = 0,
-    sortBy = null,
+    sort_by = null,
+    sort_order = null,
   } = {}) {
     return api.get(`/alerts`, {
       params: {
         label,
         message,
         type,
+        active,
         start_time,
+        start_time_operator,
         end_time,
+        end_time_operator,
         limit,
         offset,
-        sortBy,
+        sort_by,
+        sort_order,
       },
     });
   }

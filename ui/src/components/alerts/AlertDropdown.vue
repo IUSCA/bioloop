@@ -39,9 +39,9 @@ const alertStore = useAlertStore();
 
 const activeAlerts = computed(() => alertStore.alerts);
 
-onMounted(() => {
-  alertStore.fetchAlerts();
-});
+// onMounted(() => {
+//   alertStore.fetchAlerts();
+// });
 </script>
 
 <style scoped>

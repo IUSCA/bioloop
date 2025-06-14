@@ -26,25 +26,63 @@ router.get(
     query('message').optional().isString(),
     query('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
     query('start_time').optional().isISO8601(),
+    query('start_time_operator').optional().isIn(['lt', 'lte', 'gt', 'gte']),
     query('end_time').optional().isISO8601(),
+    query('end_time_operator').optional().isIn(['lt', 'lte', 'gt', 'gte']),
+    query('active').optional().isBoolean().toBoolean(),
     query('limit').optional().isInt(),
     query('offset').optional().isInt({ min: 0 }),
-    query('sortBy').optional().isString(),
+    query('sort_by').optional().isString(),
+    query('sort_order').optional().default('desc').isIn(['asc', 'desc']),
+
   ]),
   asyncHandler(async (req, res) => {
     const {
-      label, message, type, start_time, end_time, limit, offset,
+      label, message, type, start_time, start_time_operator, end_time, end_time_operator,
+      active, limit, offset,
     } = req.query;
 
-    const sortBy = req.query.sortBy || 'created_at';
+    console.log('active:', active);
 
-    const where = {
+    console.log('start_time:', start_time);
+    console.log('end_time:', end_time);
+
+    const sort_by = req.query.sort_by || 'created_at';
+    const sort_order = req.query.sort_order || 'desc';
+
+    let where = {
       ...(label && { label: { contains: label, mode: 'insensitive' } }),
       ...(message && { message: { contains: message, mode: 'insensitive' } }),
       ...(type && { type }),
-      ...(start_time && { start_time: { gte: new Date(start_time) } }),
-      ...(end_time && { end_time: { lte: new Date(end_time) } }),
     };
+
+    let time_range_filters = {};
+    const currentTime = new Date();
+    console.log('currentTime:', currentTime);
+
+    if (active === true) {
+      time_range_filters = {
+        start_time: { lte: currentTime },
+        OR: [
+          { end_time: { gte: currentTime } },
+          { end_time: null },
+        ],
+      };
+    } else {
+      if (start_time) {
+        const operator = start_time_operator || 'gte';
+        time_range_filters.start_time = { [operator]: new Date(start_time) };
+      }
+      if (end_time) {
+        const operator = end_time_operator || 'lte';
+        time_range_filters.end_time = { [operator]: new Date(end_time) };
+      }
+    }
+
+    console.log('time_range_filters:');
+    console.dir(time_range_filters, { depth: null });
+
+    where = { ...where, ...time_range_filters };
 
     try {
       const [alerts, count] = await Promise.all([
@@ -61,10 +99,16 @@ router.get(
           },
           take: parseInt(limit) || 10,
           skip: parseInt(offset) || 0,
-          ...(sortBy && { orderBy: { [sortBy]: 'asc' } }),
+          ...(sort_by && { orderBy: { [sort_by]: sort_order } }),
         }),
         prisma.alert.count({ where }),
       ]);
+
+      alerts.forEach((alert) => {
+        console.log('id:', alert.id, 'label:', alert.label);
+        console.log('start_time:', alert.start_time);
+        console.log('end_time:', alert.end_time);
+      });
 
       res.json({
         alerts,
@@ -87,8 +131,8 @@ router.post(
     body('message').optional().isString().trim()
       .escape(),
     body('type').isIn(Object.values(CONSTANTS.ALERT_TYPES)),
-    body('start_time').optional().isISO8601(),
-    body('end_time').optional().isISO8601(),
+    body('start_time').isISO8601(),
+    body('end_time').optional({ nullable: true }).isISO8601(),
   ]),
   asyncHandler(async (req, res) => {
     const {
@@ -129,8 +173,8 @@ router.patch(
     body('message').optional().isString().trim()
       .escape(),
     body('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
-    body('start_time').optional().isISO8601(),
-    body('end_time').optional().isISO8601(),
+    body('start_time').optional({ nullable: true }).isISO8601(),
+    body('end_time').optional({ nullable: true }).isISO8601(),
   ]),
   asyncHandler(async (req, res) => {
     const { id } = req.params;

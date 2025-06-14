@@ -69,8 +69,11 @@ const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-// Fetch alerts when the component is mounted
-// onMounted(() => {
-//   alertStore.fetchAlerts();
-// });
+onMounted(() => {
+  alertStore.startPolling();
+});
+
+onUnmounted(() => {
+  alertStore.stopPolling();
+});
 </script>
