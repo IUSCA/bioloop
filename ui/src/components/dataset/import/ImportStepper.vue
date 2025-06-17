@@ -4,7 +4,7 @@
     v-model="step"
     :steps="steps"
     controlsHidden
-    class="h-full ingestion-stepper"
+    class="h-full import-stepper"
   >
     <!-- Step icons and labels -->
     <template
@@ -95,7 +95,7 @@
             <va-checkbox
               v-model="isAssignedSourceRawData"
               @update:modelValue="resetRawDataSearch"
-              :disabled="willIngestRawData"
+              :disabled="willImportRawData"
               color="primary"
               label="Assign source Raw Data"
               class="flex-grow"
@@ -223,18 +223,18 @@
     </template>
 
     <template #step-content-2>
-      <IngestionInfo
+      <ImportInfo
         v-model:populated-dataset-name="populatedDatasetName"
         :dataset="dataset"
-        :ingestion-dir="selectedFile"
+        :import-dir="selectedFile"
         :dataset-type="selectedDatasetType?.value"
         :project="projectSelected"
         :source-raw-data="selectedRawData"
         :source-instrument="selectedSourceInstrument"
-        :ingestion-space="searchSpace.label"
-        :created-dataset-error="formErrors[STEP_KEYS.INGEST]"
+        :import-space="searchSpace.label"
+        :created-dataset-error="formErrors[STEP_KEYS.IMPORT]"
         :show-created-dataset-error="
-          !!formErrors[STEP_KEYS.INGEST] && !stepIsPristine
+          !!formErrors[STEP_KEYS.IMPORT] && !stepIsPristine
         "
       />
     </template>
@@ -261,8 +261,7 @@
           :color="isLastStep ? 'success' : 'primary'"
           :disabled="isNextButtonDisabled"
         >
-          <!--          {{ isLastStep ? (submitAttempted ? "Retry" : "Ingest") : "Next" }}-->
-          {{ isLastStep ? "Ingest" : "Next" }}
+          {{ isLastStep ? "Import" : "Next" }}
         </va-button>
       </div>
     </template>
@@ -286,7 +285,7 @@ import { VaPopover } from "vuestic-ui";
 const STEP_KEYS = {
   SELECT_DIRECTORY: "selectDirectory",
   GENERAL_INFO: "generalInfo",
-  INGEST: "info",
+  IMPORT: "info",
 };
 
 const UNKNOWN_VALIDATION_ERROR = "An unknown error occurred";
@@ -294,9 +293,9 @@ const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
 const DATASET_NAME_MIN_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
-const NO_FILE_SELECTED_ERROR = "A file must be selected for ingestion";
-const INGESTION_NOT_ALLOWED_ERROR =
-  "Selected file cannot be ingested as a dataset";
+const NO_FILE_SELECTED_ERROR = "A file must be selected for import";
+const IMPORT_NOT_ALLOWED_ERROR =
+  "Selected file cannot be imported as a dataset";
 
 const FILESYSTEM_SEARCH_SPACES = (config.filesystem_search_spaces || []).map(
   (space) => space[Object.keys(space)[0]],
@@ -314,8 +313,8 @@ const steps = [
     icon: "material-symbols:info",
   },
   {
-    key: STEP_KEYS.INGEST,
-    label: "Ingest",
+    key: STEP_KEYS.IMPORT,
+    label: "Import",
     icon: "material-symbols:play-circle",
   },
 ];
@@ -333,9 +332,9 @@ const datasetTypes = [
 
 const populatedDatasetName = ref("");
 const datasetTypeOptions = ref(datasetTypes);
-// `willIngestRawData` determines whether the user will ingest a Raw Data or a
-// Data Product. By default, the user will ingest a Data Product.
-const willIngestRawData = ref(false);
+// `willImportRawData` determines whether the user will import a Raw Data or a
+// Data Product. By default, the user will import a Data Product.
+const willImportRawData = ref(false);
 const isAssignedProject = ref(true);
 const isAssignedSourceRawData = ref(true);
 const submissionSuccess = ref(false);
@@ -351,7 +350,6 @@ const isAssignedSourceInstrument = ref(true);
 const selectedRawData = ref(null);
 const datasetSearchText = ref("");
 const projectSearchText = ref("");
-const willImportRawData = ref(false);
 const selectedSourceInstrument = ref(null);
 const sourceInstrumentOptions = ref([]);
 const searchSpace = ref(
@@ -371,14 +369,14 @@ const selectedDatasetType = ref(
 const stepPristineStates = ref([
   { [STEP_KEYS.SELECT_DIRECTORY]: true },
   { [STEP_KEYS.GENERAL_INFO]: true },
-  { [STEP_KEYS.INGEST]: true },
+  { [STEP_KEYS.IMPORT]: true },
 ]);
 const isFileSearchAutocompleteOpen = ref(false);
 const selectedFile = ref(null);
 const formErrors = ref({
   [STEP_KEYS.SELECT_DIRECTORY]: null,
   [STEP_KEYS.GENERAL_INFO]: null,
-  [STEP_KEYS.INGEST]: null,
+  [STEP_KEYS.IMPORT]: null,
 });
 
 const loading = computed(() => {
@@ -417,7 +415,7 @@ const stepHasErrors = computed(() => {
   } else if (step.value === 1) {
     return !!formErrors.value[STEP_KEYS.GENERAL_INFO];
   } else if (step.value === 2) {
-    return !!formErrors.value[STEP_KEYS.INGEST];
+    return !!formErrors.value[STEP_KEYS.IMPORT];
   }
 });
 
@@ -495,7 +493,7 @@ const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.SELECT_DIRECTORY]: null,
     [STEP_KEYS.GENERAL_INFO]: null,
-    [STEP_KEYS.INGEST]: null,
+    [STEP_KEYS.IMPORT]: null,
   };
 };
 
@@ -507,8 +505,8 @@ const setFormErrors = async () => {
       formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = NO_FILE_SELECTED_ERROR;
       return;
     }
-    // check if the selected file is allowed to be ingested as a dataset
-    const restricted_dataset_paths = getRestrictedIngestionPaths();
+    // check if the selected file is allowed to be imported as a dataset
+    const restricted_dataset_paths = getRestrictedImportPaths();
     const origin_path_is_restricted = selectedFile.value
       ? restricted_dataset_paths.some((pattern) => {
           const _path = selectedFile.value.path;
@@ -518,8 +516,7 @@ const setFormErrors = async () => {
         })
       : false;
     if (origin_path_is_restricted) {
-      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] =
-        INGESTION_NOT_ALLOWED_ERROR;
+      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = IMPORT_NOT_ALLOWED_ERROR;
       return;
     } else {
       formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = null;
@@ -540,9 +537,9 @@ const setFormErrors = async () => {
     const { isNameValid: datasetNameIsValid, error } =
       await validateDatasetName();
     if (datasetNameIsValid) {
-      formErrors.value[STEP_KEYS.INGEST] = null;
+      formErrors.value[STEP_KEYS.IMPORT] = null;
     } else {
-      formErrors.value[STEP_KEYS.INGEST] = error;
+      formErrors.value[STEP_KEYS.IMPORT] = error;
     }
   }
 };
@@ -641,13 +638,13 @@ const setRetrievedFiles = (files) => {
   fileList.value = files;
 };
 
-const preIngestion = () => {
+const preImport = () => {
   if (!dataset.value) {
     return datasetService.create_dataset({
       name: populatedDatasetName.value,
       type: config.dataset.types.DATA_PRODUCT.key,
       origin_path: selectedFile.value.path,
-      ingestion_space: searchSpace.value.key,
+      import_space: searchSpace.value.key,
       project_id: projectSelected.value?.id,
       src_instrument_id: selectedSourceInstrument.value?.id,
       src_dataset_id: selectedRawData.value?.id,
@@ -658,18 +655,18 @@ const preIngestion = () => {
   }
 };
 
-const initiateIngestion = async () => {
+const initiateImport = async () => {
   return datasetService
     .initiate_workflow_on_dataset({
       dataset_id: dataset.value.id,
       workflow: "integrated",
     })
     .then(() => {
-      toast.success("Initiated dataset ingestion");
+      toast.success("Initiated dataset import");
       submissionSuccess.value = true;
     })
     .catch((err) => {
-      toast.error("Failed to initiate ingestion");
+      toast.error("Failed to initiate import");
       console.error(err);
       submissionSuccess.value = false;
     });
@@ -684,7 +681,7 @@ const onSubmit = async () => {
   submitAttempted.value = true;
 
   return new Promise((resolve, reject) => {
-    preIngestion()
+    preImport()
       .then(async (res) => {
         dataset.value = res.data;
         return Promise.resolve();
@@ -701,20 +698,18 @@ const onSubmit = async () => {
         return Promise.reject(err);
       })
       .then(() => {
-        return initiateIngestion();
+        return initiateImport();
       })
       .catch((err) => {
-        toast.error("Failed to initiate ingestion");
+        toast.error("Failed to initiate import");
         // console.error(err);
         reject(err);
       });
   });
 };
 
-const getRestrictedIngestionPaths = () => {
-  return config.restricted_ingestion_dirs[searchSpace.value.key].paths.split(
-    ",",
-  );
+const getRestrictedImportPaths = () => {
+  return config.restricted_import_dirs[searchSpace.value.key].paths.split(",");
 };
 
 const onNextClick = (nextStep) => {
@@ -745,7 +740,7 @@ watch(
   async (newVals, oldVals) => {
     // mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
-    if (stepKey === STEP_KEYS.INGEST) {
+    if (stepKey === STEP_KEYS.IMPORT) {
       // `1` corresponds to `populatedDatasetName`
       stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1];
     } else {
@@ -760,7 +755,7 @@ watch(
 // fields as not pristine upon step changes
 watch(step, async () => {
   if (step.value !== 2) {
-    // step 3 is the `Ingest` step
+    // step 3 is the `Import` step
     await setFormErrors();
   }
 });
@@ -818,7 +813,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss">
-.ingestion-stepper {
+.import-stepper {
   .step-button {
     color: var(--va-secondary);
   }
