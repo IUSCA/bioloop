@@ -15,7 +15,11 @@ class Registration:
         self.dataset_type = dataset_type
         self.wf_body = wf_utils.get_wf_body(wf_name='integrated')
 
-    def register_candidate(self, dataset_name, dataset_path):
+    def register_candidate(self,
+                           dataset_name,
+                           dataset_path,
+                           project_id=None,
+                           description=None):
         print(f'registering {self.dataset_type} {dataset_name}')
         print(f'Dataset path: {dataset_path}')
 
@@ -25,6 +29,8 @@ class Registration:
             'type': self.dataset_type,
             'workflow_id': wf.workflow['_id'],
             'origin_path': dataset_path,
+            **({project_id: project_id} if project_id else {}),
+            **({description: description} if description else {})
         }
 
         # HTTP POST

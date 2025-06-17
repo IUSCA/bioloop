@@ -11,7 +11,6 @@ import traceback
 from workers.scripts.register_ondemand import Registration
 import workers.api as api
 
-
 # 60 seconds
 CHECK_INTERVAL = 60
 
@@ -89,7 +88,7 @@ def is_data_product_registered(new_name: str) -> bool:
         matching_data_products: List[Dict] = api.get_all_datasets(dataset_type='DATA_PRODUCT',
                                                                   name=new_name)
         print(f"matching data products length: {len(matching_data_products)}")
-        
+
         if len(matching_data_products) == 0:
             print(f"Dataset {new_name} not found")
             return False
@@ -98,9 +97,9 @@ def is_data_product_registered(new_name: str) -> bool:
 
         if matching_data_product['archive_path'] is not None:
             # Data Product is considered fully-registered if it has an `archive_path`
-            print(f"Found registered data product: {new_name}, with archive_path {matching_data_product['archive_path']}")
+            print(
+                f"Found registered data product: {new_name}, with archive_path {matching_data_product['archive_path']}")
             return True
-
 
         if matching_data_product:
             # Data Product is considered partially-registered if it has no `archive_path` yet.
@@ -111,25 +110,34 @@ def is_data_product_registered(new_name: str) -> bool:
         time.sleep(CHECK_INTERVAL)
 
 
-def register_data_product(new_name: str, new_path: Path) -> None:
+def register_data_product(new_name: str,
+                          new_path: Path,
+                          project_id: str = None,
+                          description: str = None) -> None:
     dataset_type = 'DATA_PRODUCT'
 
     print(f'Dataset type: {dataset_type}')
     print(f'Dataset name: {new_name}')
     print(f'Dataset path: {str(new_path)}')
+    if project_id:
+        print(f'Project ID: {project_id}')
+    if description:
+        print(f'Description: {description}')
 
     if not new_path.exists():
         print(f'{new_path} does not exist')
         return
 
     reg = Registration(dataset_type)
-    reg.register_candidate(new_name, str(new_path))
+    reg.register_candidate(new_name, str(new_path), project_id, description)
     print(f"Registered: {new_name}")
 
 
 def process_and_register_subdirectories(dir_path: str,
                                         project_name: str,
-                                        dry_run: bool = True) -> None:
+                                        dry_run: bool = True,
+                                        project_id: str = None,
+                                        description: str = None) -> None:
     dir_path = Path(dir_path)
     dir_name: str = dir_path.name
     print(f"Processing subdirectories in {dir_path.name}")
@@ -175,7 +183,7 @@ def process_and_register_subdirectories(dir_path: str,
                 print(f"{new_path} does not exist. This subdirectory is currently not registered: {new_name}")
                 try:
                     print(f"Registering: {new_name}")
-                    register_data_product(new_name, new_path)
+                    register_data_product(new_name, new_path, project_id, description)
                 except Exception as e:
                     print(f"Error occurred during registration of {new_name}: {e}")
                     traceback.print_exc()
@@ -210,7 +218,9 @@ What it does:
 1. Processes all subdirectories within the specified DIR_PATH.
 2. Renames directories to the format: {PROJECT_NAME}-{DIR_NAME}-{SUBDIRECTORY_NAME}.
 3. Copies renamed directories to a new 'renamed_directories' folder.
-4. Registers each new directory as a data product via the register_ondemand script.
+4. Registers each new directory as a Data Product via the register_ondemand script.
+5. Assigns a description to each registered dataset.
+6. Assigns a Project ID to each registered dataset.
 
 Usage:
 python -m workers.scripts.rename_and_register_ondemand [OPTIONS] DIR_PATH PROJECT_NAME
@@ -222,13 +232,15 @@ PROJECT_NAME: The name of the project to use in the new directory names.
 Options:
 --dry-run: If set to True (default), the script simulates the process without making
            any actual changes. Set to False to perform actual renaming and registration.
+--project-id: The ID of the project to associate with the registered datasets.
+--description: A description to add to each registered dataset.
 
 Example usage:
 1. Dry run (simulate without changes):
-   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz --description="Sample dataset description"
 
 2. Actually process and register:
-   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz --dry-run=False
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory project_xyz --dry-run=False --project-id=abc123
 """
 if __name__ == "__main__":
     fire.Fire(process_and_register_subdirectories)
