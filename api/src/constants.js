@@ -130,6 +130,12 @@ const auth = {
   },
 };
 
+const ALERT_TYPES = {
+  INFO: 'INFO',
+  WARNING: 'WARNING',
+  ERROR: 'ERROR',
+};
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
@@ -141,4 +147,5 @@ module.exports = {
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,
   WORKFLOWS,
+  ALERT_TYPES,
 };
