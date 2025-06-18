@@ -57,22 +57,28 @@ const emit = defineEmits([
 const now = new Date();
 
 function getDefaultStartTime() {
-  return new Date(now.getTime() + 10 * 60000); // 10 minutes from now
+  const time = new Date(now.getTime() + 10 * 60000); // 10 minutes from now
+  time.setSeconds(0, 0);
+  return time;
 }
 
 function getDefaultEndTime() {
-  return new Date(now.getTime() + 70 * 60000); // 70 minutes from now
+  const time = new Date(now.getTime() + 70 * 60000); // 70 minutes from now
+  time.setSeconds(0, 0);
+  return time;
 }
 
 const updateDateTime = (currentValue, newDate, newTime) => {
   const updatedDateTime = new Date(newDate);
-  updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes());
+  updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
+  console.log("Updated DateTime:", updatedDateTime);
   return updatedDateTime;
 };
 
 const updateTime = (currentValue, newTime) => {
   const updatedDateTime = new Date(currentValue);
-  updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes());
+  updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
+  console.log("Updated Time:", updatedDateTime);
   return updatedDateTime;
 };
 
