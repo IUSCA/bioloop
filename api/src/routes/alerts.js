@@ -3,6 +3,7 @@ const {
   body, query, param,
 } = require('express-validator');
 const { PrismaClient } = require('@prisma/client');
+const he = require('he');
 
 const { validate } = require('../middleware/validators');
 const { accessControl } = require('../middleware/auth');
@@ -136,7 +137,7 @@ router.post(
       const newAlert = await prisma.alert.create({
         data: {
           label,
-          message,
+          message: message ? he.decode(message) : null,
           type,
           created_by_id,
           ...(start_time && { start_time: new Date(start_time) }),
@@ -193,7 +194,7 @@ router.patch(
         where: { id: parseInt(id) },
         data: {
           label,
-          message,
+          message: message ? he.decode(message) : null,
           type,
           ...start_time_updates,
           ...end_time_updates,
