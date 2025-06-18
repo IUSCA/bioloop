@@ -583,6 +583,7 @@ function normalize_name(name) {
  * @param {Object} data - The data for creating the dataset.
  * @param {string} data.name - The name of the dataset.
  * @param {string} data.type - The type of the dataset.
+ * @param {string} data.description - The description for the dataset.
  * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
  * @param {BigInt} [data.size] - The size of the dataset.
  * @param {string} data.origin_path - The origin path of the dataset.
@@ -608,12 +609,13 @@ const getDatasetCreateQuery = (data) => {
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
     project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
+    description,
   } = data;
   /* eslint-disable no-unused-vars */
 
   // gather non-null data to create a new dataset
   const create_query = _.flow([
-    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata']),
+    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata', 'description']),
     _.omitBy(_.isNil),
   ])(data);
 
@@ -697,6 +699,7 @@ router.post(
     body('workflow_id').optional(),
     body('state').optional(),
     body('metadata').optional(),
+    body('description').optional().notEmpty().escape(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -710,6 +713,7 @@ router.post(
     const {
       ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
+      description,
     } = req.body;
 
     // remove any HTML entities inserted by browser because of URL encoding
@@ -745,6 +749,7 @@ router.post(
       state,
       create_method,
       metadata,
+      description,
     });
 
     // idempotence: creates dataset or returns error 409 on repeated requests
