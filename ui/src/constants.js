@@ -79,6 +79,12 @@ const exports = {
         path: "/workflows",
         test_id: "sidebar-workflows",
       },
+      {
+        icon: "mdi:alert-circle",
+        title: "Alerts",
+        path: "/alerts",
+        test_id: "sidebar-alerts",
+      },
       // {
       //   icon: "mdi-account-multiple",
       //   title: "Group Management",

@@ -186,6 +186,7 @@ model user {
   acknowledged_notifications notification[]
   user_notifications         user_notification[]
   // created_datasets           dataset_create_log[]
+  alerts_created             alert[]
 }
 
 model user_password {
@@ -389,8 +390,21 @@ model instrument {
   host             String    @unique
   description      String?
   created_at       DateTime  @default(now()) @db.Timestamp(6)
-  updated_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @default(now()) @updatedAt @db.Timestamp(6)
   sourced_datasets dataset[]
+}
+
+model alert {
+  id            Int        @id @default(autoincrement())
+  created_at    DateTime   @default(now()) @db.Timestamp(6)
+  updated_at    DateTime   @default(now()) @updatedAt @db.Timestamp(6)
+  created_by_id Int?
+  created_by    user?      @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  label         String
+  message       String?
+  type          ALERT_TYPE
+  start_time    DateTime   @default(now()) @db.Timestamp(6)
+  end_time      DateTime?  @db.Timestamp(6)
 }
 
 enum access_type {
@@ -424,4 +438,11 @@ enum DATASET_CREATE_METHOD {
   UPLOAD
   IMPORT
   SCAN
+}
+
+// todo - to metadata column
+enum ALERT_TYPE {
+  INFO
+  WARNING
+  ERROR
 }
