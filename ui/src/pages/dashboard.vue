@@ -105,5 +105,5 @@ DatasetService.getStats({ type: "DATA_PRODUCT" })
 
 <route lang="yaml">
 meta:
-title: Dashboard
+  title: Dashboard
 </route>

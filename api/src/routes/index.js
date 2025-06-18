@@ -23,5 +23,6 @@ router.use('/notifications', require('./notifications'));
 router.use('/fs', require('./fs'));
 router.use('/uploads', require('./uploads'));
 router.use('/instruments', require('./instruments'));
+router.use('/alerts', require('./alerts'));
 
 module.exports = router;
