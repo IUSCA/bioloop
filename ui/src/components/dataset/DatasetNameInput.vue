@@ -3,7 +3,7 @@
     v-model="datasetNameInput"
     :placeholder="'Dataset name'"
     class="w-full"
-    :messages="props.error ? '' : 'Name of the uploaded dataset'"
+    :messages="props.error ? [props.error] : ['Name of the uploaded dataset']"
     :disabled="props.inputDisabled"
   />
   <!-- Only one of error and hint are shown at a time -->

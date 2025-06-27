@@ -485,7 +485,7 @@ const willUploadRawData = computed(() => {
 const willCreateNewProject = computed(() => {
   return (
     noProjectsToAssign.value &&
-    auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")
+    auth.isFeatureEnabled("auto_create_project_on_dataset_creation")
   );
 });
 
@@ -562,7 +562,8 @@ const getProjectCreationPayload = () => {
     // If a new Project is to be created, the current user will be assigned to it.
     project_payload = {
       browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
-      user_assignee_ids: [auth.user.id],
+      assignee_user_ids: [auth.user.id],
+      project_name: `Project-${uploadedDatasetName.value}`,
     };
   } else {
     project_payload = projectSelected.value && {

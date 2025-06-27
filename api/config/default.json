@@ -184,14 +184,12 @@
       "enabled_for_roles": ["admin"]
     },
     "upload": {
-      "enabled_for_roles": ["admin"]
+      "enabled_for_roles": ["admin", "user"]
     },
     "fs": {
       "enabled_for_roles": ["admin"]
     },
-    "autoCreateProjectOnDatasetCreation": {
-      "enabled_for_roles": ["user"]
-    },
+    "auto_create_project_on_dataset_creation": true,
     "downloads": true,
     "signup": true
   },

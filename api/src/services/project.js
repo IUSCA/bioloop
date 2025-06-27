@@ -179,16 +179,21 @@ const build_include_object = ({
  * // Without a suffix (generates a random identifier)
  * generate_project_name() // Returns something like: "Project-3a7bd1c9f0b24e8e"
  */
-function generate_project_name({ suffix } = {}) {
-  const projectSuffix = 'Project';
+function generate_project_name({ prefix, suffix } = {}) {
+  let projectName = '';
+
+  const randomStr = crypto.randomBytes(8).toString('hex'); // Generate 16 random characters
 
   if (suffix && typeof suffix === 'string' && suffix.trim() !== '') {
-    return `${projectSuffix}-${suffix}`;
+    projectName = `${suffix}-${randomStr}`;
+  } else {
+    projectName = `${randomStr}`;
+  }
+  if (prefix && typeof prefix === 'string' && prefix.trim() !== '') {
+    projectName = `${projectName}-${prefix}`;
   }
 
-  // generate a unique identifier
-  const randomStr = crypto.randomBytes(8).toString('hex'); // Generate 16 random characters
-  return `${projectSuffix}-${randomStr}`;
+  return projectName;
 }
 
 // todo - test existing endpoints

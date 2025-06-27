@@ -587,7 +587,7 @@ const getDatasetCreateQuery = async (data) => {
   /* eslint-disable no-unused-vars */
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method,
+    user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method, project_payload,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -648,6 +648,16 @@ const getDatasetCreateQuery = async (data) => {
     ],
   };
 
+  if (project_payload) {
+    create_query.projects = await datasetService.buildProjectAssociationQuery({
+      project_name: project_payload.project_name,
+      project_id: project_payload.project_id,
+      project_assignor_id: project_payload.project_assignor_id || user_id,
+      assignee_user_ids: project_payload.assignee_user_ids,
+      browser_enabled: project_payload.browser_enabled || false,
+    });
+  }
+
   return create_query;
 };
 
@@ -668,7 +678,7 @@ router.post(
     body('project_payload.project_name').optional().escape().notEmpty(),
     body('project_payload.project_id').optional().escape().notEmpty(),
     body('project_payload.browser_enabled').optional().isBoolean(),
-    body('project_payload.user_assignee_ids')
+    body('project_payload.assignee_user_ids')
       .optional()
       .isArray()
       .custom((e) => e.every((id) => Number.isInteger(id))),
@@ -729,6 +739,7 @@ router.post(
         state,
         create_method,
         metadata,
+        project_payload,
       });
     } catch (error) {
       if (error.message === CONSTANTS.PROJECT_DATASET_ASSOCIATION_ERRORS.noProjectUserAssociation) {
@@ -736,22 +747,6 @@ router.post(
       } else {
         next(error);
       }
-    }
-
-    // Associate this Dataset with a Project
-
-    // todo - make this apply to the /POST datasets/upload API as well
-    if (project_payload) {
-      // if existing project:
-      //    - create project_user association
-      //    - create project_dataset association
-      createQuery.projects = await datasetService.buildProjectAssociationQuery({
-        project_name: project_payload.project_name,
-        project_id: project_payload.project_id,
-        project_assignor_id: project_payload.project_assignor_id || req.user.id,
-        user_assignee_ids: project_payload.user_assignee_ids,
-        browser_enabled: project_payload.browser_enabled || false,
-      });
     }
 
     // idempotence: creates dataset or returns error 409 on repeated requests
@@ -1440,7 +1435,7 @@ router.post(
     body('project_payload').optional().isObject(),
     body('project_payload.project_id').optional().escape().notEmpty(),
     body('project_payload.browser_enabled').optional().isBoolean(),
-    body('project_payload.user_assignee_ids')
+    body('project_payload.assignee_user_ids')
       .optional()
       .isArray()
       .custom((e) => e.every((id) => Number.isInteger(id))),
@@ -1462,6 +1457,7 @@ router.post(
       user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
+      project_payload,
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {

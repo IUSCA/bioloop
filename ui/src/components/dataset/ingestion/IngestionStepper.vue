@@ -447,7 +447,7 @@ const willIngestRawData = computed(() => {
 const willCreateNewProject = computed(() => {
   return (
     noProjectsToAssign.value &&
-    auth.isFeatureEnabled("autoCreateProjectOnDatasetCreation")
+    auth.isFeatureEnabled("auto_create_project_on_dataset_creation")
   );
 });
 
@@ -483,7 +483,8 @@ const getProjectCreationPayload = () => {
   if (willCreateNewProject.value) {
     project_payload = {
       browser_enabled: auth.isFeatureEnabled("genomeBrowser") || false,
-      user_assignee_ids: [auth.user.id],
+      assignee_user_ids: [auth.user.id],
+      project_name: `Project-${ingestedDatasetName.value}`,
     };
   } else {
     project_payload = projectSelected.value && {

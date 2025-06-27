@@ -839,8 +839,8 @@ A customizable alert component.
     icon="warning" 
     color="danger" 
     border="all" 
-    paddingDirection="left" 
-    paddingAmount="lg" 
+    padding-direction="left" 
+    padding-amount="lg" 
     size="large"
   >
     Warning: This is a more customized alert message.

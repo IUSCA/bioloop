@@ -767,20 +767,18 @@ const workflow_access_check = [
  * Builds a Prisma query object for creating a new Project and associating a dataset with it.
  *
  * @async
- * @function buildAssociationQueryForExistingProject
+ * @function buildAssociationQueryForNewProject
  * @param {Object} options - The options for building the query.
  * @param {string} [options.project_name=''] - The ID of the user associating the Project to the Dataset.
  * @param {int} [options.project_assignor_id] - The ID of the user associating the Project to the Dataset.
- * @param {int[]} [options.project_user_assignee_ids=[]] - The IDs of users being associated to the Project.
- * @param {int} [options.user_assignor_id] - The ID of the user associating other users to the Project.
+ * @param {int[]} [options.assignee_user_ids=[]] - The IDs of users being associated to the Project.
  * @param {boolean} [options.browser_enabled=false] - Whether the Genome Browser will be enabled for a new Project that will be created.
  * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
  */
 async function buildAssociationQueryForNewProject({
   project_name = '',
   project_assignor_id,
-  user_assignee_ids = [],
-  user_assignor_id,
+  assignee_user_ids = [],
   browser_enabled = false,
 } = {}) {
   return {
@@ -789,13 +787,13 @@ async function buildAssociationQueryForNewProject({
         create: {
           name: project_name,
           slug: await projectService.generate_slug({ name: project_name }),
-          description: `Auto-generated project for dataset ${project_name}.`,
+          description: `Auto-generated Project for Dataset ${project_name}.`,
           browser_enabled,
-          ...(user_assignee_ids.length > 0 && { // Check if any users needs to be assigned to the project.
+          ...(assignee_user_ids.length > 0 && {
             users: {
-              create: user_assignee_ids.map((id) => ({
+              create: assignee_user_ids.map((id) => ({
                 user_id: id,
-                ...(user_assignor_id && { assignor_id: user_assignor_id }),
+                ...(project_assignor_id && { assignor_id: project_assignor_id }),
               })),
             },
           }),
@@ -824,10 +822,9 @@ async function buildAssociationQueryForNewProject({
  */
 async function buildAssociationQueryForExistingProject({
   project_id,
-  assignee_user_ids = [],
-  user_assignor_id,
-  assignee_datasets_ids = [],
   project_assignor_id,
+  assignee_user_ids = [],
+  assignee_dataset_ids = [],
 } = {}) {
   // Check if the project exists and whether the user who is requesting the Project represented by `project_id` is
   // allowed to this Project. A `user` role can only assi
@@ -839,7 +836,6 @@ async function buildAssociationQueryForExistingProject({
       },
     },
   });
-
   if (!projectUserAssociation) {
     throw new Error(PROJECT_DATASET_ASSOCIATION_ERRORS.noProjectUserAssociation);
   }
@@ -848,17 +844,19 @@ async function buildAssociationQueryForExistingProject({
     create: [{
       project_id,
       ...(project_assignor_id && { assignor_id: project_assignor_id }),
-      ...(assignee_user_ids.length > 0 && { // Check if any users needs to be assigned to the Project.
+      ...(assignee_user_ids.length > 0 && {
         users: {
           create: assignee_user_ids.map((id) => ({
             user_id: id,
-            ...(user_assignor_id && { assignor_id: user_assignor_id }),
+            ...(project_assignor_id && { assignor_id: project_assignor_id }),
           })),
         },
+      }),
+      ...(assignee_dataset_ids.length > 0 && {
         datasets: {
-          create: assignee_datasets_ids.map((id) => ({
+          create: assignee_dataset_ids.map((id) => ({
             user_id: id,
-            ...(assignee_datasets_ids && { assignor_id: assignee_datasets_ids }),
+            ...(project_assignor_id && { assignor_id: project_assignor_id }),
           })),
         },
       }),
@@ -870,35 +868,35 @@ const buildProjectAssociationQuery = async ({
   project_id,
   project_name,
   project_assignor_id,
-  user_assignee_ids = [],
-  user_assignor_id,
+  assignee_user_ids = [],
+  assignee_dataset_ids = [],
   browser_enabled = false,
 } = {}) => {
   let project_dataset_association_query = {};
 
-  const project_assignor_roles = await userService.getUserRoles({ user_id: project_assignor_id });
+  // const project_assignor_roles = await userService.getUserRoles({ user_id: project_assignor_id });
 
   if (project_id) {
     // If Project ID is provided, associate this Dataset with the existing Project
     project_dataset_association_query = await buildAssociationQueryForExistingProject({
       project_id,
       project_assignor_id,
-      user_assignee_ids,
-      user_assignor_id,
+      assignee_user_ids,
+      assignee_dataset_ids,
     });
   } else if (isFeatureEnabledForRole({
-    feature: 'autoCreateProjectOnDatasetCreation',
-    roles: project_assignor_roles,
+    feature: 'auto_create_project_on_dataset_creation',
   })) {
     // Else, if auto-creation of Project is enabled, create a new Project and associate this Dataset with it.
     project_dataset_association_query = await buildAssociationQueryForNewProject({
       project_name: project_name
-          || projectService.generate_project_name({ suffix: project_dataset_association_query.name }),
+          || projectService.generate_project_name(),
       project_assignor_id,
-      user_assignee_ids,
-      user_assignor_id: project_assignor_id,
+      assignee_user_ids,
       browser_enabled,
     });
+  } else {
+    project_dataset_association_query = {};
   }
   return project_dataset_association_query;
 };
