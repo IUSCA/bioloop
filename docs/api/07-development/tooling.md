@@ -71,6 +71,28 @@ Update `.eslintrc` to support module aliases:
 - `eslint-import-resolver-module-alias`
 - `eslint-import-resolver-node`
 
+
+## ESLint Local Rules
+To enforce specific coding practices, custom ESLint rules are defined in `eslint-local-rules.js`. These rules can be used to catch common mistakes or enforce project-specific conventions.
+
+### Example Rule: No Original Prisma Client Inside Transaction
+This rule prevents using the original Prisma client inside a transaction, ensuring that the transaction context is used instead.
+
+```javascript
+async function main() {
+  prisma.$transaction(async (tx) => {
+    await prisma.user.findFirst(); // ❌ incorrect, should use `tx`
+    await tx.user.findFirst(); // ✅ correct
+  });
+}
+```
+
+Test the rule with:
+```bash
+cd api/
+npx eslint src/ --rule 'local-rules/no-original-prisma-inside-tx: error'
+```
+
 ## EditorConfig
 
 Consistent Coding styles with .editorconfig
