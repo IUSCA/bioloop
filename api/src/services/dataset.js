@@ -8,11 +8,11 @@ const config = require('config');
 const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
-const projectService = require('./project');
-const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
+// const projectService = require('./project');
+const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
-  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, PROJECT_DATASET_ASSOCIATION_ERRORS,
+  DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
 const workflowService = require('./workflow');
 const CONSTANTS = require('../constants');
@@ -763,144 +763,6 @@ const workflow_access_check = [
   }),
 ];
 
-/**
- * Builds a Prisma query object for creating a new Project and associating a dataset with it.
- *
- * @async
- * @function buildAssociationQueryForNewProject
- * @param {Object} options - The options for building the query.
- * @param {string} [options.project_name=''] - The ID of the user associating the Project to the Dataset.
- * @param {int} [options.project_assignor_id] - The ID of the user associating the Project to the Dataset.
- * @param {int[]} [options.assignee_user_ids=[]] - The IDs of users being associated to the Project.
- * @param {boolean} [options.browser_enabled=false] - Whether the Genome Browser will be enabled for a new Project that will be created.
- * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
- */
-async function buildAssociationQueryForNewProject({
-  project_name = '',
-  project_assignor_id,
-  assignee_user_ids = [],
-  browser_enabled = false,
-} = {}) {
-  return {
-    create: [{
-      project: {
-        create: {
-          name: project_name,
-          slug: await projectService.generate_slug({ name: project_name }),
-          description: `Auto-generated Project for Dataset ${project_name}.`,
-          browser_enabled,
-          ...(assignee_user_ids.length > 0 && {
-            users: {
-              create: assignee_user_ids.map((id) => ({
-                user_id: id,
-                ...(project_assignor_id && { assignor_id: project_assignor_id }),
-              })),
-            },
-          }),
-        },
-      },
-      // todo - test project_user creation
-      ...(project_assignor_id && { assignor: { connect: { id: project_assignor_id } } }),
-    }],
-  };
-}
-
-/**
- * Builds a Prisma query object for associating a dataset with an existing project.
- *
- * @async
- * @function buildAssociationQueryForExistingProject
- * @param {Object} options - The options for building the query.
- * @param {string} [options.project_id] - The ID of an existing Project to associate with the Dataset.
- * @param {int} [options.project_assignor_id] - The ID of the user associating the Project to the Dataset.
- * @returns {Promise<Object|null>} A Prisma query object for creating a project association, or null if no association should be created.
- *
- * @description
- * This function builds a query for associating a Dataset with the existing Project that corresponds to the
- * `project_id`. If the user does not have access to the Project, an error is thrown.
- *
- */
-async function buildAssociationQueryForExistingProject({
-  project_id,
-  project_assignor_id,
-  assignee_user_ids = [],
-  assignee_dataset_ids = [],
-} = {}) {
-  // Check if the project exists and whether the user who is requesting the Project represented by `project_id` is
-  // allowed to this Project. A `user` role can only assi
-  const projectUserAssociation = await prisma.project_user.findUnique({
-    where: {
-      project_id_user_id: {
-        project_id,
-        user_id: project_assignor_id,
-      },
-    },
-  });
-  if (!projectUserAssociation) {
-    throw new Error(PROJECT_DATASET_ASSOCIATION_ERRORS.noProjectUserAssociation);
-  }
-
-  return {
-    create: [{
-      project_id,
-      ...(project_assignor_id && { assignor_id: project_assignor_id }),
-      ...(assignee_user_ids.length > 0 && {
-        users: {
-          create: assignee_user_ids.map((id) => ({
-            user_id: id,
-            ...(project_assignor_id && { assignor_id: project_assignor_id }),
-          })),
-        },
-      }),
-      ...(assignee_dataset_ids.length > 0 && {
-        datasets: {
-          create: assignee_dataset_ids.map((id) => ({
-            user_id: id,
-            ...(project_assignor_id && { assignor_id: project_assignor_id }),
-          })),
-        },
-      }),
-    }],
-  };
-}
-
-const buildProjectAssociationQuery = async ({
-  project_id,
-  project_name,
-  project_assignor_id,
-  assignee_user_ids = [],
-  assignee_dataset_ids = [],
-  browser_enabled = false,
-} = {}) => {
-  let project_dataset_association_query = {};
-
-  // const project_assignor_roles = await userService.getUserRoles({ user_id: project_assignor_id });
-
-  if (project_id) {
-    // If Project ID is provided, associate this Dataset with the existing Project
-    project_dataset_association_query = await buildAssociationQueryForExistingProject({
-      project_id,
-      project_assignor_id,
-      assignee_user_ids,
-      assignee_dataset_ids,
-    });
-  } else if (isFeatureEnabledForRole({
-    feature: 'auto_create_project_on_dataset_creation',
-  })) {
-    // Else, if auto-creation of Project is enabled, create a new Project and associate this Dataset with it.
-    project_dataset_association_query = await buildAssociationQueryForNewProject({
-      project_name: project_name
-          || projectService.generate_project_name(),
-      project_assignor_id,
-      assignee_user_ids,
-      browser_enabled,
-    });
-  } else {
-    project_dataset_association_query = {};
-  }
-  return project_dataset_association_query;
-};
-
 module.exports = {
   soft_delete,
   get_dataset,
@@ -918,8 +780,5 @@ module.exports = {
   has_workflow_access,
   dataset_access_check,
   workflow_access_check,
-  buildProjectAssociationQuery,
-  buildAssociationQueryForNewProject,
-  buildAssociationQueryForExistingProject,
   noProjectUserAssociation,
 };

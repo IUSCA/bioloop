@@ -1,11 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const crypto = require('node:crypto');
 const _ = require('lodash/fp');
+const { PROJECT_ASSOCIATION_ERRORS } = require('../constants');
 
 const prisma = new PrismaClient();
 
 function normalize_name(name) {
-  // conver to lowercase
+  // convert to lowercase
   // replace all character other than a-z, 0-9, and - with -
   // replace consecutive hyphens with one -
 
@@ -163,41 +164,46 @@ const build_include_object = ({
  * Generates a name for an automatically created project.
  *
  * @param {Object} options - The options for generating the project name.
+ * @param {string} [options.prefix] - An optional prefix to prepend to the project name.
  * @param {string} [options.suffix] - An optional suffix to append to the project name.
  * @returns {string} The generated project name.
  *
  * @description
- * If a suffix is provided, the function returns "Project-{suffix}".
- * If no suffix is provided, it generates a unique identifier using cryptographically strong random bytes.
- * The resulting project name will be in the format "Project-{randomString}",
- * where randomString is a 16-character hexadecimal string.
+ * This function generates a project name using the following format:
+ * - If both prefix and suffix are provided: "{suffix}-{randomString}-{prefix}"
+ * - If only suffix is provided: "{suffix}-{randomString}"
+ * - If only prefix is provided: "{randomString}-{prefix}"
+ * - If neither is provided: "{randomString}"
+ *
+ * The randomString is a 16-character hexadecimal string generated using cryptographically strong random bytes.
  *
  * @example
- * // With a provided suffix
- * generate_project_name({ suffix: 'test' }) // Returns: "Project-test"
+ * // With both prefix and suffix
+ * generate_project_name({ prefix: 'dev', suffix: 'test' }) // Returns something like: "dev-3a7bd1c9f0b24e8e-test"
  *
- * // Without a suffix (generates a random identifier)
- * generate_project_name() // Returns something like: "Project-3a7bd1c9f0b24e8e"
+ * // With only suffix
+ * generate_project_name({ suffix: 'test' }) // Returns something like: "3a7bd1c9f0b24e8e-test"
+ *
+ * // With only prefix
+ * generate_project_name({ prefix: 'dev' }) // Returns something like: "dev-3a7bd1c9f0b24e8e"
+ *
+ * // Without prefix or suffix (generates only a random identifier)
+ * generate_project_name() // Returns something like: "3a7bd1c9f0b24e8e"
  */
 function generate_project_name({ prefix, suffix } = {}) {
-  let projectName = '';
-
   const randomStr = crypto.randomBytes(8).toString('hex'); // Generate 16 random characters
 
+  let projectName = '';
+  projectName = (prefix && typeof prefix === 'string' && prefix.trim() !== '') ? `${prefix}-${randomStr}` : randomStr;
   if (suffix && typeof suffix === 'string' && suffix.trim() !== '') {
-    projectName = `${suffix}-${randomStr}`;
-  } else {
-    projectName = `${randomStr}`;
-  }
-  if (prefix && typeof prefix === 'string' && prefix.trim() !== '') {
-    projectName = `${projectName}-${prefix}`;
+    projectName = `${projectName}-${suffix}`;
   }
 
   return projectName;
 }
 
 // todo - test existing endpoints
-async function buildProjectCreationQuery({
+async function buildCreationQuery({
   user_ids = [], dataset_ids = [], assignor_id, ...projectData
 } = {}) {
   const data = _.flow([
@@ -248,12 +254,68 @@ const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
   };
 };
 
+const buildDatasetAssociationQuery = async ({
+  project_id,
+  dataset_ids = [],
+  assignor_id,
+} = {}) => {
+  if (dataset_ids.length === 0) {
+    return null; // There are no datasets to associate
+  }
+
+  return dataset_ids.map((dataset_id) => ({
+    project_id,
+    dataset_id,
+    ...(assignor_id && { assignor_id }),
+  }));
+};
+
+const create_project = async ({
+  ...data
+}) => {
+  const projectCreationQuery = await buildCreationQuery({
+    ...data,
+  });
+  await prisma.project.create(projectCreationQuery);
+};
+
+const assign_datasets = async ({
+  ...data
+}) => {
+  if (!data.user_id) {
+    throw new Error(PROJECT_ASSOCIATION_ERRORS.noAssociatingUserId);
+  }
+
+  // ensure that the user associating business entities with the project has access to the project
+  const userAssociation = await prisma.project_user.findUnique({
+    where: {
+      project_id_user_id: {
+        project_id: data.project_id,
+        user_id: data.user_id,
+      },
+    },
+  });
+  if (!userAssociation) {
+    throw new Error(PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation);
+  }
+
+  const projectAssociationQuery = await buildDatasetAssociationQuery({
+    ...data,
+  });
+  await prisma.project_dataset.createMany({ data: projectAssociationQuery });
+};
+
 module.exports = {
   normalize_name,
   generate_slug,
   has_project_assoc,
   generate_project_name,
-  buildProjectCreationQuery,
+  buildCreationQuery,
   build_include_object,
   buildOrderByObject,
+  buildDatasetAssociationQuery,
+  create_project,
+  assign_datasets,
+  // buildAssociationQueryForNewProject,
+
 };

@@ -557,27 +557,27 @@ const someFilesPendingUpload = computed(
  * if this feature is enabled.
  */
 const getProjectCreationPayload = () => {
-  let project_payload;
+  let project_data;
   if (willCreateNewProject.value) {
     // If a new Project is to be created, the current user will be assigned to it.
-    project_payload = {
+    project_data = {
       browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
       assignee_user_ids: [auth.user.id],
       project_name: `Project-${uploadedDatasetName.value}`,
     };
   } else {
-    project_payload = projectSelected.value && {
+    project_data = projectSelected.value && {
       project_id: projectSelected.value.id,
     };
   }
-  return project_payload;
+  return project_data;
 };
 
 /**
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being uploaded.
  */
 const uploadFormData = computed(() => {
-  let project_payload = getProjectCreationPayload();
+  let project_data = getProjectCreationPayload();
 
   return {
     name: uploadedDatasetName.value,
@@ -585,7 +585,7 @@ const uploadFormData = computed(() => {
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    ...(project_payload && { project_payload }),
+    ...(project_data && { project_data }),
     ...(selectedSourceInstrument.value && {
       src_instrument_id: selectedSourceInstrument.value.id,
     }),

@@ -478,7 +478,7 @@ router.post(
       // projects
       /* eslint-enable */
 
-    const data = projectService.buildProjectCreationQuery(req.body);
+    const data = projectService.buildCreationQuery(req.body);
 
     const project = await prisma.project.create({
       data,

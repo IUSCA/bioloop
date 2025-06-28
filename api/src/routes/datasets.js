@@ -22,6 +22,7 @@ const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
 const logger = require('../services/logger');
 const { isFeatureEnabledForRole } = require('../utils');
+const { PROJECT_ASSOCIATION_ERRORS } = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -587,7 +588,7 @@ const getDatasetCreateQuery = async (data) => {
   /* eslint-disable no-unused-vars */
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method, project_payload,
+    user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -648,16 +649,6 @@ const getDatasetCreateQuery = async (data) => {
     ],
   };
 
-  if (project_payload) {
-    create_query.projects = await datasetService.buildProjectAssociationQuery({
-      project_name: project_payload.project_name,
-      project_id: project_payload.project_id,
-      project_assignor_id: project_payload.project_assignor_id || user_id,
-      assignee_user_ids: project_payload.assignee_user_ids,
-      browser_enabled: project_payload.browser_enabled || false,
-    });
-  }
-
   return create_query;
 };
 
@@ -674,11 +665,11 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('origin_path').notEmpty().escape(),
-    body('project_payload').optional().isObject(),
-    body('project_payload.project_name').optional().escape().notEmpty(),
-    body('project_payload.project_id').optional().escape().notEmpty(),
-    body('project_payload.browser_enabled').optional().isBoolean(),
-    body('project_payload.assignee_user_ids')
+    body('project_data').optional().isObject(),
+    body('project_data.project_name').optional().escape().notEmpty(),
+    body('project_data.project_id').optional().escape().notEmpty(),
+    body('project_data.browser_enabled').optional().isBoolean(),
+    body('project_data.assignee_user_ids')
       .optional()
       .isArray()
       .custom((e) => e.every((id) => Number.isInteger(id))),
@@ -700,7 +691,7 @@ router.post(
       /* eslint-enable */
 
     const {
-      ingestion_space, create_method, project_payload, src_instrument_id, src_dataset_id,
+      ingestion_space, create_method, project_data, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
     } = req.body;
 
@@ -739,20 +730,44 @@ router.post(
         state,
         create_method,
         metadata,
-        project_payload,
       });
     } catch (error) {
-      if (error.message === CONSTANTS.PROJECT_DATASET_ASSOCIATION_ERRORS.noProjectUserAssociation) {
+      if (error.message === CONSTANTS.PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation) {
         next(createError.Forbidden(error.message));
       } else {
         next(error);
       }
     }
 
+    const dataset = await prisma.$transaction(async (tx) => {
+      const createdDataset = await datasetService.createDatasetInTransaction(tx, createQuery);
+
+      if (project_data) {
+        if (!project_data.project_id) {
+          // If Project ID is not provided, associate created dataset with a new project
+          await projectService.create_project({
+            user_ids: project_data.assignee_user_ids,
+            dataset_ids: [createdDataset.id],
+            assignor_id: req.user.id,
+            ...project_data,
+          });
+        } else {
+          // Else, associate created Dataset with an existing Project
+          await projectService.assign_datasets({
+            project_id: project_data.project_id,
+            dataset_ids: [createdDataset.id],
+            assignor_id: req.user.id,
+          });
+        }
+      }
+
+      return createdDataset;
+    });
+
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    const dataset = await datasetService.createDataset(createQuery);
+    // const dataset = await datasetService.createDataset(createQuery);
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -1432,10 +1447,10 @@ router.post(
     body('name').escape().notEmpty().isLength({ min: 3 }),
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
-    body('project_payload').optional().isObject(),
-    body('project_payload.project_id').optional().escape().notEmpty(),
-    body('project_payload.browser_enabled').optional().isBoolean(),
-    body('project_payload.assignee_user_ids')
+    body('project_data').optional().isObject(),
+    body('project_data.project_id').optional().escape().notEmpty(),
+    body('project_data.browser_enabled').optional().isBoolean(),
+    body('project_data.assignee_user_ids')
       .optional()
       .isArray()
       .custom((e) => e.every((id) => Number.isInteger(id))),
@@ -1447,7 +1462,7 @@ router.post(
 
     const {
       src_instrument_id, src_dataset_id, name, type, files_metadata,
-      project_payload,
+      project_data,
     } = req.body;
 
     const datasetCreateQuery = await getDatasetCreateQuery({
@@ -1457,7 +1472,7 @@ router.post(
       user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
-      project_payload,
+      project_data,
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
