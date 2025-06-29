@@ -744,7 +744,7 @@ router.post(
     const dataset = await prisma.$transaction(async (tx) => {
       const createdDataset = await datasetService.createDatasetInTransaction(tx, createQuery);
 
-      if (project_data) {
+      if (project_data && accessControl('projects')('create')) {
         await datasetService.assignProject({
           tx,
           data: {
@@ -1475,7 +1475,7 @@ router.post(
 
       console.log('createdDataset', createdDataset);
 
-      if (project_data) {
+      if (project_data && accessControl('projects')('create')) {
         await datasetService.assignProject({
           tx,
           data: {
