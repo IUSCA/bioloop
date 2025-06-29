@@ -666,8 +666,10 @@ router.post(
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('origin_path').notEmpty().escape(),
     body('project_data').optional().isObject(),
+    body('project_data.name').optional().escape().notEmpty(),
+    body('project_data.id').optional().escape().notEmpty(),
+    body('project_data.description').optional().escape().notEmpty(),
     body('project_data.project_name').optional().escape().notEmpty(),
-    body('project_data.project_id').optional().escape().notEmpty(),
     body('project_data.browser_enabled').optional().isBoolean(),
     body('project_data.assignee_user_ids')
       .optional()
@@ -743,22 +745,14 @@ router.post(
       const createdDataset = await datasetService.createDatasetInTransaction(tx, createQuery);
 
       if (project_data) {
-        if (!project_data.project_id) {
-          // If Project ID is not provided, associate created dataset with a new project
-          await projectService.create_project({
-            user_ids: project_data.assignee_user_ids,
-            dataset_ids: [createdDataset.id],
+        await datasetService.assignProject({
+          tx,
+          data: {
+            assignee_dataset_ids: [createdDataset.id],
             assignor_id: req.user.id,
             ...project_data,
-          });
-        } else {
-          // Else, associate created Dataset with an existing Project
-          await projectService.assign_datasets({
-            project_id: project_data.project_id,
-            dataset_ids: [createdDataset.id],
-            assignor_id: req.user.id,
-          });
-        }
+          },
+        });
       }
 
       return createdDataset;
@@ -1448,7 +1442,9 @@ router.post(
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
     body('project_data').optional().isObject(),
-    body('project_data.project_id').optional().escape().notEmpty(),
+    body('project_data.name').optional().escape().notEmpty(),
+    body('project_data.description').optional().escape().notEmpty(),
+    body('project_data.id').optional().escape().notEmpty(),
     body('project_data.browser_enabled').optional().isBoolean(),
     body('project_data.assignee_user_ids')
       .optional()
@@ -1472,11 +1468,23 @@ router.post(
       user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
-      project_data,
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
+
+      console.log('createdDataset', createdDataset);
+
+      if (project_data) {
+        await datasetService.assignProject({
+          tx,
+          data: {
+            assignee_dataset_ids: [createdDataset.id],
+            assignor_id: req.user.id,
+            ...project_data,
+          },
+        });
+      }
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {

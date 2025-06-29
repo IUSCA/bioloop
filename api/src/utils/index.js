@@ -321,14 +321,14 @@ function base64urlEncode(buf) {
 }
 
 function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
-  // logger.info(`Checking if feature ${feature} is empty or defined`);
+  logger.info(`Checking if feature ${feature} is empty or defined`);
   if (!feature) {
     return true;
   }
 
   // Check if enabled_features is defined
   if (!config.enabled_features) {
-    // logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
+    logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
     return true;
   }
 
@@ -336,12 +336,14 @@ function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
 
   // Check if upload feature is defined
   if (feature_enabled == null) {
-    // logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
+    logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
     return true;
   }
 
   // Check if upload feature is a boolean `true`
   if (typeof feature_enabled === 'boolean') {
+    logger.info('Upload feature is enabled, boolean');
+    logger.info(feature_enabled);
     return feature_enabled;
   }
 

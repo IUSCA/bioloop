@@ -484,11 +484,11 @@ const getProjectCreationPayload = () => {
     project_data = {
       browser_enabled: auth.isFeatureEnabled("genomeBrowser") || false,
       assignee_user_ids: [auth.user.id],
-      project_name: `Project-${ingestedDatasetName.value}`,
+      name: `Project-${ingestedDatasetName.value}`,
     };
   } else {
     project_data = projectSelected.value && {
-      project_id: projectSelected.value.id,
+      id: projectSelected.value.id,
     };
   }
   return project_data;

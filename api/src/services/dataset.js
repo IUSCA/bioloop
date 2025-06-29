@@ -9,7 +9,7 @@ const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
 // const projectService = require('./project');
-const { log_axios_error } = require('../utils');
+const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
@@ -19,6 +19,7 @@ const CONSTANTS = require('../constants');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPermission, accessControl } = require('../middleware/auth');
 const logger = require('./logger');
+const projectService = require('./project');
 
 const prisma = new PrismaClient();
 
@@ -632,6 +633,31 @@ async function createDatasetInTransaction(tx, data) {
   });
 }
 
+async function assignProject({ tx, data }) {
+  console.log('assigning dataset to project, data:');
+  console.dir(data, { depth: null });
+
+  if (!data.id) {
+    // If Project ID is not provided, associate created dataset with a new project
+    await projectService.create_project({
+      tx,
+      user_ids: data.assignee_user_ids,
+      dataset_ids: data.assignee_dataset_ids,
+      assignor_id: data.assignor_id,
+      description: data.description || 'Auto-generated during Dataset creation',
+      ...data,
+    });
+  } else {
+    // Else, associate created Dataset with an existing Project
+    await projectService.assign_datasets({
+      tx,
+      project_id: data.id,
+      dataset_ids: data.assignee_dataset_ids,
+      assignor_id: data.assignor_id,
+    });
+  }
+}
+
 /**
  * Creates a new dataset if one with the same name and type does not already exist.
  *
@@ -781,4 +807,5 @@ module.exports = {
   dataset_access_check,
   workflow_access_check,
   noProjectUserAssociation,
+  assignProject,
 };

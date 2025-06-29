@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const crypto = require('node:crypto');
 const _ = require('lodash/fp');
 const { PROJECT_ASSOCIATION_ERRORS } = require('../constants');
+const userService = require('./user');
 
 const prisma = new PrismaClient();
 
@@ -271,38 +272,54 @@ const buildDatasetAssociationQuery = async ({
 };
 
 const create_project = async ({
+  tx,
   ...data
 }) => {
+  const transactionManager = tx || prisma;
+
+  console.log('create_project', data);
+
   const projectCreationQuery = await buildCreationQuery({
     ...data,
   });
-  await prisma.project.create(projectCreationQuery);
+  await transactionManager.project.create({ data: projectCreationQuery });
 };
 
 const assign_datasets = async ({
+  tx,
   ...data
 }) => {
-  if (!data.user_id) {
+  const transactionManager = tx || prisma;
+
+  console.log('assign_datasets', data);
+
+  if (!data.assignor_id) { // ID of user who is associating datasets with the project
     throw new Error(PROJECT_ASSOCIATION_ERRORS.noAssociatingUserId);
   }
 
+  const assignorRoles = await userService.getUserRoles({ user_id: data.assignor_id });
+  let isAuthorized = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
+
   // ensure that the user associating business entities with the project has access to the project
-  const userAssociation = await prisma.project_user.findUnique({
+  const userAssociation = await transactionManager.project_user.findUnique({
     where: {
       project_id_user_id: {
         project_id: data.project_id,
-        user_id: data.user_id,
+        user_id: data.assignor_id,
       },
     },
   });
-  if (!userAssociation) {
+
+  isAuthorized = isAuthorized || !!userAssociation;
+
+  if (!isAuthorized) {
     throw new Error(PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation);
   }
 
   const projectAssociationQuery = await buildDatasetAssociationQuery({
     ...data,
   });
-  await prisma.project_dataset.createMany({ data: projectAssociationQuery });
+  await transactionManager.project_dataset.createMany({ data: projectAssociationQuery });
 };
 
 module.exports = {
