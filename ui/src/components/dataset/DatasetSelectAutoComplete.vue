@@ -16,6 +16,7 @@
     :disabled="props.disabled"
     :label="props.label"
     :messages="props.messages"
+    data-testid="dataset-select-autocomplete"
   />
 </template>
 
@@ -89,11 +90,6 @@ const loadNextPage = () => {
   page.value += 1; // increase page value for offset recalculation
   return searchDatasets({ appendToCurrentResults: true });
 };
-
-// const trimName = (val) =>
-//   val.length > NAME_TRIM_THRESHOLD
-//     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
-//     : val;
 
 const filterQuery = computed(() => {
   let query;

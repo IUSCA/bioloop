@@ -1,10 +1,15 @@
 <template>
-  <va-inner-loading :loading="loading" class="h-full">
+  <va-inner-loading
+    :loading="loading"
+    class="h-full"
+    data-testid="inner-loading"
+  >
     <va-stepper
       v-model="step"
       :steps="steps"
       controlsHidden
       class="h-full create-data-product-stepper"
+      data-testid="stepper"
     >
       <!-- Step icons and labels -->
       <template
@@ -21,31 +26,41 @@
           @click="setStep(i)"
           :disabled="isStepperButtonDisabled(i)"
           preset="secondary"
+          :data-testid="`step-button-${i}`"
         >
           <div class="flex flex-col items-center">
-            <Icon :icon="s.icon" />
-            <span class="hidden sm:block"> {{ s.label }} </span>
+            <Icon :icon="s.icon" data-testid="step-icon" />
+            <span class="hidden sm:block" data-testid="step-label">
+              {{ s.label }}
+            </span>
           </div>
         </va-button>
       </template>
 
+      <!-- Step 0 content -->
       <template #step-content-0>
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-testid="step-content-0">
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
             @files-added="onFilesAdded"
             @directory-added="onDirectoryAdded"
+            data-testid="select-file-buttons"
           />
-          <va-divider />
+          <va-divider data-testid="divider-step-0" />
           <SelectedFilesTable
             @file-removed="removeFile"
             :files="displayedFilesToUpload"
+            data-testid="selected-files-table"
           />
         </div>
       </template>
 
+      <!-- Step 1 content -->
       <template #step-content-1>
-        <div class="flex w-full pb-6 items-center">
+        <div
+          class="flex w-full pb-6 items-center"
+          data-testid="dataset-type-row"
+        >
           <va-select
             v-model="selectedDatasetType"
             :text-by="'label'"
@@ -54,23 +69,28 @@
             label="Dataset Type"
             placeholder="Select dataset type"
             class="flex-grow"
+            data-testid="dataset-type-select"
           />
           <div class="flex items-center ml-2">
             <va-popover>
               <template #body>
-                <div class="w-96">
+                <div class="w-96" data-testid="dataset-type-help-text">
                   - Raw Data: Original, unprocessed data collected from
                   instruments.
                   <br />
                   - Data Product: Processed data derived from Raw Data
                 </div>
               </template>
-              <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
+              <Icon
+                icon="mdi:help-circle"
+                class="text-xl text-gray-500"
+                data-testid="dataset-type-help-icon"
+              />
             </va-popover>
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div class="flex w-full pb-6" data-testid="assign-source-row">
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -80,11 +100,15 @@
                 color="primary"
                 label="Assign source Raw Data"
                 class="flex-grow"
+                data-testid="assign-source-checkbox"
               />
             </div>
           </div>
 
-          <div class="flex-grow flex items-center">
+          <div
+            class="flex-grow flex items-center"
+            data-testid="dataset-autocomplete-row"
+          >
             <DatasetSelectAutoComplete
               v-model:selected="selectedRawData"
               v-model:search-term="datasetSearchText"
@@ -97,18 +121,23 @@
               class="flex-grow"
               :label="'Dataset'"
               :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
+              data-testid="raw-data-autocomplete"
             >
             </DatasetSelectAutoComplete>
             <va-popover>
               <template #body>
-                <div class="w-96">
+                <div class="w-96" data-testid="raw-data-help-text">
                   Associating a Data Product with a source Raw Data establishes
                   a clear lineage between the original data and its processed
                   form. This linkage helps to trace the origins of processed
                   data
                 </div>
               </template>
-              <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
+              <Icon
+                icon="mdi:help-circle"
+                class="ml-2 text-xl text-gray-500"
+                data-testid="raw-data-help-icon"
+              />
             </va-popover>
           </div>
         </div>
@@ -251,7 +280,6 @@
         </div>
       </template>
 
-      <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
         <div class="flex items-center justify-around w-full">
           <va-button

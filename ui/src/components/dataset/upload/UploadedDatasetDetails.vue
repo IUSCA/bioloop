@@ -5,25 +5,30 @@
     dense
     :icon="submissionAlertIcon"
     :color="props.submissionAlertColor"
+    data-testid="submission-alert"
   >
     {{ props.submissionAlert }}
   </va-alert>
 
   <!-- Details of the dataset being uploaded -->
-  <div class="va-table-responsive">
-    <table class="va-table">
+  <div
+    class="va-table-responsive"
+    data-testid="dataset-details-table-container"
+  >
+    <table class="va-table" data-testid="dataset-details-table">
       <tbody>
-        <tr>
+        <tr data-testid="dataset-name-row">
           <td>Dataset Name</td>
           <td>
             <div v-if="props.dataset">
-              <div v-if="!auth.canOperate">
+              <div v-if="!auth.canOperate" data-testid="dataset-name-display">
                 {{ props.dataset.name }}
               </div>
               <router-link
                 v-else
                 :to="`/datasets/${props.dataset.id}`"
                 target="_blank"
+                data-testid="dataset-name-link"
               >
                 {{ props.dataset.name }}
               </router-link>
@@ -34,38 +39,41 @@
               class="w-full"
               :input-disabled="props.inputDisabled"
               :error="props.datasetNameError"
+              data-testid="dataset-name-input"
             />
           </td>
         </tr>
 
-        <tr>
+        <tr data-testid="dataset-type-row">
           <td>Dataset Type</td>
           <td>
-            <va-chip size="small" outline>
+            <va-chip size="small" outline data-testid="dataset-type-chip">
               {{ props.selectedDatasetType }}
             </va-chip>
           </td>
         </tr>
 
-        <tr>
+        <tr data-testid="source-raw-data-row">
           <td>Source Raw Data</td>
           <td class="metadata">
             <router-link
               :to="`/datasets/${props.sourceRawData?.id}`"
               target="_blank"
+              data-testid="source-raw-data-link"
             >
               {{ props.sourceRawData?.name }}
             </router-link>
           </td>
         </tr>
 
-        <tr>
+        <tr data-testid="project-row">
           <td>Project</td>
           <td class="metadata">
             <div v-if="props.project">
               <router-link
                 :to="`/projects/${props.project.id}`"
                 target="_blank"
+                data-testid="project-link"
               >
                 {{ props.project.name }}
               </router-link>
@@ -78,23 +86,27 @@
               padding-direction="left"
               padding-amount="sm"
               icon="info"
+              data-testid="new-project-alert"
             >
               A new Project will be created
             </OutlinedAlert>
           </td>
         </tr>
 
-        <tr>
+        <tr data-testid="source-instrument-row">
           <td>Source Instrument</td>
-          <td class="metadata">
+          <td class="metadata" data-testid="source-instrument-name">
             {{ props.sourceInstrument?.name }}
           </td>
         </tr>
 
-        <tr>
+        <tr data-testid="status-row">
           <td>Status</td>
           <td>
-            <UploadStatusIcon :submission-status="props.submissionStatus" />
+            <UploadStatusIcon
+              :submission-status="props.submissionStatus"
+              data-testid="upload-status-icon"
+            />
           </td>
         </tr>
       </tbody>
@@ -174,7 +186,6 @@ const datasetNameInput = computed({
   },
 });
 
-// const sourceRawData = computed(() => props.sourceRawData[0]);
 const submissionAlertIcon = computed(() => {
   return props.submissionAlertColor === "success" ? "check_circle" : "warning";
 });
