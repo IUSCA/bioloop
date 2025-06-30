@@ -15,7 +15,7 @@ const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
 
-global.__basedir = path.join(__dirname, '..');
+// global.__basedir = path.join(__dirname, '..');
 
 const prisma = new PrismaClient();
 

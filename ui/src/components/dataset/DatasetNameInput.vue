@@ -3,12 +3,12 @@
     v-model="datasetNameInput"
     :placeholder="'Dataset name'"
     class="w-full"
-    :messages="'Name for the uploaded dataset'"
+    :messages="props.error ? [props.error] : ['Name of the uploaded dataset']"
     :disabled="props.inputDisabled"
   />
-
-  <div class="va-text-danger text-xs" v-if="props.showDatasetNameError">
-    {{ props.datasetNameError }}
+  <!-- Only one of error and hint are shown at a time -->
+  <div class="va-text-danger text-sm" v-if="props.error">
+    {{ props.error }}
   </div>
 </template>
 
@@ -22,11 +22,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  showDatasetNameError: {
-    type: Boolean,
-    default: false,
-  },
-  datasetNameError: {
+  error: {
     type: String,
     default: "",
   },

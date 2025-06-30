@@ -17,6 +17,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
 const { validate } = require('../middleware/validators');
 const datasetService = require('../services/dataset');
+const projectService = require('../services/project');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
 const logger = require('../services/logger');
@@ -40,18 +41,19 @@ router.get(
     let n_wf_result;
     if (req.query.type) {
       result = await prisma.$queryRaw`
-        select count(*)     as "count",
-        sum(du_size) as total_size,
-        SUM(
-                CASE
-                    WHEN metadata -> 'num_genome_files' IS NOT NULL
-                        THEN (metadata ->> 'num_genome_files')::int
-                    ELSE 0
-                    END
-            )        AS total_num_genome_files
-        from dataset
-        where is_deleted = false and type = ${req.query.type};
-      `;
+            select count(*)     as "count",
+                   sum(du_size) as total_size,
+                   SUM(
+                           CASE
+                               WHEN metadata -> 'num_genome_files' IS NOT NULL
+                                   THEN (metadata ->> 'num_genome_files')::int
+                               ELSE 0
+                               END
+                   )            AS total_num_genome_files
+            from dataset
+            where is_deleted = false
+              and type = ${req.query.type};
+        `;
 
       n_wf_result = await prisma.workflow.aggregate({
         where: {
@@ -65,19 +67,18 @@ router.get(
       });
     } else {
       result = await prisma.$queryRaw`
-        select 
-          count(*) as "count", 
-          sum(du_size) as total_size, 
-          SUM(
-                CASE
-                    WHEN metadata -> 'num_genome_files' IS NOT NULL
-                        THEN (metadata ->> 'num_genome_files')::int
-                    ELSE 0
-                    END
-            )        AS total_num_genome_files
-        from dataset 
-        where is_deleted = false;
-      `;
+            select count(*)     as "count",
+                   sum(du_size) as total_size,
+                   SUM(
+                           CASE
+                               WHEN metadata -> 'num_genome_files' IS NOT NULL
+                                   THEN (metadata ->> 'num_genome_files')::int
+                               ELSE 0
+                               END
+                   )            AS total_num_genome_files
+            from dataset
+            where is_deleted = false;
+        `;
 
       n_wf_result = await prisma.workflow.aggregate({
         _count: {
@@ -540,6 +541,10 @@ router.get(
       include_source_instrument: req.query.include_source_instrument || false,
     });
 
+    // if (true) {
+    //   throw new Error('Failed to fetch datasets');
+    // }
+
     res.json(dataset);
   }),
 );
@@ -565,8 +570,8 @@ function normalize_name(name) {
  * @param {string} data.origin_path - The origin path of the dataset.
  * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
  * @param {string} [data.workflow_id] - The ID of the associated workflow.
- * @param {string} [data.project_id] - The ID of the associated project.
  * @param {string} data.user_id - The ID of the user creating the dataset.
+ * @param {string} data.user_roles - The roles of the user creating the dataset.
  * @param {string} [data.src_instrument_id] - The ID of the source instrument.
  * @param {string} [data.src_dataset_id] - The ID of the source dataset.
  * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
@@ -575,16 +580,13 @@ function normalize_name(name) {
  * @returns {Object} An object containing the query for creating a new dataset in the database.
  *
  * @description
- * This function prepares a query object for creating a new dataset in the database.
- * It normalizes the dataset name, sets up associations with workflows and projects,
- * connects to source instruments and datasets, sets the initial state,
- * and creates an audit log entry for the dataset creation.
+ * This function prepares a Prisma query object for creating a new dataset in the database.
  */
-const getDatasetCreateQuery = (data) => {
+const getDatasetCreateQuery = async (data) => {
   /* eslint-disable no-unused-vars */
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
+    user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -607,15 +609,7 @@ const getDatasetCreateQuery = (data) => {
     };
   }
 
-  if (project_id) {
-    create_query.projects = {
-      create: [{
-        project_id,
-        assignor_id: user_id,
-      }],
-    };
-  }
-
+  // Assign source Instrument to this dataset
   if (src_instrument_id) {
     create_query.src_instrument = {
       connect: {
@@ -624,6 +618,7 @@ const getDatasetCreateQuery = (data) => {
     };
   }
 
+  // Assign source Dataset to this dataset
   if (src_dataset_id) {
     create_query.source_datasets = {
       create: [{
@@ -641,6 +636,7 @@ const getDatasetCreateQuery = (data) => {
     ],
   };
 
+  // Log the dataset's creation
   create_query.audit_logs = {
     create: [
       {
@@ -656,6 +652,36 @@ const getDatasetCreateQuery = (data) => {
 
 // Create a new dataset
 // Used by - workers + UI
+/**
+ * Create a new dataset.
+ *
+ * @route POST /datasets
+ * @param {Object} req.body - The dataset data.
+ * @param {string} req.body.name - The name of the dataset (required).
+ * @param {string} req.body.type - The type of the dataset (must be one of the configured dataset types).
+ * @param {string} req.body.origin_path - The origin path of the dataset (required).
+ * @param {BigInt} [req.body.du_size] - The disk usage size of the dataset.
+ * @param {BigInt} [req.body.size] - The size of the dataset.
+ * @param {BigInt} [req.body.bundle_size] - The size of the dataset bundle.
+ * @param {Object} [req.body.project_data] - Optional project data to associate with the dataset.
+ * @param {string} [req.body.project_data.name] - The name of the project to associate with the dataset.
+ * @param {string} [req.body.project_data.id] - The ID of an existing project to associate with the dataset.
+ * @param {string} [req.body.project_data.description] - A description of the project.
+ * @param {string} [req.body.project_data.project_name] - An alternative name for the project (if different from 'name').
+ * @param {boolean} [req.body.project_data.browser_enabled] - Whether the project is enabled for browser view.
+ * @param {number[]} [req.body.project_data.assignee_user_ids] - An array of user IDs to assign to the project.
+ * @param {string} [req.body.src_instrument_id] - The ID of the source instrument.
+ * @param {string} [req.body.src_dataset_id] - The ID of the source dataset.
+ * @param {string} [req.body.create_method] - The method used to create the dataset.
+ * @param {string} [req.body.workflow_id] - The ID of the associated workflow.
+ * @param {string} [req.body.state] - The initial state of the dataset.
+ * @param {Object} [req.body.metadata] - Additional metadata for the dataset.
+ * @param {Object} req.user - The authenticated user making the request.
+ * @param {string} req.user.id - The ID of the authenticated user.
+ * @param {string[]} req.user.roles - The roles of the authenticated user.
+ * @returns {Promise<Object>} The created dataset object.
+ * @throws {Error} If dataset creation fails or if the origin path is restricted.
+ */
 router.post(
   '/',
   isPermittedTo('create'),
@@ -667,7 +693,16 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('origin_path').notEmpty().escape(),
-    body('project_id').optional(),
+    body('project_data').optional().isObject(),
+    body('project_data.name').optional().escape().notEmpty(),
+    body('project_data.id').optional().escape().notEmpty(),
+    body('project_data.description').optional().escape().notEmpty(),
+    body('project_data.project_name').optional().escape().notEmpty(),
+    body('project_data.browser_enabled').optional().isBoolean(),
+    body('project_data.assignee_user_ids')
+      .optional()
+      .isArray()
+      .custom((e) => e.every((id) => Number.isInteger(id))),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
     body('create_method').optional(),
@@ -678,14 +713,15 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /*
-                                          * #swagger.description = 'workflow_id is optional. If the request body has
-                                          * workflow_id, a new relation is created between dataset and given
-                                          * workflow_id'
-                                          */
+    /* eslint-disable */
+      /*
+        * #swagger.description = 'workflow_id is optional. If the request body has
+        * workflow_id, a new relation is created between dataset and given workflow_id'
+        */
+      /* eslint-enable */
 
     const {
-      ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
+      ingestion_space, create_method, project_data, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
     } = req.body;
 
@@ -707,27 +743,62 @@ router.post(
       }
     }
 
-    const createQuery = getDatasetCreateQuery({
-      name,
-      type,
-      du_size,
-      origin_path: decoded_origin_path,
-      size,
-      bundle_size,
-      workflow_id,
-      project_id,
-      user_id: req.user.id,
-      src_instrument_id,
-      src_dataset_id,
-      state,
-      create_method,
-      metadata,
+    let createQuery;
+    try {
+      createQuery = await getDatasetCreateQuery({
+        name,
+        type,
+        du_size,
+        origin_path: decoded_origin_path,
+        size,
+        bundle_size,
+        workflow_id,
+        user_id: req.user.id,
+        user_roles: req.user.roles,
+        src_instrument_id,
+        src_dataset_id,
+        state,
+        create_method,
+        metadata,
+      });
+    } catch (error) {
+      if (error.message === projectService.PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation) {
+        next(createError.Forbidden(error.message));
+      } else {
+        next(error);
+      }
+    }
+
+    const dataset = await prisma.$transaction(async (tx) => {
+      const createdDataset = await datasetService.createDatasetInTransaction(tx, createQuery);
+
+      if (project_data && accessControl('projects')('create')) {
+        try {
+          await datasetService.assignProject({
+            tx,
+            data: {
+              assignee_dataset_ids: [createdDataset.id],
+              assignor_id: req.user.id,
+              ...project_data,
+            },
+            createNew: true,
+          });
+        } catch (error) {
+          if (error.message === projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject) {
+            next(createError.BadRequest(error.message));
+          } else {
+            next(error);
+          }
+        }
+      }
+
+      return createdDataset;
     });
 
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    const dataset = await datasetService.createDataset(createQuery);
+    // const dataset = await datasetService.createDataset(createQuery);
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -1398,6 +1469,24 @@ const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) =
 
 // - Register an uploaded dataset in the system
 // - Used by UI
+/**
+ * Register an uploaded dataset in the system
+ * @route POST /datasets/upload
+ * @param {Object} req.body - The request body
+ * @param {string} req.body.type - The type of the dataset (must be one of the configured dataset types)
+ * @param {string} req.body.name - The name of the dataset (minimum length: 3 characters)
+ * @param {number} [req.body.src_dataset_id] - Optional ID of the source dataset
+ * @param {Array} req.body.files_metadata - Metadata for the files being uploaded
+ * @param {Object} [req.body.project_data] - Optional project data to associate with the dataset
+ * @param {string} [req.body.project_data.name] - The name of the project
+ * @param {string} [req.body.project_data.description] - A description of the project
+ * @param {string} [req.body.project_data.id] - The ID of an existing project to associate with the dataset
+ * @param {boolean} [req.body.project_data.browser_enabled] - Whether the project is enabled for browser view
+ * @param {number[]} [req.body.project_data.assignee_user_ids] - An array of user IDs to assign to the project
+ * @param {string} [req.body.src_instrument_id] - Optional ID of the source instrument
+ * @returns {Object} The created dataset upload log
+ * @throws {Error} If dataset creation or project assignment fails
+ */
 router.post(
   '/upload',
   verifyUploadEnabledForRole,
@@ -1407,7 +1496,15 @@ router.post(
     body('name').escape().notEmpty().isLength({ min: 3 }),
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
-    body('project_id').optional(),
+    body('project_data').optional().isObject(),
+    body('project_data.name').optional().escape().notEmpty(),
+    body('project_data.description').optional().escape().notEmpty(),
+    body('project_data.id').optional().escape().notEmpty(),
+    body('project_data.browser_enabled').optional().isBoolean(),
+    body('project_data.assignee_user_ids')
+      .optional()
+      .isArray()
+      .custom((e) => e.every((id) => Number.isInteger(id))),
     body('src_instrument_id').optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -1415,20 +1512,41 @@ router.post(
     // #swagger.summary = 'Register an uploaded dataset in the system'
 
     const {
-      project_id, src_instrument_id, src_dataset_id, name, type, files_metadata,
+      src_instrument_id, src_dataset_id, name, type, files_metadata,
+      project_data,
     } = req.body;
 
-    const datasetCreateQuery = getDatasetCreateQuery({
+    const datasetCreateQuery = await getDatasetCreateQuery({
       name,
       type,
-      project_id,
       user_id: req.user.id,
+      user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
+
+      if (project_data && accessControl('projects')('create')) {
+        try {
+          await datasetService.assignProject({
+            tx,
+            data: {
+              assignee_dataset_ids: [createdDataset.id],
+              assignor_id: req.user.id,
+              ...project_data,
+            },
+            createNew: true,
+          });
+        } catch (error) {
+          if (error.message === projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject) {
+            next(createError.BadRequest(
+              error.message,
+            ));
+          }
+        }
+      }
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {

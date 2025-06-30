@@ -21,8 +21,7 @@
                   v-model:populated-dataset-name="datasetNameInput"
                   class="w-full"
                   :input-disabled="props.inputDisabled"
-                  :show-dataset-name-error="props.showCreatedDatasetError"
-                  :dataset-name-error="props.createdDatasetError"
+                  :error="props.datasetNameError"
                 />
               </td>
             </tr>
@@ -51,12 +50,25 @@
             <tr>
               <td>Project</td>
               <td class="metadata">
-                <router-link
-                  :to="`/projects/${props.project?.id}`"
-                  target="_blank"
+                <div v-if="props.project">
+                  <router-link
+                    :to="`/projects/${props.project.id}`"
+                    target="_blank"
+                  >
+                    {{ props.project.name }}
+                  </router-link>
+                </div>
+                <OutlinedAlert
+                  v-else-if="props.creatingNewProject"
+                  color="secondary"
+                  border="left"
+                  size="medium"
+                  padding-direction="left"
+                  padding-amount="sm"
+                  icon="info"
                 >
-                  {{ props.project?.name }}
-                </router-link>
+                  A new Project will be created
+                </OutlinedAlert>
               </td>
             </tr>
 
@@ -91,6 +103,7 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
+import OutlinedAlert from "@/components/utils/OutlinedAlert.vue";
 
 const props = defineProps({
   // `dataset`: Dataset to be created
@@ -100,6 +113,10 @@ const props = defineProps({
   populatedDatasetName: {
     type: String,
     default: "",
+  },
+  creatingNewProject: {
+    type: Boolean,
+    default: false,
   },
   ingestionSpace: {
     type: String,
@@ -121,13 +138,9 @@ const props = defineProps({
   project: {
     type: Object,
   },
-  createdDatasetError: {
+  datasetNameError: {
     type: String,
     default: "",
-  },
-  showCreatedDatasetError: {
-    type: Boolean,
-    default: false,
   },
 });
 

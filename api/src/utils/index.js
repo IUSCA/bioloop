@@ -3,9 +3,12 @@ const path = require('path');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
 
+const config = require('config');
+const logger = require('../services/logger');
+
 function renameKey(oldKey, newKey) {
   return (obj) => {
-  // eslint-disable-next-line no-param-reassign
+    // eslint-disable-next-line no-param-reassign
     obj[newKey] = obj[oldKey];
     // eslint-disable-next-line no-param-reassign
     delete obj[oldKey];
@@ -17,7 +20,9 @@ function setDifference(setA, setB) {
   const _setB = new Set(setB);
   const _difference = new Set(setA);
   // eslint-disable-next-line no-restricted-syntax
-  for (const elem of _setB) { _difference.delete(elem); }
+  for (const elem of _setB) {
+    _difference.delete(elem);
+  }
 
   return _difference;
 }
@@ -26,7 +31,9 @@ function setUnion(setA, setB) {
   const _setB = new Set(setB);
   const _union = new Set(setA);
   // eslint-disable-next-line no-restricted-syntax
-  for (const elem of _setB) { _union.add(elem); }
+  for (const elem of _setB) {
+    _union.add(elem);
+  }
 
   return _union;
 }
@@ -36,7 +43,9 @@ function setIntersection(setA, setB) {
   const _setB = new Set(setB);
   const _intersection = new Set();
   // eslint-disable-next-line no-restricted-syntax
-  for (const elem of _setA) { if (_setB.has(elem)) _intersection.add(elem); }
+  for (const elem of _setA) {
+    if (_setB.has(elem)) _intersection.add(elem);
+  }
 
   return _intersection;
 }
@@ -188,7 +197,8 @@ function numericStringsToNumbers(arr, numericStringFields = []) {
   return _.map((e) => {
     if (typeof e === 'string') {
       return !Number.isNaN(e) && Number(e);
-    } if (typeof e === 'object') {
+    }
+    if (typeof e === 'object') {
       const convertedFields = {};
       numericStringFields.forEach((field) => {
         if (Object.keys(e).includes(field)) {
@@ -310,6 +320,66 @@ function base64urlEncode(buf) {
     .replace(/\//g, '_'); // Replace '/' with '_'
 }
 
+function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
+  logger.info(`Checking if feature ${feature} is empty or defined`);
+  if (!feature) {
+    return true;
+  }
+
+  // Check if enabled_features is defined
+  if (!config.enabled_features) {
+    logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
+    return true;
+  }
+
+  const feature_enabled = config.enabled_features[feature];
+
+  // Check if upload feature is defined
+  if (feature_enabled == null) {
+    logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
+    return true;
+  }
+
+  // Check if upload feature is a boolean `true`
+  if (typeof feature_enabled === 'boolean') {
+    logger.info('Upload feature is enabled, boolean');
+    logger.info(feature_enabled);
+    return feature_enabled;
+  }
+
+  // Check if upload feature is an object
+  if (typeof feature_enabled !== 'object') {
+    // logger.error('Invalid config for enabling dataset uploads');
+    return false;
+  }
+
+  const feature_enabled_for_roles = feature_enabled.enabled_for_roles;
+
+  // Check if enabled_for_roles is an array
+  if (!Array.isArray(feature_enabled_for_roles)) {
+    // logger.error('Invalid config for enabling dataset uploads: enabled_for_roles is not an array');
+    return false;
+  }
+
+  // Check if enabled_for_roles is empty
+  if (feature_enabled_for_roles.length === 0) {
+    // logger.error('No roles specified for enabling dataset uploads');
+    return false;
+  }
+
+  // Check if user has one of the allowed roles
+  const is_feature_enabled_for_user = feature_enabled_for_roles.some(
+    (role) => roles.includes(role),
+  );
+  if (!is_feature_enabled_for_user) {
+    // logger.info('Upload feature is not enabled for this user');
+  } else {
+    // logger.info('Upload feature is enabled for this user');
+  }
+
+  return is_feature_enabled_for_user;
+}
+
 /**
  * Recursively sorts the keys of an object in ascending order.
  * If the input is an array, it applies the sorting to each element.
@@ -340,7 +410,8 @@ function base64urlEncode(buf) {
 function deepSortKeys(obj) {
   if (Array.isArray(obj)) {
     return obj.map(deepSortKeys);
-  } if (obj && typeof obj === 'object' && obj.constructor === Object) {
+  }
+  if (obj && typeof obj === 'object' && obj.constructor === Object) {
     return Object.fromEntries(
       Object.keys(obj).sort().map((k) => [k, deepSortKeys(obj[k])]),
     );
@@ -362,5 +433,6 @@ module.exports = {
   transactionWithRetry,
   TransactionRetryError,
   base64urlEncode,
+  isFeatureEnabledForRole,
   deepSortKeys,
 };

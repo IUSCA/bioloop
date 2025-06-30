@@ -4,8 +4,8 @@
       <va-card-content class="h-full">
         <IngestionStepper v-if="auth.isFeatureEnabled('ingestion')" />
         <va-alert color="warning" icon="warning" v-else
-          >This feature is currently disabled</va-alert
-        >
+          >This feature is currently disabled
+        </va-alert>
       </va-card-content>
     </va-card>
   </div>
@@ -28,6 +28,6 @@ nav.setNavItems([
 
 <route lang="yaml">
 meta:
-  title: Ingest
-  requiresRoles: ["operator", "admin", "user"]
+title: Ingest
+requiresRoles: ["operator", "admin", "user"]
 </route>

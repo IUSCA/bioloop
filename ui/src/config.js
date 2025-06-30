@@ -83,9 +83,12 @@ const exports = {
       enabledForRoles: ["admin"],
     },
     downloads: true,
-    signup: true,
+    signup: false,
     uploads: {
-      enabledForRoles: ["admin"],
+      enabledForRoles: ["admin", "user"],
+    },
+    auto_create_project_on_dataset_creation: {
+      enabledForRoles: ["user"],
     },
   },
   notifications: {
