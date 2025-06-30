@@ -25,7 +25,7 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    const url = !(auth.canOperate || auth.canAdmin)
+    const url = !auth.canOperate
       ? `/datasets/${auth.user.username}/all`
       : "/datasets";
     return api.get(url, {

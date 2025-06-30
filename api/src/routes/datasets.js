@@ -27,6 +27,19 @@ const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+function handleProjectAssignmentError(error, next) {
+  if ([
+    projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject,
+    projectService.PROJECT_CREATION_ERRORS.noAssociatingUserId,
+  ].includes(error.message)) {
+    next(createError.BadRequest(error.message));
+  } else if (error.message === projectService.PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation) {
+    next(createError.Forbidden(error.message));
+  } else {
+    next(error);
+  }
+}
+
 // stats - UI
 router.get(
   '/stats',
@@ -541,10 +554,6 @@ router.get(
       include_source_instrument: req.query.include_source_instrument || false,
     });
 
-    // if (true) {
-    //   throw new Error('Failed to fetch datasets');
-    // }
-
     res.json(dataset);
   }),
 );
@@ -571,7 +580,6 @@ function normalize_name(name) {
  * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
  * @param {string} [data.workflow_id] - The ID of the associated workflow.
  * @param {string} data.user_id - The ID of the user creating the dataset.
- * @param {string} data.user_roles - The roles of the user creating the dataset.
  * @param {string} [data.src_instrument_id] - The ID of the source instrument.
  * @param {string} [data.src_dataset_id] - The ID of the source dataset.
  * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
@@ -586,7 +594,7 @@ const getDatasetCreateQuery = async (data) => {
   /* eslint-disable no-unused-vars */
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    user_id, user_roles, src_instrument_id, src_dataset_id, state, create_method,
+    user_id, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -744,32 +752,27 @@ router.post(
     }
 
     let createQuery;
-    try {
-      createQuery = await getDatasetCreateQuery({
-        name,
-        type,
-        du_size,
-        origin_path: decoded_origin_path,
-        size,
-        bundle_size,
-        workflow_id,
-        user_id: req.user.id,
-        user_roles: req.user.roles,
-        src_instrument_id,
-        src_dataset_id,
-        state,
-        create_method,
-        metadata,
-      });
-    } catch (error) {
-      if (error.message === projectService.PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation) {
-        next(createError.Forbidden(error.message));
-      } else {
-        next(error);
-      }
-    }
+    // eslint-disable-next-line prefer-const
+    createQuery = await getDatasetCreateQuery({
+      name,
+      type,
+      du_size,
+      origin_path: decoded_origin_path,
+      size,
+      bundle_size,
+      workflow_id,
+      user_id: req.user.id,
+      src_instrument_id,
+      src_dataset_id,
+      state,
+      create_method,
+      metadata,
+    });
 
     const dataset = await prisma.$transaction(async (tx) => {
+      // idempotence: creates dataset or returns error 409 on repeated requests
+      // If many concurrent transactions are trying to create the same dataset, only one will succeed
+      // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
       const createdDataset = await datasetService.createDatasetInTransaction(tx, createQuery);
 
       if (project_data && accessControl('projects')('create')) {
@@ -784,21 +787,12 @@ router.post(
             createNew: true,
           });
         } catch (error) {
-          if (error.message === projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject) {
-            next(createError.BadRequest(error.message));
-          } else {
-            next(error);
-          }
+          handleProjectAssignmentError(error, next);
         }
       }
 
       return createdDataset;
     });
-
-    // idempotence: creates dataset or returns error 409 on repeated requests
-    // If many concurrent transactions are trying to create the same dataset, only one will succeed
-    // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    // const dataset = await datasetService.createDataset(createQuery);
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -1520,7 +1514,6 @@ router.post(
       name,
       type,
       user_id: req.user.id,
-      user_roles: req.user.roles,
       src_instrument_id,
       src_dataset_id,
     });
@@ -1540,11 +1533,7 @@ router.post(
             createNew: true,
           });
         } catch (error) {
-          if (error.message === projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject) {
-            next(createError.BadRequest(
-              error.message,
-            ));
-          }
+          handleProjectAssignmentError(error, next);
         }
       }
 

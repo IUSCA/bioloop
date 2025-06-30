@@ -198,7 +198,21 @@ function generate_project_name({ prefix, suffix } = {}) {
   return projectName;
 }
 
-// todo - test existing endpoints
+/**
+ * Builds a query object for creating a new project.
+ *
+ * @async
+ * @param {Object} options - The options for building the creation query.
+ * @param {string[]} [options.user_ids=[]] - Array of user IDs to associate with the project.
+ * @param {string[]} [options.dataset_ids=[]] - Array of dataset IDs to associate with the project.
+ * @param {string} [options.assignor_id] - ID of the user assigning users/datasets to the project.
+ * @param {string} [options.name] - The name of the project.
+ * @param {string} [options.description] - The description of the project.
+ * @param {boolean} [options.browser_enabled] - Whether the project is enabled for Genome Browser.
+ * @param {Object} [options.funding] - Funding information for the project.
+ * @param {Object} [options.metadata] - Additional metadata for the project.
+ * @returns {Promise<Object>} An object containing the data for creating a project.
+ */
 async function buildCreationQuery({
   user_ids = [], dataset_ids = [], assignor_id, ...projectData
 } = {}) {
@@ -250,6 +264,16 @@ const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
   };
 };
 
+/**
+ * Builds a query object for associating datasets with a project.
+ *
+ * @async
+ * @param {Object} options - The options for building the dataset association query.
+ * @param {string} options.project_id - The ID of the project to associate datasets with.
+ * @param {string[]} [options.dataset_ids=[]] - Array of dataset IDs to associate with the project.
+ * @param {string} [options.assignor_id] - ID of the user assigning the datasets.
+ * @returns {Promise<Object[]|null>} An array of objects for creating project-dataset associations, or null if no datasets to associate.
+ */
 const buildDatasetAssociationQuery = async ({
   project_id,
   dataset_ids = [],
@@ -266,6 +290,24 @@ const buildDatasetAssociationQuery = async ({
   }));
 };
 
+/**
+ * Creates a new project in the database.
+ *
+ * @async
+ * @param {Object} options - The options for creating the project.
+ * @param {import('@prisma/client').PrismaClient} [options.tx] - The Prisma transaction object.
+ * @param {Object} [options.include] - Specifies which related records to include in the query result.
+ * @param {string} [options.name] - The name of the project.
+ * @param {string} [options.description] - The description of the project.
+ * @param {boolean} [options.browser_enabled] - Whether the Project has Genome Browser enabled.
+ * @param {Object} [options.funding] - Funding information for the project.
+ * @param {Object} [options.metadata] - Additional metadata for the project.
+ * @param {string[]} [options.user_ids] - Array of user IDs to associate with the project.
+ * @param {string[]} [options.dataset_ids] - Array of dataset IDs to associate with the project.
+ * @param {string} [options.assignor_id] - ID of the user assigning users/datasets to the project.
+ * @returns {Promise<Object>} The created project object.
+ * @throws {Error} If there's an issue creating the project.
+ */
 const create_project = async ({
   tx,
   include,
@@ -282,6 +324,19 @@ const create_project = async ({
   });
 };
 
+/**
+ * Assigns datasets to an existing project.
+ *
+ * @async
+ * @param {Object} options - The options for assigning datasets.
+ * @param {import('@prisma/client').PrismaClient} [options.tx] - The Prisma transaction object.
+ * @param {Object} [options.include] - Specifies which related records to include in the query result.
+ * @param {string} options.project_id - The ID of the project to assign datasets to.
+ * @param {string[]} options.dataset_ids - Array of dataset IDs to assign to the project.
+ * @param {string} options.assignor_id - ID of the user assigning the datasets.
+ * @returns {Promise<Object>} The result of the dataset assignment operation.
+ * @throws {Error} If the assignor doesn't have permission or if there's an issue assigning datasets.
+ */
 const assign_datasets = async ({
   tx,
   include,

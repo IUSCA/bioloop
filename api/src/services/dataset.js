@@ -9,7 +9,7 @@ const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
 // const projectService = require('./project');
-const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
+const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
@@ -595,11 +595,23 @@ async function add_files({ dataset_id, data }) {
 }
 
 /**
- * Creates a new dataset within a transaction.
+ * Creates a new dataset if one with the same name and type does not already exist.
+ *
+ * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
+ *
+ * Using prisma.dataset.create alone would create the dataset if it doesn't exist, but would throw an error if it does.
+ * This approach would also increment the sequence ID even if the dataset is not created,
+ * leading to large gaps in the sequence when this function is called multiple times for existing datasets.
+ *
+ * The expected behavior is maintained even under concurrent transactions (default isolation level is read-committed):
+ * txA: findFirst -> no dataset
+ * txB: findFirst -> no dataset
+ * txA: create -> dataset created
+ * txB: create -> unique constraint violation
  *
  * @param {Object} tx - Database transaction manager.
  * @param {Object} data - The data object containing details of the dataset to be created.
- * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
+ * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
  */
 async function createDatasetInTransaction(tx, data) {
   // find if a dataset with the same name and type already exists
@@ -622,6 +634,39 @@ async function createDatasetInTransaction(tx, data) {
   });
 }
 
+/**
+ * Assigns a dataset to a project, either by creating a new project or associating with an existing one.
+ *
+ * @async
+ * @function assignProject
+ * @param {Object} options - The options for assigning the project.
+ * @param {Object} options.tx - The database transaction object.
+ * @param {Object} options.data - The data object containing project and dataset information.
+ * @param {string} [options.data.name] - The name of the project.
+ * @param {string} [options.data.description] - Description of the project.
+ * @param {boolean} [options.data.browser_enabled] - Whether the project is Genome-Browser enabled.
+ * @param {string} [options.data.funding] - Funding information for the project.
+ * @param {Object} [options.data.metadata] - Additional metadata for the project.
+ * @param {string[]} [options.data.assignee_user_ids] - Array of user IDs to be assigned to the project.
+ * @param {string[]} [options.data.assignee_dataset_ids] - Array of dataset IDs to be assigned to the project.
+ * @param {string} options.data.assignor_id - ID of the user assigning the project.
+ * @param {string} [options.data.project_id] - ID of an existing project (if associating with an existing project).
+ * @param {boolean} [options.createNew=false] - Flag to indicate whether a new project should be created.
+ * @throws {Error} Throws an error if trying to create a new project while providing an existing project ID.
+ * @returns {Promise<void>}
+ *
+ * @description
+ * This function handles the assignment of a dataset to a project. It can either create a new project
+ * or associate the dataset with an existing project based on the provided parameters.
+ *
+ * If `createNew` is true and no `project_id` is provided, it creates a new project with the given details.
+ * If `createNew` is true and a `project_id` is provided, it throws an error.
+ * If `createNew` is false, it associates the dataset with an existing project.
+ *
+ * The function uses the project schema which includes fields like id, slug, name, description,
+ * browser_enabled, funding, metadata, created_at, and updated_at. It also handles relationships
+ * with users, datasets, and contacts through separate association tables.
+ */
 async function assignProject({ tx, data, createNew = false }) {
   if (createNew && data.project_id == null) {
     // If Project ID is not provided, associate created dataset with a new project
@@ -647,24 +692,6 @@ async function assignProject({ tx, data, createNew = false }) {
   }
 }
 
-/**
- * Creates a new dataset if one with the same name and type does not already exist.
- *
- * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
- *
- * Using prisma.dataset.create alone would create the dataset if it doesn't exist, but would throw an error if it does.
- * This approach would also increment the sequence ID even if the dataset is not created,
- * leading to large gaps in the sequence when this function is called multiple times for existing datasets.
- *
- * The expected behavior is maintained even under concurrent transactions (default isolation level is read committed):
- * txA: findFirst -> no dataset
- * txB: findFirst -> no dataset
- * txA: create -> dataset created
- * txB: create -> unique constraint violation
- *
- * @param {Object} data - The data object containing details of the dataset to be created.
- * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
- */
 function createDataset(data) {
   return prisma.$transaction(async (tx) => createDatasetInTransaction(tx, data));
 }

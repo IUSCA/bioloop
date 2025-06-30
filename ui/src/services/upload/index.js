@@ -11,8 +11,7 @@ class UploadService {
   }
 
   uploadFile(data) {
-    // return this.uploadAxios.post("/upload", data);
-    return Promise.resolve();
+    return this.uploadAxios.post("/upload", data);
   }
 }
 
