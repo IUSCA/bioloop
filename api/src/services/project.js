@@ -1,10 +1,18 @@
 const { PrismaClient } = require('@prisma/client');
 const crypto = require('node:crypto');
 const _ = require('lodash/fp');
-const { PROJECT_ASSOCIATION_ERRORS } = require('../constants');
 const userService = require('./user');
 
 const prisma = new PrismaClient();
+
+const PROJECT_ASSOCIATION_ERRORS = {
+  noProjectUserAssociation: 'User is not associated with the specified project',
+  noAssociatingUserId: 'Id of the User associating the Project is required',
+};
+
+const PROJECT_CREATION_ERRORS = {
+  projectIdProvidedWhenCreatingNewProject: 'Cannot create a new Project when Project ID is provided',
+};
 
 function normalize_name(name) {
   // convert to lowercase
@@ -171,25 +179,12 @@ const build_include_object = ({
  *
  * @description
  * This function generates a project name using the following format:
- * - If both prefix and suffix are provided: "{suffix}-{randomString}-{prefix}"
- * - If only suffix is provided: "{suffix}-{randomString}"
- * - If only prefix is provided: "{randomString}-{prefix}"
+ * - If both prefix and suffix are provided: "{prefix}-{randomString}-{suffix}"
+ * - If only suffix is provided: "{prefix}-{randomString}"
+ * - If only prefix is provided: "{randomString}-{suffix}"
  * - If neither is provided: "{randomString}"
  *
  * The randomString is a 16-character hexadecimal string generated using cryptographically strong random bytes.
- *
- * @example
- * // With both prefix and suffix
- * generate_project_name({ prefix: 'dev', suffix: 'test' }) // Returns something like: "dev-3a7bd1c9f0b24e8e-test"
- *
- * // With only suffix
- * generate_project_name({ suffix: 'test' }) // Returns something like: "3a7bd1c9f0b24e8e-test"
- *
- * // With only prefix
- * generate_project_name({ prefix: 'dev' }) // Returns something like: "dev-3a7bd1c9f0b24e8e"
- *
- * // Without prefix or suffix (generates only a random identifier)
- * generate_project_name() // Returns something like: "3a7bd1c9f0b24e8e"
  */
 function generate_project_name({ prefix, suffix } = {}) {
   const randomStr = crypto.randomBytes(8).toString('hex'); // Generate 16 random characters
@@ -273,25 +268,26 @@ const buildDatasetAssociationQuery = async ({
 
 const create_project = async ({
   tx,
+  include,
   ...data
 }) => {
   const transactionManager = tx || prisma;
-
-  console.log('create_project', data);
 
   const projectCreationQuery = await buildCreationQuery({
     ...data,
   });
-  await transactionManager.project.create({ data: projectCreationQuery });
+  return transactionManager.project.create({
+    data: projectCreationQuery,
+    include: include || undefined,
+  });
 };
 
 const assign_datasets = async ({
   tx,
+  include,
   ...data
 }) => {
   const transactionManager = tx || prisma;
-
-  console.log('assign_datasets', data);
 
   if (!data.assignor_id) { // ID of user who is associating datasets with the project
     throw new Error(PROJECT_ASSOCIATION_ERRORS.noAssociatingUserId);
@@ -318,7 +314,10 @@ const assign_datasets = async ({
   const projectAssociationQuery = await buildDatasetAssociationQuery({
     ...data,
   });
-  await transactionManager.project_dataset.createMany({ data: projectAssociationQuery });
+  return transactionManager.project_dataset.createMany({
+    data: projectAssociationQuery,
+    include: include || undefined,
+  });
 };
 
 module.exports = {
@@ -332,6 +331,6 @@ module.exports = {
   buildDatasetAssociationQuery,
   create_project,
   assign_datasets,
-  // buildAssociationQueryForNewProject,
-
+  PROJECT_ASSOCIATION_ERRORS,
+  PROJECT_CREATION_ERRORS,
 };

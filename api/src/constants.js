@@ -135,11 +135,6 @@ const auth = {
   },
 };
 
-const PROJECT_ASSOCIATION_ERRORS = {
-  noProjectUserAssociation: 'User is not associated with the specified project',
-  noAssociatingUserId: 'Id of the User associating the Project is required',
-};
-
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
@@ -151,5 +146,4 @@ module.exports = {
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,
   WORKFLOWS,
-  PROJECT_ASSOCIATION_ERRORS,
 };

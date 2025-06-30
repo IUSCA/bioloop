@@ -294,7 +294,6 @@ import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { VaDivider, VaPopover } from "vuestic-ui";
-import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import { Icon } from "@iconify/vue";
 import instrumentService from "@/services/instrument";
 import constants from "@/constants";

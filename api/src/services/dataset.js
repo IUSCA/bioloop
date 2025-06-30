@@ -23,17 +23,6 @@ const projectService = require('./project');
 
 const prisma = new PrismaClient();
 
-/**
- * Error message for when a user is not associated with a specified project.
- *
- * This constant is used to provide an error message when attempting
- * to perform operations that require a user to be associated with a project,
- * but the Project-User association does not exist.
- *
- * @constant {string}
- */
-const noProjectUserAssociation = 'User is not associated with the specified project';
-
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
 
@@ -633,11 +622,8 @@ async function createDatasetInTransaction(tx, data) {
   });
 }
 
-async function assignProject({ tx, data }) {
-  console.log('assigning dataset to project, data:');
-  console.dir(data, { depth: null });
-
-  if (!data.id) {
+async function assignProject({ tx, data, createNew = false }) {
+  if (createNew && data.project_id == null) {
     // If Project ID is not provided, associate created dataset with a new project
     await projectService.create_project({
       tx,
@@ -647,6 +633,8 @@ async function assignProject({ tx, data }) {
       description: data.description || 'Auto-generated during Dataset creation',
       ...data,
     });
+  } else if (createNew && data.project_id != null) {
+    throw new Error(projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject);
   } else {
     // Else, associate created Dataset with an existing Project
     await projectService.assign_datasets({
@@ -654,6 +642,7 @@ async function assignProject({ tx, data }) {
       project_id: data.id,
       dataset_ids: data.assignee_dataset_ids,
       assignor_id: data.assignor_id,
+      ...data,
     });
   }
 }
@@ -806,6 +795,5 @@ module.exports = {
   has_workflow_access,
   dataset_access_check,
   workflow_access_check,
-  noProjectUserAssociation,
   assignProject,
 };

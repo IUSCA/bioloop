@@ -21,8 +21,6 @@ const projectService = require('../services/project');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
 const logger = require('../services/logger');
-const { isFeatureEnabledForRole } = require('../utils');
-const { PROJECT_ASSOCIATION_ERRORS } = require('../constants');
 
 const isPermittedTo = accessControl('datasets');
 
@@ -654,6 +652,36 @@ const getDatasetCreateQuery = async (data) => {
 
 // Create a new dataset
 // Used by - workers + UI
+/**
+ * Create a new dataset.
+ *
+ * @route POST /datasets
+ * @param {Object} req.body - The dataset data.
+ * @param {string} req.body.name - The name of the dataset (required).
+ * @param {string} req.body.type - The type of the dataset (must be one of the configured dataset types).
+ * @param {string} req.body.origin_path - The origin path of the dataset (required).
+ * @param {BigInt} [req.body.du_size] - The disk usage size of the dataset.
+ * @param {BigInt} [req.body.size] - The size of the dataset.
+ * @param {BigInt} [req.body.bundle_size] - The size of the dataset bundle.
+ * @param {Object} [req.body.project_data] - Optional project data to associate with the dataset.
+ * @param {string} [req.body.project_data.name] - The name of the project to associate with the dataset.
+ * @param {string} [req.body.project_data.id] - The ID of an existing project to associate with the dataset.
+ * @param {string} [req.body.project_data.description] - A description of the project.
+ * @param {string} [req.body.project_data.project_name] - An alternative name for the project (if different from 'name').
+ * @param {boolean} [req.body.project_data.browser_enabled] - Whether the project is enabled for browser view.
+ * @param {number[]} [req.body.project_data.assignee_user_ids] - An array of user IDs to assign to the project.
+ * @param {string} [req.body.src_instrument_id] - The ID of the source instrument.
+ * @param {string} [req.body.src_dataset_id] - The ID of the source dataset.
+ * @param {string} [req.body.create_method] - The method used to create the dataset.
+ * @param {string} [req.body.workflow_id] - The ID of the associated workflow.
+ * @param {string} [req.body.state] - The initial state of the dataset.
+ * @param {Object} [req.body.metadata] - Additional metadata for the dataset.
+ * @param {Object} req.user - The authenticated user making the request.
+ * @param {string} req.user.id - The ID of the authenticated user.
+ * @param {string[]} req.user.roles - The roles of the authenticated user.
+ * @returns {Promise<Object>} The created dataset object.
+ * @throws {Error} If dataset creation fails or if the origin path is restricted.
+ */
 router.post(
   '/',
   isPermittedTo('create'),
@@ -734,7 +762,7 @@ router.post(
         metadata,
       });
     } catch (error) {
-      if (error.message === CONSTANTS.PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation) {
+      if (error.message === projectService.PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation) {
         next(createError.Forbidden(error.message));
       } else {
         next(error);
@@ -745,14 +773,23 @@ router.post(
       const createdDataset = await datasetService.createDatasetInTransaction(tx, createQuery);
 
       if (project_data && accessControl('projects')('create')) {
-        await datasetService.assignProject({
-          tx,
-          data: {
-            assignee_dataset_ids: [createdDataset.id],
-            assignor_id: req.user.id,
-            ...project_data,
-          },
-        });
+        try {
+          await datasetService.assignProject({
+            tx,
+            data: {
+              assignee_dataset_ids: [createdDataset.id],
+              assignor_id: req.user.id,
+              ...project_data,
+            },
+            createNew: true,
+          });
+        } catch (error) {
+          if (error.message === projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject) {
+            next(createError.BadRequest(error.message));
+          } else {
+            next(error);
+          }
+        }
       }
 
       return createdDataset;
@@ -1432,6 +1469,24 @@ const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) =
 
 // - Register an uploaded dataset in the system
 // - Used by UI
+/**
+ * Register an uploaded dataset in the system
+ * @route POST /datasets/upload
+ * @param {Object} req.body - The request body
+ * @param {string} req.body.type - The type of the dataset (must be one of the configured dataset types)
+ * @param {string} req.body.name - The name of the dataset (minimum length: 3 characters)
+ * @param {number} [req.body.src_dataset_id] - Optional ID of the source dataset
+ * @param {Array} req.body.files_metadata - Metadata for the files being uploaded
+ * @param {Object} [req.body.project_data] - Optional project data to associate with the dataset
+ * @param {string} [req.body.project_data.name] - The name of the project
+ * @param {string} [req.body.project_data.description] - A description of the project
+ * @param {string} [req.body.project_data.id] - The ID of an existing project to associate with the dataset
+ * @param {boolean} [req.body.project_data.browser_enabled] - Whether the project is enabled for browser view
+ * @param {number[]} [req.body.project_data.assignee_user_ids] - An array of user IDs to assign to the project
+ * @param {string} [req.body.src_instrument_id] - Optional ID of the source instrument
+ * @returns {Object} The created dataset upload log
+ * @throws {Error} If dataset creation or project assignment fails
+ */
 router.post(
   '/upload',
   verifyUploadEnabledForRole,
@@ -1473,17 +1528,24 @@ router.post(
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
       const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
 
-      console.log('createdDataset', createdDataset);
-
       if (project_data && accessControl('projects')('create')) {
-        await datasetService.assignProject({
-          tx,
-          data: {
-            assignee_dataset_ids: [createdDataset.id],
-            assignor_id: req.user.id,
-            ...project_data,
-          },
-        });
+        try {
+          await datasetService.assignProject({
+            tx,
+            data: {
+              assignee_dataset_ids: [createdDataset.id],
+              assignor_id: req.user.id,
+              ...project_data,
+            },
+            createNew: true,
+          });
+        } catch (error) {
+          if (error.message === projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject) {
+            next(createError.BadRequest(
+              error.message,
+            ));
+          }
+        }
       }
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({

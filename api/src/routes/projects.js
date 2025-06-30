@@ -160,10 +160,6 @@ router.get(
     });
     project.datasets = await Promise.all(wfPromises);
 
-    // if (true) {
-    //   throw new createError.Forbidden('Access denied');
-    // }
-
     res.json(project);
   }),
 );
@@ -452,6 +448,23 @@ router.get(
   }),
 );
 
+/**
+ * Create a new project.
+ *
+ * @route POST /projects
+ * @param {Object} req.body - The project data.
+ * @param {boolean} [req.body.browser_enabled] - Whether the project is browser enabled.
+ * @param {string} [req.body.name] - The name of the project.
+ * @param {string} [req.body.description] - The description of the project.
+ * @param {string} [req.body.funding] - The funding information for the project.
+ * @param {Object} [req.body.metadata] - Additional metadata for the project.
+ * @param {number[]} [req.body.user_ids] - Array of user IDs to associate with the project.
+ * @param {number[]} [req.body.dataset_ids] - Array of dataset IDs to associate with the project.
+ * @param {Object} req.user - The authenticated user making the request.
+ * @param {string} req.user.id - The ID of the authenticated user.
+ * @returns {Promise<Object>} The created project object.
+ * @throws {Error} If project creation fails.
+ */
 router.post(
   '/',
   isPermittedTo('create'),
@@ -461,14 +474,12 @@ router.post(
     body('description').optional().isString(),
     body('funding').optional().isString(),
     body('metadata').optional().isObject(),
-    body('assignor_id').optional().isString().notEmpty()
-      .withMessage('assignor_id, if provided, must be a non-empty string'),
     body('user_ids').optional().isArray().withMessage('user_ids must be an array')
-      .custom((value) => value.every((id) => typeof id === 'string' && id.trim() !== ''))
-      .withMessage('user_ids must be an array of non-empty strings'),
+      .custom((value) => value.every((id) => typeof id === 'number' && Number.isInteger(id)))
+      .withMessage('user_ids must be an array of integers'),
     body('dataset_ids').optional().isArray().withMessage('dataset_ids must be an array')
-      .custom((value) => value.every((id) => typeof id === 'string' && id.trim() !== ''))
-      .withMessage('dataset_ids must be an array of non-empty strings'),
+      .custom((value) => value.every((id) => typeof id === 'number' && Number.isInteger(id)))
+      .withMessage('dataset_ids must be an array of integers'),
   ]),
   asyncHandler(async (req, res, next) => {
     /* eslint-disable */
@@ -478,10 +489,9 @@ router.post(
       // projects
       /* eslint-enable */
 
-    const data = projectService.buildCreationQuery(req.body);
-
-    const project = await prisma.project.create({
-      data,
+    const project = await projectService.create_project({
+      ...req.body,
+      assignor_id: req.user.id,
       include: projectService.build_include_object(),
     });
     res.json(project);
