@@ -298,9 +298,9 @@ const assign_datasets = async ({
   }
 
   const assignorRoles = await userService.getUserRoles({ user_id: data.assignor_id });
-  let isAuthorized = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
 
-  // ensure that the user associating business entities with the project has access to the project
+  // ensure that the user associating Datasets to the Project has access to the Project
+  let isAuthorized = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
   const userAssociation = await transactionManager.project_user.findUnique({
     where: {
       project_id_user_id: {
@@ -309,7 +309,6 @@ const assign_datasets = async ({
       },
     },
   });
-
   isAuthorized = isAuthorized || !!userAssociation;
 
   if (!isAuthorized) {
