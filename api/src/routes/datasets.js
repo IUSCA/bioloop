@@ -708,24 +708,24 @@ router.post(
                                           */
 
     const {
-      ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
+      import_space, create_method, project_id, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
     } = req.body;
 
     // remove any HTML entities inserted by browser because of URL encoding
     const decoded_origin_path = he.decode(origin_path);
 
-    if (ingestion_space) {
+    if (import_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
-      const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
-      const is_origin_path_restricted = restricted_ingestion_dirs.some((glob) => {
+      const restricted_import_dirs = config.restricted_import_dirs[import_space].split(',');
+      const is_origin_path_restricted = restricted_import_dirs.some((glob) => {
         const isMatch = pm(glob);
         const matches = isMatch(decoded_origin_path, glob);
         return matches.isMatch;
       });
       if (is_origin_path_restricted) {
         return next(createError.Forbidden({
-          message: `Ingestion space ${ingestion_space} is restricted for dataset creation`,
+          message: `Import space ${import_space} is restricted for dataset creation`,
         }));
       }
     }

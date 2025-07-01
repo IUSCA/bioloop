@@ -13,10 +13,10 @@ const exports = {
         test_id: "sidebar-create-dataset",
         children: [
           {
-            feature_key: "ingestion",
+            feature_key: "import",
             icon: "mdi-file-cog-outline",
-            title: "Ingest",
-            path: "/datasets/ingest",
+            title: "Import",
+            path: "/datasets/import",
           },
           {
             feature_key: "uploads",

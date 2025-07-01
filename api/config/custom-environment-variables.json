@@ -59,7 +59,7 @@
       "slateScratch": "FILESYSTEM_MOUNT_DIR_SCRATCH"
     }
   },
-  "restricted_ingestion_dirs": {
-    "slateScratch": "SCRATCH_INGESTION_RESTRICTED_DIRS"
+  "restricted_import_dirs": {
+    "slateScratch": "SCRATCH_IMPORT_RESTRICTED_DIRS"
   }
 }
