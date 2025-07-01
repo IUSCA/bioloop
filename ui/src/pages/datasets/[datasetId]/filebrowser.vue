@@ -53,5 +53,5 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
 <route lang="yaml">
 meta:
   title: File Browser
-  requiresRoles: ["operator", "admin", "user"]
+  requiresRoles: ["operator", "admin"]
 </route>

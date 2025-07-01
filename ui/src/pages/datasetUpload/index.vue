@@ -272,5 +272,4 @@ watch(filter_query, (newQuery, oldQuery) => {
 <route lang="yaml">
 meta:
   title: Dataset Uploads
-  requiresRoles: ["operator", "admin", "user"]
 </route>
