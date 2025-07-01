@@ -493,7 +493,7 @@ router.get(
         status,
         audit_log: {
           dataset: {
-            name: { contains: dataset_name },
+            name: { contains: dataset_name ?? Prisma.skip },
           },
           user: {
             username: req.params.username,
@@ -1452,7 +1452,7 @@ router.post(
               name: file.name,
               md5: file.checksum,
               num_chunks: file.num_chunks,
-              path: file.path,
+              path: file.path ?? Prisma.skip,
               status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
             })),
           },
