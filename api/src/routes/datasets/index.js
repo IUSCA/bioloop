@@ -233,8 +233,6 @@ router.get(
   }),
 );
 
-// router.use('/uploads', uploadRouter);
-
 // get by id - worker + UI
 router.get(
   '/:id',
