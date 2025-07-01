@@ -78,22 +78,13 @@ const get_mounted_search_dir = (req) => {
 
 router.get(
   '/',
-  // verifyFileSystemSearchEnabled,
-  // validatePath,
+  verifyFileSystemSearchEnabled,
+  validatePath,
   isPermittedTo('read'),
   query('dirs_only').optional().default(false),
   query('search_space').optional().escape().notEmpty(),
   asyncHandler(async (req, res, next) => {
     const { dirs_only, path: query_path } = req.query;
-
-    res.json([
-      {
-        name: 'root',
-        isDir: true,
-        path: '/dir/root',
-      },
-    ]);
-    return;
 
     if (!query_path) {
       res.json([]);
