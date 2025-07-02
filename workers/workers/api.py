@@ -8,6 +8,8 @@ from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
 from workers.config import config
+from datetime import datetime
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -95,10 +97,20 @@ def int_to_str(d: dict, key: str):
     return d
 
 
-def dataset_getter(dataset: dict):
-    date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-    date_keys = ['created_at', 'updated_at']
+def convert_dates(obj: dict, date_keys: list[str], date_format: str = '%Y-%m-%dT%H:%M:%S.%fZ'):
+    if obj is None:
+        return obj
 
+    for date_key in date_keys:
+        date_str = glom(obj, date_key, default=None)
+        if date_str is not None:
+            try:
+                glom_assign(obj, date_key, datetime.strptime(date_str, date_format))
+            except ValueError:  # unable to parse date string
+                glom_assign(obj, date_key, None)
+
+
+def dataset_getter(dataset: dict):
     # convert du_size and size from string to int
     if dataset is None:
         return dataset
@@ -108,14 +120,7 @@ def dataset_getter(dataset: dict):
     dataset['files'] = [str_to_int(f, 'size') for f in dataset.get('files', [])]
 
     # convert date strings to date objects
-    for date_key in date_keys:
-        date_str = glom(dataset, date_key, default=None)
-        if date_str is not None:
-            try:
-                glom_assign(dataset, date_key, datetime.strptime(date_str, date_format))
-            except ValueError:  # unable to parse date string
-                glom_assign(dataset, date_key, None)
-    return dataset
+    return convert_dates(dataset, ['created_at', 'updated_at'])
 
 
 def dataset_setter(dataset: dict):
@@ -124,6 +129,18 @@ def dataset_setter(dataset: dict):
         for key in ['du_size', 'size', 'bundle_size']:
             int_to_str(dataset, key)
     return dataset
+
+
+def project_getter(project: dict):
+    # convert date strings to date objects
+    return convert_dates(project, ['created_at', 'updated_at'])
+
+
+def get_project(project_id: str):
+    with APIServerSession() as s:
+        r = s.get(f'projects/{project_id}')
+        r.raise_for_status()
+        return project_getter(r.json())
 
 
 def get_all_datasets(
