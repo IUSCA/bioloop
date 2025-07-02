@@ -24,7 +24,6 @@ const logger = require('../../services/logger');
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const uploadRouter = require('./upload');
 
 const prisma = new PrismaClient();
 

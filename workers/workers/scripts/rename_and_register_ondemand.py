@@ -11,7 +11,6 @@ import traceback
 from workers.scripts.register_ondemand import Registration
 import workers.api as api
 
-
 # 60 seconds
 CHECK_INTERVAL = 60
 
@@ -89,7 +88,7 @@ def is_data_product_registered(new_name: str) -> bool:
         matching_data_products: List[Dict] = api.get_all_datasets(dataset_type='DATA_PRODUCT',
                                                                   name=new_name)
         print(f"matching data products length: {len(matching_data_products)}")
-        
+
         if len(matching_data_products) == 0:
             print(f"Dataset {new_name} not found")
             return False
@@ -98,9 +97,9 @@ def is_data_product_registered(new_name: str) -> bool:
 
         if matching_data_product['archive_path'] is not None:
             # Data Product is considered fully-registered if it has an `archive_path`
-            print(f"Found registered data product: {new_name}, with archive_path {matching_data_product['archive_path']}")
+            print(
+                f"Found registered data product: {new_name}, with archive_path {matching_data_product['archive_path']}")
             return True
-
 
         if matching_data_product:
             # Data Product is considered partially-registered if it has no `archive_path` yet.
