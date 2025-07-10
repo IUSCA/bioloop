@@ -5,27 +5,30 @@ import path from 'path';
 const attachmentsDir = path.join(__dirname, '../../../attachments');
 const testFile = 'myfile.txt';
 
-test.describe('Dataset Upload Process', () => {
+test.describe.serial('Dataset Upload Process', () => {
+  let page; // Playwright page instance to be shared across all tests in this describe block
   let testFilePath;
 
-  test.beforeAll(async () => {
-    // Create the attachments directory if it doesn't exist
+  test.beforeAll(async ({ browser }) => {
+    // Create the attachments directory where the test file to be uploaded will
+    // be stored
     await fs.mkdir(attachmentsDir, { recursive: true });
-
     // Create a test file
     testFilePath = path.join(attachmentsDir, testFile);
     await fs.writeFile(testFilePath, 'This is a test file for upload.');
+
+    page = await browser.newPage();
+
+    // Visit the dataset uploads page
+    await page.goto('/datasetUpload');
   });
 
-  // test.afterAll(async () => {
-  //   // Clean up: remove the test file after all tests in this describe block
-  //   await fs.rm(attachmentsDir, { recursive: true, force: true });
-  // });
+  test.afterAll(async () => {
+    // Clean up: remove the test file after all tests in this describe block
+    await fs.rm(attachmentsDir, { recursive: true, force: true });
+  });
 
-  test('should navigate to upload page and select a file', async ({ page }) => {
-    // Navigate to the dataset uploads page
-    await page.goto('/datasetUpload');
-
+  test('should navigate to upload page', async () => {
     // Verify that the upload button is visible
     await expect(page.locator('[data-testid="upload-dataset-button"]')).toBeVisible();
     // Click the "Upload Dataset" button
@@ -33,16 +36,47 @@ test.describe('Dataset Upload Process', () => {
 
     // Verify that we're on the new upload page
     await expect(page).toHaveURL('/datasetUpload/new');
+  });
 
+  test('should show all steps\' buttons', async () => {
     // Verify the existence of the "Select Files" step button
     const selectFilesStepButton = page.getByTestId('step-button-0');
     await expect(selectFilesStepButton).toBeVisible();
+    let labelElement = selectFilesStepButton.getByTestId('step-label');
+    await expect(labelElement).toBeVisible();
+    expect(await labelElement.textContent()).toBe('Select Files');
 
+    // Verify the existence of the "General Info" step button
+    const generalInfoStepButton = page.getByTestId('step-button-1');
+    await expect(generalInfoStepButton).toBeVisible();
+    labelElement = generalInfoStepButton.getByTestId('step-label');
+    await expect(labelElement).toBeVisible();
+    expect(await labelElement.textContent()).toBe('General Info');
+
+    // Verify the existence of the "Upload" step button
+    const uploadStepButton = page.getByTestId('step-button-2');
+    await expect(uploadStepButton).toBeVisible();
+    labelElement = uploadStepButton.getByTestId('step-label');
+    await expect(labelElement).toBeVisible();
+    expect(await labelElement.textContent()).toBe('Upload');
+  });
+
+  test('should be on the \'Select Files\' step', async () => {
+    const selectFilesStepButton = page.getByTestId('step-button-0');
+    await expect(selectFilesStepButton).not.toBeDisabled();
+
+    const generalInfoStepButton = page.getByTestId('step-button-1');
+    await expect(generalInfoStepButton).toBeDisabled();
+
+    const uploadStepButton = page.getByTestId('step-button-2');
+    await expect(uploadStepButton).toBeDisabled();
+  });
+
+  test('should allow selecting files that are to be uploaded"', async () => {
     const [fileChooser] = await Promise.all([
       page.waitForEvent('filechooser'),
       page.click('[data-testid="file-upload"]'),
     ]);
-
     // Use the fileChooser to set files to be uploaded
     await fileChooser.setFiles(path.join(attachmentsDir, testFile));
 
@@ -51,17 +85,31 @@ test.describe('Dataset Upload Process', () => {
 
     // check if the file name appears in the UI
     await expect(page.getByText(testFile)).toBeVisible();
+  });
 
+  test('should move to metadata-selection step when `Next` button is clicked', async () => {
     // Click the "Next" button to proceed to the next step
     await page.click('[data-testid="next-button"]');
 
+    const selectFilesStepButton = page.getByTestId('step-button-0');
+    await expect(selectFilesStepButton).not.toBeDisabled();
+
+    const generalInfoStepButton = page.getByTestId('step-button-1');
+    await expect(generalInfoStepButton).not.toBeDisabled();
+
+    const uploadStepButton = page.getByTestId('step-button-2');
+    await expect(uploadStepButton).toBeDisabled();
+  });
+
+  test('should display form fields in their default states, with their default values', async () => {
     // Wait for the Dataset Type row to be visible
     const datasetTypeRow = page.getByTestId('dataset-type-row');
     await expect(datasetTypeRow).toBeVisible();
-    // Find the Dataset Type select within the row and verify it's visible
+    // Find the Dataset Type select widget within the row and verify it's
+    // visible
     const datasetTypeSelect = page.getByTestId('dataset-type-select');
     await expect(datasetTypeSelect).toBeVisible();
-    // Check the selected value
+    // Assert the default value
     const selectedValueElement = datasetTypeSelect.locator('.va-select-content__option');
     await expect(selectedValueElement).toBeVisible();
     const selectedValue = await selectedValueElement.textContent();
@@ -71,11 +119,9 @@ test.describe('Dataset Upload Process', () => {
     // "Dataset Type" row
     const assignSourceRawDataRow = page.locator('[data-testid="assign-source-row"]:below([data-testid="dataset-type-row"])');
     await expect(assignSourceRawDataRow).toBeVisible();
-
     // Verify that the 'Assign source Raw Data' checkbox is checked by default
     const assignSourceCheckboxWrapper = assignSourceRawDataRow.getByTestId('assign-source-checkbox');
     await expect(assignSourceCheckboxWrapper).toBeVisible();
-    // Find the actual checkbox input within the wrapper
     const checkbox = assignSourceCheckboxWrapper.locator('input[type="checkbox"]');
     await expect(checkbox).toBeChecked();
     // Verify that the 'Search Raw Data' input field is empty
@@ -117,16 +163,14 @@ test.describe('Dataset Upload Process', () => {
     await expect(selectedOption).toHaveCount(0);
   });
 
-  // test('Dataset Type select is visible with default value "Data Product"', async ({ page }) => {
-  //   // Wait for the dataset type select to be visible
-  //   const datasetTypeSelect = page.getByTestId('dataset-type-select');
-  //   await expect(datasetTypeSelect).toBeVisible();
-  //
-  //   // Check if the default value is "Data Product"
-  //   // const selectedValue = await datasetTypeSelect.inputValue();
-  //   // expect(selectedValue);
-  //   // .toBe('Data Product');
-  //
-  // console.log('Dataset type select is visible with default value "Not Data
-  // Product"'); });
+  //   // Type 'openneuro' in the source raw data autocomplete
+  //   await searchRawDataInput.fill('openne');
+  //   await page.waitForTimeout(2000);
+  //   // Verify that the 'openneuro' option appears and select it
+  //   // const openneuroOption = page.getByRole('option', { name: 'openneuro' });
+  //   // await expect(openneuroOption).toBeVisible();
+  //   // await openneuroOption.click();
+  //   // Verify that 'openneuro' is now selected
+  //   // await expect(searchRawDataInput).toHaveValue('openneuro');
+  // });
 });

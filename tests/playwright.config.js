@@ -57,8 +57,12 @@ module.exports = {
       // testMatch: path.join(__dirname,
       // '/tests/setup/operator_login.setup.js'), }, { name: 'user_login',
       // testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'), },
-      // { name: 'unauthenticated', use: { ...devices['Desktop Chrome'] },
-      // testMatch: '/view/unauthenticated/project.spec.js', }, { name:
+      // {
+      //   name: 'unauthenticated',
+      //   use: { ...devices['Desktop Chrome'] },
+      //   testMatch: '/view/unauthenticated/test.spec.js',
+      // },
+      // { name:
       // 'admin_sidebar', use: { ...devices['Desktop Chrome'], storageState:
       // ADMIN_STORAGE_STATE }, dependencies: ['admin_login'], testMatch:
       // '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js', },
