@@ -142,7 +142,7 @@
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div class="flex w-full pb-6" data-testid="assign-project-row">
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -192,7 +192,7 @@
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div class="flex w-full pb-6" data-testid="assign-instrument-row">
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -292,6 +292,7 @@
               }
             "
             :disabled="isPreviousButtonDisabled"
+            data-testid="previous-button"
           >
             Previous
           </va-button>
@@ -300,6 +301,7 @@
             @click="onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="isNextButtonDisabled"
+            data-testid="next-button"
           >
             <!--            {{ isLastStep ? (submitAttempted ? "Retry" : "Upload") : "Next" }}-->
             {{ isLastStep ? "Upload" : "Next" }}
