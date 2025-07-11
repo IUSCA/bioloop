@@ -200,7 +200,7 @@ watch([searchTerm, filterQuery], () => {
 
   loading.value = true;
 
-  debouncedSearch.value = _.debounce(performSearch, 1000);
+  debouncedSearch.value = _.debounce(performSearch, 300);
   debouncedSearch.value(searchIndex.value);
 });
 

@@ -57,7 +57,8 @@
           size="small"
           :color="getStatusChipColor(value)"
         >
-          {{ value }}
+          <!-- convert to lowercase, split on `_`, capitalize all but first letter of each word, separate words with space -->
+          {{ snakeCaseToTitleCase(value) }}
         </va-chip>
       </template>
 
@@ -80,9 +81,8 @@
           data-testid="upload-details-dataset-type-chip"
           size="small"
           outline
+          >{{ snakeCaseToTitleCase(value) }}</va-chip
         >
-          {{ value }}
-        </va-chip>
       </template>
 
       <template #cell(source_dataset)="{ rowData }">
@@ -134,6 +134,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
 import constants from "@/constants";
+import { snakeCaseToTitleCase } from "@/services/utils";
 
 const nav = useNavStore();
 const router = useRouter();

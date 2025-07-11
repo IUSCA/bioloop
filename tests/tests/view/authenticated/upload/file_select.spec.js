@@ -8,6 +8,10 @@ const testFile = 'myfile.txt';
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
   let testFilePath;
+  let selectedDatasetType;
+  let selectedRawDataName;
+  let selectedProjectName;
+  let selectedInstrumentName;
 
   test.beforeAll(async ({ browser }) => {
     // Create the attachments directory where the test file to be uploaded will
@@ -156,6 +160,15 @@ test.describe.serial('Dataset Upload Process', () => {
   });
 
   test('should allow selecting values in the metadata fields', async () => {
+    // Select (or track, if pre-populated) Dataset Type
+    // Capture the pre-populated Dataset Type
+    const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
+    await expect(datasetTypeSelect).toBeVisible();
+    // Get the selected value from the component without clicking
+    selectedDatasetType = await datasetTypeSelect.locator('.va-select-content__option').textContent();
+    // Remove any leading/trailing whitespace
+    selectedDatasetType = selectedDatasetType.trim();
+
     // Select source Raw Data
     const datasetSearchInput = page.getByTestId('upload-metadata-dataset-autocomplete');
     await expect(datasetSearchInput).toBeVisible();
@@ -163,6 +176,7 @@ test.describe.serial('Dataset Upload Process', () => {
     await page.click('input[data-testid="upload-metadata-dataset-autocomplete"]');
     // Select the first search result
     await page.getByTestId('upload-metadata-dataset-autocomplete--search-result-li-0').click();
+    selectedRawDataName = await datasetSearchInput.inputValue();
 
     // Select Project
     const projectSearchInput = page.getByTestId('upload-metadata-project-autocomplete');
@@ -171,6 +185,7 @@ test.describe.serial('Dataset Upload Process', () => {
     await page.click('input[data-testid="upload-metadata-project-autocomplete"]');
     // Select the first search result
     await page.getByTestId('upload-metadata-project-autocomplete--search-result-li-0').click();
+    selectedProjectName = await projectSearchInput.inputValue();
 
     // Select Source Instrument
     const sourceInstrumentSelect = page.getByTestId('upload-metadata-source-instrument-select');
@@ -179,20 +194,15 @@ test.describe.serial('Dataset Upload Process', () => {
     // Wait for the dropdown to appear
     await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
     // Click the first option in the dropdown
-    const firstOption = page.locator('.va-select-option').first();
+    const sourceInstrumentFirstOption = page.locator('.va-select-option').first();
     // Note: We just used page.locator instead of sourceInstrumentSelect.locator
     // because the dropdown options are not children of the select element in
     // the DOM
-    await firstOption.click();
-
-    // // Select the first search result
-    // const firstSearchResult = page.locator('[data-testid="dataset-autocomplete--search-result-li-0"] button');
-    // await expect(firstSearchResult).toBeVisible();
-    // await firstSearchResult.click();
-    // // Verify that the selected value is now in the input field
-    // await expect(searchInput).toHaveValue('openneuro');
-
-    // await new Promise(() => {});
+    await sourceInstrumentFirstOption.click();
+    // Get the selected value from the component
+    selectedInstrumentName = await sourceInstrumentSelect.locator('.va-select-content__option').textContent();
+    // Remove any leading/trailing whitespace
+    selectedInstrumentName = selectedInstrumentName.trim();
   });
 
   test('should move to Upload step when `Next` button is clicked', async () => {
@@ -213,25 +223,23 @@ test.describe.serial('Dataset Upload Process', () => {
     // Check Dataset Type
     const datasetTypeChip = page.getByTestId('upload-details-dataset-type-chip');
     await expect(datasetTypeChip).toBeVisible();
-    await expect(datasetTypeChip).toHaveText('DATA_PRODUCT');
+    console.log('Dataset Type:', selectedDatasetType);
+    await expect(datasetTypeChip).toHaveText(selectedDatasetType);
 
     // Check Source Raw Data
     const sourceRawDataLink = page.getByTestId('upload-details-source-raw-data-link');
     await expect(sourceRawDataLink).toBeVisible();
-    await expect(sourceRawDataLink).toHaveText('openneuro');
-    // await expect(sourceRawDataLink).toHaveAttribute('href', '/datasets/31');
+    await expect(sourceRawDataLink).toHaveText(selectedRawDataName);
 
     // Check Project
     const projectLink = page.getByTestId('upload-details-project-link');
     await expect(projectLink).toBeVisible();
-    await expect(projectLink).toHaveText('Project-test-0');
-    // await expect(projectLink).toHaveAttribute('href',
-    // '/projects/31f1b4ff-c609-4683-bc2d-109653e9f250');
+    await expect(projectLink).toHaveText(selectedProjectName);
 
     // Check Source Instrument
     const sourceInstrumentName = page.getByTestId('upload-details-source-instrument-name');
     await expect(sourceInstrumentName).toBeVisible();
-    await expect(sourceInstrumentName).toHaveText('test-1');
+    await expect(sourceInstrumentName).toHaveText(selectedInstrumentName);
 
     // Check that Dataset Name input is visible and empty
     const datasetNameInput = page.getByTestId('upload-details-dataset-name-input');
@@ -239,9 +247,9 @@ test.describe.serial('Dataset Upload Process', () => {
     await expect(datasetNameInput).toHaveValue('');
 
     // Check that there's an error message for the empty Dataset Name
-    // const datasetNameError = page.locator('.va-text-danger.text-sm');
-    // await expect(datasetNameError).toBeVisible();
-    // await expect(datasetNameError).toHaveText('Dataset name cannot be
-    // empty');
+    const datasetNameRow = page.getByTestId('upload-details-dataset-name-row');
+    const datasetNameError = datasetNameRow.locator('.va-text-danger.text-xs.dataset-name-input');
+    await expect(datasetNameError).toBeVisible();
+    await expect(datasetNameError).toHaveText('Dataset name cannot be empty');
   });
 });

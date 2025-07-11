@@ -17,7 +17,7 @@
   >
     <table class="va-table" data-testid="dataset-details-table">
       <tbody>
-        <tr data-testid="dataset-name-row">
+        <tr data-testid="upload-details-dataset-name-row">
           <td>Dataset Name</td>
           <td>
             <div v-if="props.dataset">
@@ -52,7 +52,8 @@
               outline
               data-testid="upload-details-dataset-type-chip"
             >
-              {{ props.selectedDatasetType }}
+              <!-- convert to lowercase, split on `_`, capitalize all but first letter of each word, separate words with space -->
+              {{ snakeCaseToTitleCase(props.selectedDatasetType) }}
             </va-chip>
           </td>
         </tr>
@@ -124,6 +125,7 @@
 <script setup>
 import { useAuthStore } from "@/stores/auth";
 import OutlinedAlert from "@/components/utils/OutlinedAlert.vue";
+import { snakeCaseToTitleCase } from "@/services/utils";
 
 const props = defineProps({
   // `dataset`: Dataset to be uploaded
