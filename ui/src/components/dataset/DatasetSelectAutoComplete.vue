@@ -16,7 +16,7 @@
     :disabled="props.disabled"
     :label="props.label"
     :messages="props.messages"
-    data-testid="dataset-select-autocomplete"
+    :data-test-id="props.dataTestId"
   />
 </template>
 
@@ -49,6 +49,10 @@ const props = defineProps({
   messages: {
     type: Array,
     default: () => [],
+  },
+  dataTestId: {
+    type: String,
+    default: "dataset-autocomplete",
   },
 });
 
@@ -196,7 +200,7 @@ watch([searchTerm, filterQuery], () => {
 
   loading.value = true;
 
-  debouncedSearch.value = _.debounce(performSearch, 300);
+  debouncedSearch.value = _.debounce(performSearch, 1000);
   debouncedSearch.value(searchIndex.value);
 });
 

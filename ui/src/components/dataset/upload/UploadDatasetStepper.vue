@@ -121,7 +121,6 @@
               class="flex-grow"
               :label="'Dataset'"
               :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
-              data-testid="raw-data-autocomplete"
             >
             </DatasetSelectAutoComplete>
             <va-popover>
@@ -225,6 +224,7 @@
               :messages="
                 noInstrumentsToAssign ? 'No Instruments to select' : null
               "
+              data-testid="source-instrument-select"
             />
             <div class="flex items-center ml-2">
               <va-popover>

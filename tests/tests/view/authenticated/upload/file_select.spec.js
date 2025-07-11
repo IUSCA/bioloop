@@ -125,7 +125,7 @@ test.describe.serial('Dataset Upload Process', () => {
     const checkbox = assignSourceCheckboxWrapper.locator('input[type="checkbox"]');
     await expect(checkbox).toBeChecked();
     // Verify that the 'Search Raw Data' input field is empty
-    const searchRawDataInput = assignSourceRawDataRow.getByTestId('autocomplete');
+    const searchRawDataInput = assignSourceRawDataRow.getByTestId('dataset-autocomplete');
     await expect(searchRawDataInput).toBeVisible();
     await expect(searchRawDataInput).toHaveValue('');
 
@@ -140,7 +140,7 @@ test.describe.serial('Dataset Upload Process', () => {
     const projectCheckbox = assignProjectCheckboxWrapper.locator('input[type="checkbox"]');
     await expect(projectCheckbox).toBeChecked();
     // Verify that the 'Search Projects' input field is empty
-    const searchProjectInput = assignProjectRow.getByTestId('autocomplete');
+    const searchProjectInput = assignProjectRow.getByTestId('project-autocomplete');
     await expect(searchProjectInput).toBeVisible();
     await expect(searchProjectInput).toHaveValue('');
 
@@ -163,6 +163,45 @@ test.describe.serial('Dataset Upload Process', () => {
     await expect(selectedOption).toHaveCount(0);
   });
 
+  test('should allow selecting values in the metadata fields', async () => {
+    // Select source Raw Data
+    const datasetSearchInput = page.getByTestId('dataset-autocomplete');
+    await expect(datasetSearchInput).toBeVisible();
+    // Click the input field, which will trigger the Dataset search
+    await page.click('input[data-testid="dataset-autocomplete"]');
+    // Select the first search result
+    await page.getByTestId('dataset-autocomplete--search-result-li-0').click();
+
+    // Select Project
+    const projectSearchInput = page.getByTestId('project-autocomplete');
+    await expect(projectSearchInput).toBeVisible();
+    // Click the input field, which will trigger the Project search
+    await page.click('input[data-testid="project-autocomplete"]');
+    // Select the first search result
+    await page.getByTestId('project-autocomplete--search-result-li-0').click();
+
+    // Select Source Instrument
+    const sourceInstrumentSelect = page.getByTestId('source-instrument-select');
+    await expect(sourceInstrumentSelect).toBeVisible();
+    await sourceInstrumentSelect.click();
+    // Wait for the dropdown to appear
+    await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
+    // Click the first option in the dropdown
+    const firstOption = page.locator('.va-select-option').first();
+    // Note: We just used page.locator instead of sourceInstrumentSelect.locator
+    // because the dropdown options are not children of the select element in
+    // the DOM
+    await firstOption.click();
+
+    // // Select the first search result
+    // const firstSearchResult = page.locator('[data-testid="dataset-autocomplete--search-result-li-0"] button');
+    // await expect(firstSearchResult).toBeVisible();
+    // await firstSearchResult.click();
+    // // Verify that the selected value is now in the input field
+    // await expect(searchInput).toHaveValue('openneuro');
+
+    // await new Promise(() => {});
+  });
   //   // Type 'openneuro' in the source raw data autocomplete
   //   await searchRawDataInput.fill('openne');
   //   await page.waitForTimeout(2000);
