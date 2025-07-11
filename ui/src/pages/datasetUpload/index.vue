@@ -76,7 +76,11 @@
       </template>
 
       <template #cell(uploaded_dataset_type)="{ value }">
-        <va-chip data-testid="dataset-type-chip" size="small" outline>
+        <va-chip
+          data-testid="upload-details-dataset-type-chip"
+          size="small"
+          outline
+        >
           {{ value }}
         </va-chip>
       </template>

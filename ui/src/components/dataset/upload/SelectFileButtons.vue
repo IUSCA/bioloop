@@ -8,7 +8,7 @@
       dropZoneText=""
       :disabled="props.disabled"
       @file-added="onFileSelection"
-      data-testid="file-upload"
+      data-testid="upload-file-select"
     />
 
     <div

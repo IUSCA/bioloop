@@ -5,6 +5,7 @@
     class="w-full"
     :messages="props.error ? [props.error] : ['Name of the uploaded dataset']"
     :disabled="props.inputDisabled"
+    :data-testid="props.dataTestId"
   />
   <!-- Only one of error and hint are shown at a time -->
   <div class="va-text-danger text-sm" v-if="props.error">
@@ -25,6 +26,10 @@ const props = defineProps({
   error: {
     type: String,
     default: "",
+  },
+  dataTestId: {
+    type: String,
+    default: "dataset-name-input",
   },
 });
 

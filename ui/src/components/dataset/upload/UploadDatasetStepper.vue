@@ -50,7 +50,7 @@
           <SelectedFilesTable
             @file-removed="removeFile"
             :files="displayedFilesToUpload"
-            data-testid="selected-files-table"
+            data-testid="upload-selected-files-table"
           />
         </div>
       </template>
@@ -59,7 +59,7 @@
       <template #step-content-1>
         <div
           class="flex w-full pb-6 items-center"
-          data-testid="dataset-type-row"
+          data-testid="upload-metadata-dataset-type-row"
         >
           <va-select
             v-model="selectedDatasetType"
@@ -69,7 +69,7 @@
             label="Dataset Type"
             placeholder="Select dataset type"
             class="flex-grow"
-            data-testid="dataset-type-select"
+            data-testid="upload-metadata-dataset-type-select"
           />
           <div class="flex items-center ml-2">
             <va-popover>
@@ -90,7 +90,10 @@
           </div>
         </div>
 
-        <div class="flex w-full pb-6" data-testid="assign-source-row">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-source-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -100,14 +103,14 @@
                 color="primary"
                 label="Assign source Raw Data"
                 class="flex-grow"
-                data-testid="assign-source-checkbox"
+                data-testid="upload-metadata-assign-source-checkbox"
               />
             </div>
           </div>
 
           <div
             class="flex-grow flex items-center"
-            data-testid="dataset-autocomplete-row"
+            data-testid="upload-metadata-dataset-autocomplete-row"
           >
             <DatasetSelectAutoComplete
               v-model:selected="selectedRawData"
@@ -121,6 +124,7 @@
               class="flex-grow"
               :label="'Dataset'"
               :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
+              data-test-id="upload-metadata-dataset-autocomplete"
             >
             </DatasetSelectAutoComplete>
             <va-popover>
@@ -141,7 +145,10 @@
           </div>
         </div>
 
-        <div class="flex w-full pb-6" data-testid="assign-project-row">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-project-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -173,6 +180,7 @@
               class="flex-grow"
               :label="'Project'"
               :messages="noProjectsToAssign ? 'No Projects to select' : null"
+              data-test-id="upload-metadata-project-autocomplete"
             >
             </ProjectAsyncAutoComplete>
             <va-popover>
@@ -191,7 +199,10 @@
           </div>
         </div>
 
-        <div class="flex w-full pb-6" data-testid="assign-instrument-row">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-instrument-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -224,7 +235,7 @@
               :messages="
                 noInstrumentsToAssign ? 'No Instruments to select' : null
               "
-              data-testid="source-instrument-select"
+              data-testid="upload-metadata-source-instrument-select"
             />
             <div class="flex items-center ml-2">
               <va-popover>
@@ -242,7 +253,7 @@
 
       <template #step-content-2>
         <div class="flex flex-row" v-if="selectingFiles || selectingDirectory">
-          <div class="flex-1">
+          <div class="flex-1" data-testid="uploaded-dataset-details">
             <va-card class="upload-details">
               <va-card-title>
                 <div class="flex flex-nowrap items-center w-full">
@@ -274,7 +285,8 @@
           </div>
 
           <va-divider vertical />
-          <div class="flex-1">
+
+          <div class="flex-1" data-testid="dataset-upload-table">
             <DatasetFileUploadTable :files="displayedFilesToUpload" />
           </div>
         </div>
@@ -301,7 +313,7 @@
             @click="onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="isNextButtonDisabled"
-            data-testid="next-button"
+            data-testid="upload-next-button"
           >
             <!--            {{ isLastStep ? (submitAttempted ? "Retry" : "Upload") : "Next" }}-->
             {{ isLastStep ? "Upload" : "Next" }}

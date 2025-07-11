@@ -39,7 +39,7 @@
               class="w-full"
               :input-disabled="props.inputDisabled"
               :error="props.datasetNameError"
-              data-testid="dataset-name-input"
+              data-test-id="upload-details-dataset-name-input"
             />
           </td>
         </tr>
@@ -47,7 +47,11 @@
         <tr data-testid="dataset-type-row">
           <td>Dataset Type</td>
           <td>
-            <va-chip size="small" outline data-testid="dataset-type-chip">
+            <va-chip
+              size="small"
+              outline
+              data-testid="upload-details-dataset-type-chip"
+            >
               {{ props.selectedDatasetType }}
             </va-chip>
           </td>
@@ -59,7 +63,7 @@
             <router-link
               :to="`/datasets/${props.sourceRawData?.id}`"
               target="_blank"
-              data-testid="source-raw-data-link"
+              data-testid="upload-details-source-raw-data-link"
             >
               {{ props.sourceRawData?.name }}
             </router-link>
@@ -73,7 +77,7 @@
               <router-link
                 :to="`/projects/${props.project.id}`"
                 target="_blank"
-                data-testid="project-link"
+                data-testid="upload-details-project-link"
               >
                 {{ props.project.name }}
               </router-link>
@@ -95,7 +99,10 @@
 
         <tr data-testid="source-instrument-row">
           <td>Source Instrument</td>
-          <td class="metadata" data-testid="source-instrument-name">
+          <td
+            class="metadata"
+            data-testid="upload-details-source-instrument-name"
+          >
             {{ props.sourceInstrument?.name }}
           </td>
         </tr>
