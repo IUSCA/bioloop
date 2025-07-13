@@ -3,23 +3,31 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const attachmentsDir = path.join(__dirname, '../../../attachments');
-const testFile = 'myfile.txt';
+const testFiles = [
+  { name: 'file_1' },
+  { name: 'file_2' },
+  { name: 'file_3' },
+];
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
-  let testFilePath;
   let selectedDatasetType;
   let selectedRawDataName;
   let selectedProjectName;
   let selectedInstrumentName;
+  const selectedFiles = [];
 
   test.beforeAll(async ({ browser }) => {
     // Create the attachments directory where the test file to be uploaded will
     // be stored
     await fs.mkdir(attachmentsDir, { recursive: true });
-    // Create a test file
-    testFilePath = path.join(attachmentsDir, testFile);
-    await fs.writeFile(testFilePath, 'This is a test file for upload.');
+    // Create test files
+    for (let i = 0; i < testFiles.length; i += 1) {
+      const file = testFiles[i];
+      const filePath = path.join(attachmentsDir, file.name);
+      await fs.writeFile(filePath, `This is the content of ${file.name}`);
+      file.path = filePath; // Add the full path to the file object
+    }
 
     page = await browser.newPage();
 
@@ -71,19 +79,44 @@ test.describe.serial('Dataset Upload Process', () => {
     await expect(page.getByTestId('step-button-2')).toBeDisabled();
   });
 
-  test('should allow selecting files that are to be uploaded"', async () => {
+  test('should allow selecting files that are to be uploaded', async () => {
     const [fileChooser] = await Promise.all([
       page.waitForEvent('filechooser'),
       page.click('[data-testid="upload-file-select"]'),
     ]);
-    // Use the fileChooser to set files to be uploaded
-    await fileChooser.setFiles(path.join(attachmentsDir, testFile));
 
-    // Verify that the file upload table is visible after file selection
+    // Use the fileChooser to set all test files to be uploaded
+    await fileChooser.setFiles(testFiles.map((file) => file.path));
+
+    // Wait for the file upload table to be visible
     await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
 
-    // check if the file name appears in the UI
-    await expect(page.getByText(testFile)).toBeVisible();
+    // Get all rows in the table
+    const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
+
+    // For each row, extract the file name and size
+    const files = await tableRows.evaluateAll((rows) => rows.map((row) => {
+      const nameElement = row.querySelector('[data-testid="file-name"]');
+      const sizeElement = row.querySelector('td:nth-child(2)');
+      return {
+        name: nameElement ? nameElement.textContent.trim() : '',
+        size: sizeElement ? sizeElement.textContent.trim() : '',
+      };
+    }));
+
+    // Store the selected files' information in state
+    selectedFiles.push(...files);
+
+    console.log('selectedFiles', files);
+
+    // Verify that the correct number of files were selected
+    expect(selectedFiles.length).toBe(testFiles.length);
+
+    // Verify that the file names appear in the UI
+    for (let i = 0; i < selectedFiles.length; i += 1) {
+      const file = selectedFiles[i];
+      await expect(page.getByText(file.name)).toBeVisible();
+    }
   });
 
   test('should move to metadata-selection step when `Next` button is clicked', async () => {
@@ -251,5 +284,38 @@ test.describe.serial('Dataset Upload Process', () => {
     const datasetNameError = datasetNameRow.locator('.va-text-danger.text-xs.dataset-name-input');
     await expect(datasetNameError).toBeVisible();
     await expect(datasetNameError).toHaveText('Dataset name cannot be empty');
+  });
+
+  test('should show all the selected files and their details in the Upload step', async () => {
+    // Check if the file upload table is visible
+    const fileUploadTable = page.getByTestId('file-upload-table');
+    await expect(fileUploadTable).toBeVisible();
+
+    // Get all rows in the table
+    const tableRows = fileUploadTable.locator('tbody tr');
+
+    // Check if the number of rows matches the number of selected files
+    await expect(tableRows).toHaveCount(selectedFiles.length);
+
+    // Check each file's details
+    for (let i = 0; i < selectedFiles.length; i += 1) {
+      const row = tableRows.nth(i);
+
+      // Check file name
+      const fileName = row.getByTestId('file-name');
+      await expect(fileName).toHaveText(selectedFiles[i].name);
+
+      // Check file size
+      const fileSize = row.locator('td').nth(1); // Assuming size is in the second column
+      await expect(fileSize).toHaveText(selectedFiles[i].size);
+
+      // Check file status (initially empty)
+      const fileStatus = row.getByTestId('file-upload-status');
+      await expect(fileStatus).toBeEmpty();
+
+      // Check file progress (initially 0%)
+      const fileProgress = row.getByTestId('file-progress');
+      await expect(fileProgress).toContainText('0%');
+    }
   });
 });
