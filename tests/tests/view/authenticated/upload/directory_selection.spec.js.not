@@ -1,0 +1,91 @@
+import { expect, test } from '@playwright/test';
+import path from 'path';
+
+test.describe.serial('Dataset Upload Process', () => {
+  let page; // Playwright page instance to be shared across all tests in this describe block
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+
+    // Visit the dataset uploads page
+    await page.goto('/datasetUpload/new');
+
+    // Create the attachments directory where the test file to be uploaded will
+    // be stored
+    // await fs.mkdir(attachmentsDir, { recursive: true });
+  });
+
+  // test.beforeAll(async () => {
+  // });
+  //
+  // test.afterAll(async () => {
+  //   // Clean up: remove the test file after all tests in this describe block
+  //   await fs.rm(attachmentsDir, { recursive: true, force: true });
+  // });
+
+  test.describe('Directory selection', () => {
+    test.beforeAll(async () => {
+      // Select files
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent('filechooser'),
+        page.click('[data-testid="upload-file-select"]'),
+      ]);
+
+      await fileChooser.setFiles([
+        {
+          name: 'subdir/file3.txt',
+          mimeType: 'text/plain',
+          buffer: Buffer.from('hello world'),
+        },
+      ]);
+    });
+
+    test('Should allow selecting a directory', async () => {
+      await expect(page.locator('[data-testid="select-folder-button"]')).toBeVisible();
+
+      // const testDirectoryName = 'test_directory';
+
+      // await page.evaluate(({ directoryName }) => {
+      //   const input = document.querySelector('#folder-upload--input');
+      //   const event = new Event('change', { bubbles: true });
+      //
+      //   // Create mock files
+      // const mockFile1 = new File(['content1'], 'file1.txt', { type:
+      // 'text/plain' }); const mockFile2 = new File(['content2'], 'file2.txt',
+      // { type: 'text/plain' }); mockFile1.webkitRelativePath =
+      // `${directoryName}/file1.txt`; mockFile2.webkitRelativePath =
+      // `${directoryName}/file2.txt`;
+      //
+      //   // Create a mock FileList
+      //   const dataTransfer = new DataTransfer();
+      //   dataTransfer.items.add(mockFile1);
+      //   dataTransfer.items.add(mockFile2);
+      //
+      //   // Set the files property
+      //   input.files = dataTransfer.files;
+      //
+      //   // Create a custom event that mimics the structure expected by
+      //   // onDirectoryAdded
+      //   const customEvent = new CustomEvent('directory-added', {
+      //     detail: {
+      //       files: Array.from(dataTransfer.files),
+      //       directoryName,
+      //     },
+      //     bubbles: true,
+      //   });
+      //
+      //   // Dispatch the custom event
+      //   input.dispatchEvent(customEvent);
+      // }, { directoryName: testDirectoryName });
+
+      // Wait for the file upload table to be visible
+      await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
+
+      // Check for the directory name
+      // await
+      // expect(page.locator('[data-testid="file-name"]')).toHaveText(testDirectoryName);
+
+      await new Promise(() => {});
+    });
+  });
+});

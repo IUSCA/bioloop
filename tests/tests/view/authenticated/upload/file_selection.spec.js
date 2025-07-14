@@ -11,6 +11,7 @@ const testFileNames = [
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
+  let fileChooser;
 
   let testFiles; // file objects representing the files to be selected for upload
 
@@ -39,14 +40,16 @@ test.describe.serial('Dataset Upload Process', () => {
     await fs.rm(attachmentsDir, { recursive: true, force: true });
   });
 
-  test.describe('File deletion', () => {
+  test.describe('File selection and deletion', () => {
     test.beforeAll(async () => {
       // Select files
-      const [fileChooser] = await Promise.all([
+      [fileChooser] = await Promise.all([
         page.waitForEvent('filechooser'),
         page.click('[data-testid="upload-file-select"]'),
       ]);
+    });
 
+    test('Should allow selecting files', async () => {
       await fileChooser.setFiles(testFiles.map((file) => file.path));
     });
 
@@ -101,6 +104,8 @@ test.describe.serial('Dataset Upload Process', () => {
       await Promise.all(
         Array.from({ length: remainingFileCount }, (_, i) => expect(page.locator('[data-testid="delete-file-button"]').nth(i)).toBeVisible()),
       );
+
+      // await new Promise(() => {});
     });
   });
 });
