@@ -230,7 +230,7 @@ router.patch(
   ),
   validate([
     param('id').isInt().toInt(),
-    body('status').optional(),
+    body('status').optional().isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)),
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
