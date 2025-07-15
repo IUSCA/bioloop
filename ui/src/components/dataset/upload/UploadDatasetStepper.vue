@@ -62,7 +62,7 @@
                   Raw Data: Original, unprocessed data collected from
                   instruments.
                   <br />
-                  Dara Product: Processed data derived from Raw Data
+                  Data Product: Processed data derived from Raw Data
                 </div>
               </template>
               <Icon icon="mdi:information" class="text-xl text-gray-500" />
@@ -276,20 +276,20 @@
 </template>
 
 <script setup>
+import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import config from "@/config";
 import Constants from "@/constants";
 import datasetService from "@/services/dataset";
+import instrumentService from "@/services/instrument";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { Icon } from "@iconify/vue";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { VaDivider, VaPopover } from "vuestic-ui";
-import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
-import { Icon } from "@iconify/vue";
-import instrumentService from "@/services/instrument";
 
 const auth = useAuthStore();
 
@@ -590,7 +590,7 @@ const validateIfExists = (value) => {
           resolve(res.data.exists);
         })
         .catch((e) => {
-          // console.error(e);
+          console.error(e);
           reject();
         });
     }
@@ -1029,7 +1029,7 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
@@ -1081,7 +1081,7 @@ const postSubmit = () => {
         datasetUploadLog.value = res.data;
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
       });
   }
 };
@@ -1268,7 +1268,7 @@ onMounted(() => {
     })
     .catch((err) => {
       toast.error("Failed to load resources");
-      // console.error(err);
+      console.error(err);
     })
     .finally(() => {
       loading.value = false;
@@ -1473,7 +1473,7 @@ onBeforeUnmount(() => {
 
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
-    // min-height: 0 to shrink the elemenet to below its calculated min-height of children
+    // min-height: 0 to shrink the element to below its calculated min-height of children
     display: flex;
     flex-direction: column;
     flex: 1;

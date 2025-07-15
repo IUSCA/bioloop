@@ -1,25 +1,24 @@
 const assert = require('assert');
 const path = require('node:path');
 
-const { PrismaClient } = require('@prisma/client');
 const config = require('config');
-
+// const _ = require('lodash/fp');
 const createError = require('http-errors');
-const _ = require('lodash/fp');
+
+const prisma = require('@/db');
 const wfService = require('./workflow');
 const userService = require('./user');
-const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
+const workflowService = require('./workflow');
+const logger = require('./logger');
+
+const { log_axios_error } = require('../utils');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
-const workflowService = require('./workflow');
 const CONSTANTS = require('../constants');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPermission, accessControl } = require('../middleware/auth');
-const logger = require('./logger');
-
-const prisma = new PrismaClient();
 
 /**
  * Normalizes the name of a dataset to be compatible with the system.
@@ -38,11 +37,11 @@ function normalize_name(name) {
 /**
  * Gets the bundle name for a staged dataset.
  *
- * @function get_staged_bundle_name
+ * @function get_bundle_name
  * @param {Object} dataset - The dataset which has been or will be staged.
  * @returns {string} The name of the bundle which contains the staged dataset.
  */
-const get_staged_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
 
 /**
  * Generates the absolute path where a dataset will be uploaded to.
@@ -390,8 +389,8 @@ function create_filetree(files) {
   };
 
   files.forEach((file) => {
-    const { path: relpath, ...rest } = file;
-    const pathObject = path.parse(relpath);
+    const { path: relPath, ...rest } = file;
+    const pathObject = path.parse(relPath);
     const parent_dir = pathObject.dir
       .split(path.sep)
       .reduce((parent, dir_name) => {
@@ -631,6 +630,7 @@ async function search_files({
   dataset_id, name = '', base = '',
   skip, take,
   extension = null, filetype = null, min_file_size = null, max_file_size = null,
+  sort_order = null, sort_by = null,
 }) {
   // TODO: filter by extension, size, filetype, status
 
@@ -685,6 +685,16 @@ async function search_files({
     };
   }
 
+  let orderBy = {};
+  if (sort_order && sort_by) {
+    orderBy = {
+      [sort_by]: {
+        sort: sort_order,
+        nulls: 'last',
+      },
+    };
+  }
+
   return prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -695,6 +705,7 @@ async function search_files({
     },
     skip,
     take,
+    orderBy,
   });
 }
 
@@ -714,10 +725,10 @@ async function add_files({ dataset_id, data }) {
     ...f,
   }));
 
-  // create a file tree using graph datastructure
+  // create a file tree using graph data structure
   const graph = new FileGraph(files.map((f) => f.path));
 
-  // query non leaf nodes (directories) from the graph datastrucure
+  // query non leaf nodes (directories) from the graph data structure
   const directories = graph.non_leaf_nodes().map((p) => ({
     dataset_id,
     name: path.parse(p).base,
@@ -731,7 +742,7 @@ async function add_files({ dataset_id, data }) {
     skipDuplicates: true,
   });
 
-  // retrive all files and directories for this dataset to get their ids
+  // retrieve all files and directories for this dataset to get their ids
   const fileObjs = await prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -748,7 +759,7 @@ async function add_files({ dataset_id, data }) {
     return acc;
   }, {});
 
-  // query edges / parent-child relationships from the graph datastructure
+  // query edges / parent-child relationships from the graph data structure
   const edges = graph.edges().map(([src, dst]) => ({
     parent_id: path_to_ids[src],
     child_id: path_to_ids[dst],
@@ -1216,7 +1227,7 @@ module.exports = {
   files_ls,
   search_files,
   add_files,
-  get_staged_bundle_name,
+  get_bundle_name,
   get_dataset,
   createDataset,
   createDatasetInTransaction,

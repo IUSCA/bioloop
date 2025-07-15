@@ -1,15 +1,15 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const he = require('he');
-const { query } = require('express-validator');
-const asyncHandler = require('../middleware/asyncHandler');
-const { numericStringsToNumbers } = require('../utils');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
+const { query, body } = require('express-validator');
+
+const asyncHandler = require('@/middleware/asyncHandler');
+const { numericStringsToNumbers } = require('@/utils');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('metrics');
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.get('/latest', asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']
@@ -43,7 +43,7 @@ router.get(
       order by timestamp desc
   `;
 
-    // convert numeric strs to numbers
+    // convert numeric strings to numbers
     res.json(numericStringsToNumbers(
       metrics,
       ['usage', 'limit'],
@@ -54,6 +54,9 @@ router.get(
 router.post(
   '/',
   isPermittedTo('create'),
+  validate([
+    body().isArray(),
+  ]),
   asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']
   // #swagger.summary = 'Insert new measurements'

@@ -1,6 +1,6 @@
 const fsPromises = require('fs/promises');
 const express = require('express');
-const { PrismaClient, Prisma } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 const createError = require('http-errors');
 const {
   query, param, body, checkSchema,
@@ -11,20 +11,20 @@ const config = require('config');
 const pm = require('picomatch');
 const he = require('he');
 
+// const logger = require('@/services/logger');
 const path = require('path');
 const utils = require('../../utils');
-const asyncHandler = require('../../middleware/asyncHandler');
-const { accessControl } = require('../../middleware/auth');
-const { validate } = require('../../middleware/validators');
-const datasetService = require('../../services/dataset');
-const authService = require('../../services/auth');
-const CONSTANTS = require('../../constants');
-const logger = require('../../services/logger');
+const prisma = require('@/db');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const datasetService = require('@/services/dataset');
+const authService = require('@/services/auth');
+const CONSTANTS = require('@/constants');
+const logger = require('@/services/logger');
 
 const isPermittedTo = accessControl('datasets');
-
 const router = express.Router();
-
 const prisma = new PrismaClient();
 
 // stats - UI
@@ -154,6 +154,88 @@ router.get(
   }),
 );
 
+const buildQueryObject = ({
+  deleted, archived, staged, type, name, days_since_last_staged,
+  has_workflows, has_derived_data, has_source_data,
+  created_at_start, created_at_end, updated_at_start, updated_at_end,
+  match_name_exact, id,
+}) => {
+  const query_obj = _.omitBy(_.isUndefined)({
+    is_deleted: deleted,
+    is_staged: staged,
+    type,
+    name: name ? {
+      ...(match_name_exact ? { equals: name } : { contains: name }),
+      mode: 'insensitive', // case-insensitive search
+    } : undefined,
+  });
+
+  // has_workflows=true: datasets with one or more workflows associated
+  // has_workflows=false: datasets with no workflows associated
+  // has_workflows=undefined/null: no query based on workflow association
+  if (!_.isNil(has_workflows)) {
+    query_obj.workflows = { [has_workflows ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_derived_data)) {
+    query_obj.derived_datasets = { [has_derived_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_source_data)) {
+    query_obj.source_datasets = { [has_source_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(archived)) {
+    query_obj.archive_path = archived ? { not: null } : null;
+  }
+
+  // staged datasets where there is no STAGED state in last x days
+  if (_.isNumber(days_since_last_staged)) {
+    const xDaysAgo = new Date();
+    xDaysAgo.setDate(xDaysAgo.getDate() - days_since_last_staged);
+
+    query_obj.is_staged = true;
+    query_obj.NOT = {
+      states: {
+        some: {
+          state: 'STAGED',
+          timestamp: {
+            gte: xDaysAgo,
+          },
+        },
+      },
+    };
+  }
+
+  // created_at filter
+  if (created_at_start && created_at_end) {
+    query_obj.created_at = {
+      gte: new Date(created_at_start),
+      lte: new Date(created_at_end),
+    };
+  }
+
+  // updated_at filter
+  if (updated_at_start && updated_at_end) {
+    query_obj.updated_at = {
+      gte: new Date(updated_at_start),
+      lte: new Date(updated_at_end),
+    };
+  }
+
+  // id filter
+  if (id) {
+    // if id is an array, use 'in' operator
+    if (Array.isArray(id)) {
+      query_obj.id = { in: id };
+    } else {
+      query_obj.id = id;
+    }
+  }
+
+  return query_obj;
+};
+
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -196,6 +278,7 @@ router.get(
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').toBoolean().optional(),
+    query('id').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -206,9 +289,14 @@ router.get(
     const orderBy = {
       [req.query.sort_by]: req.query.sort_order,
     };
+    const optional_sort_columns = ['du_size', 'size', 'bundle_size'];
+    if (optional_sort_columns.includes(req.query.sort_by)) {
+      orderBy[req.query.sort_by] = {
+        nulls: 'last',
+        sort: req.query.sort_order,
+      };
+    }
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
       ...filterQuery,
       orderBy,
       include: {
@@ -219,6 +307,14 @@ router.get(
         states: req.query.include_states || false,
       },
     };
+
+    if (req.query.offset != null) {
+      datasetRetrievalQuery.skip = req.query.offset;
+    }
+
+    if (req.query.limit != null) {
+      datasetRetrievalQuery.take = req.query.limit;
+    }
 
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
@@ -303,24 +399,24 @@ router.post(
       /* eslint-enable */
 
     const {
-      ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
+      import_space, create_method, project_id, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
     } = req.body;
 
     // remove any HTML entities inserted by browser because of URL encoding
     const decoded_origin_path = he.decode(origin_path);
 
-    if (ingestion_space) {
+    if (import_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
-      const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
-      const is_origin_path_restricted = restricted_ingestion_dirs.some((glob) => {
+      const restricted_import_dirs = config.restricted_import_dirs[import_space].split(',');
+      const is_origin_path_restricted = restricted_import_dirs.some((glob) => {
         const isMatch = pm(glob);
         const matches = isMatch(decoded_origin_path, glob);
         return matches.isMatch;
       });
       if (is_origin_path_restricted) {
         return next(createError.Forbidden({
-          message: `Ingestion space ${ingestion_space} is restricted for dataset creation`,
+          message: `Import space ${import_space} is restricted for dataset creation`,
         }));
       }
     }
@@ -823,7 +919,7 @@ router.get(
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${datasetService.get_staged_bundle_name(dataset)}`;
+        : `${datasetService.get_bundle_name(dataset)}`;
       const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
@@ -853,10 +949,10 @@ router.get(
     query('extension').optional(),
     query('min_file_size').isInt().toInt().optional(),
     query('max_file_size').isInt().toInt().optional(),
-    query('skip').isInt().toInt().optional()
-      .default(0),
-    query('take').isInt().toInt().optional()
-      .default(1000),
+    query('sort_by').default('name').isIn(['name', 'size']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+    query('skip').default(0).isInt().toInt(),
+    query('take').default(1000).isInt().toInt(),
   ]),
   datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {

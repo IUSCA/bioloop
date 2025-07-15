@@ -79,7 +79,7 @@ const exports = {
     notifications: {
       enabledForRoles: [],
     },
-    ingestion: {
+    import: {
       enabledForRoles: ["admin"],
     },
     downloads: true,
@@ -102,10 +102,10 @@ const exports = {
       },
     },
   ],
-  restricted_ingestion_dirs: {
+  restricted_import_dirs: {
     slateScratch: {
       paths:
-        import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+        import.meta.env.VITE_SCRATCH_IMPORT_RESTRICTED_DIRS ||
         "/scratch/space/restricted",
       key: "scratch",
     },

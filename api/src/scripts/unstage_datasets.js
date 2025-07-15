@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   /**
-   * Unstages all datasets that are currently staged
+   * Unstage all datasets that are currently staged
    *
    * Usage: node src/scripts/unstage_datasets.js
    */

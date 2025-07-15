@@ -22,7 +22,7 @@ def check_files(celery_task: WorkflowTask, dataset_dir: Path, files_metadata: li
         rel_path = file_metadata['path']
         path = dataset_dir / rel_path
         if path.exists():
-            # for symlnks skip checksum validation
+            # for symlinks skip checksum validation
             if path.is_symlink():
                 continue
             digest = utils.checksum(path)

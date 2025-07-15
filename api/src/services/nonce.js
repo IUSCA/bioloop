@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('@/db');
 
 async function createNonce({ purpose, expiresIn } = {}) {
   const row = await prisma.nonce.create({

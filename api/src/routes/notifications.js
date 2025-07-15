@@ -1,20 +1,16 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const {
-  query, body,
-} = require('express-validator');
+const { query, body } = require('express-validator');
 const _ = require('lodash/fp');
-
-// const logger = require('../services/logger');
 const createError = require('http-errors');
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
+
+// const logger = require('@/services/logger');
+const prisma = require('@/db');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
 
 const isPermittedTo = accessControl('notifications');
-
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.get(
   '/',
@@ -128,7 +124,8 @@ router.delete(
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    const queryParams = req.query;
+    // remove keys with undefined values
+    const queryParams = _.omitBy(_.isUndefined)(req.query);
 
     if (Object.keys(queryParams).length === 0) {
       res.send({

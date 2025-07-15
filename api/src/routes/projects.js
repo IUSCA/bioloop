@@ -1,22 +1,19 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-const {
-  query, body, param,
-} = require('express-validator');
+const { query, body, param } = require('express-validator');
 const createError = require('http-errors');
 
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
-const projectService = require('../services/project');
-const wfService = require('../services/workflow');
-const { setDifference, log_axios_error } = require('../utils');
-const CONSTANTS = require('../constants');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const projectService = require('@/services/project');
+const wfService = require('@/services/workflow');
+const { setDifference, log_axios_error } = require('@/utils');
+const CONSTANTS = require('@/constants');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
-const prisma = new PrismaClient();
 
 const build_include_object = ({
   include_users = true,
@@ -526,14 +523,14 @@ router.post(
     * #swagger.description = admin and operator roles are allowed and user role
     * is forbidden
     */
-    const { user_ids, dataset_ids, ...projectData } = req.body;
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
       _.omitBy(_.isNil),
-    ])(projectData);
+    ])(req.body);
     data.slug = await projectService.generate_slug({ name: data.name });
 
-    if ((user_ids || []).length > 0) {
+    const user_ids = (req.body.user_ids || []).filter((id) => id != null);
+    if (user_ids.length > 0) {
       data.users = {
         create: user_ids.map((id) => ({
           user_id: id,
@@ -542,7 +539,8 @@ router.post(
       };
     }
 
-    if ((dataset_ids || []).length > 0) {
+    const dataset_ids = (req.body.dataset_ids || []).filter((id) => id != null);
+    if (dataset_ids.length > 0) {
       data.datasets = {
         create: dataset_ids.map((id) => ({
           dataset_id: id,
@@ -575,7 +573,7 @@ router.post(
     */
 
     // get source project
-    const source_porject = await prisma.project.findFirstOrThrow({
+    const source_project = await prisma.project.findFirstOrThrow({
       where: {
         id: req.params.src,
       },
@@ -598,7 +596,7 @@ router.post(
     ));
 
     // find dataset ids which are not already associated with the source project
-    const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
+    const source_dataset_ids = source_project.datasets.map((obj) => obj.dataset.id);
 
     const dataset_ids_to_add = [
       ...setDifference(target_dataset_ids, new Set(source_dataset_ids)),
