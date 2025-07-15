@@ -14,6 +14,7 @@ test.describe.serial('Dataset Upload Process', () => {
   let fileChooser;
 
   let testFiles; // file objects representing the files to be selected for upload
+  const selectedFiles = []; // array of selected files
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
@@ -51,6 +52,34 @@ test.describe.serial('Dataset Upload Process', () => {
 
     test('Should allow selecting files', async () => {
       await fileChooser.setFiles(testFiles.map((file) => file.path));
+      // Wait for the file upload table to be visible
+      await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
+    });
+
+    test('Should show the correct number of files in the table', async () => {
+      // Get all rows in the table
+      const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
+
+      // For each row, extract the file name and size
+      const files = await tableRows.evaluateAll((rows) => rows.map((row) => {
+        const nameElement = row.querySelector('[data-testid="file-name"]');
+        const sizeElement = row.querySelector('td:nth-child(2)');
+        return {
+          name: nameElement ? nameElement.textContent.trim() : '',
+          size: sizeElement ? sizeElement.textContent.trim() : '',
+        };
+      }));
+
+      // Store the selected files' information in state
+      selectedFiles.push(...files);
+
+      // Verify that the correct number of files were selected
+      expect(selectedFiles.length).toBe(testFileNames.length);
+
+      // Verify that the file names appear in the UI
+      await Promise.all(selectedFiles.map(async (file) => {
+        await expect(page.getByText(file.name)).toBeVisible();
+      }));
     });
 
     test('Should allow deleting selected files', async () => {
@@ -104,6 +133,37 @@ test.describe.serial('Dataset Upload Process', () => {
       await Promise.all(
         Array.from({ length: remainingFileCount }, (_, i) => expect(page.locator('[data-testid="delete-file-button"]').nth(i)).toBeVisible()),
       );
+
+      // await new Promise(() => {});
+    });
+
+    test('Should hide the file table when all files are deleted', async () => {
+      // Wait for the file upload table to be visible
+      await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
+
+      // Get the initial file count
+      const initialFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
+
+      // Create an array of promises for deleting files
+      const deletionPromises = Array.from({ length: initialFileCount }, async (_, i) => {
+        await page.locator('[data-testid="delete-file-button"]').first().click();
+
+        // Wait for the file to be removed from the list
+        await expect(async () => {
+          const currentFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
+          expect(currentFileCount).toBe(initialFileCount - i - 1);
+        }).toPass();
+      });
+
+      // Execute all deletion promises concurrently
+      await Promise.all(deletionPromises);
+
+      // Assert that the file table is no longer visible
+      await expect(page.locator('[data-testid="upload-selected-files-table"]')).not.toBeVisible();
+
+      // Assert that the file table is not present in the DOM
+      const fileTableExists = await page.locator('[data-testid="upload-selected-files-table"]').count() > 0;
+      expect(fileTableExists).toBe(false);
 
       // await new Promise(() => {});
     });

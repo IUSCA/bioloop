@@ -88,9 +88,7 @@ test.describe.serial('Dataset Upload Process', () => {
     test('Wait for the file upload table to be visible', async () => {
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
-    });
 
-    test('Should show the correct number of files in the table', async () => {
       // Get all rows in the table
       const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
 
@@ -106,14 +104,6 @@ test.describe.serial('Dataset Upload Process', () => {
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
-
-      // Verify that the correct number of files were selected
-      expect(selectedFiles.length).toBe(testFileNames.length);
-
-      // Verify that the file names appear in the UI
-      await Promise.all(selectedFiles.map(async (file) => {
-        await expect(page.getByText(file.name)).toBeVisible();
-      }));
     });
   });
 
