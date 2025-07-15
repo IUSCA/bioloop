@@ -1,6 +1,6 @@
 <template>
   <va-card>
-    <va-card-title>Ingestion Details</va-card-title>
+    <va-card-title>Import Details</va-card-title>
     <va-card-content>
       <div class="va-table-responsive">
         <table class="va-table w-full">
@@ -70,15 +70,15 @@
             <tr>
               <td>Source Directory</td>
               <td>
-                <CopyText :text="props.ingestionDir?.path" />
+                <CopyText :text="props.importDir?.path" />
               </td>
             </tr>
 
             <tr>
-              <td>Ingested from</td>
+              <td>Imported from</td>
               <td>
                 <va-chip size="small" outline>
-                  {{ props.ingestionSpace }}
+                  {{ props.importSpace }}
                 </va-chip>
               </td>
             </tr>
@@ -101,10 +101,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  ingestionSpace: {
+  importSpace: {
     type: String,
   },
-  ingestionDir: {
+  importDir: {
     type: Object,
     required: true,
   },

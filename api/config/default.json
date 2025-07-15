@@ -176,7 +176,7 @@
       "slateScratch": ""
     }
   },
-  "restricted_ingestion_dirs": {
+  "restricted_import_dirs": {
     "slateScratch": ""
   },
   "enabled_features": {
