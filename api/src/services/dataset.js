@@ -5,6 +5,7 @@ const config = require('config');
 // const _ = require('lodash/fp');
 const createError = require('http-errors');
 
+const _ = require('lodash/fp');
 const prisma = require('@/db');
 const wfService = require('./workflow');
 const userService = require('./user');
@@ -33,15 +34,6 @@ function normalize_name(name) {
     .replaceAll(/[\W]/g, '-')
     .replaceAll(/-+/g, '-');
 }
-
-/**
- * Gets the bundle name for a staged dataset.
- *
- * @function get_bundle_name
- * @param {Object} dataset - The dataset which has been or will be staged.
- * @returns {string} The name of the bundle which contains the staged dataset.
- */
-const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
 
 /**
  * Generates the absolute path where a dataset will be uploaded to.
@@ -129,29 +121,6 @@ async function create_workflow(dataset, wf_name, initiator_id) {
 
   return wf;
 }
-
-/**
- * Retrieves active workflows for a given dataset.
- *
- * @async
- * @function get_dataset_active_workflows
- * @param {Object} params - The parameters object.
- * @param {Object} params.dataset - The dataset object for which workflows are to be retrieved.
- * @returns {Promise<Array>} A promise that resolves to an array of active workflow objects.
- *
- * @example
- * const dataset = { workflows: [{ id: 'wf1' }, { id: 'wf2' }] };
- * const activeWorkflows = await get_dataset_active_workflows({ dataset });
- */
-const get_dataset_active_workflows = async ({ dataset } = {}) => {
-  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
-  const workflowQueryResponse = await workflowService.getAll({
-    workflow_ids: datasetWorkflowIds,
-    app_id: config.get('app_id'),
-    status: 'ACTIVE',
-  });
-  return workflowQueryResponse.data.results;
-};
 
 /**
  * Soft-deletes a dataset or initiates a delete-archive workflow.
@@ -822,6 +791,38 @@ function createDataset(data) {
 }
 
 /**
+ * Retrieves active workflows for a given dataset.
+ *
+ * @async
+ * @function get_dataset_active_workflows
+ * @param {Object} params - The parameters object.
+ * @param {Object} params.dataset - The dataset object for which workflows are to be retrieved.
+ * @returns {Promise<Array>} A promise that resolves to an array of active workflow objects.
+ *
+ * @example
+ * const dataset = { workflows: [{ id: 'wf1' }, { id: 'wf2' }] };
+ * const activeWorkflows = await get_dataset_active_workflows({ dataset });
+ */
+const get_dataset_active_workflows = async ({ dataset } = {}) => {
+  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
+  const workflowQueryResponse = await workflowService.getAll({
+    workflow_ids: datasetWorkflowIds,
+    app_id: config.get('app_id'),
+    status: 'ACTIVE',
+  });
+  return workflowQueryResponse.data.results;
+};
+
+/**
+ * Gets the bundle name for a staged dataset.
+ *
+ * @function get_bundle_name
+ * @param {Object} dataset - The dataset which has been or will be staged.
+ * @returns {string} The name of the bundle which contains the staged dataset.
+ */
+const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+
+/**
  * Middleware to check if a user has access to a dataset.
  *
  * @function dataset_access_check
@@ -937,6 +938,7 @@ const workflow_access_check = [
  * @param {string} [params.updated_at_start] - Start date for dataset update time range.
  * @param {string} [params.updated_at_end] - End date for dataset update time range.
  * @param {boolean} [params.match_name_exact] - Whether to match the dataset name exactly.
+ * @param {number} [params.id] - The ID of the requested dataset
  * @param {string} [params.username] - The username to filter datasets by user's projects.
  * @returns {Object} A query object for use with Prisma ORM.
  */
@@ -955,6 +957,7 @@ const buildDatasetsFetchQuery = ({
   updated_at_start,
   updated_at_end,
   match_name_exact,
+  id,
   username,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
@@ -1018,6 +1021,16 @@ const buildDatasetsFetchQuery = ({
       gte: new Date(updated_at_start),
       lte: new Date(updated_at_end),
     };
+  }
+
+  // id filter
+  if (id) {
+    // if id is an array, use 'in' operator
+    if (Array.isArray(id)) {
+      query_obj.id = { in: id };
+    } else {
+      query_obj.id = id;
+    }
   }
 
   // Filter by projects assigned to this user if username is provided

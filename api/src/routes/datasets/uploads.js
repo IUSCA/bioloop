@@ -80,7 +80,7 @@ router.get(
     query('dataset_name').optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
-    param('username').escape().notEmpty(),
+    param('username').trim().notEmpty(),
   ]),
   isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
@@ -133,8 +133,8 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
-    body('type').escape().notEmpty().isIn(config.dataset_types),
-    body('name').escape().notEmpty().isLength({ min: 3 }),
+    body('type').trim().notEmpty().isIn(config.dataset_types),
+    body('name').trim().notEmpty().isLength({ min: 3 }),
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
     body('project_id').optional(),

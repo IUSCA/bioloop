@@ -12,7 +12,7 @@ function isFeatureEnabled({ key }) {
 
   const featureEnabled = features[key];
   if (featureEnabled == null) {
-    // feature's enabled status is not present in the config - assume enabled
+    // feature's enabled status is not present in the config - assume enabled for backward compatibility
     return true;
   } if (typeof featureEnabled === 'boolean') {
     // feature is either enabled or disabled

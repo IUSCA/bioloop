@@ -55,9 +55,7 @@
         </va-list-item>
 
         <!-- Direct Download -->
-        <va-list-item
-          v-if="datasetService.get_staged_bundle_name(props.dataset)"
-        >
+        <va-list-item v-if="datasetService.get_bundle_name(props.dataset)">
           <!-- icon -->
           <va-list-item-section avatar>
             <i-mdi:folder-zip-outline class="text-2xl" />
