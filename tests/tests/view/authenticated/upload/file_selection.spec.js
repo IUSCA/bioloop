@@ -21,7 +21,9 @@ test.describe.serial('Dataset Upload Process', () => {
 
     // Visit the dataset uploads page
     await page.goto('/datasetUpload/new');
+  });
 
+  test.beforeAll(async () => {
     // Create the attachments directory where the test file to be uploaded will
     // be stored
     await fs.mkdir(attachmentsDir, { recursive: true });
