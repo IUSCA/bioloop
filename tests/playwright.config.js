@@ -161,4 +161,5 @@ module.exports = {
   USER_STORAGE_STATE,
   OPERATOR_STORAGE_STATE,
   ADMIN_STORAGE_STATE,
+  attachmentsDir: path.join(__dirname, 'tests', 'attachments'),
 };
