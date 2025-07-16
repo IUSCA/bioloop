@@ -42,7 +42,7 @@ test.describe.serial('Dataset Upload Process', () => {
     await fs.rm(attachmentsDir, { recursive: true, force: true });
   });
 
-  test.describe('Metadata selection step', async () => {
+  test.describe('General Info step', async () => {
     test.beforeAll(async () => {
       // Select files
       [fileChooser] = await Promise.all([
@@ -54,11 +54,11 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test.beforeAll(async () => {
-      // Click the "Next" button to proceed to the Metadata-selection step
+      // Click the "Next" button to proceed to the General-Info step
       await page.click('[data-testid="upload-next-button"]');
     });
 
-    test('should display metadata form fields in their default states, with their default values', async () => {
+    test('should display General-Info form fields in their default states, with their default values', async () => {
       // Wait for the Dataset Type row to be visible
       const datasetTypeRow = page.getByTestId('upload-metadata-dataset-type-row');
       await expect(datasetTypeRow).toBeVisible();
@@ -118,7 +118,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(selectedOption).toHaveCount(0);
     });
 
-    test('should allow selecting values in the metadata fields', async () => {
+    test('should allow selecting values in the General-Info step\'s fields', async () => {
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select'); await
       expect(datasetTypeSelect).toBeVisible();
 

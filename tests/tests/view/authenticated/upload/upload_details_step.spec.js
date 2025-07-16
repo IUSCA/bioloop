@@ -80,13 +80,13 @@ test.describe.serial('Dataset Upload Process', () => {
     });
   });
 
-  test.describe('Metadata selection step', async () => {
+  test.describe('General-Info selection step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-Details step
       await page.click('[data-testid="upload-next-button"]');
     });
 
-    test('should allow selecting values in the metadata fields', async () => {
+    test('should allow selecting values in the General-Info form\'s fields', async () => {
       // Select (or track, if pre-populated) Dataset Type
       // Capture the pre-populated Dataset Type
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
@@ -135,11 +135,11 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('Upload details step', () => {
     test.beforeAll(async () => {
-      // Click the "Next" button to proceed to the Metadata-selection step
+      // Click the "Next" button to proceed to the -Info step
       await page.click('[data-testid="upload-next-button"]');
     });
 
-    test('should show all the selected metadata fields in the Upload step', async () => {
+    test('should show all the selected General-Info form\'s fields in the Upload step', async () => {
     // Check Dataset Type
       const datasetTypeChip = page.getByTestId('upload-details-dataset-type-chip');
       await expect(datasetTypeChip).toBeVisible();

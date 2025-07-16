@@ -80,9 +80,9 @@ test.describe.serial('Dataset Upload Steps', () => {
     });
   });
 
-  test.describe('Metadata step', async () => {
+  test.describe('General-Info step', async () => {
     test.beforeAll(async () => {
-      // Click the "Next" button to proceed to the Metadata-selection step
+      // Click the "Next" button to proceed to the General-Info step
       await page.click('[data-testid="upload-next-button"]');
     });
 
@@ -97,7 +97,7 @@ test.describe.serial('Dataset Upload Steps', () => {
       await expect(uploadStepButton).toBeDisabled();
     });
 
-    test('should allow selecting values in the metadata fields', async () => {
+    test('should allow selecting values in the General-Info form\'s fields', async () => {
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
       await expect(datasetTypeSelect).toBeVisible();
 
