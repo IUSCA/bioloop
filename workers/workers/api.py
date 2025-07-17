@@ -149,7 +149,8 @@ def get_all_datasets(
         days_since_last_staged=None,
         deleted=False,
         archived=None,
-        bundle=False):
+        bundle=False,
+        include_states=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -158,6 +159,7 @@ def get_all_datasets(
             'deleted': deleted,
             'archived': archived,
             'bundle': bundle,
+            'include_states': include_states,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -279,6 +281,13 @@ def post_worker_logs(process_id: str, logs: list[dict]):
 def get_all_workflows():
     with APIServerSession() as s:
         r = s.get('workflows/current')
+        r.raise_for_status()
+        return r.json()
+
+
+def get_dataset_workflows(dataset_id: int):
+    with APIServerSession() as s:
+        r = s.get(f'workflows/{dataset_id}')
         r.raise_for_status()
         return r.json()
 
