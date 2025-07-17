@@ -220,7 +220,7 @@ router.get(
   '/:username/:id/datasets',
   isPermittedTo('read', { checkOwnership: true }),
   validate([
-    param('username').notEmpty(),
+    param('username').trim().notEmpty(),
     query('staged').toBoolean().optional(),
     query('take').isInt().toInt().optional(),
     query('skip').isInt({ min: 0 }).toInt().optional(),

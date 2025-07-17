@@ -15,6 +15,9 @@ const router = express.Router();
 router.get(
   '/',
   isPermittedTo('read'),
+  validate([
+    query('status').optional().trim().notEmpty(),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
     // #swagger.summary = Get filtered notifications
@@ -65,8 +68,8 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
-    body('label').notEmpty(),
-    body('text').notEmpty(),
+    body('label').trim().notEmpty(),
+    body('text').trim().notEmpty(),
     body('role_ids').isArray().optional(),
     body('user_ids').isArray().optional(),
   ]),
@@ -115,7 +118,7 @@ router.delete(
   '/',
   isPermittedTo('delete'),
   validate([
-    query('status').optional().notEmpty(),
+    query('status').optional().trim().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']

@@ -421,6 +421,7 @@ router.get(
   '/uploads',
   verifyUploadEnabledForRole,
   validate([
+    query('dataset_name').optional().trim().notEmpty(),
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
@@ -439,10 +440,12 @@ router.get(
       where.status = status;
     }
     if (dataset_name) {
-      where.dataset = {
-        name: {
-          contains: dataset_name,
-          mode: 'insensitive',
+      where.audit_log = {
+        dataset: {
+          name: {
+            contains: dataset_name,
+            mode: 'insensitive',
+          },
         },
       };
     }
@@ -475,9 +478,11 @@ router.get(
   '/:username/uploads',
   verifyUploadEnabledForRole,
   validate([
+    query('dataset_name').optional().trim().notEmpty(),
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
+    param('username').trim().notEmpty(),
   ]),
   isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
@@ -493,7 +498,10 @@ router.get(
         status,
         audit_log: {
           dataset: {
-            name: { contains: dataset_name ?? Prisma.skip },
+            name: {
+              contains: dataset_name ?? Prisma.skip,
+              mode: 'insensitive',
+            },
           },
           user: {
             username: req.params.username,
@@ -680,11 +688,11 @@ router.post(
   validate([
     body('name').notEmpty(),
     body('type').isIn(config.get('dataset_types')),
-    body('origin_path').notEmpty(),
+    body('origin_path').trim().notEmpty(),
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
-    body('origin_path').notEmpty(),
+    body('origin_path').trim().notEmpty(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
@@ -1381,6 +1389,8 @@ router.get(
 router.get(
   '/:datasetType/:name/exists',
   validate([
+    param('datasetType').trim().notEmpty(),
+    param('name').trim().notEmpty(),
     query('deleted').toBoolean().default(false),
   ]),
   accessControl('dataset_name')('read'),
@@ -1419,8 +1429,8 @@ router.post(
   verifyUploadEnabledForRole,
   isPermittedTo('create'),
   validate([
-    body('type').isIn(config.dataset_types),
-    body('name').isLength({ min: 3 }),
+    body('type').trim().notEmpty().isIn(config.dataset_types),
+    body('name').trim().notEmpty().isLength({ min: 3 }),
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
     body('project_id').optional(),
@@ -1516,6 +1526,7 @@ router.patch(
     },
   ),
   validate([
+    body('status').optional().trim().notEmpty(),
     param('id').isInt().toInt(),
     body('files').isArray().optional(),
   ]),
