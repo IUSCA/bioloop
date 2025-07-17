@@ -183,8 +183,12 @@
     "slateScratch": ""
   },
   "enabled_features": {
-    "upload": true,
-    "fs": true,
+    "upload": {
+      "enabled_for_roles": ["admin", "user"]
+    },
+    "fs": {
+      "enabled_for_roles": ["admin"]
+    },
     "downloads": true,
     "signup": true
   },
