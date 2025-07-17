@@ -85,7 +85,7 @@ const exports = {
     downloads: true,
     signup: true,
     uploads: {
-      enabledForRoles: ["admin"],
+      enabledForRoles: ["admin", "user"],
     },
   },
   notifications: {

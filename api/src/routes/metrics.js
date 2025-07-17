@@ -27,7 +27,7 @@ router.get(
   '/space-utilization-by-timestamp',
   isPermittedTo('read'),
   validate([
-    query('measurement').notEmpty().escape(),
+    query('measurement').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     const measurement = decodeURI(he.decode(req.query.measurement));

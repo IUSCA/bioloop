@@ -16,7 +16,7 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('status').optional().escape().notEmpty(),
+    query('status').optional().trim().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
@@ -68,8 +68,8 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
-    body('label').escape().notEmpty(),
-    body('text').escape().notEmpty(),
+    body('label').trim().notEmpty(),
+    body('text').trim().notEmpty(),
     body('role_ids').isArray().optional(),
     body('user_ids').isArray().optional(),
   ]),
@@ -118,7 +118,7 @@ router.delete(
   '/',
   isPermittedTo('delete'),
   validate([
-    query('status').optional().escape().notEmpty(),
+    query('status').optional().trim().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
