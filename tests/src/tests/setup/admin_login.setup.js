@@ -1,6 +1,6 @@
 import { expect, test as setup } from '@playwright/test';
 // eslint-disable-next-line import/named
-import { ADMIN_STORAGE_STATE } from '../../playwright.config';
+import { ADMIN_STORAGE_STATE } from '../../../playwright.config';
 
 const config = require('config');
 

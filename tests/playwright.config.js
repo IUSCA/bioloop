@@ -18,7 +18,7 @@ const ADMIN_STORAGE_STATE = path.join(__dirname, '/.auth/admin_storage_state.jso
  */
 module.exports = {
   ...defineConfig({
-    testDir: './tests',
+    testDir: './src/tests',
     /* Run tests in files in parallel */
     fullyParallel: true,
     /**
