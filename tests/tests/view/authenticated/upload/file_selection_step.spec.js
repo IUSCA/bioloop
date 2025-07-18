@@ -1,6 +1,5 @@
-import path from 'path';
-
-import { expect, test } from '../../../../fixtures/attachment';
+import { expect, test as baseTest } from '../../../../fixtures/attachment';
+import { withAttachments } from '../../../../utils/attachments/withAttachments';
 
 const attachments = [
   { name: 'file_1' },
@@ -8,11 +7,7 @@ const attachments = [
   { name: 'file_3' },
 ];
 
-test.use({
-  directory: __dirname,
-  testFile: path.basename(__filename),
-  attachments,
-});
+const test = withAttachments(baseTest, __filename, attachments);
 
 test.describe('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block

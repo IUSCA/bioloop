@@ -4,10 +4,9 @@ import { test as base } from '@playwright/test';
 const { AttachmentManager } = require('../utils/attachments');
 
 const test = base.extend({
-  directory: [undefined, { option: true }],
-  testFile: [undefined, { option: true }],
+  directory: [undefined, { option: false }],
+  testFile: [undefined, { option: false }],
   attachments: [[], { option: true }],
-  // attachmentManager: [undefined, { option: true }],
 
   attachmentManager: async ({ directory, testFile, attachments }, use) => {
     const testFileName = testFile.replace('.spec.js', '');
@@ -17,9 +16,14 @@ const test = base.extend({
     // create attachment container directory
     await attachmentManager.setup();
 
-    for (const { name, content = `Content for ${name}` } of attachments) {
+    const attachmentsToCreate = attachments.length > 0
+      ? attachments
+      : [{ name: 'default_attachment.txt', content: 'This is a default attachment' }];
+
+    // create attachments
+    await Promise.all(attachmentsToCreate.map(async ({ name, content = `Content for ${name}` }) => {
       await attachmentManager.createFile(name, content);
-    }
+    }));
 
     await use(attachmentManager);
 
