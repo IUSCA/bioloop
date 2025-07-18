@@ -1,14 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, test as baseTest } from '../../../../fixtures/attachment';
+import { withAttachments } from '../../../../utils/attachments/withAttachments';
 
-const { AttachmentManager } = require('../../../../utils/attachments');
+const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
-const testFileNames = [
-  { name: 'file_1' },
-  { name: 'file_2' },
-  { name: 'file_3' },
-];
+const test = withAttachments(baseTest, __filename, attachments);
 
-test.describe('Dataset Upload Process', () => {
+test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
 
   let selectedDatasetType;
@@ -16,10 +13,7 @@ test.describe('Dataset Upload Process', () => {
   let selectedProjectName;
   let selectedInstrumentName;
 
-  let testFiles; // file objects representing the files to be selected for upload
   const selectedFiles = []; // array of selected files
-
-  let attachmentManager;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
@@ -28,37 +22,15 @@ test.describe('Dataset Upload Process', () => {
     await page.goto('/datasetUpload/new');
   });
 
-  test.beforeAll(async () => {
-    // Create a unique directory for this test's attachments
-    attachmentManager = new AttachmentManager(__filename);
-    await attachmentManager.setup();
-  });
-
-  test.beforeAll(async () => {
-    // Create test files
-    testFiles = await Promise.all(testFileNames.map(async (file) => {
-      const filePath = await attachmentManager.createFile(file.name, `This is the content ${file.name}`);
-      return {
-        ...file,
-        path: filePath,
-      };
-    }));
-  });
-
-  test.afterAll(async () => {
-    // Clean up the directory created for this test's attachments
-    await attachmentManager.teardown();
-  });
-
   test.describe('File selection step', () => {
-    test.beforeAll(async () => {
-      // Select files
+    test.beforeAll(async ({ attachmentManager }) => {
+      // Select a file
       const [fileChooser] = await Promise.all([
         page.waitForEvent('filechooser'),
         page.click('[data-testid="upload-file-select"]'),
       ]);
-
-      await fileChooser.setFiles(testFiles.map((file) => file.path));
+      // attach files
+      await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
     });
 
     test('Wait for the file upload table to be visible', async () => {

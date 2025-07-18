@@ -1,15 +1,11 @@
 import { expect, test as baseTest } from '../../../../fixtures/attachment';
 import { withAttachments } from '../../../../utils/attachments/withAttachments';
 
-const attachments = [
-  { name: 'file_1' },
-  { name: 'file_2' },
-  { name: 'file_3' },
-];
+const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
 const test = withAttachments(baseTest, __filename, attachments);
 
-test.describe('Dataset Upload Process', () => {
+test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
   let fileChooser;
 
@@ -22,7 +18,7 @@ test.describe('Dataset Upload Process', () => {
     await page.goto('/datasetUpload/new');
   });
 
-  test.describe.serial('File selection and deletion', () => {
+  test.describe('File selection and deletion', () => {
     test.beforeAll(async () => {
       // Select files
       [fileChooser] = await Promise.all([
@@ -31,42 +27,33 @@ test.describe('Dataset Upload Process', () => {
       ]);
     });
 
-    // todo - document fixture usage
+    // todo - document fixture usage in readme
     test('Should allow selecting files', async ({ attachmentManager }) => {
-      // Select test files
+      // attach files
       await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
-
-      // await new Promise(() => {});
     });
 
     test('Should show the correct number of files in the table', async () => {
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
 
-      // // Get all rows in the table
+      // Get all rows in the table
       const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
-
-      // await new Promise(() => {});
 
       // For each row, extract the file name and size
       const files = await tableRows.evaluateAll((rows) => rows.map((row) => {
         const nameElement = row.querySelector('[data-testid="file-name"]');
         const sizeElement = row.querySelector('td:nth-child(2)');
 
-        console.log(`file: ${nameElement.textContent.trim()}, size: ${sizeElement.textContent.trim()}`);
-
-        const ret = {
+        return {
           name: nameElement ? nameElement.textContent.trim() : '',
           size: sizeElement ? sizeElement.textContent.trim() : '',
         };
-        // console.log(`file: ${ret.name}, size: ${ret.size}`);
-        return ret;
       }));
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
-      console.log('selected files: ', selectedFiles);
 
       // Verify that the correct number of files were selected
       expect(selectedFiles.length).toBe(attachments.length);
@@ -131,8 +118,6 @@ test.describe('Dataset Upload Process', () => {
       await Promise.all(
         Array.from({ length: remainingFileCount }, (_, i) => expect(page.locator('[data-testid="delete-file-button"]').nth(i)).toBeVisible()),
       );
-
-      // await new Promise(() => {});
     });
 
     test('Should hide the file table when all files are deleted', async () => {
@@ -145,7 +130,8 @@ test.describe('Dataset Upload Process', () => {
       for (let i = 0; i < initialFileCount; i += 1) {
         await page.locator('[data-testid="delete-file-button"]').first().click();
 
-        // Wait for the file to be removed from the list
+        // Wait for the current file to be removed from the list, before
+        // removing the next one
         // eslint-disable-next-line no-loop-func
         await expect(async () => {
           const currentFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
