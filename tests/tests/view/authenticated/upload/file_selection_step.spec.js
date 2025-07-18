@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
-import fs from 'fs/promises';
-import path from 'path';
 
-const attachmentsDir = path.join(__dirname, '../../../attachments');
+const { AttachmentManager } = require('../../../../utils/attachment');
+
 const testFileNames = [
   { name: 'file_1' },
   { name: 'file_2' },
@@ -16,6 +15,8 @@ test.describe.serial('Dataset Upload Process', () => {
   let testFiles; // file objects representing the files to be selected for upload
   const selectedFiles = []; // array of selected files
 
+  let attachmentManager;
+
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
@@ -24,23 +25,25 @@ test.describe.serial('Dataset Upload Process', () => {
   });
 
   test.beforeAll(async () => {
-    // Create the attachments directory where the test file to be uploaded will
-    // be stored
-    await fs.mkdir(attachmentsDir, { recursive: true });
+    // Create a unique directory for this test's attachments
+    attachmentManager = new AttachmentManager(__filename);
+    await attachmentManager.setup();
   });
 
   test.beforeAll(async () => {
     // Create test files
     testFiles = await Promise.all(testFileNames.map(async (file) => {
-      const filePath = path.join(attachmentsDir, file.name);
-      await fs.writeFile(filePath, `This is the content of ${file.name}`);
-      return { ...file, path: filePath };
+      const filePath = await attachmentManager.createFile(file.name, `This is the content ${file.name}`);
+      return {
+        ...file,
+        path: filePath,
+      };
     }));
   });
 
   test.afterAll(async () => {
-    // Clean up: remove the test file after all tests in this describe block
-    await fs.rm(attachmentsDir, { recursive: true, force: true });
+    // Clean up the directory created for this test's attachments
+    await attachmentManager.teardown();
   });
 
   test.describe('File selection and deletion', () => {
@@ -143,22 +146,20 @@ test.describe.serial('Dataset Upload Process', () => {
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
 
-      // Get the initial file count
       const initialFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
 
-      // Create an array of promises for deleting files
-      const deletionPromises = Array.from({ length: initialFileCount }, async (_, i) => {
+      /* eslint-disable no-await-in-loop */
+      for (let i = 0; i < initialFileCount; i += 1) {
         await page.locator('[data-testid="delete-file-button"]').first().click();
 
         // Wait for the file to be removed from the list
+        // eslint-disable-next-line no-loop-func
         await expect(async () => {
           const currentFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
           expect(currentFileCount).toBe(initialFileCount - i - 1);
         }).toPass();
-      });
-
-      // Execute all deletion promises concurrently
-      await Promise.all(deletionPromises);
+      }
+      /* eslint-disable no-await-in-loop */
 
       // Assert that the file table is no longer visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).not.toBeVisible();
@@ -166,8 +167,6 @@ test.describe.serial('Dataset Upload Process', () => {
       // Assert that the file table is not present in the DOM
       const fileTableExists = await page.locator('[data-testid="upload-selected-files-table"]').count() > 0;
       expect(fileTableExists).toBe(false);
-
-      // await new Promise(() => {});
     });
   });
 });

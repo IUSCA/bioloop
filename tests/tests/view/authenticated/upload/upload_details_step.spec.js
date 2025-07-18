@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
-import fs from 'fs/promises';
-import path from 'path';
 
-const attachmentsDir = path.join(__dirname, '../../../attachments');
+const { AttachmentManager } = require('../../../../utils/attachment');
+
 const testFileNames = [
   { name: 'file_1' },
   { name: 'file_2' },
@@ -20,6 +19,8 @@ test.describe.serial('Dataset Upload Process', () => {
   let testFiles; // file objects representing the files to be selected for upload
   const selectedFiles = []; // array of selected files
 
+  let attachmentManager;
+
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
@@ -28,23 +29,25 @@ test.describe.serial('Dataset Upload Process', () => {
   });
 
   test.beforeAll(async () => {
-    // Create the attachments directory where the test file to be uploaded will
-    // be stored
-    await fs.mkdir(attachmentsDir, { recursive: true });
+    // Create a unique directory for this test's attachments
+    attachmentManager = new AttachmentManager(__filename);
+    await attachmentManager.setup();
   });
 
   test.beforeAll(async () => {
     // Create test files
     testFiles = await Promise.all(testFileNames.map(async (file) => {
-      const filePath = path.join(attachmentsDir, file.name);
-      await fs.writeFile(filePath, `This is the content of ${file.name}`);
-      return { ...file, path: filePath };
+      const filePath = await attachmentManager.createFile(file.name, `This is the content ${file.name}`);
+      return {
+        ...file,
+        path: filePath,
+      };
     }));
   });
 
   test.afterAll(async () => {
-    // Clean up: remove the test file after all tests in this describe block
-    await fs.rm(attachmentsDir, { recursive: true, force: true });
+    // Clean up the directory created for this test's attachments
+    await attachmentManager.teardown();
   });
 
   test.describe('File selection step', () => {
