@@ -2,10 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 
 class AttachmentManager {
-  constructor(testFilePath) {
-    const testDir = path.dirname(testFilePath);
-    const testFileName = path.basename(testFilePath, '.spec.js');
-    this.testAttachmentsDir = path.join(testDir, 'attachments', testFileName);
+  constructor(directory) {
+    this.testAttachmentsDir = path.resolve(directory);
   }
 
   getPath() {

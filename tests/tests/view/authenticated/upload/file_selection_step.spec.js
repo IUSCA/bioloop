@@ -1,21 +1,24 @@
-import { expect, test } from '@playwright/test';
+import path from 'path';
 
-const { AttachmentManager } = require('../../../../utils/attachment');
+import { expect, test } from '../../../../fixtures/attachment';
 
-const testFileNames = [
+const attachments = [
   { name: 'file_1' },
   { name: 'file_2' },
   { name: 'file_3' },
 ];
 
-test.describe.serial('Dataset Upload Process', () => {
+test.use({
+  directory: __dirname,
+  testFile: path.basename(__filename),
+  attachments,
+});
+
+test.describe('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
   let fileChooser;
 
-  let testFiles; // file objects representing the files to be selected for upload
   const selectedFiles = []; // array of selected files
-
-  let attachmentManager;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
@@ -24,29 +27,7 @@ test.describe.serial('Dataset Upload Process', () => {
     await page.goto('/datasetUpload/new');
   });
 
-  test.beforeAll(async () => {
-    // Create a unique directory for this test's attachments
-    attachmentManager = new AttachmentManager(__filename);
-    await attachmentManager.setup();
-  });
-
-  test.beforeAll(async () => {
-    // Create test files
-    testFiles = await Promise.all(testFileNames.map(async (file) => {
-      const filePath = await attachmentManager.createFile(file.name, `This is the content ${file.name}`);
-      return {
-        ...file,
-        path: filePath,
-      };
-    }));
-  });
-
-  test.afterAll(async () => {
-    // Clean up the directory created for this test's attachments
-    await attachmentManager.teardown();
-  });
-
-  test.describe('File selection and deletion', () => {
+  test.describe.serial('File selection and deletion', () => {
     test.beforeAll(async () => {
       // Select files
       [fileChooser] = await Promise.all([
@@ -55,36 +36,52 @@ test.describe.serial('Dataset Upload Process', () => {
       ]);
     });
 
-    test('Should allow selecting files', async () => {
-      await fileChooser.setFiles(testFiles.map((file) => file.path));
+    // todo - document fixture usage
+    test('Should allow selecting files', async ({ attachmentManager }) => {
+      // Select test files
+      await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
+
+      // await new Promise(() => {});
     });
 
     test('Should show the correct number of files in the table', async () => {
-      // Get all rows in the table
+      await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
+
+      // // Get all rows in the table
       const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
+
+      // await new Promise(() => {});
 
       // For each row, extract the file name and size
       const files = await tableRows.evaluateAll((rows) => rows.map((row) => {
         const nameElement = row.querySelector('[data-testid="file-name"]');
         const sizeElement = row.querySelector('td:nth-child(2)');
-        return {
+
+        console.log(`file: ${nameElement.textContent.trim()}, size: ${sizeElement.textContent.trim()}`);
+
+        const ret = {
           name: nameElement ? nameElement.textContent.trim() : '',
           size: sizeElement ? sizeElement.textContent.trim() : '',
         };
+        // console.log(`file: ${ret.name}, size: ${ret.size}`);
+        return ret;
       }));
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
+      console.log('selected files: ', selectedFiles);
 
       // Verify that the correct number of files were selected
-      expect(selectedFiles.length).toBe(testFileNames.length);
+      expect(selectedFiles.length).toBe(attachments.length);
 
       // Verify that the file names appear in the UI
       await Promise.all(selectedFiles.map(async (file) => {
         await expect(page.getByText(file.name)).toBeVisible();
       }));
+
+      // await new Promise(() => {});
     });
 
     test('Should allow deleting selected files', async () => {
@@ -132,7 +129,8 @@ test.describe.serial('Dataset Upload Process', () => {
       );
 
       // Assert that the deleted file is no longer present
-      expect(deletedFileStillPresent, `Deleted file "${deletedFileName}" is still present in the list`).toBe(false);
+      expect(deletedFileStillPresent, `Deleted file "${deletedFileName}" is
+    still present in the list`).toBe(false);
 
       // Verify each remaining file still has a delete button
       await Promise.all(

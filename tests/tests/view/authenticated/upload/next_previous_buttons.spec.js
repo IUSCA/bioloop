@@ -1,45 +1,19 @@
-import { expect, test } from '@playwright/test';
-
-const { AttachmentManager } = require('../../../../utils/attachment');
+import { expect, test } from '../../../../fixtures/attachment';
 
 const testFileNames = [
   { name: 'file_1' },
 ];
 
-test.describe.serial('Dataset Upload Steps', () => {
+test.describe('Dataset Upload Steps', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
 
   let testFiles; // file objects representing the files to be selected for upload
-
-  let attachmentManager;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
     await page.goto('/datasetUpload/new');
-  });
-
-  test.beforeAll(async () => {
-    // Create a unique directory for this test's attachments
-    attachmentManager = new AttachmentManager(__filename);
-    await attachmentManager.setup();
-  });
-
-  test.beforeAll(async () => {
-    // Create test files
-    testFiles = await Promise.all(testFileNames.map(async (file) => {
-      const filePath = await attachmentManager.createFile(file.name, `This is the content ${file.name}`);
-      return {
-        ...file,
-        path: filePath,
-      };
-    }));
-  });
-
-  test.afterAll(async () => {
-    // Clean up the directory created for this test's attachments
-    await attachmentManager.teardown();
   });
 
   test('should show the Previous button as disabled and Next button as enabled on page load', async () => {

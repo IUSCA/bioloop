@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-const { AttachmentManager } = require('../../../../utils/attachment');
+const { AttachmentManager } = require('../../../../utils/attachments');
 
 const testFileNames = [
   { name: 'file_1' },
 ];
 
-test.describe.serial('Dataset Upload Steps', () => {
+test.describe('Dataset Upload Steps', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
 
   let testFiles; // file objects representing the files to be selected for upload

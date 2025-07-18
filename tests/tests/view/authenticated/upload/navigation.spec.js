@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test.describe.serial('Dataset Upload Process', () => {
+test.describe('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
 
   test.beforeAll(async ({ browser }) => {
