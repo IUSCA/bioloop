@@ -1,7 +1,7 @@
 import path from 'path';
 import { test as base } from '@playwright/test';
 
-const { AttachmentManager } = require('../utils/attachments');
+const { AttachmentManager } = require('../utils/attachments/manager');
 
 const test = base.extend({
   directory: [undefined, { option: false }],
@@ -11,6 +11,7 @@ const test = base.extend({
   attachmentManager: async ({ directory, testFile, attachments }, use) => {
     const testFileName = testFile.replace('.spec.js', '');
     const attachmentsDir = path.join(directory, 'attachments', testFileName);
+
     const attachmentManager = new AttachmentManager(attachmentsDir);
 
     // create attachment container directory

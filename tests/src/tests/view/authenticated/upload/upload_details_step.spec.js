@@ -3,6 +3,8 @@ import { withAttachments } from '../../../../utils/attachments/withAttachments';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
+// Set up attachments for this test and a temporary directory to store these
+// attachments in
 const test = withAttachments(baseTest, __filename, attachments);
 
 test.describe.serial('Dataset Upload Process', () => {
