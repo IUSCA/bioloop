@@ -95,8 +95,8 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test('should allow selecting values in the General-Info step\'s fields', async () => {
-      const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select'); await
-      expect(datasetTypeSelect).toBeVisible();
+      const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
+      await expect(datasetTypeSelect).toBeVisible();
 
       // Select source Raw Data
       const datasetSearchInput = page.getByTestId('upload-metadata-dataset-autocomplete');
@@ -122,10 +122,24 @@ test.describe.serial('Dataset Upload Process', () => {
       await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
       // Click the first option in the dropdown
       const sourceInstrumentFirstOption = page.locator('.va-select-option').first();
-      // Note: We just used page.locator instead of
-      // sourceInstrumentSelect.locator because the dropdown options are not
-      // children of the select element in the DOM
+      // Note: Here we are using `page.locator` instead of
+      // `sourceInstrumentSelect.locator` because the dropdown options are not
+      // children of the dropdown-select element in the DOM
       await sourceInstrumentFirstOption.click();
+    });
+
+    test('should allow clearing values in the General-Info step\'s fields', async () => {
+      // Clear Source Raw Data
+      await page.locator('[data-testid="upload-metadata-dataset-autocomplete--container"] [aria-label="reset"]').click();
+
+      // Verify Source Raw Data is cleared
+      await expect(page.getByTestId('upload-metadata-dataset-autocomplete')).toHaveValue('');
+
+      // Clear Project
+      await page.locator('[data-testid="upload-metadata-project-autocomplete--container"] [aria-label="reset"]').click();
+
+      // Verify Project is cleared
+      await expect(page.getByTestId('upload-metadata-project-autocomplete')).toHaveValue('');
     });
   });
 });

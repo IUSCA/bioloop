@@ -7,7 +7,7 @@ const attachments = Array.from({ length: 1 }, (_, i) => ({ name: `file_${i + 1}`
 // attachments in
 const test = withAttachments(baseTest, __filename, attachments);
 
-test.describe.serial('Dataset Upload Steps', () => {
+test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
 
   test.beforeAll(async ({ browser }) => {
@@ -110,26 +110,28 @@ test.describe.serial('Dataset Upload Steps', () => {
     });
 
     test('should show the Next button as disabled if either of the `Source Raw Data` or `Project` fields are cleared ', async () => {
-      // Clear Source Raw Data and check Next button
-      await page.getByTestId('upload-metadata-dataset-autocomplete').click();
-      await page.locator('[data-testid="upload-metadata-dataset-autocomplete"] button[aria-label="reset"]').click();
+      // Clear Source Raw Data and check Next/Previous buttons
+      await page.locator('[data-testid="upload-metadata-dataset-autocomplete--container"] [aria-label="reset"]').click();
+      // check buttons
       await expect(page.getByTestId('upload-next-button')).toBeDisabled();
       await expect(page.getByTestId('previous-button')).toBeEnabled();
 
-      // Select source Raw Data
+      // Refill Raw Data
       const datasetSearchInput = page.getByTestId('upload-metadata-dataset-autocomplete');
       await expect(datasetSearchInput).toBeVisible();
       // Click the input field, which will trigger the Dataset search
       await page.click('input[data-testid="upload-metadata-dataset-autocomplete"]');
       // Select the first search result
       await page.getByTestId('upload-metadata-dataset-autocomplete--search-result-li-0').click();
+      // check buttons again
+      await expect(page.getByTestId('upload-next-button')).toBeEnabled();
+      await expect(page.getByTestId('previous-button')).toBeEnabled();
 
-      // Clear Project and check Next button
-      await page.getByTestId('upload-metadata-project-autocomplete').click();
-      await page.locator('[data-testid="upload-metadata-project-autocomplete"] button[aria-label="reset"]').click();
+      // Clear Project and check Next/Previous buttons
+      await page.locator('[data-testid="upload-metadata-project-autocomplete--container"] [aria-label="reset"]').click();
+      // check buttons
       await expect(page.getByTestId('upload-next-button')).toBeDisabled();
-      await
-      expect(page.getByTestId('previous-button')).toBeEnabled();
+      await expect(page.getByTestId('previous-button')).toBeEnabled();
 
       // Refill Project
       const projectSearchInput = page.getByTestId('upload-metadata-project-autocomplete');
@@ -138,6 +140,7 @@ test.describe.serial('Dataset Upload Steps', () => {
       await page.click('input[data-testid="upload-metadata-project-autocomplete"]');
       // Select the first search result
       await page.getByTestId('upload-metadata-project-autocomplete--search-result-li-0').click();
+      // check buttons again
       await expect(page.getByTestId('upload-next-button')).toBeEnabled();
       await expect(page.getByTestId('previous-button')).toBeEnabled();
     });

@@ -120,6 +120,8 @@ module.exports = {
         name: 'upload',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
+        // testMatch:
+        // '/view/authenticated/upload/next_previous_buttons.spec.js',
         testMatch: '/view/authenticated/upload/*.spec.js',
       },
       // { name: 'firefox', use: {

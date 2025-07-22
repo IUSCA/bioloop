@@ -7,7 +7,7 @@ const attachments = Array.from({ length: 1 }, (_, i) => ({ name: `file_${i + 1}`
 // attachments in
 const test = withAttachments(baseTest, __filename, attachments);
 
-test.describe.serial('Dataset Upload Steps', () => {
+test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
 
   test.beforeAll(async ({ browser }) => {

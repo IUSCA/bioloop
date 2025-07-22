@@ -116,7 +116,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await page.click('[data-testid="upload-next-button"]');
     });
 
-    test('should show all the selected General-Info form\'s fields in the Upload step', async () => {
+    test('should show all the selected General-Info form\'s fields', async () => {
     // Check Dataset Type
       const datasetTypeChip = page.getByTestId('upload-details-dataset-type-chip');
       await expect(datasetTypeChip).toBeVisible();
@@ -150,7 +150,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(datasetNameError).toHaveText('Dataset name cannot be empty');
     });
 
-    test('should show all the selected files and their details in the Upload step', async () => {
+    test('should show all the selected files and their details', async () => {
       // Check if the file upload table is visible
       const fileUploadTable = page.getByTestId('file-upload-table');
       await expect(fileUploadTable).toBeVisible();
