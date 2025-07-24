@@ -20,7 +20,7 @@ Instead, this system:
 
 ---
 
-## The Four Key Pieces
+## The two Key Pieces
 
 ### 1. `AttachmentManager` Class
 
@@ -50,42 +50,35 @@ await attachmentManager.teardown();
 
 ---
 
-### 2. Attachment Fixture
+### 2. `withAttachment` Fixture
 
-**File:** `fixtures/attachment.js`
+**File:** `fixtures/withAttachments.js`
 
-This Playwright fixture acts as the bridge between Playwright and `attachmentManager`. It:
+This Playwright fixture acts as the bridge between Playwright and `attachmentManager`.
 
 - Sets up the attachments directory based on the test file's path
-- Creates any files defined in the test
+- Creates any attachment files defined in the test
 - Cleans everything up after the test file is done
 - Exposes an `attachmentManager` instance to the test context
 
 Using a fixture avoids having to duplicate boilperplate code for setup, file-creation and teardown in each test.
 
----
-
-### 3. `withAttachments()` utility
-
-**File:** `utils/attachments/withAttachments.js`
-
-This is a helper method to avoid having to setup the attachment fixture (via `test.use({...})`) inside each test that needs to use attachments. Instead, this wrapper::
+#### Arguments:
 
 - Accepts the test file path (`__filename`)
-- Accepts a list of file definitions (`{ name, content }`)
-- Returns a Playwright `test` instance that automatically uses the attachment fixture
+- Accepts a list of file-definitions (`{ name, content }`)
 
-Any test that needs to use attachments can opt in to this system by using this utility.
+#### Returns:
+- Returns a Playwright `test` instance that automatically uses the `withAttachment` fixture
 
-Example:
+Any test that needs to use attachments can opt in to this system by using this fixture.
 
 ```js
-
 // returns Playwright `test` instance which has now been setup to use attachments
 const test = withAttachments(
-    baseTest,
-    __filename,
-    [
+    test: baseTest,
+    filePath: __filename,
+    attachments: [
         { name: 'myFile.txt', content: 'this is my file' },
         { name: 'myFile2.txt', content: 'this is my second file' }
     ]
@@ -96,21 +89,24 @@ const test = withAttachments(
 
 ---
 
-### 4. Example
+### Example
 
 ```js
 // File: tests/upload/test_upload.spec.js
 
-import { test as baseTest, expect } from '../../fixtures/attachment';
-import { withAttachments } from '../../utils/attachments/withAttachments';
+import { expect, test as baseTest } from '@playwright/test';
 
-// Opt in to the attachment framework via the withAttachments utility
+import { withAttachments } from '../../../../fixtures/withAttachments';
+
+// Opt in to the attachment framework via the withAttachments fixture
 const test = withAttachments(
-    baseTest,
-    __filename,
-    [
-        { name: 'myFile.txt', content: 'this is my file' }
-    ]
+    {
+        test: baseTest,
+        filePath: __filename,
+        attachments: [
+            { name: 'myFile.txt', content: 'this is my file' }
+        ]
+    }
 );
 
 test('uploads file using attachmentManager', async ({ page, attachmentManager }) => {

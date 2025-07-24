@@ -1,11 +1,12 @@
-import { expect, test as baseTest } from '../../../../fixtures/attachment';
-import { withAttachments } from '../../../../utils/attachments/withAttachments';
+import { expect, test as baseTest } from '@playwright/test';
+
+import { withAttachments } from '../../../../fixtures/withAttachments';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
 // Set up attachments for this test and a temporary directory to store these
 // attachments in
-const test = withAttachments(baseTest, __filename, attachments);
+const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
@@ -29,7 +30,6 @@ test.describe.serial('Dataset Upload Process', () => {
       ]);
     });
 
-    // todo - document fixture usage in readme
     test('Should allow selecting files', async ({ attachmentManager }) => {
       // attach files
       await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
