@@ -1,10 +1,11 @@
+const { Prisma } = require('@prisma/client');
 const prisma = require('@/db');
 
 async function createNonce({ purpose, expiresIn } = {}) {
   const row = await prisma.nonce.create({
     data: {
-      purpose,
-      expires_at: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,
+      purpose: purpose ?? Prisma.skip,
+      expires_at: expiresIn ? new Date(Date.now() + expiresIn * 1000) : Prisma.skip,
     },
   });
   return row.id;
